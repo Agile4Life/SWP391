@@ -31,8 +31,9 @@ describe('classesApi.ts (Classes & Scheduling API Client)', () => {
     expect(result).toEqual(mockClasses);
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/v1/classes',
-      expect.objectContaining({ method: undefined })
+      expect.objectContaining({ headers: expect.any(Object) })
     );
+    expect(mockFetch.mock.calls[0][1].method ?? 'GET').toBe('GET');
   });
 
   it('getSessions fetches all sessions or filtered by classId', async () => {
