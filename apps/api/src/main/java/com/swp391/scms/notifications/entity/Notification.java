@@ -21,7 +21,7 @@ public class Notification {
     @Column(nullable = false, length = 150)
     private String title;
 
-    @Column(name = "message", nullable = false, columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "content", nullable = false, length = org.hibernate.Length.LONG32)
     private String message;
 
     @Column(nullable = false, length = 30)
