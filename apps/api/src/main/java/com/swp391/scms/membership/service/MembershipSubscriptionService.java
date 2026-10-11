@@ -58,7 +58,8 @@ public class MembershipSubscriptionService {
         Member member = findMember(principal.id());
         MembershipPackage membershipPackage = findActivePackage(request.packageId());
 
-        if (subscriptions.existsByMemberUserIdAndStatus(member.getUserId(), STATUS_ACTIVE)) {
+        LocalDate today = LocalDate.now(clock);
+        if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(member.getUserId(), STATUS_ACTIVE, today)) {
             throw new ConflictException(
                     "MEMBERSHIP_ALREADY_ACTIVE",
                     "error.membership.already_active",
@@ -66,7 +67,6 @@ public class MembershipSubscriptionService {
                     "Member already has an active subscription");
         }
 
-        LocalDate today = LocalDate.now(clock);
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
         subscription.setMembershipPackage(membershipPackage);
@@ -116,6 +116,21 @@ public class MembershipSubscriptionService {
         renewal.setUpdatedAt(LocalDateTime.now(clock));
 
         return toDto(subscriptions.saveAndFlush(renewal));
+    }
+
+    /**
+     * SCRUM-71 BR-01, BR-06:
+     * Lấy subscription active hiện tại (chưa hết hạn) của hội viên kèm mã QR định danh.
+     * Trả về null nếu hội viên chưa có gói hoặc gói đã hết hạn.
+     */
+    @Transactional(readOnly = true)
+    public SubscriptionDto current(AuthenticatedPrincipal principal) {
+        findMember(principal.id());
+        LocalDate today = LocalDate.now(clock);
+        return subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(principal.id(), STATUS_ACTIVE)
+                .filter(sub -> sub.getEndDate() == null || !sub.getEndDate().isBefore(today))
+                .map(this::toDto)
+                .orElse(null);
     }
 
     /**

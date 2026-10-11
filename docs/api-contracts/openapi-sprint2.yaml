@@ -1,4 +1,4 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
   title: SCMS API - Sprint 2 Contract
   version: 1.0.0
@@ -14,115 +14,251 @@ components:
     ApiResponse:
       type: object
       properties:
-        success: { type: boolean }
-        status: { type: integer }
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
         message: { type: string, description: Localized message }
         code: { type: string, description: Error code, present on errors }
         data: { description: Payload }
         details: { description: Field errors for validation failures }
         timestamp: { type: string, format: date-time }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        status: { type: integer, example: 400 }
+        code: { type: string, example: "BAD_REQUEST" }
+        message: { type: string, example: "Dữ liệu không hợp lệ" }
+        details: { type: object, nullable: true }
+        timestamp: { type: string, format: date-time }
+
     SubscriptionDto:
       type: object
       properties:
-        id: { type: integer }
-        memberId: { type: integer }
-        packageId: { type: integer }
-        packageName: { type: string }
+        id: { type: integer, example: 100 }
+        memberId: { type: integer, example: 10 }
+        packageId: { type: integer, example: 1 }
+        packageName: { type: string, example: "Gói 1 tháng" }
         previousSubscriptionId: { type: integer, nullable: true }
-        startDate: { type: string, format: date }
-        endDate: { type: string, format: date }
-        status: { type: string, enum: [pending_payment, active, expired, cancelled] }
-        qrCode: { type: string, nullable: true }
+        startDate: { type: string, format: date, example: "2026-10-12" }
+        endDate: { type: string, format: date, example: "2026-11-11" }
+        status: { type: string, enum: [pending_payment, active, expired, cancelled], example: "active" }
+        qrCode: { type: string, nullable: true, example: "QR-SUB-100-XYZ" }
         createdAt: { type: string, format: date-time }
+
     SubscriptionCreateRequest:
       type: object
       required: [packageId]
       properties:
-        packageId: { type: integer, minimum: 1 }
+        packageId: { type: integer, minimum: 1, example: 1 }
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 201 }
+        message: { type: string, example: "Tạo đơn đăng ký gói tập thành công" }
+        data: { $ref: '#/components/schemas/SubscriptionDto' }
+        timestamp: { type: string, format: date-time }
+
+    SubscriptionNullableResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
+        message: { type: string, example: "Lấy thông tin gói thành viên hiện tại thành công." }
+        data:
+          nullable: true
+          anyOf:
+            - $ref: '#/components/schemas/SubscriptionDto'
+            - type: 'null'
+        timestamp: { type: string, format: date-time }
+
+    SubscriptionListResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
+        message: { type: string, example: "Lấy danh sách gói thành viên thành công." }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionDto'
+        timestamp: { type: string, format: date-time }
+
     GymClassDto:
       type: object
       properties:
-        id: { type: integer }
-        name: { type: string }
-        disciplineId: { type: integer }
-        disciplineName: { type: string }
-        coachId: { type: integer }
-        coachName: { type: string }
-        roomId: { type: integer }
-        roomName: { type: string }
-        capacity: { type: integer }
-        level: { type: string, enum: [beginner, intermediate, advanced, all] }
-        status: { type: string, enum: [active, inactive, archived] }
+        id: { type: integer, example: 5 }
+        name: { type: string, example: "Yoga Buổi Sáng" }
+        disciplineId: { type: integer, example: 2 }
+        disciplineName: { type: string, example: "Yoga" }
+        coachId: { type: integer, example: 3 }
+        coachName: { type: string, example: "HLV Nam" }
+        roomId: { type: integer, example: 1 }
+        roomName: { type: string, example: "Phòng Studio 1" }
+        capacity: { type: integer, example: 20 }
+        level: { type: string, enum: [beginner, intermediate, advanced, all], example: "all" }
+        status: { type: string, enum: [active, inactive, archived], example: "active" }
+
     ClassCreateRequest:
       type: object
       required: [name, disciplineId, coachId, roomId, capacity, level]
       properties:
-        name: { type: string, maxLength: 150 }
-        disciplineId: { type: integer }
-        coachId: { type: integer }
-        roomId: { type: integer }
-        capacity: { type: integer, minimum: 1 }
-        level: { type: string, enum: [beginner, intermediate, advanced, all] }
+        name: { type: string, maxLength: 150, example: "Yoga Buổi Sáng" }
+        disciplineId: { type: integer, example: 2 }
+        coachId: { type: integer, example: 3 }
+        roomId: { type: integer, example: 1 }
+        capacity: { type: integer, minimum: 1, example: 20 }
+        level: { type: string, enum: [beginner, intermediate, advanced, all], example: "all" }
+
+    GymClassResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 201 }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/GymClassDto' }
+        timestamp: { type: string, format: date-time }
+
     ClassSessionDto:
       type: object
       properties:
-        id: { type: integer }
-        classId: { type: integer }
-        className: { type: string }
-        sessionDate: { type: string, format: date }
+        id: { type: integer, example: 12 }
+        classId: { type: integer, example: 5 }
+        className: { type: string, example: "Yoga Buổi Sáng" }
+        sessionDate: { type: string, format: date, example: "2026-10-15" }
         startTime: { type: string, example: "08:00:00" }
         endTime: { type: string, example: "09:30:00" }
-        status: { type: string, enum: [scheduled, completed, cancelled] }
+        status: { type: string, enum: [scheduled, completed, cancelled], example: "scheduled" }
+
     SessionScheduleRequest:
       type: object
       required: [sessionDate, startTime, endTime]
       properties:
-        sessionDate: { type: string, format: date }
+        sessionDate: { type: string, format: date, example: "2026-10-15" }
         startTime: { type: string, example: "08:00:00" }
         endTime: { type: string, example: "09:30:00" }
+
+    ClassSessionResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 201 }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/ClassSessionDto' }
+        timestamp: { type: string, format: date-time }
+
+    ClassSessionListResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
+        message: { type: string }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClassSessionDto'
+        timestamp: { type: string, format: date-time }
+
     EnrollmentDto:
       type: object
       properties:
-        id: { type: integer }
-        classId: { type: integer }
-        className: { type: string }
-        memberId: { type: integer }
-        sessionId: { type: integer, nullable: true }
-        sessionDate: { type: string, format: date, nullable: true }
-        startTime: { type: string, nullable: true }
-        endTime: { type: string, nullable: true }
-        status: { type: string, enum: [booked, cancelled, completed] }
+        id: { type: integer, example: 25 }
+        classId: { type: integer, example: 5 }
+        className: { type: string, example: "Yoga Buổi Sáng" }
+        memberId: { type: integer, example: 10 }
+        sessionId: { type: integer, nullable: true, example: 12 }
+        sessionDate: { type: string, format: date, nullable: true, example: "2026-10-15" }
+        startTime: { type: string, nullable: true, example: "08:00:00" }
+        endTime: { type: string, nullable: true, example: "09:30:00" }
+        status: { type: string, enum: [booked, cancelled, completed], example: "booked" }
         enrolledAt: { type: string, format: date-time }
         cancelledAt: { type: string, format: date-time, nullable: true }
         cancelReason: { type: string, nullable: true }
+
+    EnrollmentResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 201 }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/EnrollmentDto' }
+        timestamp: { type: string, format: date-time }
+
     WaitlistDto:
       type: object
       properties:
-        id: { type: integer }
-        classId: { type: integer }
-        className: { type: string }
-        memberId: { type: integer }
-        status: { type: string, enum: [waiting, notified, expired] }
+        id: { type: integer, example: 3 }
+        classId: { type: integer, example: 5 }
+        className: { type: string, example: "Yoga Buổi Sáng" }
+        memberId: { type: integer, example: 10 }
+        status: { type: string, enum: [waiting, notified, expired], example: "waiting" }
         requestedAt: { type: string, format: date-time }
+
+    WaitlistResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 201 }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/WaitlistDto' }
+        timestamp: { type: string, format: date-time }
+
+    WaitlistListResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
+        message: { type: string }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WaitlistDto'
+        timestamp: { type: string, format: date-time }
+
     CheckinDto:
       type: object
       properties:
-        id: { type: integer }
-        memberId: { type: integer }
-        memberName: { type: string }
-        membershipCode: { type: string }
+        id: { type: integer, example: 45 }
+        memberId: { type: integer, example: 10 }
+        memberName: { type: string, example: "Nguyễn Văn A" }
+        membershipCode: { type: string, example: "MB-2026-001" }
         checkInTime: { type: string, format: date-time }
         checkOutTime: { type: string, format: date-time, nullable: true }
-        method: { type: string, enum: [qr, manual] }
-        gate: { type: string, nullable: true }
-        recordedById: { type: integer, nullable: true }
-        status: { type: string, enum: [GRANTED, DENIED] }
+        method: { type: string, enum: [qr, manual], example: "qr" }
+        gate: { type: string, nullable: true, example: "Cổng A" }
+        recordedById: { type: integer, nullable: true, example: 1 }
+        status: { type: string, enum: [GRANTED, DENIED], example: "GRANTED" }
+
     CheckinScanRequest:
       type: object
       required: [qrCode]
       properties:
-        qrCode: { type: string }
-        gate: { type: string }
+        qrCode: { type: string, example: "QR-SUB-100-XYZ" }
+        gate: { type: string, example: "Cổng A" }
+
+    CheckinResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 201 }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/CheckinDto' }
+        timestamp: { type: string, format: date-time }
+
+    CheckinListResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        status: { type: integer, example: 200 }
+        message: { type: string }
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckinDto'
+        timestamp: { type: string, format: date-time }
+
 security:
   - bearerAuth: []
 paths:
@@ -136,9 +272,21 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SubscriptionCreateRequest' }
       responses:
-        '201': { description: Created (SubscriptionDto) }
-        '400': { description: Bad request or inactive package }
-        '409': { description: Already has active subscription }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionResponse' }
+        '400':
+          description: Bad request or inactive package
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Already has active subscription
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /memberships/subscriptions/{id}/renew:
     post:
       summary: Create a renewal pending payment (SCRUM-71)
@@ -148,14 +296,39 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '201': { description: Created (SubscriptionDto) }
-        '403': { description: Not owner }
-        '404': { description: Subscription not found }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionResponse' }
+        '403':
+          description: Not owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /memberships/subscriptions/my:
     get:
-      summary: List authenticated member's subscriptions with QR codes (SCRUM-71)
+      summary: Get authenticated member's current active subscription (or null if none) with QR code (SCRUM-71)
       responses:
-        '200': { description: OK (SubscriptionDto[]) }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionNullableResponse' }
+  /memberships/subscriptions/history:
+    get:
+      summary: List authenticated member's subscription history with QR codes (SCRUM-71)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionListResponse' }
 
   # SCRUM-72: Classes & Sessions
   /classes:
@@ -167,8 +340,16 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ClassCreateRequest' }
       responses:
-        '201': { description: Created (GymClassDto) }
-        '400': { description: Bad request }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GymClassResponse' }
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /classes/{id}/sessions:
     post:
       summary: Schedule a class session with trigger P3 conflict check (SCRUM-72)
@@ -183,8 +364,16 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SessionScheduleRequest' }
       responses:
-        '201': { description: Created (ClassSessionDto) }
-        '409': { description: Schedule conflict (Coach or Room already booked) }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassSessionResponse' }
+        '409':
+          description: Schedule conflict (Coach or Room already booked)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /classes/sessions:
     get:
       summary: List class sessions with filters (SCRUM-72)
@@ -199,7 +388,11 @@ paths:
           in: query
           schema: { type: string, format: date }
       responses:
-        '200': { description: OK (ClassSessionDto[]) }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassSessionListResponse' }
 
   # SCRUM-73: Class Enrollments
   /classes/sessions/{id}/enroll:
@@ -211,10 +404,26 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '201': { description: Booked (EnrollmentDto) }
-        '400': { description: Session cancelled or past due }
-        '403': { description: Membership expired or inactive (Trigger P4) }
-        '409': { description: Class full (Trigger P2) or already booked }
+        '201':
+          description: Booked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnrollmentResponse' }
+        '400':
+          description: Session cancelled or past due
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Membership expired or inactive (Trigger P4)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Class full (Trigger P2) or already booked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /classes/enrollments/{id}:
     delete:
       summary: Cancel booking and release seat (Owner or Staff) (SCRUM-73)
@@ -224,10 +433,26 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: Cancelled (EnrollmentDto) }
-        '400': { description: Not booked }
-        '403': { description: Not owner }
-        '404': { description: Not found }
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnrollmentResponse' }
+        '400':
+          description: Not booked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Not owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   # SCRUM-74: Class Waitlists
   /classes/sessions/{id}/waitlist:
@@ -239,9 +464,21 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '201': { description: Joined waitlist (WaitlistDto) }
-        '400': { description: Class has space or duplicate waitlist or session not open }
-        '403': { description: Inactive membership }
+        '201':
+          description: Joined waitlist
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistResponse' }
+        '400':
+          description: Class has space or duplicate waitlist or session not open
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Inactive membership
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /classes/waitlists/{id}:
     delete:
       summary: Withdraw from waitlist (Owner only) (SCRUM-74)
@@ -251,14 +488,30 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: Withdrawn (WaitlistDto) }
-        '403': { description: Not owner }
-        '404': { description: Not found }
+        '200':
+          description: Withdrawn
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistResponse' }
+        '403':
+          description: Not owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /classes/waitlists/my:
     get:
       summary: List authenticated member's waitlist entries (SCRUM-74)
       responses:
-        '200': { description: OK (WaitlistDto[]) }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistListResponse' }
 
   # SCRUM-75: Center QR Check-in
   /check-in/scan:
@@ -270,9 +523,21 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CheckinScanRequest' }
       responses:
-        '201': { description: Access granted (CheckinDto) }
-        '403': { description: Access denied (Trigger P4: Inactive/expired membership or invalid QR) }
-        '409': { description: Already checked in and not checked out }
+        '201':
+          description: Access granted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckinResponse' }
+        '403':
+          description: Access denied (Trigger P4: Inactive/expired membership or invalid QR)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '409':
+          description: Already checked in and not checked out
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /check-in/{id}/checkout:
     post:
       summary: Check out of center (SCRUM-75)
@@ -282,12 +547,32 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200': { description: Checked out (CheckinDto) }
-        '400': { description: Already checked out }
-        '403': { description: Not owner }
-        '404': { description: Not found }
+        '200':
+          description: Checked out
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckinResponse' }
+        '400':
+          description: Already checked out
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '403':
+          description: Not owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
   /check-in/history:
     get:
       summary: Get today's center check-in history (Staff only) (SCRUM-75)
       responses:
-        '200': { description: OK (CheckinDto[]) }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckinListResponse' }

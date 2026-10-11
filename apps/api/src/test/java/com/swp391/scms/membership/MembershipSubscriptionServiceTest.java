@@ -29,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +69,7 @@ class MembershipSubscriptionServiceTest {
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
-        when(subscriptions.existsByMemberUserIdAndStatus(10L, "active")).thenReturn(false);
+        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any())).thenReturn(false);
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SubscriptionDto result = service.create(principal, new SubscriptionRequests.Create(1L));
@@ -91,10 +92,34 @@ class MembershipSubscriptionServiceTest {
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
-        when(subscriptions.existsByMemberUserIdAndStatus(10L, "active")).thenReturn(true);
+        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any())).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(1L)))
                 .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void create_succeedsWhenMemberHasExpiredSubscriptionEvenWithActiveStatus() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+        pack.setStatus("active");
+        pack.setDurationDays(30);
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        // Status is active in DB, but endDate < today so existsBy...EndDateGreaterThanEqual returns false
+        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any())).thenReturn(false);
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto result = service.create(principal, new SubscriptionRequests.Create(1L));
+
+        assertThat(result.status()).isEqualTo("pending_payment");
+        assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(30));
     }
 
     @Test
@@ -208,6 +233,73 @@ class MembershipSubscriptionServiceTest {
         assertThat(list).hasSize(1);
         assertThat(list.get(0).qrCode()).isEqualTo("QR-TEST-123");
         assertThat(list.get(0).status()).isEqualTo("active");
+    }
+
+    @Test
+    void current_returnsActiveSubscription_whenValidAndUnexpired() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(100L);
+        sub.setMember(member);
+        sub.setMembershipPackage(pack);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.now(clock).minusDays(5));
+        sub.setEndDate(LocalDate.now(clock).plusDays(25));
+        sub.setQrCode("QR-TEST-123");
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(10L, "active"))
+                .thenReturn(Optional.of(sub));
+
+        SubscriptionDto result = service.current(principal);
+
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(100L);
+        assertThat(result.qrCode()).isEqualTo("QR-TEST-123");
+    }
+
+    @Test
+    void current_returnsNull_whenNoActiveSubscriptionExists() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(10L, "active"))
+                .thenReturn(Optional.empty());
+
+        SubscriptionDto result = service.current(principal);
+
+        assertThat(result).isNull();
+    }
+
+    @Test
+    void current_returnsNull_whenActiveSubscriptionHasExpiredByDate() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(100L);
+        sub.setMember(member);
+        sub.setMembershipPackage(pack);
+        sub.setStatus("active");
+        sub.setEndDate(LocalDate.now(clock).minusDays(1)); // Expired yesterday
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(10L, "active"))
+                .thenReturn(Optional.of(sub));
+
+        SubscriptionDto result = service.current(principal);
+
+        assertThat(result).isNull();
     }
 
     @Test

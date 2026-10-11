@@ -117,16 +117,43 @@ class MembershipSubscriptionControllerTest {
     }
 
     @Test
-    void getMy_returnsOk() throws Exception {
+    void getMy_returnsOk_withSubscriptionObject() throws Exception {
+        SubscriptionDto dto = new SubscriptionDto(
+                100L, 10L, 1L, "Gói 1 tháng", null,
+                LocalDate.now(), LocalDate.now().plusDays(30), "active", "QR-SUB-100", LocalDateTime.now()
+        );
+        when(service.current(any())).thenReturn(dto);
+
+        mockMvc.perform(get("/api/v1/memberships/subscriptions/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(100L))
+                .andExpect(jsonPath("$.data.qrCode").value("QR-SUB-100"));
+
+        // Also works with /api/v1/subscriptions/my
+        mockMvc.perform(get("/api/v1/subscriptions/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(100L));
+    }
+
+    @Test
+    void getMy_returnsOk_withNullWhenNoActiveSubscription() throws Exception {
+        when(service.current(any())).thenReturn(null);
+
+        mockMvc.perform(get("/api/v1/memberships/subscriptions/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    void getHistory_returnsList() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
                 100L, 10L, 1L, "Gói 1 tháng", null,
                 LocalDate.now(), LocalDate.now().plusDays(30), "active", "QR-SUB-100", LocalDateTime.now()
         );
         when(service.mine(any())).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/api/v1/memberships/subscriptions/my"))
+        mockMvc.perform(get("/api/v1/memberships/subscriptions/history"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].id").value(100L))
-                .andExpect(jsonPath("$.data[0].qrCode").value("QR-SUB-100"));
+                .andExpect(jsonPath("$.data[0].id").value(100L));
     }
 }

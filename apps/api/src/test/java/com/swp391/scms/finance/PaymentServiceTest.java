@@ -114,8 +114,10 @@ class PaymentServiceTest {
         dto.setStatus("success");
 
         Member member = new Member();
+        member.setUserId(2L);
         MembershipPackage pkg = new MembershipPackage();
         pkg.setDurationDays(30);
+        pkg.setPrice(new BigDecimal("1500000.00"));
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setId(10L);
         subscription.setMember(member);
@@ -128,9 +130,9 @@ class PaymentServiceTest {
         PaymentDto expectedDto = new PaymentDto();
 
         when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
         when(paymentMapper.toEntity(dto)).thenReturn(payment);
         when(paymentRepository.save(payment)).thenReturn(payment);
-        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
         when(paymentMapper.toDto(payment)).thenReturn(expectedDto);
 
         paymentService.createPayment(dto);
@@ -139,6 +141,55 @@ class PaymentServiceTest {
         assertEquals(java.time.LocalDate.now(clock), subscription.getStartDate());
         assertEquals(java.time.LocalDate.now(clock).plusDays(30), subscription.getEndDate());
         verify(membershipSubscriptionRepository).save(subscription);
+    }
+
+    @Test
+    @DisplayName("Should reject create payment when subscription belongs to another member")
+    void shouldRejectCreatePaymentWhenSubscriptionMemberMismatches() {
+        PaymentCreateDto dto = new PaymentCreateDto();
+        dto.setMemberId(2L);
+        dto.setSubscriptionId(10L);
+        dto.setAmount(new BigDecimal("1500000.00"));
+
+        Member currentMember = new Member();
+        currentMember.setUserId(2L);
+        Member otherMember = new Member();
+        otherMember.setUserId(99L);
+
+        MembershipSubscription subscription = new MembershipSubscription();
+        subscription.setId(10L);
+        subscription.setMember(otherMember);
+
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(currentMember));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
+
+        assertThrows(BadRequestException.class, () -> paymentService.createPayment(dto));
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should reject create payment when amount does not match subscription price")
+    void shouldRejectCreatePaymentWhenAmountMismatches() {
+        PaymentCreateDto dto = new PaymentCreateDto();
+        dto.setMemberId(2L);
+        dto.setSubscriptionId(10L);
+        dto.setAmount(new BigDecimal("1.00")); // 1 đồng test case from review feedback
+
+        Member member = new Member();
+        member.setUserId(2L);
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setPrice(new BigDecimal("1500000.00"));
+
+        MembershipSubscription subscription = new MembershipSubscription();
+        subscription.setId(10L);
+        subscription.setMember(member);
+        subscription.setMembershipPackage(pkg);
+
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
+
+        assertThrows(BadRequestException.class, () -> paymentService.createPayment(dto));
+        verify(paymentRepository, never()).save(any());
     }
 
     @Test
@@ -227,19 +278,27 @@ class PaymentServiceTest {
     @Test
     @DisplayName("Should activate subscription from payment date when status becomes successful")
     void shouldActivateSubscriptionWhenPaymentStatusBecomesSuccessful() {
-        Payment payment = new Payment();
-        payment.setId(1L);
-        payment.setStatus("pending");
-        payment.setSubscriptionId(10L);
+        Member member = new Member();
+        member.setUserId(2L);
 
         MembershipPackage pkg = new MembershipPackage();
         pkg.setDurationDays(30);
+        pkg.setPrice(new BigDecimal("1500000.00"));
+
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setId(10L);
+        subscription.setMember(member);
         subscription.setMembershipPackage(pkg);
         subscription.setStatus("pending_payment");
         subscription.setStartDate(java.time.LocalDate.now(clock).minusDays(40));
         subscription.setEndDate(subscription.getStartDate().plusDays(30));
+
+        Payment payment = new Payment();
+        payment.setId(1L);
+        payment.setStatus("pending");
+        payment.setMember(member);
+        payment.setAmount(new BigDecimal("1500000.00"));
+        payment.setSubscriptionId(10L);
 
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
@@ -252,6 +311,59 @@ class PaymentServiceTest {
         assertEquals(java.time.LocalDate.now(clock).plusDays(30), subscription.getEndDate());
         assertNotNull(subscription.getQrCode());
         verify(membershipSubscriptionRepository).save(subscription);
+    }
+
+    @Test
+    @DisplayName("Should reject update payment status to success when subscription belongs to another member")
+    void shouldRejectUpdatePaymentStatusWhenSubscriptionMemberMismatches() {
+        Member paymentMember = new Member();
+        paymentMember.setUserId(2L);
+
+        Member otherMember = new Member();
+        otherMember.setUserId(99L);
+
+        MembershipSubscription subscription = new MembershipSubscription();
+        subscription.setId(10L);
+        subscription.setMember(otherMember);
+
+        Payment payment = new Payment();
+        payment.setId(1L);
+        payment.setStatus("pending");
+        payment.setMember(paymentMember);
+        payment.setAmount(new BigDecimal("1500000.00"));
+        payment.setSubscriptionId(10L);
+
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
+
+        assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "success"));
+    }
+
+    @Test
+    @DisplayName("Should reject update payment status to success when amount does not match package price")
+    void shouldRejectUpdatePaymentStatusWhenAmountMismatches() {
+        Member member = new Member();
+        member.setUserId(2L);
+
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setPrice(new BigDecimal("1500000.00"));
+
+        MembershipSubscription subscription = new MembershipSubscription();
+        subscription.setId(10L);
+        subscription.setMember(member);
+        subscription.setMembershipPackage(pkg);
+
+        Payment payment = new Payment();
+        payment.setId(1L);
+        payment.setStatus("pending");
+        payment.setMember(member);
+        payment.setAmount(new BigDecimal("1.00")); // 1 đồng test case
+        payment.setSubscriptionId(10L);
+
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
+
+        assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "success"));
     }
 
     @Test

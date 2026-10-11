@@ -22,7 +22,7 @@ import java.util.List;
  */
 @Tag(name = "Membership Subscriptions", description = "Purchase, renewal and member subscription status (SCRUM-71)")
 @RestController
-@RequestMapping("/api/v1/memberships/subscriptions")
+@RequestMapping({"/api/v1/memberships/subscriptions", "/api/v1/subscriptions"})
 public class MembershipSubscriptionController {
 
     private final MembershipSubscriptionService service;
@@ -60,9 +60,16 @@ public class MembershipSubscriptionController {
                 .body(ApiResponse.created(msg("membership.subscription.renewed"), service.renew(principal, id)));
     }
 
-    @Operation(summary = "Get the authenticated member's subscriptions and current status")
+    @Operation(summary = "Get the authenticated member's current active subscription (or null if none)")
     @GetMapping("/my")
-    public ApiResponse<List<SubscriptionDto>> getMy(
+    public ApiResponse<SubscriptionDto> getMy(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("membership.subscription.current"), service.current(principal));
+    }
+
+    @Operation(summary = "Get the authenticated member's subscription history")
+    @GetMapping("/history")
+    public ApiResponse<List<SubscriptionDto>> getHistory(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("membership.subscription.list"), service.mine(principal));
     }
