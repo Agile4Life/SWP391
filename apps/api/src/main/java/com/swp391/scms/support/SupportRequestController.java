@@ -24,6 +24,11 @@ public class SupportRequestController {
     private final SupportRequestService supportRequestService;
     private final MessageService messageService;
 
+    public SupportRequestController(SupportRequestService supportRequestService) {
+        this(supportRequestService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     public SupportRequestController(SupportRequestService supportRequestService, MessageService messageService) {
         this.supportRequestService = supportRequestService;
         this.messageService = messageService;

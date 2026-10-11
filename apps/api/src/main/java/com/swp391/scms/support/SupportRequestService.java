@@ -61,9 +61,23 @@ public class SupportRequestService {
         SupportRequest request = supportRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
 
+        if ("closed".equalsIgnoreCase(request.getStatus())) {
+            throw new com.swp391.scms.common.exception.AppException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "INVALID_STATE_TRANSITION",
+                    "support.status.closed_cannot_reopen",
+                    new Object[]{request.getStatus(), dto.status()},
+                    "Closed support request cannot be modified"
+            );
+        }
+
         if (dto.status() != null) {
-            request.setStatus(dto.status());
-            if ("resolved".equals(dto.status()) || "closed".equals(dto.status())) {
+            String currentStatus = request.getStatus();
+            String targetStatus = dto.status();
+            validateStatusTransition(currentStatus, targetStatus);
+
+            request.setStatus(targetStatus);
+            if ("resolved".equals(targetStatus) || "closed".equals(targetStatus)) {
                 if (request.getResolvedAt() == null) {
                     request.setResolvedAt(LocalDateTime.now());
                 }
@@ -80,5 +94,26 @@ public class SupportRequestService {
 
         supportRequestRepository.save(request);
         return supportRequestMapper.toDto(request);
+    }
+
+    private void validateStatusTransition(String currentStatus, String targetStatus) {
+        if (currentStatus != null && currentStatus.equalsIgnoreCase(targetStatus)) {
+            return;
+        }
+        boolean valid = switch (currentStatus == null ? "" : currentStatus.toLowerCase()) {
+            case "open" -> "in_progress".equalsIgnoreCase(targetStatus);
+            case "in_progress" -> "open".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus);
+            case "resolved" -> "closed".equalsIgnoreCase(targetStatus);
+            default -> false;
+        };
+        if (!valid) {
+            throw new com.swp391.scms.common.exception.AppException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "INVALID_STATE_TRANSITION",
+                    "support.status.invalid_transition",
+                    new Object[]{currentStatus, targetStatus},
+                    "Invalid state transition from " + currentStatus + " to " + targetStatus
+            );
+        }
     }
 }
