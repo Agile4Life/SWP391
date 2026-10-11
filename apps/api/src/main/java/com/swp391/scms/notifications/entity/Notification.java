@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications")
+@org.hibernate.annotations.Check(name = "ck_notifications_type", constraints = "type IN ('schedule_change','package_expiry','class_reminder','system','support_reply','payment')")
+@org.hibernate.annotations.Check(name = "ck_notifications_entity_type", constraints = "related_entity_type IS NULL OR related_entity_type IN ('class_session','membership_subscription','payment','support_request','class_enrollment','training_plan')")
+@Table(name = "notifications", indexes = {@Index(name = "ix_notifications_user_read", columnList = "user_id, is_read")})
 public class Notification {
     
     @Id
@@ -16,17 +18,23 @@ public class Notification {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 150)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false, length = 50)
-    private String type; // e.g. REMINDER, SYSTEM, PAYMENT, BOOKING
+    @Column(nullable = false, length = 30)
+    private String type; // e.g. schedule_change, package_expiry, class_reminder, system, support_reply, payment
 
     @Column(name = "reference_id", length = 100)
     private String referenceId; // to link to specific payment/booking ID
+
+    @Column(name = "related_entity_type", length = 50)
+    private String relatedEntityType;
+
+    @Column(name = "related_entity_id")
+    private Long relatedEntityId;
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
@@ -64,6 +72,15 @@ public class Notification {
     public String getReferenceId() { return referenceId; }
     public void setReferenceId(String referenceId) { this.referenceId = referenceId; }
     
+    public String getRelatedEntityType() { return relatedEntityType; }
+    public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = relatedEntityType; }
+
+    public Long getRelatedEntityId() { return relatedEntityId; }
+    public void setRelatedEntityId(Long relatedEntityId) { this.relatedEntityId = relatedEntityId; }
+
+    public String getMessage() { return content; }
+    public void setMessage(String message) { this.content = message; }
+
     public boolean isRead() { return isRead; }
     public void setRead(boolean read) { isRead = read; }
     

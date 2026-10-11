@@ -60,10 +60,12 @@ public class MembershipService {
         LocalDate activationStartDate = startDate;
         LocalDate endDate = activationStartDate.plusDays(subscription.getMembershipPackage().getDurationDays());
 
+        Long prevId = previous != null ? previous.getId() : null;
         if (subscription.getMember() != null) {
             boolean overlapsActiveSubscription = membershipSubscriptionRepository
                     .findByMemberUserIdAndStatus(subscription.getMember().getUserId(), ACTIVE)
                     .stream()
+                    .filter(active -> prevId == null || !active.getId().equals(prevId))
                     .anyMatch(active -> active.getStartDate() != null && active.getEndDate() != null
                             && !active.getStartDate().isAfter(endDate)
                             && !active.getEndDate().isBefore(activationStartDate));
