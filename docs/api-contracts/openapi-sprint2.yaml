@@ -68,7 +68,7 @@ components:
     UnreadCountDto:
       type: object
       properties:
-        unreadCount:
+        count:
           type: integer
           format: int64
 
