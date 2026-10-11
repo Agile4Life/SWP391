@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@org.hibernate.annotations.Check(name = "ck_notifications_type", constraints = "type IN ('schedule_change','package_expiry','class_reminder','system','support_reply','payment')")
+@org.hibernate.annotations.Check(name = "ck_notifications_entity_type", constraints = "related_entity_type IS NULL OR related_entity_type IN ('class_session','membership_subscription','payment','support_request','class_enrollment','training_plan')")
 @Table(name = "notifications")
 public class Notification {
     
@@ -16,17 +18,20 @@ public class Notification {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 150)
     private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String content;
+    @Column(name = "content", nullable = false, length = org.hibernate.Length.LONG32)
+    private String message;
 
-    @Column(nullable = false, length = 50)
-    private String type; // e.g. REMINDER, SYSTEM, PAYMENT, BOOKING
+    @Column(nullable = false, length = 30)
+    private String type; 
 
-    @Column(name = "reference_id", length = 100)
-    private String referenceId; // to link to specific payment/booking ID
+    @Column(name = "related_entity_type", length = 50)
+    private String relatedEntityType;
+
+    @Column(name = "related_entity_id")
+    private Long relatedEntityId;
 
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
@@ -36,12 +41,13 @@ public class Notification {
 
     public Notification() {}
 
-    public Notification(User user, String title, String content, String type, String referenceId) {
+    public Notification(User user, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         this.user = user;
         this.title = title;
-        this.content = content;
+        this.message = message;
         this.type = type;
-        this.referenceId = referenceId;
+        this.relatedEntityType = relatedEntityType;
+        this.relatedEntityId = relatedEntityId;
         this.isRead = false;
         this.createdAt = LocalDateTime.now();
     }
@@ -55,17 +61,20 @@ public class Notification {
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
     
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
     
-    public String getReferenceId() { return referenceId; }
-    public void setReferenceId(String referenceId) { this.referenceId = referenceId; }
+    public String getRelatedEntityType() { return relatedEntityType; }
+    public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = relatedEntityType; }
+
+    public Long getRelatedEntityId() { return relatedEntityId; }
+    public void setRelatedEntityId(Long relatedEntityId) { this.relatedEntityId = relatedEntityId; }
     
     public boolean isRead() { return isRead; }
-    public void setRead(boolean read) { isRead = read; }
+    public void setRead(boolean read) { this.isRead = read; }
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

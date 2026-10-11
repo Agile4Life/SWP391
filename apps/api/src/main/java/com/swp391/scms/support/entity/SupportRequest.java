@@ -39,6 +39,16 @@ public class SupportRequest {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
+    public SupportRequest() {}
+
+    public SupportRequest(Member member, String subject, String description) {
+        this.member = member;
+        this.subject = subject;
+        this.description = description;
+        this.status = "open";
+        this.createdAt = LocalDateTime.now();
+    }
+
     public Long getId() { return id; }
     public Member getMember() { return member; }
     public void setMember(Member member) { this.member = member; }

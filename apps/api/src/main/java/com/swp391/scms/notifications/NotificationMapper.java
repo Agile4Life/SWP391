@@ -11,9 +11,10 @@ public class NotificationMapper {
         return new NotificationDto(
             entity.getId(),
             entity.getTitle(),
-            entity.getContent(),
+            entity.getMessage(),
             entity.getType(),
-            entity.getReferenceId(),
+            entity.getRelatedEntityType(),
+            entity.getRelatedEntityId(),
             entity.isRead(),
             entity.getCreatedAt()
         );
