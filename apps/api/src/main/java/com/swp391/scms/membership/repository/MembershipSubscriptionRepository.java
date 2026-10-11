@@ -13,18 +13,44 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
     List<MembershipSubscription> findByMemberUserId(Long memberId);
 
-    List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
-
     Optional<MembershipSubscription> findByQrCode(String qrCode);
 
+    List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
+
     List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
+
+    <<<<<<<
+
+    Updated upstream<<<<<<<
+    Updated upstream<<<<<<<
+    Updated upstream
+
+    List<MembershipSubscription> findByMemberUserIdOrderByIdDesc(Long memberId);
+
+    boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Long memberId, String status, LocalDate endDate, LocalDate startDate);==============>>>>>>>
+
+    Stashed changes
+
+    boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
+
+    boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Long memberId, String status, LocalDate startDate, LocalDate endDate);<<<<<<<
+
+    Updated upstream=======
+
+    List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);>>>>>>>
+
+    Stashed changes=======
 
     boolean existsByMemberUserIdAndStatus(Long memberId, String status);
 
     boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
 
     boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-            Long memberId, String status, LocalDate startDate, LocalDate endDate);
+            Long memberId, String status, LocalDate start, LocalDate end);
 
-    Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId, String status);
+    Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId, String status);>>>>>>>
+
+    Stashed changes
 }
