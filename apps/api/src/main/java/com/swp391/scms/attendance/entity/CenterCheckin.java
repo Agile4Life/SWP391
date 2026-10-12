@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table center_checkins (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_checkins_method", constraints = "method IN ('qr','manual')")
 @Table(name = "center_checkins", indexes = {@Index(name = "ix_checkins_member_time", columnList = "member_id, check_in_time")})
 public class CenterCheckin {
 

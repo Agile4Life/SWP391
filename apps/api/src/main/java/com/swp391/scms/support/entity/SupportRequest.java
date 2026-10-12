@@ -8,6 +8,7 @@ import org.hibernate.Length;
 
 /** Entity mapping table support_requests (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_support_status", constraints = "status IN ('open','in_progress','resolved','closed')")
 @Table(name = "support_requests")
 public class SupportRequest {
 
@@ -37,6 +38,16 @@ public class SupportRequest {
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
+
+    public SupportRequest() {}
+
+    public SupportRequest(Member member, String subject, String description) {
+        this.member = member;
+        this.subject = subject;
+        this.description = description;
+        this.status = "open";
+        this.createdAt = LocalDateTime.now();
+    }
 
     public Long getId() { return id; }
     public Member getMember() { return member; }

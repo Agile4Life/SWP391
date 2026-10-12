@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table session_attendance (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_attendance_status", constraints = "status IN ('present','absent','late','excused')")
 @Table(name = "session_attendance", indexes = {@Index(name = "ix_attendance_member", columnList = "member_id")}, uniqueConstraints = {@UniqueConstraint(name = "uq_session_member", columnNames = {"session_id", "member_id"})})
 public class SessionAttendance {
 

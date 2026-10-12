@@ -2,6 +2,8 @@
 
 Monorepo khởi tạo cho SWP391, gồm React web portal và Spring Boot REST API.
 
+Database mục tiêu là **Supabase PostgreSQL** từ SCRUM-91, tạo schema bằng Hibernate Code-First. Xem [hướng dẫn Supabase](docs/SUPABASE_SETUP.md) để lấy kết nối JDBC, cấu hình SSL/RLS và chạy test DB thật. SQL Server giữ làm tùy chọn tương thích.
+
 ## Cấu trúc
 
 ```text
@@ -17,15 +19,15 @@ scripts/        bộ script tự động hóa khởi chạy local (run-local, st
 
 ### Cách 1: 1-Click (Khuyên dùng trên Windows)
 - Chạy `npm start` (hoặc bấm đúp vào [`scripts/run-local.bat`](scripts/run-local.bat) / chạy `.\scripts\run-local.ps1`).
-- Bộ chạy sẽ tự động kiểm tra môi trường, khởi tạo database `SportsCenterDB` nếu chưa có, và mở Web + API.
+- Bộ chạy kiểm tra môi trường và profile database, khởi chạy Web + API. PostgreSQL tạo bảng bằng Hibernate khi API chạy; chỉ profile SQL Server gọi initializer `SportsCenterDB`.
 - Để dừng hệ thống: chạy `npm run stop` (hoặc bấm đúp [`scripts/stop-local.bat`](scripts/stop-local.bat)).
 
 Chi tiết xem tại [docs/LOCAL_DEV_GUIDE.md](docs/LOCAL_DEV_GUIDE.md).
 
 ### Cách 2: Khởi động thủ công
-1. Cài Java 21+, Maven 3.9+, Node.js 20+ và SQL Server 2019+.
+1. Cài Java 21+, Maven 3.9+, Node.js 20+ và chuẩn bị kết nối PostgreSQL/Supabase.
 2. Sao chép `.env.example` thành `.env` (hoặc cấu hình lại thông số kết nối).
-3. Khởi tạo database: chạy `npm run db:init` hoặc thực thi [db/databaseschema.sql](db/databaseschema.sql).
+3. Điền kết nối theo [Supabase setup](docs/SUPABASE_SETUP.md). PostgreSQL không chạy file schema T-SQL; Hibernate tạo schema từ Entity. File [db/databaseschema.sql](db/databaseschema.sql) là schema tham chiếu SQL Server.
 4. Chạy API: `cd apps/api && .\mvnw.cmd spring-boot:run`.
 5. Chạy Web: `cd apps/web && npm install && npm run dev`.
 

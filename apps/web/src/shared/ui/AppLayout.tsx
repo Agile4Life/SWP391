@@ -20,9 +20,9 @@ const NAV_ITEMS: { to: string; label: string; roles: UserSession['role'][] }[] =
 
   // Huấn luyện viên
   { to: '/staff/attendance', label: 'Điểm danh học viên', roles: ['COACH'] },
-  { to: '/staff/classes', label: 'Lịch dạy & Lớp học', roles: ['COACH'] },
 
-  // Lễ tân / Thu ngân
+  // Nhân viên & Quản lý & HLV (Quản lý lớp học, Lễ tân, Check-in)
+  { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', roles: ['COACH', 'STAFF', 'MANAGER'] },
   { to: '/staff/reception', label: 'Quầy Lễ tân & POS', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/check-in', label: 'Cổng quét QR Check-in', roles: ['STAFF', 'MANAGER'] },
 

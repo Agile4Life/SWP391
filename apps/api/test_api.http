@@ -1,3 +1,5 @@
+@auth_token = paste_your_token_here_sau_khi_login
+
 ### 1. Lấy Token Đăng nhập
 POST http://localhost:8080/api/v1/auth/login
 Content-Type: application/json
@@ -7,17 +9,14 @@ Content-Type: application/json
   "password": "Admin@123456"
 }
 
-> {%
-    client.global.set("auth_token", response.body.token);
-%}
 
 ### 2. Xem Profile (US05-F03)
 GET http://localhost:8080/api/v1/profile
-Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtZW1iZXIxIiwidXNlcklkIjoyLCJyb2xlIjoiTWVtYmVyIiwiaWF0IjoxNzkwNTU4OTI3LCJleHAiOjE3OTA2NDUzMjd9.gcappcdsHGrwKS8sQHexxKkqHJhlh0XAmw5E1bx3jJjMRk5T6STJezIxAvZY1h_39Ve09O6TubB4148LVzghBA
+Authorization: Bearer {{auth_token}}
 
 ### 3. Cập nhật Profile (US05-F03)
 PUT http://localhost:8080/api/v1/profile
-Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtZW1iZXIxIiwidXNlcklkIjoyLCJyb2xlIjoiTWVtYmVyIiwiaWF0IjoxNzkwNTU4OTI3LCJleHAiOjE3OTA2NDUzMjd9.gcappcdsHGrwKS8sQHexxKkqHJhlh0XAmw5E1bx3jJjMRk5T6STJezIxAvZY1h_39Ve09O6TubB4148LVzghBA
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 {
@@ -33,7 +32,7 @@ Content-Type: application/json
 
 ### 4. Thêm dữ liệu sức khỏe (US05-F04)
 POST http://localhost:8080/api/v1/members/2/health-metrics
-Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtZW1iZXIxIiwidXNlcklkIjoyLCJyb2xlIjoiTWVtYmVyIiwiaWF0IjoxNzkwNTU4OTI3LCJleHAiOjE3OTA2NDUzMjd9.gcappcdsHGrwKS8sQHexxKkqHJhlh0XAmw5E1bx3jJjMRk5T6STJezIxAvZY1h_39Ve09O6TubB4148LVzghBA
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 {
@@ -44,7 +43,7 @@ Content-Type: application/json
 
 ### 5. Thử Lỗi Validation (US05-F04)
 POST http://localhost:8080/api/v1/members/2/health-metrics
-Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtZW1iZXIxIiwidXNlcklkIjoyLCJyb2xlIjoiTWVtYmVyIiwiaWF0IjoxNzkwNTU4OTI3LCJleHAiOjE3OTA2NDUzMjd9.gcappcdsHGrwKS8sQHexxKkqHJhlh0XAmw5E1bx3jJjMRk5T6STJezIxAvZY1h_39Ve09O6TubB4148LVzghBA
+Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 {
@@ -55,15 +54,15 @@ Content-Type: application/json
 
 ### 6. Xem Lịch sử Sức Khỏe
 GET http://localhost:8080/api/v1/members/2/health-metrics
-Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtZW1iZXIxIiwidXNlcklkIjoyLCJyb2xlIjoiTWVtYmVyIiwiaWF0IjoxNzkwNTU4OTI3LCJleHAiOjE3OTA2NDUzMjd9.gcappcdsHGrwKS8sQHexxKkqHJhlh0XAmw5E1bx3jJjMRk5T6STJezIxAvZY1h_39Ve09O6TubB4148LVzghBA
+Authorization: Bearer {{auth_token}}
 
 ### 7. Thử Quyền Truy Cập Sai (Forbidden)
 GET http://localhost:8080/api/v1/members/3/health-metrics
-Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtZW1iZXIxIiwidXNlcklkIjoyLCJyb2xlIjoiTWVtYmVyIiwiaWF0IjoxNzkwNTU4OTI3LCJleHAiOjE3OTA2NDUzMjd9.gcappcdsHGrwKS8sQHexxKkqHJhlh0XAmw5E1bx3jJjMRk5T6STJezIxAvZY1h_39Ve09O6TubB4148LVzghBA
+Authorization: Bearer {{auth_token}}
 
-### =========================================
-### TICKET [US04-F02] & [US04-F04] - QUẢN LÝ USER & ROLE (MANAGER)
-### =========================================
+# =========================================
+# TICKET [US04-F02] & [US04-F04] - QUẢN LÝ USER & ROLE (MANAGER)
+# =========================================
 
 ### 8. Lấy danh sách Roles
 GET http://localhost:8080/api/v1/roles
@@ -103,9 +102,9 @@ PATCH http://localhost:8080/api/v1/users/3/unlock
 ### 15. Xóa mềm (Soft-delete) User 3
 DELETE http://localhost:8080/api/v1/users/3
 
-### =========================================
-### TICKET [PHONG - MỤC 3 & 4] - THANH TOÁN & HÓA ĐƠN (MODULE F)
-### =========================================
+# =========================================
+# TICKET [PHONG - MỤC 3 & 4] - THANH TOÁN & HÓA ĐƠN (MODULE F)
+# =========================================
 
 ### 16. Tạo Giao dịch Thanh toán mới
 POST http://localhost:8080/api/v1/payments
@@ -171,4 +170,67 @@ Authorization: Bearer {{auth_token}}
 
 {
   "shift": "Morning Shift (06:00 - 14:00)"
+}
+
+
+
+### 23. Lấy danh sách thông báo có phân trang
+GET http://localhost:8080/api/v1/notifications?page=0&size=20
+Authorization: Bearer {{auth_token}}
+
+### 24. Đếm số thông báo chưa đọc
+GET http://localhost:8080/api/v1/notifications/unread-count
+Authorization: Bearer {{auth_token}}
+
+### 25. Đánh dấu đã đọc một thông báo (Giả sử ID thông báo = 1)
+PATCH http://localhost:8080/api/v1/notifications/1/read
+Authorization: Bearer {{auth_token}}
+
+### 26. Đánh dấu toàn bộ thông báo là đã đọc
+PATCH http://localhost:8080/api/v1/notifications/read-all
+Authorization: Bearer {{auth_token}}
+
+# =========================================
+# TICKET [SCRUM-68] - SUPPORT REQUESTS
+# =========================================
+
+### 27. Hội viên (Member ID = 2) tạo yêu cầu hỗ trợ mới
+POST http://localhost:8080/api/v1/support/requests
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "subject": "Không thể đăng ký lịch tập Yoga",
+  "description": "App báo lỗi quá tải khi tôi cố gắng đăng ký lịch tập lớp Yoga sáng thứ 7."
+}
+
+### 28. Hội viên xem lịch sử yêu cầu của chính mình
+GET http://localhost:8080/api/v1/support/requests/my
+Authorization: Bearer {{auth_token}}
+
+### 29. Lễ tân/Quản lý xem danh sách tất cả yêu cầu hỗ trợ (có phân trang)
+GET http://localhost:8080/api/v1/support/requests?page=0&size=20
+Authorization: Bearer {{auth_token}}
+
+### 30. Lễ tân/Quản lý xem yêu cầu hỗ trợ đang trạng thái "open"
+GET http://localhost:8080/api/v1/support/requests?status=open
+Authorization: Bearer {{auth_token}}
+
+### 31. Lễ tân/Quản lý cập nhật trạng thái yêu cầu sang "in_progress" và gán người phụ trách (VD assignedTo = 3)
+PATCH http://localhost:8080/api/v1/support/requests/1/status
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "assignedTo": 3
+}
+
+### 32. Lễ tân/Quản lý cập nhật trạng thái yêu cầu sang "resolved" (Sẽ tự động cập nhật resolvedAt)
+PATCH http://localhost:8080/api/v1/support/requests/1/status
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "status": "resolved"
 }

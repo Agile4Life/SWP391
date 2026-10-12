@@ -16,6 +16,23 @@ Write-Host "==========================================================" -Foregro
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $rootDir = Split-Path -Parent $scriptDir
+. (Join-Path $scriptDir "database-config.ps1")
+# Respect process environment first; read only provider settings from .env.
+$configuredProfiles = $env:SPRING_PROFILES_ACTIVE
+$configuredUrl = $env:SPRING_DATASOURCE_URL
+$configFile = Join-Path $rootDir '.env'
+if (Test-Path $configFile) {
+    foreach ($configLine in Get-Content $configFile) {
+        if ($configLine -match '^\s*SPRING_PROFILES_ACTIVE\s*=(.*)$') { $configuredProfiles = $Matches[1].Trim() }
+        if ($configLine -match '^\s*SPRING_DATASOURCE_URL\s*=(.*)$') { $configuredUrl = $Matches[1].Trim() }
+    }
+}
+$databaseConfig = Resolve-ScmsDatabaseConfig -Profiles $configuredProfiles -JdbcUrl $configuredUrl
+if ($databaseConfig.Provider -ne 'sqlserver') {
+    if ($Force) { throw 'Force database reset is only supported by the legacy SQL Server initializer.' }
+    Write-Host '[INFO] PostgreSQL: start the API to generate the schema through Hibernate. No T-SQL executed.' -ForegroundColor Cyan
+    exit 0
+}
 $sqlFile = Join-Path $rootDir "db\databaseschema.sql"
 if (-not (Test-Path $sqlFile)) {
     $sqlFile = Join-Path $scriptDir "databaseschema.sql"

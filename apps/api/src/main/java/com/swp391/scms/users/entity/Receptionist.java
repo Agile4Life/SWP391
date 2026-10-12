@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
+@org.hibernate.annotations.Check(name = "ck_receptionists_status", constraints = "employment_status IN ('active','on_leave','terminated')")
 @Table(name = "receptionists")
 public class Receptionist {
 

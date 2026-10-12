@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
  * Entity mapping table dbo.payments (Module F: Thanh toán & Báo cáo).
  */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_payments_method", constraints = "method IN ('cash','pos','bank_transfer','online_wallet')")
+@org.hibernate.annotations.Check(name = "ck_payments_status", constraints = "status IN ('success','pending','failed','refunded')")
 @Table(name = "payments", indexes = {
         @Index(name = "ix_payments_member_status", columnList = "member_id, status"),
         @Index(name = "ix_payments_paid_at", columnList = "paid_at")

@@ -71,7 +71,7 @@ public class ProfileService {
     @Transactional
     public void updateCoachProfile(Long currentUserId, String currentUserRole, CoachProfileUpdateDto request) {
         if (!"COACH".equals(currentUserRole)) {
-            throw new ForbiddenException("Chỉ HLV mới được phép cập nhật hồ sơ chuyên môn", "users.forbidden.not_coach");
+            throw new ForbiddenException("FORBIDDEN", "users.forbidden.not_coach", null, null);
         }
         
         User user = findActiveUser(currentUserId);
@@ -90,7 +90,7 @@ public class ProfileService {
     @Transactional
     public void updateReceptionistProfile(Long currentUserId, String currentUserRole, ReceptionistProfileUpdateDto request) {
         if (!"RECEPTIONIST".equals(currentUserRole)) {
-            throw new ForbiddenException("Vai trò không hợp lệ", "users.forbidden.invalid_role");
+            throw new ForbiddenException("FORBIDDEN", "users.forbidden.invalid_role", null, null);
         }
         
         User user = findActiveUser(currentUserId);

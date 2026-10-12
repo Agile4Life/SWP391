@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table membership_subscriptions (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_subscriptions_status", constraints = "status IN ('pending_payment','active','expired','cancelled')")
 @Table(name = "membership_subscriptions", indexes = {@Index(name = "ix_subscriptions_member_status", columnList = "member_id, status"), @Index(name = "ix_subscriptions_end_date", columnList = "end_date")})
 public class MembershipSubscription {
 

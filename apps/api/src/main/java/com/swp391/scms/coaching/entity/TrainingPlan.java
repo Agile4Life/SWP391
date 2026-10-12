@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table training_plans (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_plans_status", constraints = "status IN ('draft','active','completed','cancelled')")
 @Table(name = "training_plans")
 public class TrainingPlan {
 

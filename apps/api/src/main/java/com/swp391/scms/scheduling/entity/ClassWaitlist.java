@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table class_waitlists (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_waitlist_status", constraints = "status IN ('waiting','notified','expired')")
 @Table(name = "class_waitlists")
 public class ClassWaitlist {
 
