@@ -134,6 +134,196 @@ components:
           format: date-time
           nullable: true
 
+    # --- Scheduling Schemas (SCRUM-72, 73, 74) ---
+    CreateClassRequest:
+      type: object
+      required:
+        - name
+        - disciplineId
+        - coachId
+        - roomId
+        - capacity
+      properties:
+        name:
+          type: string
+          maxLength: 150
+        disciplineId:
+          type: integer
+          format: int64
+        coachId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        capacity:
+          type: integer
+          minimum: 1
+        level:
+          type: string
+          enum: [beginner, intermediate, advanced, all]
+          default: all
+        description:
+          type: string
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - sessionDate
+        - startTime
+        - endTime
+      properties:
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+
+    GymClassDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        disciplineId:
+          type: integer
+          format: int64
+        disciplineName:
+          type: string
+        coachId:
+          type: integer
+          format: int64
+        coachName:
+          type: string
+        roomId:
+          type: integer
+          format: int64
+        roomName:
+          type: string
+        capacity:
+          type: integer
+        level:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
+
+    ClassSessionDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        gymClassId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        disciplineId:
+          type: integer
+          format: int64
+        disciplineName:
+          type: string
+        coachId:
+          type: integer
+          format: int64
+        coachName:
+          type: string
+        roomId:
+          type: integer
+          format: int64
+        roomName:
+          type: string
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+        status:
+          type: string
+        cancellationReason:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        bookedCount:
+          type: integer
+          format: int64
+
+    ClassEnrollmentDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        gymClassId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        memberId:
+          type: integer
+          format: int64
+        sessionId:
+          type: integer
+          format: int64
+          nullable: true
+        sessionDate:
+          type: string
+          format: date
+          nullable: true
+        startTime:
+          type: string
+          format: time
+          nullable: true
+        endTime:
+          type: string
+          format: time
+          nullable: true
+        status:
+          type: string
+        enrolledAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancelReason:
+          type: string
+          nullable: true
+
+    ClassWaitlistDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        gymClassId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        memberId:
+          type: integer
+          format: int64
+        status:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+
 security:
   - bearerAuth: []
 
@@ -354,3 +544,268 @@ paths:
           description: Quyền truy cập bị từ chối (FORBIDDEN)
         '404':
           description: Phiếu hỗ trợ không tồn tại
+
+  # ==========================================
+  # Classes & Scheduling Endpoints (SCRUM-72, 73, 74)
+  # ==========================================
+  /classes:
+    post:
+      summary: Tạo lớp học mới (CENTER_MANAGER)
+      tags: [Classes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassRequest'
+      responses:
+        '201':
+          description: Tạo lớp học thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/GymClassDto'
+        '400':
+          description: Dữ liệu không hợp lệ
+        '403':
+          description: Quyền truy cập bị từ chối
+    get:
+      summary: Danh sách lớp học
+      tags: [Classes]
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GymClassDto'
+
+  /classes/{id}/sessions:
+    post:
+      summary: Xếp lịch buổi học (CENTER_MANAGER)
+      tags: [Classes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Tạo lịch học thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSessionDto'
+        '400':
+          description: Lỗi thời gian hoặc dữ liệu không hợp lệ
+        '403':
+          description: Quyền truy cập bị từ chối
+        '409':
+          description: Trùng lịch phòng hoặc huấn luyện viên (Trigger P3)
+
+  /classes/sessions:
+    get:
+      summary: Tra cứu lịch học theo bộ lọc
+      tags: [Classes]
+      parameters:
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: disciplineId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: coachId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClassSessionDto'
+
+  /classes/sessions/{id}/enroll:
+    post:
+      summary: Đăng ký tham gia buổi học (MEMBER)
+      tags: [Enrollments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassEnrollmentDto'
+        '400':
+          description: Buổi học không hợp lệ hoặc đã qua
+        '403':
+          description: Gói tập chưa kích hoạt hoặc đã hết hạn (Trigger P4)
+        '409':
+          description: Lớp đã đầy chỗ (Trigger P2) hoặc đã đăng ký trước đó
+
+  /classes/enrollments/{id}:
+    delete:
+      summary: Hủy đăng ký buổi học (MEMBER hoặc Staff/Manager)
+      tags: [Enrollments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Hủy thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassEnrollmentDto'
+        '400':
+          description: Không ở trạng thái booked
+        '403':
+          description: Không có quyền hủy đăng ký của người khác
+
+  /classes/enrollments/my:
+    get:
+      summary: Danh sách đăng ký lớp học của hội viên hiện tại (MEMBER)
+      tags: [Enrollments]
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClassEnrollmentDto'
+
+  /classes/sessions/{id}/waitlist:
+    post:
+      summary: Tham gia danh sách chờ khi lớp đã đầy chỗ (MEMBER)
+      tags: [Waitlist]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: Đăng ký danh sách chờ thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassWaitlistDto'
+        '400':
+          description: Lớp còn chỗ hoặc đã đăng ký/chờ trước đó
+        '403':
+          description: Gói tập không hợp lệ (Trigger P4)
+
+  /classes/waitlists/{id}:
+    delete:
+      summary: Rút khỏi danh sách chờ (MEMBER)
+      tags: [Waitlist]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Rút khỏi danh sách chờ thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassWaitlistDto'
+        '400':
+          description: Không ở trạng thái waiting
+        '403':
+          description: Không phải người tạo yêu cầu
+
+  /classes/waitlists/my:
+    get:
+      summary: Danh sách chờ của hội viên hiện tại (MEMBER)
+      tags: [Waitlist]
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClassWaitlistDto'

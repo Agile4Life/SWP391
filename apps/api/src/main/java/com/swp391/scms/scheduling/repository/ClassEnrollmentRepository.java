@@ -17,4 +17,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     Optional<ClassEnrollment> findByGymClassIdAndMemberUserId(Long classId, Long memberId);
 
     long countByGymClassIdAndStatus(Long classId, String status);
+
+    /** SCRUM-73 BR-03: a member may only hold one active booking per class. */
+    Optional<ClassEnrollment> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 }
