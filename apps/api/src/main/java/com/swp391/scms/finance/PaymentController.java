@@ -7,11 +7,13 @@ import com.swp391.scms.finance.dto.PaymentProcessDto;
 import com.swp391.scms.finance.dto.PaymentStatusUpdateRequest;
 import com.swp391.scms.finance.service.PaymentService;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -52,6 +54,13 @@ public class PaymentController {
         PaymentDto created = paymentService.createPayment(dto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("finance.payment.created"), created));
+    }
+
+    @Operation(summary = "Lịch sử thanh toán của hội viên hiện tại", description = "Lấy tất cả giao dịch thanh toán của chính hội viên đang đăng nhập")
+    @GetMapping("/my")
+    public ResponseEntity<ApiResponse<List<PaymentDto>>> getMyPayments(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        List<PaymentDto> payments = paymentService.getPaymentsByMemberId(principal.id());
+        return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.list"), payments));
     }
 
     @Operation(summary = "Xem chi tiết giao dịch thanh toán", description = "Tra cứu giao dịch theo Payment ID")
