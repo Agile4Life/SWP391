@@ -180,7 +180,6 @@ components:
         packageId:
           type: integer
           format: int64
-
     # --- Scheduling Schemas (SCRUM-72, 73, 74) ---
     CreateClassRequest:
       type: object
@@ -417,7 +416,6 @@ components:
           type: string
           nullable: true
           example: "Cổng chính A"
-
 security:
   - bearerAuth: []
 
@@ -969,7 +967,6 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/ClassWaitlistDto'
-
   # ==========================================
   # Center Check-in Endpoints (SCRUM-75)
   # ==========================================
