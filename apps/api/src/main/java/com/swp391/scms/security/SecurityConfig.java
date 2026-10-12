@@ -68,13 +68,11 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/**").authenticated()
 
-                    // Member Lookup & Facilities Catalog
+                    // Users, Roles, Member Lookup & Facilities Catalog
+                    .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/members/lookup").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**").hasRole("CENTER_MANAGER")
-
-                    // Users & Roles Management (from main)
-                    .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")
 
                     .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
