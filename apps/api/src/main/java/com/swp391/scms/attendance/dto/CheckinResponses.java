@@ -14,6 +14,12 @@ public final class CheckinResponses {
             LocalDateTime checkOutTime,
             String method,
             String gate,
-            String status
-    ) {}
+            String status,
+            String denialReason
+    ) {
+        public CheckinDto(Long id, Long memberId, String memberName, LocalDateTime checkInTime,
+                          LocalDateTime checkOutTime, String method, String gate, String status) {
+            this(id, memberId, memberName, checkInTime, checkOutTime, method, gate, status, null);
+        }
+    }
 }

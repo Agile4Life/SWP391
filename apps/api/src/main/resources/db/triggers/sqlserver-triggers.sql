@@ -106,7 +106,8 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM inserted i
-        WHERE NOT EXISTS (
+        WHERE (i.status IS NULL OR i.status = 'GRANTED')
+        AND NOT EXISTS (
             SELECT 1
             FROM dbo.membership_subscriptions ms
             WHERE ms.member_id = i.member_id

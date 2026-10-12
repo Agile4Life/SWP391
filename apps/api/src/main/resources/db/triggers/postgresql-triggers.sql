@@ -135,7 +135,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NOT EXISTS (
+    IF (NEW.status IS NULL OR NEW.status = 'GRANTED') AND NOT EXISTS (
         SELECT 1
         FROM membership_subscriptions subscription
         WHERE subscription.member_id = NEW.member_id

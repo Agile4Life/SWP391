@@ -11,10 +11,22 @@ import java.util.Optional;
 @Repository
 public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Long> {
 
-    boolean existsByMemberUserIdAndCheckOutTimeIsNull(Long memberId);
+    boolean existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(Long memberId, String status);
 
-    Optional<CenterCheckin> findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(Long memberId);
+    default boolean existsByMemberUserIdAndCheckOutTimeIsNull(Long memberId) {
+        return existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(memberId, "GRANTED");
+    }
+
+    Optional<CenterCheckin> findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(
+            Long memberId, String status);
+
+    default Optional<CenterCheckin> findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(Long memberId) {
+        return findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(memberId, "GRANTED");
+    }
 
     List<CenterCheckin> findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(
             LocalDateTime start, LocalDateTime end);
+
+    List<CenterCheckin> findByMemberUserIdAndCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(
+            Long memberId, LocalDateTime start, LocalDateTime end);
 }

@@ -45,25 +45,30 @@ public class CenterCheckinController {
 
     @Operation(summary = "Scan a membership QR code at center gate (Staff only)")
     @PostMapping("/scan")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER','MANAGER','STAFF','RECEPTIONIST','ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<CheckinDto>> scan(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @Valid @RequestBody CheckinRequests.Scan request) {
+        CheckinDto dto = service.scan(principal, request);
+        String msgKey = "GRANTED".equalsIgnoreCase(dto.status())
+                ? "attendance.checkin.granted"
+                : "attendance.checkin.denied";
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(msg("attendance.checkin.granted"), service.scan(principal, request)));
+                .body(ApiResponse.created(msg(msgKey), dto));
     }
 
-    @Operation(summary = "Check out of the center")
+    @Operation(summary = "Check out of the center (Staff only)")
     @PostMapping("/{id}/checkout")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
     public ApiResponse<CheckinDto> checkout(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
         return ApiResponse.ok(msg("attendance.checkout.success"), service.checkout(principal, id));
     }
 
-    @Operation(summary = "Get today's center check-in history (Staff only)")
+    @Operation(summary = "Get today's center check-in history")
     @GetMapping("/history")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER','MANAGER','STAFF','RECEPTIONIST','ADMIN')")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'MEMBER', 'ADMIN')")
     public ApiResponse<List<CheckinDto>> history(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("attendance.history.success"), service.history(principal));

@@ -90,6 +90,23 @@ class CenterCheckinControllerTest {
     }
 
     @Test
+    void scan_returnsCreatedWhenDenied() throws Exception {
+        CheckinRequests.Scan request = new CheckinRequests.Scan("QR-INVALID", "Cổng chính A");
+        CheckinDto dto = new CheckinDto(
+                2L, null, null, LocalDateTime.now(), null, "qr", "Cổng chính A", "DENIED", "Mã QR không tồn tại"
+        );
+        when(service.scan(any(), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/check-in/scan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").value(2L))
+                .andExpect(jsonPath("$.data.status").value("DENIED"))
+                .andExpect(jsonPath("$.data.denialReason").value("Mã QR không tồn tại"));
+    }
+
+    @Test
     void scan_validationFailsWhenQrBlank() throws Exception {
         CheckinRequests.Scan request = new CheckinRequests.Scan("", "Cổng chính A");
 

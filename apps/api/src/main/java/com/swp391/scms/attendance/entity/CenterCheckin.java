@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 /** Entity mapping table center_checkins (schema is generated code-first by Hibernate). */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_checkins_method", constraints = "method IN ('qr','manual')")
+@org.hibernate.annotations.Check(name = "ck_checkins_status", constraints = "status IN ('GRANTED','DENIED')")
 @Table(name = "center_checkins", indexes = {@Index(name = "ix_checkins_member_time", columnList = "member_id, check_in_time")})
 public class CenterCheckin {
 
@@ -16,7 +17,7 @@ public class CenterCheckin {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
+    @JoinColumn(name = "member_id", nullable = true)
     private Member member;
 
     @Column(name = "check_in_time", nullable = false)
@@ -35,6 +36,12 @@ public class CenterCheckin {
     @Column(name = "gate", length = 50)
     private String gate;
 
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "varchar(20) default 'GRANTED'")
+    private String status = "GRANTED";
+
+    @Column(name = "denial_reason", length = 255)
+    private String denialReason;
+
     public Long getId() { return id; }
     public Member getMember() { return member; }
     public void setMember(Member member) { this.member = member; }
@@ -48,4 +55,10 @@ public class CenterCheckin {
     public void setRecordedBy(User recordedBy) { this.recordedBy = recordedBy; }
     public String getGate() { return gate; }
     public void setGate(String gate) { this.gate = gate; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getResult() { return status; }
+    public void setResult(String result) { this.status = result; }
+    public String getDenialReason() { return denialReason; }
+    public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
 }
