@@ -21,14 +21,12 @@ import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
 
 // Manager Feature Pages
 import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
-import { UserManagerPage } from '../features/manager/UserManagerPage'; // <-- Màn hình US04 RBAC
+import { UserManagerPage } from '../features/manager/UserManagerPage';
 import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
 
 export const router = createBrowserRouter([
-  // Public Quiet Luxury Single-Page Landing Experience
+  // Public Routes
   { path: '/', element: <LandingPage /> },
-
-  // Public Auth Route
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
 
@@ -38,47 +36,114 @@ export const router = createBrowserRouter([
     children: [
       { path: '/portal', element: <PortalHome /> },
 
-      // Group Member Routes (US01, US03, US04, US05)
+      // Member-only Routes
       {
         element: <RoleGuard allowedRoles={['MEMBER']} />,
-        children: [{ path: '/member/packages', element: <MemberPackagesPage /> }],
-      },
-      {
-        element: <RoleGuard allowedRoles={['MEMBER', 'MANAGER', 'CENTER_MANAGER']} />,
         children: [
-          { path: '/member/dashboard', element: <MemberDashboardPage /> },
-          { path: '/member/classes', element: <MemberClassesPage /> },
-          { path: '/member/card', element: <MemberCardPage /> },
+          {
+            path: '/member/dashboard',
+            element: <MemberDashboardPage />,
+          },
+          {
+            path: '/member/packages',
+            element: <MemberPackagesPage />,
+          },
         ],
       },
 
-      // Hồ sơ cá nhân: mọi vai trò đã đăng nhập (SCRUM-55)
+      // Shared Member Feature Routes
       {
-        element: <RoleGuard allowedRoles={['MEMBER', 'STAFF', 'COACH', 'MANAGER']} />,
-        children: [{ path: '/member/profile', element: <MemberProfilePage /> }],
-      },
-
-      // Group Staff / Coach Routes (US02, US04, US05)
-      {
-        element: <RoleGuard allowedRoles={['STAFF', 'COACH', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
+        element: (
+          <RoleGuard
+            allowedRoles={['MEMBER', 'MANAGER', 'CENTER_MANAGER']}
+          />
+        ),
         children: [
-          { path: '/staff/reception', element: <StaffReceptionPage /> },
-          { path: '/staff/check-in', element: <StaffCheckInPage /> },
-          { path: '/staff/classes', element: <StaffClassesPage /> },
-          { path: '/staff/attendance', element: <CoachAttendancePage /> },
+          {
+            path: '/member/classes',
+            element: <MemberClassesPage />,
+          },
+          {
+            path: '/member/card',
+            element: <MemberCardPage />,
+          },
         ],
       },
 
-      // Group Manager Routes (US06, US07, US08 & US04 RBAC)
+      // Hồ sơ cá nhân
       {
-        element: <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />,
+        element: (
+          <RoleGuard
+            allowedRoles={['MEMBER', 'STAFF', 'COACH', 'MANAGER']}
+          />
+        ),
         children: [
-          { path: '/manager/catalogs', element: <ManagerCatalogsPage /> },
-          { path: '/manager/users', element: <UserManagerPage /> }, // <-- Đã gắn màn hình quản lý tài khoản & phân quyền
-          { path: '/manager/reports', element: <ManagerReportsPage /> },
+          {
+            path: '/member/profile',
+            element: <MemberProfilePage />,
+          },
+        ],
+      },
+
+      // Staff / Coach Routes
+      {
+        element: (
+          <RoleGuard
+            allowedRoles={[
+              'STAFF',
+              'COACH',
+              'RECEPTIONIST',
+              'MANAGER',
+              'CENTER_MANAGER',
+            ]}
+          />
+        ),
+        children: [
+          {
+            path: '/staff/reception',
+            element: <StaffReceptionPage />,
+          },
+          {
+            path: '/staff/check-in',
+            element: <StaffCheckInPage />,
+          },
+          {
+            path: '/staff/classes',
+            element: <StaffClassesPage />,
+          },
+          {
+            path: '/staff/attendance',
+            element: <CoachAttendancePage />,
+          },
+        ],
+      },
+
+      // Manager Routes
+      {
+        element: (
+          <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />
+        ),
+        children: [
+          {
+            path: '/manager/catalogs',
+            element: <ManagerCatalogsPage />,
+          },
+          {
+            path: '/manager/users',
+            element: <UserManagerPage />,
+          },
+          {
+            path: '/manager/reports',
+            element: <ManagerReportsPage />,
+          },
         ],
       },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+
+  // Unknown route
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
+  },
 ]);
