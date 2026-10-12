@@ -5,9 +5,10 @@ import java.time.LocalDateTime;
 public record NotificationDto(
     Long id,
     String title,
-    String content,
+    String message,
     String type,
-    String referenceId,
+    String relatedEntityType,
+    Long relatedEntityId,
     boolean isRead,
     LocalDateTime createdAt
 ) {}

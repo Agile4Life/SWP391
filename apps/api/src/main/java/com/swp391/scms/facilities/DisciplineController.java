@@ -12,6 +12,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "Disciplines", description = "Discipline catalog. Read: any authenticated user; write: CENTER_MANAGER")
 @RestController
@@ -42,14 +43,17 @@ public class DisciplineController {
     }
 
     @Operation(summary = "Create discipline")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PostMapping
     public ResponseEntity<ApiResponse<DisciplineDto>> create(@Valid @RequestBody DisciplineRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg("catalog.created"), service.create(request)));
     }
 
     @Operation(summary = "Update discipline")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PutMapping("/{id}")
     public ApiResponse<DisciplineDto> update(@PathVariable Long id, @Valid @RequestBody DisciplineRequest request) {
         return ApiResponse.ok(msg("catalog.updated"), service.update(id, request));
     }
 }
+

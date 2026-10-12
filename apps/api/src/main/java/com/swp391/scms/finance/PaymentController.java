@@ -15,10 +15,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
 @Tag(name = "Payments & Invoices", description = "Quản lý giao dịch thu tiền, xuất hóa đơn điện tử và công nợ")
+@PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
 @RestController
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
@@ -95,3 +97,4 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.refunded"), refunded));
     }
 }
+

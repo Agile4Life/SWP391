@@ -11,8 +11,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "Payments & Invoices", description = "Quản lý giao dịch thu tiền, xuất hóa đơn điện tử và công nợ")
+@PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
 @RestController
 @RequestMapping("/api/v1/invoices")
 public class InvoiceController {
@@ -71,3 +73,4 @@ public class InvoiceController {
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.invoice.detail"), invoice));
     }
 }
+

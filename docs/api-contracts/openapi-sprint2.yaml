@@ -3,13 +3,23 @@ info:
   title: SCMS API - Sprint 2 Contract
   version: 1.0.0
   description: >
-    Endpoint contract for Sprint 2 (Membership Subscriptions, Scheduling, Enrollments, Waitlists, Center QR Check-in).
+    API contracts for Sprint 2 features:
+    - Module I1: In-App Notification Module (SCRUM-67)
+    - Module I2: Support Requests / Tickets Module (SCRUM-68)
+    - Module E: Membership Subscriptions (SCRUM-71)
+    - Module C: Class Scheduling & Sessions (SCRUM-72)
+    - Module C: Class Enrollments & Booking (SCRUM-73)
+    - Module C: Smart Waitlist (SCRUM-74)
+    - Module D: Center QR Check-in & Gate Access (SCRUM-75)
     All responses use the ApiResponse envelope. Messages are localized via the Accept-Language header (default vi).
 servers:
   - url: /api/v1
 components:
   securitySchemes:
-    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     ApiResponse:
       type: object
@@ -32,6 +42,103 @@ components:
         details: { type: object, nullable: true }
         timestamp: { type: string, format: date-time }
 
+    # --- Notifications Schemas (SCRUM-67) ---
+    NotificationDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+          enum: [schedule_change, package_expiry, class_reminder, system, support_reply, payment]
+        relatedEntityType:
+          type: string
+          nullable: true
+        relatedEntityId:
+          type: integer
+          format: int64
+          nullable: true
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UnreadCountDto:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+
+    # --- Support Requests Schemas (SCRUM-68) ---
+    CreateSupportRequestDto:
+      type: object
+      required:
+        - subject
+      properties:
+        subject:
+          type: string
+          maxLength: 150
+          example: "Kẹt tủ đồ phòng thay đồ nam"
+        description:
+          type: string
+          nullable: true
+          example: "Tủ số 12 bị kẹt ổ khóa không mở được"
+
+    UpdateSupportRequestStatusDto:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+          example: "in_progress"
+        assignedTo:
+          type: integer
+          format: int64
+          nullable: true
+          example: 2
+
+    SupportRequestDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        memberId:
+          type: integer
+          format: int64
+        memberName:
+          type: string
+        assignedTo:
+          type: integer
+          format: int64
+          nullable: true
+        assignedToName:
+          type: string
+          nullable: true
+        subject:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    # --- Membership Subscriptions Schemas (SCRUM-71) ---
     SubscriptionDto:
       type: object
       properties:
@@ -86,6 +193,7 @@ components:
             $ref: '#/components/schemas/SubscriptionDto'
         timestamp: { type: string, format: date-time }
 
+    # --- Scheduling Schemas (SCRUM-72) ---
     GymClassDto:
       type: object
       properties:
@@ -161,6 +269,7 @@ components:
             $ref: '#/components/schemas/ClassSessionDto'
         timestamp: { type: string, format: date-time }
 
+    # --- Class Enrollments Schemas (SCRUM-73) ---
     EnrollmentDto:
       type: object
       properties:
@@ -198,6 +307,7 @@ components:
             $ref: '#/components/schemas/EnrollmentDto'
         timestamp: { type: string, format: date-time }
 
+    # --- Waitlist Schemas (SCRUM-74) ---
     WaitlistDto:
       type: object
       properties:
@@ -229,6 +339,7 @@ components:
             $ref: '#/components/schemas/WaitlistDto'
         timestamp: { type: string, format: date-time }
 
+    # --- Center Check-in Schemas (SCRUM-75) ---
     CheckinDto:
       type: object
       properties:
@@ -273,8 +384,228 @@ components:
 
 security:
   - bearerAuth: []
+
 paths:
+  # ==========================================
+  # Notifications Endpoints (SCRUM-67)
+  # ==========================================
+  /notifications:
+    get:
+      summary: Lấy danh sách thông báo của người dùng hiện tại (phân trang)
+      tags: [Notifications]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/NotificationDto'
+        '401':
+          description: Chưa xác thực (UNAUTHORIZED)
+
+  /notifications/unread-count:
+    get:
+      summary: Đếm số lượng thông báo chưa đọc
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UnreadCountDto'
+        '401':
+          description: Chưa xác thực
+
+  /notifications/{id}/read:
+    patch:
+      summary: Đánh dấu một thông báo là đã đọc
+      tags: [Notifications]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Thành công
+        '404':
+          description: Không tìm thấy thông báo
+
+  /notifications/read-all:
+    patch:
+      summary: Đánh dấu tất cả thông báo của người dùng là đã đọc
+      tags: [Notifications]
+      responses:
+        '200':
+          description: Thành công
+
+  # ==========================================
+  # Support Requests Endpoints (SCRUM-68)
+  # ==========================================
+  /support/requests:
+    post:
+      summary: Tạo phiếu yêu cầu hỗ trợ / khiếu nại mới (Chỉ MEMBER)
+      tags: [Support]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupportRequestDto'
+      responses:
+        '200':
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SupportRequestDto'
+        '400':
+          description: Dữ liệu không hợp lệ (VALIDATION_ERROR)
+        '403':
+          description: Quyền truy cập bị từ chối (FORBIDDEN)
+
+    get:
+      summary: Xem toàn bộ danh sách phiếu yêu cầu hỗ trợ (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Support]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/SupportRequestDto'
+        '403':
+          description: Quyền truy cập bị từ chối (FORBIDDEN)
+
+  /support/requests/my:
+    get:
+      summary: Lấy lịch sử yêu cầu hỗ trợ của chính hội viên đang đăng nhập (Chỉ MEMBER)
+      tags: [Support]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/SupportRequestDto'
+        '403':
+          description: Quyền truy cập bị từ chối (FORBIDDEN)
+
+  /support/requests/{id}/status:
+    patch:
+      summary: Cập nhật trạng thái phiếu hỗ trợ và người phụ trách (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSupportRequestStatusDto'
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SupportRequestDto'
+        '400':
+          description: Lỗi state machine chuyển trạng thái hoặc validation (INVALID_STATE_TRANSITION)
+        '403':
+          description: Quyền truy cập bị từ chối (FORBIDDEN)
+        '404':
+          description: Phiếu hỗ trợ không tồn tại
+
+  # ==========================================
   # SCRUM-71: Membership Subscriptions
+  # ==========================================
   /memberships/subscriptions:
     post:
       summary: Create a subscription pending payment (SCRUM-71)
@@ -342,7 +673,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SubscriptionListResponse' }
 
+  # ==========================================
   # SCRUM-72: Classes & Sessions
+  # ==========================================
   /classes:
     post:
       summary: Create gym class (CENTER_MANAGER) (SCRUM-72)
@@ -406,7 +739,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ClassSessionListResponse' }
 
+  # ==========================================
   # SCRUM-73: Class Enrollments
+  # ==========================================
   /classes/sessions/{id}/enroll:
     post:
       summary: Book a seat in a session with trigger P2 & P4 check (MEMBER) (SCRUM-73)
@@ -494,7 +829,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  # ==========================================
   # SCRUM-74: Class Waitlists
+  # ==========================================
   /classes/sessions/{id}/waitlist:
     post:
       summary: Join waitlist when class is full (MEMBER) (SCRUM-74)
@@ -553,7 +890,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/WaitlistListResponse' }
 
+  # ==========================================
   # SCRUM-75: Center QR Check-in
+  # ==========================================
   /check-in/scan:
     post:
       summary: Scan QR code at entrance with trigger P4 check (Staff only) (SCRUM-75)

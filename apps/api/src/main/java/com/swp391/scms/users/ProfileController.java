@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "Profile", description = "Hồ sơ cá nhân của người dùng")
 @RestController
@@ -47,6 +48,7 @@ public class ProfileController {
 
     @Operation(summary = "Cập nhật hồ sơ Coach", description = "Dành riêng cho HLV cập nhật chuyên môn")
     @PutMapping("/coach")
+    @PreAuthorize("hasRole('COACH')")
     public ApiResponse<Void> updateCoachProfile(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                                 @Valid @RequestBody com.swp391.scms.users.dto.CoachProfileUpdateDto request) {
         profileService.updateCoachProfile(principal.id(), principal.role(), request);
@@ -55,9 +57,11 @@ public class ProfileController {
 
     @Operation(summary = "Cập nhật hồ sơ Lễ tân", description = "Dành cho Lễ tân tự cập nhật ca làm việc của mình. Quản lý dùng endpoint ở UserController.")
     @PutMapping("/receptionist")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<Void> updateReceptionistProfile(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                                        @Valid @RequestBody com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
         profileService.updateReceptionistProfile(principal.id(), principal.role(), request);
         return ApiResponse.ok(msg("users.profile.receptionist.update.success"), null);
     }
 }
+

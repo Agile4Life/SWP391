@@ -13,6 +13,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "Membership Packages", description = "Package catalog. Read: any authenticated user; write: CENTER_MANAGER")
 @RestController
@@ -43,20 +44,24 @@ public class PackageController {
     }
 
     @Operation(summary = "Create membership package")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PostMapping
     public ResponseEntity<ApiResponse<PackageDto>> create(@Valid @RequestBody PackageRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg("catalog.created"), service.create(request)));
     }
 
     @Operation(summary = "Update membership package")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PutMapping("/{id}")
     public ApiResponse<PackageDto> update(@PathVariable Long id, @Valid @RequestBody PackageRequest request) {
         return ApiResponse.ok(msg("catalog.updated"), service.update(id, request));
     }
 
     @Operation(summary = "Activate or deactivate a membership package")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PatchMapping("/{id}/status")
     public ApiResponse<PackageDto> updateStatus(@PathVariable Long id, @Valid @RequestBody PackageStatusRequest request) {
         return ApiResponse.ok(msg("catalog.updated"), service.updateStatus(id, request.status()));
     }
 }
+
