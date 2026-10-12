@@ -12,6 +12,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "Rooms", description = "Room catalog. Read: any authenticated user; write: CENTER_MANAGER")
 @RestController
@@ -42,14 +43,17 @@ public class RoomController {
     }
 
     @Operation(summary = "Create room")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PostMapping
     public ResponseEntity<ApiResponse<RoomDto>> create(@Valid @RequestBody RoomRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg("catalog.created"), service.create(request)));
     }
 
     @Operation(summary = "Update room, including available/maintenance/closed status")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     @PutMapping("/{id}")
     public ApiResponse<RoomDto> update(@PathVariable Long id, @Valid @RequestBody RoomRequest request) {
         return ApiResponse.ok(msg("catalog.updated"), service.update(id, request));
     }
 }
+

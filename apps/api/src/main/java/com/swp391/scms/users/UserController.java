@@ -11,10 +11,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
 @Tag(name = "Users & RBAC", description = "Quản trị người dùng, trạng thái khóa/mở khóa và phân quyền vai trò")
+@PreAuthorize("hasRole('CENTER_MANAGER')")
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -89,3 +91,4 @@ public class UserController {
         return ApiResponse.ok(msg("users.profile.receptionist.update.success"), null);
     }
 }
+

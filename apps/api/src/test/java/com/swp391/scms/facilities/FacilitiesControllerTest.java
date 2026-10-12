@@ -96,4 +96,12 @@ class FacilitiesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("inactive"));
     }
+    @Test
+    @org.junit.jupiter.api.DisplayName("PUT /api/v1/packages/{id} returns 403 when not allowed")
+    void receptionistCannotEditPackage() throws Exception {
+        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("Access is denied")).when(packages).update(eq(1L), any());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/packages/1").contentType(org.springframework.http.MediaType.APPLICATION_JSON).content("{\"name\":\"Test\",\"price\":100,\"durationDays\":30,\"status\":\"active\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
 }

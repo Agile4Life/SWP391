@@ -189,3 +189,48 @@ Authorization: Bearer {{auth_token}}
 ### 26. Đánh dấu toàn bộ thông báo là đã đọc
 PATCH http://localhost:8080/api/v1/notifications/read-all
 Authorization: Bearer {{auth_token}}
+
+# =========================================
+# TICKET [SCRUM-68] - SUPPORT REQUESTS
+# =========================================
+
+### 27. Hội viên (Member ID = 2) tạo yêu cầu hỗ trợ mới
+POST http://localhost:8080/api/v1/support/requests
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "subject": "Không thể đăng ký lịch tập Yoga",
+  "description": "App báo lỗi quá tải khi tôi cố gắng đăng ký lịch tập lớp Yoga sáng thứ 7."
+}
+
+### 28. Hội viên xem lịch sử yêu cầu của chính mình
+GET http://localhost:8080/api/v1/support/requests/my
+Authorization: Bearer {{auth_token}}
+
+### 29. Lễ tân/Quản lý xem danh sách tất cả yêu cầu hỗ trợ (có phân trang)
+GET http://localhost:8080/api/v1/support/requests?page=0&size=20
+Authorization: Bearer {{auth_token}}
+
+### 30. Lễ tân/Quản lý xem yêu cầu hỗ trợ đang trạng thái "open"
+GET http://localhost:8080/api/v1/support/requests?status=open
+Authorization: Bearer {{auth_token}}
+
+### 31. Lễ tân/Quản lý cập nhật trạng thái yêu cầu sang "in_progress" và gán người phụ trách (VD assignedTo = 3)
+PATCH http://localhost:8080/api/v1/support/requests/1/status
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "assignedTo": 3
+}
+
+### 32. Lễ tân/Quản lý cập nhật trạng thái yêu cầu sang "resolved" (Sẽ tự động cập nhật resolvedAt)
+PATCH http://localhost:8080/api/v1/support/requests/1/status
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "status": "resolved"
+}

@@ -1,0 +1,145 @@
+package com.swp391.scms.security;
+
+import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.facilities.PackageController;
+import com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest;
+import com.swp391.scms.facilities.service.PackageService;
+import com.swp391.scms.support.SupportRequestController;
+import com.swp391.scms.support.SupportRequestService;
+import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
+import com.swp391.scms.users.UserController;
+import com.swp391.scms.users.UserService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+
+/**
+ * Integration test proving that Spring Security's @EnableMethodSecurity is active
+ * and @PreAuthorize annotations genuinely enforce RBAC policies on controllers.
+ */
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes = {
+        MethodSecurityPolicyTest.MethodSecurityConfig.class
+})
+class MethodSecurityPolicyTest {
+
+    @Configuration
+    @EnableMethodSecurity
+    static class MethodSecurityConfig {
+        @Bean
+        public UserService userService() {
+            return mock(UserService.class);
+        }
+
+        @Bean
+        public PackageService packageService() {
+            return mock(PackageService.class);
+        }
+
+        @Bean
+        public SupportRequestService supportRequestService() {
+            return mock(SupportRequestService.class);
+        }
+
+        @Bean
+        public MessageService messageService() {
+            return mock(MessageService.class);
+        }
+
+        @Bean
+        public UserController userController(UserService userService) {
+            return new UserController(userService);
+        }
+
+        @Bean
+        public PackageController packageController(PackageService packageService, MessageService messageService) {
+            return new PackageController(packageService, messageService);
+        }
+
+        @Bean
+        public SupportRequestController supportRequestController(SupportRequestService service, MessageService messageService) {
+            return new SupportRequestController(service, messageService);
+        }
+    }
+
+    @Autowired
+    private UserController userController;
+
+    @Autowired
+    private PackageController packageController;
+
+    @Autowired
+    private SupportRequestController supportRequestController;
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("AC SCRUM-69: Receptionist không thể xóa người dùng -> Spring Security ném AccessDeniedException")
+    void receptionistCannotDeleteUser() {
+        assertThrows(AccessDeniedException.class, () -> userController.deleteUser(4L));
+    }
+
+    @Test
+    @WithMockUser(roles = "CENTER_MANAGER")
+    @DisplayName("AC SCRUM-69: Center Manager có quyền xóa người dùng -> Không bị chặn")
+    void centerManagerCanDeleteUser() {
+        assertDoesNotThrow(() -> userController.deleteUser(4L));
+    }
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("AC SCRUM-69: Receptionist không thể sửa bảng giá gói tập -> Spring Security ném AccessDeniedException")
+    void receptionistCannotUpdatePackage() {
+        PackageRequest request = new PackageRequest("Gold", "Desc", java.math.BigDecimal.valueOf(500000), 30, 10, "active");
+        assertThrows(AccessDeniedException.class, () -> packageController.update(1L, request));
+    }
+
+    @Test
+    @WithMockUser(roles = "CENTER_MANAGER")
+    @DisplayName("AC SCRUM-69: Center Manager có quyền sửa gói tập -> Không bị chặn")
+    void centerManagerCanUpdatePackage() {
+        PackageRequest request = new PackageRequest("Gold", "Desc", java.math.BigDecimal.valueOf(500000), 30, 10, "active");
+        assertDoesNotThrow(() -> packageController.update(1L, request));
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    @DisplayName("AC SCRUM-69: Member không thể xem toàn bộ yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
+    void memberCannotViewAllSupportRequests() {
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.getAllRequests(null, null));
+    }
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("AC SCRUM-69: Receptionist có quyền xem và xử lý yêu cầu hỗ trợ -> Không bị chặn")
+    void receptionistCanViewAllSupportRequests() {
+        assertDoesNotThrow(() -> supportRequestController.getAllRequests(null, null));
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    @DisplayName("AC SCRUM-69: Member không thể cập nhật trạng thái yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
+    void memberCannotUpdateSupportRequestStatus() {
+        UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
+        assertThrows(AccessDeniedException.class, () -> supportRequestController.updateStatus(1L, updateDto));
+    }
+
+    @Test
+    @WithMockUser(roles = "CENTER_MANAGER")
+    @DisplayName("AC SCRUM-69: Center Manager có quyền cập nhật trạng thái yêu cầu hỗ trợ -> Không bị chặn")
+    void centerManagerCanUpdateSupportRequestStatus() {
+        UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
+        assertDoesNotThrow(() -> supportRequestController.updateStatus(1L, updateDto));
+    }
+}
