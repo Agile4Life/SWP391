@@ -150,8 +150,8 @@ public class WaitlistService {
 
     private void ensureActiveMembership(Long memberId) {
         boolean hasActive = subscriptions
-                .existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock), LocalDate.now(clock));
+                .existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
+                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock));
         if (!hasActive) {
             throw new ForbiddenException(
                     "SCHEDULING_MEMBERSHIP_INVALID",

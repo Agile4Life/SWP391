@@ -61,5 +61,6 @@ public class NotificationController {
         notificationService.markAllAsRead(principal.id());
         return ApiResponse.ok(msg("notifications.mark_all_read.success"), null);
     }
+
 }
 

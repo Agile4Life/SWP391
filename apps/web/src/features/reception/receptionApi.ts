@@ -68,7 +68,14 @@ export const receptionApi = {
     } catch {
       // Fallback tìm kiếm trong /users nếu endpoint lookup chưa khớp schema
       try {
-        const users = await apiFetch<any[]>('/users');
+        const users = await apiFetch<Array<{
+          id: number;
+          roleCode: string;
+          fullName: string;
+          email: string;
+          phone: string | null;
+          status: string;
+        }>>('/users');
         return users
           .filter(
             (u) =>
@@ -128,7 +135,7 @@ export const receptionApi = {
         }
       }
       return res;
-    } catch (err) {
+    } catch {
       // Nếu backend endpoint /payments gặp sự cố hoặc 404, fallback mô phỏng giao dịch thành công có kiểm soát
       const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const fallbackId = Date.now();

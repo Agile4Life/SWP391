@@ -126,7 +126,8 @@ public class EnrollmentService {
                 msg("notifications.booking.enrolled.title"),
                 msg("notifications.booking.enrolled.body", gymClass.getName(), session.getSessionDate().toString()),
                 "system",
-                String.valueOf(saved.getId()));
+                "class_enrollment",
+                saved.getId());
 
         return toDto(saved, session);
     }
@@ -169,7 +170,8 @@ public class EnrollmentService {
                 msg("notifications.booking.cancelled.title"),
                 msg("notifications.booking.cancelled.body"),
                 "system",
-                String.valueOf(saved.getId()));
+                "class_enrollment",
+                saved.getId());
 
         return toDto(saved, null);
     }
@@ -207,8 +209,8 @@ public class EnrollmentService {
      */
     private void ensureActiveMembership(Long memberId) {
         boolean hasActive = subscriptions
-                .existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock), LocalDate.now(clock));
+                .existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
+                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock));
         if (!hasActive) {
             throw new ForbiddenException(
                     "SCHEDULING_MEMBERSHIP_INVALID",

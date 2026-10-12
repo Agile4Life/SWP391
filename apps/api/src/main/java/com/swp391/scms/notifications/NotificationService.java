@@ -52,12 +52,11 @@ public class NotificationService {
     }
 
     @Transactional
-    public void send(Long userId, String title, String content, String type, String referenceId) {
+    public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
         
-        Notification notification = new Notification(user, title, content, type, referenceId);
+        Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);
         notificationRepository.save(notification);
     }
 }
-

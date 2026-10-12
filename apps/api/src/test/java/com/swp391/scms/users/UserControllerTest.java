@@ -144,7 +144,16 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
-
         verify(userService).updateReceptionistShift(eq(5L), any());
+    }
+
+
+    @Test
+    @DisplayName("DELETE /api/v1/users/{id} returns 403 when not allowed")
+    void receptionistCannotDeleteUser() throws Exception {
+        org.mockito.Mockito.doThrow(new org.springframework.security.access.AccessDeniedException("Access is denied")).when(userService).deleteUser(4L);
+        mockMvc.perform(delete("/api/v1/users/4"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 }
