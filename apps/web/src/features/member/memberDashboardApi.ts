@@ -1,23 +1,24 @@
 import { apiFetch } from '../../shared/api/client';
 
-// Contract frontend chờ backend SCRUM-71: GET /api/v1/memberships/subscriptions/my.
-// Trả null khi member không có gói active.
 export interface MemberSubscription {
+  id: number;
+  memberId: number;
+  packageId: number;
   packageName: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
-  durationDays: number;
+  previousSubscriptionId: number | null;
+  startDate: string;
+  endDate: string;
   status: string;
+  qrCode: string | null;
+  createdAt: string;
 }
 
-// Contract frontend chờ backend scheduling: GET /api/v1/enrollments/my.
-// `to` là ngày kết thúc loại trừ; backend chỉ trả enrollment của principal.
 export interface BookedClass {
   id: number;
   className: string;
-  sessionDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm[:ss]
-  endTime: string; // HH:mm[:ss]
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
   roomName: string;
   status: string;
 }
@@ -34,6 +35,13 @@ export const getCurrentMembership = () =>
 
 export const getUpcomingBookings = () => {
   const today = new Date();
-  const until = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
-  return apiFetch<BookedClass[]>(`/enrollments/my?from=${dateParam(today)}&to=${dateParam(until)}`);
+  const until = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 7,
+  );
+
+  return apiFetch<BookedClass[]>(
+    `/enrollments/my?from=${dateParam(today)}&to=${dateParam(until)}`,
+  );
 };
