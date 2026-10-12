@@ -7,6 +7,7 @@ import org.hibernate.Length;
 
 /** Entity mapping table training_plan_items (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_plan_items_day", constraints = "day_of_week BETWEEN 1 AND 7")
 @Table(name = "training_plan_items")
 public class TrainingPlanItem {
 

@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table membership_packages (Module B: Master Facilities). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_packages_status", constraints = "status IN ('active','inactive')")
 @Table(name = "membership_packages")
 public class MembershipPackage {
 

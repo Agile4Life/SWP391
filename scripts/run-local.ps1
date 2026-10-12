@@ -2,7 +2,7 @@
 .SYNOPSIS
     SCMS - Bo chay local du an (Sports Center Management System)
 .DESCRIPTION
-    Tu dong kiem tra moi truong (Node, Java, SQL Server), khoi tao DB neu thieu,
+    Tu dong kiem tra moi truong (Node, Java, database profile),
     va khoi chay dong thoi Spring Boot API (8080) va React Web (5173).
 .PARAMETER Only
     Chi chay mot thanh phan: 'all', 'web', 'api', 'db'
@@ -39,6 +39,7 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $rootDir = Split-Path -Parent $scriptDir
 $apiDir = Join-Path $rootDir "apps\api"
 $webDir = Join-Path $rootDir "apps\web"
+. (Join-Path $scriptDir "database-config.ps1")
 
 # 1. Kiem tra file .env
 $envFile = Join-Path $rootDir ".env"
@@ -66,19 +67,26 @@ if (Test-Path $envFile) {
     }
 }
 
-# A temporary signing key keeps local development usable without storing a secret in the repository.
-if (($Only -in @("all", "api")) -and [string]::IsNullOrWhiteSpace($env:APP_JWT_SECRET)) {
+# Select the database before invoking any vendor-specific initialization.
+if ($Only -in @("all", "api", "db")) {
+    $databaseConfig = Resolve-ScmsDatabaseConfig -Profiles $env:SPRING_PROFILES_ACTIVE -JdbcUrl $env:SPRING_DATASOURCE_URL
+    $env:SPRING_PROFILES_ACTIVE = $databaseConfig.Profiles
+    foreach ($requiredName in @('SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD')) {
+        if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($requiredName))) {
+            throw "Set $requiredName in .env before starting the database/API."
+        }
+    }
+    if ($databaseConfig.IsSupabase -and [string]::IsNullOrWhiteSpace($env:APP_JWT_SECRET)) {
+        throw 'Set APP_JWT_SECRET in .env for Supabase; the local fallback is disabled.'
+    }
+}
+# A temporary signing key is only for local development.
+if (($Only -in @("all", "api")) -and -not $databaseConfig.IsSupabase -and [string]::IsNullOrWhiteSpace($env:APP_JWT_SECRET)) {
     $localJwtSecretBytes = [byte[]]::new(32)
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($localJwtSecretBytes)
+    $localJwtRng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $localJwtRng.GetBytes($localJwtSecretBytes) } finally { $localJwtRng.Dispose() }
     $env:APP_JWT_SECRET = [Convert]::ToBase64String($localJwtSecretBytes)
     Write-Host "[INFO] Generated an in-memory JWT secret for this local run." -ForegroundColor DarkGray
-}
-if ($Only -in @("all", "api")) {
-    if ([string]::IsNullOrWhiteSpace($env:SPRING_PROFILES_ACTIVE)) {
-        $env:SPRING_PROFILES_ACTIVE = "sqlserver,local"
-    } elseif ($env:SPRING_PROFILES_ACTIVE -notmatch '(^|,)local(,|$)') {
-        $env:SPRING_PROFILES_ACTIVE += ",local"
-    }
 }
 # 2. Pre-flight check: Node.js & npm
 if ($Only -in @("all", "web")) {
@@ -123,7 +131,7 @@ if ($Only -in @("all", "api")) {
 }
 
 # 4. Pre-flight check: SQL Server & Khoi tao DB
-if (-not $SkipDbCheck -and ($Only -in @("all", "api", "db"))) {
+if (-not $SkipDbCheck -and ($Only -in @("all", "api", "db")) -and $databaseConfig.Provider -eq 'sqlserver') {
     Write-Host "-> Dang kiem tra ket noi SQL Server..." -ForegroundColor Yellow
     $initScript = Join-Path $scriptDir "init-db.ps1"
     if (Test-Path $initScript) {
@@ -134,6 +142,11 @@ if (-not $SkipDbCheck -and ($Only -in @("all", "api", "db"))) {
             if ($Only -eq "db") { exit 1 }
         }
     }
+}
+
+if (($Only -in @("all", "api", "db")) -and $databaseConfig.Provider -eq 'postgresql') {
+    Write-Host '[INFO] PostgreSQL selected: Hibernate creates tables and installs triggers when API starts.' -ForegroundColor Cyan
+    Write-Host '[INFO] SQL Server initialization is skipped.' -ForegroundColor DarkGray
 }
 
 if ($Only -eq "db") {
@@ -168,23 +181,23 @@ if ($Only -in @("all", "api")) {
     }
 
     $apiProcessCmd = "cd /d `"$apiDir`" && title SCMS API (Spring Boot 8080) && $mvnExecutable spring-boot:run"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $apiProcessCmd
-    Write-Host "  [+] Da mo cua so chay API!" -ForegroundColor Green
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $apiProcessCmd -WindowStyle Hidden -RedirectStandardOutput (Join-Path $rootDir 'api.log') -RedirectStandardError (Join-Path $rootDir 'api-error.log')
+    Write-Host "  [+] API dang khoi dong nen; xem api.log / api-error.log." -ForegroundColor Green
 }
 
 # Khoi chay Frontend Web trong cua so moi
 if ($Only -in @("all", "web")) {
     Write-Host "-> Dang khoi chay Frontend Web (React + Vite) tren cong 5173..." -ForegroundColor Cyan
     $webProcessCmd = "cd /d `"$webDir`" && title SCMS Web (React Vite 5173) && npm run dev"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/k", $webProcessCmd
-    Write-Host "  [+] Da mo cua so chay Web!" -ForegroundColor Green
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $webProcessCmd -WindowStyle Hidden -RedirectStandardOutput (Join-Path $rootDir 'web.log') -RedirectStandardError (Join-Path $rootDir 'web-error.log')
+    Write-Host "  [+] Web dang khoi dong nen; xem web.log / web-error.log." -ForegroundColor Green
 }
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Green
 Write-Host "             HE THONG DANG KHOI CHAY HOAN TAT!                   " -ForegroundColor Green
 Write-Host "=================================================================" -ForegroundColor Green
-Write-Host "  Cac cua so Terminal rieng biet da duoc mo de giam sat log." -ForegroundColor White
+Write-Host "  Dich vu chay nen; xem api.log, api-error.log, web.log va web-error.log." -ForegroundColor White
 Write-Host "  De dung ca 2 server, chay: .\stop-local.bat hoac .\stop-local.ps1" -ForegroundColor Gray
 Write-Host "=================================================================" -ForegroundColor Green
 

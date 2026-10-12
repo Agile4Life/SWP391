@@ -90,7 +90,10 @@
 
 ---
 
-## 2. Bảng tổng hợp Jira Backlog Sprint 2 (46 Tickets / 93 Points)
+## 2. Bảng tổng hợp Jira Backlog Sprint 2 (104 Points theo cập nhật Jira)
+
+> **Cập nhật SCRUM-91 (08/10/2026):** Đã thêm ticket chuyển SQL Server sang Supabase PostgreSQL vào **SCRUM Sprint 2**, giao **Phong**, **5 Story Points**, **Priority High**, chưa đặt due date. Tổng sprint theo thông tin Jira được cung cấp là **104 điểm**, vượt **11 điểm** so với cam kết ban đầu **93 điểm**.
+> **Đối soát:** Bảng dưới hiện có **24 ticket / 98 điểm** (SCRUM-66 → 88 và SCRUM-91); còn **6 điểm chênh lệch** với tổng Jira chưa có chi tiết để cập nhật. Không suy đoán ticket hoặc phân bổ 6 điểm này cho thành viên.
 
 | Mã Jira | Loại | Tiêu đề Ticket (Summary) | Assignee | Points | Ưu tiên | Hạn hoàn thành |
 |---|:---:|---|:---:|:---:|:---:|:---:|
@@ -109,6 +112,7 @@
 | **SCRUM-78** | Story | [Finance] Xây dựng Quy trình Hoàn tiền & Hủy giao dịch (Refund Workflow) | Phong | 3 | High | 11/10/2026 |
 | **SCRUM-79** | Story | [Reporting] Xây dựng API Báo cáo Doanh thu Tài chính (Report Snapshots) | Phong | 5 | High | 14/10/2026 |
 | **SCRUM-80** | Task | [Architecture] Chuẩn bị Hạ tầng AI Client & Bộ Test Tích hợp Triggers P2/P3/P4 | Phong | 3 | Medium | 16/10/2026 |
+| **SCRUM-91** | Chưa cung cấp | [Database] Chuyển đổi Database từ SQL Server sang Supabase PostgreSQL | Phong | 5 | High | Chưa đặt |
 | **SCRUM-81** | Story | [UI Staff] Hoàn thiện Màn hình Quản lý Lớp học & Xếp lịch HLV (StaffClassesPage) | Khoa | 5 | Highest | 06/10/2026 |
 | **SCRUM-82** | Story | [UI Staff] Hoàn thiện Màn hình Lễ tân: Tra cứu & Thu ngân tại quầy (StaffReception) | Khoa | 5 | Highest | 10/10/2026 |
 | **SCRUM-83** | Story | [UI Staff] Hoàn thiện Màn hình Quét QR Check-in Sảnh (StaffCheckInPage) | Khoa | 5 | Highest | 13/10/2026 |
@@ -129,7 +133,8 @@
 - **Mô tả:** Cung cấp endpoint cập nhật thông tin hồ sơ chuyên biệt cho HLV (`coaches`) và Lễ tân (`receptionists`), đảm bảo phân tách theo mô hình Table-per-Type (TPT).
 - **Acceptance Criteria (AC):**
   - [ ] `PUT /api/v1/profile/coach`: HLV cập nhật được `specialization`, `bio`, `certification`.
-  - [ ] `PUT /api/v1/profile/receptionist`: Lễ tân/Quản lý cập nhật được ca làm việc `shift`.
+  - [ ] `PUT /api/v1/profile/receptionist`: Lễ tân tự cập nhật được ca làm việc `shift` của mình.
+    - [ ] `PUT /api/v1/users/{id}/receptionist`: Quản lý cập nhật được ca làm việc `shift` cho một Lễ tân bất kỳ.
   - [ ] Trả về `403 Forbidden` nếu người dùng không đúng vai trò hoặc cố sửa hồ sơ người khác.
   - [ ] Cập nhật đồng thời message keys i18n thông báo thành công và validation.
 - **Kỹ thuật:** Package `users`, Entity `Coach`, `Receptionist`, Service `ProfileService`.
@@ -226,7 +231,7 @@
 
 ---
 
-### 🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 17 Story Points
+### 🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 22 Story Points
 
 #### 📌 SCRUM-76: [Finance] Tích hợp Flow Thanh toán Mua gói tập & Ghi danh (Payment Integration)
 - **Issue Type:** Story | **Story Points:** 3 | **Priority:** Highest | **Thời gian:** 03/10 – 05/10/2026
@@ -271,6 +276,31 @@
 - **Acceptance Criteria (AC):**
   - [ ] Config AI Client sẵn sàng nhận API Key từ môi trường, có fallback mock adapter cho môi trường test.
   - [ ] Bộ integration tests kiểm chứng Trigger P2, P3, P4 hoạt động đồng nhất trên cả SQL Server và PostgreSQL (100% tests pass).
+- **Liên quan SCRUM-91:** Phong bố trí hai ticket gần nhau; bộ test PostgreSQL P2/P3/P4 của SCRUM-80 là bằng chứng nghiệm thu phần trigger của SCRUM-91.
+
+#### 📌 SCRUM-91: [Database] Chuyển đổi Database từ SQL Server sang Supabase PostgreSQL
+- **Issue Type:** Chưa được cung cấp | **Assignee:** Phong | **Sprint:** SCRUM Sprint 2 | **Story Points:** 5 | **Priority:** High | **Due date:** Chưa đặt.
+- **Mô tả:** Chuyển database của hệ thống từ SQL Server sang Supabase PostgreSQL, bảo toàn ràng buộc nghiệp vụ, thông điệp lỗi trigger và hoạt động của các API hiện có.
+- **Nguồn đặc tả:** Ticket Jira có **10 Business Rules và 6 Acceptance Criteria**. Nội dung dưới đây tóm tắt các điểm đã được cung cấp, không phải bản chép nguyên văn đầy đủ của ticket.
+- **Business Rules — các điểm chính:**
+  - Chuyển Computed Column `PERSISTED` thành `GENERATED ... STORED`.
+  - Chuyển Filtered Index thành Partial Index, giữ nguyên điều kiện và tính duy nhất.
+  - Viết lại trigger P2/P3/P4 bằng PL/pgSQL; giữ nguyên message lỗi để backend tiếp tục xử lý, không vô hiệu hóa trigger.
+  - Chuyển dữ liệu/ràng buộc JSON dùng `ISJSON` sang `jsonb`.
+  - Thông tin kết nối chỉ đọc từ biến môi trường; dùng SSL và connection pooler.
+  - Xem xét RLS để dữ liệu không bị lộ qua Supabase Data API.
+- **Acceptance Criteria — tổng hợp từ thông tin được cung cấp:**
+  - [x] Computed Column và Filtered Index được chuyển sang cú pháp PostgreSQL tương ứng, giữ nguyên hành vi nghiệp vụ.
+  - [x] Trigger P2/P3/P4 chạy bằng PL/pgSQL và giữ nguyên message lỗi mà backend đang xử lý.
+  - [x] Dữ liệu JSON dùng `jsonb` thay cho kiểm tra `ISJSON`.
+  - [x] Kết nối lấy cấu hình từ biến môi trường, dùng SSL và pooler; có kết quả rà soát RLS/quyền truy cập Data API.
+  - [x] Hibernate Code-First (`ddl-auto: update`) tạo schema thành công từ database PostgreSQL rỗng; trigger được cài qua `DatabaseTriggerProvider`.
+  - [x] Bộ test PostgreSQL P2/P3/P4 phục vụ SCRUM-80 pass và smoke test các API hiện có pass.
+- **Kiểm chứng codebase (08/10/2026):** Toàn bộ 183 backend tests pass, 0 failure/error/skip, gồm 12 integration tests chạy trên Supabase thật trong schema biệt lập. Kiểm tra capacity đồng thời, trùng lịch, subscription, partial index, generated column, JSON, CHECK, RLS và API JWT/payment/invoice đều pass. Khởi động profile `supabase` tạo 34 bảng trong `public`, bật RLS cho cả 34 bảng, cài 5 trigger; không có policy public. JDBC đến session pooler dùng TLS 1.3; schema test đã được dọn sạch. Đây là kết quả tại repository và Supabase; trạng thái/mô tả Jira chưa được cập nhật trực tiếp.
+- **Phối hợp:** Làm gần SCRUM-80 (cùng owner Phong); kiểm thử các luồng mua gói/thanh toán, booking và check-in cùng các owner API liên quan.
+- **Quyết định triển khai (08/10/2026):** Người dùng xác nhận **giữ Code-First**, thay tiêu chí Flyway bằng kiểm chứng Hibernate tạo schema PostgreSQL từ DB rỗng. Dữ liệu SQL Server hiện tại chỉ là demo, không cần chuyển sang Supabase. Bảng/cột/quan hệ vẫn định nghĩa qua Entity; trigger được nạp qua `DatabaseTriggerProvider`. Quyết định này cần được đồng bộ vào mô tả Jira khi cập nhật ticket.
+- **Đối chiếu và thiết kế:** [SCRUM-91 Supabase design](../specs/2026-10-08-scrum-91-supabase-design.md); [implementation plan](2026-10-08-scrum-91-implementation.md).
+- **Tải Sprint 2:** Phong có **22 điểm / 6 ticket** (SCRUM-76 → 80 và SCRUM-91). Có thể cân nhắc dời SCRUM-80 hoặc SCRUM-70 sang Sprint 3 khi nhóm chốt giảm tải; đây là đề xuất, chưa thay đổi sprint của các ticket. Nếu dời SCRUM-80, vẫn cần bảo đảm bộ test trigger PostgreSQL phục vụ nghiệm thu SCRUM-91.
 
 ---
 
@@ -642,10 +672,10 @@
 |---|---|:---:|:---:|:---:|:---:|:---:|
 | **🔵 Tài** | Identity, RBAC, Support, Notifications, Security | 9 tickets | 19 pts (5 tickets) | 19 pts (5 tickets) | **38 pts** | Cân bằng lý tưởng |
 | **🟢 An** | Catalogs, Subscriptions, Scheduling, Check-in, Attendance | 9 tickets | 23 pts (5 tickets) | 18 pts (5 tickets) | **41 pts** | Đã giảm tải Sprint 2 |
-| **🟠 Phong** | Architecture, Finance, Invoices, Triggers, AI Engine | 10 tickets | 17 pts (5 tickets) | 21 pts (5 tickets) | **38 pts** | Cân bằng lý tưởng |
+| **🟠 Phong** | Architecture, Finance, Invoices, Triggers, AI Engine | 10 tickets | 22 pts (6 tickets) | 21 pts (5 tickets) | **43 pts** | Tăng 5 điểm do SCRUM-91; cần rà soát tải |
 | **🟣 Khoa** | Frontend Staff & Admin Console (Classes, Reception, Reports) | 3 screens | 18 pts (4 tickets) | 16 pts (4 tickets) | **34 pts** | Cân bằng lý tưởng |
 | **🟡 Thịnh** | Frontend Member App (Dashboard, Packages, Classes, AI Chat) | 3 screens | 16 pts (4 tickets) | 17 pts (5 tickets) | **33 pts** | Cân bằng lý tưởng |
-| **TỔNG CỘNG** | **Toàn bộ hệ thống SCMS** | **31 tasks** | **93 pts (23 tickets)** | **91 pts (23 tickets)** | **184 pts** | **Khả thi 100%** |
+| **TỔNG CỘNG** | **Toàn bộ hệ thống SCMS** | **31 tasks** | **104 pts theo Jira; 98 pts / 24 tickets đã liệt kê** | **91 pts (23 tickets)** | **195 pts theo tổng Jira; 189 pts đã liệt kê** | **Sprint 2 vượt cam kết 11 điểm; cần đối soát 6 điểm** |
 
 ---
 
@@ -661,4 +691,6 @@
    - Khi bắt đầu làm ticket: Chuyển trạng thái từ `TO DO` sang `IN PROGRESS`.
    - Tạo branch git theo chuẩn: `git checkout -b <Mã_Jira>/<tên-ngắn-gọn>` (ví dụ: `SCRUM-71/membership-subscriptions`).
    - Kiểm tra `./mvnw test` và `npm test` trước khi tạo Pull Request và chuyển trạng thái sang `IN REVIEW`.
+
+
 

@@ -25,7 +25,7 @@ public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
     public void applyTriggers(JdbcTemplate jdbcTemplate) {
         ClassPathResource resource = new ClassPathResource("db/triggers/postgresql-triggers.sql");
         if (!resource.exists()) {
-            return;
+            throw new IllegalStateException("Mandatory PostgreSQL trigger script is missing");
         }
         try (InputStream is = resource.getInputStream()) {
             jdbcTemplate.execute(new String(is.readAllBytes(), StandardCharsets.UTF_8));
@@ -33,10 +33,7 @@ public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read PostgreSQL trigger script", e);
         } catch (DataAccessException e) {
-            if (!TriggerErrors.isMissingTable(e)) {
-                throw new IllegalStateException("Mandatory PostgreSQL trigger failed: " + e.getMessage(), e);
-            }
-            log.warn("Triggers skipped, a target table is not mapped yet: {}", e.getMessage());
+            throw new IllegalStateException("Cannot install mandatory PostgreSQL triggers", e);
         }
     }
 }

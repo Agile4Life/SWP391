@@ -7,10 +7,12 @@ import com.swp391.scms.users.dto.RoleDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
 @Tag(name = "Users & RBAC", description = "Quản lý vai trò và phân quyền ma trận RBAC")
+@PreAuthorize("hasRole('CENTER_MANAGER')")
 @RestController
 @RequestMapping("/api/v1/roles")
 public class RoleController {
@@ -63,3 +65,4 @@ public class RoleController {
         return ApiResponse.ok(msg("users.role.permissions.success"), roleService.getPermissionsByRoleId(id));
     }
 }
+

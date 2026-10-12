@@ -146,7 +146,7 @@ public class UserService {
     public void updateReceptionistShift(Long userId, com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
         User user = findActiveUser(userId);
         if (!"RECEPTIONIST".equalsIgnoreCase(user.getRole().getCode())) {
-            throw new com.swp391.scms.common.exception.BadRequestException("INVALID_ROLE", "Người dùng không phải là lễ tân");
+            throw new com.swp391.scms.common.exception.BadRequestException("INVALID_ROLE", "users.not_receptionist", null, null);
         }
         com.swp391.scms.users.entity.Receptionist receptionist = receptionistRepository.findById(userId).orElseGet(() -> {
             com.swp391.scms.users.entity.Receptionist newReceptionist = new com.swp391.scms.users.entity.Receptionist();

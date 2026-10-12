@@ -1,7 +1,6 @@
 package com.swp391.scms.config;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import jakarta.persistence.Entity;
 import java.io.IOException;
@@ -28,7 +27,7 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
  */
 class CodeFirstSchemaTest {
 
-    private static final Path SCHEMA = Path.of("..", "..", "databaseschema.sql");
+    private static final Path SCHEMA = Path.of("..", "..", "db", "databaseschema.sql");
 
     private static String generateDdl(String dialect) throws Exception {
         Path out = Files.createTempFile("ddl", ".sql");
@@ -71,7 +70,7 @@ class CodeFirstSchemaTest {
     @ParameterizedTest
     @ValueSource(strings = {"org.hibernate.dialect.SQLServerDialect", "org.hibernate.dialect.PostgreSQLDialect"})
     void entitiesGenerateEveryTableOfTheReferenceSchema(String dialect) throws Exception {
-        assumeTrue(Files.exists(SCHEMA), "databaseschema.sql not reachable from the test working dir");
+        assertTrue(Files.exists(SCHEMA), "db/databaseschema.sql must be reachable from the test working dir");
         String ddl = generateDdl(dialect);
         Set<String> tables = schemaTables();
         assertTrue(tables.size() >= 30, "reference schema should list its tables");
@@ -86,5 +85,29 @@ class CodeFirstSchemaTest {
         String ddl = generateDdl("org.hibernate.dialect.PostgreSQLDialect");
         assertTrue(ddl.contains("foreign key (subscription_id) references membership_subscriptions"));
         assertTrue(ddl.contains("foreign key (class_enrollment_id) references class_enrollments"));
+    }
+
+    @Test
+    void postgresGeneratesStoredComputedColumnsAndNativeJson() throws Exception {
+        String ddl = generateDdl("org.hibernate.dialect.PostgreSQLDialect");
+        assertTrue(ddl.contains("generated always as (subtotal_amount + tax_amount) stored"), ddl);
+        assertTrue(ddl.contains("generated always as (quantity * unit_price) stored"), ddl);
+        assertTrue(ddl.contains("data jsonb"), ddl);
+        assertTrue(ddl.contains("old_value jsonb"), ddl);
+        assertTrue(ddl.contains("recommended_content jsonb"), ddl);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"org.hibernate.dialect.SQLServerDialect", "org.hibernate.dialect.PostgreSQLDialect"})
+    void preservesReferenceCheckConstraintsExceptJsonWhichUsesNativeMapping(String dialect) throws Exception {
+        String ddl = generateDdl(dialect);
+        Matcher checks = Pattern.compile("CONSTRAINT\\s+(ck_\\w+)\\s+CHECK", Pattern.CASE_INSENSITIVE)
+                .matcher(Files.readString(SCHEMA, StandardCharsets.UTF_8));
+        while (checks.find()) {
+            String name = checks.group(1).toLowerCase(Locale.ROOT);
+            if (!name.endsWith("_json")) {
+                assertTrue(ddl.contains("constraint " + name + " check"), "Missing CHECK: " + name + " on " + dialect);
+            }
+        }
     }
 }

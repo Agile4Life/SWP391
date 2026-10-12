@@ -1,3 +1,5 @@
+> SCRUM-91: Database mục tiêu là Supabase PostgreSQL. Xem [SUPABASE_SETUP.md](SUPABASE_SETUP.md) để cấu hình session pooler, SSL/RLS và test DB thật. Hướng dẫn SQL Server dưới đây chỉ áp dụng với profile `sqlserver`.
+
 # Hướng Dẫn Chạy Local Dự Án SCMS (Sports Center Management System)
 
 Bộ công cụ này giúp bạn khởi động toàn bộ hệ thống gồm **SQL Server Database**, **Spring Boot REST API** và **React Vite Web Portal** chỉ với **1 cú click** hoặc 1 dòng lệnh.

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 /** Entity mapping table rooms (Module B: Master Facilities). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_rooms_status", constraints = "status IN ('available','maintenance','closed')")
 @Table(name = "rooms")
 public class Room {
 

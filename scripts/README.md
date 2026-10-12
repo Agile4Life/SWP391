@@ -2,6 +2,8 @@
 
 Thư mục này chứa các script tự động hóa khởi chạy, kiểm tra môi trường và quản lý tiến trình local cho dự án **Sports Center Management System (SCMS)**.
 
+SCRUM-91: Runner chọn database theo `SPRING_PROFILES_ACTIVE`/JDBC URL. Với Supabase PostgreSQL, cấu hình theo [SUPABASE_SETUP.md](../docs/SUPABASE_SETUP.md); không gọi initializer SQL Server. API/Web chạy nền, log tại `api.log`, `api-error.log`, `web.log`, `web-error.log` ở root. Script `init-db` chỉ chạy T-SQL khi chọn profile SQL Server; PostgreSQL sinh bảng khi API khởi động.
+
 ---
 
 ## Danh Mục Script

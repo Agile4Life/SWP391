@@ -27,12 +27,12 @@ class TriggerProvidersTest {
     }
 
     @Test
-    void postgresSkipsMissingTableButFailsOnOtherErrors() {
+    void postgresFailsStartupWhenMandatoryTablesOrTriggersAreMissing() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         PostgreSqlTriggerProvider provider = new PostgreSqlTriggerProvider();
 
         doThrow(grammar(new SQLException("missing", "42P01"))).when(jdbc).execute(anyString());
-        assertDoesNotThrow(() -> provider.applyTriggers(jdbc));
+        assertThrows(IllegalStateException.class, () -> provider.applyTriggers(jdbc));
 
         doThrow(grammar(new SQLException("syntax", "42601"))).when(jdbc).execute(anyString());
         assertThrows(IllegalStateException.class, () -> provider.applyTriggers(jdbc));

@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table class_enrollments (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_enrollments_status", constraints = "status IN ('booked','cancelled','completed')")
 @Table(name = "class_enrollments", indexes = {@Index(name = "ix_enrollments_member_status", columnList = "member_id, status"), @Index(name = "ix_enrollments_class_status", columnList = "class_id, status")})
 public class ClassEnrollment {
 

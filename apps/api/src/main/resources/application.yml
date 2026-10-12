@@ -3,7 +3,9 @@ server:
 
 spring:
   profiles:
-    default: sqlserver,local
+    default: postgresql,local
+    group:
+      supabase: postgresql
   application:
     name: scms-api
   messages:
@@ -18,8 +20,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        # Unicode (nvarchar) columns on SQL Server so Vietnamese text is stored correctly
-        use_nationalized_character_data: true
+        hbm2ddl.halt_on_error: true
   mail:
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:587}

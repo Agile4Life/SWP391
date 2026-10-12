@@ -37,9 +37,11 @@ export const TOKEN_STORAGE_KEY = 'fitcenter_token';
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -74,7 +76,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     clearAuthSession();
     window.location.assign('/login?expired=1');
   }
-  if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status);
+  if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
   return (body && 'data' in body ? body.data : body) as T;
 }
 

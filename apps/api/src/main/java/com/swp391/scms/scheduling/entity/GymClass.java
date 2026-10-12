@@ -10,6 +10,8 @@ import org.hibernate.Length;
 
 /** Entity mapping table classes (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_classes_level", constraints = "level IN ('beginner','intermediate','advanced','all')")
+@org.hibernate.annotations.Check(name = "ck_classes_status", constraints = "status IN ('active','inactive','archived')")
 @Table(name = "classes", indexes = {@Index(name = "ix_classes_coach", columnList = "coach_id")})
 public class GymClass {
 

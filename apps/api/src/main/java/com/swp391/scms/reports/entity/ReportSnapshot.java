@@ -9,6 +9,7 @@ import org.hibernate.type.SqlTypes;
 
 /** Entity mapping table report_snapshots (schema is generated code-first by Hibernate). */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_report_type", constraints = "report_type IN ('revenue','membership','class_utilization')")
 @Table(name = "report_snapshots")
 public class ReportSnapshot {
 

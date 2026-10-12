@@ -5,7 +5,7 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và h�
 ## Bối cảnh
 
 - Nguồn nghiệp vụ: `docs/PROJECT_MASTER_GUIDE.md`; schema nguồn chân lý: `db/databaseschema.sql`; backlog: `docs/plans/AGILE_SCRUM_JIRA_PLAN.md`.
-- Stack cố định: React + TypeScript ở `apps/web`, Java 21 + Spring Boot 3 ở `apps/api`, Microsoft SQL Server.
+- Stack cố định: React + TypeScript ở `apps/web`, Java 21 + Spring Boot 3 ở `apps/api`, Supabase PostgreSQL là database mục tiêu từ SCRUM-91; SQL Server giữ làm tùy chọn tương thích trong giai đoạn chuyển đổi.
 
 ## Cách làm một ticket
 

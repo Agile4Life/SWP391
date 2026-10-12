@@ -7,6 +7,8 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -19,6 +21,7 @@ import java.util.List;
  * schema generation has completed, dispatching polymorphically to providers.
  */
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class DatabaseTriggerInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseTriggerInitializer.class);
@@ -37,25 +40,21 @@ public class DatabaseTriggerInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        String dbProduct;
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
-            String dbProduct = metaData.getDatabaseProductName();
-            log.info("Detected database product: {}", dbProduct);
-
-            boolean providerFound = false;
-            for (DatabaseTriggerProvider provider : triggerProviders) {
-                if (provider.supports(dbProduct)) {
-                    provider.applyTriggers(jdbcTemplate);
-                    providerFound = true;
-                    break;
-                }
-            }
-
-            if (!providerFound) {
-                log.info("Database {} does not require vendor-specific invariant triggers.", dbProduct);
-            }
+            dbProduct = metaData.getDatabaseProductName();
         } catch (SQLException e) {
             throw new IllegalStateException("Cannot inspect database to install invariant triggers", e);
         }
+        log.info("Detected database product: {}", dbProduct);
+
+        for (DatabaseTriggerProvider provider : triggerProviders) {
+            if (provider.supports(dbProduct)) {
+                provider.applyTriggers(jdbcTemplate);
+                return;
+            }
+        }
+        log.info("Database {} does not require vendor-specific invariant triggers.", dbProduct);
     }
 }
