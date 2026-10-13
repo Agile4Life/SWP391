@@ -43,8 +43,12 @@ export const router = createBrowserRouter([
         children: [
           { path: '/member/dashboard', element: <MemberDashboardPage /> },
           { path: '/member/classes', element: <MemberClassesPage /> },
-          { path: '/member/card', element: <MemberCardPage /> },
         ],
+      },
+
+      {
+        element: <RoleGuard allowedRoles={['MEMBER']} />,
+        children: [{ path: '/member/card', element: <MemberCardPage /> }],
       },
 
       // Hồ sơ cá nhân: mọi vai trò đã đăng nhập (SCRUM-55)
