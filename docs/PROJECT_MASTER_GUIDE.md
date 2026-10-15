@@ -3,7 +3,7 @@
 > **Tài liệu hướng dẫn kỹ thuật toàn diện (Comprehensive Master Guide) dành cho AI Agent, Kỹ sư phần mềm & Nhóm phát triển.**  
 > **Môn học:** SWP391 - Đồ án Phát triển Phần mềm (Software Development Project) — FPT University  
 > **Repository:** `SWP391` (`PhongTCT/SWP391_GROUP1`)  
-> **Hệ quản trị CSDL chuẩn:** Microsoft SQL Server 2019+ (T-SQL)  
+> **Hệ quản trị CSDL chuẩn:** Supabase PostgreSQL (Hibernate Code-First)
 > **Phiên bản tài liệu:** 1.0.0 (Master Release)
 
 ---
@@ -101,7 +101,7 @@ SWP391/
 
 ## 3. THIẾT KẾ CƠ SỞ DỮ LIỆU CHUYÊN SÂU (DATABASE SCHEMA DEEP-DIVE)
 
-File [databaseschema.sql](file:///d:/SWP391_PROJECT/SWP391/databaseschema.sql) được thiết kế theo chuẩn **Microsoft SQL Server 2019+ (T-SQL)** với 33 bảng, chuẩn hóa từ **1NF đến 3NF**, xử lý hoàn toàn các bất thường về lưu trữ (anomalies).
+Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase PostgreSQL**, gồm 33 bảng tham chiếu, chuẩn hóa từ **1NF đến 3NF**, xử lý hoàn toàn các bất thường về lưu trữ (anomalies).
 
 ### 3.1. Tổng quan 10 Modules & 33 Bảng CSDL
 
@@ -202,7 +202,7 @@ File [databaseschema.sql](file:///d:/SWP391_PROJECT/SWP391/databaseschema.sql) �
 #### 2. Trigger kiểm tra sĩ số lớp học ([P2 — Class Capacity])
 - **`dbo.trg_enrollments_check_capacity`** kích hoạt `AFTER INSERT, UPDATE` trên `class_enrollments`:
   Đếm tổng số bản ghi có `status = 'booked'`. Nếu `COUNT(*) > classes.capacity`, trigger lập tức bắn lỗi:  
-  *`RAISERROR (N'Lớp học đã đầy chỗ (vượt quá capacity cho phép).', 16, 1); ROLLBACK TRANSACTION;`*
+  *PostgreSQL phát sinh SQLSTATE `23514`, constraint `trg_enrollments_check_capacity`; transaction bị rollback.*
 
 #### 3. Trigger chống trùng lịch Huấn luyện viên & Phòng học ([P3 — Schedule Conflict])
 - **`dbo.trg_sessions_check_conflict`** kích hoạt `AFTER INSERT, UPDATE` trên `class_sessions`:
@@ -512,7 +512,7 @@ Nhóm phát triển đã thiết lập bộ công cụ tự động hóa mạnh 
 Khi một AI Agent hoặc lập trình viên mới tiếp nhận dự án này để bắt đầu giai đoạn **Viết mã (Coding / Implementation Phase)**, hãy tuân thủ chặt chẽ các chỉ dẫn kiến trúc sau:
 
 ### 7.1. Kiến trúc Công nghệ Khuyến nghị (Recommended Tech Stack)
-- **Hệ quản trị CSDL:** Microsoft SQL Server 2019+ (Đã có sẵn file DDL chuẩn trong [databaseschema.sql](file:///d:/SWP391_PROJECT/SWP391/databaseschema.sql)).
+- **Hệ quản trị CSDL:** Supabase PostgreSQL; schema được đồng bộ từ JPA Entity bằng Hibernate.
 - **Backend Service:**
   - *Option 1 (Java Enterprise):* Java 17+ kết hợp **Spring Boot 3.x**, Spring Data JPA / Hibernate, Spring Security + JWT, Lombok, MapStruct.
   - *Option 2 (TypeScript Modern):* **NestJS** (hoặc Express TS), TypeORM / Prisma ORM, Passport JWT, Zod / Class-Validator.
@@ -579,9 +579,9 @@ MODULE                      METHOD   ENDPOINT                                  M
 > Mọi thay đổi về tên cột, enum giá trị hoặc ràng buộc trong `db/databaseschema.sql` phải được đồng bộ tương ứng sang `docs/diagrams/build_state_diagrams.js` và `docs/diagrams/build_clean_swimlane.js`. Sau đó bắt buộc phải chạy `node docs/diagrams/verify_diagrams.js` để đảm bảo không bị rách đồ thị.
 
 > [!IMPORTANT]
-> **2. Tôn trọng tầng bảo vệ Trigger của SQL Server:**
-> Khi viết mã Backend (Spring Boot / NestJS), lập trình viên phải bắt các lỗi SQL Exception từ database ném ra (ví dụ mã lỗi do `RAISERROR` của Trigger `trg_enrollments_check_capacity` khi lớp đầy chỗ, hoặc `trg_sessions_check_conflict` khi xếp trùng giờ giáo viên) và chuyển đổi thành mã lỗi HTTP thân thiện:
-> - `400 Bad Request` hoặc `409 Conflict` kèm thông báo lỗi tiếng Việt trực quan cho người dùng.
+> **2. Tôn trọng tầng bảo vệ Trigger của PostgreSQL:**
+> Khi viết mã Backend (Spring Boot), lập trình viên phải bắt các lỗi SQL Exception từ database ném ra (ví dụ mã SQLSTATE và constraint của Trigger `trg_enrollments_check_capacity` khi lớp đầy chỗ, hoặc `trg_sessions_check_conflict` khi xếp trùng giờ giáo viên) và chuyển đổi thành mã lỗi HTTP thân thiện:
+> - `409 Conflict` cho capacity/trùng lịch hoặc `403 Forbidden` cho membership, kèm message i18n theo request.
 
 > [!TIP]
 > **3. Xử lý Soft-Delete trên bảng `users`:**
@@ -596,7 +596,7 @@ MODULE                      METHOD   ENDPOINT                                  M
 ## 8. KẾT LUẬN & TRẠNG THÁI DỰ ÁN
 
 Dự án **Sports Center Management System (SWP391)** hiện tại đã hoàn thiện toàn bộ giai đoạn khảo sát, mô hình hóa dữ liệu và thiết kế kiến trúc quy trình:
-- **33/33 bảng CSDL** đã được kiểm chứng chuẩn hóa 3NF và sẵn sàng chạy DDL trên SQL Server.
+- **33/33 bảng CSDL** đã được kiểm chứng chuẩn hóa 3NF và được định nghĩa bằng Entity để Hibernate đồng bộ trên PostgreSQL.
 - **6/6 luồng nghiệp vụ Swimlane** đã được phân ranh giới phân vai rõ ràng, zero overlap và có sẵn file vẽ Draw.io phục vụ thuyết minh đồ án.
 - **12/12 sơ đồ máy trạng thái UML** đã được kết xuất thành ảnh minh họa và file vector trực quan.
 - **Hệ thống scripts tự động** giúp duy trì tính nhất quán tuyệt đối giữa mã nguồn và tài liệu.

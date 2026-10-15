@@ -18,7 +18,7 @@ import java.util.List;
 
 /**
  * Initializes invariant business database triggers after Hibernate Code-First
- * schema generation has completed, dispatching polymorphically to providers.
+ * schema generation has completed, selecting the PostgreSQL provider.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -55,6 +55,6 @@ public class DatabaseTriggerInitializer implements ApplicationRunner {
                 return;
             }
         }
-        log.info("Database {} does not require vendor-specific invariant triggers.", dbProduct);
+        throw new IllegalStateException("Unsupported database: " + dbProduct + "; PostgreSQL is required");
     }
 }

@@ -1,7 +1,8 @@
-# SQL Server local setup
+# Database Supabase PostgreSQL
 
-1. Start SQL Server with `docker compose --env-file .env up -d sqlserver`, or use a local SQL Server 2019+ instance.
-2. Open `databaseschema.sql` in Azure Data Studio/SSMS and execute it. The script creates `SportsCenterDB` when absent.
-3. Add non-production demo users through a future migration/seed script; never commit production information.
+Schema triển khai được định nghĩa bằng JPA Entity trong `apps/api`, đồng bộ bởi
+Hibernate `ddl-auto: update`. Trigger và index bắt buộc được cài bởi PostgreSQL provider.
 
-`databaseschema.sql` remains the SQL Server source schema. Existing SQL Server databases should apply forward scripts under `db/migrations/` (including username and OTP challenge migrations); do not rewrite an applied migration. PostgreSQL has no hand-written DDL: the schema is generated from the JPA entities (`ddl-auto: update`) and invariant triggers are installed by `DatabaseTriggerProvider`.
+Xem [Supabase setup](../docs/SUPABASE_SETUP.md) để cấu hình JDBC, TLS và kiểm thử database.
+Các file schema/migration cũ tại đây chỉ lưu lịch sử thiết kế và phục vụ kiểm tra cấu trúc;
+không dùng chúng để bootstrap hoặc nâng cấp môi trường hiện tại.
