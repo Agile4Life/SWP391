@@ -7,6 +7,7 @@ import com.swp391.scms.finance.dto.PaymentProcessDto;
 import com.swp391.scms.finance.dto.PaymentStatusUpdateRequest;
 import com.swp391.scms.finance.service.PaymentService;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -50,10 +52,21 @@ public class PaymentController {
 
     @Operation(summary = "Tạo mới giao dịch thanh toán", description = "Tạo phiếu thu tiền học phí, gói tập qua POS, Tiền mặt, Chuyển khoản")
     @PostMapping
-    public ResponseEntity<ApiResponse<PaymentDto>> createPayment(@Valid @RequestBody PaymentCreateDto dto) {
-        PaymentDto created = paymentService.createPayment(dto);
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    public ResponseEntity<ApiResponse<PaymentDto>> createPayment(@Valid @RequestBody PaymentCreateDto dto,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        PaymentDto created = paymentService.createPayment(principal, dto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("finance.payment.created"), created));
+    }
+
+    @Operation(summary = "Lịch sử thanh toán của hội viên đang đăng nhập")
+    @GetMapping("/my")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<ApiResponse<List<PaymentDto>>> getMyPayments(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.list"),
+                paymentService.getPaymentsByMemberId(principal.id())));
     }
 
     @Operation(summary = "Xem chi tiết giao dịch thanh toán", description = "Tra cứu giao dịch theo Payment ID")

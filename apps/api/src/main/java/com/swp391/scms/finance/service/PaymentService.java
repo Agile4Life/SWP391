@@ -3,6 +3,8 @@ package com.swp391.scms.finance.service;
 import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.common.exception.ForbiddenException;
+import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.finance.dto.PaymentCreateDto;
 import com.swp391.scms.finance.dto.PaymentDto;
 import com.swp391.scms.finance.dto.PaymentProcessDto;
@@ -68,6 +70,55 @@ public class PaymentService {
         this.classEnrollmentRepository = classEnrollmentRepository;
         this.paymentMapper = paymentMapper;
         this.clock = clock;
+    }
+
+    /** Member requests are pending only; staff retain the existing cashier workflow. */
+    public PaymentDto createPayment(AuthenticatedPrincipal principal, PaymentCreateDto dto) {
+        if (principal == null) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, null);
+        }
+        if ("MEMBER".equalsIgnoreCase(principal.role())) {
+            if (!principal.id().equals(dto.getMemberId())) {
+                throw new ForbiddenException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null, null);
+            }
+            if ((dto.getStatus() != null && !"pending".equalsIgnoreCase(dto.getStatus()))
+                    || dto.getPaidAt() != null || dto.getReceivedById() != null) {
+                throw new ForbiddenException("PAYMENT_MEMBER_PENDING_ONLY", "finance.payment.member_pending_only", null, null);
+            }
+            validateMemberPaymentTarget(principal.id(), dto);
+        } else if (!"CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                && !"RECEPTIONIST".equalsIgnoreCase(principal.role())) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, null);
+        }
+        return createPayment(dto);
+    }
+
+    private void validateMemberPaymentTarget(Long memberId, PaymentCreateDto dto) {
+        if (dto.getSubscriptionId() == null && dto.getClassEnrollmentId() == null) {
+            throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null, null);
+        }
+        if (dto.getSubscriptionId() != null) {
+            MembershipSubscription subscription = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", dto.getSubscriptionId()));
+            if (subscription.getMember() == null || !memberId.equals(subscription.getMember().getUserId())) {
+                throw new ForbiddenException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null, null);
+            }
+            if (!"pending_payment".equals(subscription.getStatus())) {
+                throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending", null, null);
+            }
+            BigDecimal expectedPrice = subscription.getMembershipPackage().getPrice();
+            if (dto.getAmount().compareTo(expectedPrice) != 0) {
+                throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                        new Object[]{dto.getAmount(), expectedPrice}, null);
+            }
+        }
+        if (dto.getClassEnrollmentId() != null) {
+            ClassEnrollment enrollment = classEnrollmentRepository.findById(dto.getClassEnrollmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", dto.getClassEnrollmentId()));
+            if (enrollment.getMember() == null || !memberId.equals(enrollment.getMember().getUserId())) {
+                throw new ForbiddenException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null, null);
+            }
+        }
     }
 
     public PaymentDto createPayment(PaymentCreateDto dto) {
