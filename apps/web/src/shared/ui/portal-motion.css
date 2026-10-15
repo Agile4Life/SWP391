@@ -1,0 +1,155 @@
+/* A masked light trail follows each frame without covering its content. */
+@property --portal-led-angle {
+  syntax: '<angle>';
+  initial-value: -40deg;
+  inherits: false;
+}
+
+.reference-portal :is(.overview-stat, .overview-panel, .portal-card, .metric-card) {
+  position: relative;
+  isolation: isolate;
+  transition: transform 240ms ease, border-color 240ms ease, box-shadow 280ms ease;
+}
+
+.reference-portal :is(.overview-stat, .overview-panel, .portal-card, .metric-card)::after {
+  content: '';
+  display: block;
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  width: auto;
+  height: auto;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--portal-led-angle),
+    transparent 0deg 24deg, var(--portal-led-soft, #ff8a3d55) 42deg, var(--portal-led-color, #ff8438) 57deg,
+    var(--portal-led-hot, #fff2d8) 64deg, var(--portal-led-mid, #ffb46b) 70deg, var(--portal-led-color, #ff7c31) 80deg, transparent 120deg 204deg,
+    var(--portal-led-tail, #ff8a3d44) 224deg, var(--portal-led-mid, #ff9b4c) 240deg, var(--portal-led-hot, #ffe4b4) 249deg,
+    var(--portal-led-color, #ff873e) 259deg, transparent 294deg 360deg);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  filter: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: none;
+  animation: portal-led-travel 8s ease-in-out infinite alternate paused;
+  transition: opacity 260ms ease, filter 260ms ease;
+}
+
+.reference-portal .overview-stat::after { opacity: .7; animation-play-state: running; }
+.reference-portal .overview-stat:nth-child(2)::after { animation-delay: -2s; }
+.reference-portal .overview-stat:nth-child(3)::after { animation-delay: -4s; }
+.reference-portal .overview-stat:nth-child(4)::after { animation-delay: -6s; }
+.reference-portal :is(.overview-stat, .overview-panel, .portal-card, .metric-card):focus-within::after {
+  opacity: 1;
+  animation-play-state: running;
+  filter: drop-shadow(0 0 4px var(--portal-led-glow, #ff873e99));
+}
+.reference-portal .overview-stat:focus-within { border-color: var(--portal-hover-line, #ffae7a); }
+
+@keyframes portal-led-travel {
+  from { --portal-led-angle: -40deg; }
+  to { --portal-led-angle: 320deg; }
+}
+
+/* One shared highlight moves between both pointer and keyboard targets. */
+.reference-portal .app-nav { position: relative; isolation: isolate; }
+.portal-nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: var(--nav-width, 100%);
+  height: var(--nav-height, 0px);
+  border: 1px solid #c9c7c3;
+  border-radius: 18px;
+  background: linear-gradient(110deg, #e4e3df, #e8e7e4);
+  box-shadow: inset 0 1px 0 #ffffff80, 0 2px 5px #00000004;
+  opacity: var(--nav-opacity, 0);
+  transform: translate(var(--nav-x, 0px), var(--nav-y, 0px));
+  transition: transform 280ms cubic-bezier(.2,.8,.2,1), width 220ms ease, height 220ms ease, opacity 160ms ease;
+  pointer-events: none;
+}
+.portal-nav-indicator::before {
+  content: '';
+  position: absolute;
+  inset: 25% auto 25% -1px;
+  width: 2px;
+  border-radius: 4px;
+  background: linear-gradient(transparent, #ffaf69, #fff0d0, #ff873e, transparent);
+  box-shadow: 0 0 7px #ff873e80;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.reference-portal .app-nav:is(:hover, :focus-within) .portal-nav-indicator::before { opacity: 1; }
+.reference-portal .app-nav a, .reference-portal .app-nav a:is(:hover, .active) {
+  position: relative;
+  background: transparent;
+  border-color: transparent;
+  transition: color 180ms ease;
+}
+.reference-portal .app-nav a svg { transition: color 180ms ease, transform 220ms ease; }
+.reference-portal .app-nav a:is(:hover, :focus-visible) svg { color: #a75a22; transform: translateX(2px); }
+
+.reference-portal :is(.overview-icon, .overview-ring, .overview-status, .overview-stat-link, .icon-button, .overview-avatars span) {
+  transition: color 200ms ease, background-color 200ms ease, border-color 200ms ease, transform 220ms ease, box-shadow 240ms ease;
+}
+.reference-portal :is(.btn-primary, .btn-secondary, .btn-danger, .filter-chip, .portal-tab, .seg-btn, .overview-day-tabs button, .sidebar-plan-link, .sidebar-home-link, .overview-add-button) {
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+.reference-portal :is(.overview-text-link, .overview-text-link svg, .overview-stat-link svg) { transition: transform 200ms ease, color 180ms ease; }
+.reference-portal .portal-table td { transition: background-color 180ms ease; }
+.reference-portal :is(.overview-session, .overview-operation) { border-radius: 10px; transition: background-color 200ms ease; }
+.reference-portal :is(.portal-input, .portal-select, .portal-textarea) { transition: border-color 180ms ease, box-shadow 180ms ease; }
+
+@media (hover: hover) and (pointer: fine) {
+  .reference-portal :is(.overview-stat, .overview-panel, .portal-card, .metric-card):hover {
+    transform: translateY(-3px);
+    border-color: #ffc093;
+    box-shadow: 0 8px 24px -15px #c96a3680, 0 3px 12px #00000006;
+  }
+  .reference-portal :is(.overview-stat, .overview-panel, .portal-card, .metric-card):hover::after {
+    opacity: 1;
+    animation-play-state: running;
+    animation-duration: 5s;
+    filter: drop-shadow(0 0 4px var(--portal-led-glow, #ff873e99));
+  }
+  .reference-portal .overview-stat:hover .overview-icon { color: #98521f; border-color: #efc6a6; background: #f3e9df; transform: translateY(-1px); }
+  .reference-portal .overview-stat:hover .overview-ring { border-color: #e9dfd6; box-shadow: 0 0 16px #ff873e0d; }
+  .reference-portal .overview-stat-link:hover svg { transform: translate(1px, -1px); }
+  .reference-portal .overview-text-link:hover svg { transform: translateX(3px); }
+  .reference-portal :is(.overview-add-button, .sidebar-plan-link):hover { border-color: #d8ae8c; box-shadow: 0 2px 9px #ff873e14; }
+  .reference-portal :is(.overview-session, .overview-operation):hover { background: #e9e8e459; }
+  .reference-portal .overview-avatars span:hover { transform: translateY(-3px); }
+  .reference-portal .icon-button:hover { transform: translateY(-1px); }
+}
+.reference-portal :is(button, .overview-add-button, .sidebar-plan-link):active:not(:disabled) { transform: translateY(1px); }
+
+/* Native page and table scrollbars share the portal's gray and warm accent. */
+html:has(.reference-portal), .reference-portal, .reference-portal * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--portal-scroll-thumb, #b6b1aa) var(--portal-scroll-track, #e7e7e3);
+}
+html:has(.reference-portal) { scrollbar-gutter: stable; }
+html:has(.reference-portal)::-webkit-scrollbar, .reference-portal ::-webkit-scrollbar { width: 9px; height: 9px; }
+html:has(.reference-portal)::-webkit-scrollbar-track, .reference-portal ::-webkit-scrollbar-track { background: var(--portal-scroll-track, #e7e7e3); border-radius: 12px; }
+html:has(.reference-portal)::-webkit-scrollbar-thumb, .reference-portal ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--portal-scroll-track, #e7e7e3);
+  border-radius: 12px;
+  background: linear-gradient(var(--portal-scroll-thumb, #c1bcb5), var(--portal-scroll-thumb, #a9a59e));
+}
+html:has(.reference-portal)::-webkit-scrollbar-thumb:hover, .reference-portal ::-webkit-scrollbar-thumb:hover { background: var(--portal-scroll-hover, #cc9b72); }
+
+@media (hover: none), (pointer: coarse) {
+  .reference-portal .overview-stat::after { animation-duration: 12s; opacity: .6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reference-portal *, .reference-portal *::before, .reference-portal *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .reference-portal :is(.overview-stat, .overview-panel, .portal-card, .metric-card):hover { transform: none; }
+}

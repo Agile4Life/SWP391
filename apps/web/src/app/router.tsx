@@ -22,6 +22,7 @@ import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
 import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
 import { UserManagerPage } from '../features/manager/UserManagerPage'; // <-- Màn hình US04 RBAC
 import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
+import { ManagerDashboardPage } from '../features/manager/ManagerDashboardPage';
 
 export const router = createBrowserRouter([
   // Public Quiet Luxury Single-Page Landing Experience
@@ -68,6 +69,7 @@ export const router = createBrowserRouter([
       {
         element: <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />,
         children: [
+          { path: '/manager/dashboard', element: <ManagerDashboardPage /> },
           { path: '/manager/catalogs', element: <ManagerCatalogsPage /> },
           { path: '/manager/users', element: <UserManagerPage /> }, // <-- Đã gắn màn hình quản lý tài khoản & phân quyền
           { path: '/manager/reports', element: <ManagerReportsPage /> },

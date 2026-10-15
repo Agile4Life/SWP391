@@ -117,7 +117,7 @@ export function StaffClassesPage() {
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
             </h2>
-            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--portal-muted, #7E7771)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và quản lý lớp học.
             </p>
             <a href="/portal" className="btn-secondary">
@@ -304,8 +304,8 @@ export function StaffClassesPage() {
           style={{
             marginBottom: 20,
             padding: '16px 20px',
-            backgroundColor: '#FDF2F2',
-            border: '1px solid #F8B4B4',
+            backgroundColor: 'var(--portal-danger-bg, #FDF2F2)',
+            border: '1px solid var(--portal-danger-line, #F8B4B4)',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
@@ -314,7 +314,7 @@ export function StaffClassesPage() {
           }}
           data-testid="classes-error"
         >
-          <div style={{ color: '#9B1C1C' }}>
+          <div style={{ color: 'var(--portal-danger, #9B1C1C)' }}>
             <strong>Lỗi tải dữ liệu:</strong> {error}
           </div>
           <button
@@ -342,16 +342,16 @@ export function StaffClassesPage() {
                     gap: '12px',
                     alignItems: 'center',
                     padding: '14px 0',
-                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                    borderBottom: '1px solid var(--portal-line, rgba(0,0,0,0.06))',
                   }}
                 >
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 28, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
+                  <div style={{ height: 28, backgroundColor: 'var(--portal-skeleton, #EDE8E3)', borderRadius: 4 }} />
                 </div>
               ))}
             </div>
@@ -365,7 +365,7 @@ export function StaffClassesPage() {
             <h3 className="portal-state__title" style={{ marginBottom: 6 }}>
               Chưa có lớp học nào
             </h3>
-            <p style={{ color: '#7E7771', maxWidth: 460, margin: '0 auto 16px auto' }}>
+            <p style={{ color: 'var(--portal-muted, #7E7771)', maxWidth: 460, margin: '0 auto 16px auto' }}>
               Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.
             </p>
             <button type="button" className="btn-primary" onClick={handleOpenModal}>
@@ -533,8 +533,8 @@ export function StaffClassesPage() {
             </div>
 
             {/* Khung giờ và ngày học */}
-            <div style={{ padding: '12px', backgroundColor: '#F9F8F6', borderRadius: 8, border: '1px solid #ECE7E1' }}>
-              <strong style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', color: '#4A4541' }}>
+            <div style={{ padding: '12px', backgroundColor: 'var(--portal-inset, #F9F8F6)', borderRadius: 8, border: '1px solid var(--portal-line, #ECE7E1)' }}>
+              <strong style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', color: 'var(--portal-text, #4A4541)' }}>
                 Xếp lịch buổi học đầu tiên
               </strong>
 
@@ -627,10 +627,10 @@ export function StaffClassesPage() {
               <div
                 style={{
                   padding: '12px 16px',
-                  backgroundColor: '#FDF2F2',
-                  border: '1px solid #F8B4B4',
+                  backgroundColor: 'var(--portal-danger-bg, #FDF2F2)',
+                  border: '1px solid var(--portal-danger-line, #F8B4B4)',
                   borderRadius: '6px',
-                  color: '#9B1C1C',
+                  color: 'var(--portal-danger, #9B1C1C)',
                   fontSize: '0.88rem',
                   fontWeight: 500,
                   display: 'flex',

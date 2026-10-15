@@ -41,12 +41,12 @@ export function MemberCardPage() {
         <div
           className="pass-card"
           style={{
-            background: 'linear-gradient(135deg, #2B2420 0%, #1A1614 60%, #3A322C 100%)',
+            background: 'var(--portal-pass-bg, linear-gradient(135deg, #2B2420 0%, #1A1614 60%, #3A322C 100%))',
             borderRadius: '4px',
             padding: '36px',
             color: '#FAF8F5',
             boxShadow: '0 20px 45px rgba(0, 0, 0, 0.25)',
-            border: '1px solid rgba(194, 166, 132, 0.35)',
+            border: '1px solid var(--portal-pass-line, rgba(194, 166, 132, 0.35))',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -66,14 +66,14 @@ export function MemberCardPage() {
               >
                 SÖL WELLNESS SANCTUARY
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#C2A684', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--portal-pass-accent, #C2A684)', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                 VIP RESIDENCY MEMBER PASS
               </div>
             </div>
 
             <span
               style={{
-                background: '#C2A684',
+                background: 'var(--portal-pass-accent, #C2A684)',
                 color: '#1A1614',
                 fontFamily: 'var(--font-sans)',
                 fontSize: '0.68rem',
@@ -124,16 +124,16 @@ export function MemberCardPage() {
             </div>
 
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#B8AFA6', letterSpacing: '0.12em', marginBottom: '4px' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--portal-pass-muted, #B8AFA6)', letterSpacing: '0.12em', marginBottom: '4px' }}>
                 MÃ QR CỬA TỰ ĐỘNG
               </div>
               <div style={{ fontFamily: 'monospace', fontSize: '1.05rem', letterSpacing: '0.1em', color: '#FAF8F5' }}>
                 SOL-MB89-9831
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#C2A684', marginTop: '8px' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--portal-pass-accent, #C2A684)', marginTop: '8px' }}>
                 ⟳ Tự động làm mới sau: <strong>{secondsLeft}s</strong>
               </div>
-              <div style={{ fontSize: '0.68rem', color: '#9E958C', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--portal-pass-muted, #9E958C)', marginTop: '4px' }}>
                 Đưa mã vào mắt đọc turnstile tại sảnh chính để vào cổng.
               </div>
             </div>
@@ -141,16 +141,16 @@ export function MemberCardPage() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
             <div>
-              <div style={{ fontSize: '0.65rem', color: '#B8AFA6', letterSpacing: '0.1em' }}>CHỦ THẺ</div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--portal-pass-muted, #B8AFA6)', letterSpacing: '0.1em' }}>CHỦ THẺ</div>
               <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{holderName}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.65rem', color: '#B8AFA6', letterSpacing: '0.1em' }}>MÃ HỘI VIÊN</div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--portal-pass-muted, #B8AFA6)', letterSpacing: '0.1em' }}>MÃ HỘI VIÊN</div>
               <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>MB-2026-089</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.65rem', color: '#B8AFA6', letterSpacing: '0.1em' }}>NGÀY HẾT HẠN</div>
-              <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#C2A684' }}>26/12/2026</div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--portal-pass-muted, #B8AFA6)', letterSpacing: '0.1em' }}>NGÀY HẾT HẠN</div>
+              <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--portal-pass-accent, #C2A684)' }}>26/12/2026</div>
             </div>
           </div>
         </div>
@@ -174,7 +174,7 @@ export function MemberCardPage() {
 
             <div className="kv-row">
               <span>Ngày hết hạn</span>
-              <strong style={{ color: '#15803d' }}>26/12/2026 (Còn 42 ngày)</strong>
+              <strong style={{ color: 'var(--portal-success, #15803d)' }}>26/12/2026 (Còn 42 ngày)</strong>
             </div>
 
             <div className="kv-row">

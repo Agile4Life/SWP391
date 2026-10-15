@@ -9,7 +9,7 @@ interface PageHeaderProps {
   actions?: ReactNode;
 }
 
-/** Đầu trang chuẩn của portal: eyebrow + tiêu đề serif + đường kẻ vàng, đồng bộ với landing. */
+/** Đầu trang dùng chung; kiểu chữ và màu được định nghĩa trong theme của portal. */
 export function PageHeader({ eyebrow, title, flourish, subtitle, actions }: PageHeaderProps) {
   return (
     <div className="portal-header">

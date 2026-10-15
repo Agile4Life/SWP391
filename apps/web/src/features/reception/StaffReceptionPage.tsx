@@ -79,7 +79,7 @@ export function StaffReceptionPage() {
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
             </h2>
-            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--portal-muted, #7E7771)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền truy cập quầy lễ tân &amp; thu ngân.
             </p>
             <a href="/portal" className="btn-secondary">
@@ -212,8 +212,8 @@ export function StaffReceptionPage() {
 
         {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
         {searchResults.length > 1 && (
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ECE7E1' }}>
-            <div style={{ fontSize: '0.86rem', color: '#7E7771', marginBottom: '8px' }}>
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--portal-line, #ECE7E1)' }}>
+            <div style={{ fontSize: '0.86rem', color: 'var(--portal-muted, #7E7771)', marginBottom: '8px' }}>
               Tìm thấy {searchResults.length} hội viên. Chọn hội viên để thực hiện thanh toán:
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -272,7 +272,7 @@ export function StaffReceptionPage() {
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
                   <span>Số CCCD (Bảo mật)</span>
-                  <span style={{ fontFamily: 'monospace', color: '#4A4541' }}>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--portal-text, #4A4541)' }}>
                     {maskCitizenId(selectedMember.citizenId || (selectedMember.phone ? `079${selectedMember.phone.slice(-6)}123` : null))}
                   </span>
                 </div>
@@ -284,7 +284,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>Hạn sử dụng</span>
-                  <span style={{ color: selectedMember.status === 'ACTIVE' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+                  <span style={{ color: selectedMember.status === 'ACTIVE' ? 'var(--portal-success, #15803d)' : 'var(--portal-danger, #b91c1c)', fontWeight: 600 }}>
                     {selectedMember.endDate || 'Hết hạn hoặc chưa kích hoạt'}
                   </span>
                 </div>
@@ -304,10 +304,10 @@ export function StaffReceptionPage() {
             /* BR-01: Trạng thái trống rõ ràng */
             <div className="portal-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: '#1A1614' }}>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: 'var(--portal-text, #1A1614)' }}>
                 {hasSearched ? 'Không tìm thấy hội viên' : 'Chưa chọn hội viên'}
               </h3>
-              <p style={{ color: '#7E7771', fontSize: '0.88rem', margin: 0 }}>
+              <p style={{ color: 'var(--portal-muted, #7E7771)', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
                   ? `Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`
                   : 'Hãy nhập thông tin vào thanh tra cứu phía trên để tìm kiếm khách hàng.'}
@@ -329,9 +329,9 @@ export function StaffReceptionPage() {
                 Chọn Gói Dịch Vụ Mua / Gia Hạn * (Chỉ gói Active)
               </label>
               {loadingPackages ? (
-                <div style={{ color: '#7E7771', fontSize: '0.88rem' }}>Đang nạp danh mục gói tập...</div>
+                <div style={{ color: 'var(--portal-muted, #7E7771)', fontSize: '0.88rem' }}>Đang nạp danh mục gói tập...</div>
               ) : packages.length === 0 ? (
-                <div style={{ color: '#DC2626', fontSize: '0.88rem' }}>Hiện chưa có gói tập nào đang hoạt động (active).</div>
+                <div style={{ color: 'var(--portal-danger, #DC2626)', fontSize: '0.88rem' }}>Hiện chưa có gói tập nào đang hoạt động (active).</div>
               ) : (
                 <Select
                   id="pos-package"
@@ -365,8 +365,8 @@ export function StaffReceptionPage() {
                   style={{
                     fontWeight: 700,
                     fontSize: '1rem',
-                    color: '#996515',
-                    backgroundColor: '#FAF8F5',
+                    color: 'var(--portal-warning, #996515)',
+                    backgroundColor: 'var(--portal-inset, #FAF8F5)',
                     cursor: 'not-allowed',
                   }}
                 />
@@ -436,27 +436,27 @@ export function StaffReceptionPage() {
           <div style={{ display: 'grid', gap: '16px' }}>
             <div
               style={{
-                backgroundColor: '#F0FDF4',
-                border: '1px solid #86EFAC',
+                backgroundColor: 'var(--portal-success-bg, #F0FDF4)',
+                border: '1px solid var(--portal-success-line, #86EFAC)',
                 borderRadius: '8px',
                 padding: '20px',
                 textAlign: 'center',
               }}
             >
               <div style={{ fontSize: '2.5rem', marginBottom: '6px' }}>🧾</div>
-              <h3 style={{ margin: '0 0 4px 0', color: '#166534', fontSize: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 4px 0', color: 'var(--portal-success, #166534)', fontSize: '1.25rem' }}>
                 Thanh Toán Thành Công!
               </h3>
-              <p style={{ margin: 0, color: '#15803D', fontSize: '0.9rem' }}>
+              <p style={{ margin: 0, color: 'var(--portal-success, #15803D)', fontSize: '0.9rem' }}>
                 Giao dịch đã được ghi nhận và cấp mã hóa đơn điện tử hợp lệ.
               </p>
             </div>
 
             {/* Thông tin chi tiết hóa đơn */}
-            <div className="kv-list" style={{ backgroundColor: '#FAF8F5', padding: '16px', borderRadius: '8px' }}>
+            <div className="kv-list" style={{ backgroundColor: 'var(--portal-inset, #FAF8F5)', padding: '16px', borderRadius: '8px' }}>
               <div className="kv-row">
                 <span>Số hóa đơn</span>
-                <strong style={{ fontFamily: 'monospace', color: '#996515', fontSize: '1rem' }}>
+                <strong style={{ fontFamily: 'monospace', color: 'var(--portal-warning, #996515)', fontSize: '1rem' }}>
                   {completedPayment.invoiceNumber}
                 </strong>
               </div>
@@ -476,9 +476,9 @@ export function StaffReceptionPage() {
                 <span>Thời gian thanh toán</span>
                 <span>{new Date(completedPayment.paidAt).toLocaleString('vi-VN')}</span>
               </div>
-              <div className="kv-row" style={{ borderTop: '1px dashed #D6CEC5', paddingTop: '10px' }}>
+              <div className="kv-row" style={{ borderTop: '1px dashed var(--portal-line, #D6CEC5)', paddingTop: '10px' }}>
                 <span style={{ fontSize: '1rem', fontWeight: 600 }}>TỔNG TIỀN ĐÃ THU</span>
-                <strong style={{ fontSize: '1.2rem', color: '#15803d' }}>
+                <strong style={{ fontSize: '1.2rem', color: 'var(--portal-success, #15803d)' }}>
                   {vnd(completedPayment.amount)}
                 </strong>
               </div>

@@ -122,7 +122,7 @@ export function StaffCheckInPage() {
                 type="button"
                 className="btn-secondary btn-sm"
                 onClick={() => handleSimulateScan('SOL-EXPIRED-104')}
-                style={{ color: '#b91c1c' }}
+                style={{ color: 'var(--portal-danger, #b91c1c)' }}
               >
                 Quét Thẻ Hết Hạn (Deny)
               </button>
@@ -139,8 +139,8 @@ export function StaffCheckInPage() {
                 borderRadius: '3px',
                 padding: '24px',
                 textAlign: 'center',
-                backgroundColor: currentResult.status === 'GRANTED' ? '#F0FDF4' : '#FEF2F2',
-                border: `2px solid ${currentResult.status === 'GRANTED' ? '#86EFAC' : '#FCA5A5'}`,
+                backgroundColor: currentResult.status === 'GRANTED' ? 'var(--portal-success-bg, #F0FDF4)' : 'var(--portal-danger-bg, #FEF2F2)',
+                border: `2px solid ${currentResult.status === 'GRANTED' ? 'var(--portal-success-line, #86EFAC)' : 'var(--portal-danger-line, #FCA5A5)'}`,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
@@ -150,20 +150,20 @@ export function StaffCheckInPage() {
               <h3
                 style={{
                   margin: '0 0 8px 0',
-                  color: currentResult.status === 'GRANTED' ? '#15803D' : '#B91C1C',
+                  color: currentResult.status === 'GRANTED' ? 'var(--portal-success, #15803D)' : 'var(--portal-danger, #B91C1C)',
                 }}
               >
                 {currentResult.status === 'GRANTED' ? 'CỬA MỞ: XÁC THỰC HỢP LỆ' : 'CỬA KHÓA: TỪ CHỐI CHECK-IN'}
               </h3>
 
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1A1614', marginBottom: '4px' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--portal-text, #1A1614)', marginBottom: '4px' }}>
                 {currentResult.name} ({currentResult.memberCode})
               </div>
 
-              <div style={{ fontSize: '0.82rem', color: '#6A635D' }}>{currentResult.packageName}</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--portal-muted, #6A635D)' }}>{currentResult.packageName}</div>
 
               {currentResult.reason && (
-                <div style={{ marginTop: '10px', color: '#B91C1C', fontWeight: 600, fontSize: '0.85rem' }}>
+                <div style={{ marginTop: '10px', color: 'var(--portal-danger, #B91C1C)', fontWeight: 600, fontSize: '0.85rem' }}>
                   ⚠️ {currentResult.reason}
                 </div>
               )}
@@ -193,7 +193,7 @@ export function StaffCheckInPage() {
                     <td style={{ fontWeight: 600 }}>{rec.time}</td>
                     <td>
                       <div>{rec.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>{rec.memberCode}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--portal-muted, #8C847C)' }}>{rec.memberCode}</div>
                     </td>
                     <td style={{ fontSize: '0.8rem' }}>{rec.gate}</td>
                     <td>

@@ -258,7 +258,7 @@ export function UserManagerPage() {
       case 'COACH':
         return <span className="badge badge-info">Huấn luyện viên</span>;
       case 'RECEPTIONIST':
-        return <span className="badge" style={{ background: '#E0F2FE', color: '#0369A1' }}>Lễ tân</span>;
+        return <span className="badge" style={{ background: 'var(--portal-info-bg, #E0F2FE)', color: 'var(--portal-info, #0369A1)' }}>Lễ tân</span>;
       case 'MEMBER':
         return <span className="badge">Hội viên</span>;
     }
@@ -431,7 +431,7 @@ export function UserManagerPage() {
       ) : (
         /* Matrix Phân quyền RBAC */
         <div className="portal-card portal-card--flush">
-          <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(33, 28, 24, 0.08)' }}>
+          <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--portal-line, rgba(33, 28, 24, 0.08))' }}>
             <h2 className="portal-card-title">Phân quyền vai trò</h2>
           </div>
 
@@ -515,7 +515,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.name && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #B91C1C)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.name}
                 </div>
               )}
@@ -535,7 +535,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.email && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #B91C1C)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.email}
                 </div>
               )}
@@ -557,7 +557,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.phone && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #B91C1C)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.phone}
                 </div>
               )}
@@ -578,7 +578,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.password && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #B91C1C)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.password}
                 </div>
               )}
@@ -666,7 +666,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.name && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #B91C1C)', fontSize: '0.78rem', marginTop: 4 }}>
                   {editFieldErrors.name}
                 </div>
               )}
@@ -688,7 +688,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.phone && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #B91C1C)', fontSize: '0.78rem', marginTop: 4 }}>
                   {editFieldErrors.phone}
                 </div>
               )}

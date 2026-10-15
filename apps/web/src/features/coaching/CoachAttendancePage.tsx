@@ -160,17 +160,17 @@ export function CoachAttendancePage() {
             <h2 className="portal-card-title">✨ Trợ Lý AI Gợi Ý Giáo Án</h2>
           </div>
 
-          <p style={{ fontSize: '0.86rem', color: '#4A433D', lineHeight: 1.65 }}>
+          <p style={{ fontSize: '0.86rem', color: 'var(--portal-text, #4A433D)', lineHeight: 1.65 }}>
             Trợ lý AI phân tích hồ sơ sức khỏe và tiền sử căng cơ của học viên{' '}
             <strong>Nguyễn Văn An (MB-2026-089)</strong> để đề xuất điều chỉnh bài tập cho Coach:
           </p>
 
           <div
             style={{
-              background: '#FFFFFF',
+              background: 'var(--portal-inset, #FFFFFF)',
               borderRadius: '6px',
               padding: '16px',
-              border: '1px solid rgba(33, 28, 24, 0.08)',
+              border: '1px solid var(--portal-line, rgba(33, 28, 24, 0.08))',
               marginTop: '16px',
               marginBottom: '16px',
               fontSize: '0.82rem',
@@ -180,7 +180,7 @@ export function CoachAttendancePage() {
             <div style={{ fontWeight: 600, marginBottom: '6px' }}>⚡ Điều chỉnh kỹ thuật gợi ý:</div>
             <div>• Giảm 1 lò xo đỏ xuống 1 lò xo xanh khi tập chuỗi động tác Elephant trên Reformer.</div>
             <div>• Tăng thêm 5 phút kéo dãn cơ tam đầu đùi sau buổi tập để chống căng cứng.</div>
-            <div style={{ marginTop: '8px', color: '#8C7765' }}>
+            <div style={{ marginTop: '8px', color: 'var(--portal-muted, #8C7765)' }}>
               Độ tin cậy mô hình: <strong>96.4%</strong> (Dựa trên 18 logs trước đó)
             </div>
           </div>

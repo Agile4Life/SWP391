@@ -8,6 +8,7 @@ export function installClickRipple(): void {
     if (e.button !== 0) return;
     const el = (e.target as Element | null)?.closest?.(TARGETS);
     if (!el || (el as HTMLButtonElement).disabled) return;
+    if (el.closest('.reference-portal')) return;
 
     const ripple = document.createElement('span');
     ripple.className = 'click-ripple';

@@ -98,7 +98,7 @@ export async function loginApi(identifier: string, password: string): Promise<Lo
 export const homePath = (role: UserSession['role']): string => {
   switch (role) {
     case 'MANAGER':
-      return '/manager/users';
+      return '/manager/dashboard';
     case 'STAFF':
       return '/staff/reception';
     case 'COACH':

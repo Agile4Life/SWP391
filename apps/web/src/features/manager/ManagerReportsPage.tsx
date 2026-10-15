@@ -1,11 +1,7 @@
-import { CountUp } from '../../shared/ui/CountUp';
-import { useInView } from '../../hooks/useInView';
 import { toast } from '../../shared/ui/toast';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
 export function ManagerReportsPage() {
-  const [revenueRef, revenueInView] = useInView<HTMLDivElement>(0.2);
-
   const auditLogs = [
     { id: 1045, action: 'UPDATE_SUBSCRIPTION', actor: 'thinh.reception@sol-wellness.vn', target: 'MB-2026-089', ip: '192.168.1.15', time: '10:45:12' },
     { id: 1044, action: 'CHECKIN_GRANTED', actor: 'system_turnstile_a1', target: 'MB-2026-089', ip: '10.0.1.20', time: '07:15:20' },
@@ -29,12 +25,12 @@ export function ManagerReportsPage() {
         }
       />
 
-      {/* KPI Metrics with CountUp */}
+      {/* Static KPI values for phase 1. */}
       <div className="metrics-grid">
         <div className="metric-card">
           <div className="metric-label">TỔNG DOANH THU THÁNG 09</div>
           <div className="metric-value">
-            <CountUp value={1845000000} format={(v) => Math.round(v).toLocaleString('vi-VN') + ' đ'} />
+            1.845.000.000 đ
           </div>
           <div className="metric-trend">↑ +14.2% so với tháng trước</div>
         </div>
@@ -42,7 +38,7 @@ export function ManagerReportsPage() {
         <div className="metric-card">
           <div className="metric-label">HỘI VIÊN MỚI TRONG THÁNG</div>
           <div className="metric-value">
-            <CountUp value={128} />
+            128
           </div>
           <div className="metric-trend">↑ +22 hội viên đăng ký mới</div>
         </div>
@@ -50,7 +46,7 @@ export function ManagerReportsPage() {
         <div className="metric-card">
           <div className="metric-label">TỶ LỆ LẤP ĐẦY PHÒNG TẬP</div>
           <div className="metric-value">
-            <CountUp value={86.4} format={(v) => v.toFixed(1) + '%'} />
+            86,4%
           </div>
           <div className="metric-trend">↑ Tối ưu hóa năng lực phục vụ</div>
         </div>
@@ -58,7 +54,7 @@ export function ManagerReportsPage() {
         <div className="metric-card">
           <div className="metric-label">LƯỢT QUÉT CHECK-IN TRUNG TÂM</div>
           <div className="metric-value">
-            <CountUp value={4920} format={(v) => Math.round(v).toLocaleString('vi-VN')} />
+            4.920
           </div>
           <div className="metric-trend">Trung bình 180 lượt / ngày</div>
         </div>
@@ -71,20 +67,20 @@ export function ManagerReportsPage() {
             <h2 className="portal-card-title">Cơ Cấu Doanh Thu Theo Gói Dịch Vụ</h2>
           </div>
 
-          <div ref={revenueRef} style={{ display: 'grid', gap: '16px' }}>
+          <div style={{ display: 'grid', gap: '16px' }}>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
                 <span><strong>The Sanctuary VIP (3 Tháng)</strong></span>
                 <span><strong>1.125.000.000 đ (61%)</strong></span>
               </div>
-              <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '8px', background: 'var(--portal-chart-track, #F0ECE6)', borderRadius: '4px', overflow: 'hidden' }}>
                 <div
-                  className={`progress-fill ${revenueInView ? 'is-visible' : ''}`}
+                  className="progress-fill is-visible"
                   style={{
                     ['--value' as string]: '61%',
                     width: '61%',
                     height: '100%',
-                    background: '#1A1614',
+                    background: 'var(--portal-chart-1, #1A1614)',
                     borderRadius: '4px',
                   } as React.CSSProperties}
                 />
@@ -96,14 +92,14 @@ export function ManagerReportsPage() {
                 <span><strong>The Sovereign Annual (1 Năm)</strong></span>
                 <span><strong>468.000.000 đ (25%)</strong></span>
               </div>
-              <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '8px', background: 'var(--portal-chart-track, #F0ECE6)', borderRadius: '4px', overflow: 'hidden' }}>
                 <div
-                  className={`progress-fill ${revenueInView ? 'is-visible' : ''}`}
+                  className="progress-fill is-visible"
                   style={{
                     ['--value' as string]: '25%',
                     width: '25%',
                     height: '100%',
-                    background: '#C2A684',
+                    background: 'var(--portal-chart-2, #C2A684)',
                     borderRadius: '4px',
                   } as React.CSSProperties}
                 />
@@ -115,14 +111,14 @@ export function ManagerReportsPage() {
                 <span><strong>The Essential (1 Tháng)</strong></span>
                 <span><strong>252.000.000 đ (14%)</strong></span>
               </div>
-              <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '8px', background: 'var(--portal-chart-track, #F0ECE6)', borderRadius: '4px', overflow: 'hidden' }}>
                 <div
-                  className={`progress-fill ${revenueInView ? 'is-visible' : ''}`}
+                  className="progress-fill is-visible"
                   style={{
                     ['--value' as string]: '14%',
                     width: '14%',
                     height: '100%',
-                    background: '#8C847C',
+                    background: 'var(--portal-chart-3, #8C847C)',
                     borderRadius: '4px',
                   } as React.CSSProperties}
                 />
@@ -161,7 +157,7 @@ export function ManagerReportsPage() {
                     </td>
                     <td style={{ fontSize: '0.78rem' }}>{log.actor}</td>
                     <td style={{ fontWeight: 600 }}>{log.target}</td>
-                    <td style={{ fontSize: '0.75rem', color: '#8C847C' }}>{log.time}</td>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--portal-muted, #8C847C)' }}>{log.time}</td>
                   </tr>
                 ))}
               </tbody>

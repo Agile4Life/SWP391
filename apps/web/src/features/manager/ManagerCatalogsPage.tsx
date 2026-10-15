@@ -326,7 +326,7 @@ export function ManagerCatalogsPage() {
               {tab === 'rooms' && 'Chưa có cơ sở phòng tập nào'}
               {tab === 'packages' && 'Chưa có gói hội viên nào'}
             </h3>
-            <p style={{ color: '#7E7771' }}>
+            <p style={{ color: 'var(--portal-muted, #7E7771)' }}>
               Hãy nhấn nút thêm để cấu hình danh mục phục vụ vận hành.
             </p>
             <button
@@ -355,7 +355,7 @@ export function ManagerCatalogsPage() {
                     {disciplines.map((d) => (
                       <tr key={d.id}>
                         <td><strong>{d.name}</strong></td>
-                        <td style={{ color: '#6A635D' }}>{d.description || <span className="muted">Không có mô tả</span>}</td>
+                        <td style={{ color: 'var(--portal-muted, #6A635D)' }}>{d.description || <span className="muted">Không có mô tả</span>}</td>
                         <td className="actions">
                           <button
                             type="button"

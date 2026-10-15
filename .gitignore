@@ -26,6 +26,11 @@ target/
 .env
 !.env.example
 
+# Browser test reports and traces
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/playwright/.cache/
+
 # Application dependencies, builds and secrets
 node_modules/
 dist/

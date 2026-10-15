@@ -200,7 +200,7 @@ export function MemberClassesPage() {
                     {item.className}
                   </h3>
 
-                  <div style={{ fontSize: '0.82rem', color: '#6A635D', lineHeight: 1.6 }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--portal-muted, #6A635D)', lineHeight: 1.6 }}>
                     🕒 <strong>{item.time}</strong> • 📍 {item.room} • 🏋️ HLV: <strong>{item.coach}</strong>
                   </div>
                 </div>
@@ -214,7 +214,7 @@ export function MemberClassesPage() {
                         fontFamily: 'var(--font-serif)',
                         fontSize: '1.3rem',
                         fontWeight: 600,
-                        color: isFull ? '#b91c1c' : '#1A1614',
+                        color: isFull ? 'var(--portal-danger, #b91c1c)' : 'var(--portal-text, #1A1614)',
                       }}
                     >
                       {item.enrolled} / {item.capacity}
