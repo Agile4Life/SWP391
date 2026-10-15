@@ -180,7 +180,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles Database Integrity and Trigger Violations.
+     * Handles database integrity and PostgreSQL trigger violations.
      * Invariants from AGENTS.md & PROJECT_MASTER_GUIDE.md:
      * - trg_enrollments_check_capacity (Capacity Exceeded)
      * - trg_sessions_check_conflict (Coach / Room Schedule Overlap)
@@ -193,19 +193,23 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
-            if (normalizedRootMsg.contains("lớp học đã đầy chỗ") || normalizedRootMsg.contains("trg_enrollments_check_capacity")) {
+            if (normalizedRootMsg.contains("trg_enrollments_check_capacity")
+                    || normalizedRootMsg.contains("lớp học đã đầy chỗ (vượt quá capacity cho phép).")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "CLASS_CAPACITY_EXCEEDED",
                                 resolveMessage("invariant.capacity_exceeded", "invariant.capacity_exceeded"))
                 );
             }
-            if (normalizedRootMsg.contains("trg_sessions_check_conflict") || normalizedRootMsg.contains("trùng lịch") || normalizedRootMsg.contains("khung giờ")) {
+            if (normalizedRootMsg.contains("trg_sessions_check_conflict")
+                    || normalizedRootMsg.contains("huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULE_CONFLICT",
                                 resolveMessage("invariant.schedule_conflict", "invariant.schedule_conflict"))
                 );
             }
-            if (normalizedRootMsg.contains("trg_enrollments_check_membership") || normalizedRootMsg.contains("trg_checkins_check_membership") || normalizedRootMsg.contains("gói")) {
+            if (normalizedRootMsg.contains("trg_enrollments_check_membership") || normalizedRootMsg.contains("trg_checkins_check_membership")
+                    || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để đăng ký lớp.")
+                    || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để check-in.")) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                         ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
                                 resolveMessage("invariant.membership_inactive_or_expired", "invariant.membership_inactive_or_expired"))
