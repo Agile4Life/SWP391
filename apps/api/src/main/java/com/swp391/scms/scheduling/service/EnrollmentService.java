@@ -63,6 +63,7 @@ public class EnrollmentService {
         this(enrollments, sessions, subscriptions, members, notifications, null, clock);
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
                              ClassSessionRepository sessions,
                              MembershipSubscriptionRepository subscriptions,
