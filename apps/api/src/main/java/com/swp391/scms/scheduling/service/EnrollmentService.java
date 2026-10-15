@@ -16,6 +16,7 @@ import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +64,7 @@ public class EnrollmentService {
         this(enrollments, sessions, subscriptions, members, notifications, null, clock);
     }
 
+    @Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
                              ClassSessionRepository sessions,
                              MembershipSubscriptionRepository subscriptions,
