@@ -15,3 +15,6 @@ export interface CardSubscription {
 
 export const getMySubscription = () =>
   apiFetch<CardSubscription | null>('/memberships/subscriptions/my');
+
+export const getMembershipHistory = () =>
+  apiFetch<CardSubscription[]>('/memberships/subscriptions/history');

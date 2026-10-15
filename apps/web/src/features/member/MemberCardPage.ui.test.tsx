@@ -3,12 +3,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberCardPage } from './MemberCardPage';
 import { getProfile } from './profileApi';
-import { getMySubscription } from './memberCardApi';
+import { getMembershipHistory, getMySubscription } from './memberCardApi';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 
 vi.mock('./profileApi', () => ({ getProfile: vi.fn() }));
-vi.mock('./memberCardApi', () => ({ getMySubscription: vi.fn() }));
+vi.mock('./memberCardApi', () => ({ getMySubscription: vi.fn(), getMembershipHistory: vi.fn() }));
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn() } }));
 vi.mock('html2canvas', () => ({ default: vi.fn() }));
 
@@ -34,6 +34,7 @@ beforeEach(() => {
   root = createRoot(host);
   vi.mocked(getProfile).mockResolvedValue(profile as never);
   vi.mocked(getMySubscription).mockResolvedValue(subscription as never);
+  vi.mocked(getMembershipHistory).mockResolvedValue([]);
   vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,AA' as never);
 });
 
@@ -51,6 +52,7 @@ describe('MemberCardPage', () => {
     expect(host.textContent).toContain('SÖL Gold');
     expect(host.textContent).toContain('Ngày bắt đầu: 01/01/2026');
     expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('backend-qr');
+    expect(getMembershipHistory).not.toHaveBeenCalled();
     expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).not.toBeNull();
     expect(host.querySelector('button')?.disabled).toBe(true);
     await finishQrLoading();
@@ -75,6 +77,69 @@ describe('MemberCardPage', () => {
     expect(host.textContent).toContain('Chưa có gói tập');
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/#packages');
     expect(host.querySelector('a')?.textContent).toBe('Xem gói tập');
+    expect(getMembershipHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an expired card from history without rendering its old QR or enabling download', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockResolvedValue([{ ...subscription, id: 2, packageName: 'Gói cũ', status: 'expired', endDate: '2020-01-01', qrCode: 'old-qr' }] as never);
+    await renderPage();
+    expect(host.textContent).toContain('Gói cũ');
+    expect(host.textContent).toContain('Gói tập đã hết hạn');
+    expect(host.textContent).toContain('Nguyễn Minh');
+    expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('button')?.disabled).toBe(true);
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+  });
+
+  it('treats a historical active record with a past end date as expired', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockResolvedValue([{ ...subscription, status: 'active', endDate: '2020-01-01' }] as never);
+    await renderPage();
+    expect(host.textContent).toContain('Gói tập đã hết hạn');
+    expect(host.querySelector('img')).toBeNull();
+  });
+
+  it('shows pending payment instead of never purchased', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockResolvedValue([{ ...subscription, status: 'pending_payment' }] as never);
+    await renderPage();
+    expect(host.textContent).toContain('Đang chờ thanh toán');
+    expect(host.textContent).not.toContain('Chưa có gói tập');
+    expect(host.querySelector('img')).toBeNull();
+  });
+
+  it('shows the most recently expired activated package and a newer payment request', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockResolvedValue([
+      { ...subscription, id: 3, packageName: 'Gói đang chờ', status: 'pending_payment', createdAt: '2026-10-10T10:00:00' },
+      { ...subscription, id: 1, packageName: 'Gói cũ hơn', status: 'expired', endDate: '2024-12-31', createdAt: '2024-01-01T10:00:00' },
+      { ...subscription, id: 2, packageName: 'Gói hết hạn gần nhất', status: 'expired', endDate: '2025-12-31', createdAt: '2023-01-01T10:00:00' },
+    ] as never);
+    await renderPage();
+    expect(host.textContent).toContain('Gói hết hạn gần nhất');
+    expect(host.textContent).not.toContain('Gói cũ hơn');
+    expect(host.textContent).toContain('Đang chờ thanh toán');
+    expect(host.textContent).toContain('Gói đang chờ');
+  });
+
+  it('shows a cancelled-only state without QR', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockResolvedValue([{ ...subscription, status: 'cancelled' }] as never);
+    await renderPage();
+    expect(host.textContent).toContain('không còn gói tập hiệu lực');
+    expect(host.querySelector('img')).toBeNull();
+  });
+
+  it('shows history errors and retries instead of claiming no membership', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockRejectedValueOnce(new Error('history offline')).mockResolvedValueOnce([]);
+    await renderPage();
+    expect(host.textContent).toContain('Không thể tải');
+    expect(host.textContent).not.toContain('Chưa có gói tập');
+    await act(async () => { host.querySelector('button')?.click(); });
+    expect(getMembershipHistory).toHaveBeenCalledTimes(2);
+    expect(host.textContent).toContain('Chưa có gói tập');
   });
 
   it('shows API errors and retries the request', async () => {

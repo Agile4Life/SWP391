@@ -5,11 +5,18 @@ import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { toast } from '../../shared/ui/toast';
 import { cardStatus } from './cardStatus';
-import { getMySubscription, type CardSubscription } from './memberCardApi';
+import { getMembershipHistory, getMySubscription, type CardSubscription } from './memberCardApi';
 
 function displayDate(value: string) {
   const [year, month, day] = value.split('-');
   return `${day}/${month}/${year}`;
+}
+
+function validDate(value: string | null | undefined) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 export function MemberCard({ profile, subscription }: { profile: Profile; subscription: CardSubscription }) {
@@ -77,16 +84,20 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
 export function MemberCardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [subscription, setSubscription] = useState<CardSubscription | null>(null);
+  const [history, setHistory] = useState<CardSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   async function loadCard() {
     setLoading(true);
     setError('');
+    setHistory([]);
     try {
       const [memberProfile, memberSubscription] = await Promise.all([getProfile(), getMySubscription()]);
+      const memberHistory = memberSubscription ? [] : await getMembershipHistory();
       setProfile(memberProfile);
       setSubscription(memberSubscription);
+      setHistory(memberHistory);
     } catch {
       setError('Không thể tải thông tin thẻ hội viên. Vui lòng thử lại.');
     } finally {
@@ -96,12 +107,37 @@ export function MemberCardPage() {
 
   useEffect(() => { void loadCard(); }, []);
 
+  const expired = history
+    .filter((item) => validDate(item.startDate) && validDate(item.endDate) &&
+      (item.status === 'expired' || (item.status === 'active' && cardStatus(item.status, item.endDate) === 'expired')))
+    .sort((a, b) => b.endDate.localeCompare(a.endDate))[0];
+  const latestPending = history.find((item) => item.status === 'pending_payment');
+  const pending = latestPending && (!expired || latestPending.createdAt > expired.createdAt) ? latestPending : null;
+
   return (
     <div className="portal-container">
       <PageHeader eyebrow="Hội viên" title="Thẻ thành viên" />
       {loading && <p role="status">Đang tải thẻ hội viên…</p>}
       {error && <div role="alert"><p>{error}</p><button type="button" className="btn-secondary" onClick={() => void loadCard()}>Thử lại</button></div>}
-      {!loading && !error && !subscription && (
+      {!loading && !error && !subscription && pending && (
+        <div className="portal-card">
+          <p>Đang chờ thanh toán: {pending.packageName}</p>
+          <p>Gói tập chỉ có hiệu lực sau khi được xác nhận thanh toán.</p>
+        </div>
+      )}
+      {!loading && !error && !subscription && expired && profile && (
+        <>
+          <MemberCard profile={profile} subscription={{ ...expired, status: 'expired', qrCode: null }} />
+          <p>Gói tập đã hết hạn. <a href="/#packages">Xem gói tập để gia hạn</a></p>
+        </>
+      )}
+      {!loading && !error && !subscription && history.length > 0 && !expired && !pending && (
+        <div className="portal-card">
+          <p>Bạn không còn gói tập hiệu lực.</p>
+          <a className="btn-primary" href="/#packages">Xem gói tập</a>
+        </div>
+      )}
+      {!loading && !error && !subscription && history.length === 0 && (
         <div className="portal-card">
           <p>Chưa có gói tập để hiển thị thẻ hội viên.</p>
           <p>Vui lòng đăng ký hoặc gia hạn gói tập.</p>
