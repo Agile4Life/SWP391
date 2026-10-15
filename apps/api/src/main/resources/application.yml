@@ -3,7 +3,7 @@ server:
 
 spring:
   profiles:
-    default: postgresql,local
+    default: supabase
     group:
       supabase: postgresql
   application:

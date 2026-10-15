@@ -16,25 +16,22 @@ import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 
 /**
  * Code-first guard: the JPA entities alone must be able to generate every table of
- * databaseschema.sql (no hand-written DDL) on both supported databases, without a live connection.
+ * databaseschema.sql on PostgreSQL, without a live connection or hand-written runtime DDL.
  */
 class CodeFirstSchemaTest {
 
     private static final Path SCHEMA = Path.of("..", "..", "db", "databaseschema.sql");
 
-    private static String generateDdl(String dialect) throws Exception {
+    private static String generateDdl() throws Exception {
         Path out = Files.createTempFile("ddl", ".sql");
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
-                .applySetting("hibernate.dialect", dialect)
+                .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
                 .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
-                .applySetting("hibernate.use_nationalized_character_data", "true")
                 .applySetting("jakarta.persistence.schema-generation.database.action", "none")
                 .applySetting("jakarta.persistence.schema-generation.scripts.action", "create")
                 .applySetting("jakarta.persistence.schema-generation.scripts.create-target", out.toString())
@@ -67,29 +64,28 @@ class CodeFirstSchemaTest {
         return tables;
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"org.hibernate.dialect.SQLServerDialect", "org.hibernate.dialect.PostgreSQLDialect"})
-    void entitiesGenerateEveryTableOfTheReferenceSchema(String dialect) throws Exception {
+    @Test
+    void entitiesGenerateEveryTableOfTheReferenceSchema() throws Exception {
         assertTrue(Files.exists(SCHEMA), "db/databaseschema.sql must be reachable from the test working dir");
-        String ddl = generateDdl(dialect);
+        String ddl = generateDdl();
         Set<String> tables = schemaTables();
         assertTrue(tables.size() >= 30, "reference schema should list its tables");
         for (String table : tables) {
-            assertTrue(ddl.matches("(?s).*create table (dbo\\.)?\\[?\"?" + table + "\\b.*"),
-                    "No entity generates table " + table + " for " + dialect);
+            assertTrue(ddl.matches("(?s).*create table \"?" + table + "\\b.*"),
+                    "No entity generates PostgreSQL table " + table);
         }
     }
 
     @Test
     void paymentsReferenceSubscriptionsAndEnrollments() throws Exception {
-        String ddl = generateDdl("org.hibernate.dialect.PostgreSQLDialect");
+        String ddl = generateDdl();
         assertTrue(ddl.contains("foreign key (subscription_id) references membership_subscriptions"));
         assertTrue(ddl.contains("foreign key (class_enrollment_id) references class_enrollments"));
     }
 
     @Test
     void postgresGeneratesStoredComputedColumnsAndNativeJson() throws Exception {
-        String ddl = generateDdl("org.hibernate.dialect.PostgreSQLDialect");
+        String ddl = generateDdl();
         assertTrue(ddl.contains("generated always as (subtotal_amount + tax_amount) stored"), ddl);
         assertTrue(ddl.contains("generated always as (quantity * unit_price) stored"), ddl);
         assertTrue(ddl.contains("data jsonb"), ddl);
@@ -97,16 +93,15 @@ class CodeFirstSchemaTest {
         assertTrue(ddl.contains("recommended_content jsonb"), ddl);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"org.hibernate.dialect.SQLServerDialect", "org.hibernate.dialect.PostgreSQLDialect"})
-    void preservesReferenceCheckConstraintsExceptJsonWhichUsesNativeMapping(String dialect) throws Exception {
-        String ddl = generateDdl(dialect);
+    @Test
+    void preservesReferenceCheckConstraintsExceptJsonWhichUsesNativeMapping() throws Exception {
+        String ddl = generateDdl();
         Matcher checks = Pattern.compile("CONSTRAINT\\s+(ck_\\w+)\\s+CHECK", Pattern.CASE_INSENSITIVE)
                 .matcher(Files.readString(SCHEMA, StandardCharsets.UTF_8));
         while (checks.find()) {
             String name = checks.group(1).toLowerCase(Locale.ROOT);
             if (!name.endsWith("_json")) {
-                assertTrue(ddl.contains("constraint " + name + " check"), "Missing CHECK: " + name + " on " + dialect);
+                assertTrue(ddl.contains("constraint " + name + " check"), "Missing PostgreSQL CHECK: " + name);
             }
         }
     }

@@ -38,7 +38,7 @@ public class Invoice {
     /**
      * [FIX 1NF-3NF §3.6] Computed column: AS (subtotal_amount + tax_amount).
      * @GeneratedColumn instructs Hibernate ORM (Code-First) to generate the database-agnostic
-     * computed/generated column DDL across any relational database (SQL Server, PostgreSQL, etc.).
+     * stored generated column DDL for PostgreSQL.
      * @Generated informs Hibernate to fetch the database-computed value upon INSERT and UPDATE.
      */
     @GeneratedColumn("subtotal_amount + tax_amount")

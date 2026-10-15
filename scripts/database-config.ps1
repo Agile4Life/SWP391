@@ -1,21 +1,19 @@
-# Shared provider selection for the Windows runner and legacy SQL Server initializer.
+# PostgreSQL configuration for the Windows runner; Supabase is the default.
 function Resolve-ScmsDatabaseConfig {
     param([string]$Profiles, [string]$JdbcUrl)
     $selected = @($Profiles.Split(',') | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })
-    $isSupabase = $selected -contains 'supabase'
-    $hasPostgres = $isSupabase -or ($selected -contains 'postgresql')
-    $hasSqlServer = $selected -contains 'sqlserver'
-    if (($hasPostgres -and $hasSqlServer) -or ($isSupabase -and ($selected -contains 'local'))) {
-        throw 'Do not combine database profiles, or supabase with local.'
+    if ($selected.Count -eq 0) { $selected = @('supabase') }
+    if (@($selected | Where-Object { $_ -notin @('supabase', 'postgresql', 'local') }).Count -gt 0) {
+        throw 'Unsupported database profile; use supabase or postgresql,local.'
     }
-    $urlProvider = if ($JdbcUrl -match '^jdbc:postgresql:') { 'postgresql' }
-        elseif ($JdbcUrl -match '^jdbc:sqlserver:') { 'sqlserver' }
-        elseif ([string]::IsNullOrWhiteSpace($JdbcUrl)) { '' }
-        else { throw 'Unsupported JDBC URL; use PostgreSQL or SQL Server.' }
-    $provider = if ($hasPostgres) { 'postgresql' } elseif ($hasSqlServer) { 'sqlserver' }
-        elseif ($urlProvider) { $urlProvider } else { 'postgresql' }
-    if ($urlProvider -and $urlProvider -ne $provider) { throw 'JDBC URL and database profile disagree.' }
-    if (-not $hasPostgres -and -not $hasSqlServer) { $selected += $provider }
+    $isSupabase = $selected -contains 'supabase'
+    if ($isSupabase -and ($selected -contains 'local')) {
+        throw 'Do not combine supabase with local.'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($JdbcUrl) -and $JdbcUrl -notmatch '^jdbc:postgresql:') {
+        throw 'Unsupported JDBC URL; use PostgreSQL.'
+    }
+    if (-not $isSupabase -and $selected -notcontains 'postgresql') { $selected += 'postgresql' }
     if (-not $isSupabase -and $selected -notcontains 'local') { $selected += 'local' }
-    [pscustomobject]@{ Provider = $provider; Profiles = ($selected -join ','); IsSupabase = $isSupabase }
+    [pscustomobject]@{ Provider = 'postgresql'; Profiles = ($selected -join ','); IsSupabase = $isSupabase }
 }

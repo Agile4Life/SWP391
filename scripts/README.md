@@ -2,7 +2,7 @@
 
 Thư mục này chứa các script tự động hóa khởi chạy, kiểm tra môi trường và quản lý tiến trình local cho dự án **Sports Center Management System (SCMS)**.
 
-SCRUM-91: Runner chọn database theo `SPRING_PROFILES_ACTIVE`/JDBC URL. Với Supabase PostgreSQL, cấu hình theo [SUPABASE_SETUP.md](../docs/SUPABASE_SETUP.md); không gọi initializer SQL Server. API/Web chạy nền, log tại `api.log`, `api-error.log`, `web.log`, `web-error.log` ở root. Script `init-db` chỉ chạy T-SQL khi chọn profile SQL Server; PostgreSQL sinh bảng khi API khởi động.
+Runner mặc định dùng Supabase PostgreSQL; cấu hình theo [SUPABASE_SETUP.md](../docs/SUPABASE_SETUP.md). API/Web chạy nền, log tại `api.log`, `api-error.log`, `web.log`, `web-error.log` ở root. Hibernate tạo/cập nhật schema và cài trigger khi API khởi động.
 
 ---
 
@@ -10,9 +10,9 @@ SCRUM-91: Runner chọn database theo `SPRING_PROFILES_ACTIVE`/JDBC URL. Với S
 
 | Script Windows (Batch) | Script PowerShell | Chức năng chính |
 |---|---|---|
-| [`run-local.bat`](run-local.bat) | [`run-local.ps1`](run-local.ps1) | **Khởi chạy hệ thống 1-Click:** Tự động kiểm tra Node.js, Java 21, SQL Server, nạp biến môi trường `.env`, khởi tạo database nếu thiếu, và khởi động song song Backend API (8080) + Frontend Web (5173). |
+| [`run-local.bat`](run-local.bat) | [`run-local.ps1`](run-local.ps1) | **Khởi chạy hệ thống:** Kiểm tra Node.js, Java 21 và cấu hình Supabase; nạp `.env`; chạy Backend API (8080) + Frontend Web (5173). |
 | [`stop-local.bat`](stop-local.bat) | [`stop-local.ps1`](stop-local.ps1) | **Dừng nhanh các tiến trình local:** Quét và giải phóng cổng 8080 (API) và 5173 (Web). |
-| [`init-db.bat`](init-db.bat) | [`init-db.ps1`](init-db.ps1) | **Khởi tạo cơ sở dữ liệu:** Thực thi file DDL [`../db/databaseschema.sql`](../db/databaseschema.sql) trên SQL Server để tạo 33 bảng, trigger và seed data. |
+| [`init-db.bat`](init-db.bat) | [`init-db.ps1`](init-db.ps1) | **Kiểm tra cấu hình database:** Hướng dẫn khởi động API để Hibernate đồng bộ schema; không thực thi DDL hoặc reset dữ liệu. |
 
 ---
 

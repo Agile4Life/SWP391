@@ -23,13 +23,14 @@ public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
 
     @Override
     public void applyTriggers(JdbcTemplate jdbcTemplate) {
+        CenterCheckinSchemaUpgrade.relaxMemberNullability(jdbcTemplate);
         ClassPathResource resource = new ClassPathResource("db/triggers/postgresql-triggers.sql");
         if (!resource.exists()) {
             throw new IllegalStateException("Mandatory PostgreSQL trigger script is missing");
         }
         try (InputStream is = resource.getInputStream()) {
             jdbcTemplate.execute(new String(is.readAllBytes(), StandardCharsets.UTF_8));
-            log.info("PostgreSQL invariant triggers applied via polymorphism.");
+            log.info("PostgreSQL invariant triggers installed.");
         } catch (IOException e) {
             throw new IllegalStateException("Cannot read PostgreSQL trigger script", e);
         } catch (DataAccessException e) {

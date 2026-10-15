@@ -8,15 +8,12 @@
     Chi chay mot thanh phan: 'all', 'web', 'api', 'db'
 .PARAMETER NoBrowser
     Khong tu dong mo trinh duyet
-.PARAMETER SkipDbCheck
-    Bo qua kiem tra ket noi SQL Server
 #>
 [CmdletBinding()]
 param(
     [ValidateSet("all", "web", "api", "db")]
     [string]$Only = "all",
-    [switch]$NoBrowser,
-    [switch]$SkipDbCheck
+    [switch]$NoBrowser
 )
 
 $Host.UI.RawUI.WindowTitle = "SCMS - Local Runner"
@@ -67,7 +64,7 @@ if (Test-Path $envFile) {
     }
 }
 
-# Select the database before invoking any vendor-specific initialization.
+# Validate the PostgreSQL/Supabase configuration before starting the API.
 if ($Only -in @("all", "api", "db")) {
     $databaseConfig = Resolve-ScmsDatabaseConfig -Profiles $env:SPRING_PROFILES_ACTIVE -JdbcUrl $env:SPRING_DATASOURCE_URL
     $env:SPRING_PROFILES_ACTIVE = $databaseConfig.Profiles
@@ -130,23 +127,9 @@ if ($Only -in @("all", "api")) {
     }
 }
 
-# 4. Pre-flight check: SQL Server & Khoi tao DB
-if (-not $SkipDbCheck -and ($Only -in @("all", "api", "db")) -and $databaseConfig.Provider -eq 'sqlserver') {
-    Write-Host "-> Dang kiem tra ket noi SQL Server..." -ForegroundColor Yellow
-    $initScript = Join-Path $scriptDir "init-db.ps1"
-    if (Test-Path $initScript) {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File $initScript
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[CANH BAO] Khong the ket noi den SQL Server." -ForegroundColor Yellow
-            Write-Host "Hay chac chan SQL Server dang chay (port 1433) truoc khi API hoat dong." -ForegroundColor Yellow
-            if ($Only -eq "db") { exit 1 }
-        }
-    }
-}
-
+# Hibernate owns schema creation and upgrades when the API starts.
 if (($Only -in @("all", "api", "db")) -and $databaseConfig.Provider -eq 'postgresql') {
     Write-Host '[INFO] PostgreSQL selected: Hibernate creates tables and installs triggers when API starts.' -ForegroundColor Cyan
-    Write-Host '[INFO] SQL Server initialization is skipped.' -ForegroundColor DarkGray
 }
 
 if ($Only -eq "db") {

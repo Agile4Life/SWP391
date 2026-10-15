@@ -17,8 +17,8 @@ public class SupabaseConfiguration {
     @Bean
     static BeanFactoryPostProcessor validateSupabaseConnection(Environment environment) {
         return beanFactory -> {
-            if (Arrays.stream(environment.getActiveProfiles()).anyMatch(p -> p.equals("local") || p.equals("sqlserver"))) {
-                throw new IllegalStateException("Supabase cannot be combined with local or sqlserver profiles");
+            if (Arrays.stream(environment.getActiveProfiles()).anyMatch(p -> p.equals("local"))) {
+                throw new IllegalStateException("Supabase cannot be combined with the local profile");
             }
             for (String property : new String[]{"spring.datasource.url", "spring.datasource.username",
                     "spring.datasource.password", "app.jwt.secret"}) {

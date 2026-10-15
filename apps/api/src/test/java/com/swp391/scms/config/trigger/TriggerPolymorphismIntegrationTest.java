@@ -16,36 +16,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Integration & invariant test verifying that triggers P2, P3, and P4 are polymorphic
- * and uniformly defined across both SQL Server and PostgreSQL.
+ * PostgreSQL provider checks for mandatory P2, P3, and P4 triggers.
  */
 class TriggerPolymorphismIntegrationTest {
-
-    @Test
-    @DisplayName("P2/P3/P4 triggers: SQL Server trigger script must contain all mandatory business invariants")
-    void testSqlServerTriggersContainAllInvariants() throws Exception {
-        ClassPathResource resource = new ClassPathResource("db/triggers/sqlserver-triggers.sql");
-        assertTrue(resource.exists(), "SQL Server trigger script must exist in classpath");
-
-        String sql;
-        try (InputStream is = resource.getInputStream()) {
-            sql = new String(is.readAllBytes(), StandardCharsets.UTF_8).toLowerCase();
-        }
-
-        // P2: Capacity check
-        assertTrue(sql.contains("trg_enrollments_check_capacity"), "Must contain P2 capacity trigger");
-        assertTrue(sql.contains("capacity"), "Must verify class capacity");
-
-        // P3: Schedule conflicts (Coach & Room)
-        assertTrue(sql.contains("trg_sessions_check_conflict"), "Must contain P3 conflict trigger");
-        assertTrue(sql.contains("coach_id"), "Must check coach time overlap");
-        assertTrue(sql.contains("room_id"), "Must check room time overlap");
-
-        // P4: Membership invariants (Enrollments & Checkins)
-        assertTrue(sql.contains("trg_enrollments_check_membership"), "Must contain P4 enrollment membership trigger");
-        assertTrue(sql.contains("trg_checkins_check_membership"), "Must contain P4 checkin membership trigger");
-        assertTrue(sql.contains("active"), "Must verify subscription status is active");
-    }
 
     @Test
     @DisplayName("P2/P3/P4 triggers: PostgreSQL trigger script must contain all mandatory business invariants")
@@ -76,22 +49,12 @@ class TriggerPolymorphismIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"Microsoft SQL Server", "SQL Server 2022", "sql server"})
-    @DisplayName("SqlServerTriggerProvider should correctly support SQL Server database names")
-    void testSqlServerProviderSupport(String dbName) {
-        SqlServerTriggerProvider provider = new SqlServerTriggerProvider();
-        assertTrue(provider.supports(dbName));
-        assertFalse(provider.supports("PostgreSQL"));
-        assertFalse(provider.supports("Oracle"));
-    }
-
-    @ParameterizedTest
     @ValueSource(strings = {"PostgreSQL", "PostgreSQL 16", "postgresql"})
     @DisplayName("PostgreSqlTriggerProvider should correctly support PostgreSQL database names")
     void testPostgreSqlProviderSupport(String dbName) {
         PostgreSqlTriggerProvider provider = new PostgreSqlTriggerProvider();
         assertTrue(provider.supports(dbName));
-        assertFalse(provider.supports("Microsoft SQL Server"));
+        assertFalse(provider.supports(null));
         assertFalse(provider.supports("MySQL"));
     }
 
@@ -106,13 +69,6 @@ class TriggerPolymorphismIntegrationTest {
             return null;
         }).when(mockJdbc).execute(anyString());
 
-        SqlServerTriggerProvider sqlServerProvider = new SqlServerTriggerProvider();
-        sqlServerProvider.applyTriggers(mockJdbc);
-
-        assertFalse(executedStatements.isEmpty(), "SQL Server statements must be executed");
-        assertTrue(executedStatements.size() >= 5, "Must execute at least 5 split statements for SQL Server");
-
-        executedStatements.clear();
         PostgreSqlTriggerProvider postgreSqlProvider = new PostgreSqlTriggerProvider();
         postgreSqlProvider.applyTriggers(mockJdbc);
 

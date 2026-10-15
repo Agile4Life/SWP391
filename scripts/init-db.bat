@@ -2,7 +2,7 @@
 chcp 65001 >nul
 title SCMS - Khoi tao Database
 echo ==========================================================
-echo          SCMS - KHOI TAO DATABASE SPORTCENTERDB
+echo          SCMS - CAU HINH SUPABASE POSTGRESQL
 echo ==========================================================
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0init-db.ps1" %*
 if %ERRORLEVEL% NEQ 0 (

@@ -44,12 +44,7 @@
         </dependency>
 
 
-        <!-- Driver kết nối cơ sở dữ liệu SQL Server -->
-        <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!-- PostgreSQL JDBC driver for Supabase -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
