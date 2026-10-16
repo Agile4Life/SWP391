@@ -61,21 +61,13 @@ public class PaymentController {
                 .body(ApiResponse.created(msg("finance.payment.created"), created));
     }
 
-    <<<<<<<HEAD @Operation(summary="Lịch sử thanh toán của hội viên hiện tại",description="Lấy tất cả giao dịch thanh toán của chính hội viên đang đăng nhập")@GetMapping("/my")
-
-    public ResponseEntity<ApiResponse<List<PaymentDto>>> getMyPayments(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        List<PaymentDto> payments = paymentService.getPaymentsByMemberId(principal.id());
-        return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.list"), payments));
-=======
-
-    @Operation(summary = "Lịch sử thanh toán của hội viên đang đăng nhập")
+    @Operation(summary = "Lịch sử thanh toán của hội viên đang đăng nhập", description = "Lấy tất cả giao dịch thanh toán của chính hội viên đang đăng nhập")
     @GetMapping("/my")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<List<PaymentDto>>> getMyPayments(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.list"),
                 paymentService.getPaymentsByMemberId(principal.id())));
->>>>>>> origin/main
     }
 
     @Operation(summary = "Xem chi tiết giao dịch thanh toán", description = "Tra cứu giao dịch theo Payment ID")

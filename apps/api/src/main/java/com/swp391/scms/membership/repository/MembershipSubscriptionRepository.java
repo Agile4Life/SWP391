@@ -28,4 +28,7 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
         Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId,
                         String status);
+
+        Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                        Long memberId, String status, LocalDate todayForStart, LocalDate todayForEnd);
 }

@@ -258,7 +258,8 @@ class MembershipSubscriptionServiceTest {
         sub.setQrCode("QR-TEST-123");
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
-        when(subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(10L, "active"))
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", LocalDate.now(clock), LocalDate.now(clock)))
                 .thenReturn(Optional.of(sub));
 
         SubscriptionDto result = service.current(principal);
@@ -274,7 +275,8 @@ class MembershipSubscriptionServiceTest {
         member.setUserId(10L);
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
-        when(subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(10L, "active"))
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", LocalDate.now(clock), LocalDate.now(clock)))
                 .thenReturn(Optional.empty());
 
         SubscriptionDto result = service.current(principal);
@@ -283,27 +285,34 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
-    void current_returnsNull_whenActiveSubscriptionHasExpiredByDate() {
+    void current_ignoresFutureRenewalSubscription_returnsCurrentlyActiveOnly() {
         Member member = new Member();
         member.setUserId(10L);
 
         MembershipPackage pack = new MembershipPackage();
         pack.setId(1L);
+        pack.setName("Gói 1 tháng");
 
-        MembershipSubscription sub = new MembershipSubscription();
-        sub.setId(100L);
-        sub.setMember(member);
-        sub.setMembershipPackage(pack);
-        sub.setStatus("active");
-        sub.setEndDate(LocalDate.now(clock).minusDays(1)); // Expired yesterday
+        // Currently active subscription covering today
+        MembershipSubscription currentSub = new MembershipSubscription();
+        currentSub.setId(100L);
+        currentSub.setMember(member);
+        currentSub.setMembershipPackage(pack);
+        currentSub.setStatus("active");
+        currentSub.setStartDate(LocalDate.now(clock).minusDays(10));
+        currentSub.setEndDate(LocalDate.now(clock).plusDays(20));
+        currentSub.setQrCode("QR-CURRENT-ACTIVE");
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
-        when(subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(10L, "active"))
-                .thenReturn(Optional.of(sub));
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", LocalDate.now(clock), LocalDate.now(clock)))
+                .thenReturn(Optional.of(currentSub));
 
         SubscriptionDto result = service.current(principal);
 
-        assertThat(result).isNull();
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(100L);
+        assertThat(result.qrCode()).isEqualTo("QR-CURRENT-ACTIVE");
     }
 
     @Test

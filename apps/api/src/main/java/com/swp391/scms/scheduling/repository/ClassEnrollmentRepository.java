@@ -20,7 +20,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
 
     long countByGymClassIdAndStatus(Long classId, String status);
 
-    <<<<<<<HEAD @Query("""
+    @Query("""
         SELECT ce FROM ClassEnrollment ce
         JOIN FETCH ce.gymClass gc
         LEFT JOIN FETCH gc.coach c
@@ -30,11 +30,10 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
           AND (:status IS NULL OR LOWER(ce.status) = LOWER(:status))
         ORDER BY ce.enrolledAt DESC
     """)
-
     List<ClassEnrollment> findByMemberUserIdWithDetails(
             @Param("memberId") Long memberId,
-            @Param("status") String status);=======
+            @Param("status") String status);
 
     /** SCRUM-73 BR-03: a member may only hold one active booking per class. */
-    Optional<ClassEnrollment> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);>>>>>>>origin/main
+    Optional<ClassEnrollment> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 }

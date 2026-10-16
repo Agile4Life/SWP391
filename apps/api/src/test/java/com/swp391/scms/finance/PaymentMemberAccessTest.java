@@ -13,6 +13,7 @@ import com.swp391.scms.security.*;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Member;
+import com.swp391.scms.membership.service.MembershipService;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,8 @@ class PaymentMemberAccessTest {
         UserRepository users;
         @MockBean
         MembershipSubscriptionRepository subscriptions;
+        @MockBean
+        MembershipService membershipService;
         @MockBean
         ClassEnrollmentRepository enrollments;
         @MockBean
