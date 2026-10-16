@@ -22,4 +22,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             order by u.fullName
             """)
     List<Member> search(@Param("pattern") String pattern, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.userId = :userId")
+    Optional<Member> findByIdForUpdate(@Param("userId") Long userId);
 }

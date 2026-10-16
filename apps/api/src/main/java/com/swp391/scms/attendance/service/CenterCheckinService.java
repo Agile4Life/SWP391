@@ -41,6 +41,7 @@ public class CenterCheckinService {
 
     private final CenterCheckinRepository checkins;
     private final MembershipSubscriptionRepository subscriptions;
+    private final com.swp391.scms.users.MemberRepository memberRepository;
     private final UserRepository users;
     private final Clock clock;
     private final MessageService messageService;
@@ -49,17 +50,35 @@ public class CenterCheckinService {
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
                                 Clock clock) {
-        this(checkins, subscriptions, users, clock, null);
+        this(checkins, subscriptions, null, users, clock, null);
     }
 
-    @Autowired
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
                                 Clock clock,
                                 MessageService messageService) {
+        this(checkins, subscriptions, null, users, clock, messageService);
+    }
+
+    public CenterCheckinService(CenterCheckinRepository checkins,
+                                MembershipSubscriptionRepository subscriptions,
+                                com.swp391.scms.users.MemberRepository memberRepository,
+                                UserRepository users,
+                                Clock clock) {
+        this(checkins, subscriptions, memberRepository, users, clock, null);
+    }
+
+    @Autowired
+    public CenterCheckinService(CenterCheckinRepository checkins,
+                                MembershipSubscriptionRepository subscriptions,
+                                com.swp391.scms.users.MemberRepository memberRepository,
+                                UserRepository users,
+                                Clock clock,
+                                MessageService messageService) {
         this.checkins = checkins;
         this.subscriptions = subscriptions;
+        this.memberRepository = memberRepository;
         this.users = users;
         this.clock = clock;
         this.messageService = messageService;
@@ -102,27 +121,38 @@ public class CenterCheckinService {
             return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found");
         }
 
+        // P2: Khóa bản ghi Member trước bước kiểm tra-insert để hai request không cùng GRANTED
+        Member lockedMember = memberRepository != null
+                ? memberRepository.findByIdForUpdate(member.getUserId()).orElse(member)
+                : member;
+
+        // P1: Chặn QR của Member đã xóa mềm/khóa
+        User user = lockedMember.getUser();
+        if (user != null && (user.getDeletedAt() != null || "locked".equalsIgnoreCase(user.getStatus()) || !"active".equalsIgnoreCase(user.getStatus()))) {
+            return saveDeniedRecord(lockedMember, now, request.gate(), recorder, "error.attendance.member_locked_or_deleted");
+        }
+
         // Trường hợp 3: Gói tập chưa active (vd: pending_payment, cancelled)
         if (!STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus())) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
+            return saveDeniedRecord(lockedMember, now, request.gate(), recorder, "error.attendance.subscription_not_active");
         }
 
         // Trường hợp 4: Gói tập chưa đến ngày hoặc đã hết hạn
         if (sub.getStartDate() != null && sub.getStartDate().isAfter(today)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
+            return saveDeniedRecord(lockedMember, now, request.gate(), recorder, "error.attendance.subscription_not_active");
         }
         if (sub.getEndDate() != null && sub.getEndDate().isBefore(today)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_expired");
+            return saveDeniedRecord(lockedMember, now, request.gate(), recorder, "error.attendance.subscription_expired");
         }
 
         // Trường hợp 5 (BR-04 Anti-passback): Hội viên đang ở trong phòng tập chưa checkout
-        if (checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(member.getUserId(), RESULT_GRANTED)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.already_checked_in");
+        if (checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(lockedMember.getUserId(), RESULT_GRANTED)) {
+            return saveDeniedRecord(lockedMember, now, request.gate(), recorder, "error.attendance.already_checked_in");
         }
 
         // Hợp lệ -> GRANTED
         CenterCheckin checkin = new CenterCheckin();
-        checkin.setMember(member);
+        checkin.setMember(lockedMember);
         checkin.setCheckInTime(now);
         checkin.setMethod("qr");
         checkin.setGate(request.gate());
@@ -141,7 +171,7 @@ public class CenterCheckinService {
         checkin.setGate(gate);
         checkin.setRecordedBy(recorder);
         checkin.setStatus(RESULT_DENIED);
-        checkin.setDenialReason(resolveMessage(reasonKey));
+        checkin.setDenialReason(reasonKey);
 
         return toDto(checkins.saveAndFlush(checkin));
     }
@@ -235,6 +265,7 @@ public class CenterCheckinService {
         if (member != null && member.getUser() != null) {
             memberName = member.getUser().getFullName();
         }
+        String translatedReason = c.getDenialReason() != null ? resolveMessage(c.getDenialReason()) : null;
         return new CheckinDto(
                 c.getId(),
                 member != null ? member.getUserId() : null,
@@ -244,7 +275,7 @@ public class CenterCheckinService {
                 c.getMethod(),
                 c.getGate(),
                 c.getStatus(),
-                c.getDenialReason()
+                translatedReason
         );
     }
 }

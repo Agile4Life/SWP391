@@ -45,6 +45,9 @@ class CenterCheckinServiceTest {
     private MembershipSubscriptionRepository subscriptions;
 
     @Mock
+    private com.swp391.scms.users.MemberRepository memberRepository;
+
+    @Mock
     private UserRepository users;
 
     private Clock clock;
@@ -63,13 +66,14 @@ class CenterCheckinServiceTest {
         source.setDefaultEncoding("UTF-8");
         messageService = new MessageService(source);
 
-        service = new CenterCheckinService(checkins, subscriptions, users, clock, messageService);
+        service = new CenterCheckinService(checkins, subscriptions, memberRepository, users, clock, messageService);
     }
 
     private Member mockMember(Long userId, String name) {
         User user = new User();
         user.setId(userId);
         user.setFullName(name);
+        user.setStatus("active");
 
         Member member = new Member();
         member.setUser(user);
@@ -113,8 +117,49 @@ class CenterCheckinServiceTest {
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("DENIED", captor.getValue().getStatus());
+        assertEquals("error.attendance.qr_invalid", captor.getValue().getDenialReason());
         assertNull(captor.getValue().getMember());
         assertEquals("Gate A", captor.getValue().getGate());
+    }
+
+    @Test
+    @DisplayName("P1: Member bị xóa mềm (deletedAt != null) -> Lưu bản ghi DENIED kèm message key")
+    void p1_memberSoftDeleted_logsDeniedRecord() {
+        Member member = mockMember(10L, "Nguyễn Văn X");
+        member.getUser().setDeletedAt(LocalDateTime.now(clock).minusDays(5));
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+
+        when(subscriptions.findByQrCode("QR-DELETED")).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-DELETED", "Gate A"));
+
+        assertEquals("DENIED", result.status());
+        ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
+        verify(checkins).saveAndFlush(captor.capture());
+        assertEquals("DENIED", captor.getValue().getStatus());
+        assertEquals("error.attendance.member_locked_or_deleted", captor.getValue().getDenialReason());
+    }
+
+    @Test
+    @DisplayName("P1: Member bị khóa tài khoản (status = 'locked') -> Lưu bản ghi DENIED kèm message key")
+    void p1_memberLocked_logsDeniedRecord() {
+        Member member = mockMember(10L, "Nguyễn Văn Y");
+        member.getUser().setStatus("locked");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+
+        when(subscriptions.findByQrCode("QR-LOCKED")).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-LOCKED", "Gate A"));
+
+        assertEquals("DENIED", result.status());
+        ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
+        verify(checkins).saveAndFlush(captor.capture());
+        assertEquals("DENIED", captor.getValue().getStatus());
+        assertEquals("error.attendance.member_locked_or_deleted", captor.getValue().getDenialReason());
     }
 
     @Test
@@ -134,6 +179,7 @@ class CenterCheckinServiceTest {
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("DENIED", captor.getValue().getStatus());
+        assertEquals("error.attendance.subscription_not_active", captor.getValue().getDenialReason());
         assertEquals(member, captor.getValue().getMember());
     }
 
@@ -153,6 +199,7 @@ class CenterCheckinServiceTest {
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("DENIED", captor.getValue().getStatus());
+        assertEquals("error.attendance.subscription_expired", captor.getValue().getDenialReason());
     }
 
     @Test
@@ -172,6 +219,7 @@ class CenterCheckinServiceTest {
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("DENIED", captor.getValue().getStatus());
+        assertEquals("error.attendance.already_checked_in", captor.getValue().getDenialReason());
     }
 
     @Test
@@ -259,5 +307,39 @@ class CenterCheckinServiceTest {
 
         assertEquals(2, list.size());
         verify(checkins).findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any());
+    }
+
+    @Test
+    @DisplayName("P2: Quét mã QR thành công phải gọi findByIdForUpdate khóa Member trước khi insert")
+    void p2_scan_acquiresPessimisticLockOnMember() {
+        Member member = mockMember(10L, "Nguyễn Văn Lock");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+
+        when(subscriptions.findByQrCode("QR-LOCK")).thenReturn(Optional.of(sub));
+        when(memberRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-LOCK", "Gate A"));
+
+        assertEquals("GRANTED", result.status());
+        verify(memberRepository).findByIdForUpdate(10L);
+    }
+
+    @Test
+    @DisplayName("P2: History phải dịch lý do từ chối (denial_reason) từ message key")
+    void p2_history_translatesDenialReasonFromMessageKey() {
+        CenterCheckin deniedCheckin = new CenterCheckin();
+        deniedCheckin.setStatus("DENIED");
+        deniedCheckin.setDenialReason("error.attendance.already_checked_in");
+
+        when(checkins.findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any()))
+                .thenReturn(List.of(deniedCheckin));
+
+        List<CheckinDto> list = service.history(receptionist);
+
+        assertEquals(1, list.size());
+        assertEquals(messageService.getMessage("error.attendance.already_checked_in"), list.get(0).denialReason());
     }
 }
