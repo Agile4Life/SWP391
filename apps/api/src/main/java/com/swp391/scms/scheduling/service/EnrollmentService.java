@@ -121,6 +121,7 @@ public class EnrollmentService {
 
         ClassEnrollment enrollment = new ClassEnrollment();
         enrollment.setGymClass(gymClass);
+        enrollment.setSession(session);
         enrollment.setMember(member);
         enrollment.setStatus(BOOKED);
         enrollment.setEnrolledAt(LocalDateTime.now(clock));

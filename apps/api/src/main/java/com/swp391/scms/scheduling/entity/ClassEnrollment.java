@@ -25,6 +25,10 @@ public class ClassEnrollment {
     private GymClass gymClass;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", nullable = false)
+    private ClassSession session;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
     private Member member;
 
@@ -102,5 +106,13 @@ public class ClassEnrollment {
 
     public void setCancelReason(String cancelReason) {
         this.cancelReason = cancelReason;
+    }
+
+    public ClassSession getSession() {
+        return session;
+    }
+
+    public void setSession(ClassSession session) {
+        this.session = session;
     }
 }
