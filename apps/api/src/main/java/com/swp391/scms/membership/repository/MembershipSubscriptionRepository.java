@@ -11,23 +11,21 @@ import java.util.Optional;
 @Repository
 public interface MembershipSubscriptionRepository extends JpaRepository<MembershipSubscription, Long> {
 
-    List<MembershipSubscription> findByMemberUserId(Long memberId);
+        List<MembershipSubscription> findByMemberUserId(Long memberId);
 
-    Optional<MembershipSubscription> findByQrCode(String qrCode);
+        Optional<MembershipSubscription> findByQrCode(String qrCode);
 
-    List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
+        List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
 
-    List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
+        List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
 
-    boolean existsByMemberUserIdAndStatus(Long memberId, String status);
+        boolean existsByMemberUserIdAndStatus(Long memberId, String status);
 
-    boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
+        boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
 
-    boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-            Long memberId, String status, LocalDate startDate, LocalDate endDate);
+        boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        Long memberId, String status, LocalDate startDate, LocalDate endDate);
 
-    Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId, String status);
-
-    Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
-            Long memberId, String status, LocalDate todayForStart, LocalDate todayForEnd);
+        Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId,
+                        String status);
 }

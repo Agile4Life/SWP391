@@ -38,9 +38,9 @@ public class MembershipSubscriptionService {
     private final Clock clock;
 
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
-                                         MembershipPackageRepository packages,
-                                         MemberRepository members,
-                                         Clock clock) {
+            MembershipPackageRepository packages,
+            MemberRepository members,
+            Clock clock) {
         this.subscriptions = subscriptions;
         this.packages = packages;
         this.members = members;
@@ -59,7 +59,8 @@ public class MembershipSubscriptionService {
         MembershipPackage membershipPackage = findActivePackage(request.packageId());
 
         LocalDate today = LocalDate.now(clock);
-        if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(member.getUserId(), STATUS_ACTIVE, today)) {
+        if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(member.getUserId(), STATUS_ACTIVE,
+                today)) {
             throw new ConflictException(
                     "MEMBERSHIP_ALREADY_ACTIVE",
                     "error.membership.already_active",
@@ -81,8 +82,10 @@ public class MembershipSubscriptionService {
 
     /**
      * SCRUM-71 BR-05, BR-06:
-     * Gia hạn tạo subscription mới liên kết previous_subscription_id ở pending_payment.
-     * Nếu gói cũ còn hạn thì start_date mới = end_date cũ + 1 ngày (không mất ngày đã mua).
+     * Gia hạn tạo subscription mới liên kết previous_subscription_id ở
+     * pending_payment.
+     * Nếu gói cũ còn hạn thì start_date mới = end_date cũ + 1 ngày (không mất ngày
+     * đã mua).
      * Nếu đã hết hạn thì bắt đầu từ ngày hôm nay.
      */
     @Transactional
@@ -120,16 +123,16 @@ public class MembershipSubscriptionService {
 
     /**
      * SCRUM-71 BR-01, BR-06:
-     * Lấy subscription active hiện tại (start_date <= today <= end_date) của hội viên kèm mã QR định danh.
-     * Không chọn nhầm các gói gia hạn trong tương lai (start_date > today).
+     * Lấy subscription active hiện tại (chưa hết hạn) của hội viên kèm mã QR định
+     * danh.
      * Trả về null nếu hội viên chưa có gói hoặc gói đã hết hạn.
      */
     @Transactional(readOnly = true)
     public SubscriptionDto current(AuthenticatedPrincipal principal) {
         findMember(principal.id());
         LocalDate today = LocalDate.now(clock);
-        return subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
-                        principal.id(), STATUS_ACTIVE, today, today)
+        return subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(principal.id(), STATUS_ACTIVE)
+                .filter(sub -> sub.getEndDate() == null || !sub.getEndDate().isBefore(today))
                 .map(this::toDto)
                 .orElse(null);
     }
@@ -148,7 +151,8 @@ public class MembershipSubscriptionService {
 
     /**
      * SCRUM-71 BR-01, BR-03:
-     * Kích hoạt subscription sau khi thanh toán thành công (được gọi từ workflow thanh toán - SCRUM-76).
+     * Kích hoạt subscription sau khi thanh toán thành công (được gọi từ workflow
+     * thanh toán - SCRUM-76).
      * Chỉ chuyển từ pending_payment sang active.
      * Sinh qr_code ngẫu nhiên bảo mật (UUID duy nhất), tính end_date.
      */
@@ -205,7 +209,6 @@ public class MembershipSubscriptionService {
                 s.getEndDate(),
                 s.getStatus(),
                 s.getQrCode(),
-                s.getCreatedAt()
-        );
+                s.getCreatedAt());
     }
 }
