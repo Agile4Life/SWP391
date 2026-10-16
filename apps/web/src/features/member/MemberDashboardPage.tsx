@@ -4,7 +4,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import {
   getCurrentMembership,
-  getUpcomingBookings,
+  getBookedEnrollments,
   type BookedClass,
   type MemberSubscription,
 } from './memberDashboardApi';
@@ -38,41 +38,6 @@ function membershipProgress(
 
   const used = dayNumber(today) - start;
   return Math.min(100, Math.max(0, (used / duration) * 100));
-}
-
-function upcomingBookedClasses(
-  classes: BookedClass[],
-  today: Date,
-): BookedClass[] {
-  const start = dayNumber(today);
-  const currentTime =
-    `${String(today.getHours()).padStart(2, '0')}:` +
-    `${String(today.getMinutes()).padStart(2, '0')}`;
-
-  return classes
-    .filter((item) => {
-      if (
-        !item.status ||
-        !item.sessionDate ||
-        !item.startTime
-      ) {
-        return false;
-      }
-
-      const day = dayNumber(localDate(item.sessionDate));
-
-      return (
-        item.status.toLowerCase() === 'booked' &&
-        day >= start &&
-        day < start + 7 &&
-        (day !== start || item.startTime.slice(0, 5) >= currentTime)
-      );
-    })
-    .sort((a, b) =>
-      `${a.sessionDate}T${a.startTime}`.localeCompare(
-        `${b.sessionDate}T${b.startTime}`,
-      ),
-    );
 }
 
 function formatDate(value: string): string {
@@ -113,7 +78,7 @@ export function MemberDashboardPage() {
     setClassesState({ status: 'loading' });
 
     try {
-      const classes = await getUpcomingBookings();
+      const classes = await getBookedEnrollments();
       setClassesState({ status: 'success', classes });
     } catch {
       setClassesState({ status: 'error' });
@@ -134,10 +99,7 @@ export function MemberDashboardPage() {
       ? membershipState.membership
       : null;
 
-  const classes =
-    classesState.status === 'success'
-      ? upcomingBookedClasses(classesState.classes, today)
-      : [];
+  const classes = classesState.status === 'success' ? classesState.classes : [];
 
   return (
     <div className="portal-container">
@@ -257,7 +219,7 @@ export function MemberDashboardPage() {
             id="upcoming-title"
             className="portal-card-title"
           >
-            Lịch học 7 ngày tới
+            Lớp đã đăng ký
           </h2>
         </div>
 
@@ -287,28 +249,22 @@ export function MemberDashboardPage() {
         {classesState.status === 'success' &&
           classes.length === 0 && (
             <p className="row-card__meta">
-              Bạn chưa có buổi học đã đặt trong 7 ngày tới.
+              Bạn chưa có lớp học đang đặt.
             </p>
           )}
 
         {classesState.status === 'success' &&
           classes.length > 0 && (
             <div className="stack">
+              <p className="row-card__meta">
+                Chưa thể hiển thị lịch 7 ngày chính xác vì hệ thống chưa lưu buổi học cụ thể của lượt đặt chỗ.
+              </p>
               {classes.map((item) => (
                 <div key={item.id} className="row-card">
                   <h3 className="row-card__title">
                     {item.className}
                   </h3>
-
-                  <div className="row-card__meta">
-                    {formatDate(item.sessionDate)}
-                    {' · '}
-                    {item.startTime.slice(0, 5)}
-                    {'–'}
-                    {item.endTime.slice(0, 5)}
-                    {' · '}
-                    {item.roomName}
-                  </div>
+                  <div className="row-card__meta">Đã đặt chỗ</div>
                 </div>
               ))}
             </div>
