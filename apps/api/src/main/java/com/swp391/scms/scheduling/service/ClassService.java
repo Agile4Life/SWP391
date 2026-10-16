@@ -29,9 +29,13 @@ import java.util.List;
 /**
  * SCRUM-72: class and class-session management.
  *
- * <p>Schedule-conflict (Trigger P3) is enforced by the database; violations surface as
- * {@link org.springframework.dao.DataIntegrityViolationException} and are translated to
- * HTTP 409 with message key {@code error.scheduling.session_conflict} by the global handler.
+ * <p>
+ * Schedule-conflict (Trigger P3) is enforced by the database; violations
+ * surface as
+ * {@link org.springframework.dao.DataIntegrityViolationException} and are
+ * translated to
+ * HTTP 409 with message key {@code error.scheduling.session_conflict} by the
+ * global handler.
  */
 @Service
 public class ClassService {
@@ -52,13 +56,13 @@ public class ClassService {
     private final Clock clock;
 
     public ClassService(GymClassRepository gymClasses,
-                        ClassSessionRepository sessions,
-                        ClassEnrollmentRepository enrollments,
-                        DisciplineRepository disciplines,
-                        CoachRepository coaches,
-                        RoomRepository rooms,
-                        SchedulingMapper mapper,
-                        Clock clock) {
+            ClassSessionRepository sessions,
+            ClassEnrollmentRepository enrollments,
+            DisciplineRepository disciplines,
+            CoachRepository coaches,
+            RoomRepository rooms,
+            SchedulingMapper mapper,
+            Clock clock) {
         this.gymClasses = gymClasses;
         this.sessions = sessions;
         this.enrollments = enrollments;
@@ -70,7 +74,8 @@ public class ClassService {
     }
 
     /**
-     * SCRUM-72 BR-01..BR-02, BR-05: create a class. Disciplines/coach/room must exist,
+     * SCRUM-72 BR-01..BR-02, BR-05: create a class. Disciplines/coach/room must
+     * exist,
      * capacity &gt; 0, the room must be available and the coach must be active.
      */
     @Transactional
@@ -113,7 +118,8 @@ public class ClassService {
 
     /**
      * SCRUM-72 BR-03: schedule a session. End time must be after start time and the
-     * session may not be placed in the past. Trigger P3 rejects overlaps at the database.
+     * session may not be placed in the past. Trigger P3 rejects overlaps at the
+     * database.
      */
     @Transactional
     public ClassSessionDto createSession(Long classId, CreateSessionRequest request) {
@@ -151,13 +157,14 @@ public class ClassService {
     }
 
     /**
-     * SCRUM-72 BR-06: schedule lookup for any authenticated role with optional filters.
+     * SCRUM-72 BR-06: schedule lookup for any authenticated role with optional
+     * filters.
      */
     @Transactional(readOnly = true)
     public List<ClassSessionDto> searchSessions(LocalDate fromDate,
-                                                LocalDate toDate,
-                                                Long disciplineId,
-                                                Long coachId) {
+            LocalDate toDate,
+            Long disciplineId,
+            Long coachId) {
         return sessions.searchSessions(fromDate, toDate, disciplineId, coachId).stream()
                 .map(session -> mapper.toDto(session, countBooked(session)))
                 .toList();

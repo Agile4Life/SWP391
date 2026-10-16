@@ -25,7 +25,9 @@ import java.util.List;
 /**
  * SCRUM-74: smart waitlist for full classes.
  *
- * <p>Only the underlying API is in scope here. The automatic promotion/handover and the
+ * <p>
+ * Only the underlying API is in scope here. The automatic promotion/handover
+ * and the
  * 24h expiry window belong to Sprint 3 (SCRUM-112).
  */
 @Service
@@ -43,11 +45,11 @@ public class WaitlistService {
     private final Clock clock;
 
     public WaitlistService(ClassWaitlistRepository waitlists,
-                           ClassEnrollmentRepository enrollments,
-                           ClassSessionRepository sessions,
-                           MembershipSubscriptionRepository subscriptions,
-                           MemberRepository members,
-                           Clock clock) {
+            ClassEnrollmentRepository enrollments,
+            ClassSessionRepository sessions,
+            MembershipSubscriptionRepository subscriptions,
+            MemberRepository members,
+            Clock clock) {
         this.waitlists = waitlists;
         this.enrollments = enrollments;
         this.sessions = sessions;
@@ -90,7 +92,8 @@ public class WaitlistService {
                     "Class still has seats; book directly instead");
         }
 
-        // BR-02: unique active waitlist entry per member/class (mirrors uq_waitlist_active).
+        // BR-02: unique active waitlist entry per member/class (mirrors
+        // uq_waitlist_active).
         if (waitlists.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), WAITING)
                 .isPresent()) {
             throw new BadRequestException(
@@ -133,14 +136,16 @@ public class WaitlistService {
                     "Only a waiting entry can be withdrawn");
         }
 
-        // Schema only permits waiting/notified/expired. Mark withdrawal as expired rather than
+        // Schema only permits waiting/notified/expired. Mark withdrawal as expired
+        // rather than
         // writing the unsupported cancelled value (no schema changes are allowed).
         waitlist.setStatus("expired");
         return toDto(waitlists.saveAndFlush(waitlist));
     }
 
     /**
-     * SCRUM-74 BR-04/BR-05: the authenticated member's own waitlist, FIFO by requested_at.
+     * SCRUM-74 BR-04/BR-05: the authenticated member's own waitlist, FIFO by
+     * requested_at.
      */
     @Transactional(readOnly = true)
     public List<WaitlistDto> myWaitlists(AuthenticatedPrincipal principal) {
@@ -207,7 +212,6 @@ public class WaitlistService {
                 gymClass != null ? gymClass.getName() : null,
                 waitlist.getMember() != null ? waitlist.getMember().getUserId() : null,
                 waitlist.getStatus(),
-                waitlist.getRequestedAt()
-        );
+                waitlist.getRequestedAt());
     }
 }

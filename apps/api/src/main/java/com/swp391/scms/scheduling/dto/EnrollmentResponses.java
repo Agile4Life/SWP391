@@ -24,8 +24,7 @@ public final class EnrollmentResponses {
             String status,
             LocalDateTime enrolledAt,
             LocalDateTime cancelledAt,
-            String cancelReason
-    ) {
+            String cancelReason) {
     }
 
     public record WaitlistDto(
@@ -34,7 +33,6 @@ public final class EnrollmentResponses {
             String className,
             Long memberId,
             String status,
-            LocalDateTime requestedAt
-    ) {
+            LocalDateTime requestedAt) {
     }
 }

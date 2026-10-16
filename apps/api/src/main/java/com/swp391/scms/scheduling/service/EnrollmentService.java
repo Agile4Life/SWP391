@@ -27,10 +27,13 @@ import java.time.LocalDateTime;
 /**
  * SCRUM-73: member class booking and cancellation.
  *
- * <p>Invariant triggers are owned by the database and are never bypassed:
+ * <p>
+ * Invariant triggers are owned by the database and are never bypassed:
  * Trigger P2 ({@code trg_enrollments_check_capacity}) rejects a full class and
- * Trigger P4 ({@code trg_enrollments_check_membership}) rejects an inactive/expired
- * membership. Both are mirrored as a pre-check so the API returns a precise error
+ * Trigger P4 ({@code trg_enrollments_check_membership}) rejects an
+ * inactive/expired
+ * membership. Both are mirrored as a pre-check so the API returns a precise
+ * error
  * instead of a raw constraint violation.
  */
 @Service
@@ -56,22 +59,22 @@ public class EnrollmentService {
     private final Clock clock;
 
     public EnrollmentService(ClassEnrollmentRepository enrollments,
-                             ClassSessionRepository sessions,
-                             MembershipSubscriptionRepository subscriptions,
-                             MemberRepository members,
-                             NotificationService notifications,
-                             Clock clock) {
+            ClassSessionRepository sessions,
+            MembershipSubscriptionRepository subscriptions,
+            MemberRepository members,
+            NotificationService notifications,
+            Clock clock) {
         this(enrollments, sessions, subscriptions, members, notifications, null, clock);
     }
 
     @Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
-                             ClassSessionRepository sessions,
-                             MembershipSubscriptionRepository subscriptions,
-                             MemberRepository members,
-                             NotificationService notifications,
-                             MessageService messageService,
-                             Clock clock) {
+            ClassSessionRepository sessions,
+            MembershipSubscriptionRepository subscriptions,
+            MemberRepository members,
+            NotificationService notifications,
+            MessageService messageService,
+            Clock clock) {
         this.enrollments = enrollments;
         this.sessions = sessions;
         this.subscriptions = subscriptions;
@@ -207,7 +210,8 @@ public class EnrollmentService {
     }
 
     /**
-     * SCRUM-73 BR-01: Trigger P4 pre-check, the database trigger remains the source of truth.
+     * SCRUM-73 BR-01: Trigger P4 pre-check, the database trigger remains the source
+     * of truth.
      */
     private void ensureActiveMembership(Long memberId) {
         LocalDate today = LocalDate.now(clock);
@@ -254,7 +258,6 @@ public class EnrollmentService {
                 enrollment.getStatus(),
                 enrollment.getEnrolledAt(),
                 enrollment.getCancelledAt(),
-                enrollment.getCancelReason()
-        );
+                enrollment.getCancelReason());
     }
 }
