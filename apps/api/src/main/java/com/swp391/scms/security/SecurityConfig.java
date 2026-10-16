@@ -39,19 +39,36 @@ public class SecurityConfig {
                     .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                    .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")
+                    // Attendance & Check-in (SCRUM-75)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/check-in/*/checkout", "/api/v1/check-in/checkout").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/check-in/history").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "MEMBER")
 
-                    // Payments & Invoices: Strict control for refunds & manual status updates
+                    // Payments & Invoices (SCRUM-71 & Finance)
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/refund", "/api/v1/payments/{id}/refund").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/payments/*/status", "/api/v1/payments/{id}/status").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/payments/my/**").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/payments/my/**", "/api/v1/payments/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments", "/api/v1/payments/process").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/payments/**", "/api/v1/invoices/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
 
-                    // Class Enrollments
-                    .requestMatchers("/api/v1/classes/enrollments/my").hasRole("MEMBER")
+                    // Membership Subscriptions (SCRUM-71)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/subscriptions/my", "/api/v1/subscriptions/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/memberships/subscriptions/**", "/api/v1/subscriptions/**").hasAnyRole("MEMBER", "RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/subscriptions/**", "/api/v1/subscriptions/**").hasAnyRole("MEMBER", "RECEPTIONIST", "CENTER_MANAGER")
 
+                    // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/waitlist").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/waitlists/*").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/waitlists/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
+
+                    // Users, Roles, Member Lookup & Facilities Catalog
+                    .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/members/lookup").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**").authenticated()
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**").hasRole("CENTER_MANAGER")

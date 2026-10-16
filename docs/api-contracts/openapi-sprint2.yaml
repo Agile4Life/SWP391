@@ -1,17 +1,17 @@
 openapi: 3.0.3
 info:
-  title: SCMS API - Sprint 2 Contract
+  title: SCMS API - Sprint 2 Contract (Notifications, Support, Subscriptions, Scheduling & Check-in)
   version: 1.0.0
   description: >
     API contracts for Sprint 2 features:
     - Module I1: In-App Notification Module (SCRUM-67)
     - Module I2: Support Requests / Tickets Module (SCRUM-68)
-    - Module E: Membership Subscriptions (SCRUM-71)
-    - Module C: Class Scheduling & Sessions (SCRUM-72)
-    - Module C: Class Enrollments & Booking (SCRUM-73)
-    - Module C: Smart Waitlist (SCRUM-74)
-    - Module D: Center QR Check-in & Gate Access (SCRUM-75)
-    All responses use the ApiResponse envelope. Messages are localized via the Accept-Language header (default vi).
+    - Module M1: Membership Subscriptions (SCRUM-71)
+    - Module S1-S3: Classes, Sessions, Enrollments & Waitlists (SCRUM-72, SCRUM-73, SCRUM-74)
+    - Module A1: Center QR Check-in & Attendance (SCRUM-75)
+    - Module F1: Member payment requests and own payment history (SCRUM-76)
+    All endpoints require Bearer JWT authentication and enforce RBAC via @PreAuthorize.
+    Responses are wrapped in the standard ApiResponse payload.
 servers:
   - url: /api/v1
 components:
@@ -24,25 +24,61 @@ components:
     ApiResponse:
       type: object
       properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string, description: Localized message }
-        code: { type: string, description: Error code, present on errors }
-        data: { description: Payload }
-        details: { description: Field errors for validation failures }
-        timestamp: { type: string, format: date-time }
+        success:
+          type: boolean
+        status:
+          type: integer
+        message:
+          type: string
+          description: Localized message (vi/en)
+        code:
+          type: string
+          description: Error code when success is false
+        data:
+          description: Payload
+        details:
+          description: Validation or error details
+        timestamp:
+          type: string
+          format: date-time
 
-    ErrorResponse:
+    PaymentRequest:
+      type: object
+      required: [memberId, amount, method]
+      description: >
+        A MEMBER must supply their own memberId and at least one owned subscriptionId or
+        classEnrollmentId. Subscription payments must match the package price and target
+        a pending_payment subscription. Member status must be pending or null; paidAt and
+        receivedById must be null. Staff may use the existing cashier workflow.
+      properties:
+        memberId: {type: integer, format: int64}
+        subscriptionId: {type: integer, format: int64, nullable: true}
+        classEnrollmentId: {type: integer, format: int64, nullable: true}
+        amount: {type: number, minimum: 0, exclusiveMinimum: true}
+        method: {type: string, enum: [cash, pos, bank_transfer, online_wallet]}
+        status: {type: string, enum: [pending, success, failed, refunded], default: pending, nullable: true}
+        paidAt: {type: string, format: date-time, nullable: true}
+        receivedById: {type: integer, format: int64, nullable: true}
+        note: {type: string, nullable: true}
+    PaymentDto:
       type: object
       properties:
-        success: { type: boolean, example: false }
-        status: { type: integer, example: 400 }
-        code: { type: string, example: "BAD_REQUEST" }
-        message: { type: string, example: "Dữ liệu không hợp lệ" }
-        details: { type: object, nullable: true }
-        timestamp: { type: string, format: date-time }
+        id: {type: integer, format: int64}
+        memberId: {type: integer, format: int64}
+        memberName: {type: string}
+        subscriptionId: {type: integer, format: int64, nullable: true}
+        classEnrollmentId: {type: integer, format: int64, nullable: true}
+        amount: {type: number}
+        method: {type: string, enum: [cash, pos, bank_transfer, online_wallet]}
+        status: {type: string, enum: [pending, success, failed, refunded]}
+        paidAt: {type: string, format: date-time, nullable: true}
+        receivedById: {type: integer, format: int64, nullable: true}
+        receivedByName: {type: string, nullable: true}
+        note: {type: string, nullable: true}
+        createdAt: {type: string, format: date-time}
+        invoiceNumber: {type: string, nullable: true}
 
-    # --- Notifications Schemas (SCRUM-67) ---
+    # --- Notifications Schemas ---
     NotificationDto:
       type: object
       properties:
@@ -76,7 +112,7 @@ components:
           type: integer
           format: int64
 
-    # --- Support Requests Schemas (SCRUM-68) ---
+    # --- Support Requests Schemas ---
     CreateSupportRequestDto:
       type: object
       required:
@@ -142,250 +178,337 @@ components:
     SubscriptionDto:
       type: object
       properties:
-        id: { type: integer, example: 100 }
-        memberId: { type: integer, example: 10 }
-        packageId: { type: integer, example: 1 }
-        packageName: { type: string, example: "Gói 1 tháng" }
-        previousSubscriptionId: { type: integer, nullable: true }
-        startDate: { type: string, format: date, example: "2026-10-12" }
-        endDate: { type: string, format: date, example: "2026-11-11" }
-        status: { type: string, enum: [pending_payment, active, expired, cancelled], example: "active" }
-        qrCode: { type: string, nullable: true, example: "QR-SUB-100-XYZ" }
-        createdAt: { type: string, format: date-time }
+        id:
+          type: integer
+          format: int64
+        memberId:
+          type: integer
+          format: int64
+        packageId:
+          type: integer
+          format: int64
+        packageName:
+          type: string
+        previousSubscriptionId:
+          type: integer
+          format: int64
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending_payment, active, expired, cancelled]
+        qrCode:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
 
     SubscriptionCreateRequest:
       type: object
-      required: [packageId]
+      required:
+        - packageId
       properties:
-        packageId: { type: integer, minimum: 1, example: 1 }
-
-    SubscriptionResponse:
+        packageId:
+          type: integer
+          format: int64
+    # --- Scheduling Schemas (SCRUM-72, 73, 74) ---
+    CreateClassRequest:
       type: object
+      required:
+        - name
+        - disciplineId
+        - coachId
+        - roomId
+        - capacity
       properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 201 }
-        message: { type: string, example: "Tạo đơn đăng ký gói tập thành công" }
-        data: { $ref: '#/components/schemas/SubscriptionDto' }
-        timestamp: { type: string, format: date-time }
+        name:
+          type: string
+          maxLength: 150
+        disciplineId:
+          type: integer
+          format: int64
+        coachId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        capacity:
+          type: integer
+          minimum: 1
+        level:
+          type: string
+          enum: [beginner, intermediate, advanced, all]
+          default: all
+        description:
+          type: string
 
-    SubscriptionNullableResponse:
+    CreateSessionRequest:
       type: object
+      required:
+        - sessionDate
+        - startTime
+        - endTime
       properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string, example: "Lấy thông tin gói thành viên hiện tại thành công." }
-        data:
-          nullable: true
-          anyOf:
-            - $ref: '#/components/schemas/SubscriptionDto'
-            - type: 'null'
-        timestamp: { type: string, format: date-time }
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
 
-    SubscriptionListResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string, example: "Lấy danh sách gói thành viên thành công." }
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/SubscriptionDto'
-        timestamp: { type: string, format: date-time }
-
-    # --- Scheduling Schemas (SCRUM-72) ---
     GymClassDto:
       type: object
       properties:
-        id: { type: integer, example: 5 }
-        name: { type: string, example: "Yoga Buổi Sáng" }
-        disciplineId: { type: integer, example: 2 }
-        disciplineName: { type: string, example: "Yoga" }
-        coachId: { type: integer, example: 3 }
-        coachName: { type: string, example: "HLV Nam" }
-        roomId: { type: integer, example: 1 }
-        roomName: { type: string, example: "Phòng Studio 1" }
-        capacity: { type: integer, example: 20 }
-        level: { type: string, enum: [beginner, intermediate, advanced, all], example: "all" }
-        status: { type: string, enum: [active, inactive, archived], example: "active" }
-
-    ClassCreateRequest:
-      type: object
-      required: [name, disciplineId, coachId, roomId, capacity, level]
-      properties:
-        name: { type: string, maxLength: 150, example: "Yoga Buổi Sáng" }
-        disciplineId: { type: integer, example: 2 }
-        coachId: { type: integer, example: 3 }
-        roomId: { type: integer, example: 1 }
-        capacity: { type: integer, minimum: 1, example: 20 }
-        level: { type: string, enum: [beginner, intermediate, advanced, all], example: "all" }
-
-    GymClassResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 201 }
-        message: { type: string }
-        data: { $ref: '#/components/schemas/GymClassDto' }
-        timestamp: { type: string, format: date-time }
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        disciplineId:
+          type: integer
+          format: int64
+        disciplineName:
+          type: string
+        coachId:
+          type: integer
+          format: int64
+        coachName:
+          type: string
+        roomId:
+          type: integer
+          format: int64
+        roomName:
+          type: string
+        capacity:
+          type: integer
+        level:
+          type: string
+        status:
+          type: string
+        description:
+          type: string
 
     ClassSessionDto:
       type: object
       properties:
-        id: { type: integer, example: 12 }
-        classId: { type: integer, example: 5 }
-        className: { type: string, example: "Yoga Buổi Sáng" }
-        sessionDate: { type: string, format: date, example: "2026-10-15" }
-        startTime: { type: string, example: "08:00:00" }
-        endTime: { type: string, example: "09:30:00" }
-        status: { type: string, enum: [scheduled, completed, cancelled], example: "scheduled" }
+        id:
+          type: integer
+          format: int64
+        gymClassId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        disciplineId:
+          type: integer
+          format: int64
+        disciplineName:
+          type: string
+        coachId:
+          type: integer
+          format: int64
+        coachName:
+          type: string
+        roomId:
+          type: integer
+          format: int64
+        roomName:
+          type: string
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+        status:
+          type: string
+        cancellationReason:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        bookedCount:
+          type: integer
+          format: int64
 
-    SessionScheduleRequest:
-      type: object
-      required: [sessionDate, startTime, endTime]
-      properties:
-        sessionDate: { type: string, format: date, example: "2026-10-15" }
-        startTime: { type: string, example: "08:00:00" }
-        endTime: { type: string, example: "09:30:00" }
-
-    ClassSessionResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 201 }
-        message: { type: string }
-        data: { $ref: '#/components/schemas/ClassSessionDto' }
-        timestamp: { type: string, format: date-time }
-
-    ClassSessionListResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string }
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/ClassSessionDto'
-        timestamp: { type: string, format: date-time }
-
-    # --- Class Enrollments Schemas (SCRUM-73) ---
-    EnrollmentDto:
-      type: object
-      properties:
-        id: { type: integer, example: 25 }
-        classId: { type: integer, example: 5 }
-        className: { type: string, example: "Yoga Buổi Sáng" }
-        memberId: { type: integer, example: 10 }
-        sessionId: { type: integer, nullable: true, example: 12 }
-        sessionDate: { type: string, format: date, nullable: true, example: "2026-10-15" }
-        startTime: { type: string, nullable: true, example: "08:00:00" }
-        endTime: { type: string, nullable: true, example: "09:30:00" }
-        status: { type: string, enum: [booked, cancelled, completed], example: "booked" }
-        enrolledAt: { type: string, format: date-time }
-        cancelledAt: { type: string, format: date-time, nullable: true }
-        cancelReason: { type: string, nullable: true }
-
-    EnrollmentResponse:
+    ClassEnrollmentDto:
       type: object
       properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 201 }
-        message: { type: string }
-        data: { $ref: '#/components/schemas/EnrollmentDto' }
-        timestamp: { type: string, format: date-time }
+        id:
+          type: integer
+          format: int64
+        gymClassId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        memberId:
+          type: integer
+          format: int64
+        sessionId:
+          type: integer
+          format: int64
+          nullable: true
+        sessionDate:
+          type: string
+          format: date
+          nullable: true
+        startTime:
+          type: string
+          format: time
+          nullable: true
+        endTime:
+          type: string
+          format: time
+          nullable: true
+        status:
+          type: string
+        enrolledAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        cancelReason:
+          type: string
+          nullable: true
 
-    EnrollmentListResponse:
+    ClassWaitlistDto:
       type: object
       properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string }
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/EnrollmentDto'
-        timestamp: { type: string, format: date-time }
+        id:
+          type: integer
+          format: int64
+        gymClassId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        memberId:
+          type: integer
+          format: int64
+        status:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
 
-    # --- Waitlist Schemas (SCRUM-74) ---
-    WaitlistDto:
-      type: object
-      properties:
-        id: { type: integer, example: 3 }
-        classId: { type: integer, example: 5 }
-        className: { type: string, example: "Yoga Buổi Sáng" }
-        memberId: { type: integer, example: 10 }
-        status: { type: string, enum: [waiting, notified, expired], example: "waiting" }
-        requestedAt: { type: string, format: date-time }
-
-    WaitlistResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 201 }
-        message: { type: string }
-        data: { $ref: '#/components/schemas/WaitlistDto' }
-        timestamp: { type: string, format: date-time }
-
-    WaitlistListResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string }
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WaitlistDto'
-        timestamp: { type: string, format: date-time }
-
-    # --- Center Check-in Schemas (SCRUM-75) ---
+    # --- Attendance / Check-in Schemas (SCRUM-75) ---
     CheckinDto:
       type: object
       properties:
-        id: { type: integer, example: 45 }
-        memberId: { type: integer, example: 10 }
-        memberName: { type: string, example: "Nguyễn Văn A" }
-        membershipCode: { type: string, example: "MB-2026-001" }
-        checkInTime: { type: string, format: date-time }
-        checkOutTime: { type: string, format: date-time, nullable: true }
-        method: { type: string, enum: [qr, manual], example: "qr" }
-        gate: { type: string, nullable: true, example: "Cổng A" }
-        recordedById: { type: integer, nullable: true, example: 1 }
-        status: { type: string, enum: [GRANTED, DENIED], example: "GRANTED" }
+        id:
+          type: integer
+          format: int64
+        memberId:
+          type: integer
+          format: int64
+          nullable: true
+        memberName:
+          type: string
+          nullable: true
+        checkInTime:
+          type: string
+          format: date-time
+        checkOutTime:
+          type: string
+          format: date-time
+          nullable: true
+        method:
+          type: string
+          enum: [qr, manual]
+        gate:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [GRANTED, DENIED]
+        denialReason:
+          type: string
+          nullable: true
 
     CheckinScanRequest:
       type: object
-      required: [qrCode]
+      required:
+        - qrCode
       properties:
-        qrCode: { type: string, example: "QR-SUB-100-XYZ" }
-        gate: { type: string, example: "Cổng A" }
-
-    CheckinResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 201 }
-        message: { type: string }
-        data: { $ref: '#/components/schemas/CheckinDto' }
-        timestamp: { type: string, format: date-time }
-
-    CheckinListResponse:
-      type: object
-      properties:
-        success: { type: boolean, example: true }
-        status: { type: integer, example: 200 }
-        message: { type: string }
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/CheckinDto'
-        timestamp: { type: string, format: date-time }
-
+        qrCode:
+          type: string
+          example: "QR-UUID-SUBSCRIPTION"
+        gate:
+          type: string
+          nullable: true
+          example: "Cổng chính A"
 security:
   - bearerAuth: []
 
 paths:
+  /payments/my:
+    get:
+      tags: [Payments]
+      summary: Retrieve the authenticated member's payment history
+      description: MEMBER only. The member ID comes from the authenticated principal.
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Own payment history, including an empty array when no payments exist
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: {$ref: '#/components/schemas/PaymentDto'}
+        '401': {description: Authentication required}
+        '403': {description: MEMBER role required}
+        '404': {description: Member profile not found}
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Create a payment request or staff cashier transaction
+      description: >
+        MEMBER, RECEPTIONIST or CENTER_MANAGER. A MEMBER may only create their own
+        pending payment; this never activates a subscription or confirms receipt.
+        POST /payments/process and PATCH /payments/{id}/status remain staff operations;
+        refunds require CENTER_MANAGER. Those operations are not enabled for MEMBER.
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PaymentRequest'}
+      responses:
+        '201':
+          description: Payment created; member requests remain pending
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: {$ref: '#/components/schemas/PaymentDto'}
+        '400': {description: Invalid request, missing payment target, price mismatch or subscription not pending}
+        '401': {description: Authentication required}
+        '403': {description: Foreign member or payment target, or member attempted payment confirmation/cashier fields}
+        '404': {description: Member or payment target not found}
   # ==========================================
   # Notifications Endpoints (SCRUM-67)
   # ==========================================
@@ -604,354 +727,409 @@ paths:
           description: Phiếu hỗ trợ không tồn tại
 
   # ==========================================
-  # SCRUM-71: Membership Subscriptions
+  # Membership Subscriptions (SCRUM-71)
   # ==========================================
   /memberships/subscriptions:
     post:
-      summary: Create a subscription pending payment (SCRUM-71)
+      summary: Đăng ký gói tập mới đang chờ thanh toán (SCRUM-71)
+      tags: [Memberships]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/SubscriptionCreateRequest' }
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
       responses:
         '201':
-          description: Created
+          description: Tạo lượt đăng ký thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SubscriptionResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SubscriptionDto'
         '400':
-          description: Bad request or inactive package
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Gói tập không hoạt động
         '409':
-          description: Already has active subscription
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Đã có gói tập đang hoạt động
+
   /memberships/subscriptions/{id}/renew:
     post:
-      summary: Create a renewal pending payment (SCRUM-71)
+      summary: Gia hạn gói tập chờ thanh toán (SCRUM-71)
+      tags: [Memberships]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       responses:
         '201':
-          description: Created
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/SubscriptionResponse' }
+          description: Tạo lượt gia hạn thành công
         '403':
-          description: Not owner
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Không phải chủ sở hữu gói
         '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Gói tập không tồn tại
+
   /memberships/subscriptions/my:
     get:
-      summary: Get authenticated member's current active subscription (or null if none) with QR code (SCRUM-71)
+      summary: Danh sách gói tập và mã QR của hội viên hiện tại (SCRUM-71)
+      tags: [Memberships]
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SubscriptionNullableResponse' }
-  /memberships/subscriptions/history:
-    get:
-      summary: List authenticated member's subscription history with QR codes (SCRUM-71)
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/SubscriptionListResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SubscriptionDto'
 
   # ==========================================
-  # SCRUM-72: Classes & Sessions
+  # Classes & Scheduling Endpoints (SCRUM-72, 73, 74)
   # ==========================================
   /classes:
     post:
-      summary: Create gym class (CENTER_MANAGER) (SCRUM-72)
+      summary: Tạo lớp học mới (CENTER_MANAGER)
+      tags: [Classes]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ClassCreateRequest' }
+            schema:
+              $ref: '#/components/schemas/CreateClassRequest'
       responses:
         '201':
-          description: Created
+          description: Tạo lớp học thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/GymClassResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/GymClassDto'
         '400':
-          description: Bad request
+          description: Dữ liệu không hợp lệ
+        '403':
+          description: Quyền truy cập bị từ chối
+    get:
+      summary: Danh sách lớp học
+      tags: [Classes]
+      responses:
+        '200':
+          description: Thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GymClassDto'
+
   /classes/{id}/sessions:
     post:
-      summary: Schedule a class session with trigger P3 conflict check (SCRUM-72)
+      summary: Xếp lịch buổi học (CENTER_MANAGER)
+      tags: [Classes]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/SessionScheduleRequest' }
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
       responses:
         '201':
-          description: Created
+          description: Tạo lịch học thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ClassSessionResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSessionDto'
+        '400':
+          description: Lỗi thời gian hoặc dữ liệu không hợp lệ
+        '403':
+          description: Quyền truy cập bị từ chối
         '409':
-          description: Schedule conflict (Coach or Room already booked)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Trùng lịch phòng hoặc huấn luyện viên (Trigger P3)
+
   /classes/sessions:
     get:
-      summary: List class sessions with filters (SCRUM-72)
+      summary: Tra cứu lịch học theo bộ lọc
+      tags: [Classes]
       parameters:
-        - name: classId
+        - name: fromDate
           in: query
-          schema: { type: integer }
-        - name: from
+          schema:
+            type: string
+            format: date
+        - name: toDate
           in: query
-          schema: { type: string, format: date }
-        - name: to
+          schema:
+            type: string
+            format: date
+        - name: disciplineId
           in: query
-          schema: { type: string, format: date }
+          schema:
+            type: integer
+            format: int64
+        - name: coachId
+          in: query
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ClassSessionListResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClassSessionDto'
 
-  # ==========================================
-  # SCRUM-73: Class Enrollments
-  # ==========================================
   /classes/sessions/{id}/enroll:
     post:
-      summary: Book a seat in a session with trigger P2 & P4 check (MEMBER) (SCRUM-73)
+      summary: Đăng ký tham gia buổi học (MEMBER)
+      tags: [Enrollments]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       responses:
         '201':
-          description: Booked
+          description: Đăng ký thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/EnrollmentResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassEnrollmentDto'
         '400':
-          description: Session cancelled or past due
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Buổi học không hợp lệ hoặc đã qua
         '403':
-          description: Membership expired or inactive (Trigger P4)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Gói tập chưa kích hoạt hoặc đã hết hạn (Trigger P4)
         '409':
-          description: Class full (Trigger P2) or already booked
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Lớp đã đầy chỗ (Trigger P2) hoặc đã đăng ký trước đó
+
   /classes/enrollments/{id}:
     delete:
-      summary: Cancel booking and release seat (Owner or Staff) (SCRUM-73)
+      summary: Hủy đăng ký buổi học (MEMBER hoặc Staff/Manager)
+      tags: [Enrollments]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
-          description: Cancelled
+          description: Hủy thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/EnrollmentResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassEnrollmentDto'
         '400':
-          description: Not booked
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Không ở trạng thái booked
         '403':
-          description: Not owner
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Không có quyền hủy đăng ký của người khác
+
   /classes/enrollments/my:
     get:
-      summary: List authenticated member's class enrollments (SCRUM-73)
-      parameters:
-        - name: status
-          in: query
-          required: false
-          schema: { type: string, enum: [booked, cancelled, completed] }
-        - name: upcoming
-          in: query
-          required: false
-          schema: { type: boolean }
+      summary: Danh sách đăng ký lớp học của hội viên hiện tại (MEMBER)
+      tags: [Enrollments]
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/EnrollmentListResponse' }
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '403':
-          description: Forbidden (Requires MEMBER role)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClassEnrollmentDto'
 
-  # ==========================================
-  # SCRUM-74: Class Waitlists
-  # ==========================================
   /classes/sessions/{id}/waitlist:
     post:
-      summary: Join waitlist when class is full (MEMBER) (SCRUM-74)
+      summary: Tham gia danh sách chờ khi lớp đã đầy chỗ (MEMBER)
+      tags: [Waitlist]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       responses:
         '201':
-          description: Joined waitlist
+          description: Đăng ký danh sách chờ thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/WaitlistResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassWaitlistDto'
         '400':
-          description: Class has space or duplicate waitlist or session not open
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Lớp còn chỗ hoặc đã đăng ký/chờ trước đó
         '403':
-          description: Inactive membership
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Gói tập không hợp lệ (Trigger P4)
+
   /classes/waitlists/{id}:
     delete:
-      summary: Withdraw from waitlist (Owner only) (SCRUM-74)
+      summary: Rút khỏi danh sách chờ (MEMBER)
+      tags: [Waitlist]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
-          description: Withdrawn
+          description: Rút khỏi danh sách chờ thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/WaitlistResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassWaitlistDto'
+        '400':
+          description: Không ở trạng thái waiting
         '403':
-          description: Not owner
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Không phải người tạo yêu cầu
+
   /classes/waitlists/my:
     get:
-      summary: List authenticated member's waitlist entries (SCRUM-74)
+      summary: Danh sách chờ của hội viên hiện tại (MEMBER)
+      tags: [Waitlist]
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/WaitlistListResponse' }
-
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ClassWaitlistDto'
   # ==========================================
-  # SCRUM-75: Center QR Check-in
+  # Center Check-in Endpoints (SCRUM-75)
   # ==========================================
   /check-in/scan:
     post:
-      summary: Scan QR code at entrance with trigger P4 check (Staff only) (SCRUM-75)
+      summary: Quét mã QR thẻ hội viên tại cổng trung tâm (RECEPTIONIST, CENTER_MANAGER)
+      tags: [Check-in]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CheckinScanRequest' }
+            schema:
+              $ref: '#/components/schemas/CheckinScanRequest'
       responses:
         '201':
-          description: Access granted
+          description: Ghi nhận lượt quét thành công (GRANTED hoặc DENIED)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/CheckinResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CheckinDto'
+        '400':
+          description: Dữ liệu quét không hợp lệ (mã trống)
         '403':
-          description: Access denied (Trigger P4: Inactive/expired membership or invalid QR)
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '409':
-          description: Already checked in and not checked out
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Quyền truy cập bị từ chối (Chỉ RECEPTIONIST hoặc CENTER_MANAGER)
+
   /check-in/{id}/checkout:
     post:
-      summary: Check out of center (SCRUM-75)
+      summary: Ghi nhận checkout rời trung tâm (RECEPTIONIST, CENTER_MANAGER)
+      tags: [Check-in]
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: integer }
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
-          description: Checked out
+          description: Checkout thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/CheckinResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CheckinDto'
         '400':
-          description: Already checked out
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Đã checkout trước đó hoặc bản ghi bị từ chối (DENIED)
         '403':
-          description: Not owner
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Quyền truy cập bị từ chối
         '404':
-          description: Not found
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorResponse' }
+          description: Không tìm thấy bản ghi check-in
+
   /check-in/history:
     get:
-      summary: Get today's center check-in history (Staff only) (SCRUM-75)
+      summary: Lấy lịch sử ra vào trong ngày tại các cổng
+      tags: [Check-in]
       responses:
         '200':
-          description: OK
+          description: Thành công
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/CheckinListResponse' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CheckinDto'
+        '403':
+          description: Quyền truy cập bị từ chối

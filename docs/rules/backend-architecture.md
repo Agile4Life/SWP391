@@ -24,8 +24,8 @@ Use a strict three-layer flow:
 ## JPA, database support, and Code-First polymorphism
 
 - **Nguyên tắc Code-First & ORM Polymorphism:** Toàn bộ cấu trúc bảng, kiểu dữ liệu, khóa chính/ngoại, index và computed columns được định nghĩa trực tiếp bằng Java Entity (Jakarta Persistence & Hibernate 6).
-- **Linh hoạt đa cơ sở dữ liệu:** Hibernate ORM đẩy thẳng DDL xuống cơ sở dữ liệu qua `spring.jpa.hibernate.ddl-auto: update`. Khi chuyển đổi giữa Microsoft SQL Server, PostgreSQL, MySQL hoặc bất kỳ hệ RDBMS nào, lập trình viên không phải viết lại script `CREATE TABLE`; Hibernate Dialect sẽ đa hình (polymorphic) sinh DDL tương thích hoàn toàn với database đích.
-- **Cột tính toán (Computed/Generated columns):** Bắt buộc sử dụng `@GeneratedColumn("expression")` của Hibernate 6 kết hợp `@Generated(event = {EventType.INSERT, EventType.UPDATE})`. Hibernate Dialect sẽ tự động dịch sang cú pháp phù hợp của từng database (`PERSISTED` trên SQL Server, `GENERATED ALWAYS AS ... STORED` trên PostgreSQL/MySQL).
+- **Database Supabase PostgreSQL:** Hibernate ORM đồng bộ schema qua `spring.jpa.hibernate.ddl-auto: update`. Entity là nguồn định nghĩa bảng, cột, khóa và quan hệ; không tạo script `CREATE TABLE` thủ công để bootstrap database.
+- **Cột tính toán (Generated columns):** Bắt buộc sử dụng `@GeneratedColumn("expression")` của Hibernate 6 kết hợp `@Generated(event = {EventType.INSERT, EventType.UPDATE})`. PostgreSQL Dialect sinh `GENERATED ALWAYS AS ... STORED`.
 - **Trigger toàn vẹn dữ liệu (Capacity, Schedule Conflict, Membership Invariants):** Không phụ thuộc vào DDL migration thủ công. Hệ thống sử dụng interface đa hình `DatabaseTriggerProvider` SPI kết hợp `DatabaseTriggerInitializer` để tự động nhận diện CSDL và kích hoạt trigger tương ứng ngay sau khi Hibernate Code-First sinh bảng.
 - **Không dùng native vendor SQL trong Java:** Tuyệt đối không dùng native SQL ghim cứng cú pháp một hệ quản trị CSDL trong Repository/Service; ưu tiên derived query methods hoặc JPQL chuẩn.
 - **Ranh giới Entity:** Giữ Entity bên trong persistence boundary; luôn dùng DTO và Mapper để giao tiếp với Controller.
@@ -58,7 +58,7 @@ Before opening or completing a backend change:
 - Identify the feature owner, acceptance criteria, and relevant invariants in `docs/plans/AGILE_SCRUM_JIRA_PLAN.md`, `docs/PROJECT_MASTER_GUIDE.md`, and `db/databaseschema.sql`.
 - Keep controller, service, repository, entity, and DTO responsibilities separated; inject dependencies through constructors.
 - Keep transaction boundaries in service/use-case code and persistence logic in JPA repositories.
-- Check both PostgreSQL and SQL Server implications for entity mappings, migrations, generated columns, and constraint errors.
+- Check Supabase PostgreSQL entity mappings, schema upgrades, generated columns, and constraint errors.
 - Preserve role/subscription authorization and trigger-enforced constraints.
 - Update API contracts and OpenAPI when public behavior changes.
 - Bắt buộc bổ sung message key vào cả `messages_vi.properties` và `messages_en.properties` khi thêm endpoint, mã lỗi hoặc thông báo mới.

@@ -120,15 +120,16 @@ public class MembershipSubscriptionService {
 
     /**
      * SCRUM-71 BR-01, BR-06:
-     * Lấy subscription active hiện tại (chưa hết hạn) của hội viên kèm mã QR định danh.
+     * Lấy subscription active hiện tại (start_date <= today <= end_date) của hội viên kèm mã QR định danh.
+     * Không chọn nhầm các gói gia hạn trong tương lai (start_date > today).
      * Trả về null nếu hội viên chưa có gói hoặc gói đã hết hạn.
      */
     @Transactional(readOnly = true)
     public SubscriptionDto current(AuthenticatedPrincipal principal) {
         findMember(principal.id());
         LocalDate today = LocalDate.now(clock);
-        return subscriptions.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(principal.id(), STATUS_ACTIVE)
-                .filter(sub -> sub.getEndDate() == null || !sub.getEndDate().isBefore(today))
+        return subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                        principal.id(), STATUS_ACTIVE, today, today)
                 .map(this::toDto)
                 .orElse(null);
     }

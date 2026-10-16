@@ -10,7 +10,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DatabaseProfilesTest {
-    private ApplicationContextRunner supabase() {
+    private ApplicationContextRunner database() {
         return new ApplicationContextRunner()
                 .withInitializer(context -> {
                     context.getEnvironment().getPropertySources().remove("systemEnvironment");
@@ -18,11 +18,25 @@ class DatabaseProfilesTest {
                 })
                 .withUserConfiguration(SupabaseConfiguration.class)
                 .withConfiguration(AutoConfigurations.of(DataSourceAutoConfiguration.class))
-                .withPropertyValues("spring.profiles.active=supabase",
-                        "SPRING_DATASOURCE_URL=jdbc:postgresql://pooler.example.invalid:5432/postgres",
+                .withPropertyValues("SPRING_DATASOURCE_URL=jdbc:postgresql://pooler.example.invalid:5432/postgres",
                         "SPRING_DATASOURCE_USERNAME=postgres.test-project",
                         "SPRING_DATASOURCE_PASSWORD=test-only-password",
                         "APP_JWT_SECRET=test-only-signing-secret");
+    }
+
+    private ApplicationContextRunner supabase() {
+        return database().withPropertyValues("spring.profiles.active=supabase");
+    }
+
+    @Test
+    void defaultConfigurationUsesSupabaseSslWithoutLocalDebugOtp() {
+        database().run(context -> {
+            assertThat(context).hasNotFailed();
+            HikariDataSource ds = context.getBean(HikariDataSource.class);
+            assertThat(ds.getDriverClassName()).isEqualTo("org.postgresql.Driver");
+            assertThat(ds.getDataSourceProperties().getProperty("sslmode")).isEqualTo("require");
+            assertThat(context.getEnvironment().getProperty("app.auth.debug-otp-enabled", Boolean.class)).isFalse();
+        });
     }
 
     @Test
@@ -59,6 +73,8 @@ class DatabaseProfilesTest {
         supabase().withPropertyValues("DB_SSL_MODE=disable")
                 .run(context -> assertThat(context).hasFailed());
         supabase().withPropertyValues("SPRING_DATASOURCE_URL=jdbc:postgresql://example.invalid/postgres?sslmode=disable")
+                .run(context -> assertThat(context).hasFailed());
+        supabase().withPropertyValues("SPRING_DATASOURCE_URL=jdbc:mysql://example.invalid/scms")
                 .run(context -> assertThat(context).hasFailed());
     }
 

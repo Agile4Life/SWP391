@@ -77,7 +77,8 @@ class PaymentControllerTest {
         responseDto.setId(10L);
         responseDto.setAmount(new BigDecimal("1500000.00"));
 
-        when(paymentService.createPayment(any(PaymentCreateDto.class))).thenReturn(responseDto);
+        when(paymentService.createPayment(org.mockito.ArgumentMatchers.nullable(
+                com.swp391.scms.security.AuthenticatedPrincipal.class), any(PaymentCreateDto.class))).thenReturn(responseDto);
 
         mockMvc.perform(post("/api/v1/payments")
                         .contentType(MediaType.APPLICATION_JSON)

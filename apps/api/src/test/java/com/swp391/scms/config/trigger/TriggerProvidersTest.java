@@ -1,29 +1,114 @@
 package com.swp391.scms.config.trigger;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 class TriggerProvidersTest {
 
-    private static BadSqlGrammarException grammar(SQLException cause) {
-        return new BadSqlGrammarException("sql", "select", cause);
+    @Test
+    void upgradesLegacyCheckinNullabilityBeforeInstallingTriggersAndOnlyOnce() throws Exception {
+        List<String> sql = new ArrayList<>();
+        JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNoNulls,
+                DatabaseMetaData.columnNullable);
+        DatabaseTriggerProvider provider = new PostgreSqlTriggerProvider();
+
+        provider.applyTriggers(jdbc);
+        provider.applyTriggers(jdbc);
+
+        String upgrade = "alter table \"tenant\".\"center_checkins\" alter column \"member_id\" drop not null";
+        assertEquals(upgrade, sql.getFirst().toLowerCase());
+        assertEquals(1, sql.stream().filter(statement -> statement.toLowerCase().startsWith("alter table")).count());
+        assertTrue(sql.stream().anyMatch(statement -> statement.contains("trg_checkins_check_membership")),
+                "The upgrade must still install the membership trigger");
     }
 
     @Test
-    void classifiesMissingTableForBothVendors() {
-        assertTrue(TriggerErrors.isMissingTable(grammar(new SQLException("no table", "42P01"))));
-        assertTrue(TriggerErrors.isMissingTable(grammar(new SQLException("Invalid object name", "S0002", 208))));
-        assertFalse(TriggerErrors.isMissingTable(grammar(new SQLException("syntax", "42601", 102))));
+    void leavesFreshNullableCheckinsAndUnmappedTablesAlone() throws Exception {
+        for (boolean exists : new boolean[]{true, false}) {
+            List<String> sql = new ArrayList<>();
+            JdbcTemplate jdbc = legacyCheckins(sql, exists, DatabaseMetaData.columnNullable);
+            DatabaseTriggerProvider provider = new PostgreSqlTriggerProvider();
+
+            provider.applyTriggers(jdbc);
+
+            assertFalse(sql.stream().anyMatch(statement -> statement.toLowerCase().startsWith("alter table")));
+        }
+    }
+
+    @Test
+    void doesNotUpgradeOtherSchemasReturnedByJdbcMetadataPatterns() throws Exception {
+        List<String> sql = new ArrayList<>();
+        JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNoNulls);
+        var columns = jdbc.getDataSource().getConnection().getMetaData()
+                .getColumns("scms", "tenant", "center_checkins", "member_id");
+        when(columns.getString("TABLE_SCHEM")).thenReturn("other_tenant");
+
+        new PostgreSqlTriggerProvider().applyTriggers(jdbc);
+
+        assertFalse(sql.stream().anyMatch(statement -> statement.toLowerCase().startsWith("alter table")));
+    }
+
+    @Test
+    void refusesToChangeAnUnexpectedLegacyColumnType() throws Exception {
+        List<String> sql = new ArrayList<>();
+        JdbcTemplate jdbc = legacyCheckins(sql, true, DatabaseMetaData.columnNoNulls);
+        var columns = jdbc.getDataSource().getConnection().getMetaData()
+                .getColumns("scms", "tenant", "center_checkins", "member_id");
+        when(columns.getInt("DATA_TYPE")).thenReturn(Types.VARCHAR);
+
+        assertThrows(IllegalStateException.class, () -> new PostgreSqlTriggerProvider().applyTriggers(jdbc));
+
+        assertTrue(sql.isEmpty(), "An unexpected column type must fail before any schema or trigger changes");
+    }
+
+    private JdbcTemplate legacyCheckins(List<String> sql, boolean exists, int... nullability) throws Exception {
+        DataSource source = mock(DataSource.class);
+        Connection connection = mock(Connection.class);
+        DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        ResultSet columns = mock(ResultSet.class);
+        Statement statement = mock(Statement.class);
+        when(source.getConnection()).thenReturn(connection);
+        when(connection.getMetaData()).thenReturn(metadata);
+        when(connection.getCatalog()).thenReturn("scms");
+        when(connection.getSchema()).thenReturn("tenant");
+        when(metadata.getColumns("scms", "tenant", "center_checkins", "member_id")).thenReturn(columns);
+        when(columns.next()).thenReturn(exists, false, exists, false);
+        when(columns.getString("TABLE_SCHEM")).thenReturn("tenant");
+        when(columns.getString("TABLE_NAME")).thenReturn("center_checkins");
+        when(columns.getString("COLUMN_NAME")).thenReturn("member_id");
+        when(columns.getInt("DATA_TYPE")).thenReturn(Types.BIGINT);
+        when(columns.getInt("NULLABLE")).thenReturn(nullability[0],
+                nullability.length > 1 ? nullability[1] : nullability[0]);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.execute(anyString())).thenAnswer(invocation -> {
+            sql.add(invocation.getArgument(0));
+            return false;
+        });
+        when(statement.getUpdateCount()).thenReturn(-1);
+        return new JdbcTemplate(source);
+    }
+
+    private static BadSqlGrammarException grammar(SQLException cause) {
+        return new BadSqlGrammarException("sql", "select", cause);
     }
 
     @Test
@@ -38,15 +123,4 @@ class TriggerProvidersTest {
         assertThrows(IllegalStateException.class, () -> provider.applyTriggers(jdbc));
     }
 
-    @Test
-    void sqlServerSkipsMissingTableButFailsOnOtherErrors() {
-        JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        SqlServerTriggerProvider provider = new SqlServerTriggerProvider();
-
-        doThrow(grammar(new SQLException("Invalid object name", "S0002", 208))).when(jdbc).execute(anyString());
-        assertDoesNotThrow(() -> provider.applyTriggers(jdbc));
-
-        doThrow(grammar(new SQLException("syntax", "S0001", 102))).when(jdbc).execute(anyString());
-        assertThrows(IllegalStateException.class, () -> provider.applyTriggers(jdbc));
-    }
 }

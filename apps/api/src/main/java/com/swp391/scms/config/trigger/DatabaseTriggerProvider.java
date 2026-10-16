@@ -3,8 +3,7 @@ package com.swp391.scms.config.trigger;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * Polymorphic strategy for applying database-specific invariant triggers
- * when switching between database providers (SQL Server, PostgreSQL, etc.).
+ * Installs mandatory PostgreSQL invariant triggers after Hibernate schema synchronization.
  */
 public interface DatabaseTriggerProvider {
 

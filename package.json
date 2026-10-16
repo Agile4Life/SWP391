@@ -12,7 +12,6 @@
     "build:api": "cd apps/api && mvnw.cmd package -DskipTests",
     "build": "npm run build:web && npm run build:api",
     "db:init": "powershell -ExecutionPolicy Bypass -File ./scripts/init-db.ps1",
-    "db:init:force": "powershell -ExecutionPolicy Bypass -File ./scripts/init-db.ps1 -Force",
     "stop": "powershell -ExecutionPolicy Bypass -File ./scripts/stop-local.ps1",
     "lint:web": "npm --prefix apps/web run lint",
     "test:web": "npm --prefix apps/web run test",

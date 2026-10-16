@@ -6,7 +6,7 @@ Backend truy cập PostgreSQL bằng JDBC. React tiếp tục gọi Spring Boot 
 
 1. Mở project Supabase, chọn **Connect → Session pooler**. Copy đúng host, port, database và username của project; không tự đoán vùng triển khai từ project URL.
 2. Database password là mật khẩu PostgreSQL của project, khác publishable/API key. Nếu quên, đặt lại tại **Project Settings → Database**.
-3. Trong `.env` ở root, thay các biến kết nối SQL Server cũ bằng:
+3. Trong `.env` ở root, cấu hình kết nối PostgreSQL:
 
 ```dotenv
 SPRING_PROFILES_ACTIVE=supabase
@@ -20,7 +20,7 @@ DB_POOL_MIN_IDLE=1
 SPRING_JPA_HIBERNATE_DDL_AUTO=update
 ```
 
-Các giá trị trong dấu `<...>` phải được thay bằng cấu hình thật. Không đưa password vào JDBC URL; không commit `.env`. Username thực tế phải lấy từ Connect, có thể khác ví dụ. Không kết hợp profile `supabase` với `local` hoặc `sqlserver`.
+Các giá trị trong dấu `<...>` phải được thay bằng cấu hình thật. Không đưa password vào JDBC URL; không commit `.env`. Username thực tế phải lấy từ Connect, có thể khác ví dụ. Không kết hợp profile `supabase` với `local`.
 
 Tạo JWT secret ngẫu nhiên trên Windows (chỉ in secret vào terminal của bạn, không đưa vào log/chats):
 
@@ -46,13 +46,12 @@ try { $jwtRng.GetBytes($jwtBytes) } finally { $jwtRng.Dispose() }
 npm start
 ```
 
-Runner đọc `.env`, chọn PostgreSQL, không gọi script SQL Server. Hibernate tạo bảng, generated column/JSON; trigger P2/P3/P4 và partial indexes được cài trước seed. Thiếu cấu hình hoặc không cài được trigger bắt buộc sẽ báo lỗi khởi động.
+Runner đọc `.env` và mặc định dùng Supabase PostgreSQL. Hibernate tạo bảng, generated column/JSON; trigger P2/P3/P4 và partial indexes được cài trước seed. Thiếu cấu hình hoặc không cài được trigger bắt buộc sẽ báo lỗi khởi động.
 
-`npm run db:init` trên PostgreSQL chỉ hướng dẫn khởi động API, không chạy T-SQL. Không dùng `db:init:force` cho Supabase.
+`npm run db:init` kiểm tra cấu hình và hướng dẫn khởi động API. Công cụ khởi chạy không có chức năng reset database.
 
 Trên DB rỗng, có thể tạo manager ban đầu bằng hai biến `APP_BOOTSTRAP_MANAGER_EMAIL` và `APP_BOOTSTRAP_MANAGER_PASSWORD`. Không có mật khẩu manager mặc định khi dùng Supabase. Sau khi tạo manager, bỏ hai biến bootstrap và dùng chức năng quản lý user của hệ thống.
 
-Không cần copy dữ liệu demo từ SQL Server. Database SQL Server cũ không bị xóa hoặc chỉnh sửa bởi bước chuyển này.
 
 ## Kiểm thử trên PostgreSQL thật
 
