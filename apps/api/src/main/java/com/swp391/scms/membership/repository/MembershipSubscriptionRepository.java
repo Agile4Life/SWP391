@@ -18,4 +18,7 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
 
     boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
+
+    boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Long memberId, String status, LocalDate startDate, LocalDate endDate);
 }

@@ -65,6 +65,8 @@ public class WaitlistService {
         ClassSession session = findSession(sessionId);
         GymClass gymClass = session.getGymClass();
 
+        ensureSessionWaitlistable(session);
+
         // BR-03: same membership requirement as booking (Trigger P4).
         ensureActiveMembership(member.getUserId());
 
@@ -148,10 +150,36 @@ public class WaitlistService {
                 .toList();
     }
 
+    private void ensureSessionWaitlistable(ClassSession session) {
+        if ("cancelled".equalsIgnoreCase(session.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_SESSION_CANCELLED",
+                    "error.scheduling.session_cancelled",
+                    null,
+                    "This session has been cancelled");
+        }
+        if (!"scheduled".equalsIgnoreCase(session.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_SESSION_NOT_BOOKABLE",
+                    "error.scheduling.session_not_bookable",
+                    null,
+                    "This session is not open for waitlist");
+        }
+        LocalDateTime sessionStart = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        if (sessionStart.isBefore(LocalDateTime.now(clock))) {
+            throw new BadRequestException(
+                    "SCHEDULING_PAST_SESSION",
+                    "error.scheduling.past_session",
+                    null,
+                    "Cannot join waitlist for a session that has already passed");
+        }
+    }
+
     private void ensureActiveMembership(Long memberId) {
+        LocalDate today = LocalDate.now(clock);
         boolean hasActive = subscriptions
-                .existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
-                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock));
+                .existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        memberId, ACTIVE_SUBSCRIPTION, today, today);
         if (!hasActive) {
             throw new ForbiddenException(
                     "SCHEDULING_MEMBERSHIP_INVALID",

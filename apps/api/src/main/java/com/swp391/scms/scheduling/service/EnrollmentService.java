@@ -196,8 +196,8 @@ public class EnrollmentService {
                     null,
                     "This session is not open for booking");
         }
-        LocalDate today = LocalDate.now(clock);
-        if (session.getSessionDate().isBefore(today)) {
+        LocalDateTime sessionStart = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        if (sessionStart.isBefore(LocalDateTime.now(clock))) {
             throw new BadRequestException(
                     "SCHEDULING_PAST_SESSION",
                     "error.scheduling.past_session",
@@ -210,9 +210,10 @@ public class EnrollmentService {
      * SCRUM-73 BR-01: Trigger P4 pre-check, the database trigger remains the source of truth.
      */
     private void ensureActiveMembership(Long memberId) {
+        LocalDate today = LocalDate.now(clock);
         boolean hasActive = subscriptions
-                .existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
-                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock));
+                .existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        memberId, ACTIVE_SUBSCRIPTION, today, today);
         if (!hasActive) {
             throw new ForbiddenException(
                     "SCHEDULING_MEMBERSHIP_INVALID",

@@ -128,7 +128,8 @@ public class ClassService {
                     "End time must be after start time");
         }
 
-        if (request.sessionDate().isBefore(LocalDate.now(clock))) {
+        LocalDateTime sessionStart = LocalDateTime.of(request.sessionDate(), request.startTime());
+        if (sessionStart.isBefore(LocalDateTime.now(clock))) {
             throw new BadRequestException(
                     "SCHEDULING_PAST_SESSION",
                     "error.scheduling.past_session",
