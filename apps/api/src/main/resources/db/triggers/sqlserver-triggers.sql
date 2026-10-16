@@ -11,12 +11,13 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM inserted i
-        INNER JOIN dbo.classes c ON c.id = i.class_id
+        INNER JOIN dbo.class_sessions s ON s.id = i.session_id
+        INNER JOIN dbo.classes c ON c.id = s.class_id
         WHERE i.status = 'booked'
         AND (
             SELECT COUNT(*)
             FROM dbo.class_enrollments ce
-            WHERE ce.class_id = i.class_id AND ce.status = 'booked'
+            WHERE ce.session_id = i.session_id AND ce.status = 'booked'
         ) > c.capacity
     )
     BEGIN
@@ -125,8 +126,14 @@ END;
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_users_username')
     CREATE UNIQUE INDEX uq_users_username ON dbo.users (username) WHERE username IS NOT NULL;
 ---SPLIT---
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_enrollment_active')
+    DROP INDEX uq_enrollment_active ON dbo.class_enrollments;
+---SPLIT---
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_enrollment_active')
-    CREATE UNIQUE INDEX uq_enrollment_active ON dbo.class_enrollments (class_id, member_id) WHERE status = 'booked';
+    CREATE UNIQUE INDEX uq_enrollment_active ON dbo.class_enrollments (session_id, member_id) WHERE status = 'booked';
+---SPLIT---
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_waitlist_active')
+    DROP INDEX uq_waitlist_active ON dbo.class_waitlists;
 ---SPLIT---
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'uq_waitlist_active')
-    CREATE UNIQUE INDEX uq_waitlist_active ON dbo.class_waitlists (class_id, member_id) WHERE status = 'waiting';
+    CREATE UNIQUE INDEX uq_waitlist_active ON dbo.class_waitlists (session_id, member_id) WHERE status = 'waiting';

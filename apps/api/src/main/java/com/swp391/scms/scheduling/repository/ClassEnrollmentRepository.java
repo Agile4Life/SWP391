@@ -20,9 +20,12 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
 
     long countByGymClassIdAndStatus(Long classId, String status);
 
+    long countBySessionIdAndStatus(Long sessionId, String status);
+
     @Query("""
                 SELECT ce FROM ClassEnrollment ce
                 JOIN FETCH ce.gymClass gc
+                LEFT JOIN FETCH ce.session s
                 LEFT JOIN FETCH gc.coach c
                 LEFT JOIN FETCH c.user u
                 LEFT JOIN FETCH gc.room r
@@ -34,6 +37,8 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @Param("memberId") Long memberId,
             @Param("status") String status);
 
-    /** SCRUM-73 BR-03: a member may only hold one active booking per class. */
+    /** SCRUM-73 BR-03: a member may only hold one active booking per class session. */
     Optional<ClassEnrollment> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
+
+    Optional<ClassEnrollment> findBySessionIdAndMemberUserIdAndStatus(Long sessionId, Long memberId, String status);
 }

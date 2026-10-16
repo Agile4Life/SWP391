@@ -140,11 +140,11 @@ class WaitlistServiceTest {
         when(subscriptions.existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                 10L, "active", today, today)).thenReturn(true);
 
-        when(enrollments.countByGymClassIdAndStatus(gymClass.getId(), "booked")).thenReturn(5L); // capacity is 10
+        when(enrollments.countBySessionIdAndStatus(session.getId(), "booked")).thenReturn(5L); // capacity is 10
 
         assertThatThrownBy(() -> service.join(principal, 1L))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Class still has seats; book directly instead");
+                .hasMessageContaining("Session still has seats; book directly instead");
     }
 
     @Test
@@ -157,7 +157,7 @@ class WaitlistServiceTest {
         when(subscriptions.existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                 10L, "active", today, today)).thenReturn(true);
 
-        when(enrollments.countByGymClassIdAndStatus(gymClass.getId(), "booked")).thenReturn(10L); // full
+        when(enrollments.countBySessionIdAndStatus(session.getId(), "booked")).thenReturn(10L); // full
         when(waitlists.saveAndFlush(any(ClassWaitlist.class))).thenAnswer(i -> {
             ClassWaitlist w = i.getArgument(0);
             return w;
@@ -166,5 +166,6 @@ class WaitlistServiceTest {
         WaitlistDto dto = service.join(principal, 1L);
         assertThat(dto).isNotNull();
         assertThat(dto.status()).isEqualTo("waiting");
+        assertThat(dto.sessionId()).isEqualTo(session.getId());
     }
 }

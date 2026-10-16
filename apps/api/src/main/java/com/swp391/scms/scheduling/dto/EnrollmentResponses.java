@@ -32,6 +32,10 @@ public final class EnrollmentResponses {
             Long classId,
             String className,
             Long memberId,
+            Long sessionId,
+            LocalDate sessionDate,
+            LocalTime startTime,
+            LocalTime endTime,
             String status,
             LocalDateTime requestedAt) {
     }

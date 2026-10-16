@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * SCRUM-73: class booking and cancellation endpoints.
  */
@@ -52,5 +54,13 @@ public class EnrollmentController {
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
         return ApiResponse.ok(msg("scheduling.enrollment.cancelled"), service.cancel(principal, id));
+    }
+
+    @Operation(summary = "Get list of enrollments of current member")
+    @GetMapping("/enrollments/my")
+    public ApiResponse<List<EnrollmentDto>> myEnrollments(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @RequestParam(required = false) String status) {
+        return ApiResponse.ok(msg("scheduling.enrollment.list"), service.myEnrollments(principal, status));
     }
 }

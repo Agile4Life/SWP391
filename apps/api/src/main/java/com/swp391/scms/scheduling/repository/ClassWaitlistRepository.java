@@ -14,8 +14,14 @@ public interface ClassWaitlistRepository extends JpaRepository<ClassWaitlist, Lo
 
     Optional<ClassWaitlist> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 
+    Optional<ClassWaitlist> findBySessionIdAndMemberUserIdAndStatus(Long sessionId, Long memberId, String status);
+
     /** SCRUM-74 BR-04: FIFO ordering by requested_at. */
     List<ClassWaitlist> findByGymClassIdAndStatusOrderByRequestedAtAsc(Long classId, String status);
 
+    List<ClassWaitlist> findBySessionIdAndStatusOrderByRequestedAtAsc(Long sessionId, String status);
+
     long countByGymClassIdAndStatus(Long classId, String status);
+
+    long countBySessionIdAndStatus(Long sessionId, String status);
 }

@@ -24,6 +24,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import java.util.List;
+
 /**
  * SCRUM-73: member class booking and cancellation.
  *
@@ -100,17 +102,17 @@ public class EnrollmentService {
         ensureSessionBookable(session);
         ensureActiveMembership(member.getUserId());
 
-        if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
+        if (enrollments.findBySessionIdAndMemberUserIdAndStatus(session.getId(), member.getUserId(), BOOKED)
                 .isPresent()) {
             throw new ConflictException(
                     "SCHEDULING_ALREADY_ENROLLED",
                     "error.scheduling.already_enrolled",
                     null,
-                    "Member already has an active booking for this class");
+                    "Member already has an active booking for this session");
         }
 
-        // Trigger P2 pre-check: capacity is enforced again by the database trigger.
-        long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
+        // Trigger P2 pre-check: capacity is enforced again by the database trigger per session.
+        long booked = enrollments.countBySessionIdAndStatus(session.getId(), BOOKED);
         if (booked >= gymClass.getCapacity()) {
             throw new ConflictException(
                     "SCHEDULING_CLASS_FULL",
@@ -179,7 +181,19 @@ public class EnrollmentService {
                 "class_enrollment",
                 saved.getId());
 
-        return toDto(saved, null);
+        return toDto(saved, enrollment.getSession());
+    }
+
+    /**
+     * SCRUM-73 BR-07: fetch current member's enrollments with optional status filter.
+     */
+    @Transactional(readOnly = true)
+    public List<EnrollmentDto> myEnrollments(AuthenticatedPrincipal principal, String status) {
+        String cleanStatus = (status == null || status.isBlank()) ? null : status.trim();
+        List<ClassEnrollment> list = enrollments.findByMemberUserIdWithDetails(principal.id(), cleanStatus);
+        return list.stream()
+                .map(e -> toDto(e, e.getSession()))
+                .toList();
     }
 
     /**

@@ -22,7 +22,9 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
 
@@ -81,7 +83,9 @@ class WaitlistControllerTest {
     }
 
     private WaitlistDto sampleDto() {
-        return new WaitlistDto(1L, 5L, "Yoga Flow", 12L, "waiting", LocalDateTime.now());
+        return new WaitlistDto(1L, 5L, "Yoga Flow", 12L, 9L,
+                LocalDate.now().plusDays(1), LocalTime.of(18, 0), LocalTime.of(19, 0),
+                "waiting", LocalDateTime.now());
     }
 
     @Test

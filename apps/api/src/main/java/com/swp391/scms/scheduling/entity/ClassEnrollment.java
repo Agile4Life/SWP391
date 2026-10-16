@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @org.hibernate.annotations.Check(name = "ck_enrollments_status", constraints = "status IN ('booked','cancelled','completed')")
 @Table(name = "class_enrollments", indexes = {
         @Index(name = "ix_enrollments_member_status", columnList = "member_id, status"),
-        @Index(name = "ix_enrollments_class_status", columnList = "class_id, status") })
+        @Index(name = "ix_enrollments_class_status", columnList = "class_id, status"),
+        @Index(name = "ix_enrollments_session_status", columnList = "session_id, status") })
 public class ClassEnrollment {
 
     @Id
@@ -50,6 +51,10 @@ public class ClassEnrollment {
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public GymClass getGymClass() {

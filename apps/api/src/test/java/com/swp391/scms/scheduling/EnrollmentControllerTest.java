@@ -31,9 +31,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
 
 /**
  * SCRUM-73: enrollment endpoint contract tests.
@@ -102,5 +105,15 @@ class EnrollmentControllerTest {
         mockMvc.perform(delete("/api/v1/classes/enrollments/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void myEnrollmentsReturnsOk() throws Exception {
+        when(enrollmentService.myEnrollments(any(), any())).thenReturn(List.of(sampleDto()));
+
+        mockMvc.perform(get("/api/v1/classes/enrollments/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].sessionId").value(9));
     }
 }

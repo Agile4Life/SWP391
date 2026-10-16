@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_waitlist_status", constraints = "status IN ('waiting','notified','expired')")
-@Table(name = "class_waitlists")
+@Table(name = "class_waitlists", indexes = {
+        @Index(name = "ix_waitlists_session_status", columnList = "session_id, status")
+})
 public class ClassWaitlist {
 
     @Id
@@ -20,6 +22,10 @@ public class ClassWaitlist {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_id", nullable = false)
     private GymClass gymClass;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", nullable = false)
+    private ClassSession session;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -65,5 +71,13 @@ public class ClassWaitlist {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public ClassSession getSession() {
+        return session;
+    }
+
+    public void setSession(ClassSession session) {
+        this.session = session;
     }
 }

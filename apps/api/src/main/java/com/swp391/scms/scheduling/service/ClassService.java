@@ -178,6 +178,6 @@ public class ClassService {
     }
 
     private long countBooked(ClassSession session) {
-        return enrollments.countByGymClassIdAndStatus(session.getGymClass().getId(), ENROLLMENT_BOOKED);
+        return enrollments.countBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED);
     }
 }

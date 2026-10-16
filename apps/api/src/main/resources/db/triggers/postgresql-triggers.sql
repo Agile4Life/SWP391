@@ -21,27 +21,25 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    previous_class_id BIGINT;
     class_capacity INTEGER;
     booked_count BIGINT;
 BEGIN
-    IF TG_OP = 'UPDATE' THEN
-        previous_class_id := OLD.class_id;
-    END IF;
-
-    PERFORM id
-    FROM classes
-    WHERE id = NEW.class_id OR id = previous_class_id
-    ORDER BY id
-    FOR UPDATE;
-
     IF NEW.status = 'booked' THEN
-        SELECT capacity INTO class_capacity FROM classes WHERE id = NEW.class_id;
+        PERFORM id
+        FROM class_sessions
+        WHERE id = NEW.session_id
+        FOR UPDATE;
+
+        SELECT c.capacity INTO class_capacity
+        FROM class_sessions s
+        JOIN classes c ON c.id = s.class_id
+        WHERE s.id = NEW.session_id;
+
         SELECT COUNT(*) INTO booked_count
         FROM class_enrollments
-        WHERE class_id = NEW.class_id AND status = 'booked';
+        WHERE session_id = NEW.session_id AND status = 'booked';
 
-        IF booked_count > class_capacity THEN
+        IF class_capacity IS NOT NULL AND booked_count > class_capacity THEN
             RAISE EXCEPTION 'Lớp học đã đầy chỗ (vượt quá capacity cho phép).'
                 USING ERRCODE = '23514', CONSTRAINT = 'trg_enrollments_check_capacity';
         END IF;
@@ -53,7 +51,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_enrollments_check_capacity ON class_enrollments;
 CREATE TRIGGER trg_enrollments_check_capacity
-AFTER INSERT OR UPDATE OF class_id, status ON class_enrollments
+AFTER INSERT OR UPDATE OF session_id, status ON class_enrollments
 FOR EACH ROW EXECUTE FUNCTION scms_check_enrollment_capacity();
 
 CREATE OR REPLACE FUNCTION scms_check_session_conflict()
@@ -160,5 +158,7 @@ FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_checkin();
 -- Filtered unique indexes (cannot be expressed portably in JPA)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username) WHERE username IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users (phone) WHERE phone IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollment_active ON class_enrollments (class_id, member_id) WHERE status = 'booked';
-CREATE UNIQUE INDEX IF NOT EXISTS uq_waitlist_active ON class_waitlists (class_id, member_id) WHERE status = 'waiting';
+DROP INDEX IF EXISTS uq_enrollment_active;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollment_active ON class_enrollments (session_id, member_id) WHERE status = 'booked';
+DROP INDEX IF EXISTS uq_waitlist_active;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_waitlist_active ON class_waitlists (session_id, member_id) WHERE status = 'waiting';

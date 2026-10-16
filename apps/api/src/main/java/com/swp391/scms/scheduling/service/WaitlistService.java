@@ -72,39 +72,40 @@ public class WaitlistService {
         // BR-03: same membership requirement as booking (Trigger P4).
         ensureActiveMembership(member.getUserId());
 
-        // BR-02: a member already holding a booking may not also wait.
-        if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
+        // BR-02: a member already holding a booking for this session may not also wait.
+        if (enrollments.findBySessionIdAndMemberUserIdAndStatus(session.getId(), member.getUserId(), BOOKED)
                 .isPresent()) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_ALREADY_BOOKED",
                     "error.scheduling.waitlist_already_booked",
                     null,
-                    "Member already holds a booking for this class");
+                    "Member already holds a booking for this session");
         }
 
-        // BR-01: only allowed when there is no free seat.
-        long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
+        // BR-01: only allowed when there is no free seat in this session.
+        long booked = enrollments.countBySessionIdAndStatus(session.getId(), BOOKED);
         if (booked < gymClass.getCapacity()) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_CLASS_HAS_SPACE",
                     "error.scheduling.waitlist_class_has_space",
                     null,
-                    "Class still has seats; book directly instead");
+                    "Session still has seats; book directly instead");
         }
 
-        // BR-02: unique active waitlist entry per member/class (mirrors
+        // BR-02: unique active waitlist entry per member/session (mirrors
         // uq_waitlist_active).
-        if (waitlists.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), WAITING)
+        if (waitlists.findBySessionIdAndMemberUserIdAndStatus(session.getId(), member.getUserId(), WAITING)
                 .isPresent()) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_DUPLICATE",
                     "error.scheduling.waitlist_duplicate",
                     null,
-                    "Member is already waiting for this class");
+                    "Member is already waiting for this session");
         }
 
         ClassWaitlist waitlist = new ClassWaitlist();
         waitlist.setGymClass(gymClass);
+        waitlist.setSession(session);
         waitlist.setMember(member);
         waitlist.setStatus(WAITING);
         waitlist.setRequestedAt(LocalDateTime.now(clock));
@@ -206,11 +207,19 @@ public class WaitlistService {
 
     private WaitlistDto toDto(ClassWaitlist waitlist) {
         GymClass gymClass = waitlist.getGymClass();
+        ClassSession session = waitlist.getSession();
+        if (gymClass == null && session != null) {
+            gymClass = session.getGymClass();
+        }
         return new WaitlistDto(
                 waitlist.getId(),
                 gymClass != null ? gymClass.getId() : null,
                 gymClass != null ? gymClass.getName() : null,
                 waitlist.getMember() != null ? waitlist.getMember().getUserId() : null,
+                session != null ? session.getId() : null,
+                session != null ? session.getSessionDate() : null,
+                session != null ? session.getStartTime() : null,
+                session != null ? session.getEndTime() : null,
                 waitlist.getStatus(),
                 waitlist.getRequestedAt());
     }
