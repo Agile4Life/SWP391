@@ -245,16 +245,19 @@ public class EnrollmentService {
     }
 
     private EnrollmentDto toDto(ClassEnrollment enrollment, ClassSession session) {
-        GymClass gymClass = enrollment.getGymClass();
+        ClassSession effectiveSession = session != null ? session : enrollment.getSession();
+        GymClass gymClass = enrollment.getGymClass() != null
+                ? enrollment.getGymClass()
+                : (effectiveSession != null ? effectiveSession.getGymClass() : null);
         return new EnrollmentDto(
                 enrollment.getId(),
                 gymClass != null ? gymClass.getId() : null,
                 gymClass != null ? gymClass.getName() : null,
                 enrollment.getMember() != null ? enrollment.getMember().getUserId() : null,
-                session != null ? session.getId() : null,
-                session != null ? session.getSessionDate() : null,
-                session != null ? session.getStartTime() : null,
-                session != null ? session.getEndTime() : null,
+                effectiveSession != null ? effectiveSession.getId() : null,
+                effectiveSession != null ? effectiveSession.getSessionDate() : null,
+                effectiveSession != null ? effectiveSession.getStartTime() : null,
+                effectiveSession != null ? effectiveSession.getEndTime() : null,
                 enrollment.getStatus(),
                 enrollment.getEnrolledAt(),
                 enrollment.getCancelledAt(),
