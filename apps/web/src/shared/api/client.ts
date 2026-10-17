@@ -94,6 +94,14 @@ export async function loginApi(identifier: string, password: string): Promise<Lo
   return { token: data.token, user };
 }
 
+export function setAuthSession(token: string, username: string, roleCode: string): UserSession {
+  const role = SESSION_ROLE[roleCode] || 'MEMBER';
+  const user: UserSession = { id: username, name: username, identifier: username, role };
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  setCurrentUser(user);
+  return user;
+}
+
 // Màn hình mặc định sau đăng nhập theo từng vai trò
 export const homePath = (role: UserSession['role']): string => {
   switch (role) {

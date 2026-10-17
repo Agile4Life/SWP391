@@ -181,6 +181,93 @@ public class AuthService {
         return user;
     }
 
+    @Transactional
+    public String requestGoogleOtp(String rawEmail) {
+        if (rawEmail == null || !rawEmail.contains("@")) {
+            throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, "Email is invalid");
+        }
+        String email = normalize(rawEmail);
+
+        java.util.Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+        User user;
+        if (userOpt.isEmpty()) {
+            Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
+
+            String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
+            if (baseUsername.length() < 3) baseUsername = "user_" + baseUsername;
+            String username = baseUsername;
+            int suffix = 1;
+            while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+                username = baseUsername + suffix++;
+            }
+
+            user = new User();
+            user.setUsername(username);
+            user.setRole(memberRole);
+            user.setFullName(username);
+            user.setEmail(email);
+            user.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            user.setStatus("inactive");
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
+            userRepository.saveAndFlush(user);
+
+            Member member = new Member();
+            member.setUser(user);
+            member.setMembershipCode("MEM-" + user.getId());
+            member.setJoinDate(LocalDate.now(clock));
+            member.setFitnessLevel("beginner");
+            user.setMember(member);
+            userRepository.save(user);
+        } else {
+            user = userOpt.get();
+            if (user.getDeletedAt() != null) {
+                throw new BadRequestException("ACCOUNT_INACTIVE", "auth.account.inactive", null, "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động");
+            }
+        }
+
+        String code = otpService.generateOtp(email);
+        if (!debugOtpEnabled) {
+            try {
+                otpDeliveryPort.send(email, code);
+            } catch (RuntimeException deliveryFailure) {
+                otpService.invalidate(email);
+                throw deliveryFailure;
+            }
+        }
+        return code;
+    }
+
+    @Transactional
+    public AuthTokenResponse verifyGoogleOtp(String rawEmail, String otpCode) {
+        String email = normalize(rawEmail);
+        OtpService.Status status = otpService.verifyOtp(email, otpCode);
+        switch (status.result()) {
+            case EXPIRED_OR_NOT_FOUND -> throw new BadRequestException("OTP_EXPIRED", "auth.otp.expired", null, null);
+            case MAX_ATTEMPTS_EXCEEDED -> throw new TooManyRequestsException("MAX_ATTEMPTS", "auth.otp.max_attempts", null, null);
+            case INVALID_CODE -> throw new BadRequestException("INVALID_OTP", "auth.otp.invalid",
+                    new Object[]{status.remainingAttempts()}, null);
+            case SUCCESS -> {
+                User user = userRepository.findByEmailIgnoreCase(email)
+                        .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
+                if (user.getDeletedAt() != null) {
+                    throw new BadRequestException("ACCOUNT_INACTIVE", "auth.account.inactive", null, "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động");
+                }
+                user.setStatus("active");
+                user.setLastLoginAt(LocalDateTime.now(clock));
+                user.setUpdatedAt(LocalDateTime.now(clock));
+                userRepository.save(user);
+
+                String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
+                String role = user.getRole().getCode();
+                return new AuthTokenResponse(jwtService.generateToken(user.getId(), username, role), username, role);
+            }
+        }
+        throw new BadRequestException("OTP_VERIFICATION_FAILED", "auth.otp.invalid", null, null);
+    }
+
     private String normalize(String value) {
         return value.trim().toLowerCase(Locale.ROOT);
     }
