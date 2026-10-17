@@ -10,7 +10,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 /**
  * SCRUM-73: class booking and cancellation endpoints.
@@ -39,6 +41,7 @@ public class EnrollmentController {
 
     @Operation(summary = "Enroll the authenticated member in a class session")
     @PostMapping("/sessions/{id}/enroll")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<EnrollmentDto>> enroll(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
@@ -48,9 +51,18 @@ public class EnrollmentController {
 
     @Operation(summary = "Cancel a class enrollment (owner or staff)")
     @DeleteMapping("/enrollments/{id}")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<EnrollmentDto> cancel(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
         return ApiResponse.ok(msg("scheduling.enrollment.cancelled"), service.cancel(principal, id));
+    }
+
+    @Operation(summary = "List the authenticated member's class enrollments")
+    @GetMapping("/enrollments/my")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ApiResponse<List<EnrollmentDto>> myEnrollments(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("scheduling.enrollment.list"), service.myEnrollments(principal));
     }
 }

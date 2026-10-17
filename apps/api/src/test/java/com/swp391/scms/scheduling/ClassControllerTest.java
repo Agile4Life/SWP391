@@ -26,6 +26,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -72,6 +73,20 @@ class ClassControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(1L))
                 .andExpect(jsonPath("$.data.name").value("Yoga Cơ Bản"));
+    }
+
+    @Test
+    void createClass_rejectsUnsupportedLevelBeforePersistence() throws Exception {
+        CreateClassRequest request = new CreateClassRequest("Yoga", 1L, 2L, 3L, 20, "expert", null);
+
+        mockMvc.perform(post("/api/v1/classes")
+                        .header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details.level").value("Level must be beginner, intermediate, advanced or all"));
+        verifyNoInteractions(classService);
     }
 
     @Test

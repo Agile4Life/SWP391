@@ -128,13 +128,7 @@ public class ClassService {
                     "End time must be after start time");
         }
 
-        if (request.sessionDate().isBefore(LocalDate.now(clock))) {
-            throw new BadRequestException(
-                    "SCHEDULING_PAST_SESSION",
-                    "error.scheduling.past_session",
-                    null,
-                    "Cannot schedule a session in the past");
-        }
+        SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
 
         ClassSession session = new ClassSession();
         session.setGymClass(gymClass);

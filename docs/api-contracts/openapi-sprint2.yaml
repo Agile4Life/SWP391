@@ -251,6 +251,7 @@ components:
 
     CreateSessionRequest:
       type: object
+      description: Buổi học phải bắt đầu sau thời điểm hiện tại của server; endTime phải sau startTime.
       required:
         - sessionDate
         - startTime
@@ -970,6 +971,7 @@ paths:
   /classes/enrollments/my:
     get:
       summary: Danh sách đăng ký lớp học của hội viên hiện tại (MEMBER)
+      description: Chỉ trả đăng ký của principal hiện tại. Enrollment gắn với lớp nên thông tin buổi học có thể null.
       tags: [Enrollments]
       responses:
         '200':
@@ -988,6 +990,7 @@ paths:
   /classes/sessions/{id}/waitlist:
     post:
       summary: Tham gia danh sách chờ khi lớp đã đầy chỗ (MEMBER)
+      description: Chỉ nhận buổi scheduled chưa bắt đầu và hội viên có gói active đang trong thời hạn. Đăng ký thành công sẽ đóng mục waiting của hội viên trong cùng lớp.
       tags: [Waitlist]
       parameters:
         - name: id

@@ -3,6 +3,7 @@ package com.swp391.scms.scheduling.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -34,6 +35,7 @@ public final class SchedulingRequests {
             @Min(value = 1, message = "{validation.scheduling.capacity.min}")
             Integer capacity,
 
+            @Pattern(regexp = "beginner|intermediate|advanced|all", message = "{validation.scheduling.level.pattern}")
             String level,
 
             String description

@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,6 +101,13 @@ class EnrollmentControllerTest {
         when(enrollmentService.cancel(any(), anyLong())).thenReturn(sampleDto());
 
         mockMvc.perform(delete("/api/v1/classes/enrollments/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void myEnrollmentsEndpointExists() throws Exception {
+        mockMvc.perform(get("/api/v1/classes/enrollments/my"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }

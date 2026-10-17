@@ -11,6 +11,7 @@ import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
+import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
@@ -33,13 +34,13 @@ public class WaitlistService {
 
     private static final String WAITING = "waiting";
     private static final String BOOKED = "booked";
-    private static final String ACTIVE_SUBSCRIPTION = "active";
 
     private final ClassWaitlistRepository waitlists;
     private final ClassEnrollmentRepository enrollments;
     private final ClassSessionRepository sessions;
     private final MembershipSubscriptionRepository subscriptions;
     private final MemberRepository members;
+    private final GymClassRepository gymClasses;
     private final Clock clock;
 
     public WaitlistService(ClassWaitlistRepository waitlists,
@@ -47,12 +48,14 @@ public class WaitlistService {
                            ClassSessionRepository sessions,
                            MembershipSubscriptionRepository subscriptions,
                            MemberRepository members,
+                           GymClassRepository gymClasses,
                            Clock clock) {
         this.waitlists = waitlists;
         this.enrollments = enrollments;
         this.sessions = sessions;
         this.subscriptions = subscriptions;
         this.members = members;
+        this.gymClasses = gymClasses;
         this.clock = clock;
     }
 
@@ -63,7 +66,11 @@ public class WaitlistService {
     public WaitlistDto join(AuthenticatedPrincipal principal, Long sessionId) {
         Member member = findMember(principal.id());
         ClassSession session = findSession(sessionId);
-        GymClass gymClass = session.getGymClass();
+        // Serialize bookings and waitlist joins for this class before checking either state.
+        Long classId = session.getGymClass().getId();
+        GymClass gymClass = gymClasses.findByIdForUpdate(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+        SessionEligibility.ensureBookable(session, clock);
 
         // BR-03: same membership requirement as booking (Trigger P4).
         ensureActiveMembership(member.getUserId());
@@ -149,9 +156,7 @@ public class WaitlistService {
     }
 
     private void ensureActiveMembership(Long memberId) {
-        boolean hasActive = subscriptions
-                .existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
-                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock));
+        boolean hasActive = subscriptions.hasActiveMembership(memberId, LocalDate.now(clock));
         if (!hasActive) {
             throw new ForbiddenException(
                     "SCHEDULING_MEMBERSHIP_INVALID",

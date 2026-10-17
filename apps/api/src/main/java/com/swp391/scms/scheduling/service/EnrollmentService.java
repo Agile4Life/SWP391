@@ -13,6 +13,8 @@ import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
+import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
+import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * SCRUM-73: member class booking and cancellation.
@@ -38,8 +41,6 @@ public class EnrollmentService {
 
     private static final String BOOKED = "booked";
     private static final String CANCELLED = "cancelled";
-    private static final String SCHEDULED = "scheduled";
-    private static final String ACTIVE_SUBSCRIPTION = "active";
     private static final String WAITING = "waiting";
 
     private static final String ROLE_CENTER_MANAGER = "CENTER_MANAGER";
@@ -49,24 +50,19 @@ public class EnrollmentService {
 
     private final ClassEnrollmentRepository enrollments;
     private final ClassSessionRepository sessions;
+    private final ClassWaitlistRepository waitlists;
+    private final GymClassRepository gymClasses;
     private final MembershipSubscriptionRepository subscriptions;
     private final MemberRepository members;
     private final NotificationService notifications;
     private final MessageService messageService;
     private final Clock clock;
 
-    public EnrollmentService(ClassEnrollmentRepository enrollments,
-                             ClassSessionRepository sessions,
-                             MembershipSubscriptionRepository subscriptions,
-                             MemberRepository members,
-                             NotificationService notifications,
-                             Clock clock) {
-        this(enrollments, sessions, subscriptions, members, notifications, null, clock);
-    }
-
     @Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
                              ClassSessionRepository sessions,
+                             ClassWaitlistRepository waitlists,
+                             GymClassRepository gymClasses,
                              MembershipSubscriptionRepository subscriptions,
                              MemberRepository members,
                              NotificationService notifications,
@@ -74,6 +70,8 @@ public class EnrollmentService {
                              Clock clock) {
         this.enrollments = enrollments;
         this.sessions = sessions;
+        this.waitlists = waitlists;
+        this.gymClasses = gymClasses;
         this.subscriptions = subscriptions;
         this.members = members;
         this.notifications = notifications;
@@ -92,9 +90,10 @@ public class EnrollmentService {
     public EnrollmentDto enroll(AuthenticatedPrincipal principal, Long sessionId) {
         Member member = findMember(principal.id());
         ClassSession session = findSession(sessionId);
-        GymClass gymClass = session.getGymClass();
-
-        ensureSessionBookable(session);
+        Long classId = session.getGymClass().getId();
+        GymClass gymClass = gymClasses.findByIdForUpdate(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+        SessionEligibility.ensureBookable(session, clock);
         ensureActiveMembership(member.getUserId());
 
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED)
@@ -123,6 +122,12 @@ public class EnrollmentService {
         enrollment.setEnrolledAt(LocalDateTime.now(clock));
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
+
+        waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), WAITING)
+                .ifPresent(waiting -> {
+                    waiting.setStatus("expired");
+                    waitlists.save(waiting);
+                });
 
         notifications.send(member.getUserId(),
                 msg("notifications.booking.enrolled.title"),
@@ -178,41 +183,19 @@ public class EnrollmentService {
         return toDto(saved, null);
     }
 
-    /**
-     * SCRUM-73 BR-04: cannot book a session that already happened or was cancelled.
-     */
-    private void ensureSessionBookable(ClassSession session) {
-        if (CANCELLED.equalsIgnoreCase(session.getStatus())) {
-            throw new BadRequestException(
-                    "SCHEDULING_SESSION_CANCELLED",
-                    "error.scheduling.session_cancelled",
-                    null,
-                    "This session has been cancelled");
-        }
-        if (!SCHEDULED.equalsIgnoreCase(session.getStatus())) {
-            throw new BadRequestException(
-                    "SCHEDULING_SESSION_NOT_BOOKABLE",
-                    "error.scheduling.session_not_bookable",
-                    null,
-                    "This session is not open for booking");
-        }
-        LocalDate today = LocalDate.now(clock);
-        if (session.getSessionDate().isBefore(today)) {
-            throw new BadRequestException(
-                    "SCHEDULING_PAST_SESSION",
-                    "error.scheduling.past_session",
-                    null,
-                    "Cannot book a session that has already passed");
-        }
+    @Transactional(readOnly = true)
+    public List<EnrollmentDto> myEnrollments(AuthenticatedPrincipal principal) {
+        findMember(principal.id());
+        return enrollments.findByMemberUserId(principal.id()).stream()
+                .map(enrollment -> toDto(enrollment, null))
+                .toList();
     }
 
     /**
      * SCRUM-73 BR-01: Trigger P4 pre-check, the database trigger remains the source of truth.
      */
     private void ensureActiveMembership(Long memberId) {
-        boolean hasActive = subscriptions
-                .existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(
-                        memberId, ACTIVE_SUBSCRIPTION, LocalDate.now(clock));
+        boolean hasActive = subscriptions.hasActiveMembership(memberId, LocalDate.now(clock));
         if (!hasActive) {
             throw new ForbiddenException(
                     "SCHEDULING_MEMBERSHIP_INVALID",
