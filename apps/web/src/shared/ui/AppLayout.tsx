@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<UserSession['role'], string> = {
 const NAV_ITEMS: { to: string; label: string; roles: UserSession['role'][] }[] = [
   // Hội viên
   { to: '/member/dashboard', label: 'Bảng điều khiển', roles: ['MEMBER'] },
+  { to: '/member/packages', label: 'Gói tập', roles: ['MEMBER'] },
   { to: '/member/classes', label: 'Lịch học & Đặt chỗ', roles: ['MEMBER'] },
   { to: '/member/card', label: 'Thẻ hội viên & Hóa đơn', roles: ['MEMBER'] },
 

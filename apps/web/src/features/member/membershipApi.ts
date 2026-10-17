@@ -1,0 +1,77 @@
+import { apiFetch } from '../../shared/api/client';
+
+export interface MembershipPackage {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  durationDays: number;
+  classCreditLimit: number | null;
+  status: 'active' | 'inactive';
+}
+
+export interface MemberSubscription {
+  id: number;
+  memberId: number;
+  packageId: number;
+  packageName: string;
+  previousSubscriptionId: number | null;
+  startDate: string;
+  endDate: string;
+  status: string;
+  qrCode: string | null;
+  createdAt: string;
+}
+
+export interface Payment {
+  id: number;
+  memberId: number;
+  memberName: string | null;
+  subscriptionId: number | null;
+  classEnrollmentId: number | null;
+  amount: number;
+  method: string;
+  status: string;
+  paidAt: string | null;
+  receivedById: number | null;
+  receivedByName: string | null;
+  note: string | null;
+  createdAt: string;
+  invoiceNumber: string | null;
+}
+
+export const getMembershipPackages = () =>
+  apiFetch<MembershipPackage[]>('/packages');
+
+export const getCurrentMembership = () =>
+  apiFetch<MemberSubscription | null>('/memberships/subscriptions/my');
+
+export const getMembershipHistory = () =>
+  apiFetch<MemberSubscription[]>('/memberships/subscriptions/history');
+
+export const getMyPayments = () => apiFetch<Payment[]>('/payments/my');
+
+export const createPaymentRequest = (subscription: MemberSubscription, amount: number) =>
+  apiFetch<Payment>('/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      memberId: subscription.memberId,
+      subscriptionId: subscription.id,
+      amount,
+      method: 'bank_transfer',
+    }),
+  });
+
+export const createMembershipSubscription = (packageId: number) =>
+  apiFetch<MemberSubscription>('/memberships/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify({ packageId }),
+  });
+
+export const renewMembershipSubscription = (subscriptionId: number) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/renew`,
+    {
+      method: 'POST',
+    },
+  );
