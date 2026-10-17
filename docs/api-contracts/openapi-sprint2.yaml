@@ -452,6 +452,7 @@ components:
           example: "QR-UUID-SUBSCRIPTION"
         gate:
           type: string
+          maxLength: 50
           nullable: true
           example: "Cổng chính A"
 security:
@@ -1065,6 +1066,7 @@ paths:
   /check-in/scan:
     post:
       summary: Quét mã QR thẻ hội viên tại cổng trung tâm (RECEPTIONIST, CENTER_MANAGER)
+      description: Quét đồng thời cùng hội viên được xử lý tuần tự. Hội viên bị khóa hoặc xóa bị DENIED; mỗi lượt quét hợp lệ về cấu trúc đều được lưu. denialReason được dịch theo Accept-Language khi trả dữ liệu.
       tags: [Check-in]
       requestBody:
         required: true
@@ -1084,7 +1086,7 @@ paths:
                       data:
                         $ref: '#/components/schemas/CheckinDto'
         '400':
-          description: Dữ liệu quét không hợp lệ (mã trống)
+          description: Dữ liệu quét không hợp lệ (mã trống hoặc tên cổng dài quá 50 ký tự)
         '403':
           description: Quyền truy cập bị từ chối (Chỉ RECEPTIONIST hoặc CENTER_MANAGER)
 

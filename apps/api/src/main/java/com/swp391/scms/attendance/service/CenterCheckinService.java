@@ -12,6 +12,7 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.UserRepository;
+import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,25 +43,29 @@ public class CenterCheckinService {
     private final CenterCheckinRepository checkins;
     private final MembershipSubscriptionRepository subscriptions;
     private final UserRepository users;
+    private final MemberRepository members;
     private final Clock clock;
     private final MessageService messageService;
 
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
+                                MemberRepository members,
                                 Clock clock) {
-        this(checkins, subscriptions, users, clock, null);
+        this(checkins, subscriptions, users, members, clock, null);
     }
 
     @Autowired
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
+                                MemberRepository members,
                                 Clock clock,
                                 MessageService messageService) {
         this.checkins = checkins;
         this.subscriptions = subscriptions;
         this.users = users;
+        this.members = members;
         this.clock = clock;
         this.messageService = messageService;
     }
@@ -102,6 +107,16 @@ public class CenterCheckinService {
             return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found");
         }
 
+        // Serialize every QR belonging to the same member before checking for an open visit.
+        member = members.findByUserIdForUpdate(member.getUserId()).orElse(null);
+        if (member == null) {
+            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found");
+        }
+        User memberUser = member.getUser();
+        if (memberUser == null || memberUser.getDeletedAt() != null || !"active".equals(memberUser.getStatus())) {
+            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.member_inactive");
+        }
+
         // Trường hợp 3: Gói tập chưa active (vd: pending_payment, cancelled)
         if (!STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus())) {
             return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
@@ -141,7 +156,7 @@ public class CenterCheckinService {
         checkin.setGate(gate);
         checkin.setRecordedBy(recorder);
         checkin.setStatus(RESULT_DENIED);
-        checkin.setDenialReason(resolveMessage(reasonKey));
+        checkin.setDenialReason(reasonKey);
 
         return toDto(checkins.saveAndFlush(checkin));
     }
@@ -155,7 +170,7 @@ public class CenterCheckinService {
     public CheckinDto checkout(AuthenticatedPrincipal principal, Long id) {
         ensureStaff(principal);
 
-        CenterCheckin checkin = checkins.findById(id)
+        CenterCheckin checkin = checkins.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.checkin", id));
 
         if (RESULT_DENIED.equalsIgnoreCase(checkin.getStatus())) {
@@ -244,7 +259,7 @@ public class CenterCheckinService {
                 c.getMethod(),
                 c.getGate(),
                 c.getStatus(),
-                c.getDenialReason()
+                c.getDenialReason() != null ? resolveMessage(c.getDenialReason()) : null
         );
     }
 }

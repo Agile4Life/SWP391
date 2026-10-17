@@ -3,6 +3,10 @@ package com.swp391.scms.attendance.repository;
 import com.swp391.scms.attendance.entity.CenterCheckin;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CenterCheckin c where c.id = :id")
+    Optional<CenterCheckin> findByIdForUpdate(@Param("id") Long id);
 
     boolean existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(Long memberId, String status);
 

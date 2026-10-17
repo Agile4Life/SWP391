@@ -9,10 +9,16 @@ import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByMembershipCode(String membershipCode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.userId = :memberId")
+    Optional<Member> findByUserIdForUpdate(@Param("memberId") Long memberId);
 
     @Query("""
             select m from Member m join fetch m.user u

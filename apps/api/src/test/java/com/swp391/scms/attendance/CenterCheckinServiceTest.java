@@ -12,6 +12,7 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.UserRepository;
+import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,9 +20,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -29,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,6 +51,9 @@ class CenterCheckinServiceTest {
     @Mock
     private UserRepository users;
 
+    @Mock
+    private MemberRepository members;
+
     private Clock clock;
     private MessageService messageService;
     private CenterCheckinService service;
@@ -63,7 +70,7 @@ class CenterCheckinServiceTest {
         source.setDefaultEncoding("UTF-8");
         messageService = new MessageService(source);
 
-        service = new CenterCheckinService(checkins, subscriptions, users, clock, messageService);
+        service = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService);
     }
 
     private Member mockMember(Long userId, String name) {
@@ -74,6 +81,7 @@ class CenterCheckinServiceTest {
         Member member = new Member();
         member.setUser(user);
         member.setUserId(userId);
+        when(members.findByUserIdForUpdate(userId)).thenReturn(Optional.of(member));
         return member;
     }
 
@@ -195,6 +203,11 @@ class CenterCheckinServiceTest {
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("GRANTED", captor.getValue().getStatus());
         assertNull(captor.getValue().getDenialReason());
+        InOrder locksBeforeInsert = inOrder(subscriptions, members, checkins);
+        locksBeforeInsert.verify(subscriptions).findByQrCode("QR-VALID");
+        locksBeforeInsert.verify(members).findByUserIdForUpdate(10L);
+        locksBeforeInsert.verify(checkins).existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED");
+        locksBeforeInsert.verify(checkins).saveAndFlush(any());
     }
 
     @Test
@@ -202,7 +215,7 @@ class CenterCheckinServiceTest {
     void br05_checkoutDeniedRecord_throwsBadRequest() {
         CenterCheckin checkin = new CenterCheckin();
         checkin.setStatus("DENIED");
-        when(checkins.findById(1L)).thenReturn(Optional.of(checkin));
+        when(checkins.findByIdForUpdate(1L)).thenReturn(Optional.of(checkin));
 
         assertThrows(BadRequestException.class, () -> service.checkout(receptionist, 1L));
     }
@@ -213,7 +226,7 @@ class CenterCheckinServiceTest {
         CenterCheckin checkin = new CenterCheckin();
         checkin.setStatus("GRANTED");
         checkin.setCheckOutTime(LocalDateTime.now(clock).minusMinutes(10));
-        when(checkins.findById(2L)).thenReturn(Optional.of(checkin));
+        when(checkins.findByIdForUpdate(2L)).thenReturn(Optional.of(checkin));
 
         assertThrows(BadRequestException.class, () -> service.checkout(receptionist, 2L));
     }
@@ -225,7 +238,7 @@ class CenterCheckinServiceTest {
         checkin.setStatus("GRANTED");
         checkin.setCheckInTime(LocalDateTime.now(clock).minusHours(1));
         checkin.setCheckOutTime(null);
-        when(checkins.findById(3L)).thenReturn(Optional.of(checkin));
+        when(checkins.findByIdForUpdate(3L)).thenReturn(Optional.of(checkin));
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         CheckinDto result = service.checkout(receptionist, 3L);
@@ -259,5 +272,66 @@ class CenterCheckinServiceTest {
 
         assertEquals(2, list.size());
         verify(checkins).findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any());
+    }
+
+    @Test
+    void scanDeletedMember_logsDeniedInsteadOfGrantingAccess() {
+        Member member = mockMember(10L, "Deleted member");
+        member.getUser().setDeletedAt(LocalDateTime.now(clock));
+        MembershipSubscription sub = mockSubscription(member, "active", LocalDate.now(clock), LocalDate.now(clock).plusDays(1));
+        when(subscriptions.findByQrCode("QR-DELETED")).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-DELETED", "Gate A"));
+
+        assertEquals("DENIED", result.status());
+        ArgumentCaptor<CenterCheckin> record = ArgumentCaptor.forClass(CenterCheckin.class);
+        verify(checkins).saveAndFlush(record.capture());
+        assertEquals("error.attendance.member_inactive", record.getValue().getDenialReason());
+    }
+
+    @Test
+    void scanLockedMember_logsDeniedInsteadOfGrantingAccess() {
+        Member member = mockMember(10L, "Locked member");
+        member.getUser().setStatus("locked");
+        MembershipSubscription sub = mockSubscription(member, "active", LocalDate.now(clock), LocalDate.now(clock).plusDays(1));
+        when(subscriptions.findByQrCode("QR-LOCKED")).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertEquals("DENIED", service.scan(receptionist, new CheckinRequests.Scan("QR-LOCKED", "Gate A")).status());
+    }
+
+    @Test
+    void denialStoresStableKeyAndHistoryUsesCurrentRequestLanguage() {
+        when(subscriptions.findByQrCode("QR-INVALID")).thenReturn(Optional.empty());
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        Locale original = LocaleContextHolder.getLocale();
+        try {
+            LocaleContextHolder.setLocale(Locale.ENGLISH);
+            CheckinDto scanned = service.scan(receptionist, new CheckinRequests.Scan("QR-INVALID", "Gate A"));
+            ArgumentCaptor<CenterCheckin> record = ArgumentCaptor.forClass(CenterCheckin.class);
+            verify(checkins).saveAndFlush(record.capture());
+            assertEquals("error.attendance.qr_invalid", record.getValue().getDenialReason());
+            assertEquals(messageService.getMessage("error.attendance.qr_invalid"), scanned.denialReason());
+            when(checkins.findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any()))
+                    .thenReturn(List.of(record.getValue()));
+
+            LocaleContextHolder.setLocale(Locale.forLanguageTag("vi"));
+            assertEquals(messageService.getMessage("error.attendance.qr_invalid"), service.history(receptionist).getFirst().denialReason());
+            assertNotEquals(scanned.denialReason(), service.history(receptionist).getFirst().denialReason());
+        } finally {
+            LocaleContextHolder.setLocale(original);
+        }
+    }
+
+    @Test
+    void historyPreservesLegacyTranslatedDenialReason() {
+        CenterCheckin legacy = new CenterCheckin();
+        legacy.setStatus("DENIED");
+        legacy.setDenialReason("Legacy QR denial text");
+        when(checkins.findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any()))
+                .thenReturn(List.of(legacy));
+
+        assertEquals("Legacy QR denial text", service.history(receptionist).getFirst().denialReason());
     }
 }

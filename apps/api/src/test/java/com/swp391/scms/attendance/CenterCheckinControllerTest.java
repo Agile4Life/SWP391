@@ -29,6 +29,8 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -115,6 +117,31 @@ class CenterCheckinControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void scan_rejectsGateLongerThanDatabaseColumnBeforeCallingService() throws Exception {
+        CheckinDto dto = new CheckinDto(1L, 10L, "Member", LocalDateTime.now(), null, "qr", "Gate", "GRANTED");
+        lenient().when(service.scan(any(), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/check-in/scan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CheckinRequests.Scan("QR-VALID", "G".repeat(51)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details.gate").exists());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void scan_acceptsGateAtDatabaseColumnLimit() throws Exception {
+        CheckinDto dto = new CheckinDto(1L, 10L, "Member", LocalDateTime.now(), null, "qr", "G".repeat(50), "GRANTED");
+        when(service.scan(any(), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/check-in/scan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new CheckinRequests.Scan("QR-VALID", "G".repeat(50)))))
+                .andExpect(status().isCreated());
     }
 
     @Test
