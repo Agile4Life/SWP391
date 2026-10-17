@@ -29,6 +29,10 @@ const priceFormatter = new Intl.NumberFormat('vi-VN', {
   currency: 'VND',
 });
 
+// Keep confirmation locked until the team supplies approved transfer instructions.
+const paymentInstructionsAvailable = false;
+const paymentInstructionsNotice = 'Chưa cấu hình thông tin thanh toán. Vui lòng liên hệ nhân viên để được hướng dẫn chuyển khoản.';
+
 function formatPrice(price: number): string {
   return priceFormatter.format(price);
 }
@@ -116,7 +120,7 @@ export function MemberPackagesPage() {
   const relatedPayments = pending && paymentsState.status === 'success'
     ? paymentsState.data.filter((payment) => payment.subscriptionId === pending.id) : [];
   const pendingPackage = pending ? packages.find((item) => item.id === pending.packageId) : null;
-  const canRequest = packagesState.status === 'success' && currentState.status === 'success'
+  const canRequest = paymentInstructionsAvailable && packagesState.status === 'success' && currentState.status === 'success'
     && historyState.status === 'success' && paymentsState.status === 'success'
     && pendingItems.length === 1 && pendingPackage != null
     && pending?.memberId != null && relatedPayments.length === 0 && !sendingPayment;
@@ -253,6 +257,9 @@ export function MemberPackagesPage() {
               <p className="row-card__meta">
                 Hiệu lực đến {formatDate(current.endDate)}
               </p>
+              {current.status === 'active' && paymentsState.status === 'success' &&
+                paymentsState.data.some((payment) => payment.subscriptionId === current.id && payment.status === 'success') &&
+                <p role="status">Gói đã kích hoạt.</p>}
             </section>
           )}
           {currentState.status === 'success' && !current && (
@@ -266,7 +273,7 @@ export function MemberPackagesPage() {
               style={{ marginBottom: 24 }}
             >
               <div className="meta-label">
-                Đang chờ xác nhận
+                Thanh toán gói tập
               </div>
 
               <h2
@@ -280,14 +287,18 @@ export function MemberPackagesPage() {
                 Yêu cầu #{pending.id} đang ở trạng thái chờ
                 thanh toán.
               </p>
+              {pendingPackage && <p className="row-card__meta">Số tiền: {formatPrice(pendingPackage.price)}</p>}
               {paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage && (
+                <>
+                <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
                 <button type="button" className="btn-primary" disabled={!canRequest}
                   onClick={() => void handlePaymentRequest()}>
-                  {sendingPayment ? 'Đang gửi…' : 'Gửi yêu cầu thanh toán'}
+                  {sendingPayment ? 'Đang gửi…' : 'Tôi đã chuyển khoản'}
                 </button>
+                </>
               )}
               {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending') &&
-                <p className="row-card__meta">Đã gửi yêu cầu thanh toán — chờ nhân viên xác nhận.</p>}
+                <p className="row-card__meta" role="status">Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.</p>}
               {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') &&
                 <p role="alert">Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.</p>}
               {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'failed') &&
@@ -505,6 +516,13 @@ export function MemberPackagesPage() {
                 </h3>
               </div>
             </div>
+
+            <p className="row-card__meta" role="status" style={{ marginTop: 20 }}>
+              {paymentInstructionsNotice}
+            </p>
+            <button type="button" className="btn-primary" disabled style={{ marginTop: 20 }}>
+              Tôi đã chuyển khoản
+            </button>
 
             <p
               className="row-card__meta"

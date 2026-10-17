@@ -97,11 +97,13 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Gói hiện tại');
   });
 
-  it('restores a pending subscription after reload and offers a payment request', async () => {
+  it('restores a pending subscription without allowing transfer confirmation before configuration', async () => {
     api.history.mockResolvedValue([pending]);
     await render();
     expect(host.textContent).toContain('Yêu cầu #12');
-    expect(button('Gửi yêu cầu thanh toán')?.disabled).toBe(false);
+    expect(host.textContent).toContain('Chưa cấu hình thông tin thanh toán');
+    expect(button('Tôi đã chuyển khoản')?.disabled).toBe(true);
+    expect(host.querySelector('img')).toBeNull();
     expect(api.create).not.toHaveBeenCalled();
   });
 
@@ -109,68 +111,79 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     api.payments.mockResolvedValue([{ ...payment, subscriptionId: 88 }, payment]);
     await render();
-    expect(host.textContent).toContain('Đã gửi yêu cầu thanh toán');
-    expect(button('Gửi yêu cầu thanh toán')).toBeUndefined();
+    expect(host.textContent).toContain('Đã gửi thông báo chuyển khoản. Vui lòng chờ nhân viên xác nhận.');
+    expect(host.textContent).not.toContain('Thanh toán thành công');
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
+    expect(api.createPayment).not.toHaveBeenCalled();
   });
 
   it('does not confuse a different subscription payment with this one', async () => {
     api.history.mockResolvedValue([pending]);
     api.payments.mockResolvedValue([{ ...payment, subscriptionId: 88 }]);
     await render();
-    expect(button('Gửi yêu cầu thanh toán')?.disabled).toBe(false);
+    expect(button('Tôi đã chuyển khoản')?.disabled).toBe(true);
+    expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
   });
 
-  it('submits only one payment for repeated clicks', async () => {
+  it('does not submit a payment for repeated clicks without transfer instructions', async () => {
     api.history.mockResolvedValue([pending]);
-    let finish!: (value: typeof payment) => void;
-    api.createPayment.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
     await render();
     await act(async () => {
-      button('Gửi yêu cầu thanh toán')?.click();
-      button('Gửi yêu cầu thanh toán')?.click();
+      button('Tôi đã chuyển khoản')?.click();
+      button('Tôi đã chuyển khoản')?.click();
     });
-    expect(api.createPayment).toHaveBeenCalledTimes(1);
-    await act(async () => finish(payment));
+    expect(api.createPayment).not.toHaveBeenCalled();
   });
 
-  it('keeps a successful POST response when the immediate payment list is stale', async () => {
-    api.history.mockResolvedValue([pending]);
-    api.payments.mockResolvedValue([]);
+  it('shows missing instructions in the purchase modal without invented bank details or QR', async () => {
     await render();
-    await act(async () => button('Gửi yêu cầu thanh toán')?.click());
-    expect(host.textContent).toContain('Đã gửi yêu cầu thanh toán');
-    expect(button('Gửi yêu cầu thanh toán')).toBeUndefined();
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    const dialog = host.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('Essential');
+    expect(dialog?.textContent).toContain('500.000');
+    expect(dialog?.textContent).toContain('#12');
+    expect(dialog?.textContent).toContain('Chưa cấu hình thông tin thanh toán');
+    expect(dialog?.textContent).not.toContain('Số tài khoản');
+    expect(dialog?.textContent).not.toContain('Tên người nhận');
+    expect(dialog?.querySelector('img, canvas')).toBeNull();
+    const confirm = [...dialog!.querySelectorAll('button')].find((item) => item.textContent?.includes('Tôi đã chuyển khoản'));
+    expect(confirm?.disabled).toBe(true);
+    await act(async () => confirm?.click());
+    expect(api.createPayment).not.toHaveBeenCalled();
   });
 
-  it('shows backend rejection without activating membership', async () => {
-    api.history.mockResolvedValue([pending]);
-    api.createPayment.mockRejectedValue({ status: 409, code: 'PAYMENT_AMOUNT_MISMATCH', message: 'Giá không khớp' });
+  it('restores an activated subscription only when the backend reports it active', async () => {
+    api.current.mockResolvedValue({ ...pending, status: 'active' });
+    api.history.mockResolvedValue([{ ...pending, status: 'active' }]);
+    api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
     await render();
-    await act(async () => button('Gửi yêu cầu thanh toán')?.click());
-    expect(host.textContent).toContain('Không thể gửi yêu cầu thanh toán.');
-    expect(host.textContent).not.toContain('Gói hiện tại');
+    expect(host.textContent).toContain('Gói đã kích hoạt');
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
+    expect(api.createPayment).not.toHaveBeenCalled();
   });
 
-  it('rechecks payments after a failed POST before allowing Retry', async () => {
+  it('refreshes payments without submitting a new transfer notification', async () => {
     api.history.mockResolvedValue([pending]);
-    api.createPayment.mockRejectedValue(new Error('Mất kết nối'));
     api.payments.mockResolvedValueOnce([]).mockResolvedValueOnce([payment]);
     await render();
-    await act(async () => button('Gửi yêu cầu thanh toán')?.click());
+    await act(async () => button('Tải lại trạng thái')?.click());
     expect(api.payments).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain('Đã gửi yêu cầu thanh toán');
-    expect(button('Gửi yêu cầu thanh toán')).toBeUndefined();
+    expect(host.textContent).toContain('Đã gửi thông báo chuyển khoản');
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
+    expect(api.createPayment).not.toHaveBeenCalled();
     expect(api.create).not.toHaveBeenCalled();
   });
 
-  it('keeps payment unverified when the recheck also fails', async () => {
+  it('keeps payment unverified when refreshing fails and recovers through Retry', async () => {
     api.history.mockResolvedValue([pending]);
-    api.createPayment.mockRejectedValue(new Error('Mất kết nối'));
-    api.payments.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('offline'));
+    api.payments.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([payment]);
     await render();
-    await act(async () => button('Gửi yêu cầu thanh toán')?.click());
+    await act(async () => button('Tải lại trạng thái')?.click());
     expect(host.textContent).toContain('Không thể kiểm tra thanh toán');
-    expect(button('Gửi yêu cầu thanh toán')).toBeUndefined();
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
+    await act(async () => button('Thử lại')?.click());
+    expect(host.textContent).toContain('Đã gửi thông báo chuyển khoản');
+    expect(api.createPayment).not.toHaveBeenCalled();
   });
 
   it('never displays an active package when payment is success but membership is pending', async () => {
@@ -188,14 +201,15 @@ describe('SCRUM-86 packages', () => {
     expect(button('Có yêu cầu đang chờ')?.disabled).toBe(true);
   });
 
-  it('keeps the created subscription when payment creation fails', async () => {
+  it('keeps the created subscription while transfer instructions are unavailable', async () => {
     api.history.mockResolvedValueOnce([]).mockResolvedValue([pending]);
-    api.createPayment.mockRejectedValue(new Error('offline'));
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
     expect(api.create).toHaveBeenCalledTimes(1);
     await act(async () => button('Đóng')?.click());
-    await act(async () => button('Gửi yêu cầu thanh toán')?.click());
+    expect(button('Tôi đã chuyển khoản')?.disabled).toBe(true);
+    await act(async () => button('Tôi đã chuyển khoản')?.click());
+    expect(api.createPayment).not.toHaveBeenCalled();
     expect(api.create).toHaveBeenCalledTimes(1);
     expect(host.textContent).toContain('Yêu cầu #12');
   });
@@ -234,6 +248,7 @@ describe('SCRUM-86 packages', () => {
     api.payments.mockResolvedValue([{ ...payment, status }]);
     await render();
     expect(host.textContent).toContain(status === 'failed' ? 'giao dịch thất bại' : 'đã hoàn tiền');
-    expect(button('Gửi yêu cầu thanh toán')).toBeUndefined();
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
+    expect(api.createPayment).not.toHaveBeenCalled();
   });
 });
