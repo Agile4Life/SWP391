@@ -48,6 +48,10 @@ export const router = createBrowserRouter([
             path: '/member/packages',
             element: <MemberPackagesPage />,
           },
+          {
+            path: '/member/card',
+            element: <MemberCardPage />,
+          },
         ],
       },
 
@@ -62,10 +66,6 @@ export const router = createBrowserRouter([
           {
             path: '/member/classes',
             element: <MemberClassesPage />,
-          },
-          {
-            path: '/member/card',
-            element: <MemberCardPage />,
           },
         ],
       },
