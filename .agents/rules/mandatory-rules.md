@@ -15,8 +15,9 @@ Tuyệt đối KHÔNG can thiệp, tự ý sửa đổi hoặc code vào phân h
 - **An**: Phân hệ Core Operations & Membership (Lớp học, Lịch tập, Ghi danh enrollment, Điểm danh check-in, Thiết bị facility, Gói tập subscription).
 
 ## 3. Các bất biến kiến trúc cốt lõi (Core Invariants)
+- **Database duy nhất — Supabase PostgreSQL:** Dùng profile `supabase`, JDBC qua TLS và credentials từ môi trường trong mọi môi trường chạy API. Không thêm lại database/driver/profile SQL Server, H2 hoặc MySQL. Test DB thật chạy trong schema biệt lập trên Supabase dev/test.
 - **Code-First & ORM Polymorphism:** Toàn bộ bảng, cột, khóa chính, khóa ngoại, computed column và quan hệ dữ liệu BẮT BUỘC định nghĩa qua Java JPA Entity. Khi đổi CSDL không viết lại file DDL thủ công mà Hibernate ORM đẩy thẳng (`ddl-auto: update`).
-- **Database Trigger đa hình qua Strategy:** Các trigger nghiệp vụ bắt buộc (sức chứa capacity, trùng lịch coach/room, kiểm tra gói tập active) được nạp tự động qua Strategy Polymorphism (`DatabaseTriggerProvider`) dựa trên CSDL đang kết nối, không ghim cứng cú pháp riêng của một loại CSDL.
+- **Database Trigger đa hình qua Strategy:** Các trigger nghiệp vụ bắt buộc (sức chứa capacity, trùng lịch coach/room, kiểm tra gói tập active) được nạp tự động qua SPI `DatabaseTriggerProvider` và `PostgreSqlTriggerProvider` sau Hibernate. Không khôi phục các adapter database đã ngừng hỗ trợ.
 - **Đa ngôn ngữ (i18n bắt buộc - Cấm Hard-code Strings):**
   - Mọi thông báo thành công (API response message), thông điệp lỗi (exception message), và ràng buộc kiểm tra dữ liệu đầu vào (Bean Validation message) BẮT BUỘC sử dụng message keys thông qua `MessageService`.
   - Tuyệt đối KHÔNG viết chuỗi tiếng Việt hoặc tiếng Anh trực tiếp trong controller, service, dto.

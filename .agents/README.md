@@ -38,7 +38,7 @@ Do not treat files in this directory as product runtime code.
 ## Danh sách Skills đã tích hợp
 
 1. **SCMS Development** (`skills/scms-development`):
-   - Quy ước chuyên biệt cho dự án Sports Center Management System (React, Spring Boot, SQL Server, Jira).
+   - Quy ước chuyên biệt cho dự án Sports Center Management System (React, Spring Boot, Supabase PostgreSQL, Hibernate Code-First, Jira).
 
 2. **Ponytail - Lazy Senior Dev Mode** (`skills/ponytail`, `ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help`, `ponytail-review`):
    - Nguồn: [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)

@@ -4,6 +4,8 @@ Thư mục này chứa các script tự động hóa khởi chạy, kiểm tra m
 
 Runner mặc định dùng Supabase PostgreSQL; cấu hình theo [SUPABASE_SETUP.md](../docs/SUPABASE_SETUP.md). API/Web chạy nền, log tại `api.log`, `api-error.log`, `web.log`, `web-error.log` ở root. Hibernate tạo/cập nhật schema và cài trigger khi API khởi động.
 
+Runner chỉ chấp nhận profile `supabase`; không chạy database thay thế trên máy cá nhân. Kiểm tra cấu hình bằng `powershell -ExecutionPolicy Bypass -File scripts/test-database-config.ps1` từ root.
+
 ---
 
 ## Danh Mục Script

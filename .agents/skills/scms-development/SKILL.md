@@ -1,6 +1,6 @@
 ---
 name: scms-development
-description: Implement or review a Sports Center Management System ticket using this repository's React, Spring Boot, SQL Server, and Jira conventions.
+description: Use when implementing or reviewing a Sports Center Management System ticket in this repository with React, Spring Boot, Supabase PostgreSQL, Hibernate Code-First, and Jira.
 ---
 
 # SCMS development
@@ -21,7 +21,9 @@ Trước khi sửa hoặc thêm bất kỳ dòng code nào, Agent PHẢI đọc:
 
 ## 3. Bất biến kiến trúc bắt buộc (Architectural Invariants)
 - **Code-First & ORM Polymorphism:** Toàn bộ bảng, cột, quan hệ định nghĩa qua Java JPA Entity; Hibernate ORM đẩy thẳng (`ddl-auto: update`), không tạo file DDL thủ công.
-- **Trigger đa hình:** Trigger được nạp tự động qua Strategy Polymorphism (`DatabaseTriggerProvider`) theo loại CSDL đang kết nối (`SqlServerTriggerStrategy`, `PostgresTriggerStrategy`, `H2TriggerStrategy`), không ghim cứng DDL.
+- **Database duy nhất:** Dùng Supabase PostgreSQL với profile `supabase` cho cả chạy ứng dụng và kiểm thử DB thật. Kết nối JDBC qua TLS, lấy credentials từ môi trường; unit test dùng mock. Không thêm database/driver/profile thay thế.
+- **Trigger đa hình:** Giữ SPI `DatabaseTriggerProvider`; triển khai đang hỗ trợ là `PostgreSqlTriggerProvider`, tự nạp `db/triggers/postgresql-triggers.sql` sau Hibernate. Không khôi phục adapter database cũ.
+- **Nâng cấp schema:** Entity là nguồn định nghĩa schema. Với cột/quan hệ mới trên bảng có dữ liệu, phải xử lý dữ liệu cũ và kiểm thử nâng cấp; không tự gán buổi học hoặc bản ghi quan hệ tùy ý. Các file SQL lịch sử trong `db/` không phải script triển khai.
 - **Đa ngôn ngữ (i18n bắt buộc):** Mọi response API message, exception message, validation message PHẢI dùng message key qua `MessageService`. Cấm tuyệt đối hard-code chuỗi tiếng Việt/tiếng Anh. Bắt buộc cập nhật đồng thời cả 3 file:
   + `apps/api/src/main/resources/i18n/messages_vi.properties`
   + `apps/api/src/main/resources/i18n/messages_en.properties`
@@ -31,4 +33,4 @@ Trước khi sửa hoặc thêm bất kỳ dòng code nào, Agent PHẢI đọc:
 ## 4. Routing & Implementation
 - **Backend (`apps/api`):** Tổ chức package-by-feature; DTOs ở ranh giới; Service quản lý transaction và ném `AppException` con kèm `(errorCode, messageKey, messageArgs, fallbackMessage)`; Controller chỉ điều phối và trả về `ApiResponse<T>`.
 - **Frontend (`apps/web`):** Đặt UI trong `src/features/<feature>`; page chỉ compose feature; luôn có trạng thái loading, empty, error và forbidden.
-- **Verification:** Chạy `./mvnw test` (100% tests pass) và cập nhật `graphify update .` trước khi commit.
+- **Verification:** Chạy `./mvnw test` (bao gồm `DatabasePolicyTest` và `DatabaseProfilesTest`) và `scripts/test-database-config.ps1`. Test Supabase thật cần `SCMS_POSTGRES_TEST_*`; nếu skipped thì ghi rõ chưa kiểm chứng DB thật. Cập nhật `graphify update .` sau thay đổi kiến trúc trước khi commit.

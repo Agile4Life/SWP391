@@ -4,6 +4,8 @@ Monorepo khởi tạo cho SWP391, gồm React web portal và Spring Boot REST AP
 
 Database của dự án là **Supabase PostgreSQL**, tạo schema bằng Hibernate Code-First. Xem [hướng dẫn Supabase](docs/SUPABASE_SETUP.md) để lấy kết nối JDBC, cấu hình SSL/RLS và chạy test DB thật.
 
+API và runner chỉ hỗ trợ profile `supabase`; không có database local thay thế. CI kiểm tra chính sách này qua `DatabasePolicyTest`, `DatabaseProfilesTest` và kiểm thử cấu hình runner. Các file SQL trong `db/` chỉ là tài liệu lịch sử, không dùng để triển khai.
+
 ## Cấu trúc
 
 ```text

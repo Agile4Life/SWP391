@@ -1,5 +1,7 @@
 # KẾ HOẠCH CHI TIẾT THEO SPRINT — CHO TỪNG NGƯỜI
 # Sports Center Management System (SWP391) — GROUP1_SWP
+> Current database policy: Supabase PostgreSQL only, profile `supabase`, Hibernate Code-First. Earlier references to SQL Server/Flyway describe retired planning history and must not guide new implementation.
+
 
 > Lịch giả định: mỗi Sprint 2 tuần (14 ngày), bắt đầu Sprint 1 từ **19/09/2026**. Điều chỉnh lại ngày thật với nhóm nếu lịch học/lịch thi khác đi — cấu trúc và thứ tự công việc vẫn giữ nguyên.
 > Người: **Tài, An, Phong** (Backend) — **Khoa, Thịnh** (Frontend).
@@ -267,7 +269,7 @@
 - **Acceptance Criteria (AC):**
   - [ ] `GET /api/v1/reports/revenue/daily`: Thống kê doanh thu theo từng ngày trong khoảng thời gian.
   - [ ] `GET /api/v1/reports/revenue/by-package`: Thống kê tỷ trọng doanh thu theo từng loại gói tập.
-  - [ ] `POST /api/v1/reports/snapshots/generate`: Lưu snapshot báo cáo dạng JSON (`ISJSON(data) = 1`) phục vụ đối soát nhanh cho Quản lý.
+  - [ ] `POST /api/v1/reports/snapshots/generate`: Lưu snapshot báo cáo dạng PostgreSQL `jsonb` phục vụ đối soát nhanh cho Quản lý.
 - **Kỹ thuật:** Package `reports`, Entity `ReportSnapshot`, Service, Controller.
 
 #### 📌 SCRUM-80: [Architecture] Chuẩn bị Hạ tầng AI Client & Bộ Test Tích hợp Triggers P2/P3/P4
@@ -275,7 +277,7 @@
 - **Mô tả:** Chuẩn bị sẵn module Spring AI / RestClient kết nối LLM (Gemini/OpenAI) cho Sprint 3; viết integration tests kiểm thử đa hình các trigger P2, P3, P4.
 - **Acceptance Criteria (AC):**
   - [ ] Config AI Client sẵn sàng nhận API Key từ môi trường, có fallback mock adapter cho môi trường test.
-  - [ ] Bộ integration tests kiểm chứng Trigger P2, P3, P4 hoạt động đồng nhất trên cả SQL Server và PostgreSQL (100% tests pass).
+  - [ ] Bộ integration tests kiểm chứng Trigger P2, P3, P4 trên Supabase PostgreSQL với schema test biệt lập (100% tests pass). SQL Server/H2 không còn thuộc phạm vi triển khai hoặc kiểm thử database.
 - **Liên quan SCRUM-91:** Phong bố trí hai ticket gần nhau; bộ test PostgreSQL P2/P3/P4 của SCRUM-80 là bằng chứng nghiệm thu phần trigger của SCRUM-91.
 
 #### 📌 SCRUM-91: [Database] Chuyển đổi Database từ SQL Server sang Supabase PostgreSQL

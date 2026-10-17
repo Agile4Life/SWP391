@@ -6,7 +6,7 @@ Cần Java 21+, Node.js 20+ và kết nối Supabase PostgreSQL. Maven Wrapper n
 
 1. Sao chép `.env.example` thành `.env` ở root.
 2. Lấy thông số kết nối từ Supabase Dashboard và điền theo [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
-3. Dùng profile `supabase` (cũng là mặc định), cấu hình JWT secret và TLS trong `.env`.
+3. Dùng profile `supabase` (profile database duy nhất), cấu hình JWT secret và TLS trong `.env`. API/Web chạy local nhưng database luôn ở Supabase; không bật profile `local` hoặc `postgresql` riêng.
 
 Không commit `.env` hoặc mật khẩu. Hibernate tạo/cập nhật schema từ JPA Entity khi API khởi động;
 PostgreSQL provider tự cài trigger P2/P3/P4 và các index bắt buộc.

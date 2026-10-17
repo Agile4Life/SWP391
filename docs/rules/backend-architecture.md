@@ -25,8 +25,10 @@ Use a strict three-layer flow:
 
 - **Nguyên tắc Code-First & ORM Polymorphism:** Toàn bộ cấu trúc bảng, kiểu dữ liệu, khóa chính/ngoại, index và computed columns được định nghĩa trực tiếp bằng Java Entity (Jakarta Persistence & Hibernate 6).
 - **Database Supabase PostgreSQL:** Hibernate ORM đồng bộ schema qua `spring.jpa.hibernate.ddl-auto: update`. Entity là nguồn định nghĩa bảng, cột, khóa và quan hệ; không tạo script `CREATE TABLE` thủ công để bootstrap database.
+- **Một cấu hình database:** API luôn dùng profile `supabase`; JDBC URL, username, password và JWT secret lấy từ môi trường, TLS bắt buộc. Không có profile database local riêng hoặc hỗ trợ SQL Server/H2/MySQL. Test DB thật dùng Supabase dev/test trong schema biệt lập; unit tests tiếp tục dùng mock, không dùng database thay thế.
 - **Cột tính toán (Generated columns):** Bắt buộc sử dụng `@GeneratedColumn("expression")` của Hibernate 6 kết hợp `@Generated(event = {EventType.INSERT, EventType.UPDATE})`. PostgreSQL Dialect sinh `GENERATED ALWAYS AS ... STORED`.
 - **Trigger toàn vẹn dữ liệu (Capacity, Schedule Conflict, Membership Invariants):** Không phụ thuộc vào DDL migration thủ công. Hệ thống sử dụng interface đa hình `DatabaseTriggerProvider` SPI kết hợp `DatabaseTriggerInitializer` để tự động nhận diện CSDL và kích hoạt trigger tương ứng ngay sau khi Hibernate Code-First sinh bảng.
+- Provider đang hỗ trợ duy nhất là `PostgreSqlTriggerProvider`; không khôi phục adapter hoặc trigger script của database đã ngừng hỗ trợ. Khi nâng cấp bảng có dữ liệu, cần kiểm thử khả năng cập nhật schema và bảo toàn dữ liệu; `ddl-auto: update` không tự suy ra cách backfill quan hệ mới.
 - **Không dùng native vendor SQL trong Java:** Tuyệt đối không dùng native SQL ghim cứng cú pháp một hệ quản trị CSDL trong Repository/Service; ưu tiên derived query methods hoặc JPQL chuẩn.
 - **Ranh giới Entity:** Giữ Entity bên trong persistence boundary; luôn dùng DTO và Mapper để giao tiếp với Controller.
 

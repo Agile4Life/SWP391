@@ -15,7 +15,7 @@
 3. [Thiết Kế Cơ Sở Dữ Liệu Chuyên Sâu (Database Schema Deep-Dive)](#3-thiết-kế-cơ-sở-dữ-liệu-chuyên-sâu-database-schema-deep-dive)
    - [3.1. Tổng quan 10 Modules & 33 Bảng CSDL](#31-tổng-quan-10-modules--33-bảng-csdl)
    - [3.2. Chi tiết từng Module và quan hệ khóa ngoại (FK)](#32-chi-tiết-từng-module-và-quan-hệ-khóa-ngoại-fk)
-   - [3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Filtered Indexes](#33-các-ràng-buộc-nghiệp-vụ-nâng-cao-triggers--filtered-indexes)
+   - [3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Partial Indexes](#33-các-ràng-buộc-nghiệp-vụ-nâng-cao-triggers--filtered-indexes)
 4. [Hệ Thống 6 Luồng Nghiệp Vụ Cốt Lõi (6 Core Business Flows)](#4-hệ-thống-6-luồng-nghiệp-vụ-cốt-lõi-6-core-business-flows)
    - [4.1. Ma trận chức năng tổng hợp (Actor × Flow Matrix)](#41-ma-trận-chức-năng-tổng-hợp-actor--flow-matrix)
    - [4.2. Bóc tách chi tiết từng Luồng từ Flow 1 đến Flow 6](#42-bóc-tách-chi-tiết-từng-luồng-từ-flow-1-đến-flow-6)
@@ -156,7 +156,7 @@ Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase P
 19. `payments`: Giao dịch thanh toán (`id`, `member_id`, `subscription_id`, `class_enrollment_id`, `amount`, `method` CHECK `cash/pos/bank_transfer/online_wallet`, `status` CHECK `success/pending/failed/refunded`, `paid_at`, `received_by` -> `users.id`).
 20. `invoices`: Hóa đơn điện tử (`id`, `payment_id` UNIQUE -> `payments.id`, `invoice_number` UNIQUE, `issued_at`, `subtotal_amount`, `tax_amount`, `total_amount` là cột tính toán, `pdf_url`).
 21. `invoice_items`: Chi tiết dòng hàng hóa đơn (`id`, `invoice_id` -> `invoices.id ON DELETE CASCADE`, `description`, `quantity`, `unit_price`, `amount` là cột tính toán).
-22. `report_snapshots`: Bản lưu trữ ảnh chụp báo cáo tài chính (`id`, `report_type` CHECK `revenue/membership/class_utilization`, `period_start`, `period_end`, `data` NVARCHAR(MAX) CHECK `ISJSON(data)=1`, `generated_by` -> `users.id`).
+22. `report_snapshots`: Bản lưu trữ ảnh chụp báo cáo tài chính (`id`, `report_type` CHECK `revenue/membership/class_utilization`, `period_start`, `period_end`, `data` `jsonb`, `generated_by` -> `users.id`).
 
 #### Module G: Huấn luyện & Đánh giá thể lực
 23. `training_plans`: Kế hoạch huấn luyện (`id`, `member_id` -> `members`, `coach_id` -> `coaches`, `class_id`, `goal`, `start_date`, `end_date`, `status` CHECK `draft/active/completed/cancelled`, `is_ai_generated` BIT, `ai_recommendation_id` -> `ai_recommendation_logs.id`).
@@ -165,7 +165,7 @@ Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase P
 26. `member_progress_logs`: Nhật ký theo dõi các chỉ số cơ thể (`id`, `member_id`, `metric_name` như Cân nặng, % Mỡ, Vòng eo..., `metric_value`, `unit`, `recorded_by`, `recorded_at`).
 
 #### Module H: Trí tuệ nhân tạo (AI Engine)
-27. `ai_recommendation_logs`: Nhật ký đề xuất bài tập của AI (`id`, `coach_id`, `member_id`, `input_context` NVARCHAR(MAX) CHECK `ISJSON=1`, `recommended_content` NVARCHAR(MAX) CHECK `ISJSON=1`, `model_name`, `is_applied` BIT).
+27. `ai_recommendation_logs`: Nhật ký đề xuất bài tập của AI (`id`, `coach_id`, `member_id`, `input_context` `jsonb`, `recommended_content` `jsonb`, `model_name`, `is_applied` boolean).
 28. `ai_chat_sessions`: Phiên hội thoại giữa hội viên và Chatbot (`id`, `member_id`, `topic`, `started_at`, `ended_at`).
 29. `ai_chat_messages`: Chi tiết tin nhắn hội thoại (`id`, `session_id` -> `ai_chat_sessions.id ON DELETE CASCADE`, `sender` CHECK `member/ai`, `message`, `created_at`).
 
@@ -175,49 +175,51 @@ Mô hình dữ liệu được triển khai bằng **JPA Entity trên Supabase P
 32. `support_request_messages`: Lịch sử trao đổi trong phiếu hỗ trợ (`id`, `support_request_id` -> `support_requests.id ON DELETE CASCADE`, `sender_user_id` -> `users.id`, `message`).
 
 #### Module J: Hệ thống & Kiểm toán
-33. `audit_logs`: Ghi vết toàn bộ hành vi hệ thống (`id`, `user_id` -> `users.id`, `action`, `entity_type` có CHECK giới hạn các bảng dữ liệu, `entity_id`, `old_value` CHECK `ISJSON=1`, `new_value` CHECK `ISJSON=1`, `ip_address`, `created_at`).
+33. `audit_logs`: Ghi vết toàn bộ hành vi hệ thống (`id`, `user_id` -> `users.id`, `action`, `entity_type` có CHECK giới hạn các bảng dữ liệu, `entity_id`, `old_value` `jsonb`, `new_value` `jsonb`, `ip_address`, `created_at`).
 
 ---
 
-### 3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Filtered Indexes
+### 3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Partial Indexes
+
+SQL examples below describe PostgreSQL constraints installed by `PostgreSqlTriggerProvider` after Hibernate. Do not execute them manually or create table-migration scripts.
 
 Để bảo đảm toàn vẹn dữ liệu ở cấp độ cao nhất mà ứng dụng không thể bị rách dữ liệu (race conditions), database cài đặt 5 cơ chế bảo vệ cốt lõi:
 
-#### 1. Filtered Unique Indexes (Đánh chỉ mục duy nhất có điều kiện)
+#### 1. Partial Unique Indexes (Đánh chỉ mục duy nhất có điều kiện)
 - **Đặt chỗ lớp học (`uq_enrollment_active`):**
   ```sql
   CREATE UNIQUE INDEX uq_enrollment_active
-  ON dbo.class_enrollments (class_id, member_id)
+  ON class_enrollments (class_id, member_id)
   WHERE status = 'booked';
   ```
   *Ý nghĩa:* Không bao giờ có 2 dòng `booked` cùng lúc cho 1 hội viên trong 1 lớp, nhưng **cho phép lưu vô số dòng `cancelled` và `completed`**. Nhờ đó học viên có thể hủy rồi đăng ký lại thoải mái mà lịch sử booking không bị ghi đè hay mất mát.
 - **Hàng chờ đặt chỗ (`uq_waitlist_active`):**
   ```sql
   CREATE UNIQUE INDEX uq_waitlist_active
-  ON dbo.class_waitlists (class_id, member_id)
+  ON class_waitlists (class_id, member_id)
   WHERE status = 'waiting';
   ```
   *Ý nghĩa:* Ngăn 1 người xếp hàng chờ 2 lần cùng lúc trong 1 lớp. Khi trạng thái chuyển sang `notified` hoặc `expired`, hội viên có thể vào lại waitlist.
 
 #### 2. Trigger kiểm tra sĩ số lớp học ([P2 — Class Capacity])
-- **`dbo.trg_enrollments_check_capacity`** kích hoạt `AFTER INSERT, UPDATE` trên `class_enrollments`:
+- **`trg_enrollments_check_capacity`** kích hoạt `AFTER INSERT, UPDATE` trên `class_enrollments`:
   Đếm tổng số bản ghi có `status = 'booked'`. Nếu `COUNT(*) > classes.capacity`, trigger lập tức bắn lỗi:  
   *PostgreSQL phát sinh SQLSTATE `23514`, constraint `trg_enrollments_check_capacity`; transaction bị rollback.*
 
 #### 3. Trigger chống trùng lịch Huấn luyện viên & Phòng học ([P3 — Schedule Conflict])
-- **`dbo.trg_sessions_check_conflict`** kích hoạt `AFTER INSERT, UPDATE` trên `class_sessions`:
+- **`trg_sessions_check_conflict`** kích hoạt `AFTER INSERT, UPDATE` trên `class_sessions`:
   Kiểm tra điều kiện giao thoa khung giờ chuẩn toán học:  
   `NOT (i.end_time <= s2.start_time OR i.start_time >= s2.end_time)`
   - Bắn lỗi nếu **cùng Huấn luyện viên** bị trùng giờ giữa 2 buổi dạy khác nhau trong cùng ngày.
   - Bắn lỗi nếu **cùng Phòng tập** bị 2 lớp xếp chồng chéo khung giờ.
 
 #### 4. Trigger kiểm tra gói thành viên còn hạn ([P4 — Membership Validation])
-- **`dbo.trg_enrollments_check_membership`:** Chặn ngay lập tức nếu hội viên cố tình book lớp mà không có `membership_subscriptions` nào đạt điều kiện: `status = 'active' AND end_date >= CAST(SYSDATETIME() AS DATE)`.
-- **`dbo.trg_checkins_check_membership`:** Chặn quét QR qua cổng trung tâm nếu gói tập đã hết hạn hoặc chưa thanh toán kích hoạt.
+- **`trg_enrollments_check_membership`:** Chặn ngay lập tức nếu hội viên cố tình book lớp mà không có `membership_subscriptions` nào đạt điều kiện: `status = 'active' AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`.
+- **`trg_checkins_check_membership`:** Chặn quét QR qua cổng trung tâm nếu gói tập đã hết hạn hoặc chưa thanh toán kích hoạt.
 
-#### 5. Computed Columns PERSISTED (Cột tính toán lưu vật lý)
-- `invoices.total_amount AS (subtotal_amount + tax_amount) PERSISTED`
-- `invoice_items.amount AS (quantity * unit_price) PERSISTED`  
+#### 5. Computed Columns STORED (Cột tính toán lưu vật lý)
+- `invoices.total_amount GENERATED ALWAYS AS (subtotal_amount + tax_amount) STORED`
+- `invoice_items.amount GENERATED ALWAYS AS (quantity * unit_price) STORED`
 *Ý nghĩa:* Loại bỏ hoàn toàn rủi ro sai lệch dữ liệu tài chính (inconsistency) do lập trình viên tính toán nhầm ở tầng code.
 
 ---
@@ -300,7 +302,7 @@ Mô hình quy trình nghiệp vụ được chuẩn hóa qua sơ đồ Swimlane 
 - **Mục tiêu:** Tiếp nhận thanh toán đa phương thức, tự động phát hành hóa đơn và cung cấp hệ thống báo cáo quản trị toàn diện cho Ban Quản lý.
 - **Tiến trình:**
   1. Giao dịch mua gói hoặc phí dịch vụ phát sinh -> *Lễ tân* hoặc cổng trực tuyến ghi nhận phương thức (`cash`, `pos`, `bank_transfer`, `online_wallet`).
-  2. *Hệ thống* lưu bản ghi `payments` (`status = 'success'`), tự động tạo hóa đơn `invoices` kèm các chi tiết dòng hàng `invoice_items` với cột thành tiền tự động tính `PERSISTED`.
+  2. *Hệ thống* lưu bản ghi `payments` (`status = 'success'`), tự động tạo hóa đơn `invoices` kèm các chi tiết dòng hàng `invoice_items` với cột thành tiền tự động tính `STORED`.
   3. Lễ tân in biên lai hoặc hệ thống gửi hóa đơn điện tử dạng PDF qua Email/App của Hội viên.
   4. *Center Manager* truy cập Bảng điều khiển (Admin Dashboard):
      - Lọc doanh thu theo ngày/tháng/quý/năm, theo từng bộ môn, gói tập hoặc HLV.
@@ -575,8 +577,8 @@ MODULE                      METHOD   ENDPOINT                                  M
 ### 7.3. Những quy tắc "Sống Còn" (Critical Gotchas) Dành Cho Agent Code
 
 > [!CAUTION]
-> **1. KHÔNG tự ý sửa đổi Schema DDL cơ sở dữ liệu nếu không chạy lại công cụ kiểm thử:**
-> Mọi thay đổi về tên cột, enum giá trị hoặc ràng buộc trong `db/databaseschema.sql` phải được đồng bộ tương ứng sang `docs/diagrams/build_state_diagrams.js` và `docs/diagrams/build_clean_swimlane.js`. Sau đó bắt buộc phải chạy `node docs/diagrams/verify_diagrams.js` để đảm bảo không bị rách đồ thị.
+> **1. Hibernate Code-First on Supabase PostgreSQL only:**
+> JPA entities define tables, columns and relationships. Historical files in `db/` are reference material, never deployment scripts. Update diagrams when entity/state definitions change; run Maven tests and verify upgrades against an isolated Supabase dev/test schema before merging.
 
 > [!IMPORTANT]
 > **2. Tôn trọng tầng bảo vệ Trigger của PostgreSQL:**

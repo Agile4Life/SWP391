@@ -20,7 +20,7 @@ DB_POOL_MIN_IDLE=1
 SPRING_JPA_HIBERNATE_DDL_AUTO=update
 ```
 
-Các giá trị trong dấu `<...>` phải được thay bằng cấu hình thật. Không đưa password vào JDBC URL; không commit `.env`. Username thực tế phải lấy từ Connect, có thể khác ví dụ. Không kết hợp profile `supabase` với `local`.
+Các giá trị trong dấu `<...>` phải được thay bằng cấu hình thật. Không đưa password hoặc TLS settings vào JDBC URL; không commit `.env`. Username thực tế phải lấy từ Connect, có thể khác ví dụ. Profile database duy nhất là `supabase`; các profile `local`, `postgresql`, SQL Server/H2 đã ngừng hỗ trợ. Web/API vẫn chạy trên máy cá nhân, còn database ở Supabase.
 
 Tạo JWT secret ngẫu nhiên trên Windows (chỉ in secret vào terminal của bạn, không đưa vào log/chats):
 
@@ -55,15 +55,17 @@ Trên DB rỗng, có thể tạo manager ban đầu bằng hai biến `APP_BOOTS
 
 ## Kiểm thử trên PostgreSQL thật
 
-Dùng test database riêng hoặc project Supabase dành cho dev; role cần quyền tạo schema. Test dùng schema ngẫu nhiên `scrum91_test_<uuid>`, tạo bảng bằng Hibernate và chỉ xóa schema này khi kết thúc; không reset `public`.
+Dùng project Supabase dành riêng cho dev/test; role cần quyền tạo schema. Test chạy cùng profile `supabase`, dùng schema ngẫu nhiên `scrum91_test_<uuid>`, tạo bảng bằng Hibernate và chỉ xóa schema này khi kết thúc; không reset `public`.
 
 Điền trong `.env`:
 
 ```dotenv
-SCMS_POSTGRES_TEST_URL=jdbc:postgresql://<TEST_SESSION_POOLER_HOST>:5432/postgres?sslmode=require
+SCMS_POSTGRES_TEST_URL=jdbc:postgresql://<TEST_SESSION_POOLER_HOST>:5432/postgres
 SCMS_POSTGRES_TEST_USERNAME=<TEST_DB_USERNAME>
 SCMS_POSTGRES_TEST_PASSWORD=<TEST_DB_PASSWORD>
 ```
+
+Kết nối test áp dụng TLS riêng qua `DB_SSL_MODE` (mặc định `require`) và `DB_SSL_ROOT_CERT`; không thêm `sslmode`, username hoặc password vào test JDBC URL. Tên biến `SCMS_POSTGRES_TEST_*` được giữ để tương thích công cụ hiện có.
 
 Nạp **chỉ các biến test** rồi chạy Maven:
 
@@ -77,7 +79,7 @@ Push-Location apps/api
 try { .\mvnw.cmd '-Dtest=PostgreSqlDatabaseIntegrationTest' test } finally { Pop-Location }
 ```
 
-Test kiểm chứng P2/P3/P4 trên DB thật, booking đồng thời, partial index, generated columns, CHECK constraint, `jsonb`, cài RLS và HTTP smoke qua MockMvc với Spring Security/JPA thật. Smoke bao gồm health, login, catalog, tạo/đọc payment và phát hành/đọc invoice; không tuyên bố kiểm chứng API booking/check-in chưa có controller trong codebase.
+Test kiểm chứng P2/P3/P4 trên DB thật, booking đồng thời, partial index, generated columns, CHECK constraint, `jsonb`, cài RLS và HTTP smoke qua MockMvc với Spring Security/JPA thật. Smoke hiện bao gồm health, login, catalog, tạo/đọc payment và phát hành/đọc invoice; chưa thay thế kiểm thử API booking/check-in riêng.
 
 Thiếu `SCMS_POSTGRES_TEST_URL` thì cả lớp integration test **skipped**, không tính là PostgreSQL đã được nghiệm thu. Nếu bị ngắt giữa chừng có thể còn schema test; chỉ xóa schema có tên do lần chạy đó tạo, không xóa schema ứng dụng.
 

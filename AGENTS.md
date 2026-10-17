@@ -6,6 +6,7 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 
 - Nguồn nghiệp vụ: `docs/PROJECT_MASTER_GUIDE.md`; schema triển khai được định nghĩa bằng JPA Entity, `db/databaseschema.sql` chỉ là tham chiếu cấu trúc lịch sử; backlog: `docs/plans/AGILE_SCRUM_JIRA_PLAN.md`.
 - Stack cố định: React + TypeScript ở `apps/web`, Java 21 + Spring Boot 3 ở `apps/api`, database Supabase PostgreSQL.
+- Mọi môi trường chạy API dùng profile `supabase`, JDBC PostgreSQL qua TLS và thông tin kết nối từ biến môi trường. Không thêm lại database/profile/driver SQL Server, H2 hoặc MySQL. Test DB thật dùng project Supabase dành cho dev/test và schema biệt lập.
 
 ## Cách làm một ticket
 
@@ -18,7 +19,8 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 ## Bất biến nghiệp vụ và kiến trúc dữ liệu
 
 - **Code-First & ORM Polymorphism bắt buộc:** Toàn bộ bảng, cột, khóa và quan hệ định nghĩa qua Java Entity; chuyển đổi CSDL không viết lại DDL thủ công mà dùng Hibernate ORM đẩy thẳng (`ddl-auto: update`).
-- **Trigger đa hình:** Các trigger nghiệp vụ bắt buộc (capacity, trùng lịch) được nạp tự động qua Strategy Polymorphism (`DatabaseTriggerProvider`) dựa trên CSDL đang kết nối, không ghim cứng DDL.
+- **Trigger đa hình:** Các trigger nghiệp vụ bắt buộc (capacity, trùng lịch) được nạp tự động qua `DatabaseTriggerProvider` và `PostgreSqlTriggerProvider` sau Hibernate. Chỉ hỗ trợ Supabase PostgreSQL; không tạo adapter cho database khác.
+- **CI bắt buộc:** `DatabasePolicyTest`, `DatabaseProfilesTest` và `scripts/test-database-config.ps1` kiểm tra chính sách database. `db/databaseschema.sql` và ba migration V1–V3 là tài liệu lịch sử; không sửa hoặc chạy chúng để triển khai, không thêm migration DDL mới.
 - **Đa ngôn ngữ (i18n bắt buộc):** Hệ thống hỗ trợ đa ngôn ngữ qua `Accept-Language` (mặc định `vi`). Bất kỳ tính năng backend mới nào khi thêm thông báo/mã lỗi bắt buộc phải cập nhật đồng thời cả `i18n/messages_vi.properties` và `i18n/messages_en.properties`, dùng `MessageService` để resolve.
 - Chỉ Member có subscription `active` và chưa hết hạn được booking/check-in.
 - Database trigger kiểm tra capacity và trùng lịch là bắt buộc. Map lỗi SQL đó thành lỗi HTTP dễ hiểu, không vô hiệu trigger.

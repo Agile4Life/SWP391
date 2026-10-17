@@ -41,8 +41,10 @@ Trước khi viết mã triển khai:
    - Mọi bảng, cột, kiểu dữ liệu, ràng buộc quan hệ PHẢI định nghĩa bằng Java JPA Entity trong `apps/api`.
    - CSDL do Hibernate tự động đồng bộ (`ddl-auto: update`), không viết file DDL migration thủ công riêng biệt.
 3. **Trigger đa hình (DatabaseTriggerProvider Strategy):**
-   - Không ghim cứng trigger theo cú pháp của một CSDL đơn lẻ.
-   - Thêm câu lệnh trigger vào lớp Strategy tương ứng (`SqlServerTriggerStrategy`, `PostgresTriggerStrategy`, `H2TriggerStrategy`).
+   - Database triển khai duy nhất là Supabase PostgreSQL, profile `supabase`, JDBC qua TLS và credentials từ môi trường.
+   - Giữ SPI `DatabaseTriggerProvider`; cập nhật `db/triggers/postgresql-triggers.sql` qua `PostgreSqlTriggerProvider` sau Hibernate. Không thêm adapter, driver hoặc profile database thay thế.
+   - Kiểm thử DB thật trên Supabase dev/test trong schema biệt lập. Không dùng các script SQL lịch sử để bootstrap hoặc nâng cấp; không thêm migration DDL thủ công mới.
+   - Khi thêm quan hệ hoặc cột bắt buộc vào bảng có dữ liệu, xử lý backfill có căn cứ và bổ sung test nâng cấp trước khi yêu cầu merge.
 4. **Đa ngôn ngữ (i18n) - CẤM HARD-CODE STRING:**
    - Mọi câu thông báo response API, exception message, validation message PHẢI dùng mã khóa (message key).
    - Khai báo đồng thời vào cả 3 file:
