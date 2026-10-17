@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -60,7 +61,7 @@ public class PaymentController {
                 .body(ApiResponse.created(msg("finance.payment.created"), created));
     }
 
-    @Operation(summary = "Lịch sử thanh toán của hội viên đang đăng nhập")
+    @Operation(summary = "Lịch sử thanh toán của hội viên đang đăng nhập", description = "Lấy tất cả giao dịch thanh toán của chính hội viên đang đăng nhập")
     @GetMapping("/my")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<List<PaymentDto>>> getMyPayments(
@@ -101,4 +102,3 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.refunded"), refunded));
     }
 }
-

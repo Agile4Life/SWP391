@@ -14,6 +14,7 @@ import com.swp391.scms.finance.mapper.PaymentMapper;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.membership.service.MembershipService;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.UserRepository;
@@ -30,7 +31,6 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Service managing Payments transactions.
@@ -45,6 +45,7 @@ public class PaymentService {
     private final MemberRepository memberRepository;
     private final UserRepository userRepository;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+    private final MembershipService membershipService;
     private final ClassEnrollmentRepository classEnrollmentRepository;
     private final PaymentMapper paymentMapper;
     private final Clock clock;
@@ -52,21 +53,15 @@ public class PaymentService {
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
-                          PaymentMapper paymentMapper, Clock clock) {
-        this(paymentRepository, memberRepository, userRepository, null, null, paymentMapper, clock);
-    }
-
-    @Autowired
-    public PaymentService(PaymentRepository paymentRepository,
-                          MemberRepository memberRepository,
-                          UserRepository userRepository,
                           MembershipSubscriptionRepository membershipSubscriptionRepository,
                           ClassEnrollmentRepository classEnrollmentRepository,
+                          MembershipService membershipService,
                           PaymentMapper paymentMapper, Clock clock) {
         this.paymentRepository = paymentRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
         this.membershipSubscriptionRepository = membershipSubscriptionRepository;
+        this.membershipService = membershipService;
         this.classEnrollmentRepository = classEnrollmentRepository;
         this.paymentMapper = paymentMapper;
         this.clock = clock;
@@ -131,6 +126,16 @@ public class PaymentService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.cashier", dto.getReceivedById()));
         }
 
+        MembershipSubscription subscription = null;
+        if (dto.getSubscriptionId() != null) {
+            subscription = validateSubscriptionForPayment(dto.getSubscriptionId(), member, dto.getAmount());
+        }
+
+        ClassEnrollment enrollment = null;
+        if (dto.getClassEnrollmentId() != null) {
+            enrollment = validateClassEnrollmentForPayment(dto.getClassEnrollmentId(), member);
+        }
+
         Payment payment = paymentMapper.toEntity(dto);
         payment.setMember(member);
         payment.setReceivedBy(receiver);
@@ -143,6 +148,15 @@ public class PaymentService {
         markPaidIfSuccess(payment, initialStatus);
 
         Payment saved = paymentRepository.save(payment);
+        if ("success".equals(initialStatus)) {
+            if (subscription != null) {
+                membershipService.activateSubscription(subscription);
+            }
+            if (enrollment != null) {
+                enrollment.setStatus("booked");
+                classEnrollmentRepository.save(enrollment);
+            }
+        }
         return paymentMapper.toDto(saved);
     }
 
@@ -185,6 +199,23 @@ public class PaymentService {
             }
             payment.setStatus(normalizedStatus);
             markPaidIfSuccess(payment, normalizedStatus);
+            if ("success".equals(normalizedStatus)) {
+                if (payment.getSubscriptionId() != null) {
+                    MembershipSubscription subscription = validateSubscriptionForPayment(
+                            payment.getSubscriptionId(), payment.getMember(), payment.getAmount());
+                    if (subscription != null) {
+                        membershipService.activateSubscription(subscription);
+                    }
+                }
+                if (payment.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
+                    ClassEnrollment enrollment = validateClassEnrollmentForPayment(
+                            payment.getClassEnrollmentId(), payment.getMember());
+                    if (enrollment != null) {
+                        enrollment.setStatus("booked");
+                        classEnrollmentRepository.save(enrollment);
+                    }
+                }
+            }
         }
 
         return paymentMapper.toDto(payment);
@@ -205,42 +236,21 @@ public class PaymentService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.cashier", dto.getReceivedById()));
         }
 
-        if (dto.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
-            MembershipSubscription subscription = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", dto.getSubscriptionId()));
-
-            if (!subscription.getMember().getUserId().equals(member.getUserId())) {
-                throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null,
-                        "Subscription does not belong to member");
+        if (dto.getSubscriptionId() != null) {
+            MembershipSubscription subscription = validateSubscriptionForPayment(
+                    dto.getSubscriptionId(), member, dto.getAmount());
+            if (subscription != null) {
+                membershipService.activateSubscription(subscription);
             }
-
-            if (subscription.getMembershipPackage() != null && subscription.getMembershipPackage().getPrice() != null) {
-                BigDecimal expectedPrice = subscription.getMembershipPackage().getPrice();
-                if (dto.getAmount().compareTo(expectedPrice) != 0) {
-                    throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
-                            new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
-                }
-            }
-
-            subscription.setStatus("active");
-            if (subscription.getQrCode() == null || subscription.getQrCode().isBlank()) {
-                subscription.setQrCode("SUB-" + subscription.getId() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            }
-            subscription.setUpdatedAt(LocalDateTime.now(clock));
-            membershipSubscriptionRepository.save(subscription);
         }
 
-        if (dto.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
-            ClassEnrollment enrollment = classEnrollmentRepository.findById(dto.getClassEnrollmentId())
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", dto.getClassEnrollmentId()));
-
-            if (!enrollment.getMember().getUserId().equals(member.getUserId())) {
-                throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null,
-                        "Enrollment does not belong to member");
+        if (dto.getClassEnrollmentId() != null) {
+            ClassEnrollment enrollment = validateClassEnrollmentForPayment(
+                    dto.getClassEnrollmentId(), member);
+            if (enrollment != null) {
+                enrollment.setStatus("booked");
+                classEnrollmentRepository.save(enrollment);
             }
-
-            enrollment.setStatus("booked");
-            classEnrollmentRepository.save(enrollment);
         }
 
         Payment payment = new Payment();
@@ -310,5 +320,43 @@ public class PaymentService {
         if ("success".equals(status) && payment.getPaidAt() == null) {
             payment.setPaidAt(LocalDateTime.now(clock));
         }
+    }
+
+    private MembershipSubscription validateSubscriptionForPayment(Long subscriptionId, Member member, BigDecimal amount) {
+        if (subscriptionId == null || membershipSubscriptionRepository == null) {
+            return null;
+        }
+        MembershipSubscription subscription = membershipSubscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+
+        if (member != null && (subscription.getMember() == null || !subscription.getMember().getUserId().equals(member.getUserId()))) {
+            throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null,
+                    "Subscription does not belong to member");
+        }
+
+        if (subscription.getMembershipPackage() != null && subscription.getMembershipPackage().getPrice() != null && amount != null) {
+            BigDecimal expectedPrice = subscription.getMembershipPackage().getPrice();
+            if (amount.compareTo(expectedPrice) != 0) {
+                throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                        new Object[]{amount, expectedPrice}, "Payment amount mismatch");
+            }
+        }
+
+        return subscription;
+    }
+
+    private ClassEnrollment validateClassEnrollmentForPayment(Long classEnrollmentId, Member member) {
+        if (classEnrollmentId == null || classEnrollmentRepository == null) {
+            return null;
+        }
+        ClassEnrollment enrollment = classEnrollmentRepository.findById(classEnrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", classEnrollmentId));
+
+        if (member != null && (enrollment.getMember() == null || !enrollment.getMember().getUserId().equals(member.getUserId()))) {
+            throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null,
+                    "Enrollment does not belong to member");
+        }
+
+        return enrollment;
     }
 }

@@ -20,9 +20,22 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     @Lock(LockModeType.PESSIMISTIC_READ)
     Optional<MembershipSubscription> findByQrCode(String qrCode);
 
+    List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
+
     List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
 
+    boolean existsByMemberUserIdAndStatus(Long memberId, String status);
+
     boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
+
+    boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Long memberId, String status, LocalDate startDate, LocalDate endDate);
+
+    Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId,
+            String status);
+
+    Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+            Long memberId, String status, LocalDate todayForStart, LocalDate todayForEnd);
 
     @Query("""
             select (count(s) > 0) from MembershipSubscription s

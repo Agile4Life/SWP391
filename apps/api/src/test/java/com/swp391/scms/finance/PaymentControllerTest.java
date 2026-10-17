@@ -39,11 +39,27 @@ class PaymentControllerTest {
     @InjectMocks
     private PaymentController paymentController;
 
+    private final org.springframework.web.method.support.HandlerMethodArgumentResolver principalResolver = new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+        @Override
+        public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+            return parameter.getParameterType().isAssignableFrom(com.swp391.scms.security.AuthenticatedPrincipal.class);
+        }
+
+        @Override
+        public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                                      org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                                      org.springframework.web.context.request.NativeWebRequest webRequest,
+                                      org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+            return new com.swp391.scms.security.AuthenticatedPrincipal(2L, "member02", "MEMBER");
+        }
+    };
+
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         mockMvc = MockMvcBuilders.standaloneSetup(paymentController)
+                .setCustomArgumentResolvers(principalResolver)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -110,6 +126,20 @@ class PaymentControllerTest {
         mockMvc.perform(get("/api/v1/payments/member/2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/payments/my should return 200 OK for authenticated member")
+    void shouldGetMyPaymentsSuccessfully() throws Exception {
+        PaymentDto dto = new PaymentDto();
+        dto.setId(1L);
+
+        when(paymentService.getPaymentsByMemberId(2L)).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/v1/payments/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].id").value(1));
     }
 
     @Test
