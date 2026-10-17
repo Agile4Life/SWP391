@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberCardPage } from './MemberCardPage';
 import { getProfile } from './profileApi';
@@ -18,7 +19,7 @@ let host: HTMLDivElement;
 let root: Root;
 
 async function renderPage() {
-  await act(async () => { root.render(<MemberCardPage />); });
+  await act(async () => { root.render(<MemoryRouter><MemberCardPage /></MemoryRouter>); });
 }
 
 async function finishQrLoading() {
@@ -75,7 +76,7 @@ describe('MemberCardPage', () => {
     vi.mocked(getMySubscription).mockResolvedValue(null);
     await renderPage();
     expect(host.textContent).toContain('Chưa có gói tập');
-    expect(host.querySelector('a')?.getAttribute('href')).toBe('/#packages');
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
     expect(host.querySelector('a')?.textContent).toBe('Xem gói tập');
     expect(getMembershipHistory).toHaveBeenCalledTimes(1);
   });
@@ -90,6 +91,7 @@ describe('MemberCardPage', () => {
     expect(host.querySelector('img')).toBeNull();
     expect(host.querySelector('button')?.disabled).toBe(true);
     expect(QRCode.toDataURL).not.toHaveBeenCalled();
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
   });
 
   it('treats a historical active record with a past end date as expired', async () => {
@@ -98,6 +100,7 @@ describe('MemberCardPage', () => {
     await renderPage();
     expect(host.textContent).toContain('Gói tập đã hết hạn');
     expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
   });
 
   it('shows pending payment instead of never purchased', async () => {
@@ -129,6 +132,7 @@ describe('MemberCardPage', () => {
     await renderPage();
     expect(host.textContent).toContain('không còn gói tập hiệu lực');
     expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
   });
 
   it('shows history errors and retries instead of claiming no membership', async () => {

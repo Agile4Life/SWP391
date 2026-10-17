@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
+import { Link } from 'react-router-dom';
 import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { toast } from '../../shared/ui/toast';
@@ -128,20 +129,20 @@ export function MemberCardPage() {
       {!loading && !error && !subscription && expired && profile && (
         <>
           <MemberCard profile={profile} subscription={{ ...expired, status: 'expired', qrCode: null }} />
-          <p>Gói tập đã hết hạn. <a href="/#packages">Xem gói tập để gia hạn</a></p>
+          <p>Gói tập đã hết hạn. <Link to="/member/packages">Xem gói tập để gia hạn</Link></p>
         </>
       )}
       {!loading && !error && !subscription && history.length > 0 && !expired && !pending && (
         <div className="portal-card">
           <p>Bạn không còn gói tập hiệu lực.</p>
-          <a className="btn-primary" href="/#packages">Xem gói tập</a>
+          <Link className="btn-primary" to="/member/packages">Xem gói tập</Link>
         </div>
       )}
       {!loading && !error && !subscription && history.length === 0 && (
         <div className="portal-card">
           <p>Chưa có gói tập để hiển thị thẻ hội viên.</p>
           <p>Vui lòng đăng ký hoặc gia hạn gói tập.</p>
-          <a className="btn-primary" href="/#packages">Xem gói tập</a>
+          <Link className="btn-primary" to="/member/packages">Xem gói tập</Link>
         </div>
       )}
       {!loading && !error && profile && subscription && <MemberCard profile={profile} subscription={subscription} />}
