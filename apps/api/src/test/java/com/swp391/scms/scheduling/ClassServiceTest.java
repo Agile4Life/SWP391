@@ -82,7 +82,7 @@ class ClassServiceTest {
 
         assertThatThrownBy(() -> service.createSession(1L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Cannot schedule a session in the past");
+                .hasMessageContaining("Session must start in the future");
     }
 
     @Test
@@ -99,7 +99,7 @@ class ClassServiceTest {
 
         assertThatThrownBy(() -> service.createSession(1L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Cannot schedule a session in the past");
+                .hasMessageContaining("Session must start in the future");
     }
 
     @Test

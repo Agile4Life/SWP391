@@ -157,6 +157,7 @@ class MembershipSubscriptionServiceTest {
         prev.setId(100L);
         prev.setMember(member);
         prev.setMembershipPackage(pack);
+        prev.setStatus("active");
         prev.setEndDate(LocalDate.now(clock).plusDays(10)); // still 10 days left
 
         when(subscriptions.findById(100L)).thenReturn(Optional.of(prev));
@@ -186,6 +187,7 @@ class MembershipSubscriptionServiceTest {
         prev.setId(100L);
         prev.setMember(member);
         prev.setMembershipPackage(pack);
+        prev.setStatus("expired");
         prev.setEndDate(LocalDate.now(clock).minusDays(5)); // expired 5 days ago
 
         when(subscriptions.findById(100L)).thenReturn(Optional.of(prev));
