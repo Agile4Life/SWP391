@@ -101,6 +101,15 @@ public class MembershipSubscriptionService {
                     "Subscription does not belong to the authenticated member");
         }
 
+        if (STATUS_PENDING_PAYMENT.equalsIgnoreCase(previous.getStatus())
+                || "cancelled".equalsIgnoreCase(previous.getStatus())) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_INVALID_RENEWAL_STATUS",
+                    "membership.subscription.invalid_renewal_status",
+                    new Object[]{previous.getStatus()},
+                    "Subscription with status " + previous.getStatus() + " cannot be renewed");
+        }
+
         MembershipPackage membershipPackage = findActivePackage(previous.getMembershipPackage().getId());
 
         LocalDate today = LocalDate.now(clock);

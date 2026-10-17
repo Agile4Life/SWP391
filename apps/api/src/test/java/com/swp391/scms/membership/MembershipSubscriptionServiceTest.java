@@ -214,6 +214,24 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void renew_failsWhenPreviousIsPendingOrCancelled() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        for (String invalidStatus : List.of("pending_payment", "cancelled")) {
+            MembershipSubscription prev = new MembershipSubscription();
+            prev.setId(100L);
+            prev.setMember(member);
+            prev.setStatus(invalidStatus);
+
+            when(subscriptions.findById(100L)).thenReturn(Optional.of(prev));
+
+            assertThatThrownBy(() -> service.renew(principal, 100L))
+                    .isInstanceOf(BadRequestException.class);
+        }
+    }
+
+    @Test
     void mine_returnsListOrdered() {
         Member member = new Member();
         member.setUserId(10L);
