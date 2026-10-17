@@ -4,8 +4,6 @@ server:
 spring:
   profiles:
     default: supabase
-    group:
-      supabase: postgresql
   application:
     name: scms-api
   messages:
@@ -45,7 +43,7 @@ springdoc:
 
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:c2Ntc19sb2NhbF9qd3Rfc2VjcmV0X2tleV9mb3Jfc3dwMzkxX3Byb2plY3RfMjAyNg==}
+    secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}

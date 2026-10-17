@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entity mapping table dbo.payments (Module F: Thanh toán & Báo cáo).
+ * Entity mapping table payments on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_payments_method", constraints = "method IN ('cash','pos','bank_transfer','online_wallet')")

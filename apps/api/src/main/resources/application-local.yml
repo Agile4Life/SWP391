@@ -1,7 +1,0 @@
-app:
-  auth:
-    debug-otp-enabled: true
-  bootstrap:
-    manager:
-      email: admin@scms.local
-      password: ${APP_BOOTSTRAP_MANAGER_PASSWORD:Admin@123456}

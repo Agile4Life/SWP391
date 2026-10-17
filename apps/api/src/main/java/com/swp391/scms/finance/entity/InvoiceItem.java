@@ -5,8 +5,8 @@ import org.hibernate.annotations.GeneratedColumn;
 import java.math.BigDecimal;
 
 /**
- * Entity mapping table dbo.invoice_items (Module F: Thanh toán & Báo cáo).
- * Contains computed column amount (quantity * unit_price) PERSISTED.
+ * Entity mapping table invoice_items on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
+ * Contains stored generated column amount (quantity * unit_price).
  */
 @Entity
 @Table(name = "invoice_items")

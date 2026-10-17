@@ -7,9 +7,7 @@ foreach ($profiles in @('', 'supabase')) {
         throw 'The default and Supabase profiles must use PostgreSQL without local settings.'
     }
 }
-$pg = Resolve-ScmsDatabaseConfig -Profiles 'postgresql' -JdbcUrl 'jdbc:postgresql://localhost:5432/scms'
-if ($pg.Provider -ne 'postgresql' -or $pg.Profiles -ne 'postgresql,local') { throw 'Explicit PostgreSQL development profile resolution failed.' }
-foreach ($invalid in @('supabase,local', 'legacy-db', 'postgresql,legacy-db')) {
+foreach ($invalid in @('postgresql', 'local', 'sqlserver', 'h2', 'supabase,local', 'supabase,postgresql', 'legacy-db')) {
     $rejected = $false
     try { Resolve-ScmsDatabaseConfig -Profiles $invalid -JdbcUrl '' | Out-Null } catch { $rejected = $true }
     if (-not $rejected) { throw "Unsupported profile combination accepted: $invalid" }
@@ -17,4 +15,4 @@ foreach ($invalid in @('supabase,local', 'legacy-db', 'postgresql,legacy-db')) {
 $rejected = $false
 try { Resolve-ScmsDatabaseConfig -Profiles 'supabase' -JdbcUrl 'jdbc:mysql://localhost/test' | Out-Null } catch { $rejected = $true }
 if (-not $rejected) { throw 'A non-PostgreSQL JDBC URL was accepted.' }
-Write-Output 'Database runner config: 7 cases passed.'
+Write-Output 'Supabase runner config: 10 cases passed.'

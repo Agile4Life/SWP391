@@ -2,7 +2,6 @@ package com.swp391.scms.config;
 
 import com.swp391.scms.config.trigger.PostgreSqlTriggerProvider;
 import jakarta.persistence.Entity;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
@@ -26,8 +25,7 @@ class CenterCheckinSchemaUpgradePostgreSqlTest {
     @Test
     void upgradesLegacyCheckinsAfterHibernateAndPreservesHistoryForeignKeyAndMembershipTrigger() throws Exception {
         String schema = "scrum91_upgrade_" + UUID.randomUUID().toString().replace("-", "");
-        try (var connection = DriverManager.getConnection(credential("SCMS_POSTGRES_TEST_URL"),
-                credential("SCMS_POSTGRES_TEST_USERNAME"), credential("SCMS_POSTGRES_TEST_PASSWORD"));
+        try (var connection = SupabaseTestDatabase.connect();
              var statement = connection.createStatement()) {
             String originalSchema = connection.getSchema();
             statement.execute("create schema \"" + schema + "\"");
@@ -122,9 +120,4 @@ class CenterCheckinSchemaUpgradePostgreSqlTest {
                 + "values (null, now(), 'qr', 'DENIED', 'Unknown QR fixture')");
     }
 
-    private static String credential(String name) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) throw new IllegalStateException("Set " + name + " for PostgreSQL integration tests");
-        return value;
-    }
 }

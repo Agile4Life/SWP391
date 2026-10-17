@@ -73,17 +73,9 @@ if ($Only -in @("all", "api", "db")) {
             throw "Set $requiredName in .env before starting the database/API."
         }
     }
-    if ($databaseConfig.IsSupabase -and [string]::IsNullOrWhiteSpace($env:APP_JWT_SECRET)) {
-        throw 'Set APP_JWT_SECRET in .env for Supabase; the local fallback is disabled.'
+    if ([string]::IsNullOrWhiteSpace($env:APP_JWT_SECRET)) {
+        throw 'Set APP_JWT_SECRET in .env for Supabase.'
     }
-}
-# A temporary signing key is only for local development.
-if (($Only -in @("all", "api")) -and -not $databaseConfig.IsSupabase -and [string]::IsNullOrWhiteSpace($env:APP_JWT_SECRET)) {
-    $localJwtSecretBytes = [byte[]]::new(32)
-    $localJwtRng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-    try { $localJwtRng.GetBytes($localJwtSecretBytes) } finally { $localJwtRng.Dispose() }
-    $env:APP_JWT_SECRET = [Convert]::ToBase64String($localJwtSecretBytes)
-    Write-Host "[INFO] Generated an in-memory JWT secret for this local run." -ForegroundColor DarkGray
 }
 # 2. Pre-flight check: Node.js & npm
 if ($Only -in @("all", "web")) {

@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 /**
- * Service managing Invoices, InvoiceItems, and PERSISTED computed column synchronizations.
+ * Service managing invoices, invoice items, and PostgreSQL stored generated columns.
  */
 @Service
 @Transactional

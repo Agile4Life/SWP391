@@ -17,20 +17,20 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.sql.DataSource;
 import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Real PostgreSQL only. Uses a fresh, uniquely named schema and never resets public. */
+/** Real Supabase PostgreSQL. Uses a fresh, uniquely named schema and never resets public. */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("postgresql")
+@ActiveProfiles("supabase")
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 class PostgreSqlDatabaseIntegrationTest {
     private static final String SCHEMA = "scrum91_test_" + UUID.randomUUID().toString().replace("-", "");
@@ -43,17 +43,10 @@ class PostgreSqlDatabaseIntegrationTest {
     @Autowired ObjectMapper json;
     @Autowired DataSource dataSource;
 
-    private static String credential(String name) {
-        String value = System.getenv(name);
-        if (value == null || value.isBlank()) throw new IllegalStateException("Set " + name + " for PostgreSQL integration tests");
-        return value;
-    }
-
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) throws Exception {
         // The schema name is generated here, never supplied by external configuration.
-        try (var connection = DriverManager.getConnection(credential("SCMS_POSTGRES_TEST_URL"),
-                credential("SCMS_POSTGRES_TEST_USERNAME"), credential("SCMS_POSTGRES_TEST_PASSWORD"));
+        try (var connection = SupabaseTestDatabase.connect();
              var statement = connection.createStatement()) {
             statement.execute("create schema \"" + SCHEMA + "\"");
         }
@@ -73,8 +66,7 @@ class PostgreSqlDatabaseIntegrationTest {
     @AfterAll
     static void cleanup() throws Exception {
         assertTrue(SCHEMA.matches("scrum91_test_[a-f0-9]{32}"));
-        try (var connection = DriverManager.getConnection(credential("SCMS_POSTGRES_TEST_URL"),
-                credential("SCMS_POSTGRES_TEST_USERNAME"), credential("SCMS_POSTGRES_TEST_PASSWORD"));
+        try (var connection = SupabaseTestDatabase.connect();
              var statement = connection.createStatement()) {
             statement.execute("drop schema if exists \"" + SCHEMA + "\" cascade");
         }

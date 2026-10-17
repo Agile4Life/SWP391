@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entity mapping table dbo.invoices (Module F: Thanh toán & Báo cáo).
- * Contains computed column total_amount (subtotal_amount + tax_amount) PERSISTED.
+ * Entity mapping table invoices on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
+ * Contains stored generated column total_amount (subtotal_amount + tax_amount).
  */
 @Entity
 @Table(name = "invoices")

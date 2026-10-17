@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DatabaseProfilesTest {
     private ApplicationContextRunner database() {
@@ -84,5 +85,34 @@ class DatabaseProfilesTest {
                 .run(context -> assertThat(context).hasFailed());
         supabase().withPropertyValues("APP_JWT_SECRET=")
                 .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void rejectsStandaloneDatabaseProfilesThatBypassSupabase() {
+        for (String profile : new String[]{"postgresql", "local", "sqlserver", "h2"}) {
+            database().withPropertyValues("spring.profiles.active=" + profile)
+                    .run(context -> assertThat(context).hasFailed());
+        }
+    }
+
+    @Test
+    void rejectsDevelopmentProfileWhenCombinedWithSupabase() {
+        for (String profile : new String[]{"postgresql", "local", "sqlserver", "h2"}) {
+            supabase().withPropertyValues("spring.profiles.active=supabase," + profile)
+                    .run(context -> assertThat(context).hasFailed());
+        }
+    }
+
+    @Test
+    void directIntegrationConnectionsRejectUnsafeTlsAndUrlBeforeOpeningJdbc() {
+        var settings = new java.util.Properties();
+        settings.setProperty("sslmode", "disable");
+        assertThatThrownBy(() -> SupabaseTestDatabase.connect("jdbc:postgresql://example.invalid/postgres", settings))
+                .isInstanceOf(IllegalStateException.class);
+        settings.setProperty("sslmode", "require");
+        for (String query : new String[]{"sslmode=disable", "user=other", "password=other", "ssl=false"}) {
+            assertThatThrownBy(() -> SupabaseTestDatabase.connect("jdbc:postgresql://example.invalid/postgres?" + query, settings))
+                    .isInstanceOf(IllegalStateException.class);
+        }
     }
 }
