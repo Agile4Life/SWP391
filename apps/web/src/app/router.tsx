@@ -39,9 +39,12 @@ export const router = createBrowserRouter([
 
       // Group Member Routes (US01, US03, US04, US05)
       {
+        element: <RoleGuard allowedRoles={['MEMBER']} />,
+        children: [{ path: '/member/dashboard', element: <MemberDashboardPage /> }],
+      },
+      {
         element: <RoleGuard allowedRoles={['MEMBER', 'MANAGER', 'CENTER_MANAGER']} />,
         children: [
-          { path: '/member/dashboard', element: <MemberDashboardPage /> },
           { path: '/member/classes', element: <MemberClassesPage /> },
           { path: '/member/card', element: <MemberCardPage /> },
         ],
