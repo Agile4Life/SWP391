@@ -113,7 +113,11 @@ export function MemberPackagesPage() {
   }, [loadPackages, loadCurrent, loadHistory, loadPayments]);
 
   const packages = packagesState.status === 'success' ? packagesState.data : [];
-  const current = currentState.status === 'success' ? currentState.data : null;
+  const current =
+    currentState.status === 'success' &&
+    currentState.data?.status?.toLowerCase() === 'active'
+      ? currentState.data
+      : null;
   const pendingItems = historyState.status === 'success'
     ? historyState.data.filter((item) => item.status === 'pending_payment') : [];
   const pending = pendingItems.length === 1 ? pendingItems[0] : null;

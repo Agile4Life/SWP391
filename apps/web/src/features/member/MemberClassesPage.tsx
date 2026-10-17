@@ -128,7 +128,7 @@ export function MemberClassesPage() {
             </div>;
           })}
         <p className="row-card__meta">* Backend hiện tính số đã đăng ký theo lớp, chưa xác nhận riêng từng buổi. Đặt chỗ và hàng chờ đang chờ đồng bộ backend theo buổi học.</p>
-        <p className="row-card__meta">Chưa thể kiểm tra gói tập trước thao tác. <Link to="/#packages">Xem gói tập</Link></p>
+        <p className="row-card__meta">Chưa thể kiểm tra gói tập trước thao tác. <Link to="/member/packages">Xem gói tập</Link></p>
       </div> : <div className="stack">
         <div className="portal-card portal-empty"><h3>Lịch đã đặt chưa khả dụng</h3>
           <p>Backend chưa cung cấp danh sách đăng ký và buổi học tương ứng. Chưa thể hiển thị hoặc hủy đặt chỗ chính xác.</p></div>

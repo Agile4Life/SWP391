@@ -21,12 +21,13 @@ describe('MemberClassesPage', () => {
   let host: HTMLDivElement;
   let root: Root;
   beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
     mocks.sessions.mockReset(); mocks.waitlists.mockReset();
     mocks.waitlists.mockResolvedValue([]);
   });
-  afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
+  afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemoryRouter><MemberClassesPage /></MemoryRouter>)); }
 
   it('shows loading, then real sessions and a disabled full-class action', async () => {
@@ -39,6 +40,7 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).toContain('12 / 12');
     const button = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Tham gia hàng chờ'));
     expect(button?.disabled).toBe(true);
+    expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
   });
 
   it('shows empty schedule', async () => {

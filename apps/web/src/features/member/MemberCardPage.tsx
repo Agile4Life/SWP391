@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 import { Link } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { cardStatus } from './cardStatus';
 import { getMembershipHistory, getMySubscription, type CardSubscription } from './memberCardApi';
 
 function displayDate(value: string) {
+  if (!validDate(value)) return '—';
   const [year, month, day] = value.split('-');
   return `${day}/${month}/${year}`;
 }
@@ -27,7 +28,11 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const [qrError, setQrError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const status = cardStatus(subscription.status, subscription.endDate);
-  const canShowQr = (status === 'active' || status === 'warning') && Boolean(subscription.qrCode?.trim());
+  const canShowQr =
+    validDate(subscription.startDate) &&
+    validDate(subscription.endDate) &&
+    (status === 'active' || status === 'warning') &&
+    Boolean(subscription.qrCode?.trim());
   const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#C2A684' : '#A45A53';
 
   useEffect(() => {

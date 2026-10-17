@@ -11,6 +11,17 @@ import {
 
 const DAY_MS = 86_400_000;
 
+function validDate(value: string | null | undefined): boolean {
+  if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
 function localDate(value: string): Date {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
@@ -95,11 +106,19 @@ export function MemberDashboardPage() {
   const membership =
     membershipState.status === 'success' &&
     membershipState.membership?.status?.toLowerCase() === 'active' &&
+    validDate(membershipState.membership.startDate) &&
+    validDate(membershipState.membership.endDate) &&
+    dayNumber(localDate(membershipState.membership.startDate)) <= dayNumber(today) &&
     dayNumber(localDate(membershipState.membership.endDate)) >= dayNumber(today)
       ? membershipState.membership
       : null;
 
-  const classes = classesState.status === 'success' ? classesState.classes : [];
+  const classes =
+    classesState.status === 'success'
+      ? classesState.classes.filter(
+          (item) => item.status?.toLowerCase() === 'booked',
+        )
+      : [];
 
   return (
     <div className="portal-container">

@@ -185,8 +185,16 @@ public class EnrollmentService {
 
     @Transactional(readOnly = true)
     public List<EnrollmentDto> myEnrollments(AuthenticatedPrincipal principal) {
+        return myEnrollments(principal, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnrollmentDto> myEnrollments(AuthenticatedPrincipal principal, String status) {
         findMember(principal.id());
+        String normalizedStatus = status != null && !status.isBlank() ? status.trim() : null;
         return enrollments.findByMemberUserId(principal.id()).stream()
+                .filter(enrollment -> normalizedStatus == null
+                        || normalizedStatus.equalsIgnoreCase(enrollment.getStatus()))
                 .map(enrollment -> toDto(enrollment, null))
                 .toList();
     }

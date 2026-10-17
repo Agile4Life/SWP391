@@ -26,6 +26,7 @@ describe('SCRUM-85 dashboard', () => {
   let root: Root;
 
   beforeEach(() => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
     root = createRoot(host);
@@ -38,6 +39,7 @@ describe('SCRUM-85 dashboard', () => {
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+    vi.unstubAllGlobals();
   });
 
   async function renderDashboard() {
@@ -78,5 +80,23 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.textContent).toContain('Yoga');
     expect(host.textContent).toContain('Chưa thể hiển thị lịch 7 ngày chính xác');
     expect(host.textContent).not.toContain('2026-10-17');
+  });
+
+  it('excludes cancelled enrollments and not-yet-started memberships', async () => {
+    api.membership.mockResolvedValue({
+      ...membership,
+      startDate: '2099-01-01',
+      endDate: '2099-12-31',
+    });
+    api.bookings.mockResolvedValue([{
+      id: 10, classId: 3, className: 'Pilates Cancelled', coachName: 'Bình', roomName: 'B',
+      sessionDate: null, startTime: null, endTime: null,
+      status: 'cancelled', createdAt: '2026-10-16T10:00:00',
+      cancelledAt: '2026-10-16T11:00:00', cancelReason: 'Cancelled by MEMBER',
+    }]);
+    await renderDashboard();
+    expect(host.textContent).toContain('Hành trình của bạn bắt đầu tại đây');
+    expect(host.textContent).not.toContain('Pilates Cancelled');
+    expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
   });
 });

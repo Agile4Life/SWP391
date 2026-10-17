@@ -62,7 +62,12 @@ public class EnrollmentController {
     @GetMapping("/enrollments/my")
     @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<List<EnrollmentDto>> myEnrollments(
-            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return ApiResponse.ok(msg("scheduling.enrollment.list"), service.myEnrollments(principal));
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @RequestParam(required = false) String status) {
+        return ApiResponse.ok(msg("scheduling.enrollment.list"), service.myEnrollments(principal, status));
+    }
+
+    public ApiResponse<List<EnrollmentDto>> myEnrollments(AuthenticatedPrincipal principal) {
+        return myEnrollments(principal, null);
     }
 }
