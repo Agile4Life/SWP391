@@ -72,37 +72,39 @@ npm start
 - **Mã Jira:** `SCRUM-85`, `SCRUM-86` (UI Member) + `SCRUM-82` (UI Quầy Lễ tân POS) + `SCRUM-71` (Backend Subscription) + `SCRUM-76`, `SCRUM-77`, `SCRUM-78` (Backend Payment, Invoice, Refund)
 - **Người trình bày:** **Thịnh (UI Member)** + **Khoa (UI Lễ tân POS)** + **Phong & An (Backend Finance & Membership)**
 
-#### Bước 1: Demo UI/UX Hội viên tự mua/gia hạn gói tập (`/member` & `/member/packages` — Thịnh trình bày)
+#### Bước 1: Demo UI/UX Hội viên tự chọn mua/gia hạn gói tập (`/member` & `/member/packages` — Thịnh trình bày)
 1. **Trang Tổng quan Hội viên (`/member` — `MemberDashboardPage.tsx`):**
    - Khi hội viên chưa có gói tập: Hiển thị banner *Quiet Luxury Empty State* với nút CTA **"Khám phá các gói tập ngay"**.
    - Khi đã có gói tập: Hiển thị thẻ tóm tắt gói hiện tại, số ngày còn hạn, thanh tiến trình thời gian (`progress bar`) và lịch tập sắp tới.
 2. **Màn hình Danh mục & Mua/Gia hạn Gói tập (`/member/packages` — `MemberPackagesPage.tsx`):**
-   - Hiển thị 3 hạng gói tập (*The Essential*, *The Sanctuary VIP*, *The Sovereign Annual*) kèm giá tiền, số ngày hiệu lực và quyền lợi.
-   - Bấm **"Đăng ký gói"** (hoặc **"Gia hạn"**) → Mở **Modal Thanh toán Chuyển khoản** hiển thị mã QR ngân hàng, số tiền và nội dung chuyển khoản tự động.
-   - Bấm **"Tôi đã chuyển khoản"** → Gửi request qua `membershipApi.ts` (`POST /api/v1/memberships/subscriptions/purchase` + `POST /api/v1/payments/process`), gói tập lập tức chuyển sang **`ACTIVE`** ngay trên giao diện.
+   - Hiển thị 3 hạng gói tập (*The Essential*, *The Sanctuary VIP*, *The Sovereign Annual*) kèm **nhãn phân hạng**, **mô tả chi tiết tiếng Việt**, **4 quyền lợi cụ thể (`.package-benefit-list`)**, giá tiền và số ngày hiệu lực.
+   - Bấm **"Đăng ký gói"** (hoặc **"Gia hạn gói này"**) → Gửi request `POST /api/v1/memberships/subscriptions/purchase` (hoặc `/renew`) → Hệ thống tạo yêu cầu gói tập ở trạng thái **`pending_payment` (Đang chờ thanh toán)** và mở hướng dẫn chuyển khoản QR / thanh toán tại quầy Lễ tân.
 
-#### Bước 2: Demo UI/UX Lễ tân bán gói tại quầy POS & Xuất Hóa đơn (`/staff/reception` — Khoa trình bày)
+#### Bước 2: Demo UI/UX Lễ tân xác nhận yêu cầu gói tập đang chờ tại quầy POS & Xuất Hóa đơn (`/staff/reception` — Khoa & Phong trình bày)
 1. Mở màn hình **Quầy Lễ tân & Thu ngân (`/staff/reception` — `StaffReceptionPage.tsx`)**:
-   - **Ô tra cứu nhanh:** Nhập SĐT hoặc tên hội viên → Gọi `GET /api/v1/members/lookup` trả về thông tin hội viên và trạng thái gói hiện tại.
-   - **Form Thu ngân POS:** Chọn gói tập khách muốn mua tại quầy → Chọn phương thức thanh toán (*Tiền mặt / Quẹt thẻ POS / Chuyển khoản*).
-   - Bấm **"Xác nhận thu tiền"** → Gọi `POST /api/v1/payments/process` kèm `packageId` → Bật ngay **Popup Hóa đơn điện tử (`INV-YYYYMMDD-XXXXX`)** hiển thị tiền trước thuế, thuế VAT, tổng tiền thanh toán và nút **In hóa đơn**.
+   - **Mục "Yêu Cầu Gói Tập Đang Chờ Thanh Toán" (`GET /api/v1/memberships/subscriptions/pending`):** Tự động hiển thị ngay yêu cầu gói tập `pending_payment` mà Hội viên vừa đăng ký kèm tên hội viên, mã hội viên, tên gói và số tiền cần thu.
+   - **Chọn xử lý 1 chạm & Khóa gói tập:** Khi Lễ tân bấm **"Chọn xử lý"** trên dòng yêu cầu của Hội viên (hoặc tra cứu SĐT hội viên ở thanh tìm kiếm), form Thu ngân POS tự động nạp hồ sơ hội viên và **khóa cố định gói tập mà Hội viên đã chọn** (Lễ tân không được tự ý đổi gói khác tại quầy để tránh nhầm lẫn).
+   - **Xác nhận thu tiền & Xuất Hóa đơn:** Chọn phương thức thanh toán (*Tiền mặt / Quẹt thẻ POS / Chuyển khoản QR*) → Bấm **"Xác nhận thanh toán & Xuất hóa đơn"** → Gọi `POST /api/v1/payments/process` → Yêu cầu biến mất khỏi hàng chờ và bật ngay **Phiếu Hóa đơn điện tử (`INV-...`)** có nút **In hóa đơn**.
 
 #### Bước 3: Giải thích Backend & Database phía sau (`SCRUM-71, 76, 77, 78` — Phong & An trình bày)
-1. **Vòng đời Gói tập & Cộng dồn ngày gia hạn (`MembershipSubscriptionService.java` — An):**
-   - Khi mua mới hoặc gia hạn (`renewSubscription`), hệ thống liên kết `previousSubscription`. Nếu gói cũ vẫn còn hạn (`endDate >= today`), ngày bắt đầu gói mới tự động nối tiếp `currentEndDate.plusDays(1)` để hội viên không mất ngày tập còn dư.
-2. **Xử lý Thanh toán nguyên tử (`PaymentService.java` — Phong):**
-   - Mở `apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java`:
+1. **Hàng chờ Gói tập & Cộng dồn ngày gia hạn (`MembershipSubscriptionService.java` — An):**
+   - API `GET /api/v1/memberships/subscriptions/pending` trả danh sách các bản ghi `pending_payment` kèm thông tin Hội viên & Gói tập để Lễ tân đối soát.
+   - Khi gia hạn (`renewSubscription`), hệ thống liên kết `previousSubscriptionId`. Nếu gói cũ vẫn còn hạn (`endDate >= today`), ngày bắt đầu gói mới tự động nối tiếp `currentEndDate.plusDays(1)` để hội viên không mất ngày tập còn dư.
+2. **Xử lý Thanh toán POS nguyên tử (`PaymentService.java` — Phong):**
+   - Mở `apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java` (hàm `processPosPayment`):
    - Trong một `@Transactional` duy nhất:
-     1. Kiểm tra số tiền thanh toán phải khớp 100% với giá gói tập (`error.finance.payment.amount_mismatch`).
-     2. Chuyển trạng thái Payment sang `success`.
-     3. Tự động gọi `subscriptionService.activateSubscription(...)` để chuyển gói từ `pending_payment` sang `active`, tính `endDate = startDate + durationDays` và sinh mã `qrCode` định danh duy nhất.
-     4. Tự động gọi `invoiceService.issueForPayment(...)` phát hành Hóa đơn điện tử.
-3. **Hóa đơn điện tử & Cột tính toán tự động PostgreSQL (`Invoice.java` & `InvoiceItem.java` — Phong):**
-   - Mở `Invoice.java` và `InvoiceItem.java`:
-   - Chỉ ra `@GeneratedColumn("subtotal_amount + tax_amount")` trên `Invoice.totalAmount` và `@GeneratedColumn("quantity * unit_price")` trên `InvoiceItem.amount`. PostgreSQL tự tính và lưu trữ (`GENERATED ALWAYS AS ... STORED`), đảm bảo không bao giờ sai lệch số liệu kế toán.
-4. **Quy trình Hoàn tiền & Hủy dịch vụ (`POST /api/v1/payments/{id}/refund` — Phong):**
+     1. Tìm đúng bản ghi `MembershipSubscription` đang ở trạng thái `pending_payment` của hội viên (ưu tiên theo `subscriptionId` hoặc `packageId` mà hội viên đã chọn).
+     2. Tạo giao dịch `Payment` với trạng thái `completed` và thời điểm `paidAt`.
+     3. Kích hoạt gói tập sang `active`, sinh mã định danh QR duy nhất `SCMS-SUB-{id}-{UUID8}` để hội viên dùng quét Check-in tại sảnh.
+     4. Tự động gọi `invoiceService.issueInvoice(...)` phát hành Hóa đơn điện tử (`INV-{timestamp}-{UUID}`).
+3. **Cột tính toán tự động PostgreSQL (`Payment.java` — Phong):**
+   - Mở `Payment.java`: Chỉ ra cột `total_amount` (`amount - discount + tax`) được PostgreSQL tự động tính toán (`insertable = false, updatable = false`), đảm bảo số liệu kế toán nhất quán tuyệt đối ở tầng CSDL.
+4. **Quy trình Hoàn tiền & Tự động thu hồi quyền lợi (`POST /api/v1/payments/{id}/refund` — Phong):**
    - Mở hàm `refundPayment` trong `PaymentService.java` (có thể bấm thử trên Swagger UI):
-   - Khi quản lý/lễ tân hoàn tiền giao dịch `success`, hệ thống chuyển Payment sang `refunded`, tự động hủy (`cancelled`) gói tập hoặc lượt đặt lớp liên kết, và AOP `AuditAspect` tự động ghi vết vào bảng `audit_logs`.
+   - Chỉ `ADMIN` hoặc `CENTER_MANAGER` được phép hoàn tiền. Khi hoàn tiền giao dịch `completed`:
+     1. Chuyển trạng thái Payment sang `refunded` và lưu lý do hoàn tiền.
+     2. Tự động hủy (`cancelled`) gói tập liên kết và **xóa `qrCode = null`** để vô hiệu hóa thẻ QR ngay lập tức.
+     3. Tự động hủy toàn bộ lịch lớp học tương lai (`ClassEnrollment`) của hội viên đó và ghi vết thông báo In-App.
 
 ---
 
