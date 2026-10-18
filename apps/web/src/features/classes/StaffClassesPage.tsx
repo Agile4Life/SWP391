@@ -62,6 +62,8 @@ export function StaffClassesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ClassFormData>(defaultFormData());
   const [modalError, setModalError] = useState<string | null>(null);
+  const [pendingClassId, setPendingClassId] = useState<number | null>(null);
+  const [pendingClassSignature, setPendingClassSignature] = useState<string | null>(null);
 
   // Tải dữ liệu các danh mục phụ trợ (Phòng available, HLV active, Bộ môn)
   const loadCatalogs = useCallback(async () => {
@@ -131,6 +133,8 @@ export function StaffClassesPage() {
 
   const handleOpenModal = () => {
     setModalError(null);
+    setPendingClassId(null);
+    setPendingClassSignature(null);
     // Đặt mặc định nếu chưa chọn
     setFormData((prev) => ({
       ...prev,
@@ -145,6 +149,8 @@ export function StaffClassesPage() {
   const handleCloseModal = () => {
     if (isSubmitting) return;
     setModalError(null);
+    setPendingClassId(null);
+    setPendingClassSignature(null);
     setShowModal(false);
   };
 
@@ -209,7 +215,7 @@ export function StaffClassesPage() {
 
     setIsSubmitting(true);
     try {
-      const createdClass = await classesApi.createClass({
+      const currentClassSignature = JSON.stringify({
         name: formData.name.trim(),
         disciplineId: Number(formData.disciplineId),
         coachId: Number(formData.coachId),
@@ -217,14 +223,34 @@ export function StaffClassesPage() {
         capacity: capacityNum,
         level: formData.level,
         description: formData.description.trim() || undefined,
-        sessionDate: formData.sessionDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
       });
 
-      if (createdClass?.id && formData.sessionDate && formData.startTime && formData.endTime) {
+      let targetClassId =
+        pendingClassId && pendingClassSignature === currentClassSignature ? pendingClassId : null;
+
+      if (!targetClassId) {
+        const createdClass = await classesApi.createClass({
+          name: formData.name.trim(),
+          disciplineId: Number(formData.disciplineId),
+          coachId: Number(formData.coachId),
+          roomId: Number(formData.roomId),
+          capacity: capacityNum,
+          level: formData.level,
+          description: formData.description.trim() || undefined,
+          sessionDate: formData.sessionDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        });
+        targetClassId = createdClass?.id ?? null;
+        if (targetClassId) {
+          setPendingClassId(targetClassId);
+          setPendingClassSignature(currentClassSignature);
+        }
+      }
+
+      if (targetClassId && formData.sessionDate && formData.startTime && formData.endTime) {
         await classesApi.createSession({
-          classId: createdClass.id,
+          classId: targetClassId,
           sessionDate: formData.sessionDate,
           startTime: formData.startTime,
           endTime: formData.endTime,
@@ -235,6 +261,8 @@ export function StaffClassesPage() {
       setShowModal(false);
       setFormData(defaultFormData());
       setModalError(null);
+      setPendingClassId(null);
+      setPendingClassSignature(null);
       await loadData();
     } catch (err: unknown) {
       // BR-04: Bắt lỗi trùng lịch phòng/HLV (P3, error.scheduling.session_conflict)

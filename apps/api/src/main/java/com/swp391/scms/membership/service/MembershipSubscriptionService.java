@@ -226,6 +226,9 @@ public class MembershipSubscriptionService {
     @Transactional(readOnly = true)
     public List<com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto> listPending() {
         return subscriptions.findByStatusOrderByCreatedAtDesc(STATUS_PENDING_PAYMENT).stream()
+                .filter(s -> s.getMember() != null
+                        && s.getMember().getUser() != null
+                        && s.getMember().getUser().getDeletedAt() == null)
                 .map(this::toPendingDto)
                 .toList();
     }

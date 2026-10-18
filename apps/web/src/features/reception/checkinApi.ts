@@ -2,13 +2,13 @@ import { apiFetch } from '../../shared/api/client';
 
 export interface CheckinDto {
   id: number;
-  memberId: number;
-  memberName: string;
+  memberId?: number | null;
+  memberName?: string | null;
   checkInTime: string;
   checkOutTime?: string | null;
   method: string;
   gate?: string | null;
-  status: 'success' | 'denied' | string;
+  status: 'GRANTED' | 'DENIED' | 'success' | 'denied' | string;
   denialReason?: string | null;
 }
 

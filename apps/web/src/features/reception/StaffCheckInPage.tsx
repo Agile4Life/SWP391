@@ -13,6 +13,12 @@ const formatTime = (iso?: string | null): string => {
   return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
 
+const isCheckinGranted = (status?: string | null): boolean => {
+  if (!status) return false;
+  const normalized = status.trim().toUpperCase();
+  return normalized === 'GRANTED' || normalized === 'SUCCESS';
+};
+
 export function StaffCheckInPage() {
   const currentUser = getCurrentUser();
 
@@ -93,8 +99,8 @@ export function StaffCheckInPage() {
       setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)].slice(0, 10));
       setScanCode('');
 
-      if (res.status?.toLowerCase() === 'success') {
-        toast(`Check-in hợp lệ: ${res.memberName}`, 'success');
+      if (isCheckinGranted(res.status)) {
+        toast(`Check-in hợp lệ: ${res.memberName || 'Hội viên'}`, 'success');
       } else {
         toast(res.denialReason || 'Từ chối mở cổng: Thẻ không hợp lệ hoặc đã hết hạn.', 'error');
       }
@@ -108,7 +114,7 @@ export function StaffCheckInPage() {
         checkOutTime: null,
         method: 'qr_code',
         gate: selectedGate,
-        status: 'denied',
+        status: 'DENIED',
         denialReason: msg,
       };
       setCurrentResult(deniedRecord);
@@ -141,7 +147,7 @@ export function StaffCheckInPage() {
     }
   };
 
-  const isGranted = currentResult?.status?.toLowerCase() === 'success';
+  const isGranted = isCheckinGranted(currentResult?.status);
 
   return (
     <div className="portal-container">
@@ -241,7 +247,7 @@ export function StaffCheckInPage() {
               </h3>
 
               <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1A1614', marginBottom: '4px' }}>
-                {currentResult.memberName} {currentResult.memberId ? `(HV #${currentResult.memberId})` : ''}
+                {currentResult.memberName || 'Mã QR không xác định'} {currentResult.memberId ? `(HV #${currentResult.memberId})` : ''}
               </div>
 
               <div style={{ fontSize: '0.82rem', color: '#6A635D' }}>
@@ -290,8 +296,14 @@ export function StaffCheckInPage() {
           )}
 
           {loadingHistory ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#7E7771' }} data-testid="checkin-history-loading">
-              Đang tải lịch sử ra vào sảnh...
+            <div
+              style={{ display: 'grid', gap: 10, padding: '8px 0' }}
+              data-testid="checkin-history-loading"
+              aria-busy="true"
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <div key={n} className="portal-skeleton" style={{ height: 52, borderRadius: 8 }} />
+              ))}
             </div>
           ) : recentCheckins.length === 0 ? (
             <div style={{ padding: '40px 16px', textAlign: 'center', color: '#7E7771' }} data-testid="checkin-history-empty">
@@ -311,7 +323,7 @@ export function StaffCheckInPage() {
                 </thead>
                 <tbody>
                   {recentCheckins.map((rec, i) => {
-                    const ok = rec.status?.toLowerCase() === 'success';
+                    const ok = isCheckinGranted(rec.status);
                     return (
                       <tr key={rec.id} className="row-in" style={{ '--i': i } as React.CSSProperties}>
                         <td style={{ fontWeight: 600 }}>
@@ -323,9 +335,9 @@ export function StaffCheckInPage() {
                           )}
                         </td>
                         <td>
-                          <div>{rec.memberName}</div>
+                          <div>{rec.memberName || 'Thẻ QR không xác định'}</div>
                           <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>
-                            HV #{rec.memberId}
+                            {rec.memberId ? `HV #${rec.memberId}` : 'Chưa định danh'}
                           </div>
                         </td>
                         <td style={{ fontSize: '0.8rem' }}>{rec.gate || 'Sảnh chính'}</td>

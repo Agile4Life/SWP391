@@ -299,10 +299,12 @@ export function UserManagerPage() {
       )}
 
       {loading ? (
-        <div className="portal-card">
-          <div className="portal-state">
-            <div className="spinner" />
-            <p>Đang tải dữ liệu tài khoản và phân quyền...</p>
+        <div className="portal-card" aria-busy="true">
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-skeleton" style={{ height: 42, borderRadius: 8 }} />
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="portal-skeleton" style={{ height: 52, borderRadius: 8 }} />
+            ))}
           </div>
         </div>
       ) : activeTab === 'USERS' ? (
