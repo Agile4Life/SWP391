@@ -85,17 +85,13 @@ export async function loginApi(identifier: string, password: string): Promise<Lo
     method: 'POST',
     body: JSON.stringify({ username: identifier.trim(), password }),
   });
-  const role = SESSION_ROLE[data.role];
-  if (!role) throw new ApiError('Vai trò tài khoản chưa được hỗ trợ trên portal.', 403);
-
-  const user: UserSession = { id: data.username, name: data.username, identifier: data.username, role };
-  localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
-  setCurrentUser(user);
+  const user = setAuthSession(data.token, data.username, data.role);
   return { token: data.token, user };
 }
 
 export function setAuthSession(token: string, username: string, roleCode: string): UserSession {
-  const role = SESSION_ROLE[roleCode] || 'MEMBER';
+  const role = SESSION_ROLE[roleCode];
+  if (!role) throw new ApiError('Vai trò tài khoản chưa được hỗ trợ trên portal.', 403);
   const user: UserSession = { id: username, name: username, identifier: username, role };
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
   setCurrentUser(user);

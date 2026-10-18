@@ -109,4 +109,47 @@ class AuthControllerTest {
 
         verify(authService).verifyOtp(any());
     }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/google/send-otp returns 200 with email and localized message key")
+    void sendGoogleOtpSuccess() throws Exception {
+        GoogleOtpRequest req = new GoogleOtpRequest("user@gmail.com");
+        when(authService.requestGoogleOtp("user@gmail.com")).thenReturn("654321");
+
+        mockMvc.perform(post("/api/v1/auth/google/send-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("user@gmail.com"))
+                .andExpect(jsonPath("$.data.message").value("auth.google.otp.sent"))
+                .andExpect(jsonPath("$.data.debugOtp").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/google/send-otp returns 400 when email is invalid")
+    void sendGoogleOtpInvalidEmail() throws Exception {
+        GoogleOtpRequest req = new GoogleOtpRequest("not-an-email");
+
+        mockMvc.perform(post("/api/v1/auth/google/send-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/google/verify-otp returns 200 with JWT token and role")
+    void verifyGoogleOtpSuccess() throws Exception {
+        GoogleVerifyOtpRequest req = new GoogleVerifyOtpRequest("user@gmail.com", "654321");
+        when(authService.verifyGoogleOtp("user@gmail.com", "654321"))
+                .thenReturn(new AuthTokenResponse("google-jwt-token", "user", "MEMBER"));
+
+        mockMvc.perform(post("/api/v1/auth/google/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.token").value("google-jwt-token"))
+                .andExpect(jsonPath("$.data.role").value("MEMBER"));
+    }
 }

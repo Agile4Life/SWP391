@@ -39,8 +39,8 @@ public class AuthController {
         this.messageService = messageService;
     }
 
-    private String msg(String key) {
-        return messageService != null ? messageService.getMessage(key) : key;
+    private String msg(String key, Object... args) {
+        return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
     @Operation(summary = "Đăng nhập hệ thống", description = "Xác thực tài khoản và trả về JWT Token cùng vai trò người dùng")
@@ -82,15 +82,15 @@ public class AuthController {
 
     @Operation(summary = "Gửi mã OTP đăng nhập Google", description = "Tạo tài khoản nếu chưa có và gửi mã OTP xác nhận về Gmail")
     @PostMapping("/google/send-otp")
-    public ApiResponse<Map<String, Object>> sendGoogleOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        if (email == null || email.isBlank()) {
-            throw new BadRequestException("MISSING_EMAIL", "auth.otp.missing_target", null, "Email is required");
+    public ApiResponse<Map<String, Object>> sendGoogleOtp(@Valid @RequestBody GoogleOtpRequest request) {
+        String email = request.email() == null ? "" : request.email().trim();
+        if (email.isBlank()) {
+            throw new BadRequestException("MISSING_EMAIL", "auth.otp.missing_target", null, null);
         }
-        String code = authService.requestGoogleOtp(email.trim());
+        String code = authService.requestGoogleOtp(email);
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("email", email.trim());
-        data.put("message", "Đã gửi mã xác nhận đến gmail " + email.trim() + ". Hãy nhập mã xác nhận để kích hoạt tài khoản.");
+        data.put("email", email);
+        data.put("message", msg("auth.google.otp.sent", email));
         data.put("expiresInMinutes", 5);
         if (debugOtpEnabled) {
             data.put("debugOtp", code);
@@ -100,13 +100,13 @@ public class AuthController {
 
     @Operation(summary = "Xác thực mã OTP Google và đăng nhập", description = "Xác thực mã OTP gửi về Gmail, kích hoạt tài khoản và trả về JWT Token")
     @PostMapping("/google/verify-otp")
-    public ApiResponse<AuthTokenResponse> verifyGoogleOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        String otpCode = body.get("otpCode");
-        if (email == null || otpCode == null || email.isBlank() || otpCode.isBlank()) {
-            throw new BadRequestException("MISSING_PARAMS", "auth.otp.missing_target", null, "Email and otpCode are required");
+    public ApiResponse<AuthTokenResponse> verifyGoogleOtp(@Valid @RequestBody GoogleVerifyOtpRequest request) {
+        String email = request.email() == null ? "" : request.email().trim();
+        String otpCode = request.otpCode() == null ? "" : request.otpCode().trim();
+        if (email.isBlank() || otpCode.isBlank()) {
+            throw new BadRequestException("MISSING_PARAMS", "auth.otp.missing_target", null, null);
         }
-        AuthTokenResponse response = authService.verifyGoogleOtp(email.trim(), otpCode.trim());
+        AuthTokenResponse response = authService.verifyGoogleOtp(email, otpCode);
         return ApiResponse.ok(msg("auth.login.success"), response);
     }
 }

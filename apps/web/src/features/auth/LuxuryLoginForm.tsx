@@ -90,10 +90,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   };
 
   // Gửi OTP tới Gmail
-  const handleGoogleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSendOtp = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
     const cleanEmail = googleEmail.trim();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
       fail('Vui lòng nhập đúng địa chỉ Gmail.');
       return;
     }
@@ -109,6 +109,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         setOtpCode(res.debugOtp);
       } else {
         setDebugOtpCode('');
+        setOtpCode('');
       }
       setMode('google_otp');
       setCountdown(30);
@@ -295,6 +296,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                   setIdentifier(e.target.value);
                   if (isExpired) setIsExpired(false);
                 }}
+                aria-invalid={!!formError && !identifier.trim() ? true : undefined}
               />
             </div>
 
@@ -329,6 +331,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                   setPassword(e.target.value);
                   if (isExpired) setIsExpired(false);
                 }}
+                aria-invalid={!!formError && (!password || !!identifier.trim()) ? true : undefined}
               />
             </div>
 
@@ -447,6 +450,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             type="button"
             className="btn-secondary"
             style={{ width: '100%', fontSize: '0.85rem', padding: '10px' }}
+            disabled={isLoading}
             onClick={() => {
               setFormError('');
               setMode('standard');
@@ -501,6 +505,8 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             <input
               id="google-otp-code"
               type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               maxLength={6}
               className="portal-input"
               placeholder="000000"
@@ -545,12 +551,12 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 border: 'none',
                 fontSize: '0.82rem',
                 color: '#8B572A',
-                cursor: countdown > 0 ? 'not-allowed' : 'pointer',
-                opacity: countdown > 0 ? 0.6 : 1,
+                cursor: countdown > 0 || isLoading || success ? 'not-allowed' : 'pointer',
+                opacity: countdown > 0 || isLoading || success ? 0.6 : 1,
                 padding: 0,
                 fontWeight: 600,
               }}
-              disabled={countdown > 0 || isLoading}
+              disabled={countdown > 0 || isLoading || success}
               onClick={handleGoogleSendOtp}
             >
               {countdown > 0 ? `Gửi lại mã sau (${countdown}s)` : 'Gửi lại mã xác nhận'}
@@ -563,11 +569,15 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 border: 'none',
                 fontSize: '0.82rem',
                 color: '#7E7771',
-                cursor: 'pointer',
+                cursor: isLoading || success ? 'not-allowed' : 'pointer',
+                opacity: isLoading || success ? 0.6 : 1,
                 padding: 0,
               }}
+              disabled={isLoading || success}
               onClick={() => {
                 setFormError('');
+                setOtpCode('');
+                setDebugOtpCode('');
                 setMode('google_email');
               }}
             >

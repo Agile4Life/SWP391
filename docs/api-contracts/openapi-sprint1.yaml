@@ -72,6 +72,16 @@ paths:
       summary: Verify OTP and activate account (public). data = { target, isVerified }
       security: []
       responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '429': { description: MAX_ATTEMPTS } }
+  /auth/google/send-otp:
+    post:
+      summary: Create pending account if needed and send Google login OTP (public). data = { email, message, expiresInMinutes, debugOtp? }
+      security: []
+      responses: { '200': { description: OK }, '400': { description: INVALID_EMAIL / MISSING_EMAIL }, '403': { description: ACCOUNT_INACTIVE }, '503': { description: Delivery channel not configured } }
+  /auth/google/verify-otp:
+    post:
+      summary: Verify Google OTP, activate account, and issue JWT token (public). data = { token, username, role }
+      security: []
+      responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '403': { description: ACCOUNT_INACTIVE }, '429': { description: MAX_ATTEMPTS } }
   /users:
     get: { summary: List users (non deleted), responses: { '200': { description: OK } } }
     post: { summary: Create user, responses: { '201': { description: Created }, '409': { description: EMAIL_EXISTS / PHONE_EXISTS } } }

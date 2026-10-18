@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   homePath,
   loginApi,
+  setAuthSession,
   setCurrentUser,
   AUTH_STORAGE_KEY,
   TOKEN_STORAGE_KEY,
@@ -103,5 +104,14 @@ describe('client.ts (API client & Auth session)', () => {
     expect(homePath('STAFF')).toBe('/staff/reception');
     expect(homePath('COACH')).toBe('/staff/attendance');
     expect(homePath('MEMBER')).toBe('/member/dashboard');
+  });
+
+  it('setAuthSession stores session and rejects unsupported roles', () => {
+    const user = setAuthSession('jwt-1', 'member1', 'MEMBER');
+    expect(user.role).toBe('MEMBER');
+    expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe('jwt-1');
+    expect(() => setAuthSession('jwt-2', 'x', 'UNKNOWN_ROLE')).toThrow(
+      'Vai trò tài khoản chưa được hỗ trợ trên portal.',
+    );
   });
 });
