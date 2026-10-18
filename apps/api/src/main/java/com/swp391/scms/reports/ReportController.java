@@ -64,8 +64,10 @@ public class ReportController {
     @Operation(summary = "Lưu ảnh chụp báo cáo định kỳ", description = "Tạo ảnh chụp báo cáo (snapshot) định dạng JSON phục vụ đối soát cho Quản lý")
     @PostMapping("/snapshots/generate")
     public ResponseEntity<ApiResponse<ReportSnapshotDto>> generateSnapshot(
-            @Valid @RequestBody ReportSnapshotCreateDto dto) {
-        ReportSnapshotDto created = reportService.generateSnapshot(dto, null);
+            @Valid @RequestBody ReportSnapshotCreateDto dto,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.swp391.scms.security.AuthenticatedPrincipal principal) {
+        Long currentUserId = principal != null ? principal.id() : null;
+        ReportSnapshotDto created = reportService.generateSnapshot(dto, currentUserId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("reports.snapshot.created"), created));
     }

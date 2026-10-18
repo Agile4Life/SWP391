@@ -140,6 +140,10 @@ public class RevenueReportService {
     }
 
     public ReportSnapshotDto generateSnapshot(ReportSnapshotCreateDto dto, Long currentUserId) {
+        if (dto.getPeriodStart() != null && dto.getPeriodEnd() != null && dto.getPeriodStart().isAfter(dto.getPeriodEnd())) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
+                    "Start date cannot be after end date");
+        }
         try {
             objectMapper.readTree(dto.getData());
         } catch (JsonProcessingException | RuntimeException e) {
@@ -154,7 +158,7 @@ public class RevenueReportService {
         }
 
         ReportSnapshot snapshot = new ReportSnapshot();
-        snapshot.setReportType(dto.getReportType());
+        snapshot.setReportType(dto.getReportType() != null ? dto.getReportType().toLowerCase(Locale.ROOT) : "revenue");
         snapshot.setPeriodStart(dto.getPeriodStart());
         snapshot.setPeriodEnd(dto.getPeriodEnd());
         snapshot.setData(dto.getData());

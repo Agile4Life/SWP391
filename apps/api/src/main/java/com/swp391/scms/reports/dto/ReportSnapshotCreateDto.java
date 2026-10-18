@@ -9,7 +9,8 @@ import java.time.LocalDate;
 public class ReportSnapshotCreateDto {
 
     @NotBlank(message = "{validation.reports.report_type.not_blank}")
-    @Schema(description = "Loại báo cáo (REVENUE_DAILY, REVENUE_PACKAGE, FINANCIAL_SUMMARY)", example = "REVENUE_DAILY")
+    @jakarta.validation.constraints.Pattern(regexp = "(?i)^(revenue|membership|class_utilization)$", message = "{validation.reports.type.pattern}")
+    @Schema(description = "Loại báo cáo (revenue, membership, class_utilization)", example = "revenue")
     private String reportType;
 
     @NotNull(message = "{validation.reports.period_start.not_null}")

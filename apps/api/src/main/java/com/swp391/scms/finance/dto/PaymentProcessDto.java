@@ -18,8 +18,11 @@ public class PaymentProcessDto {
     @Schema(description = "ID hội viên thực hiện thanh toán", example = "2")
     private Long memberId;
 
-    @Schema(description = "ID gói hội viên đăng ký (nếu thanh toán cho gói tập)", example = "1")
+    @Schema(description = "ID gói hội viên đăng ký (nếu thanh toán cho gói tập đã tạo)", example = "1")
     private Long subscriptionId;
+
+    @Schema(description = "ID gói tập mua trực tiếp tại quầy (nếu chưa tạo subscription trước)", example = "1")
+    private Long packageId;
 
     @Schema(description = "ID lượt đăng ký lớp học (nếu thanh toán cho lớp)", example = "5")
     private Long classEnrollmentId;
@@ -30,7 +33,7 @@ public class PaymentProcessDto {
     private BigDecimal amount;
 
     @NotBlank(message = "{validation.payment.method.not_blank}")
-    @Pattern(regexp = "cash|pos|bank_transfer|online_wallet", message = "{validation.payment.method.pattern}")
+    @Pattern(regexp = "(?i)^(cash|pos|bank_transfer|online_wallet)$", message = "{validation.payment.method.pattern}")
     @Schema(description = "Phương thức thanh toán", example = "cash")
     private String method;
 
@@ -58,6 +61,9 @@ public class PaymentProcessDto {
 
     public Long getSubscriptionId() { return subscriptionId; }
     public void setSubscriptionId(Long subscriptionId) { this.subscriptionId = subscriptionId; }
+
+    public Long getPackageId() { return packageId; }
+    public void setPackageId(Long packageId) { this.packageId = packageId; }
 
     public Long getClassEnrollmentId() { return classEnrollmentId; }
     public void setClassEnrollmentId(Long classEnrollmentId) { this.classEnrollmentId = classEnrollmentId; }

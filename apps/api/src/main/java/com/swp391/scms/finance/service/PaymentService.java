@@ -49,6 +49,12 @@ public class PaymentService {
     private final PaymentMapper paymentMapper;
     private final Clock clock;
 
+    @Autowired(required = false)
+    private com.swp391.scms.common.i18n.MessageService messageService;
+
+    @Autowired(required = false)
+    private com.swp391.scms.facilities.repository.MembershipPackageRepository membershipPackageRepository;
+
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -185,13 +191,16 @@ public class PaymentService {
             }
             payment.setStatus(normalizedStatus);
             markPaidIfSuccess(payment, normalizedStatus);
+            if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)) {
+                activateLinkedTargetsOnSuccess(payment);
+            }
         }
 
         return paymentMapper.toDto(payment);
     }
 
     public PaymentDto processPayment(PaymentProcessDto dto) {
-        if (dto.getSubscriptionId() == null && dto.getClassEnrollmentId() == null) {
+        if (dto.getSubscriptionId() == null && dto.getPackageId() == null && dto.getClassEnrollmentId() == null) {
             throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null,
                     "Target subscription or enrollment is required");
         }
@@ -205,13 +214,53 @@ public class PaymentService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.cashier", dto.getReceivedById()));
         }
 
-        if (dto.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
-            MembershipSubscription subscription = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", dto.getSubscriptionId()));
+        Long resolvedSubscriptionId = dto.getSubscriptionId();
+
+        if (resolvedSubscriptionId == null && dto.getPackageId() != null
+                && membershipPackageRepository != null && membershipSubscriptionRepository != null) {
+            com.swp391.scms.facilities.entity.MembershipPackage pkg = membershipPackageRepository.findById(dto.getPackageId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.package", dto.getPackageId()));
+            if (pkg.getPrice() != null && dto.getAmount().compareTo(pkg.getPrice()) != 0) {
+                throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                        new Object[]{dto.getAmount(), pkg.getPrice()}, "Payment amount mismatch");
+            }
+            java.time.LocalDate today = java.time.LocalDate.now(clock);
+            MembershipSubscription sub = new MembershipSubscription();
+            sub.setMember(member);
+            sub.setMembershipPackage(pkg);
+            java.time.LocalDate startDate = membershipSubscriptionRepository
+                    .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                            member.getUserId(), "active", today, today)
+                    .map(active -> {
+                        sub.setPreviousSubscription(active);
+                        return active.getEndDate().plusDays(1);
+                    })
+                    .orElse(today);
+            int durationDays = Math.max(1, pkg.getDurationDays());
+            sub.setStartDate(startDate);
+            sub.setEndDate(startDate.plusDays(durationDays - 1L));
+            sub.setStatus("active");
+            sub.setCreatedBy(receiver);
+            sub.setCreatedAt(LocalDateTime.now(clock));
+            sub.setUpdatedAt(LocalDateTime.now(clock));
+            MembershipSubscription savedSub = membershipSubscriptionRepository.save(sub);
+            Long subId = savedSub != null && savedSub.getId() != null ? savedSub.getId() : sub.getId();
+            sub.setQrCode("SUB-" + (subId != null ? subId : "NEW") + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            membershipSubscriptionRepository.save(sub);
+            resolvedSubscriptionId = subId;
+        } else if (resolvedSubscriptionId != null && membershipSubscriptionRepository != null) {
+            final Long targetSubId = resolvedSubscriptionId;
+            MembershipSubscription subscription = membershipSubscriptionRepository.findById(targetSubId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", targetSubId));
 
             if (!subscription.getMember().getUserId().equals(member.getUserId())) {
                 throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null,
                         "Subscription does not belong to member");
+            }
+
+            if (subscription.getStatus() != null && !"pending_payment".equalsIgnoreCase(subscription.getStatus())) {
+                throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending",
+                        null, "Subscription is not in pending_payment state");
             }
 
             if (subscription.getMembershipPackage() != null && subscription.getMembershipPackage().getPrice() != null) {
@@ -222,12 +271,7 @@ public class PaymentService {
                 }
             }
 
-            subscription.setStatus("active");
-            if (subscription.getQrCode() == null || subscription.getQrCode().isBlank()) {
-                subscription.setQrCode("SUB-" + subscription.getId() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            }
-            subscription.setUpdatedAt(LocalDateTime.now(clock));
-            membershipSubscriptionRepository.save(subscription);
+            activateSubscription(subscription);
         }
 
         if (dto.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
@@ -245,7 +289,7 @@ public class PaymentService {
 
         Payment payment = new Payment();
         payment.setMember(member);
-        payment.setSubscriptionId(dto.getSubscriptionId());
+        payment.setSubscriptionId(resolvedSubscriptionId);
         payment.setClassEnrollmentId(dto.getClassEnrollmentId());
         payment.setAmount(dto.getAmount());
         payment.setMethod(dto.getMethod() != null ? dto.getMethod().toLowerCase(Locale.ROOT) : "cash");
@@ -276,12 +320,14 @@ public class PaymentService {
         }
 
         payment.setStatus("refunded");
-        String refundNote = "[HOÀN TIỀN: " + refundAmount + " VNĐ] Lý do: " + request.getReason();
-        if (payment.getNote() != null && !payment.getNote().isBlank()) {
-            payment.setNote(payment.getNote() + " | " + refundNote);
-        } else {
-            payment.setNote(refundNote);
+        String refundNote = resolveRefundNote(refundAmount, request.getReason());
+        String combinedNote = (payment.getNote() != null && !payment.getNote().isBlank())
+                ? payment.getNote() + " | " + refundNote
+                : refundNote;
+        if (combinedNote.length() > 255) {
+            combinedNote = combinedNote.substring(0, 255);
         }
+        payment.setNote(combinedNote);
 
         // Cancel associated subscription
         if (payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
@@ -304,6 +350,47 @@ public class PaymentService {
 
         Payment saved = paymentRepository.save(payment);
         return paymentMapper.toDto(saved);
+    }
+
+    private void activateLinkedTargetsOnSuccess(Payment payment) {
+        if (payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
+            membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(this::activateSubscription);
+        }
+        if (payment.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
+            classEnrollmentRepository.findById(payment.getClassEnrollmentId()).ifPresent(enrollment -> {
+                enrollment.setStatus("booked");
+                classEnrollmentRepository.save(enrollment);
+            });
+        }
+    }
+
+    private void activateSubscription(MembershipSubscription subscription) {
+        java.time.LocalDate today = java.time.LocalDate.now(clock);
+        if (subscription.getPreviousSubscription() == null
+                && subscription.getMembershipPackage() != null
+                && subscription.getMembershipPackage().getDurationDays() > 0
+                && (subscription.getStartDate() == null || subscription.getStartDate().isBefore(today))) {
+            int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
+            subscription.setStartDate(today);
+            subscription.setEndDate(today.plusDays(durationDays - 1L));
+        }
+        subscription.setStatus("active");
+        if (subscription.getQrCode() == null || subscription.getQrCode().isBlank()) {
+            subscription.setQrCode("SUB-" + subscription.getId() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        }
+        subscription.setUpdatedAt(LocalDateTime.now(clock));
+        membershipSubscriptionRepository.save(subscription);
+    }
+
+    private String resolveRefundNote(BigDecimal refundAmount, String reason) {
+        String fallback = "[HOÀN TIỀN: " + refundAmount + " VNĐ] Lý do: " + reason;
+        if (messageService == null) {
+            return fallback;
+        }
+        String resolved = messageService.getMessage("finance.payment.refund_note", new Object[]{refundAmount, reason});
+        return (resolved == null || resolved.isBlank() || "finance.payment.refund_note".equals(resolved))
+                ? fallback
+                : resolved;
     }
 
     private void markPaidIfSuccess(Payment payment, String status) {

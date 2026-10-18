@@ -79,7 +79,7 @@ class ReportControllerTest {
     @DisplayName("POST /api/v1/reports/snapshots/generate should return 201 Created")
     void shouldGenerateSnapshot() throws Exception {
         ReportSnapshotCreateDto request = new ReportSnapshotCreateDto(
-                "REVENUE_DAILY",
+                "revenue",
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 5),
                 "{\"revenue\": 1000}",
@@ -88,7 +88,7 @@ class ReportControllerTest {
 
         ReportSnapshotDto response = new ReportSnapshotDto();
         response.setId(10L);
-        response.setReportType("REVENUE_DAILY");
+        response.setReportType("revenue");
 
         when(reportService.generateSnapshot(any(ReportSnapshotCreateDto.class), any())).thenReturn(response);
 

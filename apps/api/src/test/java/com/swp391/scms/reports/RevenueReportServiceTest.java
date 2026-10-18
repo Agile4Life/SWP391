@@ -140,7 +140,7 @@ class RevenueReportServiceTest {
     @DisplayName("Should generate snapshot when json data is valid")
     void shouldGenerateSnapshotWhenJsonIsValid() {
         ReportSnapshotCreateDto dto = new ReportSnapshotCreateDto(
-                "REVENUE_DAILY",
+                "revenue",
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 5),
                 "{\"totalRevenue\": 3000000, \"orders\": 1}",
@@ -155,7 +155,7 @@ class RevenueReportServiceTest {
 
         ReportSnapshotDto result = service.generateSnapshot(dto, 1L);
         assertNotNull(result);
-        assertEquals("REVENUE_DAILY", result.getReportType());
+        assertEquals("revenue", result.getReportType());
         verify(snapshotRepository).save(any(ReportSnapshot.class));
     }
 
@@ -163,7 +163,7 @@ class RevenueReportServiceTest {
     @DisplayName("Should reject snapshot generation when json data is invalid syntax")
     void shouldRejectSnapshotWhenJsonIsInvalid() {
         ReportSnapshotCreateDto dto = new ReportSnapshotCreateDto(
-                "REVENUE_DAILY",
+                "revenue",
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 5),
                 "{invalid_json_format",
