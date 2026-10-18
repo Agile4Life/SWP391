@@ -1606,3 +1606,60 @@ textarea.portal-textarea:focus-visible,
 .portal-input:focus, .portal-select:focus, .portal-textarea:focus {
   box-shadow: 0 0 0 3px rgba(194, 166, 132, 0.2);
 }
+
+/* ==========================================================================
+   UNIFIED SKELETON LOADING & PACKAGE BENEFIT LISTS
+   ========================================================================== */
+@keyframes portal-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.member-skeleton,
+.portal-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #EAE3DA 25%, #F5F0E9 50%, #EAE3DA 75%);
+  background-size: 200% 100%;
+  animation: portal-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.portal-skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #EAE3DA 25%, #F5F0E9 50%, #EAE3DA 75%);
+  background-size: 200% 100%;
+  animation: portal-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.package-benefit-list {
+  list-style: none;
+  padding: 14px 0 0;
+  margin: 14px 0 18px;
+  border-top: 1px solid rgba(33, 28, 24, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.package-benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #3E3630;
+}
+
+.package-benefit-check {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #EFE6D8;
+  color: #7D5D3B;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+}
+

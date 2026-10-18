@@ -103,10 +103,22 @@ export function MemberProfilePage() {
 
   if (loading) {
     return (
-      <div className="portal-container">
-        <div className="portal-state">
-          <div className="spinner" />
-          <p>Đang tải thông tin hồ sơ và chỉ số sức khỏe...</p>
+      <div className="portal-container" role="status" aria-busy="true">
+        <span className="sr-only">Đang tải thông tin hồ sơ và chỉ số sức khỏe...</span>
+        <PageHeader eyebrow="Tài khoản" title="Hồ sơ cá nhân" />
+        <div className="profile-grid" aria-hidden="true">
+          <div className="portal-card">
+            <div className="portal-skeleton-line" style={{ width: '45%', height: 22, marginBottom: 20 }} />
+            {[1, 2, 3, 4].map((row) => (
+              <div key={row} className="portal-skeleton-line" style={{ width: '100%', height: 42, marginBottom: 14 }} />
+            ))}
+          </div>
+          <div className="portal-card">
+            <div className="portal-skeleton-line" style={{ width: '52%', height: 22, marginBottom: 20 }} />
+            {[1, 2, 3].map((row) => (
+              <div key={row} className="portal-skeleton-line" style={{ width: '100%', height: 48, marginBottom: 14 }} />
+            ))}
+          </div>
         </div>
       </div>
     );

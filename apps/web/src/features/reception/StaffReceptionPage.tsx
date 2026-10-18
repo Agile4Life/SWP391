@@ -285,8 +285,31 @@ export function StaffReceptionPage() {
         </div>
 
         {loadingPending ? (
-          <div style={{ padding: '20px 0', color: '#7E7771', fontSize: '0.9rem' }}>
-            Đang tải danh sách yêu cầu chờ thanh toán...
+          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+            <span className="sr-only">Đang tải danh sách yêu cầu chờ thanh toán...</span>
+            {[1, 2].map((idx) => (
+              <div
+                key={idx}
+                aria-hidden="true"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '14px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #E5DFD7',
+                  backgroundColor: '#FFFFFF',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div className="portal-skeleton-line" style={{ width: '42%', height: 18, marginBottom: 8 }} />
+                  <div className="portal-skeleton-line" style={{ width: '64%', height: 14 }} />
+                </div>
+                <div style={{ width: 160 }}>
+                  <div className="portal-skeleton-line" style={{ width: '100%', height: 34 }} />
+                </div>
+              </div>
+            ))}
           </div>
         ) : pendingList.length === 0 ? (
           <div style={{ padding: '24px 16px', textAlign: 'center', color: '#7E7771', fontSize: '0.9rem' }}>

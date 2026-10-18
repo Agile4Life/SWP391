@@ -27,20 +27,21 @@ export interface WaitlistDto {
 
 export const getClasses = () => apiFetch<GymClassDto[]>('/classes');
 // Current local calendar week, Monday through Sunday. Date strings have no UTC conversion.
-export function currentWeek(): { fromDate: string; toDate: string } {
+export function currentWeek(weekOffset = 0): { fromDate: string; toDate: string } {
   const monday = new Date();
   monday.setHours(12, 0, 0, 0);
-  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
+  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7 + weekOffset * 7);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   const date = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
   return { fromDate: date(monday), toDate: date(sunday) };
 }
 
-export const getSessions = () => {
-  const { fromDate, toDate } = currentWeek();
+export const getSessions = (weekOffset = 0) => {
+  const { fromDate, toDate } = currentWeek(weekOffset);
   return apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`);
 };
+export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
 export const getMyWaitlists = () => apiFetch<WaitlistDto[]>('/classes/waitlists/my');
 export const enroll = (sessionId: number) => apiFetch<EnrollmentDto>(`/classes/sessions/${sessionId}/enroll`, { method: 'POST' });
 export const cancelEnrollment = (enrollmentId: number) => apiFetch<EnrollmentDto>(`/classes/enrollments/${enrollmentId}`, { method: 'DELETE' });

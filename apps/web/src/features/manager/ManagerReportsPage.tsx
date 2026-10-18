@@ -183,13 +183,27 @@ export function ManagerReportsPage() {
 
       {/* Loading Skeleton */}
       {loading && (
-        <div className="metrics-grid" style={{ marginBottom: '24px' }}>
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="metric-card" style={{ opacity: 0.6 }}>
-              <div className="metric-label">Đang tải số liệu...</div>
-              <div className="metric-value">---</div>
+        <div role="status" aria-busy="true">
+          <span className="sr-only">Đang tải số liệu...</span>
+          <div className="metrics-grid" style={{ marginBottom: '24px' }} aria-hidden="true">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="metric-card">
+                <div className="portal-skeleton-line" style={{ width: '58%', height: 14, marginBottom: 12 }} />
+                <div className="portal-skeleton-line" style={{ width: '75%', height: 28, marginBottom: 10 }} />
+                <div className="portal-skeleton-line" style={{ width: '50%', height: 12 }} />
+              </div>
+            ))}
+          </div>
+          <div className="reports-charts-grid" aria-hidden="true">
+            <div className="portal-card">
+              <div className="portal-skeleton-line" style={{ width: '45%', height: 20, marginBottom: 18 }} />
+              <div className="portal-skeleton-line" style={{ width: '100%', height: 190 }} />
             </div>
-          ))}
+            <div className="portal-card">
+              <div className="portal-skeleton-line" style={{ width: '55%', height: 20, marginBottom: 18 }} />
+              <div className="portal-skeleton-line" style={{ width: '100%', height: 190 }} />
+            </div>
+          </div>
         </div>
       )}
 
