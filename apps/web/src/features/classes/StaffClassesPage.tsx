@@ -209,7 +209,7 @@ export function StaffClassesPage() {
 
     setIsSubmitting(true);
     try {
-      await classesApi.createClass({
+      const createdClass = await classesApi.createClass({
         name: formData.name.trim(),
         disciplineId: Number(formData.disciplineId),
         coachId: Number(formData.coachId),
@@ -221,6 +221,15 @@ export function StaffClassesPage() {
         startTime: formData.startTime,
         endTime: formData.endTime,
       });
+
+      if (createdClass?.id && formData.sessionDate && formData.startTime && formData.endTime) {
+        await classesApi.createSession({
+          classId: createdClass.id,
+          sessionDate: formData.sessionDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        });
+      }
 
       toast('Đã tạo lớp học và xếp lịch thành công!', 'success');
       setShowModal(false);
@@ -409,8 +418,8 @@ export function StaffClassesPage() {
                       <strong>{cls.capacity} học viên</strong>
                     </td>
                     <td>
-                      <span className={`badge ${cls.status === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                        {cls.status}
+                      <span className={`badge ${cls.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
+                        {cls.status?.toUpperCase()}
                       </span>
                     </td>
                     <td>

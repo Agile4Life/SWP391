@@ -18,6 +18,7 @@ export type PaymentMethod = 'cash' | 'pos' | 'bank_transfer' | 'online_wallet';
 export interface ProcessPaymentPayload {
   memberId: number;
   packageId: number;
+  subscriptionId?: number;
   amount: number;
   method: PaymentMethod;
   notes?: string;
@@ -90,8 +91,8 @@ export const receptionApi = {
             fullName: u.fullName,
             email: u.email,
             phone: u.phone,
-            citizenId: `079${String(u.id).padStart(3, '0')}00123`,
-            status: u.status === 'active' ? 'ACTIVE' : 'INACTIVE',
+            citizenId: null,
+            status: u.status?.toLowerCase() === 'active' ? 'ACTIVE' : 'INACTIVE',
           }));
       } catch {
         return [];
@@ -108,46 +109,30 @@ export const receptionApi = {
   },
 
   /**
-   * Xác nhận thu tiền qua Payment API & sinh hóa đơn
+   * Xác nhận thu tiền qua Payment API (/payments/process) & tự động phát hành hóa đơn
    */
   processPayment: async (payload: ProcessPaymentPayload): Promise<PaymentResponseDto> => {
-    try {
-      const res = await apiFetch<PaymentResponseDto>('/payments', {
-        method: 'POST',
-        body: JSON.stringify({
-          memberId: payload.memberId,
-          subscriptionId: payload.packageId,
-          amount: payload.amount,
-          method: payload.method,
-          status: 'success',
-          note: payload.notes || 'Thu tiền tại quầy Lễ tân POS',
-        }),
-      });
-
-      // Nếu API trả về nhưng chưa có mã hóa đơn, thử gọi auto-issue hoặc tạo mã chuẩn
-      if (!res.invoiceNumber) {
-        try {
-          const inv = await apiFetch<InvoiceDto>(`/invoices/auto-issue/${res.id}`, { method: 'POST' });
-          res.invoiceNumber = inv.invoiceNumber;
-        } catch {
-          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-          res.invoiceNumber = `INV-${today}-${String(res.id).padStart(4, '0')}`;
-        }
-      }
-      return res;
-    } catch {
-      // Nếu backend endpoint /payments gặp sự cố hoặc 404, fallback mô phỏng giao dịch thành công có kiểm soát
-      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const fallbackId = Date.now();
-      return {
-        id: fallbackId,
+    const res = await apiFetch<PaymentResponseDto>('/payments/process', {
+      method: 'POST',
+      body: JSON.stringify({
         memberId: payload.memberId,
+        subscriptionId: payload.subscriptionId,
+        packageId: payload.packageId,
         amount: payload.amount,
         method: payload.method,
-        status: 'success',
-        paidAt: new Date().toISOString(),
-        invoiceNumber: `INV-${today}-${Math.floor(1000 + Math.random() * 9000)}`,
-      };
+        note: payload.notes || 'Thu tiền tại quầy Lễ tân POS',
+      }),
+    });
+
+    if (!res.invoiceNumber && res.id) {
+      try {
+        const inv = await apiFetch<InvoiceDto>(`/invoices/auto-issue/${res.id}`, { method: 'POST' });
+        res.invoiceNumber = inv.invoiceNumber;
+      } catch {
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        res.invoiceNumber = `INV-${today}-${String(res.id).padStart(4, '0')}`;
+      }
     }
+    return res;
   },
 };

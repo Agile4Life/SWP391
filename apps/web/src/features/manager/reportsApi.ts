@@ -54,8 +54,8 @@ export const reportsApi = {
   getSummary: async (startDate: string, endDate: string): Promise<ReportSummary> => {
     // Gọi đồng thời cả 2 endpoint báo cáo có sẵn của backend
     const [daily, packages] = await Promise.all([
-      reportsApi.getDailyRevenue(startDate, endDate).catch(() => []),
-      reportsApi.getPackageRevenue(startDate, endDate).catch(() => []),
+      reportsApi.getDailyRevenue(startDate, endDate),
+      reportsApi.getPackageRevenue(startDate, endDate),
     ]);
 
     // BR-02: Doanh thu thuần = thanh toán thành công trừ hoàn tiền

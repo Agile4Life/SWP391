@@ -1,213 +1,367 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { getCurrentUser } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { Select } from '../../shared/ui/Select';
+import { toast } from '../../shared/ui/toast';
+import { checkinApi, type CheckinDto } from './checkinApi';
 
-interface CheckInRecord {
-  id: string;
-  memberCode: string;
-  name: string;
-  packageName: string;
-  time: string;
-  gate: string;
-  status: 'GRANTED' | 'DENIED';
-  reason?: string;
-}
+const formatTime = (iso?: string | null): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
 
 export function StaffCheckInPage() {
+  const currentUser = getCurrentUser();
+
+  // BR-01: Chỉ RECEPTIONIST / STAFF và CENTER_MANAGER / MANAGER được truy cập
+  const hasAccess = useMemo(() => {
+    if (!currentUser) return false;
+    return currentUser.role === 'MANAGER' || currentUser.role === 'STAFF';
+  }, [currentUser]);
+
   const [scanCode, setScanCode] = useState('');
-  const [currentResult, setCurrentResult] = useState<CheckInRecord | null>(null);
+  const [selectedGate, setSelectedGate] = useState('Turnstile A1 - Sảnh Chính');
+  const [isScanning, setIsScanning] = useState(false);
+  const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
 
-  const [recentCheckins, setRecentCheckins] = useState<CheckInRecord[]>([
-    {
-      id: 'CK-901',
-      memberCode: 'MB-2026-089',
-      name: 'Nguyễn Văn An',
-      packageName: 'The Sanctuary (3 Tháng)',
-      time: '07:15:20',
-      gate: 'Turnstile A1 - Sảnh Chính',
-      status: 'GRANTED',
-    },
-    {
-      id: 'CK-900',
-      memberCode: 'MB-2026-104',
-      name: 'Lê Hoàng Minh',
-      packageName: 'The Essential (1 Tháng)',
-      time: '07:08:44',
-      gate: 'Turnstile A2 - Sảnh Chính',
-      status: 'DENIED',
-      reason: 'Gói tập đã hết hạn từ ngày 20/09/2026',
-    },
-    {
-      id: 'CK-899',
-      memberCode: 'MB-2026-042',
-      name: 'Phạm Thu Thảo',
-      packageName: 'The Sovereign (1 Năm VIP)',
-      time: '06:55:12',
-      gate: 'Turnstile B1 - Tầng Mezzanine',
-      status: 'GRANTED',
-    },
-  ]);
+  const [currentResult, setCurrentResult] = useState<CheckinDto | null>(null);
+  const [recentCheckins, setRecentCheckins] = useState<CheckinDto[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
-  const handleSimulateScan = (codeToScan: string) => {
-    const isExpired = codeToScan.includes('EXPIRED') || codeToScan.includes('104');
-    const now = new Date();
-    const timeStr = now.toTimeString().split(' ')[0];
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    setHistoryError(null);
+    try {
+      const list = await checkinApi.getHistory();
+      setRecentCheckins(list.slice(0, 10));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể tải lịch sử ra vào cổng.';
+      setHistoryError(msg);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
 
-    const result: CheckInRecord = {
-      id: `CK-${Math.floor(1000 + Math.random() * 9000)}`,
-      memberCode: isExpired ? 'MB-2026-104' : 'MB-2026-089',
-      name: isExpired ? 'Lê Hoàng Minh' : 'Nguyễn Văn An',
-      packageName: isExpired ? 'The Essential (Hết hạn)' : 'The Sanctuary VIP',
-      time: timeStr,
-      gate: 'Turnstile A1 - Sảnh Chính',
-      status: isExpired ? 'DENIED' : 'GRANTED',
-      reason: isExpired ? 'Gói tập đã hết hạn. Yêu cầu chuyển quầy Lễ tân gia hạn.' : undefined,
-    };
+  useEffect(() => {
+    if (hasAccess) {
+      void loadHistory();
+    }
+  }, [hasAccess, loadHistory]);
 
-    setCurrentResult(result);
-    setRecentCheckins((prev) => [result, ...prev]);
-    setScanCode('');
+  if (!hasAccess) {
+    return (
+      <div className="portal-container" data-testid="checkin-forbidden-guard">
+        <div className="portal-card">
+          <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
+              🚫
+            </div>
+            <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+              403 - Quyền truy cập bị từ chối
+            </h2>
+            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+              Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền vận hành cổng kiểm soát QR Check-in.
+            </p>
+            <a href="/portal" className="btn-secondary">
+              Về trang chủ Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const executeScan = async (codeToScan: string) => {
+    const trimmed = codeToScan.trim();
+    if (!trimmed) {
+      toast('Vui lòng nhập hoặc quét mã QR thẻ hội viên.', 'error');
+      return;
+    }
+    if (isScanning) return;
+
+    setIsScanning(true);
+    try {
+      const res = await checkinApi.scan({
+        qrCode: trimmed,
+        gate: selectedGate,
+      });
+      setCurrentResult(res);
+      setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)].slice(0, 10));
+      setScanCode('');
+
+      if (res.status?.toLowerCase() === 'success') {
+        toast(`Check-in hợp lệ: ${res.memberName}`, 'success');
+      } else {
+        toast(res.denialReason || 'Từ chối mở cổng: Thẻ không hợp lệ hoặc đã hết hạn.', 'error');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể xác thực mã QR lúc này.';
+      const deniedRecord: CheckinDto = {
+        id: Date.now(),
+        memberId: 0,
+        memberName: trimmed,
+        checkInTime: new Date().toISOString(),
+        checkOutTime: null,
+        method: 'qr_code',
+        gate: selectedGate,
+        status: 'denied',
+        denialReason: msg,
+      };
+      setCurrentResult(deniedRecord);
+      toast(msg, 'error');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scanCode.trim()) return;
-    handleSimulateScan(scanCode);
+    void executeScan(scanCode);
   };
+
+  const handleCheckout = async (checkinId: number) => {
+    if (checkingOutId !== null) return;
+    setCheckingOutId(checkinId);
+    try {
+      const updated = await checkinApi.checkout(checkinId);
+      setRecentCheckins((prev) => prev.map((item) => (item.id === checkinId ? updated : item)));
+      if (currentResult?.id === checkinId) {
+        setCurrentResult(updated);
+      }
+      toast('Đã ghi nhận hội viên checkout thành công!', 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Checkout thất bại.';
+      toast(msg, 'error');
+    } finally {
+      setCheckingOutId(null);
+    }
+  };
+
+  const isGranted = currentResult?.status?.toLowerCase() === 'success';
 
   return (
     <div className="portal-container">
       <PageHeader
-        eyebrow="Lễ tân"
-        title="Check-in cổng"
+        eyebrow="Lễ tân &amp; Kiểm soát sảnh"
+        title="Quét QR Check-in Cổng"
+        actions={
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => void loadHistory()}
+            disabled={loadingHistory}
+          >
+            Làm mới nhật ký
+          </button>
+        }
       />
 
       <div className="grid-2">
-        {/* Scanner Simulation Panel */}
+        {/* Scanner Panel */}
         <div className="portal-card">
           <div className="portal-card-header">
             <h2 className="portal-card-title">Mắt đọc mã QR cổng turnstile</h2>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
-            <label className="portal-label">Quét hoặc Nhập Chuỗi Mã QR:</label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <input
-                type="text"
-                className="portal-input"
-                placeholder="Nhập mã QR hoặc Mã HV (ví dụ: SOL-MB89-9831)..."
-                value={scanCode}
-                onChange={(e) => setScanCode(e.target.value)}
-              />
-              <button type="submit" className="btn-primary">
-                Check-in
-              </button>
+          <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
+            <div>
+              <label className="portal-label" htmlFor="checkin-gate-select">
+                Cổng kiểm soát (Turnstile Gate)
+              </label>
+              <Select
+                id="checkin-gate-select"
+                className="portal-select"
+                value={selectedGate}
+                onChange={(e) => setSelectedGate(e.target.value)}
+                disabled={isScanning}
+              >
+                <option value="Turnstile A1 - Sảnh Chính">Turnstile A1 - Sảnh Chính</option>
+                <option value="Turnstile A2 - Sảnh Chính">Turnstile A2 - Sảnh Chính</option>
+                <option value="Turnstile B1 - Tầng Mezzanine">Turnstile B1 - Tầng Mezzanine</option>
+              </Select>
+            </div>
+
+            <div>
+              <label className="portal-label" htmlFor="checkin-qr-input">
+                Quét hoặc Nhập Chuỗi Mã QR:
+              </label>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <input
+                  id="checkin-qr-input"
+                  type="text"
+                  className="portal-input"
+                  placeholder="Nhập mã QR thẻ hội viên (ví dụ: SUB-10-ABCD1234)..."
+                  value={scanCode}
+                  onChange={(e) => setScanCode(e.target.value)}
+                  disabled={isScanning}
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isScanning || !scanCode.trim()}
+                  data-testid="scan-submit-button"
+                >
+                  {isScanning ? 'Đang quét...' : 'Check-in'}
+                </button>
+              </div>
             </div>
           </form>
-
-          {/* Quick Simulation Buttons */}
-          <div style={{ padding: '16px', background: 'var(--color-bg-warm)', borderRadius: '3px', marginBottom: '24px' }}>
-            <div className="meta-label" style={{ marginBottom: '10px' }}>
-              Quét thử
-            </div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => handleSimulateScan('SOL-VALID-089')}
-              >
-                Quét Thẻ Hợp Lệ (Active)
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => handleSimulateScan('SOL-EXPIRED-104')}
-                style={{ color: '#b91c1c' }}
-              >
-                Quét Thẻ Hết Hạn (Deny)
-              </button>
-            </div>
-          </div>
 
           {/* Visual Door Gate Feedback */}
           {currentResult && (
             <div
               key={currentResult.id}
               role="status"
-              className={`gate-result gate-result--${currentResult.status === 'GRANTED' ? 'granted' : 'denied'}`}
+              data-testid="checkin-result-banner"
+              className={`gate-result gate-result--${isGranted ? 'granted' : 'denied'}`}
               style={{
-                borderRadius: '3px',
+                borderRadius: '6px',
                 padding: '24px',
                 textAlign: 'center',
-                backgroundColor: currentResult.status === 'GRANTED' ? '#F0FDF4' : '#FEF2F2',
-                border: `2px solid ${currentResult.status === 'GRANTED' ? '#86EFAC' : '#FCA5A5'}`,
+                backgroundColor: isGranted ? '#F0FDF4' : '#FEF2F2',
+                border: `2px solid ${isGranted ? '#86EFAC' : '#FCA5A5'}`,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                <StatusMark type={currentResult.status === 'GRANTED' ? 'success' : 'error'} size={64} />
+                <StatusMark type={isGranted ? 'success' : 'error'} size={64} />
               </div>
 
               <h3
                 style={{
                   margin: '0 0 8px 0',
-                  color: currentResult.status === 'GRANTED' ? '#15803D' : '#B91C1C',
+                  color: isGranted ? '#15803D' : '#B91C1C',
                 }}
               >
-                {currentResult.status === 'GRANTED' ? 'CỬA MỞ: XÁC THỰC HỢP LỆ' : 'CỬA KHÓA: TỪ CHỐI CHECK-IN'}
+                {isGranted ? 'CỬA MỞ: XÁC THỰC HỢP LỆ' : 'CỬA KHÓA: TỪ CHỐI CHECK-IN'}
               </h3>
 
               <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1A1614', marginBottom: '4px' }}>
-                {currentResult.name} ({currentResult.memberCode})
+                {currentResult.memberName} {currentResult.memberId ? `(HV #${currentResult.memberId})` : ''}
               </div>
 
-              <div style={{ fontSize: '0.82rem', color: '#6A635D' }}>{currentResult.packageName}</div>
+              <div style={{ fontSize: '0.82rem', color: '#6A635D' }}>
+                {currentResult.gate || selectedGate} — {formatTime(currentResult.checkInTime)}
+              </div>
 
-              {currentResult.reason && (
+              {currentResult.denialReason && (
                 <div style={{ marginTop: '10px', color: '#B91C1C', fontWeight: 600, fontSize: '0.85rem' }}>
-                  ⚠️ {currentResult.reason}
+                  ⚠️ {currentResult.denialReason}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Live Stream Table */}
+        {/* Live Stream Table (Capped at 10 recent entries) */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Nhật Ký Lượt Ra Vào Hôm Nay</h2>
+            <h2 className="portal-card-title">Nhật Ký 10 Lượt Ra Vào Gần Nhất</h2>
           </div>
 
-          <div className="portal-table-wrapper">
-            <table className="portal-table">
-              <thead>
-                <tr>
-                  <th>Thời gian</th>
-                  <th>Hội viên</th>
-                  <th>Cổng</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentCheckins.map((rec, i) => (
-                  <tr key={rec.id} className="row-in" style={{ '--i': i } as React.CSSProperties}>
-                    <td style={{ fontWeight: 600 }}>{rec.time}</td>
-                    <td>
-                      <div>{rec.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>{rec.memberCode}</div>
-                    </td>
-                    <td style={{ fontSize: '0.8rem' }}>{rec.gate}</td>
-                    <td>
-                      <span
-                        className={`badge ${rec.status === 'GRANTED' ? 'badge-success' : 'badge-danger'}`}
-                      >
-                        {rec.status === 'GRANTED' ? 'Mở Cổng' : 'Từ Chối'}
-                      </span>
-                    </td>
+          {historyError && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: '12px 16px',
+                backgroundColor: '#FDF2F2',
+                border: '1px solid #F8B4B4',
+                borderRadius: 6,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+              }}
+              data-testid="checkin-history-error"
+            >
+              <span style={{ color: '#9B1C1C', fontSize: '0.88rem' }}>{historyError}</span>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => void loadHistory()}
+              >
+                Thử lại
+              </button>
+            </div>
+          )}
+
+          {loadingHistory ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#7E7771' }} data-testid="checkin-history-loading">
+              Đang tải lịch sử ra vào sảnh...
+            </div>
+          ) : recentCheckins.length === 0 ? (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: '#7E7771' }} data-testid="checkin-history-empty">
+              Chưa có lượt check-in nào được ghi nhận.
+            </div>
+          ) : (
+            <div className="portal-table-wrapper">
+              <table className="portal-table">
+                <thead>
+                  <tr>
+                    <th>Giờ vào / ra</th>
+                    <th>Hội viên</th>
+                    <th>Cổng</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {recentCheckins.map((rec, i) => {
+                    const ok = rec.status?.toLowerCase() === 'success';
+                    return (
+                      <tr key={rec.id} className="row-in" style={{ '--i': i } as React.CSSProperties}>
+                        <td style={{ fontWeight: 600 }}>
+                          <div>Vào: {formatTime(rec.checkInTime)}</div>
+                          {rec.checkOutTime && (
+                            <div style={{ fontSize: '0.75rem', color: '#6A635D' }}>
+                              Ra: {formatTime(rec.checkOutTime)}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div>{rec.memberName}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>
+                            HV #{rec.memberId}
+                          </div>
+                        </td>
+                        <td style={{ fontSize: '0.8rem' }}>{rec.gate || 'Sảnh chính'}</td>
+                        <td>
+                          <span className={`badge ${ok ? 'badge-success' : 'badge-danger'}`}>
+                            {ok ? 'Mở Cổng' : 'Từ Chối'}
+                          </span>
+                          {rec.denialReason && (
+                            <div style={{ fontSize: '0.72rem', color: '#B91C1C', marginTop: 2 }}>
+                              {rec.denialReason}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {ok && !rec.checkOutTime ? (
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              disabled={checkingOutId === rec.id}
+                              onClick={() => void handleCheckout(rec.id)}
+                            >
+                              {checkingOutId === rec.id ? '...' : 'Checkout'}
+                            </button>
+                          ) : rec.checkOutTime ? (
+                            <span style={{ fontSize: '0.78rem', color: '#6A635D' }}>Đã ra về</span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

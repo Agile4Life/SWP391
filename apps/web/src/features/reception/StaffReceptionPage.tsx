@@ -238,8 +238,8 @@ export function StaffReceptionPage() {
           <div className="portal-card-header">
             <h2 className="portal-card-title">Thông Tin Hội Viên</h2>
             {selectedMember && (
-              <span className={`badge ${selectedMember.status === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                {selectedMember.status}
+              <span className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
+                {selectedMember.status?.toUpperCase()}
               </span>
             )}
           </div>
@@ -273,7 +273,7 @@ export function StaffReceptionPage() {
                 <div className="kv-row">
                   <span>Số CCCD (Bảo mật)</span>
                   <span style={{ fontFamily: 'monospace', color: '#4A4541' }}>
-                    {maskCitizenId(selectedMember.citizenId || (selectedMember.phone ? `079${selectedMember.phone.slice(-6)}123` : null))}
+                    {maskCitizenId(selectedMember.citizenId)}
                   </span>
                 </div>
 
@@ -284,7 +284,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>Hạn sử dụng</span>
-                  <span style={{ color: selectedMember.status === 'ACTIVE' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
+                  <span style={{ color: selectedMember.status?.toUpperCase() === 'ACTIVE' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
                     {selectedMember.endDate || 'Hết hạn hoặc chưa kích hoạt'}
                   </span>
                 </div>

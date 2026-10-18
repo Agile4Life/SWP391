@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { toast } from '../../shared/ui/toast';
@@ -32,7 +32,7 @@ export function ManagerReportsPage() {
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
 
-  const fetchReports = async (start: string, end: string) => {
+  const fetchReports = useCallback(async (start: string, end: string) => {
     if (start > end) {
       toast('Ngày bắt đầu không được lớn hơn ngày kết thúc.', 'error');
       return;
@@ -49,16 +49,16 @@ export function ManagerReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!hasAccess) return;
-    fetchReports(startDate, endDate);
-  }, [hasAccess]);
+    void fetchReports(thirtyDaysAgoStr, todayStr);
+  }, [hasAccess, fetchReports, thirtyDaysAgoStr, todayStr]);
 
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchReports(startDate, endDate);
+    void fetchReports(startDate, endDate);
   };
 
   const handleQuickRange = (days: number) => {
@@ -68,7 +68,7 @@ export function ManagerReportsPage() {
     const start = d.toISOString().slice(0, 10);
     setStartDate(start);
     setEndDate(end);
-    fetchReports(start, end);
+    void fetchReports(start, end);
   };
 
   // 403 Forbidden Guard
@@ -109,7 +109,7 @@ export function ManagerReportsPage() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => toast('Tính năng xuất file Excel/PDF đang chuẩn bị triển khai.', 'info')}
+              onClick={() => toast('Tính năng xuất file Excel/PDF đang chuẩn bị triển khai.', 'success')}
             >
               Xuất Báo Cáo
             </button>
@@ -239,7 +239,7 @@ export function ManagerReportsPage() {
               <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>Rê chuột vào cột để xem chi tiết</span>
             </div>
 
-            {dailyData.length === 0 ? (
+            {dailyData.length === 0 || dailyData.every((d) => d.revenue === 0) ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: '#7E7771' }}>
                 Không có dữ liệu phát sinh doanh thu trong kỳ được chọn.
               </div>
@@ -270,7 +270,7 @@ export function ManagerReportsPage() {
                   }}
                 >
                   {dailyData.map((d) => {
-                    const heightPercent = Math.max(8, Math.round((d.revenue / maxDailyRevenue) * 100));
+                    const heightPercent = d.revenue > 0 ? Math.max(8, Math.round((d.revenue / maxDailyRevenue) * 100)) : 0;
                     const isHovered = hoveredBar?.date === d.date;
                     const dateFormatted = d.date.slice(5).replace('-', '/');
                     return (
