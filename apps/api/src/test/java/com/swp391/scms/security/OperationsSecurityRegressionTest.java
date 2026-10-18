@@ -4,6 +4,8 @@ import com.swp391.scms.attendance.CenterCheckinController;
 import com.swp391.scms.attendance.dto.CheckinResponses.CheckinDto;
 import com.swp391.scms.attendance.service.CenterCheckinService;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.membership.MembershipSubscriptionController;
+import com.swp391.scms.membership.service.MembershipSubscriptionService;
 import com.swp391.scms.scheduling.ClassController;
 import com.swp391.scms.scheduling.EnrollmentController;
 import com.swp391.scms.scheduling.WaitlistController;
@@ -31,8 +33,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Exercises the merged SCRUM-72..75 matchers with the real security filter chain. */
-@WebMvcTest({ClassController.class, EnrollmentController.class, WaitlistController.class, CenterCheckinController.class})
+/** Exercises the merged SCRUM-71..75 matchers with the real security filter chain. */
+@WebMvcTest({ClassController.class, EnrollmentController.class, WaitlistController.class,
+        CenterCheckinController.class, MembershipSubscriptionController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
 class OperationsSecurityRegressionTest {
@@ -41,6 +44,7 @@ class OperationsSecurityRegressionTest {
     @MockitoBean EnrollmentService enrollments;
     @MockitoBean WaitlistService waitlists;
     @MockitoBean CenterCheckinService checkins;
+    @MockitoBean MembershipSubscriptionService subscriptions;
     @MockitoBean JwtService jwt;
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
@@ -71,7 +75,7 @@ class OperationsSecurityRegressionTest {
     }
 
     @Test
-    void staffAndCoachCannotUseMemberOnlyBookingsOrWaitlists() throws Exception {
+    void staffAndCoachCannotUseMemberOnlyBookingsWaitlistsOrSubscriptions() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER")) {
             mvc.perform(post("/api/v1/classes/sessions/1/enroll").with(authentication(actor(role))))
                     .andExpect(status().isForbidden());
@@ -79,8 +83,13 @@ class OperationsSecurityRegressionTest {
                     .andExpect(status().isForbidden());
             mvc.perform(get("/api/v1/classes/enrollments/my").with(authentication(actor(role))))
                     .andExpect(status().isForbidden());
+            mvc.perform(get("/api/v1/memberships/subscriptions/my").with(authentication(actor(role))))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/api/v1/memberships/subscriptions").with(authentication(actor(role)))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"packageId\":1}"))
+                    .andExpect(status().isForbidden());
         }
-        verifyNoInteractions(enrollments, waitlists);
+        verifyNoInteractions(enrollments, waitlists, subscriptions);
     }
 
     @Test

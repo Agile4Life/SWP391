@@ -67,6 +67,13 @@ public class MembershipSubscriptionService {
                     null,
                     "Member already has an active subscription");
         }
+        if (subscriptions.existsByMemberUserIdAndStatus(member.getUserId(), STATUS_PENDING_PAYMENT)) {
+            throw new ConflictException(
+                    "MEMBERSHIP_PENDING_EXISTS",
+                    "error.membership.pending_exists",
+                    null,
+                    "Member already has a pending payment subscription");
+        }
 
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
@@ -108,6 +115,15 @@ public class MembershipSubscriptionService {
                     "membership.subscription.invalid_renewal_status",
                     new Object[]{previous.getStatus()},
                     "Subscription with status " + previous.getStatus() + " cannot be renewed");
+        }
+
+        if (subscriptions.existsByPreviousSubscriptionIdAndStatusIn(previousId,
+                List.of(STATUS_PENDING_PAYMENT, STATUS_ACTIVE))) {
+            throw new ConflictException(
+                    "MEMBERSHIP_ALREADY_RENEWED",
+                    "error.membership.already_renewed",
+                    null,
+                    "Subscription has already been renewed");
         }
 
         MembershipPackage membershipPackage = findActivePackage(previous.getMembershipPackage().getId());

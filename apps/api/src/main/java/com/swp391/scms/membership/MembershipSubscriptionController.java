@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.List;
  * Controller for managing membership subscriptions (SCRUM-71).
  */
 @Tag(name = "Membership Subscriptions", description = "Purchase, renewal and member subscription status (SCRUM-71)")
+@PreAuthorize("hasRole('MEMBER')")
 @RestController
 @RequestMapping({"/api/v1/memberships/subscriptions", "/api/v1/subscriptions"})
 public class MembershipSubscriptionController {

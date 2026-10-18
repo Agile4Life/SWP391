@@ -63,7 +63,7 @@ class ClassControllerTest {
                 "Yoga Cơ Bản", 1L, 2L, 3L, 20, "beginner", "Lớp học yoga cho người mới"
         );
         GymClassDto dto = new GymClassDto(
-                1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101", 20, "beginner", "active", "Lớp học yoga cho người mới"
+                1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101", 20, "beginner", "Lớp học yoga cho người mới", "active"
         );
         when(classService.createClass(any())).thenReturn(dto);
 
@@ -127,7 +127,7 @@ class ClassControllerTest {
     @Test
     void listClasses_returnsOk() throws Exception {
         GymClassDto dto = new GymClassDto(
-                1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101", 20, "beginner", "active", "Lớp học yoga cho người mới"
+                1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101", 20, "beginner", "Lớp học yoga cho người mới", "active"
         );
         when(classService.listClasses()).thenReturn(List.of(dto));
 

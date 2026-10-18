@@ -305,7 +305,7 @@ components:
         id:
           type: integer
           format: int64
-        gymClassId:
+        classId:
           type: integer
           format: int64
         className:
@@ -336,7 +336,7 @@ components:
           format: time
         status:
           type: string
-        cancellationReason:
+        cancelReason:
           type: string
           nullable: true
         capacity:
@@ -351,17 +351,16 @@ components:
         id:
           type: integer
           format: int64
-        gymClassId:
+        classId:
           type: integer
           format: int64
         className:
           type: string
-        memberId:
-          type: integer
-          format: int64
-        sessionId:
-          type: integer
-          format: int64
+        coachName:
+          type: string
+          nullable: true
+        roomName:
+          type: string
           nullable: true
         sessionDate:
           type: string
@@ -377,7 +376,7 @@ components:
           nullable: true
         status:
           type: string
-        enrolledAt:
+        createdAt:
           type: string
           format: date-time
         cancelledAt:
@@ -394,14 +393,11 @@ components:
         id:
           type: integer
           format: int64
-        gymClassId:
+        classId:
           type: integer
           format: int64
         className:
           type: string
-        memberId:
-          type: integer
-          format: int64
         status:
           type: string
         requestedAt:
@@ -605,7 +601,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateSupportRequestDto'
       responses:
-        '200':
+        '201':
           description: Tạo thành công
           content:
             application/json:
@@ -755,7 +751,7 @@ paths:
         '400':
           description: Gói tập không hoạt động
         '409':
-          description: Đã có gói tập đang hoạt động
+          description: Đã có gói tập đang hoạt động hoặc đang chờ thanh toán
 
   /memberships/subscriptions/{id}/renew:
     post:
@@ -775,10 +771,28 @@ paths:
           description: Không phải chủ sở hữu gói
         '404':
           description: Gói tập không tồn tại
+        '409':
+          description: Gói tập đã có lượt gia hạn trước đó
 
   /memberships/subscriptions/my:
     get:
-      summary: Danh sách gói tập và mã QR của hội viên hiện tại (SCRUM-71)
+      summary: Gói tập hiện tại và mã QR của hội viên đang đăng nhập (SCRUM-71)
+      tags: [Memberships]
+      responses:
+        '200':
+          description: Thành công (data có thể null nếu hội viên chưa có gói tập)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SubscriptionDto'
+
+  /memberships/subscriptions/history:
+    get:
+      summary: Lịch sử toàn bộ gói tập của hội viên đang đăng nhập (SCRUM-71)
       tags: [Memberships]
       responses:
         '200':
@@ -1123,6 +1137,16 @@ paths:
     get:
       summary: Lấy lịch sử ra vào trong ngày tại các cổng
       tags: [Check-in]
+      parameters:
+        - name: memberId
+          in: query
+          schema: {type: integer, format: int64}
+        - name: fromDate
+          in: query
+          schema: {type: string, format: date}
+        - name: toDate
+          in: query
+          schema: {type: string, format: date}
       responses:
         '200':
           description: Thành công
@@ -1138,3 +1162,243 @@ paths:
                           $ref: '#/components/schemas/CheckinDto'
         '403':
           description: Quyền truy cập bị từ chối
+
+  # ==========================================
+  # Staff Profiles (SCRUM-66)
+  # ==========================================
+  /profile/coach:
+    get:
+      summary: Xem hồ sơ huấn luyện viên đang đăng nhập (COACH)
+      tags: [Profile]
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Quyền truy cập bị từ chối}
+    patch:
+      summary: Cập nhật chuyên môn/tiểu sử huấn luyện viên đang đăng nhập (COACH)
+      tags: [Profile]
+      responses:
+        '200': {description: Cập nhật thành công}
+        '403': {description: Quyền truy cập bị từ chối}
+
+  /profile/receptionist:
+    get:
+      summary: Xem hồ sơ lễ tân đang đăng nhập (RECEPTIONIST)
+      tags: [Profile]
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Quyền truy cập bị từ chối}
+    patch:
+      summary: Cập nhật thông tin lễ tân đang đăng nhập (RECEPTIONIST)
+      tags: [Profile]
+      responses:
+        '200': {description: Cập nhật thành công}
+        '403': {description: Quyền truy cập bị từ chối}
+
+  /users/{id}/receptionist:
+    get:
+      summary: Quản lý xem hồ sơ lễ tân theo ID (CENTER_MANAGER)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Quyền truy cập bị từ chối}
+        '404': {description: Không tìm thấy lễ tân}
+    put:
+      summary: Quản lý cập nhật ca trực/quầy phụ trách của lễ tân (CENTER_MANAGER)
+      tags: [Users]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Cập nhật thành công}
+        '403': {description: Quyền truy cập bị từ chối}
+        '404': {description: Không tìm thấy lễ tân}
+
+  # ==========================================
+  # Finance, Invoices & Reports (SCRUM-76..79)
+  # ==========================================
+  /payments/process:
+    post:
+      summary: Xử lý thanh toán và tự động kích hoạt gói tập/ghi danh (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Payments]
+      responses:
+        '201': {description: Xử lý thanh toán thành công}
+        '400': {description: Dữ liệu thanh toán không hợp lệ}
+        '403': {description: Quyền truy cập bị từ chối}
+
+  /payments/{id}:
+    get:
+      summary: Xem chi tiết giao dịch thanh toán (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Payments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Thành công}
+        '404': {description: Không tìm thấy giao dịch}
+
+  /payments/member/{memberId}:
+    get:
+      summary: Lịch sử thanh toán của hội viên (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Payments]
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Thành công}
+        '404': {description: Không tìm thấy hội viên}
+
+  /payments/{id}/status:
+    patch:
+      summary: Cập nhật trạng thái giao dịch thanh toán (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Payments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Cập nhật thành công}
+        '400': {description: Trạng thái chuyển đổi không hợp lệ}
+
+  /payments/{id}/refund:
+    post:
+      summary: Hoàn tiền và hủy gói tập/ghi danh liên quan (CENTER_MANAGER)
+      tags: [Payments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Hoàn tiền thành công}
+        '400': {description: Không thể hoàn tiền}
+        '403': {description: Chỉ CENTER_MANAGER được phép hoàn tiền}
+
+  /invoices:
+    post:
+      summary: Phát hành hóa đơn điện tử (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Invoices]
+      responses:
+        '201': {description: Phát hành hóa đơn thành công}
+        '409': {description: Giao dịch đã có hóa đơn hoặc trùng số hóa đơn}
+
+  /invoices/auto-issue/{paymentId}:
+    post:
+      summary: Tự động phát hành hóa đơn cho giao dịch đã thanh toán thành công (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Invoices]
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '201': {description: Phát hành hóa đơn tự động thành công}
+
+  /invoices/{id}:
+    get:
+      summary: Xem chi tiết hóa đơn theo ID (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Invoices]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Thành công}
+        '404': {description: Không tìm thấy hóa đơn}
+
+  /invoices/by-number/{invoiceNumber}:
+    get:
+      summary: Tra cứu hóa đơn theo mã hóa đơn (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Invoices]
+      parameters:
+        - name: invoiceNumber
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: Thành công}
+        '404': {description: Không tìm thấy hóa đơn}
+
+  /invoices/by-payment/{paymentId}:
+    get:
+      summary: Tra cứu hóa đơn theo Payment ID (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Invoices]
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Thành công}
+        '404': {description: Không tìm thấy hóa đơn}
+
+  /reports/revenue/daily:
+    get:
+      summary: Báo cáo doanh thu theo từng ngày (CENTER_MANAGER)
+      tags: [Reports]
+      parameters:
+        - name: startDate
+          in: query
+          schema: {type: string, format: date}
+        - name: endDate
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Chỉ CENTER_MANAGER được truy cập}
+
+  /reports/revenue/by-package:
+    get:
+      summary: Báo cáo doanh thu theo từng gói tập (CENTER_MANAGER)
+      tags: [Reports]
+      parameters:
+        - name: startDate
+          in: query
+          schema: {type: string, format: date}
+        - name: endDate
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Chỉ CENTER_MANAGER được truy cập}
+
+  /reports/snapshots/generate:
+    post:
+      summary: Tạo ảnh chụp báo cáo định kỳ (CENTER_MANAGER)
+      tags: [Reports]
+      responses:
+        '201': {description: Tạo snapshot thành công}
+        '400': {description: Dữ liệu JSON hoặc loại báo cáo không hợp lệ}
+
+  /reports/snapshots:
+    get:
+      summary: Danh sách ảnh chụp báo cáo đã lưu (CENTER_MANAGER)
+      tags: [Reports]
+      responses:
+        '200': {description: Thành công}
+
+  /reports/snapshots/{id}:
+    get:
+      summary: Chi tiết ảnh chụp báo cáo theo ID (CENTER_MANAGER)
+      tags: [Reports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Thành công}
+        '404': {description: Không tìm thấy snapshot}
+
