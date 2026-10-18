@@ -76,6 +76,30 @@ describe('client.ts (API client & Auth session)', () => {
     await expect(apiFetch('/users')).rejects.toThrow('Dữ liệu không hợp lệ');
   });
 
+  it.each([{}, { data: null }])('unwraps an empty successful envelope as null (%j)', async (payload) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, status: 200, message: 'OK', ...payload }),
+    }));
+    await expect(apiFetch('/memberships/subscriptions/my')).resolves.toBeNull();
+  });
+
+  it.each([[], 0, false, ''])('preserves a non-null payload (%j)', async (data) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ success: true, data }),
+    }));
+    await expect(apiFetch('/test')).resolves.toEqual(data);
+  });
+
+  it('preserves a response without an ApiResponse envelope', async () => {
+    const health = { service: 'scms-api', status: 'UP' };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => health,
+    }));
+    await expect(apiFetch('/health')).resolves.toEqual(health);
+  });
+
   it('loginApi sends credentials, stores token, and maps system roles correctly', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

@@ -77,7 +77,11 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     window.location.assign('/login?expired=1');
   }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
-  return (body && 'data' in body ? body.data : body) as T;
+  // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
+  if (body && typeof body === 'object' && ('data' in body || body.success === true)) {
+    return (body.data ?? null) as T;
+  }
+  return body as T;
 }
 
 export async function loginApi(identifier: string, password: string): Promise<LoginResponse> {

@@ -43,7 +43,7 @@ npm run build
 npm run lint
 ```
 
-Kết quả: **20 file test, 107 test đạt**; TypeScript/Vite build đạt; ESLint đạt.
+Kết quả sau sửa lỗi đăng nhập: **21 file test, 115 test đạt**; TypeScript/Vite build đạt; ESLint đạt.
 Test được chạy với một worker để tránh thiếu bộ nhớ khi môi trường tạo nhiều
 process đồng thời. Build còn cảnh báo chunk JavaScript lớn hơn 500 kB.
 
@@ -89,3 +89,27 @@ Supabase thật. Các giới hạn sẵn có về đặt chỗ theo buổi, than
 điểm danh không nằm trong phạm vi thiết kế lại. Trang tổng quan vẫn giữ thông
 báo khi backend chưa xác định được buổi học của lượt đặt chỗ, không tự tạo giờ
 học hoặc phòng tập thay cho dữ liệu còn thiếu.
+
+## Bổ sung: lỗi sau đăng nhập
+
+Hai vấn đề được xác định từ log và ảnh lỗi:
+
+- Proxy không kết nối được API lúc 22:40:18; API đến 22:40:40 mới sẵn sàng.
+  Runner hiện chờ health API trước khi chạy web, dùng lại dịch vụ đang hoạt động
+  và chỉ mở trình duyệt sau kiểm tra sẵn sàng. Vite được giữ ở cổng 5173.
+- Dashboard crash với `status?.toLowerCase is not a function` khi chưa có gói tập.
+  Backend dùng Jackson `NON_NULL`, nên phản hồi thành công không có trường
+  `data` thay vì `data: null`. API client cũ trả cả envelope, khiến mã HTTP
+  `status: 200` bị đọc như trạng thái subscription. API client đã được sửa để
+  trả `null` cho payload bị bỏ trống, đồng thời giữ nguyên dữ liệu `false`, `0`,
+  chuỗi rỗng, mảng và phản hồi health không có envelope.
+
+Regression test tái hiện đúng lỗi trước sửa và kiểm chứng dashboard qua API
+client thật, bao gồm các hàm lấy gói tập và thẻ hội viên. Kiểm tra runner:
+PowerShell syntax hợp lệ, bốn kiểm tra readiness đạt (API, web, từ chối nhận
+web là API, timeout khi không có dịch vụ); chạy launcher `-NoBrowser` thành công.
+
+Kiểm tra trực tiếp ngày 18/10/2026: `/api/v1/health` qua web và API trả 200;
+đăng nhập bằng tài khoản chẩn đoán không tồn tại trả 401 `INVALID_CREDENTIALS`
+qua cả proxy 5173 và API 8080. Điều này xác nhận yêu cầu tới được phần xác thực,
+không phải 502; chưa xác minh đăng nhập thành công bằng tài khoản của người dùng.
