@@ -55,8 +55,10 @@ export function weekday(date: string): number {
 }
 
 export function filterSessions(sessions: ClassSessionDto[], discipline: string, day: string): ClassSessionDto[] {
-  return sessions.filter((session) =>
-    (discipline === 'ALL' || session.disciplineName.toLocaleLowerCase() === discipline.toLocaleLowerCase()) &&
-    (day === 'ALL' || weekday(session.sessionDate) === Number(day))
-  );
+  const needle = discipline.toLocaleLowerCase();
+  return sessions.filter((session) => {
+    const disc = session.disciplineName.toLocaleLowerCase();
+    const matchDisc = discipline === 'ALL' || disc === needle || disc.includes(needle);
+    return matchDisc && (day === 'ALL' || weekday(session.sessionDate) === Number(day));
+  });
 }

@@ -170,7 +170,7 @@ export function MemberClassesPage() {
   const weekRange = currentWeek(weekOffset);
   const disciplines = [...new Set(['Gym', 'Yoga', 'Pilates', 'Boxing', ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
   const visible = filterSessions(sessions, discipline, day);
-  const activeEnrollments = enrollments.filter((item) => item.status === 'enrolled');
+  const activeEnrollments = enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled');
   const activeWaitlists = waitlists.filter((item) => item.status === 'waiting' || item.status === 'notified');
 
   return (
@@ -340,10 +340,10 @@ export function MemberClassesPage() {
                       </div>
                       <h3 className="row-card__title">{item.className}</h3>
                       <div className="row-card__meta">
-                        {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · {item.roomName} · HLV {item.coachName}
+                        {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · {item.roomName} · {item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}
                       </div>
                       <div className="row-card__meta">
-                        Trạng thái: {item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
+                        Trạng thái: {past ? 'Đã qua giờ mở lớp' : item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
