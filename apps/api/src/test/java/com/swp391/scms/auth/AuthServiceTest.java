@@ -8,12 +8,15 @@ import static org.mockito.Mockito.when;
 
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
+import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.TooManyRequestsException;
 import com.swp391.scms.security.JwtService;
 import com.swp391.scms.users.RoleRepository;
 import com.swp391.scms.users.UserRepository;
+import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.User;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -119,5 +122,73 @@ class AuthServiceTest {
         when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("a@b.com")).thenReturn(Optional.of(active));
 
         assertThrows(BadRequestException.class, () -> service.generateOtp("a@b.com"));
+    }
+
+    @Test
+    void requestGoogleOtpCreatesPendingMemberWhenEmailDoesNotExist() {
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        when(userRepository.findByEmailIgnoreCase("new@gmail.com")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameIgnoreCase("new")).thenReturn(Optional.empty());
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(memberRole));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(otpService.generateOtp("new@gmail.com")).thenReturn("123456");
+
+        String code = service.requestGoogleOtp("New@gmail.com");
+
+        assertEquals("123456", code);
+        verify(userRepository).saveAndFlush(any(User.class));
+        verify(otpDeliveryPort).send("new@gmail.com", "123456");
+    }
+
+    @Test
+    void requestGoogleOtpRejectsLockedOrDeletedAccount() {
+        User lockedUser = pendingUser();
+        lockedUser.setStatus("locked");
+        when(userRepository.findByEmailIgnoreCase("locked@gmail.com")).thenReturn(Optional.of(lockedUser));
+
+        assertThrows(ForbiddenException.class, () -> service.requestGoogleOtp("locked@gmail.com"));
+
+        User deletedUser = pendingUser();
+        deletedUser.setDeletedAt(LocalDateTime.now());
+        when(userRepository.findByEmailIgnoreCase("deleted@gmail.com")).thenReturn(Optional.of(deletedUser));
+
+        assertThrows(ForbiddenException.class, () -> service.requestGoogleOtp("deleted@gmail.com"));
+    }
+
+    @Test
+    void verifyGoogleOtpActivatesPendingUserAndIssuesJwt() {
+        User user = pendingUser();
+        user.setId(42L);
+        user.setUsername("member42");
+        user.setEmail("member42@gmail.com");
+        Role role = new Role();
+        role.setCode("MEMBER");
+        user.setRole(role);
+
+        when(otpService.verifyOtp("member42@gmail.com", "123456"))
+                .thenReturn(new OtpService.Status(OtpService.VerifyResult.SUCCESS, 0));
+        when(userRepository.findByEmailIgnoreCase("member42@gmail.com")).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(42L, "member42", "MEMBER")).thenReturn("jwt-42");
+
+        var res = service.verifyGoogleOtp("member42@gmail.com", "123456");
+
+        assertEquals("active", user.getStatus());
+        assertEquals("jwt-42", res.token());
+        assertEquals("MEMBER", res.role());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void verifyGoogleOtpRejectsLockedAccountWithoutReactivatingIt() {
+        User locked = pendingUser();
+        locked.setStatus("locked");
+        when(otpService.verifyOtp("locked@gmail.com", "123456"))
+                .thenReturn(new OtpService.Status(OtpService.VerifyResult.SUCCESS, 0));
+        when(userRepository.findByEmailIgnoreCase("locked@gmail.com")).thenReturn(Optional.of(locked));
+
+        assertThrows(ForbiddenException.class, () -> service.verifyGoogleOtp("locked@gmail.com", "123456"));
+        assertEquals("locked", locked.getStatus());
+        verify(userRepository, org.mockito.Mockito.never()).save(any());
     }
 }

@@ -78,9 +78,7 @@ public class AuthService {
         }
 
         user.setLastLoginAt(LocalDateTime.now(clock));
-        String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
-        String role = user.getRole().getCode();
-        return new AuthTokenResponse(jwtService.generateToken(user.getId(), username, role), username, role);
+        return issueTokenForUser(user);
     }
 
     @Transactional
@@ -101,30 +99,7 @@ public class AuthService {
             }
         }
 
-        Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
-                .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
-
-        User user = new User();
-        user.setUsername(username);
-        user.setRole(memberRole);
-        user.setFullName(username);
-        user.setEmail(email);
-        user.setPhone(phone);
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setStatus("inactive");
-        LocalDateTime now = LocalDateTime.now(clock);
-        user.setCreatedAt(now);
-        user.setUpdatedAt(now);
-        userRepository.saveAndFlush(user);
-
-        Member member = new Member();
-        member.setUser(user);
-        member.setMembershipCode("MEM-" + user.getId());
-        member.setJoinDate(LocalDate.now(clock));
-        member.setFitnessLevel("beginner");
-        user.setMember(member);
-        userRepository.save(user);
-
+        User user = createPendingMemberUser(username, email, phone, request.password());
         return new RegistrationResponse(
                 msg("auth.register.success"),
                 user.getId(), username);
@@ -132,14 +107,8 @@ public class AuthService {
 
     @Transactional
     public OtpService.Status verifyOtp(VerifyOtpRequest request) {
-        OtpService.Status status = otpService.verifyOtp(request.target(), request.otpCode());
-        switch (status.result()) {
-            case EXPIRED_OR_NOT_FOUND -> throw new BadRequestException("OTP_EXPIRED", "auth.otp.expired", null, null);
-            case MAX_ATTEMPTS_EXCEEDED -> throw new TooManyRequestsException("MAX_ATTEMPTS", "auth.otp.max_attempts", null, null);
-            case INVALID_CODE -> throw new BadRequestException("INVALID_OTP", "auth.otp.invalid",
-                    new Object[]{status.remainingAttempts()}, null);
-            case SUCCESS -> activateAccount(request.target());
-        }
+        OtpService.Status status = verifyOtpChallenge(request.target(), request.otpCode());
+        activateAccount(request.target());
         return status;
     }
 
@@ -154,16 +123,7 @@ public class AuthService {
 
     public String generateOtp(String target) {
         findPendingUser(target);
-        String code = otpService.generateOtp(normalize(target));
-        if (!debugOtpEnabled) {
-            try {
-                otpDeliveryPort.send(normalize(target), code);
-            } catch (RuntimeException deliveryFailure) {
-                otpService.invalidate(normalize(target));
-                throw deliveryFailure;
-            }
-        }
-        return code;
+        return issueAndSendOtp(normalize(target));
     }
 
     private void activateAccount(String target) {
@@ -179,6 +139,135 @@ public class AuthService {
             throw new BadRequestException("ACCOUNT_NOT_PENDING", "auth.account.not_pending", null, null);
         }
         return user;
+    }
+
+    @Transactional
+    public String requestGoogleOtp(String rawEmail) {
+        if (!isValidEmail(rawEmail)) {
+            throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
+        }
+        String email = normalize(rawEmail);
+
+        java.util.Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+        if (userOpt.isEmpty()) {
+            String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
+            if (baseUsername.length() < 3) {
+                baseUsername = "user_" + baseUsername;
+            }
+            if (baseUsername.length() > 40) {
+                baseUsername = baseUsername.substring(0, 40);
+            }
+            String username = baseUsername;
+            int suffix = 1;
+            while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+                username = baseUsername + suffix++;
+            }
+            createPendingMemberUser(username, email, null, java.util.UUID.randomUUID().toString());
+        } else {
+            User user = userOpt.get();
+            ensureGoogleOtpAccountAllowed(user);
+        }
+
+        return issueAndSendOtp(email);
+    }
+
+    @Transactional
+    public AuthTokenResponse verifyGoogleOtp(String rawEmail, String otpCode) {
+        if (!isValidEmail(rawEmail)) {
+            throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
+        }
+        if (otpCode == null || otpCode.isBlank()) {
+            throw new BadRequestException("INVALID_OTP", "validation.auth.otp.not_blank", null, null);
+        }
+        String email = normalize(rawEmail);
+        verifyOtpChallenge(email, otpCode.trim());
+
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
+        ensureGoogleOtpAccountAllowed(user);
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (!"active".equalsIgnoreCase(user.getStatus())) {
+            user.setStatus("active");
+        }
+        user.setLastLoginAt(now);
+        user.setUpdatedAt(now);
+        userRepository.save(user);
+
+        return issueTokenForUser(user);
+    }
+
+    private User createPendingMemberUser(String username, String email, String phone, String rawPassword) {
+        Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
+                .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
+
+        User user = new User();
+        user.setUsername(username);
+        user.setRole(memberRole);
+        user.setFullName(username);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setStatus("inactive");
+        LocalDateTime now = LocalDateTime.now(clock);
+        user.setCreatedAt(now);
+        user.setUpdatedAt(now);
+        userRepository.saveAndFlush(user);
+
+        Member member = new Member();
+        member.setUser(user);
+        member.setMembershipCode("MEM-" + user.getId());
+        member.setJoinDate(LocalDate.now(clock));
+        member.setFitnessLevel("beginner");
+        user.setMember(member);
+        userRepository.save(user);
+        return user;
+    }
+
+    private String issueAndSendOtp(String normalizedTarget) {
+        String code = otpService.generateOtp(normalizedTarget);
+        if (!debugOtpEnabled) {
+            try {
+                otpDeliveryPort.send(normalizedTarget, code);
+            } catch (RuntimeException deliveryFailure) {
+                otpService.invalidate(normalizedTarget);
+                throw deliveryFailure;
+            }
+        }
+        return code;
+    }
+
+    private OtpService.Status verifyOtpChallenge(String target, String otpCode) {
+        OtpService.Status status = otpService.verifyOtp(target, otpCode);
+        return switch (status.result()) {
+            case EXPIRED_OR_NOT_FOUND -> throw new BadRequestException("OTP_EXPIRED", "auth.otp.expired", null, null);
+            case MAX_ATTEMPTS_EXCEEDED -> throw new TooManyRequestsException("MAX_ATTEMPTS", "auth.otp.max_attempts", null, null);
+            case INVALID_CODE -> throw new BadRequestException("INVALID_OTP", "auth.otp.invalid",
+                    new Object[]{status.remainingAttempts()}, null);
+            case SUCCESS -> status;
+        };
+    }
+
+    private void ensureGoogleOtpAccountAllowed(User user) {
+        String status = user.getStatus();
+        boolean allowedStatus = "active".equalsIgnoreCase(status) || "inactive".equalsIgnoreCase(status);
+        if (user.getDeletedAt() != null || !allowedStatus) {
+            throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
+        }
+    }
+
+    private AuthTokenResponse issueTokenForUser(User user) {
+        String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
+        String role = user.getRole().getCode();
+        return new AuthTokenResponse(jwtService.generateToken(user.getId(), username, role), username, role);
+    }
+
+    private boolean isValidEmail(String rawEmail) {
+        if (rawEmail == null) {
+            return false;
+        }
+        String trimmed = rawEmail.trim();
+        return !trimmed.isEmpty() && trimmed.length() <= 150 && trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     }
 
     private String normalize(String value) {

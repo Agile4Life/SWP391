@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { register, sendOtp, verifyOtp } from './authApi';
+import { googleSendOtp, googleVerifyOtp, register, sendOtp, verifyOtp } from './authApi';
 
 describe('authApi.ts (Register and OTP flow)', () => {
   beforeEach(() => {
@@ -111,5 +111,46 @@ describe('authApi.ts (Register and OTP flow)', () => {
       }),
     );
     expect(res).toEqual({ target: 'member@test.com', isVerified: true });
+  });
+
+  it('googleSendOtp and googleVerifyOtp call Google OTP endpoints', async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          data: { email: 'user@gmail.com', message: 'Sent', expiresInMinutes: 5, debugOtp: '654321' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          data: { token: 'jwt-google', username: 'user', role: 'MEMBER' },
+        }),
+      });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const sendRes = await googleSendOtp('user@gmail.com');
+    expect(sendRes.debugOtp).toBe('654321');
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/auth/google/send-otp',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'user@gmail.com' }),
+      }),
+    );
+
+    const verifyRes = await googleVerifyOtp('user@gmail.com', '654321');
+    expect(verifyRes).toEqual({ token: 'jwt-google', username: 'user', role: 'MEMBER' });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/auth/google/verify-otp',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'user@gmail.com', otpCode: '654321' }),
+      }),
+    );
   });
 });
