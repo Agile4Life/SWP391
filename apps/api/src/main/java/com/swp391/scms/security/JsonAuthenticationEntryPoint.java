@@ -28,7 +28,8 @@ public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
             throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        String message = messageService != null ? messageService.getMessage("error.unauthorized") : "error.unauthorized";
         objectMapper.writeValue(response.getOutputStream(),
-                ApiResponse.error(401, "UNAUTHORIZED", messageService.getMessage("error.unauthorized")));
+                ApiResponse.error(401, "UNAUTHORIZED", message));
     }
 }

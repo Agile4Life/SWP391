@@ -86,7 +86,7 @@ class ProfileControllerTest {
         messageService = new MessageService(messageSource);
 
         profileService = new ProfileService(userRepository, memberRepository, coachRepository, receptionistRepository);
-        profileController = new ProfileController(profileService);
+        profileController = new ProfileController(profileService, messageService);
 
         AcceptHeaderLocaleResolver localeResolver = new AcceptHeaderLocaleResolver();
         localeResolver.setDefaultLocale(new Locale("vi"));
@@ -251,11 +251,35 @@ class ProfileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Cập nhật hồ sơ Lễ tân thành công"));
     }
 
-    
+    @Test
+    @DisplayName("PUT /api/v1/profile/receptionist returns 403 when wrong role")
+    void updateReceptionistProfileWrongRole() throws Exception {
+        ReceptionistProfileUpdateDto request = new ReceptionistProfileUpdateDto("Morning");
 
+        mockMvc.perform(put("/api/v1/profile/receptionist")
+                        .header("X-Test-Role", "MEMBER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/profile/receptionist returns 400 when shift exceeds max length")
+    void updateReceptionistProfileShiftTooLong() throws Exception {
+        ReceptionistProfileUpdateDto request = new ReceptionistProfileUpdateDto("A".repeat(60));
+
+        mockMvc.perform(put("/api/v1/profile/receptionist")
+                        .header("X-Test-Role", "RECEPTIONIST")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
 }
 
 

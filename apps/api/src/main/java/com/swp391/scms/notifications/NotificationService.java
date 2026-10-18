@@ -53,7 +53,7 @@ public class NotificationService {
 
     @Transactional
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
         
         Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);

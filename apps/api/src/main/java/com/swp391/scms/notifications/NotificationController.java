@@ -7,13 +7,16 @@ import com.swp391.scms.notifications.dto.UnreadCountDto;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Notifications", description = "Quản lý hộp thư thông báo in-app của người dùng")
+@PreAuthorize("isAuthenticated()")
 @RestController
 @RequestMapping("/api/v1/notifications")
 public class NotificationController {
@@ -21,6 +24,11 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final MessageService messageService;
 
+    public NotificationController(NotificationService notificationService) {
+        this(notificationService, null);
+    }
+
+    @Autowired
     public NotificationController(NotificationService notificationService, MessageService messageService) {
         this.notificationService = notificationService;
         this.messageService = messageService;

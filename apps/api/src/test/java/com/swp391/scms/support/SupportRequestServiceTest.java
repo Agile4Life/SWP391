@@ -46,6 +46,12 @@ class SupportRequestServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.swp391.scms.notifications.NotificationService notificationService;
+
+    @Mock
+    private com.swp391.scms.common.i18n.MessageService messageService;
+
     @InjectMocks
     private SupportRequestService supportRequestService;
 
@@ -60,6 +66,7 @@ class SupportRequestServiceTest {
         sampleUser.setFullName("Nguyễn Văn A");
 
         sampleMember = new Member();
+        sampleMember.setUserId(10L);
         sampleMember.setUser(sampleUser);
 
         sampleRequest = new SupportRequest(sampleMember, "Lỗi tủ đồ", "Tủ số 12 bị kẹt");
@@ -92,6 +99,17 @@ class SupportRequestServiceTest {
         when(memberRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> supportRequestService.createRequest(99L, dto))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("Ném ResourceNotFoundException khi user của member đã bị xóa mềm")
+    void createRequest_SoftDeletedMemberUser() {
+        sampleUser.setDeletedAt(LocalDateTime.now());
+        CreateSupportRequestDto dto = new CreateSupportRequestDto("Lỗi tủ đồ", "Tủ số 12 bị kẹt");
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(sampleMember));
+
+        assertThatThrownBy(() -> supportRequestService.createRequest(10L, dto))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -131,7 +149,7 @@ class SupportRequestServiceTest {
     }
 
     @Test
-    @DisplayName("Chuyển trạng thái hợp lệ: open -> in_progress")
+    @DisplayName("Chuyển trạng thái hợp lệ: open -> in_progress và gửi thông báo cho member")
     void updateStatus_OpenToInProgress_Success() {
         sampleRequest.setStatus("open");
         when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
@@ -145,6 +163,7 @@ class SupportRequestServiceTest {
 
         assertThat(sampleRequest.getStatus()).isEqualTo("in_progress");
         assertThat(result.status()).isEqualTo("in_progress");
+        verify(notificationService).send(eq(10L), any(), any(), eq("support_reply"), eq("support_request"), any());
     }
 
     @Test
@@ -231,9 +250,13 @@ class SupportRequestServiceTest {
         User staff = new User();
         staff.setId(20L);
         staff.setFullName("Lễ tân Lan");
+        staff.setStatus("active");
+        com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
+        role.setCode("RECEPTIONIST");
+        staff.setRole(role);
 
         when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
-        when(userRepository.findById(20L)).thenReturn(Optional.of(staff));
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staff));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
                 new SupportRequestDto(1L, 10L, "Nguyễn Văn A", 20L, "Lễ tân Lan", "Lỗi", "Desc", "open", LocalDateTime.now(), null)
@@ -243,5 +266,6 @@ class SupportRequestServiceTest {
         SupportRequestDto result = supportRequestService.updateStatus(1L, updateDto);
 
         assertThat(sampleRequest.getAssignedTo()).isEqualTo(staff);
+        assertThat(result.assignedToName()).isEqualTo("Lễ tân Lan");
     }
 }

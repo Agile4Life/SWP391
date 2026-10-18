@@ -39,24 +39,38 @@ public class SecurityConfig {
                     .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                    // Profile extensions (SCRUM-66)
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/profile/receptionist").hasRole("RECEPTIONIST")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("CENTER_MANAGER")
+
+                    // Notifications & Support Requests (SCRUM-67, SCRUM-68)
+                    .requestMatchers("/api/v1/notifications/**").authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/support/requests").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/support/requests/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/support/requests").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/support/requests/*/status").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+
                     // Attendance & Check-in (SCRUM-75)
                     .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/check-in/*/checkout", "/api/v1/check-in/checkout").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/check-in/history").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "MEMBER")
 
-                    // Payments & Invoices (SCRUM-71 & Finance)
+                    // Payments & Invoices (SCRUM-76, 77, 78)
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/refund").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/payments/*/status").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/my/**").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/payments", "/api/v1/payments/process").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/payments").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/payments/process").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/payments/**", "/api/v1/invoices/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
 
+                    // Reports (SCRUM-79)
+                    .requestMatchers("/api/v1/reports/**").hasRole("CENTER_MANAGER")
+
                     // Membership Subscriptions (SCRUM-71)
-                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/subscriptions/my", "/api/v1/subscriptions/my").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/memberships/subscriptions", "/api/v1/memberships/subscriptions/**",
-                            "/api/v1/subscriptions", "/api/v1/subscriptions/**").hasAnyRole("MEMBER", "RECEPTIONIST", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/subscriptions/**", "/api/v1/subscriptions/**").hasAnyRole("MEMBER", "RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
+                            "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 
                     // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74)
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
