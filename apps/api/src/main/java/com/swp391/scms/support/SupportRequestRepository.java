@@ -11,7 +11,15 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     
     Page<SupportRequest> findByMemberUserIdOrderByCreatedAtDesc(Long memberId, Pageable pageable);
 
-    @Query("SELECT s FROM SupportRequest s WHERE :status IS NULL OR s.status = :status ORDER BY s.createdAt DESC")
-    Page<SupportRequest> findAllByStatus(@Param("status") String status, Pageable pageable);
+    Page<SupportRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    Page<SupportRequest> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
+
+    default Page<SupportRequest> findAllByStatus(@Param("status") String status, Pageable pageable) {
+        if (status == null || status.isBlank()) {
+            return findAllByOrderByCreatedAtDesc(pageable);
+        }
+        return findByStatusOrderByCreatedAtDesc(status, pageable);
+    }
 }
 
