@@ -13,6 +13,23 @@ export interface MemberLookupResult {
   endDate?: string;
 }
 
+export interface PendingSubscriptionItem {
+  id: number;
+  memberId: number;
+  membershipCode: string | null;
+  memberName: string;
+  memberEmail: string;
+  memberPhone: string | null;
+  packageId: number;
+  packageName: string;
+  durationDays: number;
+  packagePrice: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+  createdAt: string;
+}
+
 export type PaymentMethod = 'cash' | 'pos' | 'bank_transfer' | 'online_wallet';
 
 export interface ProcessPaymentPayload {
@@ -106,6 +123,13 @@ export const receptionApi = {
   getActivePackages: async (): Promise<MembershipPackage[]> => {
     const all = await catalogApi.packages();
     return all.filter((p) => p.status === 'active');
+  },
+
+  /**
+   * Lấy danh sách yêu cầu đăng ký/gia hạn gói tập đang chờ thanh toán (pending_payment)
+   */
+  getPendingSubscriptions: async (): Promise<PendingSubscriptionItem[]> => {
+    return apiFetch<PendingSubscriptionItem[]>('/memberships/subscriptions/pending');
   },
 
   /**

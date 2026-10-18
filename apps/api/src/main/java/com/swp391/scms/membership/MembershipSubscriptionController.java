@@ -75,4 +75,11 @@ public class MembershipSubscriptionController {
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("membership.subscription.list"), service.mine(principal));
     }
+
+    @Operation(summary = "List all pending payment subscriptions for receptionist confirmation")
+    @GetMapping("/pending")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<List<com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto>> getPending() {
+        return ApiResponse.ok(msg("membership.subscription.list"), service.listPending());
+    }
 }

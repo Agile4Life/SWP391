@@ -19,4 +19,21 @@ public final class SubscriptionResponses {
             String qrCode,
             LocalDateTime createdAt
     ) {}
+
+    public record PendingSubscriptionDto(
+            Long id,
+            Long memberId,
+            String membershipCode,
+            String memberName,
+            String memberEmail,
+            String memberPhone,
+            Long packageId,
+            String packageName,
+            Integer durationDays,
+            java.math.BigDecimal packagePrice,
+            LocalDate startDate,
+            LocalDate endDate,
+            String status,
+            LocalDateTime createdAt
+    ) {}
 }

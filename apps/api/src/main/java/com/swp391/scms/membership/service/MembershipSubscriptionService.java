@@ -223,6 +223,13 @@ public class MembershipSubscriptionService {
         return membershipPackage;
     }
 
+    @Transactional(readOnly = true)
+    public List<com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto> listPending() {
+        return subscriptions.findByStatusOrderByCreatedAtDesc(STATUS_PENDING_PAYMENT).stream()
+                .map(this::toPendingDto)
+                .toList();
+    }
+
     private SubscriptionDto toDto(MembershipSubscription s) {
         return new SubscriptionDto(
                 s.getId(),
@@ -234,6 +241,27 @@ public class MembershipSubscriptionService {
                 s.getEndDate(),
                 s.getStatus(),
                 s.getQrCode(),
+                s.getCreatedAt());
+    }
+
+    private com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto toPendingDto(MembershipSubscription s) {
+        Member m = s.getMember();
+        com.swp391.scms.users.entity.User u = m != null ? m.getUser() : null;
+        MembershipPackage pkg = s.getMembershipPackage();
+        return new com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto(
+                s.getId(),
+                m != null ? m.getUserId() : null,
+                m != null ? m.getMembershipCode() : null,
+                u != null ? u.getFullName() : null,
+                u != null ? u.getEmail() : null,
+                u != null ? u.getPhone() : null,
+                pkg != null ? pkg.getId() : null,
+                pkg != null ? pkg.getName() : null,
+                pkg != null ? pkg.getDurationDays() : null,
+                pkg != null ? pkg.getPrice() : null,
+                s.getStartDate(),
+                s.getEndDate(),
+                s.getStatus(),
                 s.getCreatedAt());
     }
 }
