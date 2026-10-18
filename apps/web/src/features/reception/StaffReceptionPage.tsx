@@ -420,7 +420,7 @@ export function StaffReceptionPage() {
                   <span>Đang xử lý thu tiền...</span>
                 </>
               ) : (
-                'Xác Nhận Thu Tiền &amp; Xuất Hóa Đơn'
+                'Xác Nhận Thu Tiền & Xuất Hóa Đơn'
               )}
             </button>
           </form>

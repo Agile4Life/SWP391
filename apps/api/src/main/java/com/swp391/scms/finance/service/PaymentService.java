@@ -224,30 +224,40 @@ public class PaymentService {
                 throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
                         new Object[]{dto.getAmount(), pkg.getPrice()}, "Payment amount mismatch");
             }
-            java.time.LocalDate today = java.time.LocalDate.now(clock);
-            MembershipSubscription sub = new MembershipSubscription();
-            sub.setMember(member);
-            sub.setMembershipPackage(pkg);
-            java.time.LocalDate startDate = membershipSubscriptionRepository
-                    .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
-                            member.getUserId(), "active", today, today)
-                    .map(active -> {
-                        sub.setPreviousSubscription(active);
-                        return active.getEndDate().plusDays(1);
-                    })
-                    .orElse(today);
-            int durationDays = Math.max(1, pkg.getDurationDays());
-            sub.setStartDate(startDate);
-            sub.setEndDate(startDate.plusDays(durationDays - 1L));
-            sub.setStatus("active");
-            sub.setCreatedBy(receiver);
-            sub.setCreatedAt(LocalDateTime.now(clock));
-            sub.setUpdatedAt(LocalDateTime.now(clock));
-            MembershipSubscription savedSub = membershipSubscriptionRepository.save(sub);
-            Long subId = savedSub != null && savedSub.getId() != null ? savedSub.getId() : sub.getId();
-            sub.setQrCode("SUB-" + (subId != null ? subId : "NEW") + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            membershipSubscriptionRepository.save(sub);
-            resolvedSubscriptionId = subId;
+            List<MembershipSubscription> pendingSubs = membershipSubscriptionRepository
+                    .findByMemberUserIdAndStatus(member.getUserId(), "pending_payment");
+            if (pendingSubs != null && !pendingSubs.isEmpty()) {
+                MembershipSubscription pendingSub = pendingSubs.get(0);
+                pendingSub.setMembershipPackage(pkg);
+                pendingSub.setCreatedBy(receiver);
+                activateSubscription(pendingSub);
+                resolvedSubscriptionId = pendingSub.getId();
+            } else {
+                java.time.LocalDate today = java.time.LocalDate.now(clock);
+                MembershipSubscription sub = new MembershipSubscription();
+                sub.setMember(member);
+                sub.setMembershipPackage(pkg);
+                java.time.LocalDate startDate = membershipSubscriptionRepository
+                        .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                                member.getUserId(), "active", today, today)
+                        .map(active -> {
+                            sub.setPreviousSubscription(active);
+                            return active.getEndDate().plusDays(1);
+                        })
+                        .orElse(today);
+                int durationDays = Math.max(1, pkg.getDurationDays());
+                sub.setStartDate(startDate);
+                sub.setEndDate(startDate.plusDays(durationDays - 1L));
+                sub.setStatus("active");
+                sub.setCreatedBy(receiver);
+                sub.setCreatedAt(LocalDateTime.now(clock));
+                sub.setUpdatedAt(LocalDateTime.now(clock));
+                MembershipSubscription savedSub = membershipSubscriptionRepository.save(sub);
+                Long subId = savedSub != null && savedSub.getId() != null ? savedSub.getId() : sub.getId();
+                sub.setQrCode("SUB-" + (subId != null ? subId : "NEW") + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                membershipSubscriptionRepository.save(sub);
+                resolvedSubscriptionId = subId;
+            }
         } else if (resolvedSubscriptionId != null && membershipSubscriptionRepository != null) {
             final Long targetSubId = resolvedSubscriptionId;
             MembershipSubscription subscription = membershipSubscriptionRepository.findById(targetSubId)
