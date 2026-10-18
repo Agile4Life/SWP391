@@ -231,7 +231,7 @@ export function ManagerReportsPage() {
 
       {/* Biểu đồ doanh thu hàng ngày & Cơ cấu doanh thu */}
       {!loading && !error && summary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: '24px', marginBottom: '24px' }}>
+        <div className="reports-charts-grid">
           {/* Biểu đồ cột SVG */}
           <div className="portal-card" style={{ minWidth: 0, overflow: 'hidden' }}>
             <div className="portal-card-header" style={{ marginBottom: '16px' }}>
@@ -368,7 +368,7 @@ export function ManagerReportsPage() {
               Chưa có giao dịch thanh toán nào được ghi nhận.
             </div>
           ) : (
-            <div className="portal-table-container">
+            <div className="portal-table-wrapper" tabIndex={0} role="region" aria-label="Giao dịch gần đây, cuộn ngang để xem đầy đủ">
               <table className="portal-table">
                 <thead>
                   <tr>

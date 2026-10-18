@@ -1,0 +1,497 @@
+{
+  "checks": [
+    {
+      "role": "MEMBER",
+      "path": "/member/dashboard",
+      "width": 375,
+      "title": "Xin chào, Nguyễn Minh Anh",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/dashboard",
+      "width": 768,
+      "title": "Xin chào, Nguyễn Minh Anh",
+      "overflow": false,
+      "mainWidth": 586.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/dashboard",
+      "width": 1024,
+      "title": "Xin chào, Nguyễn Minh Anh",
+      "overflow": false,
+      "mainWidth": 826.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/dashboard",
+      "width": 1440,
+      "title": "Xin chào, Nguyễn Minh Anh",
+      "overflow": false,
+      "mainWidth": 1215.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/packages",
+      "width": 375,
+      "title": "Gói tập",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/packages",
+      "width": 768,
+      "title": "Gói tập",
+      "overflow": false,
+      "mainWidth": 586.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/packages",
+      "width": 1024,
+      "title": "Gói tập",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/packages",
+      "width": 1440,
+      "title": "Gói tập",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/classes",
+      "width": 375,
+      "title": "Lịch học & đặt chỗ",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/classes",
+      "width": 768,
+      "title": "Lịch học & đặt chỗ",
+      "overflow": false,
+      "mainWidth": 596.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/classes",
+      "width": 1024,
+      "title": "Lịch học & đặt chỗ",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/classes",
+      "width": 1440,
+      "title": "Lịch học & đặt chỗ",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/card",
+      "width": 375,
+      "title": "Thẻ thành viên",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/card",
+      "width": 768,
+      "title": "Thẻ thành viên",
+      "overflow": false,
+      "mainWidth": 596.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/card",
+      "width": 1024,
+      "title": "Thẻ thành viên",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/card",
+      "width": 1440,
+      "title": "Thẻ thành viên",
+      "overflow": false,
+      "mainWidth": 1215.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/profile",
+      "width": 375,
+      "title": "Hồ sơ cá nhân",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/profile",
+      "width": 768,
+      "title": "Hồ sơ cá nhân",
+      "overflow": false,
+      "mainWidth": 586.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/profile",
+      "width": 1024,
+      "title": "Hồ sơ cá nhân",
+      "overflow": false,
+      "mainWidth": 826.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MEMBER",
+      "path": "/member/profile",
+      "width": 1440,
+      "title": "Hồ sơ cá nhân",
+      "overflow": false,
+      "mainWidth": 1215.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/reception",
+      "width": 375,
+      "title": "Quầy lễ tân & Thu ngân trực tiếp",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/reception",
+      "width": 768,
+      "title": "Quầy lễ tân & Thu ngân trực tiếp",
+      "overflow": false,
+      "mainWidth": 586.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/reception",
+      "width": 1024,
+      "title": "Quầy lễ tân & Thu ngân trực tiếp",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/reception",
+      "width": 1440,
+      "title": "Quầy lễ tân & Thu ngân trực tiếp",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/check-in",
+      "width": 375,
+      "title": "Quét QR Check-in Cổng",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/check-in",
+      "width": 768,
+      "title": "Quét QR Check-in Cổng",
+      "overflow": false,
+      "mainWidth": 596.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/check-in",
+      "width": 1024,
+      "title": "Quét QR Check-in Cổng",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/check-in",
+      "width": 1440,
+      "title": "Quét QR Check-in Cổng",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/classes",
+      "width": 375,
+      "title": "Quản lý lớp học & Xếp lịch",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/classes",
+      "width": 768,
+      "title": "Quản lý lớp học & Xếp lịch",
+      "overflow": false,
+      "mainWidth": 596.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/classes",
+      "width": 1024,
+      "title": "Quản lý lớp học & Xếp lịch",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/classes",
+      "width": 1440,
+      "title": "Quản lý lớp học & Xếp lịch",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "COACH",
+      "path": "/staff/attendance",
+      "width": 375,
+      "title": "Điểm danh buổi học",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "COACH",
+      "path": "/staff/attendance",
+      "width": 768,
+      "title": "Điểm danh buổi học",
+      "overflow": false,
+      "mainWidth": 586.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "COACH",
+      "path": "/staff/attendance",
+      "width": 1024,
+      "title": "Điểm danh buổi học",
+      "overflow": false,
+      "mainWidth": 826.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "COACH",
+      "path": "/staff/attendance",
+      "width": 1440,
+      "title": "Điểm danh buổi học",
+      "overflow": false,
+      "mainWidth": 1215.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/users",
+      "width": 375,
+      "title": "Tài khoản & phân quyền",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/users",
+      "width": 768,
+      "title": "Tài khoản & phân quyền",
+      "overflow": false,
+      "mainWidth": 596.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/users",
+      "width": 1024,
+      "title": "Tài khoản & phân quyền",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/users",
+      "width": 1440,
+      "title": "Tài khoản & phân quyền",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/catalogs",
+      "width": 375,
+      "title": "Danh mục vận hành",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/catalogs",
+      "width": 768,
+      "title": "Danh mục vận hành",
+      "overflow": false,
+      "mainWidth": 596.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/catalogs",
+      "width": 1024,
+      "title": "Danh mục vận hành",
+      "overflow": false,
+      "mainWidth": 836.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/catalogs",
+      "width": 1440,
+      "title": "Danh mục vận hành",
+      "overflow": false,
+      "mainWidth": 1225.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/reports",
+      "width": 375,
+      "title": "Báo cáo Doanh thu & Thống kê",
+      "overflow": false,
+      "mainWidth": 337,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/reports",
+      "width": 768,
+      "title": "Báo cáo Doanh thu & Thống kê",
+      "overflow": false,
+      "mainWidth": 586.875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/reports",
+      "width": 1024,
+      "title": "Báo cáo Doanh thu & Thống kê",
+      "overflow": false,
+      "mainWidth": 826.46875,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "role": "MANAGER",
+      "path": "/manager/reports",
+      "width": 1440,
+      "title": "Báo cáo Doanh thu & Thống kê",
+      "overflow": false,
+      "mainWidth": 1215.84375,
+      "brokenImages": [],
+      "offenders": []
+    },
+    {
+      "scenario": "empty",
+      "text": "Hội viên\n\nXin chào, Nguyễn Minh Anh\n\nMột không gian nhỏ cho hành trình khỏe mạnh của bạn.\n\nKhám phá lịch học\nTổng quan của tôi\nChủ Nhật, 18 tháng 10\nGói tập của tôi\nSÖL WELLNESS\nHành trình của bạn bắt đầu tại đây\n\nChọn gói tập phù hợp với nhịp sống của bạn.\n\nKhám phá các gói tập\nMột gói tập, nhiều trải nghiệm\nKhám phá gói tập phù hợp với bạn\nLịch tập của tôi\nLớp đã đăng ký\n\nBạn chưa có lớp học đang đặt.\n\nTìm lớp phù hợp\nTìm nhịp tập của bạn\nKhám phá lịch Gym, Yoga, Pilates, Boxing\nThẻ & thanh toán\nSÖL\nWELLNESS MEMBERSHIP\nNguyễn Minh Anh\nThẻ hội viên điện tử\nChạm vào hành trình\n\nMở thẻ hội viên để xem mã QR check-in và trạng thái gói tập của bạn.\n\nMở thẻ hội viên\nGói tập & thanh toán\nKiểm tra đăng ký và thanh toán\nSức khỏe & cân bằng\nHiểu cơ thể của bạn\n\nCập nhật hồ sơ và chỉ số sức khỏe để theo dõi từng bước tiến.\n\nHồ sơ & sức khỏe\nSÖL WELLNESS SANCTUARY\nDành một chút\nbình yên cho mình.\nKhám phá SÖL"
+    },
+    {
+      "scenario": "loading",
+      "text": "Hội viên\n\nXin chào, Nguyễn Minh Anh\n\nMột không gian nhỏ cho hành trình khỏe mạnh của bạn.\n\nKhám phá lịch học\nTổng quan của tôi\nChủ Nhật, 18 tháng 10\nGói tập của tôi\nĐang tải thông tin gói tập…\nMột gói tập, nhiều trải nghiệm\nKhám phá gói tập phù hợp với bạn\nLịch tập của tôi\nLớp đã đăng ký\n\nĐang tải lịch học…\n\nTìm nhịp tập của bạn\nKhám phá lịch Gym, Yoga, Pilates, Boxing\nThẻ & thanh toán\nSÖL\nWELLNESS MEMBERSHIP\nNguyễn Minh Anh\nThẻ hội viên điện tử\nChạm vào hành trình\n\nMở thẻ hội viên để xem mã QR check-in và trạng thái gói tập của bạn.\n\nMở thẻ hội viên\nGói tập & thanh toán\nKiểm tra đăng ký và thanh toán\nSức khỏe & cân bằng\nHiểu cơ thể của bạn\n\nCập nhật hồ sơ và chỉ số sức khỏe để theo dõi từng bước tiến.\n\nHồ sơ & sức khỏe\nSÖL WELLNESS SANCTUARY\nDành một chút\nbình yên cho mình.\nKhám phá SÖL"
+    },
+    {
+      "scenario": "error",
+      "text": "Hội viên\n\nXin chào, Nguyễn Minh Anh\n\nMột không gian nhỏ cho hành trình khỏe mạnh của bạn.\n\nKhám phá lịch học\nTổng quan của tôi\nChủ Nhật, 18 tháng 10\nGói tập của tôi\nKhông thể tải thông tin gói tập\n\nVui lòng thử lại sau ít phút.\n\nThử lại\nMột gói tập, nhiều trải nghiệm\nKhám phá gói tập phù hợp với bạn\nLịch tập của tôi\nLớp đã đăng ký\n\nChưa thể tải lịch học lúc này.\n\nThử lại\nTìm nhịp tập của bạn\nKhám phá lịch Gym, Yoga, Pilates, Boxing\nThẻ & thanh toán\nSÖL\nWELLNESS MEMBERSHIP\nNguyễn Minh Anh\nThẻ hội viên điện tử\nChạm vào hành trình\n\nMở thẻ hội viên để xem mã QR check-in và trạng thái gói tập của bạn.\n\nMở thẻ hội viên\nGói tập & thanh toán\nKiểm tra đăng ký và thanh toán\nSức khỏe & cân bằng\nHiểu cơ thể của bạn\n\nCập nhật hồ sơ và chỉ số sức khỏe để theo dõi từng bước tiến.\n\nHồ sơ & sức khỏe\nSÖL WELLNESS SANCTUARY\nDành một chút\nbình yên cho mình.\nKhám phá SÖL"
+    }
+  ],
+  "errors": []
+}

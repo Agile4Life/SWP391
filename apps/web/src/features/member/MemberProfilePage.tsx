@@ -324,44 +324,56 @@ export function MemberProfilePage() {
             <span className="badge badge-info">{metrics.length} bản ghi</span>
           </div>
 
-          <form onSubmit={handleAddMetric} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr auto', gap: 8, marginBottom: 16 }}>
-            <Select
-              className="portal-select"
-              required
-              value={metric.metricName}
-              aria-label="Chọn chỉ số"
-              onChange={(e) => {
-                const name = e.target.value;
-                setMetric({
-                  ...metric,
-                  metricName: name,
-                  unit: DEFAULT_UNITS[name] ?? metric.unit,
-                });
-              }}
-            >
-              <option value="">Chọn chỉ số</option>
-              {Object.entries(METRIC_LABELS).map(([code, label]) => (
-                <option key={code} value={code}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-            <input
-              className="portal-input"
-              required
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="Giá trị"
-              value={metric.metricValue}
-              onChange={(e) => setMetric({ ...metric, metricValue: e.target.value })}
-            />
-            <input
-              className="portal-input"
-              placeholder="Đơn vị"
-              value={metric.unit}
-              onChange={(e) => setMetric({ ...metric, unit: e.target.value })}
-            />
+          <form onSubmit={handleAddMetric} className="profile-metric-form">
+            <div className="profile-metric-form__type">
+              <label className="portal-label" htmlFor="health-metric-name">Chỉ số</label>
+              <Select
+                id="health-metric-name"
+                className="portal-select"
+                required
+                value={metric.metricName}
+                aria-label="Chọn chỉ số"
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setMetric({
+                    ...metric,
+                    metricName: name,
+                    unit: DEFAULT_UNITS[name] ?? metric.unit,
+                  });
+                }}
+              >
+                <option value="">Chọn chỉ số</option>
+                {Object.entries(METRIC_LABELS).map(([code, label]) => (
+                  <option key={code} value={code}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="portal-label" htmlFor="health-metric-value">Giá trị</label>
+              <input
+                id="health-metric-value"
+                className="portal-input"
+                required
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Giá trị"
+                value={metric.metricValue}
+                onChange={(e) => setMetric({ ...metric, metricValue: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="portal-label" htmlFor="health-metric-unit">Đơn vị</label>
+              <input
+                id="health-metric-unit"
+                className="portal-input"
+                placeholder="Đơn vị"
+                value={metric.unit}
+                onChange={(e) => setMetric({ ...metric, unit: e.target.value })}
+              />
+            </div>
             <button type="submit" className="btn-primary" disabled={addingMetric} title="Thêm chỉ số">
               {addingMetric ? <span className="spinner" /> : 'Thêm'}
             </button>
