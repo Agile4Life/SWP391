@@ -72,6 +72,28 @@ class MethodSecurityPolicyTest {
         public SupportRequestController supportRequestController(SupportRequestService service, MessageService messageService) {
             return new SupportRequestController(service, messageService);
         }
+
+        @Bean
+        public com.swp391.scms.finance.service.PaymentService paymentService() {
+            return mock(com.swp391.scms.finance.service.PaymentService.class);
+        }
+
+        @Bean
+        public com.swp391.scms.finance.PaymentController paymentController(
+                com.swp391.scms.finance.service.PaymentService paymentService, MessageService messageService) {
+            return new com.swp391.scms.finance.PaymentController(paymentService, messageService);
+        }
+
+        @Bean
+        public com.swp391.scms.scheduling.service.ClassService classService() {
+            return mock(com.swp391.scms.scheduling.service.ClassService.class);
+        }
+
+        @Bean
+        public com.swp391.scms.scheduling.ClassController classController(
+                com.swp391.scms.scheduling.service.ClassService classService, MessageService messageService) {
+            return new com.swp391.scms.scheduling.ClassController(classService, messageService);
+        }
     }
 
     @Autowired
@@ -82,6 +104,12 @@ class MethodSecurityPolicyTest {
 
     @Autowired
     private SupportRequestController supportRequestController;
+
+    @Autowired
+    private com.swp391.scms.finance.PaymentController paymentController;
+
+    @Autowired
+    private com.swp391.scms.scheduling.ClassController classController;
 
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
@@ -141,5 +169,30 @@ class MethodSecurityPolicyTest {
     void centerManagerCanUpdateSupportRequestStatus() {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
         assertDoesNotThrow(() -> supportRequestController.updateStatus(1L, updateDto));
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    @DisplayName("AC SCRUM-69: Member không thể truy cập endpoint quản lý lớp của Manager")
+    void memberCannotCreateClass() {
+        com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest req =
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest("Yoga", 1L, 2L, 3L, 20, "beginner", "Desc");
+        assertThrows(AccessDeniedException.class, () -> classController.createClass(req));
+    }
+
+    @Test
+    @WithMockUser(roles = "MEMBER")
+    @DisplayName("AC SCRUM-69: Member không thể truy cập endpoint xử lý thanh toán của Receptionist")
+    void memberCannotProcessPayment() {
+        com.swp391.scms.finance.dto.PaymentProcessDto req = new com.swp391.scms.finance.dto.PaymentProcessDto();
+        assertThrows(AccessDeniedException.class, () -> paymentController.processPayment(req));
+    }
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("AC SCRUM-69: Receptionist không thể hoàn tiền (chỉ Center Manager)")
+    void receptionistCannotRefundPayment() {
+        com.swp391.scms.finance.dto.PaymentRefundRequest req = new com.swp391.scms.finance.dto.PaymentRefundRequest();
+        assertThrows(AccessDeniedException.class, () -> paymentController.refundPayment(1L, req));
     }
 }

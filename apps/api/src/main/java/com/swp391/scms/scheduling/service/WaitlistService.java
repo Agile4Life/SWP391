@@ -70,6 +70,13 @@ public class WaitlistService {
         Long classId = session.getGymClass().getId();
         GymClass gymClass = gymClasses.findByIdForUpdate(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+        if (gymClass.getStatus() != null && !"active".equalsIgnoreCase(gymClass.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_CLASS_INACTIVE",
+                    "error.scheduling.class_inactive",
+                    null,
+                    "Class is currently inactive");
+        }
         SessionEligibility.ensureBookable(session, clock);
 
         // BR-03: same membership requirement as booking (Trigger P4).
@@ -130,7 +137,8 @@ public class WaitlistService {
                     "You can only withdraw your own waitlist entry");
         }
 
-        if (!WAITING.equalsIgnoreCase(waitlist.getStatus())) {
+        if (!WAITING.equalsIgnoreCase(waitlist.getStatus())
+                && !"notified".equalsIgnoreCase(waitlist.getStatus())) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_NOT_ACTIVE",
                     "error.scheduling.waitlist_not_active",

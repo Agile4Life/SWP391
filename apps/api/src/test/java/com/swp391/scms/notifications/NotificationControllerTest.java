@@ -97,7 +97,7 @@ public class NotificationControllerTest {
     @Test
     @DisplayName("GET /api/v1/notifications returns user notifications")
     void getNotifications_Success() throws Exception {
-        NotificationDto dto = new NotificationDto(1L, "Test title", "Test content", "INFO", "USER", 101L, false, LocalDateTime.now());
+        NotificationDto dto = new NotificationDto(1L, "Test title", "Test content", "system", "support_request", 101L, false, LocalDateTime.now());
         Page<NotificationDto> page = new PageImpl<>(Collections.singletonList(dto), PageRequest.of(0, 20), 1);
         when(notificationService.getUserNotifications(eq(101L), any())).thenReturn(page);
 

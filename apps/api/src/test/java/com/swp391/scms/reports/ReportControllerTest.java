@@ -21,6 +21,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
+import static org.mockito.Mockito.verify;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -79,7 +81,7 @@ class ReportControllerTest {
     @DisplayName("POST /api/v1/reports/snapshots/generate should return 201 Created")
     void shouldGenerateSnapshot() throws Exception {
         ReportSnapshotCreateDto request = new ReportSnapshotCreateDto(
-                "REVENUE_DAILY",
+                "revenue",
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 5),
                 "{\"revenue\": 1000}",
@@ -88,7 +90,7 @@ class ReportControllerTest {
 
         ReportSnapshotDto response = new ReportSnapshotDto();
         response.setId(10L);
-        response.setReportType("REVENUE_DAILY");
+        response.setReportType("revenue");
 
         when(reportService.generateSnapshot(any(ReportSnapshotCreateDto.class), any())).thenReturn(response);
 
@@ -112,4 +114,21 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value(1L));
     }
+    @Test
+    void shouldExposeRecentTransactionsForSelectedPeriod() throws Exception {
+        var start = LocalDate.of(2026, 10, 1);
+        var end = LocalDate.of(2026, 10, 5);
+        when(reportService.getRecentTransactions(start, end)).thenReturn(List.of(
+                new RecentTransactionDto(78L, "SCMS-78", "Nguyễn An", "Gold",
+                        new BigDecimal("750000"), "cash", end.atTime(18, 45, 12))));
+        mockMvc.perform(get("/api/v1/reports/transactions/recent?startDate=2026-10-01&endDate=2026-10-05"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].id").value(78))
+                .andExpect(jsonPath("$.data[0].invoiceNumber").value("SCMS-78"))
+                .andExpect(jsonPath("$.data[0].memberName").value("Nguyễn An"))
+                .andExpect(jsonPath("$.data[0].amount").value(750000));
+        verify(reportService).getRecentTransactions(start, end);
+    }
+
 }

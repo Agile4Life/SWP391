@@ -36,6 +36,9 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
 
     @Override
     public GoogleUserInfo verify(String idTokenString) {
+        if (clientId == null || clientId.isBlank()) {
+            throw new UnauthorizedException("GOOGLE_LOGIN_NOT_CONFIGURED", "auth.google.not_configured", null, null);
+        }
         if (idTokenString == null || idTokenString.isBlank()) {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google ID Token is missing");
         }
@@ -50,7 +53,8 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
                     payload.getEmail(),
                     Boolean.TRUE.equals(payload.getEmailVerified()),
                     (String) payload.get("name"),
-                    (String) payload.get("picture")
+                    (String) payload.get("picture"),
+                    (String) payload.get("hd")
             );
         } catch (UnauthorizedException ue) {
             throw ue;

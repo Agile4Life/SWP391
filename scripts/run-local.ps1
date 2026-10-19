@@ -38,6 +38,33 @@ $apiDir = Join-Path $rootDir "apps\api"
 $webDir = Join-Path $rootDir "apps\web"
 . (Join-Path $scriptDir "database-config.ps1")
 
+function Test-ScmsLocalService {
+    param([string]$Uri, [switch]$Api)
+    try {
+        $response = Invoke-WebRequest -Uri $Uri -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+        if ($response.StatusCode -ne 200) { return $false }
+        if ($Api) {
+            $health = $response.Content | ConvertFrom-Json
+            return $health.service -eq 'scms-api' -and $health.status -eq 'UP'
+        }
+        return $response.Content -match '<title>.*SCMS</title>'
+    } catch { return $false }
+}
+
+function Wait-ScmsLocalService {
+    param([string]$Name, [string]$Uri, [switch]$Api, [int]$TimeoutSeconds = 120)
+    Write-Host "-> Dang cho $Name san sang: $Uri" -ForegroundColor Yellow
+    $timer = [Diagnostics.Stopwatch]::StartNew()
+    while ($timer.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
+        if (Test-ScmsLocalService -Uri $Uri -Api:$Api) {
+            Write-Host "[OK] $Name da san sang." -ForegroundColor Green
+            return
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    throw "$Name chua san sang sau $TimeoutSeconds giay. Kiem tra api.log, api-error.log, web.log va web-error.log."
+}
+
 # 1. Kiem tra file .env
 $envFile = Join-Path $rootDir ".env"
 $envExample = Join-Path $rootDir ".env.example"
@@ -148,7 +175,7 @@ if ($Only -in @("all", "web") -and $conn5173) {
 }
 
 # Khoi chay Backend API trong cua so moi
-if ($Only -in @("all", "api")) {
+if ($Only -in @("all", "api") -and -not (Test-ScmsLocalService -Uri 'http://localhost:8080/api/v1/health' -Api)) {
     Write-Host "-> Dang khoi chay Backend API (Spring Boot) tren cong 8080..." -ForegroundColor Cyan
     $mvnExecutable = ".\mvnw.cmd"
     if (-not (Test-Path (Join-Path $apiDir "mvnw.cmd"))) {
@@ -160,12 +187,21 @@ if ($Only -in @("all", "api")) {
     Write-Host "  [+] API dang khoi dong nen; xem api.log / api-error.log." -ForegroundColor Green
 }
 
+# Do not open the login screen while its upstream API is still booting.
+if ($Only -in @("all", "api")) {
+    Wait-ScmsLocalService -Name 'Backend API' -Uri 'http://localhost:8080/api/v1/health' -Api
+}
+
 # Khoi chay Frontend Web trong cua so moi
-if ($Only -in @("all", "web")) {
+if ($Only -in @("all", "web") -and -not (Test-ScmsLocalService -Uri 'http://localhost:5173')) {
     Write-Host "-> Dang khoi chay Frontend Web (React + Vite) tren cong 5173..." -ForegroundColor Cyan
-    $webProcessCmd = "cd /d `"$webDir`" && title SCMS Web (React Vite 5173) && npm run dev"
+    $webProcessCmd = "cd /d `"$webDir`" && title SCMS Web (React Vite 5173) && npm run dev -- --port 5173 --strictPort"
     Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $webProcessCmd -WindowStyle Hidden -RedirectStandardOutput (Join-Path $rootDir 'web.log') -RedirectStandardError (Join-Path $rootDir 'web-error.log')
     Write-Host "  [+] Web dang khoi dong nen; xem web.log / web-error.log." -ForegroundColor Green
+}
+
+if ($Only -in @("all", "web")) {
+    Wait-ScmsLocalService -Name 'Frontend Web' -Uri 'http://localhost:5173'
 }
 
 Write-Host ""
@@ -176,9 +212,7 @@ Write-Host "  Dich vu chay nen; xem api.log, api-error.log, web.log va web-error
 Write-Host "  De dung ca 2 server, chay: .\stop-local.bat hoac .\stop-local.ps1" -ForegroundColor Gray
 Write-Host "=================================================================" -ForegroundColor Green
 
-# Cho trinh duyet mo sau vai giay
+# Both requested services have passed readiness checks before opening the browser.
 if (-not $NoBrowser -and ($Only -in @("all", "web"))) {
-    Write-Host "-> Dang cho Web server san sang de mo trinh duyet..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 3
     Start-Process "http://localhost:5173"
 }

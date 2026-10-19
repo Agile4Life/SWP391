@@ -17,15 +17,15 @@ foreach ($port in $Ports) {
     $connections = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
     if ($connections) {
         foreach ($conn in $connections) {
-            $pId = $conn.OwningProcess
+            $processId = $conn.OwningProcess
             try {
-                $proc = Get-Process -Id $pId -ErrorAction Stop
-                Write-Host "  -> Dang tat tien trinh '$($proc.ProcessName)' (PID: $pId) tren port $port ..." -ForegroundColor Yellow
-                Stop-Process -Id $pId -Force -ErrorAction SilentlyContinue
+                $proc = Get-Process -Id $processId -ErrorAction Stop
+                Write-Host "  -> Dang tat tien trinh '$($proc.ProcessName)' (PID: $processId) tren port $port ..." -ForegroundColor Yellow
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
                 Write-Host "  [OK] Da giai phong port $port!" -ForegroundColor Green
                 $stoppedAny = $true
             } catch {
-                Write-Host "  [!] Khong the tat PID $($pId): $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  [!] Khong the tat PID $($processId): $($_.Exception.Message)" -ForegroundColor Red
             }
         }
     } else {

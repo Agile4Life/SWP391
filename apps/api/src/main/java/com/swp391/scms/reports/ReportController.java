@@ -3,6 +3,7 @@ package com.swp391.scms.reports;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
@@ -61,11 +62,22 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.ok(msg("reports.revenue.by_package"), packageRevenue));
     }
 
+    @Operation(summary = "Mười giao dịch thanh toán thành công gần nhất trong kỳ")
+    @GetMapping("/transactions/recent")
+    public ResponseEntity<ApiResponse<List<RecentTransactionDto>>> getRecentTransactions(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.ok(msg("reports.transactions.recent"),
+                reportService.getRecentTransactions(startDate, endDate)));
+    }
+
     @Operation(summary = "Lưu ảnh chụp báo cáo định kỳ", description = "Tạo ảnh chụp báo cáo (snapshot) định dạng JSON phục vụ đối soát cho Quản lý")
     @PostMapping("/snapshots/generate")
     public ResponseEntity<ApiResponse<ReportSnapshotDto>> generateSnapshot(
-            @Valid @RequestBody ReportSnapshotCreateDto dto) {
-        ReportSnapshotDto created = reportService.generateSnapshot(dto, null);
+            @Valid @RequestBody ReportSnapshotCreateDto dto,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.swp391.scms.security.AuthenticatedPrincipal principal) {
+        Long currentUserId = principal != null ? principal.id() : null;
+        ReportSnapshotDto created = reportService.generateSnapshot(dto, currentUserId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("reports.snapshot.created"), created));
     }

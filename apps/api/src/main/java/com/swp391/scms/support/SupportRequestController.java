@@ -28,7 +28,7 @@ public class SupportRequestController {
         this(supportRequestService, null);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @org.springframework.beans.factory.annotation.Autowired
     public SupportRequestController(SupportRequestService supportRequestService, MessageService messageService) {
         this.supportRequestService = supportRequestService;
         this.messageService = messageService;

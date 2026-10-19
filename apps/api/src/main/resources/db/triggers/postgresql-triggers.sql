@@ -162,3 +162,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username) WHERE us
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users (phone) WHERE phone IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollment_active ON class_enrollments (class_id, member_id) WHERE status = 'booked';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_waitlist_active ON class_waitlists (class_id, member_id) WHERE status = 'waiting';
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'notifications'
+          AND column_name = 'message'
+          AND is_nullable = 'NO'
+    ) THEN
+        EXECUTE format('ALTER TABLE %I.notifications ALTER COLUMN message DROP NOT NULL', current_schema());
+    END IF;
+END;
+$$;
+

@@ -1,4 +1,4 @@
-import { apiFetch, ApiError } from '../../shared/api/client';
+import { apiFetch } from '../../shared/api/client';
 import type { Discipline, Room } from '../manager/catalogApi';
 
 export interface ClassSessionDto {
@@ -65,169 +65,45 @@ interface UserDto {
   status: string;
 }
 
-const FALLBACK_CLASSES_KEY = 'scms_fallback_classes';
-const FALLBACK_SESSIONS_KEY = 'scms_fallback_sessions';
-
-const defaultSeedClasses = (): ClassItem[] => [
-  {
-    id: 1,
-    name: 'Reformer Core Architecture',
-    disciplineId: 1,
-    disciplineName: 'Pilates',
-    coachId: 1,
-    coachName: 'Elena Vũ',
-    roomId: 1,
-    roomName: 'Studio 01 (Level 2)',
-    schedule: '2026-10-10 (17:30 - 18:30)',
-    capacity: 12,
-    activeSessions: 36,
-    status: 'ACTIVE',
-  },
-  {
-    id: 2,
-    name: 'Olympic Barbell & Plyometrics',
-    disciplineId: 2,
-    disciplineName: 'Strength & Conditioning',
-    coachId: 2,
-    coachName: 'Minh Trí',
-    roomId: 2,
-    roomName: 'Arena 02 (Level 1)',
-    schedule: '2026-10-12 (08:00 - 09:30)',
-    capacity: 16,
-    activeSessions: 24,
-    status: 'ACTIVE',
-  },
-  {
-    id: 3,
-    name: 'Yin Yoga & Sound Healing',
-    disciplineId: 3,
-    disciplineName: 'Yoga',
-    coachId: 3,
-    coachName: 'An Nhiên',
-    roomId: 3,
-    roomName: 'Zen Garden Studio',
-    schedule: '2026-10-14 (19:00 - 20:15)',
-    capacity: 15,
-    activeSessions: 18,
-    status: 'ACTIVE',
-  },
-];
-
 export const classesApi = {
   /**
-   * Lấy danh sách lớp học (gọi API thật, tự động fallback nếu backend chưa có endpoint /classes)
+   * Lấy danh sách lớp học từ API
    */
   getClasses: async (): Promise<ClassItem[]> => {
-    try {
-      return await apiFetch<ClassItem[]>('/classes');
-    } catch (err) {
-      if (err instanceof ApiError && (err.status === 404 || err.status === 0)) {
-        const raw = localStorage.getItem(FALLBACK_CLASSES_KEY);
-        if (raw) {
-          try {
-            return JSON.parse(raw);
-          } catch {
-            // ignore JSON error
-          }
-        }
-        const initial = defaultSeedClasses();
-        localStorage.setItem(FALLBACK_CLASSES_KEY, JSON.stringify(initial));
-        return initial;
-      }
-      throw err;
-    }
+    return apiFetch<ClassItem[]>('/classes');
   },
 
   /**
    * Lấy danh sách buổi học / lịch học
    */
   getSessions: async (classId?: number): Promise<ClassSessionDto[]> => {
-    try {
-      return await apiFetch<ClassSessionDto[]>(
-        classId ? `/classes/sessions?classId=${classId}` : '/classes/sessions'
-      );
-    } catch (err) {
-      if (err instanceof ApiError && (err.status === 404 || err.status === 0)) {
-        const raw = localStorage.getItem(FALLBACK_SESSIONS_KEY);
-        const list: ClassSessionDto[] = raw ? JSON.parse(raw) : [];
-        return classId ? list.filter((s) => s.classId === classId) : list;
-      }
-      throw err;
-    }
+    const list = await apiFetch<ClassSessionDto[]>(
+      classId ? `/classes/sessions?classId=${classId}` : '/classes/sessions'
+    );
+    return classId ? list.filter((s) => s.classId === classId) : list;
   },
 
   /**
-   * Tạo lớp học mới kèm xếp lịch buổi học
+   * Tạo lớp học mới
    */
   createClass: async (payload: CreateClassPayload): Promise<ClassItem> => {
-    try {
-      return await apiFetch<ClassItem>('/classes', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-    } catch (err) {
-      if (err instanceof ApiError && (err.status === 404 || err.status === 0)) {
-        // Mô phỏng kiểm tra trùng lịch (BR-04) khi backend chưa có API
-        const rawSessions = localStorage.getItem(FALLBACK_SESSIONS_KEY);
-        const sessions: ClassSessionDto[] = rawSessions ? JSON.parse(rawSessions) : [];
-
-        // Nếu trùng ngày và giao thoa khung giờ
-        const hasConflict = sessions.some(
-          (s) =>
-            s.sessionDate === payload.sessionDate &&
-            !(payload.endTime <= s.startTime || payload.startTime >= s.endTime)
-        );
-
-        if (hasConflict) {
-          throw new ApiError(
-            'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này.',
-            409,
-            'error.scheduling.session_conflict'
-          );
-        }
-
-        const raw = localStorage.getItem(FALLBACK_CLASSES_KEY);
-        const currentList: ClassItem[] = raw ? JSON.parse(raw) : defaultSeedClasses();
-
-        const newClass: ClassItem = {
-          id: Date.now(),
-          name: payload.name,
-          disciplineId: payload.disciplineId,
-          coachId: payload.coachId,
-          roomId: payload.roomId,
-          capacity: payload.capacity,
-          level: payload.level,
-          description: payload.description,
-          schedule: `${payload.sessionDate} (${payload.startTime} - ${payload.endTime})`,
-          status: 'ACTIVE',
-        };
-
-        const updatedList = [newClass, ...currentList];
-        localStorage.setItem(FALLBACK_CLASSES_KEY, JSON.stringify(updatedList));
-
-        const newSession: ClassSessionDto = {
-          id: Date.now() + 1,
-          classId: newClass.id,
-          sessionDate: payload.sessionDate,
-          startTime: payload.startTime,
-          endTime: payload.endTime,
-          status: 'scheduled',
-        };
-        localStorage.setItem(FALLBACK_SESSIONS_KEY, JSON.stringify([...sessions, newSession]));
-
-        return newClass;
-      }
-      throw err;
-    }
+    return apiFetch<ClassItem>('/classes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   /**
-   * Thêm buổi học mới cho lớp
+   * Thêm buổi học mới cho lớp qua POST /api/v1/classes/{id}/sessions
    */
   createSession: (payload: CreateSessionPayload) =>
-    apiFetch<ClassSessionDto>('/classes/sessions', {
+    apiFetch<ClassSessionDto>(`/classes/${payload.classId}/sessions`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        sessionDate: payload.sessionDate,
+        startTime: payload.startTime,
+        endTime: payload.endTime,
+      }),
     }),
 
   /**

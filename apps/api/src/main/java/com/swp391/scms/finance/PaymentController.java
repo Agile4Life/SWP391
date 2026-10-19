@@ -37,7 +37,7 @@ public class PaymentController {
         this.paymentService = paymentService;
         this.messageService = messageService;
     }
-
+    //key
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
@@ -94,6 +94,7 @@ public class PaymentController {
 
     @Operation(summary = "Hoàn tiền và hủy giao dịch", description = "Ghi nhận hoàn tiền, chuyển trạng thái payment sang refunded, hủy gói tập/ghi danh liên quan và ghi audit log")
     @PostMapping("/{id}/refund")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
     public ResponseEntity<ApiResponse<PaymentDto>> refundPayment(
             @PathVariable Long id,
             @Valid @RequestBody com.swp391.scms.finance.dto.PaymentRefundRequest request) {

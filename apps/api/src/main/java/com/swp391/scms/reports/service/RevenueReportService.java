@@ -10,6 +10,9 @@ import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
+import com.swp391.scms.reports.repository.TransactionReportRepository;
+import org.springframework.data.domain.PageRequest;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
@@ -38,19 +41,34 @@ public class RevenueReportService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final TransactionReportRepository transactionReportRepository;
 
     public RevenueReportService(PaymentRepository paymentRepository,
                                 MembershipSubscriptionRepository subscriptionRepository,
                                 ReportSnapshotRepository snapshotRepository,
                                 UserRepository userRepository,
                                 ObjectMapper objectMapper,
-                                Clock clock) {
+                                Clock clock,
+                                TransactionReportRepository transactionReportRepository) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.snapshotRepository = snapshotRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.transactionReportRepository = transactionReportRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecentTransactionDto> getRecentTransactions(LocalDate startDate, LocalDate endDate) {
+        LocalDate start = startDate != null ? startDate : LocalDate.now(clock).minusDays(30);
+        LocalDate end = endDate != null ? endDate : LocalDate.now(clock);
+        if (start.isAfter(end)) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
+                    "Start date cannot be after end date");
+        }
+        return transactionReportRepository.findRecentTransactions(
+                start.atStartOfDay(), end.plusDays(1).atStartOfDay(), PageRequest.of(0, 10));
     }
 
     @Transactional(readOnly = true)
@@ -140,6 +158,10 @@ public class RevenueReportService {
     }
 
     public ReportSnapshotDto generateSnapshot(ReportSnapshotCreateDto dto, Long currentUserId) {
+        if (dto.getPeriodStart() != null && dto.getPeriodEnd() != null && dto.getPeriodStart().isAfter(dto.getPeriodEnd())) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
+                    "Start date cannot be after end date");
+        }
         try {
             objectMapper.readTree(dto.getData());
         } catch (JsonProcessingException | RuntimeException e) {
@@ -154,7 +176,7 @@ public class RevenueReportService {
         }
 
         ReportSnapshot snapshot = new ReportSnapshot();
-        snapshot.setReportType(dto.getReportType());
+        snapshot.setReportType(dto.getReportType() != null ? dto.getReportType().toLowerCase(Locale.ROOT) : "revenue");
         snapshot.setPeriodStart(dto.getPeriodStart());
         snapshot.setPeriodEnd(dto.getPeriodEnd());
         snapshot.setData(dto.getData());

@@ -284,6 +284,15 @@ public class AuthService {
             user = bySub.get();
         } else if (byEmail.isPresent()) {
             user = byEmail.get();
+            String linkedSub = user.getGoogleSub();
+            if (linkedSub != null && !linkedSub.isBlank() && !linkedSub.equals(googleSub)) {
+                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+            }
+            boolean googleManagedEmail = email.endsWith("@gmail.com")
+                    || (googleUser.hostedDomain() != null && !googleUser.hostedDomain().isBlank());
+            if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
+                throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
+            }
             // Bind google_sub to existing account
             user.setGoogleSub(googleSub);
         } else {

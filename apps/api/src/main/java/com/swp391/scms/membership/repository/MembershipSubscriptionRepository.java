@@ -22,9 +22,13 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
     List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
 
+    List<MembershipSubscription> findByStatusOrderByCreatedAtDesc(String status);
+
     List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
 
     boolean existsByMemberUserIdAndStatus(Long memberId, String status);
+
+    boolean existsByPreviousSubscriptionIdAndStatusIn(Long previousId, java.util.Collection<String> statuses);
 
     boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
 

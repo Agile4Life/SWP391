@@ -2,7 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { ApiError } from '../../shared/api/client';
-import { filterSessions, getMyWaitlists, getSessions, type ClassSessionDto, type WaitlistDto } from './memberClassesApi';
+import {
+  cancelEnrollment,
+  currentWeek,
+  enroll,
+  filterSessions,
+  getMyEnrollments,
+  getMyWaitlists,
+  getSessions,
+  joinWaitlist,
+  leaveWaitlist,
+  type ClassSessionDto,
+  type EnrollmentDto,
+  type WaitlistDto,
+} from './memberClassesApi';
 
 const days = [
   ['ALL', 'Tất cả các ngày'], ['1', 'Thứ 2'], ['2', 'Thứ 3'], ['3', 'Thứ 4'],
@@ -12,9 +25,9 @@ const days = [
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
-      return 'Lớp đã đầy. Hãy tải lại lịch để xem sĩ số mới.';
+      return 'Lớp đã đầy. Bạn có thể tham gia hàng chờ để được tự động đôn lên khi có chỗ trống.';
     if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED'].includes(error.code ?? ''))
-      return 'Gói tập chưa hoạt động hoặc đã hết hạn. Vui lòng xem các gói tập.';
+      return 'Gói tập chưa hoạt động hoặc đã hết hạn. Vui lòng kích hoạt gói tập trước khi đặt lịch.';
     return error.message;
   }
   return 'Không thể tải lịch học. Vui lòng thử lại.';
@@ -25,9 +38,16 @@ function localToday(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+function formatShortDate(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return d && m && y ? `${d}/${m}/${y}` : iso;
+}
+
 export function MemberClassesPage() {
   const [tab, setTab] = useState<'schedule' | 'my'>('schedule');
+  const [weekOffset, setWeekOffset] = useState<0 | 1>(0);
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
+  const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [waitlists, setWaitlists] = useState<WaitlistDto[]>([]);
   const [discipline, setDiscipline] = useState('ALL');
   const [day, setDay] = useState('ALL');
@@ -37,6 +57,9 @@ export function MemberClassesPage() {
   const [waitlistsLoading, setWaitlistsLoading] = useState(true);
   const [waitlistsError, setWaitlistsError] = useState('');
   const [waitlistsRetry, setWaitlistsRetry] = useState(0);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -44,7 +67,7 @@ export function MemberClassesPage() {
       setLoading(true);
       setError('');
       try {
-        const nextSessions = await getSessions();
+        const nextSessions = weekOffset === 0 ? await getSessions() : await getSessions(weekOffset);
         if (active) setSessions(nextSessions);
       } catch (cause) {
         if (active) setError(errorMessage(cause));
@@ -54,96 +77,432 @@ export function MemberClassesPage() {
     }
     void load();
     return () => { active = false; };
-  }, [retry]);
+  }, [retry, weekOffset]);
 
   useEffect(() => {
     let active = true;
-    async function loadWaitlists() {
+    async function loadMySchedule() {
       setWaitlistsLoading(true);
       setWaitlistsError('');
       try {
-        const nextWaitlists = await getMyWaitlists();
-        if (active) setWaitlists(nextWaitlists);
+        const [nextWaitlists, nextEnrollments] = await Promise.all([
+          getMyWaitlists(),
+          Promise.resolve(getMyEnrollments?.() ?? []).catch(() => [] as EnrollmentDto[]),
+        ]);
+        if (active) {
+          setWaitlists(nextWaitlists ?? []);
+          setEnrollments(nextEnrollments ?? []);
+        }
       } catch (cause) {
         if (active) setWaitlistsError(errorMessage(cause));
       } finally {
         if (active) setWaitlistsLoading(false);
       }
     }
-    void loadWaitlists();
+    void loadMySchedule();
     return () => { active = false; };
   }, [waitlistsRetry]);
 
+  async function handleEnroll(session: ClassSessionDto) {
+    setBusyKey(`session-${session.id}`);
+    setNotice('');
+    setActionError('');
+    try {
+      await enroll(session.id);
+      setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
+      setRetry((v) => v + 1);
+      setWaitlistsRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleJoinWaitlist(session: ClassSessionDto) {
+    setBusyKey(`session-${session.id}`);
+    setNotice('');
+    setActionError('');
+    try {
+      await joinWaitlist(session.id);
+      setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
+      setRetry((v) => v + 1);
+      setWaitlistsRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleCancelEnrollment(enrollmentId: number, className: string) {
+    setBusyKey(`enroll-${enrollmentId}`);
+    setNotice('');
+    setActionError('');
+    try {
+      await cancelEnrollment(enrollmentId);
+      setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
+      setRetry((v) => v + 1);
+      setWaitlistsRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleLeaveWaitlist(waitlistId: number, className: string) {
+    setBusyKey(`waitlist-${waitlistId}`);
+    setNotice('');
+    setActionError('');
+    try {
+      await leaveWaitlist(waitlistId);
+      setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
+      setRetry((v) => v + 1);
+      setWaitlistsRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  const weekRange = currentWeek(weekOffset);
   const disciplines = [...new Set(['Gym', 'Yoga', 'Pilates', 'Boxing', ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
   const visible = filterSessions(sessions, discipline, day);
+  const activeEnrollments = enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled');
   const activeWaitlists = waitlists.filter((item) => item.status === 'waiting' || item.status === 'notified');
 
-  return <div className="portal-container">
-    <PageHeader eyebrow="Hội viên" title="Lịch học & đặt chỗ" />
-    <p className="row-card__meta">Lịch tuần này (Thứ 2–Chủ nhật)</p>
-    <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
-      {['ALL', ...disciplines].map((value) => <button key={value} type="button"
-        className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
-        aria-pressed={discipline === value} onClick={() => setDiscipline(value)}>
-        {value === 'ALL' ? 'Tất cả bộ môn' : value}
-      </button>)}
-    </div>
-    <div style={{ margin: '16px 0 24px' }}>
-      <label htmlFor="member-classes-day" className="meta-label" style={{ marginRight: 12 }}>Thứ trong tuần</label>
-      <select id="member-classes-day" value={day} onChange={(event) => setDay(event.target.value)}>
-        {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-      </select>
-    </div>
-    <div className="portal-tabs" role="tablist" aria-label="Lịch học">
-      <button type="button" role="tab" aria-selected={tab === 'schedule'} className={`portal-tab ${tab === 'schedule' ? 'active' : ''}`}
-        onClick={() => setTab('schedule')}>Lịch lớp học</button>
-      <button type="button" role="tab" aria-selected={tab === 'my'} className={`portal-tab ${tab === 'my' ? 'active' : ''}`}
-        onClick={() => setTab('my')}>Lịch học của tôi</button>
-    </div>
+  return (
+    <div className="portal-container">
+      <PageHeader
+        eyebrow="Hội viên"
+        title="Lịch học & đặt chỗ"
+        subtitle="Đặt lịch tập cùng Huấn luyện viên, quản lý chỗ ngồi và danh sách chờ tự động theo thời gian thực."
+      />
 
-    {tab === 'schedule' ? loading ? <div className="portal-card portal-empty" role="status">Đang tải lịch học...</div> : error ?
-      <div className="portal-card portal-empty" role="alert"><h3>Không tải được lịch học</h3><p>{error}</p>
-        <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>Thử lại</button>
-      </div> : <div className="stack">
-        {sessions.length === 0 ? <div className="portal-card portal-empty"><h3>Chưa có lịch học</h3><p>Vui lòng quay lại sau.</p></div> :
-          visible.length === 0 ? <div className="portal-card portal-empty"><h3>Không có buổi học phù hợp</h3><p>Hãy thử bộ lọc khác.</p></div> :
-          visible.map((item) => {
-            const [year, month, date] = item.sessionDate.split('-');
-            const now = new Date();
-            const past = item.sessionDate < localToday() ||
-              (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= now.toTimeString().slice(0, 5));
-            const unavailable = past || item.status !== 'scheduled';
-            return <div key={item.id} className="portal-card portal-card--list">
-              <div><div className="row-card__meta"><span className="badge badge-info">{item.disciplineName}</span> · {date}/{month}/{year}</div>
-                <h3 className="row-card__title">{item.className}</h3>
-                <div className="row-card__meta">{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · {item.roomName} · HLV {item.coachName}</div>
-                <div className="row-card__meta">Trạng thái: {item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}><div className="meta-label">SỨC CHỨA · SỐ ĐÃ ĐĂNG KÝ*</div>
-                <strong>{item.bookedCount} / {item.capacity}</strong><div style={{ marginTop: 10 }}>
-                  <button type="button" className="btn-secondary btn-sm" disabled title="Đang chờ backend lưu đăng ký theo buổi học">
-                    {unavailable ? 'Không thể đặt' : item.bookedCount < item.capacity ? 'Đặt chỗ ngay' : 'Tham gia hàng chờ'}
-                  </button>
-                </div></div>
-            </div>;
-          })}
-        <p className="row-card__meta">* Backend hiện tính số đã đăng ký theo lớp, chưa xác nhận riêng từng buổi. Đặt chỗ và hàng chờ đang chờ đồng bộ backend theo buổi học.</p>
-        <p className="row-card__meta">Chưa thể kiểm tra gói tập trước thao tác. <Link to="/member/packages">Xem gói tập</Link></p>
-      </div> : <div className="stack">
-        <div className="portal-card portal-empty"><h3>Lịch đã đặt chưa khả dụng</h3>
-          <p>Backend chưa cung cấp danh sách đăng ký và buổi học tương ứng. Chưa thể hiển thị hoặc hủy đặt chỗ chính xác.</p></div>
-        {waitlistsLoading ? <div className="portal-card portal-empty" role="status">Đang tải hàng chờ...</div> :
-          waitlistsError ? <div className="portal-card portal-empty" role="alert">
-            <h3>Không tải được hàng chờ</h3><p>{waitlistsError}</p>
-            <button type="button" className="btn-secondary btn-sm" onClick={() => setWaitlistsRetry((value) => value + 1)}>Thử lại hàng chờ</button>
-          </div> : null}
-        {!waitlistsLoading && !waitlistsError && activeWaitlists.length > 0 && <h3 className="row-card__title">Hàng chờ của tôi</h3>}
-        {!waitlistsLoading && !waitlistsError && activeWaitlists.map((item) => <div key={item.id} className="portal-card portal-card--list">
-          <div><h3 className="row-card__title">{item.className}</h3>
-            <div className="row-card__meta">{item.status === 'waiting' ? 'Đang chờ' : 'Đã được thông báo'} · Đăng ký chờ: {item.requestedAt.replace('T', ' ').slice(0, 16)}</div>
-            <div className="row-card__meta">Backend chưa xác định buổi học và vị trí hàng chờ.</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+        <p className="row-card__meta" style={{ margin: 0 }}>
+          Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> (Thứ 2–Chủ nhật)
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
+            onClick={() => setWeekOffset(0)}
+          >
+            Tuần này
+          </button>
+          <button
+            type="button"
+            className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
+            onClick={() => setWeekOffset(1)}
+          >
+            Tuần kế tiếp
+          </button>
+        </div>
+      </div>
+
+      <div className="filter-chips" role="group" aria-label="Lọc theo bộ môn">
+        {['ALL', ...disciplines].map((value) => (
+          <button
+            key={value}
+            type="button"
+            className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
+            aria-pressed={discipline === value}
+            onClick={() => setDiscipline(value)}
+          >
+            {value === 'ALL' ? 'Tất cả bộ môn' : value}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ margin: '16px 0 24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div>
+          <label htmlFor="member-classes-day" className="meta-label" style={{ marginRight: 12 }}>Thứ trong tuần</label>
+          <select id="member-classes-day" value={day} onChange={(event) => setDay(event.target.value)}>
+            {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </div>
+        <p className="row-card__meta" style={{ margin: 0 }}>
+          Cần gói tập đang hoạt động để đặt chỗ. <Link to="/member/packages">Xem gói tập</Link>
+        </p>
+      </div>
+
+      {notice && (
+        <div className="portal-card" role="status" style={{ marginBottom: 16, borderColor: 'rgba(46, 107, 79, 0.35)', background: 'rgba(46, 107, 79, 0.06)' }}>
+          <strong style={{ color: '#2e6b4f' }}>{notice}</strong>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>
+          <strong style={{ color: '#9e2a2b' }}>{actionError}</strong>
+          <div style={{ marginTop: 8 }}>
+            <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+              Kiểm tra gói tập của tôi
+            </Link>
           </div>
-        </div>)}
-      </div>}
-  </div>;
+        </div>
+      )}
+
+      <div className="portal-tabs" role="tablist" aria-label="Lịch học">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'schedule'}
+          className={`portal-tab ${tab === 'schedule' ? 'active' : ''}`}
+          onClick={() => setTab('schedule')}
+        >
+          Lịch lớp học
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'my'}
+          className={`portal-tab ${tab === 'my' ? 'active' : ''}`}
+          onClick={() => setTab('my')}
+        >
+          Lịch học của tôi {(activeEnrollments.length + activeWaitlists.length) > 0 ? `(${activeEnrollments.length + activeWaitlists.length})` : ''}
+        </button>
+      </div>
+
+      {tab === 'schedule' ? (
+        loading ? (
+          <div className="stack" role="status" aria-busy="true">
+            <span className="sr-only">Đang tải lịch học...</span>
+            {[1, 2, 3].map((idx) => (
+              <div key={idx} className="portal-card portal-card--list" aria-hidden="true">
+                <div style={{ flex: 1 }}>
+                  <div className="portal-skeleton-line" style={{ width: '32%', height: 14, marginBottom: 10 }} />
+                  <div className="portal-skeleton-line" style={{ width: '55%', height: 22, marginBottom: 10 }} />
+                  <div className="portal-skeleton-line" style={{ width: '68%', height: 14 }} />
+                </div>
+                <div style={{ width: 150 }}>
+                  <div className="portal-skeleton-line" style={{ width: '100%', height: 16, marginBottom: 10 }} />
+                  <div className="portal-skeleton-line" style={{ width: '100%', height: 34 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="portal-card portal-empty" role="alert">
+            <h3>Không tải được lịch học</h3>
+            <p>{error}</p>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>
+              Thử lại
+            </button>
+          </div>
+        ) : (
+          <div className="stack">
+            {sessions.length === 0 ? (
+              <div className="portal-card portal-empty">
+                <h3>Chưa có lịch học</h3>
+                <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần kế tiếp.</p>
+                {weekOffset === 0 && (
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setWeekOffset(1)}>
+                    Xem lịch tuần kế tiếp
+                  </button>
+                )}
+              </div>
+            ) : visible.length === 0 ? (
+              <div className="portal-card portal-empty">
+                <h3>Không có buổi học phù hợp</h3>
+                <p>Hãy thử bộ lọc khác.</p>
+              </div>
+            ) : (
+              visible.map((item) => {
+                const [year, month, date] = item.sessionDate.split('-');
+                const now = new Date();
+                const past =
+                  item.sessionDate < localToday() ||
+                  (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= now.toTimeString().slice(0, 5));
+                const unavailable = past || item.status !== 'scheduled';
+                const myEnrollment = activeEnrollments.find(
+                  (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
+                );
+                const myWaitlist = activeWaitlists.find((w) => w.classId === item.classId);
+                const isBusy = busyKey === `session-${item.id}` ||
+                  (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false) ||
+                  (myWaitlist ? busyKey === `waitlist-${myWaitlist.id}` : false);
+
+                return (
+                  <div key={item.id} className="portal-card portal-card--list">
+                    <div>
+                      <div className="row-card__meta">
+                        <span className="badge badge-info">{item.disciplineName}</span> · {date}/{month}/{year}
+                        {myEnrollment && (
+                          <span className="badge badge-success" style={{ marginLeft: 8 }}>Đã đặt chỗ</span>
+                        )}
+                        {!myEnrollment && myWaitlist && (
+                          <span className="badge badge-warning" style={{ marginLeft: 8 }}>Đang chờ chỗ</span>
+                        )}
+                      </div>
+                      <h3 className="row-card__title">{item.className}</h3>
+                      <div className="row-card__meta">
+                        {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · {item.roomName} · {item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}
+                      </div>
+                      <div className="row-card__meta">
+                        Trạng thái: {past ? 'Đã qua giờ mở lớp' : item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="meta-label">SĨ SỐ HIỆN TẠI</div>
+                      <strong>{item.bookedCount} / {item.capacity} học viên</strong>
+                      <div style={{ marginTop: 10 }}>
+                        {myEnrollment ? (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isBusy || past}
+                            onClick={() => void handleCancelEnrollment(myEnrollment.id, item.className)}
+                          >
+                            {isBusy ? 'Đang xử lý...' : 'Hủy đặt chỗ'}
+                          </button>
+                        ) : myWaitlist ? (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isBusy}
+                            onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
+                          >
+                            {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
+                          </button>
+                        ) : unavailable ? (
+                          <button type="button" className="btn-secondary btn-sm" disabled>
+                            Không thể đặt
+                          </button>
+                        ) : item.bookedCount < item.capacity ? (
+                          <button
+                            type="button"
+                            className="btn-primary btn-sm"
+                            disabled={isBusy}
+                            onClick={() => void handleEnroll(item)}
+                          >
+                            {isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isBusy}
+                            onClick={() => void handleJoinWaitlist(item)}
+                          >
+                            {isBusy ? 'Đang đăng ký...' : 'Tham gia hàng chờ'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )
+      ) : (
+        <div className="stack">
+          {waitlistsLoading ? (
+            <div className="stack" role="status" aria-busy="true">
+              <span className="sr-only">Đang tải hàng chờ...</span>
+              {[1, 2].map((idx) => (
+                <div key={idx} className="portal-card portal-card--list" aria-hidden="true">
+                  <div style={{ flex: 1 }}>
+                    <div className="portal-skeleton-line" style={{ width: '48%', height: 20, marginBottom: 10 }} />
+                    <div className="portal-skeleton-line" style={{ width: '65%', height: 14 }} />
+                  </div>
+                  <div className="portal-skeleton-line" style={{ width: 120, height: 34 }} />
+                </div>
+              ))}
+            </div>
+          ) : waitlistsError ? (
+            <div className="portal-card portal-empty" role="alert">
+              <h3>Không tải được hàng chờ</h3>
+              <p>{waitlistsError}</p>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => setWaitlistsRetry((value) => value + 1)}
+              >
+                Thử lại hàng chờ
+              </button>
+            </div>
+          ) : activeEnrollments.length === 0 && activeWaitlists.length === 0 ? (
+            <div className="portal-card portal-empty">
+              <h3>Chưa có lịch học đã đặt</h3>
+              <p>Bạn chưa đặt chỗ buổi học nào hoặc chưa tham gia hàng chờ. Hãy chọn buổi học phù hợp tại tab Lịch lớp học.</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setTab('schedule')}>
+                Xem lịch lớp học
+              </button>
+            </div>
+          ) : (
+            <>
+              {activeEnrollments.length > 0 && (
+                <>
+                  <h3 className="row-card__title">Buổi học đã đặt chỗ ({activeEnrollments.length})</h3>
+                  {activeEnrollments.map((item) => (
+                    <div key={item.id} className="portal-card portal-card--list">
+                      <div>
+                        <div className="row-card__meta">
+                          <span className="badge badge-success">Đã xác nhận chỗ</span>
+                          {item.sessionDate ? ` · Ngày học: ${formatShortDate(item.sessionDate)}` : ''}
+                        </div>
+                        <h3 className="row-card__title">{item.className}</h3>
+                        <div className="row-card__meta">
+                          {item.startTime && item.endTime
+                            ? `Khung giờ: ${item.startTime.slice(0, 5)}–${item.endTime.slice(0, 5)} · `
+                            : ''}
+                          Đăng ký lúc: {item.enrolledAt.replace('T', ' ').slice(0, 16)}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          disabled={busyKey === `enroll-${item.id}`}
+                          onClick={() => void handleCancelEnrollment(item.id, item.className)}
+                        >
+                          {busyKey === `enroll-${item.id}` ? 'Đang hủy...' : 'Hủy đặt chỗ'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {activeWaitlists.length > 0 && (
+                <>
+                  <h3 className="row-card__title">Hàng chờ của tôi ({activeWaitlists.length})</h3>
+                  {activeWaitlists.map((item) => (
+                    <div key={item.id} className="portal-card portal-card--list">
+                      <div>
+                        <div className="row-card__meta">
+                          <span className="badge badge-warning">
+                            {item.status === 'waiting' ? 'Đang chờ trống chỗ' : 'Đã được thông báo'}
+                          </span>
+                        </div>
+                        <h3 className="row-card__title">{item.className}</h3>
+                        <div className="row-card__meta">
+                          Đăng ký chờ lúc: {item.requestedAt.replace('T', ' ').slice(0, 16)} · Tự động đôn lên khi có học viên hủy chỗ
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          disabled={busyKey === `waitlist-${item.id}`}
+                          onClick={() => void handleLeaveWaitlist(item.id, item.className)}
+                        >
+                          {busyKey === `waitlist-${item.id}` ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

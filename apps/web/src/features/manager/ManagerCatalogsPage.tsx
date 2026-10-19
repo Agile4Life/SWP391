@@ -312,10 +312,11 @@ export function ManagerCatalogsPage() {
       )}
 
       {loading ? (
-        <div className="portal-card">
-          <div className="portal-state">
-            <div className="spinner" />
-            <p>Đang tải danh mục vận hành...</p>
+        <div className="portal-card" aria-busy="true">
+          <div style={{ display: 'grid', gap: 12 }}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="portal-skeleton" style={{ height: 52, borderRadius: 8 }} />
+            ))}
           </div>
         </div>
       ) : rowCount === 0 && !error ? (

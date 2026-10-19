@@ -43,10 +43,14 @@ const defaultFormData = (): ClassFormData => ({
 export function StaffClassesPage() {
   const currentUser = getCurrentUser();
 
-  // BR-01: Chỉ CENTER_MANAGER và Staff được cấp quyền thấy màn hình
+  // BR-01: Chỉ CENTER_MANAGER, STAFF và COACH được cấp quyền thấy màn hình
   const hasAccess = useMemo(() => {
     if (!currentUser) return false;
-    return currentUser.role === 'MANAGER' || currentUser.role === 'STAFF';
+    return (
+      currentUser.role === 'MANAGER' ||
+      currentUser.role === 'STAFF' ||
+      currentUser.role === 'COACH'
+    );
   }, [currentUser]);
 
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -62,6 +66,8 @@ export function StaffClassesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ClassFormData>(defaultFormData());
   const [modalError, setModalError] = useState<string | null>(null);
+  const [pendingClassId, setPendingClassId] = useState<number | null>(null);
+  const [pendingClassSignature, setPendingClassSignature] = useState<string | null>(null);
 
   // Tải dữ liệu các danh mục phụ trợ (Phòng available, HLV active, Bộ môn)
   const loadCatalogs = useCallback(async () => {
@@ -131,6 +137,8 @@ export function StaffClassesPage() {
 
   const handleOpenModal = () => {
     setModalError(null);
+    setPendingClassId(null);
+    setPendingClassSignature(null);
     // Đặt mặc định nếu chưa chọn
     setFormData((prev) => ({
       ...prev,
@@ -145,6 +153,8 @@ export function StaffClassesPage() {
   const handleCloseModal = () => {
     if (isSubmitting) return;
     setModalError(null);
+    setPendingClassId(null);
+    setPendingClassSignature(null);
     setShowModal(false);
   };
 
@@ -209,7 +219,7 @@ export function StaffClassesPage() {
 
     setIsSubmitting(true);
     try {
-      await classesApi.createClass({
+      const currentClassSignature = JSON.stringify({
         name: formData.name.trim(),
         disciplineId: Number(formData.disciplineId),
         coachId: Number(formData.coachId),
@@ -217,15 +227,46 @@ export function StaffClassesPage() {
         capacity: capacityNum,
         level: formData.level,
         description: formData.description.trim() || undefined,
-        sessionDate: formData.sessionDate,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
       });
+
+      let targetClassId =
+        pendingClassId && pendingClassSignature === currentClassSignature ? pendingClassId : null;
+
+      if (!targetClassId) {
+        const createdClass = await classesApi.createClass({
+          name: formData.name.trim(),
+          disciplineId: Number(formData.disciplineId),
+          coachId: Number(formData.coachId),
+          roomId: Number(formData.roomId),
+          capacity: capacityNum,
+          level: formData.level,
+          description: formData.description.trim() || undefined,
+          sessionDate: formData.sessionDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        });
+        targetClassId = createdClass?.id ?? null;
+        if (targetClassId) {
+          setPendingClassId(targetClassId);
+          setPendingClassSignature(currentClassSignature);
+        }
+      }
+
+      if (targetClassId && formData.sessionDate && formData.startTime && formData.endTime) {
+        await classesApi.createSession({
+          classId: targetClassId,
+          sessionDate: formData.sessionDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+        });
+      }
 
       toast('Đã tạo lớp học và xếp lịch thành công!', 'success');
       setShowModal(false);
       setFormData(defaultFormData());
       setModalError(null);
+      setPendingClassId(null);
+      setPendingClassSignature(null);
       await loadData();
     } catch (err: unknown) {
       // BR-04: Bắt lỗi trùng lịch phòng/HLV (P3, error.scheduling.session_conflict)
@@ -409,8 +450,8 @@ export function StaffClassesPage() {
                       <strong>{cls.capacity} học viên</strong>
                     </td>
                     <td>
-                      <span className={`badge ${cls.status === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                        {cls.status}
+                      <span className={`badge ${cls.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
+                        {cls.status?.toUpperCase()}
                       </span>
                     </td>
                     <td>

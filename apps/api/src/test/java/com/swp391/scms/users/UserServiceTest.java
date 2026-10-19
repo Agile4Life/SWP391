@@ -29,6 +29,7 @@ class UserServiceTest {
     @Mock RoleRepository roleRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock UserMapper userMapper;
+    @Mock ReceptionistRepository receptionistRepository;
     @InjectMocks UserService service;
 
     @Test
@@ -84,5 +85,33 @@ class UserServiceTest {
         when(userRepository.findByIdAndDeletedAtIsNull(9L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getUserById(9L));
+    }
+
+    @Test
+    void updateReceptionistShiftSavesShiftForReceptionist() {
+        User user = new User();
+        user.setId(5L);
+        com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
+        role.setCode("RECEPTIONIST");
+        user.setRole(role);
+        when(userRepository.findByIdAndDeletedAtIsNull(5L)).thenReturn(Optional.of(user));
+        when(receptionistRepository.findById(5L)).thenReturn(Optional.empty());
+
+        service.updateReceptionistShift(5L, new com.swp391.scms.users.dto.ReceptionistProfileUpdateDto("Morning"));
+
+        verify(receptionistRepository).save(any());
+    }
+
+    @Test
+    void updateReceptionistShiftRejectsNonReceptionistRole() {
+        User user = new User();
+        user.setId(5L);
+        com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
+        role.setCode("MEMBER");
+        user.setRole(role);
+        when(userRepository.findByIdAndDeletedAtIsNull(5L)).thenReturn(Optional.of(user));
+
+        assertThrows(BadRequestException.class, () ->
+                service.updateReceptionistShift(5L, new com.swp391.scms.users.dto.ReceptionistProfileUpdateDto("Morning")));
     }
 }

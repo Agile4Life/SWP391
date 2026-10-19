@@ -62,6 +62,31 @@ class GoogleAuthServiceTest {
     }
 
     @Test
+    void rejectsReplacingExistingGoogleIdentity() {
+        var existing = new User();
+        existing.setGoogleSub("original-sub");
+        when(googleTokenVerifierPort.verify("token")).thenReturn(
+                new GoogleUserInfo("different-sub", "member@gmail.com", true, "Member", null));
+        when(userRepository.findByEmailIgnoreCase("member@gmail.com")).thenReturn(Optional.of(existing));
+        assertThrows(UnauthorizedException.class, () -> authService.loginWithGoogle(new GoogleLoginRequest("token")));
+        assertEquals("original-sub", existing.getGoogleSub());
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void requiresAdditionalVerificationToLinkThirdPartyEmail() {
+        var existing = new User();
+        when(googleTokenVerifierPort.verify("token")).thenReturn(
+                new GoogleUserInfo("new-sub", "member@example.com", true, "Member", null));
+        when(userRepository.findByEmailIgnoreCase("member@example.com")).thenReturn(Optional.of(existing));
+        assertThrows(UnauthorizedException.class, () -> authService.loginWithGoogle(new GoogleLoginRequest("token")));
+        assertNull(existing.getGoogleSub());
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
     @DisplayName("Case 1: Token hợp lệ - Người dùng mới -> Tự tạo tài khoản MEMBER active và cấp JWT")
     void testGoogleLogin_ValidToken_NewUser() {
         GoogleUserInfo googleUser = new GoogleUserInfo(

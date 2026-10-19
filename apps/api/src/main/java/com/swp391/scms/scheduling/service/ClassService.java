@@ -120,6 +120,14 @@ public class ClassService {
         GymClass gymClass = gymClasses.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
 
+        if (gymClass.getStatus() != null && !CLASS_ACTIVE.equalsIgnoreCase(gymClass.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_CLASS_INACTIVE",
+                    "error.scheduling.class_inactive",
+                    null,
+                    "Class is currently inactive");
+        }
+
         if (!request.endTime().isAfter(request.startTime())) {
             throw new BadRequestException(
                     "SCHEDULING_INVALID_TIME_RANGE",

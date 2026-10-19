@@ -6,6 +6,8 @@ Runner mặc định dùng Supabase PostgreSQL; cấu hình theo [SUPABASE_SETUP
 
 Runner chỉ chấp nhận profile `supabase`; không chạy database thay thế trên máy cá nhân. Kiểm tra cấu hình bằng `powershell -ExecutionPolicy Bypass -File scripts/test-database-config.ps1` từ root.
 
+Runner chờ API báo `UP` tại `/api/v1/health` trước khi khởi chạy web, rồi kiểm tra web ở cổng 5173 trước khi báo hoàn tất và mở trình duyệt. Dịch vụ SÖL đang hoạt động được dùng lại; web không tự chuyển sang cổng khác nếu 5173 đang bị chiếm. Nếu dịch vụ chưa sẵn sàng sau 120 giây, runner báo lỗi kèm vị trí log.
+
 ---
 
 ## Danh Mục Script

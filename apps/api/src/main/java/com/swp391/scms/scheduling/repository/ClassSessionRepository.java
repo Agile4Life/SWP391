@@ -15,8 +15,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findByGymClassIdOrderBySessionDateAscStartTimeAsc(Long classId);
 
     /**
-     * SCRUM-72 BR-06: schedule lookup with optional filters by date range, discipline and coach.
-     * All filters are optional (null means "no filter").
+     * Fetch all sessions with class, discipline, coach, and room details ordered by date and time.
      */
     @Query("""
             select s from ClassSession s
@@ -24,16 +23,29 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             join fetch c.discipline d
             join fetch c.coach co
             join fetch c.room r
-            where (:fromDate is null or s.sessionDate >= :fromDate)
-              and (:toDate is null or s.sessionDate <= :toDate)
-              and (:disciplineId is null or d.id = :disciplineId)
-              and (:coachId is null or co.userId = :coachId)
             order by s.sessionDate asc, s.startTime asc
             """)
-    List<ClassSession> searchSessions(@Param("fromDate") LocalDate fromDate,
-                                      @Param("toDate") LocalDate toDate,
-                                      @Param("disciplineId") Long disciplineId,
-                                      @Param("coachId") Long coachId);
+    List<ClassSession> findAllWithDetails();
+
+    /**
+     * SCRUM-72 BR-06: schedule lookup with optional filters by date range, discipline and coach.
+     * Avoids PostgreSQL PSQLException ("could not determine data type of parameter $1") on (? is null).
+     */
+    default List<ClassSession> searchSessions(LocalDate fromDate,
+                                              LocalDate toDate,
+                                              Long disciplineId,
+                                              Long coachId) {
+        return findAllWithDetails().stream()
+                .filter(s -> fromDate == null || (s.getSessionDate() != null && !s.getSessionDate().isBefore(fromDate)))
+                .filter(s -> toDate == null || (s.getSessionDate() != null && !s.getSessionDate().isAfter(toDate)))
+                .filter(s -> disciplineId == null || (s.getGymClass() != null
+                        && s.getGymClass().getDiscipline() != null
+                        && disciplineId.equals(s.getGymClass().getDiscipline().getId())))
+                .filter(s -> coachId == null || (s.getGymClass() != null
+                        && s.getGymClass().getCoach() != null
+                        && coachId.equals(s.getGymClass().getCoach().getUserId())))
+                .toList();
+    }
 
     long countByGymClassIdAndStatus(Long classId, String status);
 }

@@ -53,7 +53,7 @@ function collect(children: ReactNode, out: Opt[] = []): Opt[] {
     if (el.type === Fragment) collect(el.props.children, out);
     else if (el.type === 'option') {
       const label = toText(el.props.children);
-      out.push({ value: el.props.value ?? label, label, disabled: !!el.props.disabled });
+      out.push({ value: el.props.value != null ? String(el.props.value) : label, label, disabled: !!el.props.disabled });
     }
   });
   return out;

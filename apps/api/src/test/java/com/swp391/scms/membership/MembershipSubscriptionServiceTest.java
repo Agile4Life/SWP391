@@ -356,4 +356,51 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.qrCode()).isNotNull().isNotBlank();
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(30));
     }
+
+    @Test
+    void listPending_excludesSoftDeletedMembers() {
+        com.swp391.scms.users.entity.User activeUser = new com.swp391.scms.users.entity.User();
+        activeUser.setId(10L);
+        activeUser.setFullName("Active Member");
+        activeUser.setDeletedAt(null);
+
+        Member activeMember = new Member();
+        activeMember.setUserId(10L);
+        activeMember.setUser(activeUser);
+
+        com.swp391.scms.users.entity.User deletedUser = new com.swp391.scms.users.entity.User();
+        deletedUser.setId(11L);
+        deletedUser.setFullName("Deleted Member");
+        deletedUser.setDeletedAt(java.time.LocalDateTime.now(clock));
+
+        Member deletedMember = new Member();
+        deletedMember.setUserId(11L);
+        deletedMember.setUser(deletedUser);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+        pack.setDurationDays(30);
+
+        MembershipSubscription activeSub = new MembershipSubscription();
+        activeSub.setId(201L);
+        activeSub.setMember(activeMember);
+        activeSub.setMembershipPackage(pack);
+        activeSub.setStatus("pending_payment");
+
+        MembershipSubscription deletedSub = new MembershipSubscription();
+        deletedSub.setId(202L);
+        deletedSub.setMember(deletedMember);
+        deletedSub.setMembershipPackage(pack);
+        deletedSub.setStatus("pending_payment");
+
+        when(subscriptions.findByStatusOrderByCreatedAtDesc("pending_payment"))
+                .thenReturn(List.of(activeSub, deletedSub));
+
+        var result = service.listPending();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(201L);
+        assertThat(result.get(0).memberName()).isEqualTo("Active Member");
+    }
 }

@@ -93,6 +93,13 @@ public class EnrollmentService {
         Long classId = session.getGymClass().getId();
         GymClass gymClass = gymClasses.findByIdForUpdate(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+        if (gymClass.getStatus() != null && !"active".equalsIgnoreCase(gymClass.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_CLASS_INACTIVE",
+                    "error.scheduling.class_inactive",
+                    null,
+                    "Class is currently inactive");
+        }
         SessionEligibility.ensureBookable(session, clock);
         ensureActiveMembership(member.getUserId());
 
@@ -123,11 +130,13 @@ public class EnrollmentService {
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
 
-        waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), WAITING)
-                .ifPresent(waiting -> {
-                    waiting.setStatus("expired");
-                    waitlists.save(waiting);
-                });
+        for (String wlStatus : List.of(WAITING, "notified")) {
+            waitlists.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), wlStatus)
+                    .ifPresent(waiting -> {
+                        waiting.setStatus("expired");
+                        waitlists.save(waiting);
+                    });
+        }
 
         notifications.send(member.getUserId(),
                 msg("notifications.booking.enrolled.title"),
@@ -169,7 +178,7 @@ public class EnrollmentService {
 
         enrollment.setStatus(CANCELLED);
         enrollment.setCancelledAt(LocalDateTime.now(clock));
-        enrollment.setCancelReason("Cancelled by " + principal.role());
+        enrollment.setCancelReason(msg("scheduling.enrollment.cancelled_by_role", principal.role()));
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
 
@@ -180,7 +189,25 @@ public class EnrollmentService {
                 "class_enrollment",
                 saved.getId());
 
-        return toDto(saved, null);
+        if (enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
+            List<com.swp391.scms.scheduling.entity.ClassWaitlist> waitingList =
+                    waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(enrollment.getGymClass().getId(), WAITING);
+            if (waitingList != null && !waitingList.isEmpty()) {
+                com.swp391.scms.scheduling.entity.ClassWaitlist nextWaiting = waitingList.get(0);
+                nextWaiting.setStatus("notified");
+                waitlists.save(nextWaiting);
+                if (nextWaiting.getMember() != null && nextWaiting.getMember().getUserId() != null) {
+                    notifications.send(nextWaiting.getMember().getUserId(),
+                            msg("notifications.waitlist.notified.title"),
+                            msg("notifications.waitlist.notified.body", enrollment.getGymClass().getName()),
+                            "schedule_change",
+                            "class_session",
+                            nextWaiting.getId());
+                }
+            }
+        }
+
+        return toDto(saved, resolveSessionForClass(enrollment.getGymClass()));
     }
 
     @Transactional(readOnly = true)
@@ -195,8 +222,24 @@ public class EnrollmentService {
         return enrollments.findByMemberUserId(principal.id()).stream()
                 .filter(enrollment -> normalizedStatus == null
                         || normalizedStatus.equalsIgnoreCase(enrollment.getStatus()))
-                .map(enrollment -> toDto(enrollment, null))
+                .map(enrollment -> toDto(enrollment, resolveSessionForClass(enrollment.getGymClass())))
                 .toList();
+    }
+
+    private ClassSession resolveSessionForClass(GymClass gymClass) {
+        if (gymClass == null || gymClass.getId() == null || sessions == null) {
+            return null;
+        }
+        List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(gymClass.getId());
+        if (classSessions == null || classSessions.isEmpty()) {
+            return null;
+        }
+        LocalDate today = LocalDate.now(clock);
+        return classSessions.stream()
+                .filter(s -> s.getSessionDate() != null && !s.getSessionDate().isBefore(today)
+                        && !"cancelled".equalsIgnoreCase(s.getStatus()))
+                .findFirst()
+                .orElse(classSessions.get(0));
     }
 
     /**

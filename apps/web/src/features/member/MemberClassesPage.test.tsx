@@ -4,10 +4,28 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassesPage } from './MemberClassesPage';
 
-const mocks = vi.hoisted(() => ({ sessions: vi.fn(), waitlists: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  sessions: vi.fn(),
+  waitlists: vi.fn(),
+  enrollments: vi.fn(),
+  enroll: vi.fn(),
+  cancelEnrollment: vi.fn(),
+  joinWaitlist: vi.fn(),
+  leaveWaitlist: vi.fn(),
+}));
+
 vi.mock('./memberClassesApi', async (importOriginal) => {
   const original = await importOriginal<typeof import('./memberClassesApi')>();
-  return { ...original, getSessions: mocks.sessions, getMyWaitlists: mocks.waitlists };
+  return {
+    ...original,
+    getSessions: mocks.sessions,
+    getMyWaitlists: mocks.waitlists,
+    getMyEnrollments: mocks.enrollments,
+    enroll: mocks.enroll,
+    cancelEnrollment: mocks.cancelEnrollment,
+    joinWaitlist: mocks.joinWaitlist,
+    leaveWaitlist: mocks.leaveWaitlist,
+  };
 });
 
 const session = {
@@ -24,13 +42,20 @@ describe('MemberClassesPage', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
-    mocks.sessions.mockReset(); mocks.waitlists.mockReset();
+    mocks.sessions.mockReset();
+    mocks.waitlists.mockReset();
+    mocks.enrollments.mockReset();
+    mocks.enroll.mockReset();
+    mocks.cancelEnrollment.mockReset();
+    mocks.joinWaitlist.mockReset();
+    mocks.leaveWaitlist.mockReset();
     mocks.waitlists.mockResolvedValue([]);
+    mocks.enrollments.mockResolvedValue([]);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemoryRouter><MemberClassesPage /></MemoryRouter>)); }
 
-  it('shows loading, then real sessions and a disabled full-class action', async () => {
+  it('shows loading, then real sessions and waitlist action when class is full', async () => {
     let resolve!: (value: typeof session[]) => void;
     mocks.sessions.mockReturnValue(new Promise((done) => { resolve = done; }));
     await render();
@@ -39,7 +64,7 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).toContain('Yoga Flow');
     expect(host.textContent).toContain('12 / 12');
     const button = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Tham gia hàng chờ'));
-    expect(button?.disabled).toBe(true);
+    expect(button?.disabled).toBe(false);
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
   });
 
@@ -77,7 +102,7 @@ describe('MemberClassesPage', () => {
     await render();
     expect(host.textContent).toContain('Yoga Flow');
     expect(host.textContent).not.toContain('Không tải được lịch học');
-    const tab = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Lịch học của tôi')!;
+    const tab = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!;
     await act(async () => tab.click());
     expect(host.textContent).toContain('Không tải được hàng chờ');
     const retry = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Thử lại hàng chờ')!;
@@ -87,13 +112,13 @@ describe('MemberClassesPage', () => {
     expect(mocks.waitlists).toHaveBeenCalledTimes(2);
   });
 
-  it('does not expose booking or cancellation without backend enrollment data', async () => {
+  it('disables booking for cancelled sessions and shows empty my-schedule when nothing booked', async () => {
     mocks.sessions.mockResolvedValue([{ ...session, status: 'cancelled' }]);
     await render();
     expect(host.textContent).toContain('Không thể đặt');
-    const tab = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Lịch học của tôi')!;
+    const tab = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!;
     await act(async () => tab.click());
-    expect(host.textContent).toContain('Lịch đã đặt chưa khả dụng');
+    expect(host.textContent).toContain('Chưa có lịch học đã đặt');
     expect(host.textContent).not.toContain('Hủy đặt chỗ');
   });
 

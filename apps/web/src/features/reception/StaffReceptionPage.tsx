@@ -1,17 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { toast } from '../../shared/ui/toast';
-import type { MembershipPackage } from '../manager/catalogApi';
 import {
   maskCitizenId,
   receptionApi,
   type MemberLookupResult,
-  type MembershipPackage,
   type PaymentMethod,
   type PaymentResponseDto,
+  type PendingSubscriptionItem,
 } from './receptionApi';
 
 const vnd = (n: number) => `${n.toLocaleString('vi-VN')} đ`;
@@ -31,23 +30,18 @@ export function StaffReceptionPage() {
   const [searchResults, setSearchResults] = useState<MemberLookupResult[]>([]);
   const [selectedMember, setSelectedMember] = useState<MemberLookupResult | null>(null);
 
-  const [packages, setPackages] = useState<MembershipPackage[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState(true);
-
-  // Danh sách gói tập đang hoạt động bán tại quầy POS
-  const [activePackages, setActivePackages] = useState<MembershipPackage[]>([]);
-  const [selectedPackageId, setSelectedPackageId] = useState<number | ''>('');
+  // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký)
+  const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
+  const [loadingPending, setLoadingPending] = useState(true);
+  const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
 
   // Form thanh toán
-  const [selectedPackageId, setSelectedPackageId] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('pos');
   const [paymentNotes, setPaymentNotes] = useState('Thanh toán gói tập tại quầy Lễ tân');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // Popup Hóa đơn điện tử sau khi thanh toán thành công (BR-04)
   const [completedPayment, setCompletedPayment] = useState<PaymentResponseDto | null>(null);
-<<<<<<< Updated upstream
-=======
   const [completedPackageName, setCompletedPackageName] = useState<string>('');
   const [completedMemberName, setCompletedMemberName] = useState<string>('');
 
@@ -56,11 +50,10 @@ export function StaffReceptionPage() {
     setLoadingPending(true);
     try {
       const items = await receptionApi.getPendingSubscriptions();
-      setPendingList(items ?? []);
-      if (items && items.length > 0) {
+      setPendingList(items);
+      if (items.length > 0) {
         const first = items[0];
         setSelectedPending((prev) => items.find((i) => i.id === prev?.id) ?? first);
-        setSelectedPackageId((prev) => (prev ? prev : first.packageId));
         setSelectedMember((prev) =>
           prev ?? {
             userId: first.memberId,
@@ -83,43 +76,13 @@ export function StaffReceptionPage() {
       setLoadingPending(false);
     }
   }, [hasAccess]);
->>>>>>> Stashed changes
 
-  // BR-02: Tải danh sách gói tập chỉ đang ACTIVE
   useEffect(() => {
-<<<<<<< Updated upstream
-    if (!hasAccess) return;
-    let active = true;
-    (async () => {
-      setLoadingPackages(true);
-      try {
-        const pkgs = await receptionApi.getActivePackages();
-        if (active) {
-          setPackages(pkgs);
-          if (pkgs.length > 0) {
-            setSelectedPackageId(pkgs[0].id);
-          }
-        }
-      } catch {
-        if (active) setPackages([]);
-      } finally {
-        if (active) setLoadingPackages(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [hasAccess]);
-=======
     void loadPendingSubscriptions();
-    if (hasAccess) {
-      receptionApi.getActivePackages().then(setActivePackages).catch(() => {});
-    }
-  }, [hasAccess, loadPendingSubscriptions]);
+  }, [loadPendingSubscriptions]);
 
   const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
-    setSelectedPackageId(item.packageId);
     setSelectedMember({
       userId: item.memberId,
       membershipCode: item.membershipCode || `MB-2026-${String(item.memberId).padStart(3, '0')}`,
@@ -132,7 +95,6 @@ export function StaffReceptionPage() {
       endDate: `${item.startDate} → ${item.endDate}`,
     });
   };
->>>>>>> Stashed changes
 
   // BR-01: Forbidden Guard khi vai trò không hợp lệ
   if (!hasAccess) {
@@ -158,18 +120,7 @@ export function StaffReceptionPage() {
     );
   }
 
-<<<<<<< Updated upstream
-  // Gói tập đang chọn
-  const selectedPackage = packages.find((p) => p.id === Number(selectedPackageId));
-  const currentPrice = selectedPackage ? selectedPackage.price : 0;
-=======
-  const selectedDirectPackage = activePackages.find((p) => p.id === Number(selectedPackageId)) ?? null;
-  const currentPrice = selectedPending
-    ? selectedPending.packagePrice
-    : selectedDirectPackage
-      ? selectedDirectPackage.price
-      : 0;
->>>>>>> Stashed changes
+  const currentPrice = selectedPending ? selectedPending.packagePrice : 0;
 
   // Xử lý tra cứu hội viên
   const handleSearch = async (e: React.FormEvent) => {
@@ -180,7 +131,7 @@ export function StaffReceptionPage() {
       return;
     }
     if (q.length < 2) {
-      toast('Từ khóa tìm kiếm phải có ít nhất 2 ký tự.', 'error');
+      toast('Từ khóa tìm kiếm phải ít nhất 2 ký tự.', 'error');
       return;
     }
 
@@ -190,63 +141,32 @@ export function StaffReceptionPage() {
       const results = await receptionApi.lookupMembers(q);
       setSearchResults(results);
       if (results.length > 0) {
-<<<<<<< Updated upstream
-        setSelectedMember(results[0]);
-        toast(`Đã tìm thấy ${results.length} kết quả phù hợp.`, 'success');
-      } else {
-        setSelectedMember(null);
-=======
         const member = results[0];
         setSelectedMember(member);
         const matchedPending = pendingList.find((p) => p.memberId === member.userId) ?? null;
         setSelectedPending(matchedPending);
-        setSelectedPackageId(matchedPending ? matchedPending.packageId : '');
         toast(`Đã tìm thấy ${results.length} kết quả phù hợp.`, 'success');
       } else {
         setSelectedMember(null);
         setSelectedPending(null);
-        setSelectedPackageId('');
->>>>>>> Stashed changes
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Tra cứu thất bại.';
       toast(msg, 'error');
       setSearchResults([]);
       setSelectedMember(null);
-<<<<<<< Updated upstream
-=======
       setSelectedPending(null);
-      setSelectedPackageId('');
->>>>>>> Stashed changes
     } finally {
       setIsSearching(false);
     }
   };
 
-<<<<<<< Updated upstream
-  // BR-03 & BR-04: Xử lý thanh toán
-=======
-  // BR-03 & BR-04: Xác nhận thanh toán cho yêu cầu chờ hoặc bán gói trực tiếp tại quầy
->>>>>>> Stashed changes
+  // BR-03 & BR-04: Xác nhận thanh toán cho yêu cầu gói tập đang chờ của hội viên
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedMember) {
-<<<<<<< Updated upstream
-      toast('Vui lòng tra cứu và chọn hội viên trước khi thu tiền.', 'error');
-      return;
-    }
-
-    if (!selectedPackageId || !selectedPackage) {
-      toast('Vui lòng chọn gói dịch vụ cần mua hoặc gia hạn.', 'error');
-=======
-      toast('Vui lòng tra cứu hoặc chọn một hội viên.', 'error');
-      return;
-    }
-
-    if (!selectedPending && !selectedPackageId) {
-      toast('Vui lòng chọn một gói tập để thanh toán.', 'error');
->>>>>>> Stashed changes
+    if (!selectedMember || !selectedPending) {
+      toast('Vui lòng chọn một yêu cầu đăng ký gói tập đang chờ thanh toán của hội viên.', 'error');
       return;
     }
 
@@ -260,37 +180,24 @@ export function StaffReceptionPage() {
 
     setIsSubmittingPayment(true);
     try {
-      const packageIdToPay = selectedPending ? selectedPending.packageId : Number(selectedPackageId);
-      const pkg = activePackages.find((p) => p.id === packageIdToPay);
-      const amountToPay = selectedPending ? selectedPending.packagePrice : (pkg?.price ?? currentPrice);
-      const packageName = selectedPending ? selectedPending.packageName : (pkg?.name ?? 'Gói tập');
-
       const result = await receptionApi.processPayment({
-        memberId: selectedMember.userId,
-<<<<<<< Updated upstream
-        packageId: selectedPackage.id,
-        amount: selectedPackage.price,
-=======
-        subscriptionId: selectedPending?.id,
-        packageId: packageIdToPay,
-        amount: amountToPay,
->>>>>>> Stashed changes
+        memberId: selectedPending.memberId,
+        subscriptionId: selectedPending.id,
+        packageId: selectedPending.packageId,
+        amount: selectedPending.packagePrice,
         method: paymentMethod,
         notes: paymentNotes.trim() || undefined,
       });
 
       // BR-04: Chỉ hiển thị hóa đơn khi Payment API trả thành công
-<<<<<<< Updated upstream
-=======
-      setCompletedPackageName(packageName);
-      setCompletedMemberName(selectedMember.fullName);
->>>>>>> Stashed changes
+      setCompletedPackageName(selectedPending.packageName);
+      setCompletedMemberName(selectedPending.memberName);
       setCompletedPayment(result);
       toast(`Đã xác nhận thu tiền thành công! Hóa đơn: ${result.invoiceNumber}`, 'success');
+      await loadPendingSubscriptions();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Giao dịch thanh toán thất bại.';
       toast(msg, 'error');
-      // Thất bại: không tạo hóa đơn
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -337,7 +244,7 @@ export function StaffReceptionPage() {
         {searchResults.length > 1 && (
           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ECE7E1' }}>
             <div style={{ fontSize: '0.86rem', color: '#7E7771', marginBottom: '8px' }}>
-              Tìm thấy {searchResults.length} hội viên. Chọn hội viên để thực hiện thanh toán:
+              Tìm thấy {searchResults.length} hội viên. Chọn hội viên để kiểm tra yêu cầu:
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {searchResults.map((m) => (
@@ -345,21 +252,144 @@ export function StaffReceptionPage() {
                   key={m.userId}
                   type="button"
                   className={`btn-secondary btn-sm ${selectedMember?.userId === m.userId ? 'btn-primary' : ''}`}
-<<<<<<< Updated upstream
-                  onClick={() => setSelectedMember(m)}
-=======
                   onClick={() => {
                     setSelectedMember(m);
-                    const matched = pendingList.find((p) => p.memberId === m.userId) ?? null;
-                    setSelectedPending(matched);
-                    setSelectedPackageId(matched ? matched.packageId : '');
+                    setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
                   }}
->>>>>>> Stashed changes
                 >
                   {m.fullName} ({m.membershipCode || m.phone})
                 </button>
               ))}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mục Yêu Cầu Đăng Ký / Gia Hạn Gói Tập Đang Chờ Thanh Toán (pending_payment) */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 className="portal-card-title">Yêu Cầu Gói Tập Đang Chờ Thanh Toán ({pendingList.length})</h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#7E7771' }}>
+              Danh sách các gói tập do Hội viên đã tự chọn đăng ký/gia hạn và đang chờ Lễ tân xác nhận thu tiền.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => void loadPendingSubscriptions()}
+            disabled={loadingPending}
+          >
+            {loadingPending ? 'Đang tải...' : 'Làm mới danh sách'}
+          </button>
+        </div>
+
+        {loadingPending ? (
+          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+            <span className="sr-only">Đang tải danh sách yêu cầu chờ thanh toán...</span>
+            {[1, 2].map((idx) => (
+              <div
+                key={idx}
+                aria-hidden="true"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '14px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #E5DFD7',
+                  backgroundColor: '#FFFFFF',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div className="portal-skeleton-line" style={{ width: '42%', height: 18, marginBottom: 8 }} />
+                  <div className="portal-skeleton-line" style={{ width: '64%', height: 14 }} />
+                </div>
+                <div style={{ width: 160 }}>
+                  <div className="portal-skeleton-line" style={{ width: '100%', height: 34 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : pendingList.length === 0 ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#7E7771', fontSize: '0.9rem' }}>
+            Hiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+            {pendingList.map((item) => {
+              const isSelected = selectedPending?.id === item.id;
+              return (
+                <div
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelectPendingItem(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelectPendingItem(item);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    padding: '14px 18px',
+                    borderRadius: '10px',
+                    border: isSelected ? '2px solid #996515' : '1px solid #E5DFD7',
+                    backgroundColor: isSelected ? '#FAF6F0' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          color: '#996515',
+                          fontSize: '0.92rem',
+                        }}
+                      >
+                        Yêu cầu #{item.id}
+                      </span>
+                      <strong>{item.memberName}</strong>
+                      <span style={{ color: '#7E7771', fontSize: '0.85rem' }}>
+                        ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: '#4A4541', marginTop: '4px' }}>
+                      Gói hội viên đã chọn: <strong>{item.packageName}</strong> ({item.durationDays} ngày • {item.startDate} → {item.endDate})
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1A1614' }}>
+                        {vnd(item.packagePrice)}
+                      </div>
+                      <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+                        CHỜ THANH TOÁN
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className={isSelected ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectPendingItem(item);
+                      }}
+                    >
+                      {isSelected ? 'Đang chọn xử lý' : 'Chọn xác nhận'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -370,8 +400,8 @@ export function StaffReceptionPage() {
           <div className="portal-card-header">
             <h2 className="portal-card-title">Thông Tin Hội Viên</h2>
             {selectedMember && (
-              <span className={`badge ${selectedMember.status === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                {selectedMember.status}
+              <span className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
+                {selectedPending ? 'CHỜ THANH TOÁN' : selectedMember.status?.toUpperCase()}
               </span>
             )}
           </div>
@@ -405,31 +435,27 @@ export function StaffReceptionPage() {
                 <div className="kv-row">
                   <span>Số CCCD (Bảo mật)</span>
                   <span style={{ fontFamily: 'monospace', color: '#4A4541' }}>
-                    {maskCitizenId(selectedMember.citizenId || (selectedMember.phone ? `079${selectedMember.phone.slice(-6)}123` : null))}
+                    {maskCitizenId(selectedMember.citizenId)}
                   </span>
                 </div>
 
                 <div className="kv-row">
-                  <span>Gói tập hiện tại</span>
-                  <span>{selectedMember.currentPackage || 'Chưa đăng ký gói nào'}</span>
+                  <span>Gói tập yêu cầu</span>
+                  <strong>
+                    {selectedPending
+                      ? `${selectedPending.packageName} (Yêu cầu #${selectedPending.id})`
+                      : selectedMember.currentPackage || 'Chưa có yêu cầu gói tập chờ thanh toán'}
+                  </strong>
                 </div>
 
                 <div className="kv-row">
-                  <span>Hạn sử dụng</span>
-                  <span style={{ color: selectedMember.status === 'ACTIVE' ? '#15803d' : '#b91c1c', fontWeight: 600 }}>
-                    {selectedMember.endDate || 'Hết hạn hoặc chưa kích hoạt'}
+                  <span>Thời hạn gói</span>
+                  <span style={{ color: '#996515', fontWeight: 600 }}>
+                    {selectedPending
+                      ? `${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} ngày)`
+                      : selectedMember.endDate || 'Chưa kích hoạt'}
                   </span>
                 </div>
-              </div>
-
-              <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
-                  onClick={() => toast(`Đã gửi thẻ QR điện tử về số ${selectedMember.phone || selectedMember.email}`, 'success')}
-                >
-                  Cấp Lại Thẻ QR
-                </button>
               </div>
             </div>
           ) : (
@@ -442,90 +468,42 @@ export function StaffReceptionPage() {
               <p style={{ color: '#7E7771', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
                   ? `Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`
-                  : 'Hãy nhập thông tin vào thanh tra cứu phía trên để tìm kiếm khách hàng.'}
+                  : 'Hãy ấn vào một Yêu cầu đang chờ ở danh sách trên hoặc tra cứu SĐT hội viên.'}
               </p>
             </div>
           )}
         </div>
 
-        {/* Panel thu ngân & Bán gói tập (BR-02, BR-03) */}
+        {/* Panel thu ngân & Xác nhận gói tập do Hội viên đã chọn */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Xử Lý Thu Phí &amp; Bán Gói Tập (POS)</h2>
+            <h2 className="portal-card-title">Xác Nhận Thanh Toán Gói Tập (POS)</h2>
           </div>
 
           <form onSubmit={handlePayment}>
-<<<<<<< Updated upstream
-            {/* BR-02: Dropdown chỉ liệt kê gói tập đang active */}
+            {/* Gói tập cố định theo lựa chọn của Hội viên — Staff không được tự chọn/đổi gói */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="pos-package">
-                Chọn Gói Dịch Vụ Mua / Gia Hạn * (Chỉ gói Active)
+                Gói Tập Hội Viên Đã Chọn (Cố định theo yêu cầu của Hội viên)
               </label>
-              {loadingPackages ? (
-                <div style={{ color: '#7E7771', fontSize: '0.88rem' }}>Đang nạp danh mục gói tập...</div>
-              ) : packages.length === 0 ? (
-                <div style={{ color: '#DC2626', fontSize: '0.88rem' }}>Hiện chưa có gói tập nào đang hoạt động (active).</div>
-=======
-            {/* Gói tập: Hiển thị gói đã chọn nếu có pending, hoặc cho phép chọn trực tiếp từ danh sách activePackages */}
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="pos-package">
-                {selectedPending ? 'Gói Tập Hội Viên Đã Chọn (Yêu cầu chờ)' : 'Chọn Gói Tập Bán Tại Quầy *'}
-              </label>
-              {selectedPending ? (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    id="pos-package"
-                    type="text"
-                    className="portal-input"
-                    value={`${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`}
-                    disabled
-                    readOnly
-                    style={{
-                      fontWeight: 600,
-                      color: '#1A1614',
-                      backgroundColor: '#FAF8F5',
-                      flex: 1,
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    onClick={() => {
-                      setSelectedPending(null);
-                      setSelectedPackageId('');
-                    }}
-                    title="Bỏ chọn yêu cầu này để chọn gói khác"
-                  >
-                    Đổi gói khác
-                  </button>
-                </div>
->>>>>>> Stashed changes
-              ) : (
-                <Select
-                  id="pos-package"
-                  className="portal-select"
-<<<<<<< Updated upstream
-                  value={String(selectedPackageId)}
-                  onChange={(e) => setSelectedPackageId(Number(e.target.value))}
-                  disabled={isSubmittingPayment}
-                >
-                  {packages.map((pkg) => (
-                    <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} ({pkg.durationDays} ngày — {vnd(pkg.price)})
-=======
-                  value={selectedPackageId}
-                  onChange={(e) => setSelectedPackageId(e.target.value ? Number(e.target.value) : '')}
-                  disabled={isSubmittingPayment}
-                >
-                  <option value="">-- Chọn gói tập bán trực tiếp cho hội viên --</option>
-                  {activePackages.map((pkg) => (
-                    <option key={pkg.id} value={pkg.id}>
-                      {pkg.name} ({pkg.durationDays} ngày) — {vnd(pkg.price)}
->>>>>>> Stashed changes
-                    </option>
-                  ))}
-                </Select>
-              )}
+              <input
+                id="pos-package"
+                type="text"
+                className="portal-input"
+                value={
+                  selectedPending
+                    ? `${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`
+                    : 'Chưa có yêu cầu gói tập chờ thanh toán'
+                }
+                disabled
+                readOnly
+                style={{
+                  fontWeight: 600,
+                  color: selectedPending ? '#1A1614' : '#7E7771',
+                  backgroundColor: '#FAF8F5',
+                  cursor: 'not-allowed',
+                }}
+              />
             </div>
 
             <div className="grid-2">
@@ -586,20 +564,12 @@ export function StaffReceptionPage() {
               />
             </div>
 
-<<<<<<< Updated upstream
-            {/* BR-03: Nút bị khóa khi đang xử lý để tránh thu trùng */}
-=======
-            {/* BR-03: Nút bật khi đã chọn hội viên VÀ có gói tập (từ yêu cầu chờ hoặc chọn trực tiếp) */}
->>>>>>> Stashed changes
+            {/* BR-03: Nút chỉ bật khi đã chọn yêu cầu chờ thanh toán của hội viên */}
             <button
               type="submit"
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
-<<<<<<< Updated upstream
-              disabled={isSubmittingPayment || !selectedMember || packages.length === 0}
-=======
-              disabled={isSubmittingPayment || !selectedMember || (!selectedPending && !selectedPackageId)}
->>>>>>> Stashed changes
+              disabled={isSubmittingPayment || !selectedPending}
             >
               {isSubmittingPayment ? (
                 <>
@@ -607,7 +577,7 @@ export function StaffReceptionPage() {
                   <span>Đang xử lý thu tiền...</span>
                 </>
               ) : (
-                'Xác Nhận Thu Tiền &amp; Xuất Hóa Đơn'
+                'Xác Nhận Thu Tiền & Xuất Hóa Đơn'
               )}
             </button>
           </form>
@@ -635,7 +605,7 @@ export function StaffReceptionPage() {
                 Thanh Toán Thành Công!
               </h3>
               <p style={{ margin: 0, color: '#15803D', fontSize: '0.9rem' }}>
-                Giao dịch đã được ghi nhận và cấp mã hóa đơn điện tử hợp lệ.
+                Giao dịch đã được ghi nhận, gói tập đã kích hoạt và cấp mã hóa đơn điện tử hợp lệ.
               </p>
             </div>
 
@@ -649,11 +619,11 @@ export function StaffReceptionPage() {
               </div>
               <div className="kv-row">
                 <span>Khách hàng</span>
-                <strong>{selectedMember?.fullName}</strong>
+                <strong>{completedMemberName || selectedMember?.fullName}</strong>
               </div>
               <div className="kv-row">
                 <span>Gói dịch vụ</span>
-                <strong>{selectedPackage?.name}</strong>
+                <strong>{completedPackageName}</strong>
               </div>
               <div className="kv-row">
                 <span>Phương thức</span>

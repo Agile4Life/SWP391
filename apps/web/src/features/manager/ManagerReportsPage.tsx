@@ -1,174 +1,423 @@
-import { CountUp } from '../../shared/ui/CountUp';
-import { useInView } from '../../hooks/useInView';
-import { toast } from '../../shared/ui/toast';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { toast } from '../../shared/ui/toast';
+import { reportsApi, type ReportSummary } from './reportsApi';
+
+const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} đ`;
+const paymentMethods: Record<string, string> = {
+  cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
+};
 
 export function ManagerReportsPage() {
-  const [revenueRef, revenueInView] = useInView<HTMLDivElement>(0.2);
+  const currentUser = getCurrentUser();
 
-  const auditLogs = [
-    { id: 1045, action: 'UPDATE_SUBSCRIPTION', actor: 'thinh.reception@sol-wellness.vn', target: 'MB-2026-089', ip: '192.168.1.15', time: '10:45:12' },
-    { id: 1044, action: 'CHECKIN_GRANTED', actor: 'system_turnstile_a1', target: 'MB-2026-089', ip: '10.0.1.20', time: '07:15:20' },
-    { id: 1043, action: 'CREATE_CLASS_SESSION', actor: 'admin.manager@sol-wellness.vn', target: 'CLS-102', ip: '192.168.1.2', time: '07:00:15' },
-    { id: 1042, action: 'PAYMENT_SUCCESS', actor: 'thinh.reception@sol-wellness.vn', target: 'INV-2026-00452', ip: '192.168.1.15', time: '25/09 16:30' },
-  ];
+  // BR-01: Chỉ CENTER_MANAGER được xem báo cáo doanh thu tài chính
+  const hasAccess = useMemo(() => {
+    if (!currentUser) return false;
+    return currentUser.role === 'MANAGER';
+  }, [currentUser]);
+
+  // Bộ lọc khoảng ngày mặc định: 30 ngày gần nhất
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const thirtyDaysAgoStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  }, []);
+
+  const [startDate, setStartDate] = useState(thirtyDaysAgoStr);
+  const [endDate, setEndDate] = useState(todayStr);
+
+  const [summary, setSummary] = useState<ReportSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
+
+  const fetchReports = useCallback(async (start: string, end: string) => {
+    if (start > end) {
+      toast('Ngày bắt đầu không được lớn hơn ngày kết thúc.', 'error');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await reportsApi.getSummary(start, end);
+      setSummary(data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể tải báo cáo doanh thu.';
+      setError(msg);
+      toast(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasAccess) return;
+    void fetchReports(thirtyDaysAgoStr, todayStr);
+  }, [hasAccess, fetchReports, thirtyDaysAgoStr, todayStr]);
+
+  const handleApplyFilter = (e: React.FormEvent) => {
+    e.preventDefault();
+    void fetchReports(startDate, endDate);
+  };
+
+  const handleQuickRange = (days: number) => {
+    const end = todayStr;
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const start = d.toISOString().slice(0, 10);
+    setStartDate(start);
+    setEndDate(end);
+    void fetchReports(start, end);
+  };
+
+  // 403 Forbidden Guard
+  if (!hasAccess) {
+    return (
+      <div className="portal-container" data-testid="reports-forbidden-guard">
+        <div className="portal-card">
+          <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
+              🚫
+            </div>
+            <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+              403 - Quyền truy cập bị từ chối
+            </h2>
+            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+              Chỉ Quản lý trung tâm (Center Manager) mới có quyền truy cập báo cáo tài chính &amp; doanh thu.
+            </p>
+            <a href="/portal" className="btn-secondary">
+              Về trang chủ Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Tìm giá trị max doanh thu trong chart để chuẩn hóa tỷ lệ cột
+  const dailyData = summary?.dailyRevenue || [];
+  const maxDailyRevenue = Math.max(...dailyData.map((d) => d.revenue), 1);
 
   return (
     <div className="portal-container">
       <PageHeader
-        eyebrow="Quản lý"
-        title="Báo cáo & thống kê"
+        eyebrow="Quản lý trung tâm"
+        title="Báo cáo Doanh thu & Thống kê"
         actions={
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => toast('Đang tạo và tải xuống bản báo cáo tài chính PDF...', 'success')}
-          >
-            Xuất báo cáo
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => toast('Tính năng xuất file Excel/PDF đang chuẩn bị triển khai.', 'success')}
+            >
+              Xuất Báo Cáo
+            </button>
+          </div>
         }
       />
 
-      {/* KPI Metrics with CountUp */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-label">TỔNG DOANH THU THÁNG 09</div>
-          <div className="metric-value">
-            <CountUp value={1845000000} format={(v) => Math.round(v).toLocaleString('vi-VN') + ' đ'} />
+      {/* Bộ lọc khoảng ngày (Interactive Filter) */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <form onSubmit={handleApplyFilter} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.88rem', color: '#7E7771', fontWeight: 600 }}>Từ ngày:</span>
+            <input
+              type="date"
+              className="portal-input"
+              style={{ width: '160px', padding: '8px 12px' }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
-          <div className="metric-trend">↑ +14.2% so với tháng trước</div>
-        </div>
 
-        <div className="metric-card">
-          <div className="metric-label">HỘI VIÊN MỚI TRONG THÁNG</div>
-          <div className="metric-value">
-            <CountUp value={128} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.88rem', color: '#7E7771', fontWeight: 600 }}>Đến ngày:</span>
+            <input
+              type="date"
+              className="portal-input"
+              style={{ width: '160px', padding: '8px 12px' }}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </div>
-          <div className="metric-trend">↑ +22 hội viên đăng ký mới</div>
-        </div>
 
-        <div className="metric-card">
-          <div className="metric-label">TỶ LỆ LẤP ĐẦY PHÒNG TẬP</div>
-          <div className="metric-value">
-            <CountUp value={86.4} format={(v) => v.toFixed(1) + '%'} />
-          </div>
-          <div className="metric-trend">↑ Tối ưu hóa năng lực phục vụ</div>
-        </div>
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Đang lọc...' : 'Áp Dụng Lọc'}
+          </button>
 
-        <div className="metric-card">
-          <div className="metric-label">LƯỢT QUÉT CHECK-IN TRUNG TÂM</div>
-          <div className="metric-value">
-            <CountUp value={4920} format={(v) => Math.round(v).toLocaleString('vi-VN')} />
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={() => handleQuickRange(7)}
+            >
+              7 ngày qua
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={() => handleQuickRange(30)}
+            >
+              30 ngày qua
+            </button>
           </div>
-          <div className="metric-trend">Trung bình 180 lượt / ngày</div>
-        </div>
+        </form>
       </div>
 
-      <div className="grid-2">
-        {/* Revenue Breakdown */}
-        <div className="portal-card">
-          <div className="portal-card-header">
-            <h2 className="portal-card-title">Cơ Cấu Doanh Thu Theo Gói Dịch Vụ</h2>
+      {/* Error state */}
+      {error && !loading && (
+        <div className="portal-card" style={{ marginBottom: '24px' }}>
+          <div className="portal-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚠️</div>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Lỗi khi tải dữ liệu báo cáo</h3>
+            <p style={{ color: '#7E7771', marginBottom: '16px' }}>{error}</p>
+            <button type="button" className="btn-primary" onClick={() => fetchReports(startDate, endDate)}>
+              Thử Lại
+            </button>
           </div>
+        </div>
+      )}
 
-          <div ref={revenueRef} style={{ display: 'grid', gap: '16px' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-                <span><strong>The Sanctuary VIP (3 Tháng)</strong></span>
-                <span><strong>1.125.000.000 đ (61%)</strong></span>
+      {/* Loading Skeleton */}
+      {loading && (
+        <div role="status" aria-busy="true">
+          <span className="sr-only">Đang tải số liệu...</span>
+          <div className="metrics-grid" style={{ marginBottom: '24px' }} aria-hidden="true">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="metric-card">
+                <div className="portal-skeleton-line" style={{ width: '58%', height: 14, marginBottom: 12 }} />
+                <div className="portal-skeleton-line" style={{ width: '75%', height: 28, marginBottom: 10 }} />
+                <div className="portal-skeleton-line" style={{ width: '50%', height: 12 }} />
               </div>
-              <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
-                <div
-                  className={`progress-fill ${revenueInView ? 'is-visible' : ''}`}
-                  style={{
-                    ['--value' as string]: '61%',
-                    width: '61%',
-                    height: '100%',
-                    background: '#1A1614',
-                    borderRadius: '4px',
-                  } as React.CSSProperties}
-                />
-              </div>
+            ))}
+          </div>
+          <div className="reports-charts-grid" aria-hidden="true">
+            <div className="portal-card">
+              <div className="portal-skeleton-line" style={{ width: '45%', height: 20, marginBottom: 18 }} />
+              <div className="portal-skeleton-line" style={{ width: '100%', height: 190 }} />
             </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-                <span><strong>The Sovereign Annual (1 Năm)</strong></span>
-                <span><strong>468.000.000 đ (25%)</strong></span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
-                <div
-                  className={`progress-fill ${revenueInView ? 'is-visible' : ''}`}
-                  style={{
-                    ['--value' as string]: '25%',
-                    width: '25%',
-                    height: '100%',
-                    background: '#C2A684',
-                    borderRadius: '4px',
-                  } as React.CSSProperties}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
-                <span><strong>The Essential (1 Tháng)</strong></span>
-                <span><strong>252.000.000 đ (14%)</strong></span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
-                <div
-                  className={`progress-fill ${revenueInView ? 'is-visible' : ''}`}
-                  style={{
-                    ['--value' as string]: '14%',
-                    width: '14%',
-                    height: '100%',
-                    background: '#8C847C',
-                    borderRadius: '4px',
-                  } as React.CSSProperties}
-                />
-              </div>
+            <div className="portal-card">
+              <div className="portal-skeleton-line" style={{ width: '55%', height: 20, marginBottom: 18 }} />
+              <div className="portal-skeleton-line" style={{ width: '100%', height: 190 }} />
             </div>
           </div>
         </div>
+      )}
 
-        {/* Audit Logs Trail */}
-        <div className="portal-card">
-          <div className="portal-card-header">
-            <h2 className="portal-card-title">Nhật Ký Hệ Thống</h2>
+      {/* 4 Thẻ KPI Metrics (AC: Doanh thu ngày, Doanh thu tháng, Số gói bán ra, Tỷ lệ gia hạn) */}
+      {!loading && !error && summary && (
+        <div className="metrics-grid" style={{ marginBottom: '24px' }}>
+          <div className="metric-card">
+            <div className="metric-label">DOANH THU NGÀY (HÔM NAY)</div>
+            <div className="metric-value">{vnd(summary.todayRevenue)}</div>
+            <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? '#2E7D32' : '#7E7771' }}>
+              {summary.todayRevenue > 0 ? '↑ Giao dịch phát sinh trong ngày' : 'Chưa có giao dịch hôm nay'}
+            </div>
           </div>
 
-          <div className="portal-table-wrapper">
-            <table className="portal-table">
-              <thead>
-                <tr>
-                  <th>Hành Động</th>
-                  <th>Người Thực Hiện</th>
-                  <th>Mục Tiêu</th>
-                  <th>IP / Giờ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log, index) => (
-                  <tr
-                    key={log.id}
-                    className="row-in"
-                    style={{ ['--i' as string]: index } as React.CSSProperties}
-                  >
-                    <td>
-                      <span className="badge badge-neutral" style={{ fontFamily: 'monospace' }}>
-                        {log.action}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.78rem' }}>{log.actor}</td>
-                    <td style={{ fontWeight: 600 }}>{log.target}</td>
-                    <td style={{ fontSize: '0.75rem', color: '#8C847C' }}>{log.time}</td>
-                  </tr>
+          <div className="metric-card">
+            <div className="metric-label">DOANH THU THÁNG (TOÀN KỲ)</div>
+            <div className="metric-value">{vnd(summary.periodRevenue)}</div>
+            <div className="metric-trend">Từ {startDate} đến {endDate}</div>
+          </div>
+
+          <div className="metric-card">
+            <div className="metric-label">SỐ GÓI BÁN RA</div>
+            <div className="metric-value">{summary.packagesSoldCount}</div>
+            <div className="metric-trend">Gói dịch vụ đã thanh toán</div>
+          </div>
+
+          <div className="metric-card">
+            <div className="metric-label">TỶ LỆ GIA HẠN</div>
+            {/* BR-03: Tỷ lệ gia hạn = số lượt gia hạn / số gói hết hạn trong kỳ; mẫu số bằng 0 hiển thị "—" thay vì lỗi chia 0 */}
+            <div className="metric-value">
+              {summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}
+            </div>
+            <div className="metric-trend">
+              {summary.renewalRate !== null ? 'Khách hàng tiếp tục duy trì' : 'Không có gói hết hạn trong kỳ'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Biểu đồ doanh thu hàng ngày & Cơ cấu doanh thu */}
+      {!loading && !error && summary && (
+        <div className="reports-charts-grid">
+          {/* Biểu đồ cột SVG */}
+          <div className="portal-card" style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div className="portal-card-header" style={{ marginBottom: '16px' }}>
+              <h2 className="portal-card-title">Biểu Đồ Doanh Thu Theo Ngày</h2>
+              <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>Rê chuột vào cột để xem chi tiết</span>
+            </div>
+
+            {dailyData.length === 0 || dailyData.every((d) => d.revenue === 0) ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#7E7771' }}>
+                Không có dữ liệu phát sinh doanh thu trong kỳ được chọn.
+              </div>
+            ) : (
+              <div>
+                {/* Khu vực tooltip hiển thị khi hover */}
+                <div style={{ height: '32px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
+                  {hoveredBar ? (
+                    <span style={{ color: '#A06D3B' }}>
+                      📅 Ngày {hoveredBar.date}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
+                    </span>
+                  ) : (
+                    <span style={{ color: '#7E7771', fontWeight: 400 }}>Di chuột lên cột để xem doanh thu cụ thể</span>
+                  )}
+                </div>
+
+                {/* Khung vẽ cột */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: dailyData.length > 15 ? '4px' : '8px',
+                    height: '210px',
+                    paddingBottom: '32px',
+                    borderBottom: '1px solid #ECE7E1',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                  }}
+                >
+                  {dailyData.map((d) => {
+                    const heightPercent = d.revenue > 0 ? Math.max(8, Math.round((d.revenue / maxDailyRevenue) * 100)) : 0;
+                    const isHovered = hoveredBar?.date === d.date;
+                    const dateFormatted = d.date.slice(5).replace('-', '/');
+                    return (
+                      <div
+                        key={d.date}
+                        style={{
+                          flex: '1 0 16px',
+                          maxWidth: '40px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          height: '100%',
+                          justifyContent: 'flex-end',
+                        }}
+                        onMouseEnter={() => setHoveredBar({ date: d.date, revenue: d.revenue, count: d.transactionCount })}
+                        onMouseLeave={() => setHoveredBar(null)}
+                      >
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${heightPercent}%`,
+                            background: isHovered ? '#8B572A' : '#1A1614',
+                            borderRadius: '4px 4px 0 0',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            color: '#7E7771',
+                            marginTop: '8px',
+                            transform: 'rotate(-45deg)',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                        >
+                          {dateFormatted}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cơ cấu doanh thu theo gói */}
+          <div className="portal-card" style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div className="portal-card-header" style={{ marginBottom: '16px' }}>
+              <h2 className="portal-card-title">Cơ Cấu Doanh Thu Theo Gói Tập</h2>
+            </div>
+
+            {summary.packageRevenue.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#7E7771' }}>
+                Chưa có gói tập nào phát sinh doanh thu trong kỳ này.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {summary.packageRevenue.map((pkg) => (
+                  <div key={pkg.packageId}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', marginBottom: '6px' }}>
+                      <span><strong>{pkg.packageName}</strong> ({pkg.subscriptionCount} lượt)</span>
+                      <span><strong>{vnd(pkg.revenue)}</strong> ({pkg.percentage}%)</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${Math.min(100, pkg.percentage)}%`,
+                          height: '100%',
+                          background: '#1A1614',
+                          borderRadius: '4px',
+                          transition: 'width 0.4s ease',
+                        }}
+                      />
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Bảng danh sách giao dịch gần nhất */}
+      {!loading && !error && summary && (
+        <div className="portal-card">
+          <div className="portal-card-header" style={{ marginBottom: '16px' }}>
+            <h2 className="portal-card-title">Giao Dịch Thanh Toán Gần Nhất</h2>
+            <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>10 thanh toán thành công gần nhất trong kỳ</span>
+          </div>
+
+          {summary.recentTransactions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#7E7771' }}>
+              Chưa có giao dịch thanh toán nào được ghi nhận.
+            </div>
+          ) : (
+            <div className="portal-table-wrapper" tabIndex={0} role="region" aria-label="Giao dịch gần đây, cuộn ngang để xem đầy đủ">
+              <table className="portal-table">
+                <thead>
+                  <tr>
+                    <th>Mã Hóa Đơn</th>
+                    <th>Hội Viên</th>
+                    <th>Dịch Vụ / Gói Tập</th>
+                    <th>Số Tiền</th>
+                    <th>Hình Thức</th>
+                    <th>Thời Gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.recentTransactions.map((tx) => (
+                    <tr key={tx.id}>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tx.invoiceNumber ?? 'Chưa xuất hóa đơn'}</td>
+                      <td>{tx.memberName}</td>
+                      <td>{tx.packageName ?? '—'}</td>
+                      <td style={{ fontWeight: 600, color: '#2E7D32' }}>{vnd(tx.amount)}</td>
+                      <td>
+                        <span className="badge badge-success" style={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                          {paymentMethods[tx.method] ?? tx.method}
+                        </span>
+                      </td>
+                      <td style={{ color: '#7E7771', fontSize: '0.84rem' }}>{new Date(tx.paidAt).toLocaleString('vi-VN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

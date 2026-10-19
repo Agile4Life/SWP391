@@ -32,6 +32,9 @@ public class InvoiceService {
     private final InvoiceMapper invoiceMapper;
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.common.i18n.MessageService messageService;
+
     public InvoiceService(InvoiceRepository invoiceRepository,
                           PaymentRepository paymentRepository,
                           InvoiceMapper invoiceMapper, Clock clock) {
@@ -127,7 +130,7 @@ public class InvoiceService {
                     invoice.setTaxAmount(java.math.BigDecimal.ZERO);
 
                     InvoiceItem item = new InvoiceItem();
-                    item.setDescription("Dịch vụ thể thao / Gói tập - Thanh toán #" + payment.getId());
+                    item.setDescription(resolveDefaultItemDescription(payment.getId()));
                     item.setQuantity(1);
                     item.setUnitPrice(payment.getAmount());
                     invoice.addItem(item);
@@ -135,6 +138,17 @@ public class InvoiceService {
                     Invoice saved = invoiceRepository.save(invoice);
                     return invoiceMapper.toDto(saved);
                 });
+    }
+
+    private String resolveDefaultItemDescription(Long paymentId) {
+        String fallback = "Dịch vụ thể thao / Gói tập - Thanh toán #" + paymentId;
+        if (messageService == null) {
+            return fallback;
+        }
+        String resolved = messageService.getMessage("finance.invoice.default_item_description", new Object[]{paymentId});
+        return (resolved == null || resolved.isBlank() || "finance.invoice.default_item_description".equals(resolved))
+                ? fallback
+                : resolved;
     }
 
     private String generateInvoiceNumber() {
