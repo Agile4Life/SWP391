@@ -1,6 +1,7 @@
 package com.swp391.scms.auth;
 
 import com.swp391.scms.auth.dto.AuthTokenResponse;
+import com.swp391.scms.auth.dto.GoogleLoginRequest;
 import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.exception.BadRequestException;
@@ -107,6 +108,13 @@ public class AuthController {
             throw new BadRequestException("MISSING_PARAMS", "auth.otp.missing_target", null, null);
         }
         AuthTokenResponse response = authService.verifyGoogleOtp(email, otpCode);
+        return ApiResponse.ok(msg("auth.login.success"), response);
+    }
+
+    @Operation(summary = "Đăng nhập Google bằng ID Token (SCRUM-89)", description = "Xác thực Google ID Token, tự động liên kết hoặc tạo tài khoản MEMBER và cấp JWT")
+    @PostMapping("/google")
+    public ApiResponse<AuthTokenResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        AuthTokenResponse response = authService.loginWithGoogle(request);
         return ApiResponse.ok(msg("auth.login.success"), response);
     }
 }

@@ -22,7 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.swp391.scms.auth.dto.GoogleLoginRequest;
+import com.swp391.scms.auth.dto.GoogleUserInfo;
+import com.swp391.scms.audit.Audited;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -36,12 +41,21 @@ public class AuthService {
     private final boolean debugOtpEnabled;
     private final Clock clock;
     private final MessageService messageService;
+    private final GoogleTokenVerifierPort googleTokenVerifierPort;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null);
+    }
+
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
+                       @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
+                       MessageService messageService) {
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -49,7 +63,8 @@ public class AuthService {
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
-                       MessageService messageService) {
+                       MessageService messageService,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) GoogleTokenVerifierPort googleTokenVerifierPort) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -59,6 +74,7 @@ public class AuthService {
         this.debugOtpEnabled = debugOtpEnabled;
         this.clock = clock;
         this.messageService = messageService;
+        this.googleTokenVerifierPort = googleTokenVerifierPort;
     }
 
     private String msg(String key) {
@@ -235,6 +251,103 @@ public class AuthService {
             }
         }
         return code;
+    }
+
+    @Transactional
+    @Audited(action = "LOGIN_GOOGLE", entity = "users")
+    public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
+        if (request == null || request.idToken() == null || request.idToken().isBlank()) {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google ID Token is missing");
+        }
+
+        if (googleTokenVerifierPort == null) {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google Token Verifier is not available");
+        }
+
+        // BR-01: Verify token signature, aud, iss, exp
+        GoogleUserInfo googleUser = googleTokenVerifierPort.verify(request.idToken());
+
+        // BR-02: Only accept email_verified = true
+        if (!googleUser.emailVerified()) {
+            throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_not_verified", null, "Google email is not verified");
+        }
+
+        String email = normalize(googleUser.email());
+        String googleSub = googleUser.sub();
+
+        // BR-03 & BR-04: Match by googleSub or email
+        Optional<User> bySub = userRepository.findByGoogleSub(googleSub);
+        Optional<User> byEmail = userRepository.findByEmailIgnoreCase(email);
+
+        User user;
+        if (bySub.isPresent()) {
+            user = bySub.get();
+        } else if (byEmail.isPresent()) {
+            user = byEmail.get();
+            String linkedSub = user.getGoogleSub();
+            if (linkedSub != null && !linkedSub.isBlank() && !linkedSub.equals(googleSub)) {
+                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+            }
+            boolean googleManagedEmail = email.endsWith("@gmail.com")
+                    || (googleUser.hostedDomain() != null && !googleUser.hostedDomain().isBlank());
+            if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
+                throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
+            }
+            // Bind google_sub to existing account
+            user.setGoogleSub(googleSub);
+        } else {
+            // Auto create new user with role MEMBER, status active
+            Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
+
+            String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
+            if (baseUsername.length() < 3) baseUsername = "user_" + baseUsername;
+            String username = baseUsername;
+            int suffix = 1;
+            while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+                username = baseUsername + suffix++;
+            }
+
+            user = new User();
+            user.setUsername(username);
+            user.setRole(memberRole);
+            user.setFullName(googleUser.name() != null && !googleUser.name().isBlank() ? googleUser.name() : username);
+            user.setEmail(email);
+            user.setGoogleSub(googleSub);
+            user.setAvatarUrl(googleUser.picture());
+            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+            user.setStatus("active");
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
+            userRepository.saveAndFlush(user);
+
+            Member member = new Member();
+            member.setUser(user);
+            member.setMembershipCode("MEM-" + user.getId());
+            member.setJoinDate(LocalDate.now(clock));
+            member.setFitnessLevel("beginner");
+            user.setMember(member);
+            userRepository.save(user);
+        }
+
+        // BR-05: Only role MEMBER is allowed! COACH / STAFF / RECEPTIONIST / CENTER_MANAGER / MANAGER -> 403 Forbidden!
+        String roleCode = user.getRole().getCode();
+        if (!"MEMBER".equalsIgnoreCase(roleCode)) {
+            throw new ForbiddenException("STAFF_GOOGLE_NOT_ALLOWED", "auth.google.staff_not_allowed", null, "Staff accounts are not allowed to log in via Google");
+        }
+
+        // BR-06: Locked / inactive / deleted accounts rejected
+        if (user.getDeletedAt() != null || !"active".equalsIgnoreCase(user.getStatus())) {
+            throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, "Account is deactivated or locked");
+        }
+
+        // BR-07: Issue standard JWT token and update last login time
+        user.setLastLoginAt(LocalDateTime.now(clock));
+        user.setUpdatedAt(LocalDateTime.now(clock));
+        userRepository.save(user);
+
+        return issueTokenForUser(user);
     }
 
     private OtpService.Status verifyOtpChallenge(String target, String otpCode) {
