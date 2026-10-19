@@ -40,3 +40,10 @@ export const googleVerifyOtp = (email: string, otpCode: string) =>
     method: 'POST',
     body: JSON.stringify({ email, otpCode }),
   });
+
+export const googleLoginWithIdToken = (idToken: string) =>
+  apiFetch<GoogleVerifyResponse>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ idToken }),
+  });
+

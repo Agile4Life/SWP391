@@ -9,6 +9,7 @@ import {
   maskCitizenId,
   receptionApi,
   type MemberLookupResult,
+  type MembershipPackage,
   type PaymentMethod,
   type PaymentResponseDto,
 } from './receptionApi';
@@ -33,6 +34,10 @@ export function StaffReceptionPage() {
   const [packages, setPackages] = useState<MembershipPackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(true);
 
+  // Danh sách gói tập đang hoạt động bán tại quầy POS
+  const [activePackages, setActivePackages] = useState<MembershipPackage[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | ''>('');
+
   // Form thanh toán
   const [selectedPackageId, setSelectedPackageId] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('pos');
@@ -41,9 +46,48 @@ export function StaffReceptionPage() {
 
   // Popup Hóa đơn điện tử sau khi thanh toán thành công (BR-04)
   const [completedPayment, setCompletedPayment] = useState<PaymentResponseDto | null>(null);
+<<<<<<< Updated upstream
+=======
+  const [completedPackageName, setCompletedPackageName] = useState<string>('');
+  const [completedMemberName, setCompletedMemberName] = useState<string>('');
+
+  const loadPendingSubscriptions = useCallback(async () => {
+    if (!hasAccess) return;
+    setLoadingPending(true);
+    try {
+      const items = await receptionApi.getPendingSubscriptions();
+      setPendingList(items ?? []);
+      if (items && items.length > 0) {
+        const first = items[0];
+        setSelectedPending((prev) => items.find((i) => i.id === prev?.id) ?? first);
+        setSelectedPackageId((prev) => (prev ? prev : first.packageId));
+        setSelectedMember((prev) =>
+          prev ?? {
+            userId: first.memberId,
+            membershipCode: first.membershipCode || `MB-2026-${String(first.memberId).padStart(3, '0')}`,
+            fullName: first.memberName,
+            email: first.memberEmail,
+            phone: first.memberPhone,
+            citizenId: null,
+            status: 'PENDING_PAYMENT',
+            currentPackage: first.packageName,
+            endDate: `${first.startDate} → ${first.endDate}`,
+          },
+        );
+      } else {
+        setSelectedPending(null);
+      }
+    } catch {
+      setPendingList([]);
+    } finally {
+      setLoadingPending(false);
+    }
+  }, [hasAccess]);
+>>>>>>> Stashed changes
 
   // BR-02: Tải danh sách gói tập chỉ đang ACTIVE
   useEffect(() => {
+<<<<<<< Updated upstream
     if (!hasAccess) return;
     let active = true;
     (async () => {
@@ -66,6 +110,29 @@ export function StaffReceptionPage() {
       active = false;
     };
   }, [hasAccess]);
+=======
+    void loadPendingSubscriptions();
+    if (hasAccess) {
+      receptionApi.getActivePackages().then(setActivePackages).catch(() => {});
+    }
+  }, [hasAccess, loadPendingSubscriptions]);
+
+  const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
+    setSelectedPending(item);
+    setSelectedPackageId(item.packageId);
+    setSelectedMember({
+      userId: item.memberId,
+      membershipCode: item.membershipCode || `MB-2026-${String(item.memberId).padStart(3, '0')}`,
+      fullName: item.memberName,
+      email: item.memberEmail,
+      phone: item.memberPhone,
+      citizenId: null,
+      status: 'PENDING_PAYMENT',
+      currentPackage: item.packageName,
+      endDate: `${item.startDate} → ${item.endDate}`,
+    });
+  };
+>>>>>>> Stashed changes
 
   // BR-01: Forbidden Guard khi vai trò không hợp lệ
   if (!hasAccess) {
@@ -91,9 +158,18 @@ export function StaffReceptionPage() {
     );
   }
 
+<<<<<<< Updated upstream
   // Gói tập đang chọn
   const selectedPackage = packages.find((p) => p.id === Number(selectedPackageId));
   const currentPrice = selectedPackage ? selectedPackage.price : 0;
+=======
+  const selectedDirectPackage = activePackages.find((p) => p.id === Number(selectedPackageId)) ?? null;
+  const currentPrice = selectedPending
+    ? selectedPending.packagePrice
+    : selectedDirectPackage
+      ? selectedDirectPackage.price
+      : 0;
+>>>>>>> Stashed changes
 
   // Xử lý tra cứu hội viên
   const handleSearch = async (e: React.FormEvent) => {
@@ -114,32 +190,63 @@ export function StaffReceptionPage() {
       const results = await receptionApi.lookupMembers(q);
       setSearchResults(results);
       if (results.length > 0) {
+<<<<<<< Updated upstream
         setSelectedMember(results[0]);
         toast(`Đã tìm thấy ${results.length} kết quả phù hợp.`, 'success');
       } else {
         setSelectedMember(null);
+=======
+        const member = results[0];
+        setSelectedMember(member);
+        const matchedPending = pendingList.find((p) => p.memberId === member.userId) ?? null;
+        setSelectedPending(matchedPending);
+        setSelectedPackageId(matchedPending ? matchedPending.packageId : '');
+        toast(`Đã tìm thấy ${results.length} kết quả phù hợp.`, 'success');
+      } else {
+        setSelectedMember(null);
+        setSelectedPending(null);
+        setSelectedPackageId('');
+>>>>>>> Stashed changes
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Tra cứu thất bại.';
       toast(msg, 'error');
       setSearchResults([]);
       setSelectedMember(null);
+<<<<<<< Updated upstream
+=======
+      setSelectedPending(null);
+      setSelectedPackageId('');
+>>>>>>> Stashed changes
     } finally {
       setIsSearching(false);
     }
   };
 
+<<<<<<< Updated upstream
   // BR-03 & BR-04: Xử lý thanh toán
+=======
+  // BR-03 & BR-04: Xác nhận thanh toán cho yêu cầu chờ hoặc bán gói trực tiếp tại quầy
+>>>>>>> Stashed changes
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedMember) {
+<<<<<<< Updated upstream
       toast('Vui lòng tra cứu và chọn hội viên trước khi thu tiền.', 'error');
       return;
     }
 
     if (!selectedPackageId || !selectedPackage) {
       toast('Vui lòng chọn gói dịch vụ cần mua hoặc gia hạn.', 'error');
+=======
+      toast('Vui lòng tra cứu hoặc chọn một hội viên.', 'error');
+      return;
+    }
+
+    if (!selectedPending && !selectedPackageId) {
+      toast('Vui lòng chọn một gói tập để thanh toán.', 'error');
+>>>>>>> Stashed changes
       return;
     }
 
@@ -153,15 +260,31 @@ export function StaffReceptionPage() {
 
     setIsSubmittingPayment(true);
     try {
+      const packageIdToPay = selectedPending ? selectedPending.packageId : Number(selectedPackageId);
+      const pkg = activePackages.find((p) => p.id === packageIdToPay);
+      const amountToPay = selectedPending ? selectedPending.packagePrice : (pkg?.price ?? currentPrice);
+      const packageName = selectedPending ? selectedPending.packageName : (pkg?.name ?? 'Gói tập');
+
       const result = await receptionApi.processPayment({
         memberId: selectedMember.userId,
+<<<<<<< Updated upstream
         packageId: selectedPackage.id,
         amount: selectedPackage.price,
+=======
+        subscriptionId: selectedPending?.id,
+        packageId: packageIdToPay,
+        amount: amountToPay,
+>>>>>>> Stashed changes
         method: paymentMethod,
         notes: paymentNotes.trim() || undefined,
       });
 
       // BR-04: Chỉ hiển thị hóa đơn khi Payment API trả thành công
+<<<<<<< Updated upstream
+=======
+      setCompletedPackageName(packageName);
+      setCompletedMemberName(selectedMember.fullName);
+>>>>>>> Stashed changes
       setCompletedPayment(result);
       toast(`Đã xác nhận thu tiền thành công! Hóa đơn: ${result.invoiceNumber}`, 'success');
     } catch (err: unknown) {
@@ -222,7 +345,16 @@ export function StaffReceptionPage() {
                   key={m.userId}
                   type="button"
                   className={`btn-secondary btn-sm ${selectedMember?.userId === m.userId ? 'btn-primary' : ''}`}
+<<<<<<< Updated upstream
                   onClick={() => setSelectedMember(m)}
+=======
+                  onClick={() => {
+                    setSelectedMember(m);
+                    const matched = pendingList.find((p) => p.memberId === m.userId) ?? null;
+                    setSelectedPending(matched);
+                    setSelectedPackageId(matched ? matched.packageId : '');
+                  }}
+>>>>>>> Stashed changes
                 >
                   {m.fullName} ({m.membershipCode || m.phone})
                 </button>
@@ -323,6 +455,7 @@ export function StaffReceptionPage() {
           </div>
 
           <form onSubmit={handlePayment}>
+<<<<<<< Updated upstream
             {/* BR-02: Dropdown chỉ liệt kê gói tập đang active */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="pos-package">
@@ -332,10 +465,46 @@ export function StaffReceptionPage() {
                 <div style={{ color: '#7E7771', fontSize: '0.88rem' }}>Đang nạp danh mục gói tập...</div>
               ) : packages.length === 0 ? (
                 <div style={{ color: '#DC2626', fontSize: '0.88rem' }}>Hiện chưa có gói tập nào đang hoạt động (active).</div>
+=======
+            {/* Gói tập: Hiển thị gói đã chọn nếu có pending, hoặc cho phép chọn trực tiếp từ danh sách activePackages */}
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="pos-package">
+                {selectedPending ? 'Gói Tập Hội Viên Đã Chọn (Yêu cầu chờ)' : 'Chọn Gói Tập Bán Tại Quầy *'}
+              </label>
+              {selectedPending ? (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    id="pos-package"
+                    type="text"
+                    className="portal-input"
+                    value={`${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`}
+                    disabled
+                    readOnly
+                    style={{
+                      fontWeight: 600,
+                      color: '#1A1614',
+                      backgroundColor: '#FAF8F5',
+                      flex: 1,
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => {
+                      setSelectedPending(null);
+                      setSelectedPackageId('');
+                    }}
+                    title="Bỏ chọn yêu cầu này để chọn gói khác"
+                  >
+                    Đổi gói khác
+                  </button>
+                </div>
+>>>>>>> Stashed changes
               ) : (
                 <Select
                   id="pos-package"
                   className="portal-select"
+<<<<<<< Updated upstream
                   value={String(selectedPackageId)}
                   onChange={(e) => setSelectedPackageId(Number(e.target.value))}
                   disabled={isSubmittingPayment}
@@ -343,6 +512,16 @@ export function StaffReceptionPage() {
                   {packages.map((pkg) => (
                     <option key={pkg.id} value={pkg.id}>
                       {pkg.name} ({pkg.durationDays} ngày — {vnd(pkg.price)})
+=======
+                  value={selectedPackageId}
+                  onChange={(e) => setSelectedPackageId(e.target.value ? Number(e.target.value) : '')}
+                  disabled={isSubmittingPayment}
+                >
+                  <option value="">-- Chọn gói tập bán trực tiếp cho hội viên --</option>
+                  {activePackages.map((pkg) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {pkg.name} ({pkg.durationDays} ngày) — {vnd(pkg.price)}
+>>>>>>> Stashed changes
                     </option>
                   ))}
                 </Select>
@@ -407,12 +586,20 @@ export function StaffReceptionPage() {
               />
             </div>
 
+<<<<<<< Updated upstream
             {/* BR-03: Nút bị khóa khi đang xử lý để tránh thu trùng */}
+=======
+            {/* BR-03: Nút bật khi đã chọn hội viên VÀ có gói tập (từ yêu cầu chờ hoặc chọn trực tiếp) */}
+>>>>>>> Stashed changes
             <button
               type="submit"
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
+<<<<<<< Updated upstream
               disabled={isSubmittingPayment || !selectedMember || packages.length === 0}
+=======
+              disabled={isSubmittingPayment || !selectedMember || (!selectedPending && !selectedPackageId)}
+>>>>>>> Stashed changes
             >
               {isSubmittingPayment ? (
                 <>

@@ -53,3 +53,6 @@ app:
     otp:
       delivery: ${APP_OTP_DELIVERY:disabled}
       from-address: ${SMTP_FROM:no-reply@example.invalid}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+
