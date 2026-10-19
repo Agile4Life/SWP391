@@ -37,7 +37,7 @@ public class PaymentController {
         this.paymentService = paymentService;
         this.messageService = messageService;
     }
-
+    //key
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
