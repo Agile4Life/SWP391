@@ -43,10 +43,14 @@ const defaultFormData = (): ClassFormData => ({
 export function StaffClassesPage() {
   const currentUser = getCurrentUser();
 
-  // BR-01: Chỉ CENTER_MANAGER và Staff được cấp quyền thấy màn hình
+  // BR-01: Chỉ CENTER_MANAGER, STAFF và COACH được cấp quyền thấy màn hình
   const hasAccess = useMemo(() => {
     if (!currentUser) return false;
-    return currentUser.role === 'MANAGER' || currentUser.role === 'STAFF';
+    return (
+      currentUser.role === 'MANAGER' ||
+      currentUser.role === 'STAFF' ||
+      currentUser.role === 'COACH'
+    );
   }, [currentUser]);
 
   const [classes, setClasses] = useState<ClassItem[]>([]);
