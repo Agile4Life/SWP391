@@ -5,6 +5,9 @@ import { toast } from '../../shared/ui/toast';
 import { reportsApi, type ReportSummary } from './reportsApi';
 
 const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} đ`;
+const paymentMethods: Record<string, string> = {
+  cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
+};
 
 export function ManagerReportsPage() {
   const currentUser = getCurrentUser();
@@ -374,7 +377,7 @@ export function ManagerReportsPage() {
         <div className="portal-card">
           <div className="portal-card-header" style={{ marginBottom: '16px' }}>
             <h2 className="portal-card-title">Giao Dịch Thanh Toán Gần Nhất</h2>
-            <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>Cập nhật theo thời gian thực</span>
+            <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>10 thanh toán thành công gần nhất trong kỳ</span>
           </div>
 
           {summary.recentTransactions.length === 0 ? (
@@ -397,16 +400,16 @@ export function ManagerReportsPage() {
                 <tbody>
                   {summary.recentTransactions.map((tx) => (
                     <tr key={tx.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tx.invoiceNumber}</td>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tx.invoiceNumber ?? 'Chưa xuất hóa đơn'}</td>
                       <td>{tx.memberName}</td>
-                      <td>{tx.packageName}</td>
+                      <td>{tx.packageName ?? '—'}</td>
                       <td style={{ fontWeight: 600, color: '#2E7D32' }}>{vnd(tx.amount)}</td>
                       <td>
                         <span className="badge badge-success" style={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>
-                          {tx.method}
+                          {paymentMethods[tx.method] ?? tx.method}
                         </span>
                       </td>
-                      <td style={{ color: '#7E7771', fontSize: '0.84rem' }}>{tx.paidAt}</td>
+                      <td style={{ color: '#7E7771', fontSize: '0.84rem' }}>{new Date(tx.paidAt).toLocaleString('vi-VN')}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -3,6 +3,7 @@ package com.swp391.scms.reports;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
@@ -59,6 +60,15 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         List<PackageRevenueDto> packageRevenue = reportService.getRevenueByPackage(startDate, endDate);
         return ResponseEntity.ok(ApiResponse.ok(msg("reports.revenue.by_package"), packageRevenue));
+    }
+
+    @Operation(summary = "Mười giao dịch thanh toán thành công gần nhất trong kỳ")
+    @GetMapping("/transactions/recent")
+    public ResponseEntity<ApiResponse<List<RecentTransactionDto>>> getRecentTransactions(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.ok(msg("reports.transactions.recent"),
+                reportService.getRecentTransactions(startDate, endDate)));
     }
 
     @Operation(summary = "Lưu ảnh chụp báo cáo định kỳ", description = "Tạo ảnh chụp báo cáo (snapshot) định dạng JSON phục vụ đối soát cho Quản lý")

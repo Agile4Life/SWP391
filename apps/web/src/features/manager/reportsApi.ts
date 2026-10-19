@@ -16,9 +16,9 @@ export interface PackageRevenue {
 
 export interface RecentTransaction {
   id: number;
-  invoiceNumber: string;
+  invoiceNumber: string | null;
   memberName: string;
-  packageName: string;
+  packageName: string | null;
   amount: number;
   method: string;
   paidAt: string;
@@ -52,10 +52,11 @@ export const reportsApi = {
   },
 
   getSummary: async (startDate: string, endDate: string): Promise<ReportSummary> => {
-    // Gọi đồng thời cả 2 endpoint báo cáo có sẵn của backend
-    const [daily, packages] = await Promise.all([
+    const params = new URLSearchParams({ startDate, endDate });
+    const [daily, packages, recentTransactions] = await Promise.all([
       reportsApi.getDailyRevenue(startDate, endDate),
       reportsApi.getPackageRevenue(startDate, endDate),
+      apiFetch<RecentTransaction[]>(`/reports/transactions/recent?${params.toString()}`),
     ]);
 
     // BR-02: Doanh thu thuần = thanh toán thành công trừ hoàn tiền
@@ -71,24 +72,6 @@ export const reportsApi = {
     const expiredCount = packagesSoldCount > 0 ? packagesSoldCount : 0;
     const renewedCount = Math.floor(packagesSoldCount * 0.7); // Số lượt khách tiếp tục gia hạn
     const renewalRate = expiredCount > 0 ? (renewedCount / expiredCount) * 100 : null;
-
-    // Sinh danh sách giao dịch từ dữ liệu bán gói và ngày
-    const recentTransactions: RecentTransaction[] = daily
-      .filter((d) => d.transactionCount > 0)
-      .slice(-10)
-      .reverse()
-      .map((d, index) => {
-        const pkg = packages[index % (packages.length || 1)] || { packageName: 'Gói tập tiêu chuẩn' };
-        return {
-          id: index + 1,
-          invoiceNumber: `INV-${d.date.replace(/-/g, '')}-${String(index + 1).padStart(4, '0')}`,
-          memberName: `Hội viên #${index + 101}`,
-          packageName: pkg.packageName,
-          amount: Math.round(d.revenue / Math.max(1, d.transactionCount)),
-          method: index % 2 === 0 ? 'POS' : 'Chuyển khoản',
-          paidAt: `${d.date} 09:30:00`,
-        };
-      });
 
     return {
       periodRevenue,

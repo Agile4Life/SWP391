@@ -13,6 +13,9 @@ import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.entity.ReportSnapshot;
 import com.swp391.scms.reports.repository.ReportSnapshotRepository;
+import com.swp391.scms.reports.repository.TransactionReportRepository;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
+import org.springframework.data.domain.PageRequest;
 import com.swp391.scms.reports.service.RevenueReportService;
 import com.swp391.scms.users.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +50,9 @@ class RevenueReportServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private TransactionReportRepository transactionReportRepository;
+
     private ObjectMapper objectMapper;
     private Clock clock;
     private RevenueReportService service;
@@ -56,7 +62,33 @@ class RevenueReportServiceTest {
         objectMapper = new ObjectMapper();
         clock = Clock.fixed(Instant.parse("2026-10-05T10:00:00Z"), ZoneOffset.UTC);
         service = new RevenueReportService(paymentRepository, subscriptionRepository,
-                snapshotRepository, userRepository, objectMapper, clock);
+                snapshotRepository, userRepository, objectMapper, clock, transactionReportRepository);
+    }
+
+    @Test
+    void returnsRealTransactionsWithInclusiveEndDateAndLimitOfTen() {
+        LocalDate start = LocalDate.of(2026, 10, 1);
+        LocalDate end = LocalDate.of(2026, 10, 5);
+        var transaction = new RecentTransactionDto(78L, "SCMS-78", "Nguyễn An", "Gold",
+                new BigDecimal("750000"), "cash", end.atTime(23, 59, 59, 999999999));
+        when(transactionReportRepository.findRecentTransactions(start.atStartOfDay(),
+                end.plusDays(1).atStartOfDay(), PageRequest.of(0, 10))).thenReturn(List.of(transaction));
+
+        assertEquals(List.of(transaction), service.getRecentTransactions(start, end));
+    }
+
+    @Test
+    void rejectsReversedTransactionDateRange() {
+        assertThrows(BadRequestException.class, () -> service.getRecentTransactions(
+                LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 1)));
+        verifyNoInteractions(transactionReportRepository);
+    }
+
+    @Test
+    void defaultsTransactionPeriodUsingApplicationClock() {
+        when(transactionReportRepository.findRecentTransactions(LocalDate.of(2026, 9, 5).atStartOfDay(),
+                LocalDate.of(2026, 10, 6).atStartOfDay(), PageRequest.of(0, 10))).thenReturn(List.of());
+        assertTrue(service.getRecentTransactions(null, null).isEmpty());
     }
 
     @Test

@@ -8,7 +8,7 @@ vi.mock('../../shared/api/client', () => ({
 
 describe('reportsApi', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it('fetches daily revenue with query params', async () => {
@@ -43,7 +43,8 @@ describe('reportsApi', () => {
 
     vi.mocked(client.apiFetch)
       .mockResolvedValueOnce(mockDaily)
-      .mockResolvedValueOnce(mockPackages);
+      .mockResolvedValueOnce(mockPackages)
+      .mockResolvedValueOnce([]);
 
     const summary = await reportsApi.getSummary('2026-09-01', '2026-10-15');
     expect(summary.periodRevenue).toBe(5000000);
@@ -51,4 +52,28 @@ describe('reportsApi', () => {
     expect(summary.packagesSoldCount).toBe(3);
     expect(summary.dailyRevenue).toHaveLength(2);
   });
+  it('uses actual individual payments instead of synthesizing transactions from daily totals', async () => {
+    const transactions = [
+      { id: 78, invoiceNumber: 'SCMS-REAL-78', memberName: 'Nguyễn An', packageName: 'Gold', amount: 750000, method: 'cash', paidAt: '2026-10-05T18:45:12' },
+      { id: 77, invoiceNumber: null, memberName: 'Trần Bình', packageName: null, amount: 250000, method: 'bank_transfer', paidAt: '2026-10-05T10:20:00' },
+    ];
+    vi.mocked(client.apiFetch)
+      .mockResolvedValueOnce([{ date: '2026-10-05', revenue: 1000000, transactionCount: 2 }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(transactions);
+
+    const summary = await reportsApi.getSummary('2026-10-01', '2026-10-05');
+
+    expect(summary.recentTransactions).toEqual(transactions);
+    expect(client.apiFetch).toHaveBeenCalledWith('/reports/transactions/recent?startDate=2026-10-01&endDate=2026-10-05');
+  });
+
+  it('keeps recent transactions empty when no real payments are returned', async () => {
+    vi.mocked(client.apiFetch)
+      .mockResolvedValueOnce([{ date: '2026-10-05', revenue: 1000000, transactionCount: 2 }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    expect((await reportsApi.getSummary('2026-10-01', '2026-10-05')).recentTransactions).toEqual([]);
+  });
+
 });

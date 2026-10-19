@@ -1374,6 +1374,49 @@ paths:
         '200': {description: Thành công}
         '403': {description: Chỉ CENTER_MANAGER được truy cập}
 
+  /reports/transactions/recent:
+    get:
+      summary: Mười thanh toán thành công gần nhất trong kỳ (CENTER_MANAGER)
+      description: >-
+        SCRUM-79 / SCRUM-84. Dữ liệu giao dịch thực, sắp xếp paidAt giảm dần rồi id giảm dần,
+        tối đa 10 bản ghi. Loại trừ hội viên đã xóa. Khoảng ngày bao gồm cả ngày kết thúc;
+        mặc định từ 30 ngày trước đến hôm nay theo đồng hồ ứng dụng.
+        invoiceNumber và packageName có thể null khi chưa có hóa đơn hoặc dịch vụ liên kết.
+      tags: [Reports]
+      parameters:
+        - name: startDate
+          in: query
+          schema: {type: string, format: date}
+        - name: endDate
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Danh sách giao dịch thực trong ApiResponse.data (rỗng nếu không có)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  message: {type: string}
+                  data:
+                    type: array
+                    maxItems: 10
+                    items:
+                      type: object
+                      properties:
+                        id: {type: integer, format: int64}
+                        invoiceNumber: {type: string, nullable: true}
+                        memberName: {type: string}
+                        packageName: {type: string, nullable: true}
+                        amount: {type: number}
+                        method: {type: string, enum: [cash, pos, bank_transfer, online_wallet]}
+                        paidAt: {type: string, format: date-time, description: Thời gian thanh toán theo đồng hồ ứng dụng}
+        '400': {description: Khoảng ngày không hợp lệ}
+        '401': {description: Chưa đăng nhập}
+        '403': {description: Chỉ CENTER_MANAGER được truy cập}
+
   /reports/snapshots/generate:
     post:
       summary: Tạo ảnh chụp báo cáo định kỳ (CENTER_MANAGER)
