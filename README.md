@@ -1,5 +1,7 @@
 # Sports Center Management System
 
+CI/CD: xem [hướng dẫn GitHub Actions → Vercel + Render](docs/CICD_SETUP.md) để cấu hình Secrets và theo dõi cả kiểm thử lẫn deploy trong tab Actions.
+
 Monorepo khởi tạo cho SWP391, gồm React web portal và Spring Boot REST API.
 
 Database của dự án là **Supabase PostgreSQL**, tạo schema bằng Hibernate Code-First. Xem [hướng dẫn Supabase](docs/SUPABASE_SETUP.md) để lấy kết nối JDBC, cấu hình SSL/RLS và chạy test DB thật.
