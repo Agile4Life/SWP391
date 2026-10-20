@@ -334,4 +334,103 @@ class CenterCheckinServiceTest {
 
         assertEquals("Legacy QR denial text", service.history(receptionist).getFirst().denialReason());
     }
+
+    @Test
+    @DisplayName("Anti-passback: Lượt check-in cũ quá 12 tiếng được tự động check-out (SYSTEM_AUTO_CHECKOUT) và lượt quét hôm sau được GRANTED")
+    void antiPassback_staleCheckinOlderThan12Hours_isAutoCheckedOutAndSubsequentScanGranted() {
+        Member member = mockMember(10L, "Nguyễn Văn F");
+        LocalDate today = LocalDate.now(clock);
+        LocalDateTime now = LocalDateTime.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(2), today.plusDays(30));
+
+        CenterCheckin staleCheckin = new CenterCheckin();
+        staleCheckin.setMember(member);
+        staleCheckin.setStatus("GRANTED");
+        staleCheckin.setCheckInTime(now.minusHours(14));
+        staleCheckin.setCheckOutTime(null);
+
+        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        when(checkins.findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
+                eq(10L), eq("GRANTED"), any(LocalDateTime.class)))
+                .thenReturn(List.of(staleCheckin));
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+
+        assertEquals("GRANTED", result.status());
+        assertNotNull(staleCheckin.getCheckOutTime());
+        assertEquals("SYSTEM_AUTO_CHECKOUT", staleCheckin.getNotes());
+        verify(checkins).save(staleCheckin);
+    }
+
+    @Test
+    @DisplayName("Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 12 tiếng")
+    void autoCheckoutStaleVisitsCronJob_closesAllVisitsOlderThan12Hours() {
+        Member member = new Member();
+        member.setUserId(10L);
+        LocalDateTime now = LocalDateTime.now(clock);
+
+        CenterCheckin stale1 = new CenterCheckin();
+        stale1.setMember(member);
+        stale1.setStatus("GRANTED");
+        stale1.setCheckInTime(now.minusHours(15));
+
+        CenterCheckin stale2 = new CenterCheckin();
+        stale2.setMember(member);
+        stale2.setStatus("GRANTED");
+        stale2.setCheckInTime(now.minusHours(20));
+
+        when(checkins.findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(eq("GRANTED"), any(LocalDateTime.class)))
+                .thenReturn(List.of(stale1, stale2));
+
+        int closedCount = service.autoCheckoutStaleVisits();
+
+        assertEquals(2, closedCount);
+        assertNotNull(stale1.getCheckOutTime());
+        assertEquals("SYSTEM_AUTO_CHECKOUT", stale1.getNotes());
+        assertNotNull(stale2.getCheckOutTime());
+        assertEquals("SYSTEM_AUTO_CHECKOUT", stale2.getNotes());
+        verify(checkins, times(2)).save(any(CenterCheckin.class));
+    }
+
+    @Test
+    @DisplayName("Dynamic QR HMAC-SHA256 hợp lệ -> GRANTED")
+    void validDynamicQr_granted() {
+        Member member = mockMember(10L, "Nguyễn Văn Dynamic");
+        LocalDate today = LocalDate.now(clock);
+        LocalDateTime now = LocalDateTime.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+
+        com.swp391.scms.membership.service.DynamicQrService qrService =
+                new com.swp391.scms.membership.service.DynamicQrService();
+        long currentMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli();
+        String dynamicQr = qrService.generate(10L, 5L, currentMillis);
+
+        when(subscriptions.findById(5L)).thenReturn(Optional.of(sub));
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(dynamicQr, "Gate A"));
+
+        assertEquals("GRANTED", result.status());
+        assertNull(result.denialReason());
+    }
+
+    @Test
+    @DisplayName("Dynamic QR đã hết hạn (>60s) -> Bị từ chối với lỗi error.attendance.qr_expired")
+    void expiredDynamicQr_deniedWithQrExpired() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        com.swp391.scms.membership.service.DynamicQrService qrService =
+                new com.swp391.scms.membership.service.DynamicQrService();
+        long oldMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli() - 90000L;
+        String expiredQr = qrService.generate(10L, 5L, oldMillis);
+
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(expiredQr, "Gate A"));
+
+        assertEquals("DENIED", result.status());
+        assertEquals(messageService.getMessage("error.attendance.qr_expired"), result.denialReason());
+    }
 }

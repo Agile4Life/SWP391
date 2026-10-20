@@ -39,6 +39,7 @@ import java.util.List;
 @Service
 public class EnrollmentService {
 
+    public static final int WAITLIST_RESERVATION_MINUTES = 15;
     private static final String BOOKED = "booked";
     private static final String CANCELLED = "cancelled";
     private static final String WAITING = "waiting";
@@ -112,9 +113,19 @@ public class EnrollmentService {
                     "Member already has an active booking for this class");
         }
 
-        // Trigger P2 pre-check: capacity is enforced again by the database trigger.
+        LocalDateTime now = LocalDateTime.now(clock);
+        processExpiredWaitlistReservations(gymClass.getId(), now);
+
+        boolean isHoldingReservation = waitlists.findByGymClassIdAndMemberUserIdAndStatus(
+                classId, member.getUserId(), "notified"
+        ).isPresent();
+
         long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
-        if (booked >= gymClass.getCapacity()) {
+        long activeReservations = waitlists
+                .countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(gymClass.getId(), "notified", now);
+
+        // Khóa chống cướp chỗ: nếu không giữ slot notified và lớp đã đầy (tính cả suất giữ ảo 15 phút), chặn người ngoài
+        if (!isHoldingReservation && (booked + activeReservations >= gymClass.getCapacity())) {
             throw new ConflictException(
                     "SCHEDULING_CLASS_FULL",
                     "error.scheduling.class_full",
@@ -126,7 +137,7 @@ public class EnrollmentService {
         enrollment.setGymClass(gymClass);
         enrollment.setMember(member);
         enrollment.setStatus(BOOKED);
-        enrollment.setEnrolledAt(LocalDateTime.now(clock));
+        enrollment.setEnrolledAt(now);
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
 
@@ -176,8 +187,9 @@ public class EnrollmentService {
                     "Only a booked enrollment can be cancelled");
         }
 
+        LocalDateTime now = LocalDateTime.now(clock);
         enrollment.setStatus(CANCELLED);
-        enrollment.setCancelledAt(LocalDateTime.now(clock));
+        enrollment.setCancelledAt(now);
         enrollment.setCancelReason(msg("scheduling.enrollment.cancelled_by_role", principal.role()));
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
@@ -189,25 +201,63 @@ public class EnrollmentService {
                 "class_enrollment",
                 saved.getId());
 
+        // Đôn người tiếp theo trong hàng chờ và cấp Reservation Window 15 phút
         if (enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
-            List<com.swp391.scms.scheduling.entity.ClassWaitlist> waitingList =
-                    waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(enrollment.getGymClass().getId(), WAITING);
-            if (waitingList != null && !waitingList.isEmpty()) {
-                com.swp391.scms.scheduling.entity.ClassWaitlist nextWaiting = waitingList.get(0);
-                nextWaiting.setStatus("notified");
-                waitlists.save(nextWaiting);
-                if (nextWaiting.getMember() != null && nextWaiting.getMember().getUserId() != null) {
-                    notifications.send(nextWaiting.getMember().getUserId(),
-                            msg("notifications.waitlist.notified.title"),
-                            msg("notifications.waitlist.notified.body", enrollment.getGymClass().getName()),
-                            "schedule_change",
-                            "class_session",
-                            nextWaiting.getId());
-                }
-            }
+            promoteNextWaitlistEntry(enrollment.getGymClass().getId(), now);
         }
 
         return toDto(saved, resolveSessionForClass(enrollment.getGymClass()));
+    }
+
+    /**
+     * Đôn người đầu tiên trong waitlist lên trạng thái 'notified' kèm Reservation Window 15 phút.
+     */
+    @Transactional
+    public void promoteNextWaitlistEntry(Long classId, LocalDateTime now) {
+        if (classId == null) return;
+        List<com.swp391.scms.scheduling.entity.ClassWaitlist> waitingList =
+                waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(classId, WAITING);
+        if (waitingList != null && !waitingList.isEmpty()) {
+            com.swp391.scms.scheduling.entity.ClassWaitlist nextWaiting = waitingList.get(0);
+            nextWaiting.setStatus("notified");
+            nextWaiting.setNotifiedAt(now);
+            nextWaiting.setReservationExpiresAt(now.plusMinutes(WAITLIST_RESERVATION_MINUTES));
+            waitlists.save(nextWaiting);
+            if (nextWaiting.getMember() != null && nextWaiting.getMember().getUserId() != null) {
+                notifications.send(nextWaiting.getMember().getUserId(),
+                        msg("notifications.waitlist.notified.title"),
+                        msg("notifications.waitlist.notified.body_window",
+                                nextWaiting.getGymClass() != null ? nextWaiting.getGymClass().getName() : "",
+                                WAITLIST_RESERVATION_MINUTES),
+                        "schedule_change",
+                        "class_session",
+                        nextWaiting.getId());
+            }
+        }
+    }
+
+    /**
+     * Tự động kiểm tra và hết hạn các lượt giữ chỗ notified quá 15 phút, sau đó đôn người kế tiếp.
+     */
+    @Transactional
+    public void processExpiredWaitlistReservations(Long classId, LocalDateTime now) {
+        if (classId == null) return;
+        List<com.swp391.scms.scheduling.entity.ClassWaitlist> expiredList = waitlists
+                .findByGymClassIdAndStatusAndReservationExpiresAtLessThan(classId, "notified", now);
+        for (com.swp391.scms.scheduling.entity.ClassWaitlist expired : expiredList) {
+            expired.setStatus("expired");
+            waitlists.save(expired);
+            if (expired.getMember() != null && expired.getMember().getUserId() != null) {
+                notifications.send(expired.getMember().getUserId(),
+                        msg("notifications.waitlist.expired.title"),
+                        msg("notifications.waitlist.expired.body",
+                                expired.getGymClass() != null ? expired.getGymClass().getName() : ""),
+                        "schedule_change",
+                        "class_session",
+                        expired.getId());
+            }
+            promoteNextWaitlistEntry(classId, now);
+        }
     }
 
     @Transactional(readOnly = true)

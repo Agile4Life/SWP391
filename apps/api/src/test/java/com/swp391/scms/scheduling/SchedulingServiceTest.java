@@ -44,14 +44,17 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -160,7 +163,7 @@ class SchedulingServiceTest {
     @Test
     void bookingClosesExistingWaitlistEntry() {
         ClassWaitlist waiting = waitingEntry();
-        when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "waiting"))
+        lenient().when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "waiting"))
                 .thenReturn(Optional.of(waiting));
 
         var result = enrollmentService.enroll(MEMBER, 9L);
@@ -261,5 +264,64 @@ class SchedulingServiceTest {
         waiting.setGymClass(gymClass);
         waiting.setStatus("waiting");
         return waiting;
+    }
+
+    @Test
+    void cancellationGrants15MinReservationWindowToNextWaitlistMember() {
+        ClassEnrollment enrollment = new ClassEnrollment();
+        ReflectionTestUtils.setField(enrollment, "id", 101L);
+        enrollment.setGymClass(gymClass);
+        enrollment.setStatus("booked");
+        Member owner = new Member();
+        owner.setUserId(MEMBER.id());
+        enrollment.setMember(owner);
+
+        ClassWaitlist waiting = waitingEntry();
+        Member waitlistMember = new Member();
+        waitlistMember.setUserId(99L);
+        waiting.setMember(waitlistMember);
+
+        when(enrollments.findById(101L)).thenReturn(Optional.of(enrollment));
+        when(waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(5L, "waiting"))
+                .thenReturn(List.of(waiting));
+
+        enrollmentService.cancel(MEMBER, 101L);
+
+        assertEquals("cancelled", enrollment.getStatus());
+        assertEquals("notified", waiting.getStatus());
+        assertNotNull(waiting.getNotifiedAt());
+        assertNotNull(waiting.getReservationExpiresAt());
+        assertEquals(waiting.getNotifiedAt().plusMinutes(15), waiting.getReservationExpiresAt());
+        verify(waitlists).save(waiting);
+    }
+
+    @Test
+    void outsiderBlockedFromBookingWhenActiveWaitlistReservationHoldsVirtualSeat() {
+        // Lớp capacity = 1, booked = 0 nhưng có 1 slot ảo đang giữ (active reservation = 1)
+        when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(0L);
+        when(waitlists.countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(eq(5L), eq("notified"), any()))
+                .thenReturn(1L);
+        when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "notified"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ConflictException.class, () -> enrollmentService.enroll(MEMBER, 9L));
+    }
+
+    @Test
+    void notifiedMemberCanClaimReservedSeat() {
+        ClassWaitlist holdingReservation = waitingEntry();
+        holdingReservation.setStatus("notified");
+        holdingReservation.setReservationExpiresAt(LocalDateTime.of(2026, 10, 17, 12, 15));
+
+        when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(0L);
+        when(waitlists.countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(eq(5L), eq("notified"), any()))
+                .thenReturn(1L);
+        when(waitlists.findByGymClassIdAndMemberUserIdAndStatus(5L, MEMBER.id(), "notified"))
+                .thenReturn(Optional.of(holdingReservation));
+
+        var result = enrollmentService.enroll(MEMBER, 9L);
+
+        assertEquals("booked", result.status());
+        assertEquals("expired", holdingReservation.getStatus());
     }
 }

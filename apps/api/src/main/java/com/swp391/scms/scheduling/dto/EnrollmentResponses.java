@@ -34,7 +34,11 @@ public final class EnrollmentResponses {
             String className,
             Long memberId,
             String status,
-            LocalDateTime requestedAt
+            LocalDateTime requestedAt,
+            LocalDateTime reservationExpiresAt
     ) {
+        public WaitlistDto(Long id, Long classId, String className, Long memberId, String status, LocalDateTime requestedAt) {
+            this(id, classId, className, memberId, status, requestedAt, null);
+        }
     }
 }

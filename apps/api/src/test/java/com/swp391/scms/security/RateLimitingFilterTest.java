@@ -1,0 +1,64 @@
+package com.swp391.scms.security;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+
+import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
+class RateLimitingFilterTest {
+
+    private RateLimitingFilter filter;
+    private FilterChain filterChain;
+
+    @BeforeEach
+    void setUp() {
+        filter = new RateLimitingFilter();
+        filterChain = mock(FilterChain.class);
+    }
+
+    @Test
+    @DisplayName("Các request bình thường dưới ngưỡng limit được cho qua")
+    void requestsUnderLimit_passThrough() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/check-in/scan");
+        request.setRemoteAddr("192.168.1.100");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertEquals(200, response.getStatus());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    @DisplayName("Vượt quá rate limit (quét cạn > 60 req/phút) -> Trả về HTTP 429 Too Many Requests kèm Retry-After")
+    void requestsExceedingLimit_return429TooManyRequests() throws ServletException, IOException {
+        String clientIp = "10.0.0.99";
+
+        // Gửi 60 requests hợp lệ
+        for (int i = 0; i < 60; i++) {
+            MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/v1/check-in/scan");
+            req.setRemoteAddr(clientIp);
+            MockHttpServletResponse res = new MockHttpServletResponse();
+            filter.doFilterInternal(req, res, filterChain);
+            assertEquals(200, res.getStatus());
+        }
+
+        // Request thứ 61 bị chặn rate limit
+        MockHttpServletRequest blockedReq = new MockHttpServletRequest("POST", "/api/v1/check-in/scan");
+        blockedReq.setRemoteAddr(clientIp);
+        MockHttpServletResponse blockedRes = new MockHttpServletResponse();
+
+        filter.doFilterInternal(blockedReq, blockedRes, filterChain);
+
+        assertEquals(429, blockedRes.getStatus());
+        assertEquals("60", blockedRes.getHeader("Retry-After"));
+    }
+}

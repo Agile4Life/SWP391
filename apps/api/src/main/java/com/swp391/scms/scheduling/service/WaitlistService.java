@@ -92,9 +92,12 @@ public class WaitlistService {
                     "Member already holds a booking for this class");
         }
 
-        // BR-01: only allowed when there is no free seat.
+        // BR-01: only allowed when there is no free seat (taking active reservations into account).
+        LocalDateTime now = LocalDateTime.now(clock);
         long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
-        if (booked < gymClass.getCapacity()) {
+        long activeReservations = waitlists
+                .countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(gymClass.getId(), "notified", now);
+        if (booked + activeReservations < gymClass.getCapacity()) {
             throw new BadRequestException(
                     "SCHEDULING_WAITLIST_CLASS_HAS_SPACE",
                     "error.scheduling.waitlist_class_has_space",
@@ -116,7 +119,7 @@ public class WaitlistService {
         waitlist.setGymClass(gymClass);
         waitlist.setMember(member);
         waitlist.setStatus(WAITING);
-        waitlist.setRequestedAt(LocalDateTime.now(clock));
+        waitlist.setRequestedAt(now);
 
         return toDto(waitlists.saveAndFlush(waitlist));
     }
@@ -146,10 +149,49 @@ public class WaitlistService {
                     "Only a waiting entry can be withdrawn");
         }
 
+        boolean wasNotified = "notified".equalsIgnoreCase(waitlist.getStatus());
         // Schema only permits waiting/notified/expired. Mark withdrawal as expired rather than
         // writing the unsupported cancelled value (no schema changes are allowed).
         waitlist.setStatus("expired");
-        return toDto(waitlists.saveAndFlush(waitlist));
+        ClassWaitlist saved = waitlists.saveAndFlush(waitlist);
+
+        if (wasNotified && waitlist.getGymClass() != null && waitlist.getGymClass().getId() != null) {
+            promoteNextWaitlistEntry(waitlist.getGymClass().getId(), LocalDateTime.now(clock));
+        }
+
+        return toDto(saved);
+    }
+
+    /**
+     * Scheduled Job: Quét dọn các suất giữ chỗ quá 15 phút mỗi 60 giây.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000)
+    @Transactional
+    public int scheduledCleanupExpiredReservations() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        List<ClassWaitlist> expiredList = waitlists
+                .findByStatusAndReservationExpiresAtLessThan("notified", now);
+        for (ClassWaitlist expired : expiredList) {
+            expired.setStatus("expired");
+            waitlists.save(expired);
+            if (expired.getGymClass() != null && expired.getGymClass().getId() != null) {
+                promoteNextWaitlistEntry(expired.getGymClass().getId(), now);
+            }
+        }
+        return expiredList.size();
+    }
+
+    private void promoteNextWaitlistEntry(Long classId, LocalDateTime now) {
+        if (classId == null) return;
+        List<ClassWaitlist> waitingList =
+                waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(classId, WAITING);
+        if (waitingList != null && !waitingList.isEmpty()) {
+            ClassWaitlist nextWaiting = waitingList.get(0);
+            nextWaiting.setStatus("notified");
+            nextWaiting.setNotifiedAt(now);
+            nextWaiting.setReservationExpiresAt(now.plusMinutes(15));
+            waitlists.save(nextWaiting);
+        }
     }
 
     /**
@@ -192,7 +234,8 @@ public class WaitlistService {
                 gymClass != null ? gymClass.getName() : null,
                 waitlist.getMember() != null ? waitlist.getMember().getUserId() : null,
                 waitlist.getStatus(),
-                waitlist.getRequestedAt()
+                waitlist.getRequestedAt(),
+                waitlist.getReservationExpiresAt()
         );
     }
 }

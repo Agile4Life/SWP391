@@ -15,7 +15,9 @@ import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import com.swp391.scms.membership.service.DynamicQrService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,9 @@ import java.util.Set;
 @Service
 public class CenterCheckinService {
 
+    public static final int ANTI_PASSBACK_TIMEOUT_HOURS = 12;
+    public static final String AUTO_CHECKOUT_NOTE = "SYSTEM_AUTO_CHECKOUT";
+
     private static final String STATUS_ACTIVE = "active";
     private static final String RESULT_GRANTED = "GRANTED";
     private static final String RESULT_DENIED = "DENIED";
@@ -46,13 +51,23 @@ public class CenterCheckinService {
     private final MemberRepository members;
     private final Clock clock;
     private final MessageService messageService;
+    private final DynamicQrService dynamicQrService;
 
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
                                 MemberRepository members,
                                 Clock clock) {
-        this(checkins, subscriptions, users, members, clock, null);
+        this(checkins, subscriptions, users, members, clock, null, new DynamicQrService());
+    }
+
+    public CenterCheckinService(CenterCheckinRepository checkins,
+                                MembershipSubscriptionRepository subscriptions,
+                                UserRepository users,
+                                MemberRepository members,
+                                Clock clock,
+                                MessageService messageService) {
+        this(checkins, subscriptions, users, members, clock, messageService, new DynamicQrService());
     }
 
     @Autowired
@@ -61,13 +76,15 @@ public class CenterCheckinService {
                                 UserRepository users,
                                 MemberRepository members,
                                 Clock clock,
-                                MessageService messageService) {
+                                MessageService messageService,
+                                @Autowired(required = false) DynamicQrService dynamicQrService) {
         this.checkins = checkins;
         this.subscriptions = subscriptions;
         this.users = users;
         this.members = members;
         this.clock = clock;
         this.messageService = messageService;
+        this.dynamicQrService = dynamicQrService != null ? dynamicQrService : new DynamicQrService();
     }
 
     private String resolveMessage(String key) {
@@ -77,11 +94,12 @@ public class CenterCheckinService {
     /**
      * SCRUM-75 BR-01, BR-02, BR-03, BR-04 & Trigger P4:
      * - BR-01: Chỉ RECEPTIONIST và CENTER_MANAGER (hoặc barrier) mới được gọi API quét mã. Member bị 403.
-     * - BR-02 & Trigger P4: Quét QR tra cứu membership_subscriptions.
+     * - BR-02 & Trigger P4: Quét QR tra cứu membership_subscriptions (hỗ trợ cả Dynamic QR HMAC-SHA256 lẫn static QR).
      *   result = 'GRANTED' khi: qr tồn tại, subscription có status = 'active', end_date >= CURRENT_DATE.
      *   Nếu không thỏa: result = 'DENIED' kèm denial_reason.
      * - BR-03: MỌI lượt quét (GRANTED hay DENIED) bắt buộc lưu 1 bản ghi vào center_checkins với server time.
      * - BR-04: Anti-passback: Nếu hội viên đã GRANTED mà chưa checkout, chặn GRANTED thứ hai và log DENIED.
+     *   Tự động đóng phiên treo quá 12 tiếng để tránh kẹt quyền vào cửa ngày hôm sau.
      */
     @Transactional
     public CheckinDto scan(AuthenticatedPrincipal principal, CheckinRequests.Scan request) {
@@ -92,7 +110,23 @@ public class CenterCheckinService {
         User recorder = users.findById(principal.id()).orElse(null);
 
         String rawQr = request.qrCode() != null ? request.qrCode().trim() : "";
-        Optional<MembershipSubscription> subOpt = subscriptions.findByQrCode(rawQr);
+        Optional<MembershipSubscription> subOpt;
+
+        // Xử lý Dynamic QR HMAC-SHA256 (nếu mã bắt đầu bằng DYN:)
+        if (dynamicQrService.isDynamic(rawQr)) {
+            long currentMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli();
+            DynamicQrService.VerificationResult qrResult = dynamicQrService.verify(rawQr, currentMillis);
+            if (!qrResult.valid()) {
+                String reasonKey = qrResult.expired() ? "error.attendance.qr_expired" : "error.attendance.qr_invalid";
+                return saveDeniedRecord(null, now, request.gate(), recorder, reasonKey);
+            }
+            subOpt = subscriptions.findById(qrResult.subscriptionId());
+            if (subOpt.isPresent() && (subOpt.get().getMember() == null || !subOpt.get().getMember().getUserId().equals(qrResult.userId()))) {
+                return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid");
+            }
+        } else {
+            subOpt = subscriptions.findByQrCode(rawQr);
+        }
 
         // Trường hợp 1: Mã QR không tồn tại
         if (subOpt.isEmpty()) {
@@ -130,6 +164,9 @@ public class CenterCheckinService {
             return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_expired");
         }
 
+        // Tự động đóng các lượt check-in GRANTED bị treo quá 12 tiếng của hội viên (giải phóng bẫy anti-passback)
+        autoCheckoutStaleVisitsForMember(member.getUserId(), now);
+
         // Trường hợp 5 (BR-04 Anti-passback): Hội viên đang ở trong phòng tập chưa checkout
         if (checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(member.getUserId(), RESULT_GRANTED)) {
             return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.already_checked_in");
@@ -146,6 +183,44 @@ public class CenterCheckinService {
         checkin.setDenialReason(null);
 
         return toDto(checkins.saveAndFlush(checkin));
+    }
+
+    /**
+     * Tự động checkout các lượt check-in GRANTED của member bị treo quá 12 tiếng.
+     */
+    @Transactional
+    public void autoCheckoutStaleVisitsForMember(Long memberUserId, LocalDateTime now) {
+        if (memberUserId == null) return;
+        LocalDateTime cutoff = now.minusHours(ANTI_PASSBACK_TIMEOUT_HOURS);
+        List<CenterCheckin> staleVisits = checkins
+                .findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
+                        memberUserId, RESULT_GRANTED, cutoff);
+        for (CenterCheckin stale : staleVisits) {
+            stale.setCheckOutTime(stale.getCheckInTime().plusHours(4).isBefore(now)
+                    ? stale.getCheckInTime().plusHours(4) : now);
+            stale.setNotes(AUTO_CHECKOUT_NOTE);
+            checkins.save(stale);
+        }
+    }
+
+    /**
+     * Cron Job chạy lúc 03:00 AM hàng ngày: Tự động đóng các lượt check-in GRANTED chưa checkout của ngày hôm trước
+     * với trạng thái ghi chú SYSTEM_AUTO_CHECKOUT, giải phóng hội viên khỏi bẫy anti-passback ngày hôm sau.
+     */
+    @Scheduled(cron = "${app.attendance.auto-checkout.cron:0 0 3 * * ?}")
+    @Transactional
+    public int autoCheckoutStaleVisits() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime cutoff = now.minusHours(ANTI_PASSBACK_TIMEOUT_HOURS);
+        List<CenterCheckin> staleVisits = checkins
+                .findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(RESULT_GRANTED, cutoff);
+        for (CenterCheckin stale : staleVisits) {
+            stale.setCheckOutTime(stale.getCheckInTime().plusHours(4).isBefore(now)
+                    ? stale.getCheckInTime().plusHours(4) : now);
+            stale.setNotes(AUTO_CHECKOUT_NOTE);
+            checkins.save(stale);
+        }
+        return staleVisits.size();
     }
 
     private CheckinDto saveDeniedRecord(Member member, LocalDateTime now, String gate, User recorder, String reasonKey) {
