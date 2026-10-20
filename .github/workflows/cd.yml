@@ -2,7 +2,7 @@ name: Sport Center Project (CD included) | © 2026 by Agile4Life
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: ["Sport Center Project (CI included) | © 2026 by Agile4Life"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
