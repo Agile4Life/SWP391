@@ -59,6 +59,9 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "google_sub", length = 100, unique = true)
+    private String googleSub;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Member member;
 
@@ -129,4 +132,7 @@ public class User {
 
     public Receptionist getReceptionist() { return receptionist; }
     public void setReceptionist(Receptionist receptionist) { this.receptionist = receptionist; }
+
+    public String getGoogleSub() { return googleSub; }
+    public void setGoogleSub(String googleSub) { this.googleSub = googleSub; }
 }

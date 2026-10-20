@@ -20,7 +20,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import java.util.List;
 
 @Tag(name = "Payments & Invoices", description = "Quản lý giao dịch thu tiền, xuất hóa đơn điện tử và công nợ")
-@PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
 @RestController
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
@@ -44,6 +43,7 @@ public class PaymentController {
 
     @Operation(summary = "Xử lý thanh toán mua gói hoặc ghi danh", description = "Tiếp nhận thanh toán và tự động kích hoạt gói tập / ghi danh lớp học kèm sinh mã QR")
     @PostMapping("/process")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<PaymentDto>> processPayment(@Valid @RequestBody PaymentProcessDto dto) {
         PaymentDto processed = paymentService.processPayment(dto);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -71,6 +71,7 @@ public class PaymentController {
 
     @Operation(summary = "Xem chi tiết giao dịch thanh toán", description = "Tra cứu giao dịch theo Payment ID")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<PaymentDto>> getPaymentById(@PathVariable Long id) {
         PaymentDto payment = paymentService.getPaymentById(id);
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.detail"), payment));
@@ -78,6 +79,7 @@ public class PaymentController {
 
     @Operation(summary = "Lịch sử thanh toán của hội viên", description = "Lấy tất cả giao dịch thanh toán của một hội viên")
     @GetMapping("/member/{memberId}")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<PaymentDto>>> getPaymentsByMemberId(@PathVariable Long memberId) {
         List<PaymentDto> payments = paymentService.getPaymentsByMemberId(memberId);
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.list"), payments));
@@ -85,6 +87,7 @@ public class PaymentController {
 
     @Operation(summary = "Cập nhật trạng thái thanh toán", description = "Chuyển trạng thái giao dịch sang success, pending, failed, refunded")
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<PaymentDto>> updatePaymentStatus(
             @PathVariable Long id,
             @Valid @RequestBody PaymentStatusUpdateRequest request) {

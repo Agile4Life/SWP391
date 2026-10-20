@@ -10,6 +10,7 @@ import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.TooManyRequestsException;
+import com.swp391.scms.common.exception.UnauthorizedException;
 import com.swp391.scms.security.JwtService;
 import com.swp391.scms.users.RoleRepository;
 import com.swp391.scms.users.UserRepository;
@@ -34,12 +35,14 @@ class AuthServiceTest {
     @Mock JwtService jwtService;
     @Mock OtpService otpService;
     @Mock OtpDeliveryPort otpDeliveryPort;
+    @Mock GoogleTokenVerifier googleTokenVerifier;
+    @Mock com.swp391.scms.audit.AuditLogRepository auditLogRepository;
     private AuthService service;
 
     @BeforeEach
     void setUp() {
         service = new AuthService(userRepository, roleRepository, passwordEncoder, jwtService, otpService,
-                otpDeliveryPort, Clock.systemUTC(), false);
+                otpDeliveryPort, Clock.systemUTC(), false, null, googleTokenVerifier, auditLogRepository);
     }
 
     private User pendingUser() {
@@ -190,5 +193,111 @@ class AuthServiceTest {
         assertThrows(ForbiddenException.class, () -> service.verifyGoogleOtp("locked@gmail.com", "123456"));
         assertEquals("locked", locked.getStatus());
         verify(userRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void loginWithGoogleRejectsInvalidOrExpiredToken() {
+        when(googleTokenVerifier.verify("invalid-token")).thenReturn(null);
+
+        assertThrows(UnauthorizedException.class, () -> service.loginWithGoogle("invalid-token"));
+    }
+
+    @Test
+    void loginWithGoogleRejectsUnverifiedEmail() {
+        when(googleTokenVerifier.verify("unverified-token"))
+                .thenReturn(new GoogleTokenPayload("sub-123", "unverified@gmail.com", false, "Test", null));
+
+        assertThrows(UnauthorizedException.class, () -> service.loginWithGoogle("unverified-token"));
+    }
+
+    @Test
+    void loginWithGoogleExistingMemberLoginSuccess() {
+        User user = new User();
+        user.setId(10L);
+        user.setUsername("existing_member");
+        user.setEmail("existing@gmail.com");
+        user.setStatus("active");
+        Role role = new Role();
+        role.setCode("MEMBER");
+        user.setRole(role);
+
+        when(googleTokenVerifier.verify("valid-token"))
+                .thenReturn(new GoogleTokenPayload("google-sub-10", "existing@gmail.com", true, "Existing Member", "http://avatar.jpg"));
+        when(userRepository.findByGoogleSubAndDeletedAtIsNull("google-sub-10")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("existing@gmail.com")).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(10L, "existing_member", "MEMBER")).thenReturn("jwt-member-10");
+
+        var response = service.loginWithGoogle("valid-token");
+
+        assertEquals("jwt-member-10", response.token());
+        assertEquals("existing_member", response.username());
+        assertEquals("MEMBER", response.role());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void loginWithGoogleNewMemberAutoCreated() {
+        when(googleTokenVerifier.verify("new-token"))
+                .thenReturn(new GoogleTokenPayload("google-sub-99", "newuser@gmail.com", true, "New Member", null));
+        when(userRepository.findByGoogleSubAndDeletedAtIsNull("google-sub-99")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("newuser@gmail.com")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameIgnoreCase("newuser")).thenReturn(Optional.empty());
+
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(memberRole));
+        when(passwordEncoder.encode(any())).thenReturn("random-hashed-pwd");
+
+        when(userRepository.saveAndFlush(any())).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(99L);
+            return u;
+        });
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtService.generateToken(99L, "newuser", "MEMBER")).thenReturn("jwt-new-99");
+
+        var response = service.loginWithGoogle("new-token");
+
+        assertEquals("jwt-new-99", response.token());
+        assertEquals("MEMBER", response.role());
+        verify(userRepository, org.mockito.Mockito.atLeastOnce()).save(any());
+    }
+
+    @Test
+    void loginWithGoogleRejectsStaffAccount() {
+        User staff = new User();
+        staff.setId(5L);
+        staff.setUsername("coach_staff");
+        staff.setEmail("coach@gym.com");
+        staff.setStatus("active");
+        Role coachRole = new Role();
+        coachRole.setCode("COACH");
+        staff.setRole(coachRole);
+
+        when(googleTokenVerifier.verify("staff-token"))
+                .thenReturn(new GoogleTokenPayload("google-sub-coach", "coach@gym.com", true, "Coach Staff", null));
+        when(userRepository.findByGoogleSubAndDeletedAtIsNull("google-sub-coach")).thenReturn(Optional.of(staff));
+        when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("coach@gym.com")).thenReturn(Optional.of(staff));
+
+        assertThrows(ForbiddenException.class, () -> service.loginWithGoogle("staff-token"));
+    }
+
+    @Test
+    void loginWithGoogleRejectsLockedAccount() {
+        User locked = new User();
+        locked.setId(7L);
+        locked.setUsername("locked_member");
+        locked.setEmail("locked@gmail.com");
+        locked.setStatus("locked");
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        locked.setRole(memberRole);
+
+        when(googleTokenVerifier.verify("locked-token"))
+                .thenReturn(new GoogleTokenPayload("google-sub-locked", "locked@gmail.com", true, "Locked Member", null));
+        when(userRepository.findByGoogleSubAndDeletedAtIsNull("google-sub-locked")).thenReturn(Optional.of(locked));
+        when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("locked@gmail.com")).thenReturn(Optional.of(locked));
+
+        assertThrows(ForbiddenException.class, () -> service.loginWithGoogle("locked-token"));
     }
 }

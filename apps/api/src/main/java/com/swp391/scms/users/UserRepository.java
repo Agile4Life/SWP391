@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findActiveByIdentifier(@org.springframework.data.repository.query.Param("identifier") String identifier);
     Optional<User> findByEmailIgnoreCase(String email);
     Optional<User> findByEmailIgnoreCaseAndDeletedAtIsNull(String email);
+    Optional<User> findByGoogleSub(String googleSub);
+    Optional<User> findByGoogleSubAndDeletedAtIsNull(String googleSub);
     Optional<User> findByPhone(String phone);
     Optional<User> findByPhoneAndDeletedAtIsNull(String phone);
 }

@@ -72,6 +72,27 @@ paths:
       summary: Verify OTP and activate account (public). data = { target, isVerified }
       security: []
       responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '429': { description: MAX_ATTEMPTS } }
+  /auth/google:
+    post:
+      summary: Verify Google ID Token, link or create member account, and issue JWT (SCRUM-89 public). data = { token, username, role }
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken:
+                  type: string
+                  description: Google ID Token issued by Google OAuth
+      responses:
+        '200': { description: OK - JWT issued }
+        '400': { description: Bad request or validation failure }
+        '401': { description: INVALID_GOOGLE_TOKEN / GOOGLE_EMAIL_NOT_VERIFIED }
+        '403': { description: STAFF_GOOGLE_LOGIN_FORBIDDEN / ACCOUNT_LOCKED / ACCOUNT_INACTIVE }
+        '409': { description: GOOGLE_SUB_CONFLICT }
   /auth/google/send-otp:
     post:
       summary: Create pending account if needed and send Google login OTP (public). data = { email, message, expiresInMinutes, debugOtp? }

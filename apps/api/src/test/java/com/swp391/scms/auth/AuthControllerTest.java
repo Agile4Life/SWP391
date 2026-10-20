@@ -152,4 +152,31 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.token").value("google-jwt-token"))
                 .andExpect(jsonPath("$.data.role").value("MEMBER"));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/google returns 200 with JWT token and role when token is valid")
+    void loginWithGoogleSuccess() throws Exception {
+        GoogleIdTokenRequest req = new GoogleIdTokenRequest("valid-google-id-token");
+        when(authService.loginWithGoogle("valid-google-id-token"))
+                .thenReturn(new AuthTokenResponse("jwt-token-google", "member_google", "MEMBER"));
+
+        mockMvc.perform(post("/api/v1/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.token").value("jwt-token-google"))
+                .andExpect(jsonPath("$.data.role").value("MEMBER"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/google returns 400 when idToken is blank")
+    void loginWithGoogleBlankToken() throws Exception {
+        GoogleIdTokenRequest req = new GoogleIdTokenRequest("");
+
+        mockMvc.perform(post("/api/v1/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest());
+    }
 }

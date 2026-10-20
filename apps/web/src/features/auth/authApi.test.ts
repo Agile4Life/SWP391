@@ -153,4 +153,27 @@ describe('authApi.ts (Register and OTP flow)', () => {
       }),
     );
   });
+
+  it('googleLoginWithIdToken calls /auth/google with idToken', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { token: 'jwt-google-idtoken', username: 'google_user', role: 'MEMBER' },
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const { googleLoginWithIdToken } = await import('./authApi');
+    const res = await googleLoginWithIdToken('my-google-id-token');
+    expect(res).toEqual({ token: 'jwt-google-idtoken', username: 'google_user', role: 'MEMBER' });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/auth/google',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ idToken: 'my-google-id-token' }),
+      }),
+    );
+  });
 });

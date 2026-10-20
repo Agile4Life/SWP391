@@ -22,7 +22,6 @@ import java.util.List;
  * Controller for managing membership subscriptions (SCRUM-71).
  */
 @Tag(name = "Membership Subscriptions", description = "Purchase, renewal and member subscription status (SCRUM-71)")
-@PreAuthorize("hasRole('MEMBER')")
 @RestController
 @RequestMapping({"/api/v1/memberships/subscriptions", "/api/v1/subscriptions"})
 public class MembershipSubscriptionController {
@@ -46,6 +45,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Create a membership subscription awaiting payment")
     @PostMapping
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<SubscriptionDto>> create(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @Valid @RequestBody SubscriptionRequests.Create request) {
@@ -55,6 +55,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Renew a membership subscription")
     @PostMapping("/{id}/renew")
+    @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<SubscriptionDto>> renew(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
@@ -64,6 +65,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Get the authenticated member's current active subscription (or null if none)")
     @GetMapping("/my")
+    @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<SubscriptionDto> getMy(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("membership.subscription.current"), service.current(principal));
@@ -71,6 +73,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Get the authenticated member's subscription history")
     @GetMapping("/history")
+    @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<List<SubscriptionDto>> getHistory(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("membership.subscription.list"), service.mine(principal));

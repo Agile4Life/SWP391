@@ -109,4 +109,11 @@ public class AuthController {
         AuthTokenResponse response = authService.verifyGoogleOtp(email, otpCode);
         return ApiResponse.ok(msg("auth.login.success"), response);
     }
+
+    @Operation(summary = "Đăng nhập bằng Google ID Token", description = "Xác thực Google ID Token, tự động liên kết hoặc tạo tài khoản hội viên và cấp JWT (SCRUM-89)")
+    @PostMapping("/google")
+    public ApiResponse<AuthTokenResponse> loginWithGoogle(@Valid @RequestBody GoogleIdTokenRequest request) {
+        AuthTokenResponse response = authService.loginWithGoogle(request.idToken());
+        return ApiResponse.ok(msg("auth.login.success"), response);
+    }
 }

@@ -23,6 +23,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -36,12 +37,22 @@ public class AuthService {
     private final boolean debugOtpEnabled;
     private final Clock clock;
     private final MessageService messageService;
+    private final GoogleTokenVerifier googleTokenVerifier;
+    private final com.swp391.scms.audit.AuditLogRepository auditLogRepository;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null, null);
+    }
+
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
+                       @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
+                       MessageService messageService) {
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -49,7 +60,9 @@ public class AuthService {
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
-                       MessageService messageService) {
+                       MessageService messageService,
+                       GoogleTokenVerifier googleTokenVerifier,
+                       com.swp391.scms.audit.AuditLogRepository auditLogRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -59,6 +72,8 @@ public class AuthService {
         this.debugOtpEnabled = debugOtpEnabled;
         this.clock = clock;
         this.messageService = messageService;
+        this.googleTokenVerifier = googleTokenVerifier;
+        this.auditLogRepository = auditLogRepository;
     }
 
     private String msg(String key) {
@@ -268,6 +283,121 @@ public class AuthService {
         }
         String trimmed = rawEmail.trim();
         return !trimmed.isEmpty() && trimmed.length() <= 150 && trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    }
+
+    @Transactional
+    public AuthTokenResponse loginWithGoogle(String idToken) {
+        if (idToken == null || idToken.isBlank()) {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+        }
+
+        GoogleTokenPayload payload = googleTokenVerifier != null ? googleTokenVerifier.verify(idToken) : null;
+        if (payload == null) {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+        }
+
+        if (!payload.emailVerified()) {
+            throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_unverified", null, null);
+        }
+
+        String email = normalize(payload.email());
+        String sub = payload.sub();
+
+        Optional<User> bySub = (sub != null && !sub.isBlank())
+                ? userRepository.findByGoogleSubAndDeletedAtIsNull(sub)
+                : Optional.empty();
+        Optional<User> byEmail = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email);
+
+        User user;
+        if (bySub.isPresent() && byEmail.isPresent()) {
+            if (!bySub.get().getId().equals(byEmail.get().getId())) {
+                throw new ConflictException("GOOGLE_SUB_CONFLICT", "auth.google.sub_conflict", null, null);
+            }
+            user = bySub.get();
+        } else if (bySub.isPresent()) {
+            user = bySub.get();
+        } else if (byEmail.isPresent()) {
+            user = byEmail.get();
+            // Link google_sub if not yet set
+            if (sub != null && !sub.isBlank()) {
+                Optional<User> existingSub = userRepository.findByGoogleSub(sub);
+                if (existingSub.isPresent() && !existingSub.get().getId().equals(user.getId())) {
+                    throw new ConflictException("GOOGLE_SUB_CONFLICT", "auth.google.sub_conflict", null, null);
+                }
+                user.setGoogleSub(sub);
+                user.setUpdatedAt(LocalDateTime.now(clock));
+                userRepository.save(user);
+            }
+        } else {
+            // BR-04: Tạo tài khoản mới vai trò MEMBER, trạng thái active và bản ghi members tương ứng
+            Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
+
+            String baseUsername = email.contains("@") ? email.split("@")[0] : email;
+            String username = baseUsername;
+            if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+                username = baseUsername + "_" + (System.currentTimeMillis() % 10000);
+            }
+
+            user = new User();
+            user.setUsername(username);
+            user.setRole(memberRole);
+            user.setFullName(payload.name() != null && !payload.name().isBlank() ? payload.name() : username);
+            user.setEmail(email);
+            user.setGoogleSub(sub);
+            user.setAvatarUrl(payload.picture());
+            user.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            user.setStatus("active");
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
+            userRepository.saveAndFlush(user);
+
+            Member member = new Member();
+            member.setUser(user);
+            member.setMembershipCode("MEM-" + user.getId());
+            member.setJoinDate(LocalDate.now(clock));
+            member.setFitnessLevel("beginner");
+            user.setMember(member);
+            userRepository.save(user);
+
+            recordAuditLog(user, "REGISTER_GOOGLE");
+        }
+
+        // BR-05: Chỉ vai trò MEMBER được đăng nhập bằng Google; nhân sự bị từ chối 403
+        if (user.getRole() == null || !"MEMBER".equalsIgnoreCase(user.getRole().getCode())) {
+            throw new ForbiddenException("STAFF_GOOGLE_LOGIN_FORBIDDEN", "auth.google.staff_forbidden", null, null);
+        }
+
+        // BR-06: Tài khoản bị khóa (locked) hoặc inactive bị từ chối
+        if ("locked".equalsIgnoreCase(user.getStatus())) {
+            throw new ForbiddenException("ACCOUNT_LOCKED", "auth.google.account_locked", null, null);
+        }
+        if (!"active".equalsIgnoreCase(user.getStatus())) {
+            throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
+        }
+
+        // BR-07: Cấp JWT đồng nhất + ghi audit log đăng nhập
+        user.setLastLoginAt(LocalDateTime.now(clock));
+        userRepository.save(user);
+        recordAuditLog(user, "LOGIN_GOOGLE");
+
+        return issueTokenForUser(user);
+    }
+
+    private void recordAuditLog(User user, String action) {
+        if (auditLogRepository == null) return;
+        try {
+            com.swp391.scms.audit.AuditLog entry = new com.swp391.scms.audit.AuditLog();
+            entry.setUserId(user.getId());
+            entry.setAction(action);
+            entry.setEntityType("users");
+            entry.setEntityId(user.getId());
+            entry.setNewValue("{\"email\":\"" + user.getEmail() + "\",\"role\":\"" + (user.getRole() != null ? user.getRole().getCode() : "MEMBER") + "\"}");
+            auditLogRepository.save(entry);
+        } catch (Exception ignored) {
+            // Audit log write should not block login flow
+        }
     }
 
     private String normalize(String value) {
