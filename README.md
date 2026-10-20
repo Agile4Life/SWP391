@@ -54,9 +54,9 @@ Không gian cá nhân giúp hội viên theo dõi thời hạn gói tập, đăn
 | :---: | :---: |
 | <img src="docs/qa/portal-redesign/member-packages-1440.png" alt="Member Packages" width="100%" /> | <img src="docs/qa/portal-redesign/member-classes-1440.png" alt="Member Classes" width="100%" /> |
 
-| 🪪 Thẻ Hội viên Điện tử & QR Check-in (`/member/card`) | 📱 Giao diện Mobile & Hồ sơ Sức khỏe BMI (`/member/profile`) |
+| 🪪 Thẻ Hội viên Điện tử & QR Check-in (`/member/card`) | 🧬 Hồ sơ Cá nhân & Chỉ số Sức khỏe BMI (`/member/profile`) |
 | :---: | :---: |
-| <img src="docs/qa/portal-redesign/member-card-1440.png" alt="Member QR Card" width="100%" /> | <img src="docs/qa/portal-redesign/member-profile-375.png" alt="Member Profile Mobile" width="260" /> <img src="docs/qa/portal-redesign/member-dashboard-375.png" alt="Member Dashboard Mobile" width="260" /> |
+| <img src="docs/qa/portal-redesign/member-card-1440.png" alt="Member QR Card" width="100%" /> | <img src="docs/qa/portal-redesign/member-profile-1440.png" alt="Member Profile Desktop" width="100%" /> |
 
 ---
 
