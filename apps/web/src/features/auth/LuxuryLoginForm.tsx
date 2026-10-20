@@ -64,7 +64,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   };
 
   // BR-01, BR-06: Xác thực Google ID Token qua backend API và cấp JWT session
-  const processGoogleIdToken = async (idToken: string) => {
+  const processGoogleIdToken = useCallback(async (idToken: string) => {
     setIsGoogleLoading(true);
     setFormError('');
     try {
@@ -87,7 +87,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     } finally {
       setIsGoogleLoading(false);
     }
-  };
+  }, [fail, navigate, onSuccess]);
 
   // Khởi tạo Google Identity Services (GIS)
   useEffect(() => {
@@ -135,7 +135,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       }, 500);
       return () => window.clearInterval(interval);
     }
-  }, [googleClientId]);
+  }, [googleClientId, processGoogleIdToken]);
 
   const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
