@@ -1,4 +1,4 @@
-name: CI
+name: Sport Center Project (CI included) | © 2026 by Agile4Life
 
 on:
   pull_request:
@@ -48,6 +48,9 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: apps/api/pom.xml
+      - name: Verify Render deployment script offline
+        working-directory: .
+        run: python3 -B -m unittest discover -s scripts -p test_deploy_render.py
       - name: Verify Supabase runner configuration
         shell: pwsh
         working-directory: .

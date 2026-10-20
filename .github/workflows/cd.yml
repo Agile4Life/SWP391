@@ -1,0 +1,107 @@
+name: Sport Center Project (CD included) | © 2026 by Agile4Life
+
+on:
+  workflow_run:
+    workflows: ["Sport Center Project (CI included) | © 2026 by Agile4Life"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Do not cancel a deployment that has already started on either platform.
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Check tested production commit
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      current: ${{ steps.commit.outputs.current }}
+    steps:
+      # A slower, older CI run must not roll production back after a newer push.
+      - name: Skip commits superseded on main
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$TESTED_SHA" = "$latest_sha" ]; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'current=false' >> "$GITHUB_OUTPUT"
+            echo 'Skipping deployment: main has a newer commit.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  frontend:
+    name: Deploy frontend to Vercel
+    needs: release
+    if: needs.release.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Vercel configuration
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
+        run: |
+          : "${VERCEL_TOKEN:?Set the VERCEL_TOKEN secret}"
+          : "${VERCEL_ORG_ID:?Set the VERCEL_ORG_ID secret}"
+          : "${VERCEL_PROJECT_ID:?Set the VERCEL_PROJECT_ID secret}"
+          [[ "$VERCEL_CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Set VERCEL_CLI_VERSION to an exact reviewed version (x.y.z).'; exit 1; }
+      - name: Install pinned Vercel CLI
+        env:
+          VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
+        run: npm install --global "vercel@$VERCEL_CLI_VERSION"
+      # Run from the repository root: the linked Vercel project has Root Directory apps/web.
+      - name: Pull production settings
+        run: vercel pull --yes --environment=production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build production frontend
+        run: vercel build --prod
+      - name: Deploy production frontend
+        run: vercel deploy --prebuilt --prod
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+  backend:
+    name: Deploy backend to Render
+    needs: release
+    if: needs.release.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Deploy tested commit and wait until live
+        run: python scripts/deploy-render.py
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          DEPLOY_COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}

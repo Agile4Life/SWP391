@@ -1,5 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 import { catalogApi, type MembershipPackage } from '../manager/catalogApi';
+export type { MembershipPackage };
 
 export interface MemberLookupResult {
   userId: number;

@@ -103,6 +103,21 @@ paths:
       summary: Verify Google OTP, activate account, and issue JWT token (public). data = { token, username, role }
       security: []
       responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '403': { description: ACCOUNT_INACTIVE }, '429': { description: MAX_ATTEMPTS } }
+  /auth/google:
+    post:
+      summary: Authenticate via Google ID Token (SCRUM-89, public). data = { token, username, role }
+      description: Requires GOOGLE_CLIENT_ID. Only active MEMBER accounts may sign in through Google. Existing Google bindings cannot be replaced. Linking existing accounts with third-party email requires additional verification.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken: {type: string, minLength: 1}
+      security: []
+      responses: { '200': { description: OK }, '401': { description: INVALID_GOOGLE_TOKEN / GOOGLE_EMAIL_NOT_VERIFIED / GOOGLE_LOGIN_NOT_CONFIGURED / GOOGLE_ACCOUNT_LINK_REQUIRED }, '403': { description: STAFF_GOOGLE_NOT_ALLOWED / ACCOUNT_INACTIVE } }
   /users:
     get: { summary: List users (non deleted), responses: { '200': { description: OK } } }
     post: { summary: Create user, responses: { '201': { description: Created }, '409': { description: EMAIL_EXISTS / PHONE_EXISTS } } }
