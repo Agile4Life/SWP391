@@ -28,12 +28,37 @@ export function ManagerReportsPage() {
 
   const [startDate, setStartDate] = useState(thirtyDaysAgoStr);
   const [endDate, setEndDate] = useState(todayStr);
+  const [appliedRange, setAppliedRange] = useState({
+    startDate: thirtyDaysAgoStr,
+    endDate: todayStr,
+  });
 
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
+
+  const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setStartDate(val);
+    if (val && endDate && val > endDate) {
+      setEndDate(val);
+    }
+  };
+
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (startDate && val && val < startDate) {
+      toast('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.', 'error');
+      e.target.value = startDate;
+      setEndDate(startDate);
+      return;
+    }
+    setEndDate(val);
+  };
 
   const fetchReports = useCallback(async (start: string, end: string) => {
     if (start > end) {
@@ -45,6 +70,7 @@ export function ManagerReportsPage() {
     try {
       const data = await reportsApi.getSummary(start, end);
       setSummary(data);
+      setAppliedRange({ startDate: start, endDate: end });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải báo cáo doanh thu.';
       setError(msg);
@@ -61,6 +87,10 @@ export function ManagerReportsPage() {
 
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isInvalidRange) {
+      toast('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.', 'error');
+      return;
+    }
     void fetchReports(startDate, endDate);
   };
 
@@ -130,7 +160,8 @@ export function ManagerReportsPage() {
               className="portal-input"
               style={{ width: '160px', padding: '8px 12px' }}
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              max={endDate || undefined}
+              onChange={handleStartDateChange}
             />
           </div>
 
@@ -141,13 +172,20 @@ export function ManagerReportsPage() {
               className="portal-input"
               style={{ width: '160px', padding: '8px 12px' }}
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              min={startDate || undefined}
+              onChange={handleEndDateChange}
             />
           </div>
 
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <button type="submit" className="btn-primary" disabled={loading || isInvalidRange}>
             {loading ? 'Đang lọc...' : 'Áp Dụng Lọc'}
           </button>
+
+          {isInvalidRange && (
+            <span style={{ fontSize: '0.82rem', color: '#DC2626', fontWeight: 500 }}>
+              ⚠️ Ngày kết thúc không được nhỏ hơn ngày bắt đầu.
+            </span>
+          )}
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
             <button
@@ -224,7 +262,7 @@ export function ManagerReportsPage() {
           <div className="metric-card">
             <div className="metric-label">DOANH THU THÁNG (TOÀN KỲ)</div>
             <div className="metric-value">{vnd(summary.periodRevenue)}</div>
-            <div className="metric-trend">Từ {startDate} đến {endDate}</div>
+            <div className="metric-trend">Từ {appliedRange.startDate} đến {appliedRange.endDate}</div>
           </div>
 
           <div className="metric-card">
