@@ -1,5 +1,8 @@
 # Sports Center Management System
 
+[![Sport Center Project (CD included) | © 2026 by Agile4Life](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml)
+[![Sport Center Project (CI included) | © 2026 by Agile4Life](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml)
+
 CI/CD: xem [hướng dẫn GitHub Actions → Vercel + Render](docs/CICD_SETUP.md) để cấu hình Secrets và theo dõi cả kiểm thử lẫn deploy trong tab Actions.
 
 Monorepo khởi tạo cho SWP391, gồm React web portal và Spring Boot REST API.
