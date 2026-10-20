@@ -16,7 +16,7 @@
 
 <br />
 
-<img src="apps/web/public/images/hero-sports-sanctuary.jpg" alt="SÖL Wellness Sanctuary Hero Banner" width="100%" />
+<img src="docs/qa/portal-redesign/landing-1440.png" alt="SÖL Wellness Sanctuary Landing Page" width="100%" />
 
 </div>
 
@@ -24,40 +24,76 @@
 
 ## ✨ Giới thiệu tổng quan
 
-**Sports Center Management System (SCMS)** là hệ thống quản lý vận hành trung tâm thể hình & wellness hiện đại, kết hợp cổng thông tin hội viên (**React + Vite + TypeScript**) với **Spring Boot 3 REST API (Java 21)** và cơ sở dữ liệu đám mây **Supabase PostgreSQL** theo kiến trúc **Hibernate Code-First** cùng hệ thống **PostgreSQL Trigger** kiểm soát toàn vẹn nghiệp vụ.
+**Sports Center Management System (SCMS)** là hệ thống quản lý vận hành trung tâm thể hình & wellness hiện đại, kết hợp cổng thông tin đa phân hệ (**React + Vite + TypeScript**) với **Spring Boot 3 REST API (Java 21)** và cơ sở dữ liệu đám mây **Supabase PostgreSQL** theo kiến trúc **Hibernate Code-First** cùng hệ thống **PostgreSQL Trigger** kiểm soát toàn vẹn nghiệp vụ.
 
 - **CI/CD Tự động hóa:** Xem [Hướng dẫn GitHub Actions → Vercel + Render](docs/CICD_SETUP.md) để cấu hình Secrets và theo dõi toàn bộ luồng kiểm thử (CI) lẫn triển khai Production (CD) trong tab **Actions**.
 - **Cơ sở dữ liệu đám mây:** Sử dụng duy nhất profile `supabase` (**Supabase PostgreSQL** qua TLS), tự động ánh xạ schema từ JPA Entity và nạp trigger nghiệp vụ khi khởi chạy. Xem chi tiết tại [Hướng dẫn Supabase](docs/SUPABASE_SETUP.md).
 
 ---
 
-## 🖼️ Giao diện hệ thống (UI Showcase)
+## 🖥️ Các màn hình chính của hệ thống (Main Screens Showcase)
 
-### 1. Cổng thông tin Hội viên (Member Portal — Desktop)
-Không gian trực quan giúp hội viên theo dõi gói tập đang hoạt động, lịch học 7 ngày, thẻ hội viên điện tử QR và chỉ số sức khỏe cá nhân:
+### 1. Trang chủ & Cổng Đăng nhập (`/` & `/login`)
+Giao diện giới thiệu dịch vụ cao cấp tích hợp trợ lý AI và cổng đăng nhập phân luồng tự động theo 4 vai trò (**Hội viên**, **Lễ tân**, **Huấn luyện viên**, **Quản lý trung tâm**):
 
-<p align="center">
-  <img src="docs/qa/portal-redesign/member-dashboard-1440.png" alt="Member Dashboard Desktop" width="100%" />
-</p>
-
-### 2. Báo cáo Doanh thu & Thống kê Quản lý (Manager Analytics)
-Bảng điều khiển dành cho Quản lý trung tâm với thống kê doanh thu theo ngày/tháng, tỷ lệ gia hạn, biểu đồ trực quan và lịch sử hóa đơn POS thời gian thực:
-
-<p align="center">
-  <img src="docs/qa/portal-redesign/manager-reports-768.png" alt="Manager Revenue Reports" width="75%" />
-</p>
-
-### 3. Trải nghiệm Đa thiết bị (Responsive Mobile Views)
-
-| Trang tổng quan Hội viên (Mobile) | Hồ sơ cá nhân & Chỉ số sức khỏe (Mobile) |
+| Trang chủ SÖL Wellness Sanctuary (`/`) | Cổng Đăng nhập Đa vai trò (`/login`) |
 | :---: | :---: |
-| <img src="docs/qa/portal-redesign/member-dashboard-375.png" alt="Member Dashboard Mobile" width="320" /> | <img src="docs/qa/portal-redesign/member-profile-375.png" alt="Member Profile Mobile" width="320" /> |
+| <img src="docs/qa/portal-redesign/landing-1440.png" alt="Landing Page" width="100%" /> | <img src="docs/qa/portal-redesign/login-1440.png" alt="Login Page" width="100%" /> |
 
-### 4. Không gian Tập luyện & Dịch vụ tại SÖL Wellness Sanctuary
+---
 
-| Reformer Pilates Studio | Aerial Silk & Yoga Studio | Thermal & Cold Plunge Recovery |
-| :---: | :---: | :---: |
-| <img src="apps/web/public/images/pilates-reformer-studio.jpg" alt="Pilates Studio" width="100%" /> | <img src="apps/web/public/images/yoga-aerial-silk-studio.jpg" alt="Yoga Studio" width="100%" /> | <img src="apps/web/public/images/about-thermal-recovery.jpg" alt="Thermal Recovery" width="100%" /> |
+### 2. Phân hệ Hội viên — Member Portal (`/member/*`)
+Không gian cá nhân giúp hội viên theo dõi thời hạn gói tập, đăng ký gói mới, đặt lịch lớp học có kiểm tra trùng lịch/sức chứa và xuất trình mã QR check-in:
+
+#### 📊 Trang tổng quan Hội viên (`/member/dashboard`)
+<p align="center">
+  <img src="docs/qa/portal-redesign/member-dashboard-1440.png" alt="Member Dashboard" width="100%" />
+</p>
+
+| 💳 Gói tập & Lịch sử Thanh toán (`/member/packages`) | 📅 Đặt lịch Lớp học & Lịch của tôi (`/member/classes`) |
+| :---: | :---: |
+| <img src="docs/qa/portal-redesign/member-packages-1440.png" alt="Member Packages" width="100%" /> | <img src="docs/qa/portal-redesign/member-classes-1440.png" alt="Member Classes" width="100%" /> |
+
+| 🪪 Thẻ Hội viên Điện tử & QR Check-in (`/member/card`) | 📱 Giao diện Mobile & Hồ sơ Sức khỏe BMI (`/member/profile`) |
+| :---: | :---: |
+| <img src="docs/qa/portal-redesign/member-card-1440.png" alt="Member QR Card" width="100%" /> | <img src="docs/qa/portal-redesign/member-profile-375.png" alt="Member Profile Mobile" width="260" /> <img src="docs/qa/portal-redesign/member-dashboard-375.png" alt="Member Dashboard Mobile" width="260" /> |
+
+---
+
+### 3. Phân hệ Lễ tân & Thu ngân — Front Desk & POS (`/staff/*`)
+Bộ công cụ tác nghiệp tại quầy lễ tân: đăng ký nhanh hội viên mới, thu ngân POS (Tiền mặt / VietQR), cổng kiểm soát ra vào bằng mã QR và điều phối lịch lớp học:
+
+| 🧾 Quầy Thu ngân POS & Cấp Gói tập (`/staff/reception`) | 🔍 Cổng Quét QR Check-in Thời gian thực (`/staff/check-in`) |
+| :---: | :---: |
+| <img src="docs/qa/portal-redesign/staff-reception-1440.png" alt="Staff Reception POS" width="100%" /> | <img src="docs/qa/portal-redesign/staff-checkin-1440.png" alt="Staff QR Check-in" width="100%" /> |
+
+#### 🗓️ Quản lý Lớp học & Xếp lịch Phòng tập (`/staff/classes`)
+<p align="center">
+  <img src="docs/qa/portal-redesign/staff-classes-1440.png" alt="Staff Class Scheduling" width="100%" />
+</p>
+
+---
+
+### 4. Phân hệ Huấn luyện viên — Coach Workspace (`/staff/attendance`)
+Màn hình chuyên biệt cho Huấn luyện viên điểm danh học viên theo từng buổi tập, chấm điểm kỹ thuật và tạo nhận xét/đánh giá kết quả tập luyện hỗ trợ bởi AI:
+
+<p align="center">
+  <img src="docs/qa/portal-redesign/coach-attendance-1440.png" alt="Coach Attendance and Evaluation" width="100%" />
+</p>
+
+---
+
+### 5. Phân hệ Quản lý Trung tâm — Center Manager (`/manager/*`)
+Trung tâm điều hành dành cho cấp Quản lý: theo dõi báo cáo doanh thu, tỷ lệ gia hạn, quản trị danh mục vận hành (Bộ môn, Phòng tập, Gói tập) và phân quyền tài khoản RBAC:
+
+#### 📈 Báo cáo Doanh thu & Thống kê Vận hành (`/manager/reports`)
+<p align="center">
+  <img src="docs/qa/portal-redesign/manager-reports-1440.png" alt="Manager Revenue Reports" width="100%" />
+</p>
+
+| 🗂️ Danh mục Vận hành: Bộ môn · Phòng tập · Gói tập (`/manager/catalogs`) | 🔐 Quản lý Tài khoản & Phân quyền RBAC (`/manager/users`) |
+| :---: | :---: |
+| <img src="docs/qa/portal-redesign/manager-catalogs-1440.png" alt="Manager Catalogs" width="100%" /> | <img src="docs/qa/portal-redesign/manager-users-1440.png" alt="Manager Users & RBAC" width="100%" /> |
 
 ---
 
