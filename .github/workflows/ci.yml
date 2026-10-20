@@ -1,4 +1,4 @@
-name: CI
+name: Sport Center Project (CI included) | © 2026 by Agile4Life
 
 on:
   pull_request:
