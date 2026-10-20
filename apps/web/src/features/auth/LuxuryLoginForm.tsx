@@ -477,7 +477,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 });
               } else {
                 // Fallback OTP nếu chưa cấu hình Client ID thực tế trong môi trường dev
-                toast('Chưa cấu hình VITE_GOOGLE_CLIENT_ID. Chuyển sang luồng đăng nhập nhanh bằng Gmail OTP.', 'info');
+                toast('Chưa cấu hình VITE_GOOGLE_CLIENT_ID. Chuyển sang luồng đăng nhập nhanh bằng Gmail OTP.');
                 setMode('google_email');
               }
             }}
