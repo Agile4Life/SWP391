@@ -77,7 +77,7 @@ class MembershipSubscriptionServiceTest {
 
         assertThat(result.status()).isEqualTo("pending_payment");
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(30));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
         assertThat(result.memberId()).isEqualTo(10L);
     }
 
@@ -123,7 +123,7 @@ class MembershipSubscriptionServiceTest {
 
         assertThat(result.status()).isEqualTo("pending_payment");
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(30));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
     }
 
     @Test
@@ -169,7 +169,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.status()).isEqualTo("pending_payment");
         assertThat(result.previousSubscriptionId()).isEqualTo(100L);
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock).plusDays(11));
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(41));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(40));
     }
 
     @Test
@@ -197,7 +197,7 @@ class MembershipSubscriptionServiceTest {
         SubscriptionDto result = service.renew(principal, 100L);
 
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(30));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
     }
 
     @Test
@@ -354,7 +354,7 @@ class MembershipSubscriptionServiceTest {
 
         assertThat(result.status()).isEqualTo("active");
         assertThat(result.qrCode()).isNotNull().isNotBlank();
-        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(30));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
     }
 
     @Test

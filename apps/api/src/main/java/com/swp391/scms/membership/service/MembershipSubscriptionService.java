@@ -90,8 +90,9 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
         subscription.setMembershipPackage(membershipPackage);
+        int durationDays = Math.max(1, membershipPackage.getDurationDays());
         subscription.setStartDate(today);
-        subscription.setEndDate(today.plusDays(membershipPackage.getDurationDays()));
+        subscription.setEndDate(today.plusDays(durationDays - 1L));
         subscription.setStatus(STATUS_PENDING_PAYMENT);
         subscription.setCreatedAt(LocalDateTime.now(clock));
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -149,8 +150,9 @@ public class MembershipSubscriptionService {
         renewal.setMember(previous.getMember());
         renewal.setMembershipPackage(membershipPackage);
         renewal.setPreviousSubscription(previous);
+        int durationDays = Math.max(1, membershipPackage.getDurationDays());
         renewal.setStartDate(newStartDate);
-        renewal.setEndDate(newStartDate.plusDays(membershipPackage.getDurationDays()));
+        renewal.setEndDate(newStartDate.plusDays(durationDays - 1L));
         renewal.setStatus(STATUS_PENDING_PAYMENT);
         renewal.setCreatedAt(LocalDateTime.now(clock));
         renewal.setUpdatedAt(LocalDateTime.now(clock));
@@ -207,8 +209,9 @@ public class MembershipSubscriptionService {
         }
 
         LocalDate start = subscription.getStartDate() != null ? subscription.getStartDate() : LocalDate.now(clock);
+        int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
         subscription.setStartDate(start);
-        subscription.setEndDate(start.plusDays(subscription.getMembershipPackage().getDurationDays()));
+        subscription.setEndDate(start.plusDays(durationDays - 1L));
         subscription.setQrCode(UUID.randomUUID().toString());
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
