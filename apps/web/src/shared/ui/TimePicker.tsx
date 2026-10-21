@@ -13,7 +13,7 @@ export interface TimePickerProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => (i < 10 ? `0${i}` : `${i}`));
-const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
 
 export function TimePicker({
   id,
@@ -50,7 +50,12 @@ export function TimePicker({
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOpen(false);
+        containerRef.current?.querySelector<HTMLButtonElement>('.luxury-timepicker-trigger')?.focus();
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
@@ -111,12 +116,17 @@ export function TimePicker({
           required={required}
           value={value}
           onChange={() => {}}
+          onInvalid={(event) => {
+            event.preventDefault();
+            setIsOpen(true);
+            containerRef.current?.querySelector<HTMLButtonElement>('.luxury-timepicker-trigger')?.focus();
+          }}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
         />
       )}
 
       {isOpen && (
-        <div className="luxury-timepicker-popover" role="dialog" aria-modal="true">
+        <div className="luxury-timepicker-popover" role="dialog" aria-label="Chọn giờ">
           <div className="ltp-header">
             <span className="ltp-title">Khung Giờ</span>
             <span className="ltp-preview-badge">

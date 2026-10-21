@@ -64,7 +64,12 @@ export function DatePicker({
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOpen(false);
+        containerRef.current?.querySelector<HTMLButtonElement>('.luxury-datepicker-trigger')?.focus();
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
@@ -231,12 +236,17 @@ export function DatePicker({
           required={required}
           value={value}
           onChange={() => {}}
+          onInvalid={(event) => {
+            event.preventDefault();
+            setIsOpen(true);
+            containerRef.current?.querySelector<HTMLButtonElement>('.luxury-datepicker-trigger')?.focus();
+          }}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
         />
       )}
 
       {isOpen && (
-        <div className="luxury-datepicker-popover" role="dialog" aria-modal="true">
+        <div className="luxury-datepicker-popover" role="dialog" aria-label="Chọn ngày">
           <div className="ldp-header">
             <span className="ldp-title">
               Tháng {viewMonth + 1}, {viewYear}
@@ -287,6 +297,9 @@ export function DatePicker({
                   type="button"
                   className={classNames}
                   disabled={d.isDisabled}
+                  aria-label={d.dateStr}
+                  aria-pressed={d.isSelected}
+                  aria-current={d.isToday ? 'date' : undefined}
                   onClick={() => handleSelectDate(d.dateStr, d.isDisabled)}
                 >
                   {d.dayNum}
