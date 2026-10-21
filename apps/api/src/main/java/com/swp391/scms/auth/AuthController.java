@@ -6,7 +6,6 @@ import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
 import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
 import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.common.ApiResponse;
-import com.swp391.scms.common.exception.AppException;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,10 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -29,43 +27,27 @@ import java.util.Map;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private static final String GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
-
     private final AuthService authService;
     private final boolean debugOtpEnabled;
     private final MessageService messageService;
-    private final String googleClientId;
-    private final String googleRedirectUri;
-    private final String webOrigin;
+    private final GoogleOAuthRedirectService googleOAuthRedirectService;
 
-    public AuthController(AuthService authService,
-                          @Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled) {
-        this(authService, debugOtpEnabled, null, "", "http://localhost:8080/api/v1/auth/google/callback", "http://localhost:5173");
+    public AuthController(AuthService authService, boolean debugOtpEnabled) {
+        this(authService, debugOtpEnabled, null, null);
     }
 
-    public AuthController(AuthService authService,
-                          @Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
-                          MessageService messageService) {
-        this(authService, debugOtpEnabled, messageService, "", "http://localhost:8080/api/v1/auth/google/callback", "http://localhost:5173");
+    public AuthController(AuthService authService, boolean debugOtpEnabled, MessageService messageService) {
+        this(authService, debugOtpEnabled, messageService, null);
     }
 
     @Autowired
     public AuthController(AuthService authService,
                           @Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
-                          MessageService messageService,
-                          @Value("${app.google.client-id:${GOOGLE_CLIENT_ID:}}") String googleClientId,
-                          @Value("${app.google.redirect-uri:${GOOGLE_REDIRECT_URI:http://localhost:8080/api/v1/auth/google/callback}}") String googleRedirectUri,
-                          @Value("${app.cors.web-origin:http://localhost:5173}") String webOrigin) {
+                          MessageService messageService, GoogleOAuthRedirectService googleOAuthRedirectService) {
         this.authService = authService;
         this.debugOtpEnabled = debugOtpEnabled;
         this.messageService = messageService;
-        this.googleClientId = googleClientId != null ? googleClientId.trim() : "";
-        this.googleRedirectUri = googleRedirectUri != null && !googleRedirectUri.isBlank()
-                ? googleRedirectUri.trim()
-                : "http://localhost:8080/api/v1/auth/google/callback";
-        this.webOrigin = webOrigin != null && !webOrigin.isBlank()
-                ? webOrigin.trim()
-                : "http://localhost:5173";
+        this.googleOAuthRedirectService = googleOAuthRedirectService;
     }
 
     private String msg(String key, Object... args) {
@@ -127,10 +109,10 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.otp.sent"), data);
     }
 
-    @Operation(summary = "Xác thực Google OAuth Callback và gửi mã OTP qua Gmail",
-            description = "Xác thực token/code từ Google OAuth (ID Token, Access Token hoặc Authorization Code), liên kết/tạo tài khoản MEMBER và gửi mã OTP 6 chữ số về Gmail để xác nhận")
+    @Operation(summary = "Verify Google popup credentials and send OTP (SCRUM-89)",
+            description = "Accepts an ID token or client-bound access token. Authorization codes use the state-protected redirect callback.")
     @PostMapping("/google/oauth-callback")
-    public ApiResponse<Map<String, Object>> handleGoogleOAuthCallback(@RequestBody GoogleOAuthCallbackRequest request) {
+    public ApiResponse<Map<String, Object>> handleGoogleOAuthCallback(@Valid @RequestBody GoogleOAuthCallbackRequest request) {
         GoogleOAuthOtpChallenge challenge = authService.requestGoogleOAuthOtp(request);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("email", challenge.email());
@@ -142,87 +124,28 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.otp.sent"), data);
     }
 
-    @Operation(summary = "Khởi tạo luồng chuyển hướng Google OAuth 2.0",
-            description = "Chuyển hướng trình duyệt sang trang đăng nhập tài khoản Google (OAuth 2.0 Authorization Endpoint)")
     @GetMapping("/google/authorize")
     public ResponseEntity<Void> authorizeGoogleOAuth(
-            @RequestParam(value = "redirect_uri", required = false) String customRedirectUri) {
-        if (googleClientId.isBlank()) {
-            URI fallbackUri = UriComponentsBuilder.fromUriString(webOrigin + "/login")
-                    .queryParam("google_oauth", "not_configured")
-                    .build()
-                    .encode(StandardCharsets.UTF_8)
-                    .toUri();
-            return ResponseEntity.status(HttpStatus.FOUND).location(fallbackUri).build();
-        }
-        String effectiveRedirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
-                ? customRedirectUri.trim()
-                : googleRedirectUri;
-        URI googleAuthUri = UriComponentsBuilder.fromUriString(GOOGLE_OAUTH_AUTHORIZE_URL)
-                .queryParam("client_id", googleClientId)
-                .queryParam("redirect_uri", effectiveRedirectUri)
-                .queryParam("response_type", "code")
-                .queryParam("scope", "openid email profile")
-                .queryParam("access_type", "online")
-                .queryParam("prompt", "select_account")
-                .build()
-                .encode(StandardCharsets.UTF_8)
-                .toUri();
-        return ResponseEntity.status(HttpStatus.FOUND).location(googleAuthUri).build();
+            @RequestParam(value = "redirect_uri", required = false) String redirectUri) {
+        return redirect(googleOAuthRedirectService.entry(redirectUri));
     }
 
-    @Operation(summary = "Callback nhận kết quả từ Google OAuth 2.0 Redirect",
-            description = "Nhận authorization code từ Google, xác thực tài khoản, gửi mã OTP về Gmail và redirect ngược về trang Login để hiển thị màn hình nhập OTP")
+    @GetMapping("/google/authorize/start")
+    public ResponseEntity<Void> startGoogleOAuth(HttpServletRequest request) {
+        return redirect(googleOAuthRedirectService.authorize(request.getSession(true)));
+    }
+
     @GetMapping("/google/callback")
-    public ResponseEntity<Void> googleOAuthRedirectCallback(
+    public ResponseEntity<Void> googleOAuthRedirectCallback(HttpServletRequest request,
+            @RequestParam(value = "state", required = false) String state,
             @RequestParam(value = "code", required = false) String code,
             @RequestParam(value = "error", required = false) String error,
-            @RequestParam(value = "redirect_uri", required = false) String customRedirectUri) {
-        if (error != null && !error.isBlank()) {
-            URI errorUri = UriComponentsBuilder.fromUriString(webOrigin + "/login")
-                    .queryParam("google_oauth", "error")
-                    .queryParam("error", msg("auth.google.invalid_token"))
-                    .build()
-                    .encode(StandardCharsets.UTF_8)
-                    .toUri();
-            return ResponseEntity.status(HttpStatus.FOUND).location(errorUri).build();
-        }
-        try {
-            String effectiveRedirectUri = (customRedirectUri != null && !customRedirectUri.isBlank())
-                    ? customRedirectUri.trim()
-                    : googleRedirectUri;
-            GoogleOAuthOtpChallenge challenge = authService.requestGoogleOAuthOtp(
-                    new GoogleOAuthCallbackRequest(null, null, code, effectiveRedirectUri)
-            );
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(webOrigin + "/login")
-                    .queryParam("google_oauth", "callback")
-                    .queryParam("email", challenge.email())
-                    .queryParam("message", msg("auth.google.otp.sent", challenge.email()));
-            if (debugOtpEnabled && challenge.otpCode() != null) {
-                builder.queryParam("debugOtp", challenge.otpCode());
-            }
-            URI callbackFrontUri = builder.build().encode(StandardCharsets.UTF_8).toUri();
-            return ResponseEntity.status(HttpStatus.FOUND).location(callbackFrontUri).build();
-        } catch (AppException ex) {
-            String resolvedError = ex.getMessageKey() != null
-                    ? msg(ex.getMessageKey(), ex.getMessageArgs() != null ? ex.getMessageArgs() : new Object[0])
-                    : ex.getMessage();
-            URI errorUri = UriComponentsBuilder.fromUriString(webOrigin + "/login")
-                    .queryParam("google_oauth", "error")
-                    .queryParam("error", resolvedError)
-                    .build()
-                    .encode(StandardCharsets.UTF_8)
-                    .toUri();
-            return ResponseEntity.status(HttpStatus.FOUND).location(errorUri).build();
-        } catch (Exception ex) {
-            URI errorUri = UriComponentsBuilder.fromUriString(webOrigin + "/login")
-                    .queryParam("google_oauth", "error")
-                    .queryParam("error", msg("auth.google.invalid_token"))
-                    .build()
-                    .encode(StandardCharsets.UTF_8)
-                    .toUri();
-            return ResponseEntity.status(HttpStatus.FOUND).location(errorUri).build();
-        }
+            @RequestParam(value = "redirect_uri", required = false) String redirectUri) {
+        return redirect(googleOAuthRedirectService.complete(request.getSession(false), state, code, error, redirectUri));
+    }
+
+    private ResponseEntity<Void> redirect(URI location) {
+        return ResponseEntity.status(HttpStatus.FOUND).location(location).build();
     }
 
     @Operation(summary = "Xác thực mã OTP Google và đăng nhập", description = "Xác thực mã OTP gửi về Gmail, kích hoạt tài khoản và trả về JWT Token")

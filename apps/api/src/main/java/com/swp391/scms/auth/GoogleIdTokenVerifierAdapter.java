@@ -7,6 +7,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.GenericJson;
 import com.google.api.client.json.JsonObjectParser;
@@ -33,7 +34,7 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
     private final String clientId;
     private final String clientSecret;
     private final String defaultRedirectUri;
-    private final NetHttpTransport transport;
+    private final HttpTransport transport;
     private final GsonFactory jsonFactory;
     private final GoogleIdTokenVerifier verifier;
 
@@ -46,10 +47,14 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
             @Value("${app.google.client-id:${GOOGLE_CLIENT_ID:}}") String clientId,
             @Value("${app.google.client-secret:${GOOGLE_CLIENT_SECRET:}}") String clientSecret,
             @Value("${app.google.redirect-uri:${GOOGLE_REDIRECT_URI:http://localhost:8080/api/v1/auth/google/callback}}") String defaultRedirectUri) {
+        this(clientId, clientSecret, defaultRedirectUri, new NetHttpTransport());
+    }
+
+    GoogleIdTokenVerifierAdapter(String clientId, String clientSecret, String defaultRedirectUri, HttpTransport transport) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.defaultRedirectUri = defaultRedirectUri;
-        this.transport = new NetHttpTransport();
+        this.transport = transport;
         this.jsonFactory = GsonFactory.getDefaultInstance();
         GoogleIdTokenVerifier.Builder builder = new GoogleIdTokenVerifier.Builder(
                 this.transport,
@@ -87,7 +92,7 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         } catch (UnauthorizedException ue) {
             throw ue;
         } catch (Exception e) {
-            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Failed to verify Google ID Token: " + e.getMessage());
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
         }
     }
 
@@ -100,15 +105,19 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google Access Token is missing");
         }
         try {
-            HttpRequest request = transport.createRequestFactory(req -> {
-                req.setParser(new JsonObjectParser(jsonFactory));
-                req.getHeaders().setAuthorization("Bearer " + accessToken.trim());
-            }).buildGetRequest(new GenericUrl(GOOGLE_USERINFO_URL));
-
-            HttpResponse response = request.execute();
-            GenericJson payload = response.parseAs(GenericJson.class);
-            if (payload == null || payload.get("email") == null || payload.get("sub") == null) {
-                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Invalid Google UserInfo response");
+            GenericUrl tokenInfoUrl = new GenericUrl("https://www.googleapis.com/oauth2/v2/tokeninfo");
+            tokenInfoUrl.set("access_token", accessToken.trim());
+            GenericJson tokenInfo = fetchJson(tokenInfoUrl, null);
+            if (tokenInfo == null || !clientId.trim().equals(tokenInfo.get("audience"))
+                    || !clientId.trim().equals(tokenInfo.get("issued_to"))
+                    || tokenInfo.get("expires_in") == null
+                    || Double.parseDouble(tokenInfo.get("expires_in").toString()) <= 0) {
+                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+            }
+            GenericJson payload = fetchJson(new GenericUrl(GOOGLE_USERINFO_URL), accessToken.trim());
+            if (payload == null || payload.get("email") == null || payload.get("sub") == null
+                    || (tokenInfo.get("user_id") != null && !tokenInfo.get("user_id").equals(payload.get("sub")))) {
+                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
             }
             Object emailVerifiedRaw = payload.get("email_verified");
             boolean emailVerified = Boolean.TRUE.equals(emailVerifiedRaw)
@@ -124,7 +133,23 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         } catch (UnauthorizedException ue) {
             throw ue;
         } catch (Exception e) {
-            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Failed to verify Google Access Token: " + e.getMessage());
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+        }
+    }
+
+    private GenericJson fetchJson(GenericUrl url, String bearer) throws java.io.IOException {
+        HttpRequest request = transport.createRequestFactory(req -> {
+            req.setParser(new JsonObjectParser(jsonFactory));
+            req.setLoggingEnabled(false);
+            req.setConnectTimeout(10000);
+            req.setReadTimeout(10000);
+            if (bearer != null) req.getHeaders().setAuthorization("Bearer " + bearer);
+        }).buildGetRequest(url);
+        HttpResponse response = request.execute();
+        try {
+            return response.parseAs(GenericJson.class);
+        } finally {
+            response.disconnect();
         }
     }
 
@@ -139,6 +164,9 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         String targetRedirect = (redirectUri != null && !redirectUri.isBlank())
                 ? redirectUri.trim()
                 : defaultRedirectUri;
+        if (!defaultRedirectUri.equals(targetRedirect)) {
+            throw new UnauthorizedException("INVALID_GOOGLE_REDIRECT", "auth.google.redirect_invalid", null, null);
+        }
         try {
             GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
                     transport,
@@ -162,7 +190,7 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         } catch (UnauthorizedException ue) {
             throw ue;
         } catch (Exception e) {
-            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Failed to exchange Google authorization code: " + e.getMessage());
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
         }
     }
 }

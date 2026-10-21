@@ -126,6 +126,8 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       nextParams.delete('email');
       nextParams.delete('message');
       nextParams.delete('debug_otp');
+      nextParams.delete('debugOtp');
+      nextParams.delete('state');
       nextParams.delete('error');
       nextParams.delete('code');
       nextParams.delete('scope');
@@ -139,7 +141,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     if (oauthStatus === 'callback') {
       const email = (params.get('email') || '').trim();
       const message = params.get('message') || `Đã gửi mã xác nhận đến gmail ${email}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`;
-      const debugOtp = params.get('debug_otp') || '';
+      const debugOtp = params.get('debug_otp') || params.get('debugOtp') || '';
       cleanSearchParams();
       if (email) {
         setGoogleEmail(email);
@@ -174,9 +176,8 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
 
     if (code) {
-      const redirectUri = `${window.location.origin}${window.location.pathname}`;
       cleanSearchParams();
-      void processGoogleOAuthCallback({ code, redirectUri });
+      fail('Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
     }
   }, [fail, processGoogleOAuthCallback]);
 

@@ -19,7 +19,6 @@ import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.User;
 import com.swp391.scms.common.i18n.MessageService;
-import com.swp391.scms.audit.Audited;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -183,7 +182,6 @@ public class AuthService {
      * verifies the Google identity, links/creates the MEMBER account, and sends a 6-digit OTP to Gmail.
      */
     @Transactional
-    @Audited(action = "OAUTH_GOOGLE_OTP_CHALLENGE", entity = "users")
     public GoogleOAuthOtpChallenge requestGoogleOAuthOtp(GoogleOAuthCallbackRequest request) {
         if (request == null) {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google OAuth payload is missing");
@@ -270,8 +268,9 @@ public class AuthService {
 
         ensureGoogleOtpAccountAllowed(user);
 
-        String otpCode = issueAndSendOtp(email);
-        return new GoogleOAuthOtpChallenge(email, otpCode);
+        String accountEmail = normalize(user.getEmail());
+        String otpCode = issueAndSendOtp(accountEmail);
+        return new GoogleOAuthOtpChallenge(accountEmail, otpCode);
     }
 
     @Transactional
@@ -357,7 +356,6 @@ public class AuthService {
     }
 
     @Transactional
-    @Audited(action = "LOGIN_GOOGLE", entity = "users")
     public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
         if (request == null || request.idToken() == null || request.idToken().isBlank()) {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google ID Token is missing");

@@ -121,3 +121,11 @@ it('opens email OTP verification screen automatically when redirected back from 
   expect(host.textContent).toContain('redirected@gmail.com');
   expect(window.location.search).toBe('');
 });
+
+
+it('accepts legacy debugOtp and removes sensitive callback parameters from history', async () => {
+  window.history.replaceState({}, '', '/login?google_oauth=callback&email=user%40gmail.com&debugOtp=123456&state=old-state&error=old-error');
+  await renderForm();
+  expect(host.querySelector<HTMLInputElement>('#google-otp-code')?.value).toBe('123456');
+  expect(window.location.search).toBe('');
+});

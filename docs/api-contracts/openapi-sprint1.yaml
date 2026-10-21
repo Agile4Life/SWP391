@@ -86,10 +86,9 @@ paths:
     post:
       summary: Verify Google credentials and send a login OTP (SCRUM-89, public)
       description: >
-        Accepts an ID token, access token, or authorization code in that priority order.
+        Accepts an ID token or an access token bound to this application client. Authorization codes are accepted only by the state-protected GET callback.
         Creates or links a MEMBER account and returns an OTP challenge without issuing a JWT.
         Staff and deleted accounts are rejected. Complete login through /auth/google/verify-otp.
-        This local checkpoint still requires the security follow-ups in docs/reviews/2026-10-21-SCRUM-89-commit-review.md before production release.
       security: []
       requestBody:
         required: true
@@ -100,12 +99,9 @@ paths:
               anyOf:
                 - required: [idToken]
                 - required: [accessToken]
-                - required: [code]
               properties:
                 idToken: {type: string, minLength: 1}
                 accessToken: {type: string, minLength: 1}
-                code: {type: string, minLength: 1}
-                redirectUri: {type: string, format: uri}
       responses:
         '200':
           description: OTP dispatched; data contains email, message, expiresInMinutes and debugOtp only when debug OTP is enabled
@@ -116,7 +112,7 @@ paths:
   /auth/google/authorize:
     get:
       summary: Start Google authorization code redirect (SCRUM-89, public)
-      description: Requires GOOGLE_CLIENT_ID. Uses GOOGLE_REDIRECT_URI unless redirect_uri is provided. Pending browser-bound state validation before production release.
+      description: Requires GOOGLE_CLIENT_ID. Redirects first to the configured backend authorize/start origin so its session cookie is available at callback. Any redirect_uri must exactly match GOOGLE_REDIRECT_URI.
       security: []
       parameters:
         - name: redirect_uri
@@ -124,15 +120,29 @@ paths:
           schema: {type: string, format: uri}
       responses:
         '302':
-          description: Redirect to Google consent, or frontend login with google_oauth=not_configured
+          description: Redirect to canonical backend authorize/start, or frontend login with google_oauth=not_configured
+          headers:
+            Location: {schema: {type: string, format: uri}}
+  /auth/google/authorize/start:
+    get:
+      summary: Establish browser correlation session and redirect to Google (SCRUM-89, public)
+      description: Sets an HttpOnly SameSite=Lax session cookie on the backend host and generates single-use state valid for five minutes. JWT authentication remains stateless.
+      security: []
+      responses:
+        '302':
+          description: Google consent URL including state, or not_configured fallback
           headers:
             Location: {schema: {type: string, format: uri}}
   /auth/google/callback:
     get:
       summary: Exchange Google authorization code and redirect to the frontend OTP form (SCRUM-89, public)
-      description: Requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and a registered GOOGLE_REDIRECT_URI. Pending state validation before production release.
+      description: Requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, registered GOOGLE_REDIRECT_URI and the initiating browser session cookie. State is consumed before exchange; missing, expired, mismatched and replayed states are rejected.
       security: []
       parameters:
+        - name: state
+          in: query
+          required: true
+          schema: {type: string}
         - name: code
           in: query
           schema: {type: string}
@@ -144,7 +154,7 @@ paths:
           schema: {type: string, format: uri}
       responses:
         '302':
-          description: Frontend login URL with google_oauth=callback and email, or google_oauth=error and a localized error
+          description: Frontend login URL with google_oauth=callback and email, or google_oauth=error and a localized error. Debug mode alone includes debug_otp
           headers:
             Location: {schema: {type: string, format: uri}}
   /auth/google:

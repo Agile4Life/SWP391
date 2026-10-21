@@ -40,14 +40,10 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        authController = new AuthController(
-                authService,
-                false,
-                null,
-                "test-google-client.apps.googleusercontent.com",
-                "http://localhost:8080/api/v1/auth/google/callback",
-                "http://localhost:5173"
-        );
+        var redirectService = new GoogleOAuthRedirectService(authService, null, java.time.Clock.systemUTC(),
+                "test-google-client.apps.googleusercontent.com", "http://localhost:8080/api/v1/auth/google/callback",
+                "http://localhost:5173", false);
+        authController = new AuthController(authService, false, null, redirectService);
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -186,8 +182,7 @@ class AuthControllerTest {
     void googleOAuthAuthorizeRedirectsToGoogle() throws Exception {
         mockMvc.perform(get("/api/v1/auth/google/authorize"))
                 .andExpect(status().isFound())
-                .andExpect(header().string("Location", containsString("https://accounts.google.com/o/oauth2/v2/auth")))
-                .andExpect(header().string("Location", containsString("client_id=test-google-client.apps.googleusercontent.com")));
+                .andExpect(header().string("Location", containsString("http://localhost:8080/api/v1/auth/google/authorize/start")));
     }
 
     @Test
@@ -196,9 +191,35 @@ class AuthControllerTest {
         when(authService.requestGoogleOAuthOtp(any()))
                 .thenReturn(new GoogleOAuthOtpChallenge("member@gmail.com", "998877"));
 
-        mockMvc.perform(get("/api/v1/auth/google/callback").param("code", "auth-code-xyz"))
+        var start = mockMvc.perform(get("/api/v1/auth/google/authorize/start")).andReturn();
+        var session = (org.springframework.mock.web.MockHttpSession) start.getRequest().getSession(false);
+        String state = org.springframework.web.util.UriComponentsBuilder.fromUriString(start.getResponse().getHeader("Location"))
+                .build().getQueryParams().getFirst("state");
+        mockMvc.perform(get("/api/v1/auth/google/callback").session(session).param("state", state).param("code", "auth-code-xyz"))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", containsString("http://localhost:5173/login?google_oauth=callback")))
                 .andExpect(header().string("Location", containsString("email=member@gmail.com")));
     }
+    @Test
+    void callbackWithoutBrowserStateDoesNotExchangeCode() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/google/callback").param("code", "injected-code"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", containsString("google_oauth=error")));
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
+
+    @Test
+    void authorizeRejectsUnconfiguredRedirect() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/google/authorize").param("redirect_uri", "https://attacker.example/callback"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void popupEndpointCannotBypassBrowserStateWithAuthorizationCode() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/google/oauth-callback").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"injected-code\"}"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
+
 }

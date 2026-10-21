@@ -1,8 +1,10 @@
 package com.swp391.scms.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
+
 /**
- * Request payload when Google OAuth callbacks back to the application
- * (supports ID Token from GIS, Access Token from OAuth2 Popup, or Authorization Code from Redirect).
+ * Google credentials. HTTP popup requests accept tokens only; the state-validated redirect service uses code/redirectUri internally.
  */
 public record GoogleOAuthCallbackRequest(
         String idToken,
@@ -10,6 +12,13 @@ public record GoogleOAuthCallbackRequest(
         String code,
         String redirectUri
 ) {
+    @JsonIgnore
+    @AssertTrue(message = "{auth.google.invalid_token}")
+    public boolean isPopupCredential() {
+        return code == null && redirectUri == null
+                && ((idToken != null && !idToken.isBlank()) || (accessToken != null && !accessToken.isBlank()));
+    }
+
     public GoogleOAuthCallbackRequest(String idToken) {
         this(idToken, null, null, null);
     }

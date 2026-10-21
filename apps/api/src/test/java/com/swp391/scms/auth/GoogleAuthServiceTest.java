@@ -39,6 +39,13 @@ class GoogleAuthServiceTest {
     @Mock GoogleTokenVerifierPort googleTokenVerifierPort;
 
     private AuthService authService;
+    private com.swp391.scms.audit.AuditLogRepository auditRepository;
+
+    @org.junit.jupiter.api.AfterEach
+    void authenticationCredentialsNeverReachAuditPersistence() {
+        verifyNoInteractions(auditRepository);
+    }
+
 
     @BeforeEach
     void setUp() {
@@ -54,6 +61,10 @@ class GoogleAuthServiceTest {
                 null,
                 googleTokenVerifierPort
         );
+        auditRepository = mock(com.swp391.scms.audit.AuditLogRepository.class);
+        var proxyFactory = new org.springframework.aop.aspectj.annotation.AspectJProxyFactory(authService);
+        proxyFactory.addAspect(new com.swp391.scms.audit.AuditAspect(auditRepository, new com.fasterxml.jackson.databind.ObjectMapper()));
+        authService = proxyFactory.getProxy();
     }
 
     private Role createRole(String code) {
@@ -268,4 +279,21 @@ class GoogleAuthServiceTest {
         verify(otpDeliveryPort).send("oauthmember@gmail.com", "482910");
         verifyNoInteractions(jwtService);
     }
+    @Test
+    void renamedGoogleEmailKeepsOtpBoundToResolvedLocalAccount() {
+        User member = new User();
+        member.setEmail("original@example.com");
+        member.setGoogleSub("stable-sub");
+        member.setStatus("active");
+        member.setRole(createRole("MEMBER"));
+        when(googleTokenVerifierPort.verify("renamed-token")).thenReturn(
+                new GoogleUserInfo("stable-sub", "renamed@example.com", true, "Member", null, "example.com"));
+        when(userRepository.findByGoogleSub("stable-sub")).thenReturn(Optional.of(member));
+        when(otpService.generateOtp("original@example.com")).thenReturn("123456");
+        var challenge = authService.requestGoogleOAuthOtp(new GoogleOAuthCallbackRequest("renamed-token"));
+        assertEquals("original@example.com", challenge.email());
+        verify(otpDeliveryPort).send("original@example.com", "123456");
+        verifyNoInteractions(jwtService);
+    }
+
 }

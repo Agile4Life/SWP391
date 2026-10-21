@@ -23,8 +23,6 @@ export interface GoogleVerifyResponse {
 export interface GoogleOAuthCallbackInput {
   idToken?: string;
   accessToken?: string;
-  code?: string;
-  redirectUri?: string;
 }
 
 export const register = (input: RegisterInput) =>
