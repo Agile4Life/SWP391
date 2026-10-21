@@ -6,6 +6,7 @@ import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.MembershipPackage;
+import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
 import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
@@ -54,6 +55,8 @@ public class MembershipSubscriptionService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
+    @Autowired(required = false) private jakarta.persistence.EntityManager entityManager;
+    @Autowired(required = false) private PaymentRepository payments;
 
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
@@ -146,54 +149,113 @@ public class MembershipSubscriptionService {
      */
     @Transactional
     public SubscriptionDto renew(AuthenticatedPrincipal principal, Long previousId) {
-        MembershipSubscription previous = subscriptions.findById(previousId)
+        MembershipSubscription requested = subscriptions.findById(previousId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", previousId));
-
-        if (previous.getMember() == null || !previous.getMember().getUserId().equals(principal.id())) {
-            throw new ForbiddenException(
-                    "MEMBERSHIP_NOT_OWNER",
-                    "error.membership.not_owner",
-                    null,
+        if (requested.getMember() == null || !principal.id().equals(requested.getMember().getUserId())) {
+            throw new ForbiddenException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null,
                     "Subscription does not belong to the authenticated member");
         }
-
-        if (STATUS_PENDING_PAYMENT.equalsIgnoreCase(previous.getStatus())
-                || "cancelled".equalsIgnoreCase(previous.getStatus())) {
-            throw new BadRequestException(
-                    "MEMBERSHIP_INVALID_RENEWAL_STATUS",
-                    "membership.subscription.invalid_renewal_status",
-                    new Object[]{previous.getStatus()},
-                    "Subscription with status " + previous.getStatus() + " cannot be renewed");
+        if (!isPaidPeriod(requested)) {
+            throw new BadRequestException("MEMBERSHIP_INVALID_RENEWAL_STATUS",
+                    "membership.subscription.invalid_renewal_status", new Object[]{requested.getStatus()},
+                    "Only a paid subscription can be renewed");
         }
-
-        if (subscriptions.existsByPreviousSubscriptionIdAndStatusIn(previousId,
-                List.of(STATUS_PENDING_PAYMENT, STATUS_ACTIVE))) {
-            throw new ConflictException(
-                    "MEMBERSHIP_ALREADY_RENEWED",
-                    "error.membership.already_renewed",
-                    null,
-                    "Subscription has already been renewed");
+        // Serialize all renewal requests for this member, then read the chain afresh.
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        if (entityManager != null) entityManager.refresh(requested);
+        List<MembershipSubscription> history = subscriptions.findByMemberUserId(principal.id());
+        List<MembershipSubscription> paidPeriods = history.stream().filter(this::isPaidPeriod).toList();
+        for (MembershipSubscription item : paidPeriods) {
+            long siblings = paidPeriods.stream().filter(other -> other.getPreviousSubscription() != null
+                    && item.getPreviousSubscription() != null
+                    && item.getPreviousSubscription().getId().equals(other.getPreviousSubscription().getId()))
+                    .count();
+            if (siblings > 1) throw renewalConflict();
         }
-
-        MembershipPackage membershipPackage = findActivePackage(previous.getMembershipPackage().getId());
-
+        for (int i = 0; i < paidPeriods.size(); i++) {
+            MembershipSubscription a = paidPeriods.get(i);
+            if (!validPeriod(a)) throw renewalConflict();
+            for (int j = i + 1; j < paidPeriods.size(); j++) {
+                MembershipSubscription b = paidPeriods.get(j);
+                if (!validPeriod(b) || (!a.getStartDate().isAfter(b.getEndDate())
+                        && !a.getEndDate().isBefore(b.getStartDate())
+                        && !isUpgradeTransition(a, b))) throw renewalConflict();
+            }
+        }
+        MembershipSubscription tail = history.stream().filter(item -> previousId.equals(item.getId()))
+                .findFirst().orElseThrow(this::renewalConflict);
+        if (!isPaidPeriod(tail) || !validPeriod(tail)) throw renewalConflict();
+        if (history.stream().anyMatch(item -> STATUS_PENDING_PAYMENT.equalsIgnoreCase(item.getStatus()))) {
+            throw new ConflictException("MEMBERSHIP_PENDING_EXISTS", "error.membership.pending_exists", null,
+                    "A subscription is still awaiting payment");
+        }
+        if (history.stream().anyMatch(item -> STATUS_FROZEN.equalsIgnoreCase(item.getStatus()))) throw renewalConflict();
+        java.util.Set<Long> visited = new java.util.HashSet<>();
+        while (true) {
+            if (!visited.add(tail.getId())) throw renewalConflict();
+            Long tailId = tail.getId();
+            List<MembershipSubscription> next = history.stream()
+                    .filter(item -> item.getPreviousSubscription() != null
+                            && tailId.equals(item.getPreviousSubscription().getId()) && isPaidPeriod(item))
+                    .toList();
+            if (next.size() > 1) throw renewalConflict();
+            if (next.isEmpty()) break;
+            MembershipSubscription successor = next.get(0);
+            if (!validPeriod(successor) || !successor.getStartDate().isAfter(tail.getEndDate())
+                    || successor.getMembershipPackage() == null || tail.getMembershipPackage() == null
+                    || !successor.getMembershipPackage().getId().equals(tail.getMembershipPackage().getId())) {
+                throw renewalConflict();
+            }
+            tail = successor;
+        }
+        MembershipPackage membershipPackage = findActivePackage(tail.getMembershipPackage().getId());
         LocalDate today = LocalDate.now(clock);
-        LocalDate newStartDate = (previous.getEndDate() != null && !previous.getEndDate().isBefore(today))
-                ? previous.getEndDate().plusDays(1)
-                : today;
-
+        LocalDate startDate = tail.getEndDate().isBefore(today) ? today : tail.getEndDate().plusDays(1);
+        LocalDate endDate = startDate.plusDays(Math.max(1, membershipPackage.getDurationDays()) - 1L);
+        for (MembershipSubscription item : history) {
+            if (isPaidPeriod(item) && validPeriod(item)
+                    && !item.getStartDate().isAfter(endDate) && !item.getEndDate().isBefore(startDate)) {
+                throw renewalConflict();
+            }
+        }
         MembershipSubscription renewal = new MembershipSubscription();
-        renewal.setMember(previous.getMember());
+        renewal.setMember(tail.getMember());
         renewal.setMembershipPackage(membershipPackage);
-        renewal.setPreviousSubscription(previous);
-        int durationDays = Math.max(1, membershipPackage.getDurationDays());
-        renewal.setStartDate(newStartDate);
-        renewal.setEndDate(newStartDate.plusDays(durationDays - 1L));
+        renewal.setPreviousSubscription(tail);
+        renewal.setStartDate(startDate);
+        renewal.setEndDate(endDate);
         renewal.setStatus(STATUS_PENDING_PAYMENT);
         renewal.setCreatedAt(LocalDateTime.now(clock));
         renewal.setUpdatedAt(LocalDateTime.now(clock));
-
         return toDto(subscriptions.saveAndFlush(renewal));
+    }
+
+    private boolean isPaidPeriod(MembershipSubscription subscription) {
+        return subscription != null && (STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
+                || "expired".equalsIgnoreCase(subscription.getStatus()));
+    }
+
+    private boolean validPeriod(MembershipSubscription subscription) {
+        return subscription.getStartDate() != null && subscription.getEndDate() != null
+                && !subscription.getEndDate().isBefore(subscription.getStartDate());
+    }
+
+    private boolean isUpgradeTransition(MembershipSubscription a, MembershipSubscription b) {
+        MembershipSubscription newer = b.getPreviousSubscription() != null
+                && a.getId().equals(b.getPreviousSubscription().getId()) ? b
+                : a.getPreviousSubscription() != null
+                && b.getId().equals(a.getPreviousSubscription().getId()) ? a : null;
+        MembershipSubscription older = newer == b ? a : newer == a ? b : null;
+        return older != null && older.getMembershipPackage() != null
+                && newer.getMembershipPackage() != null
+                && !older.getMembershipPackage().getId().equals(newer.getMembershipPackage().getId())
+                && older.getEndDate().equals(newer.getStartDate());
+    }
+
+    private ConflictException renewalConflict() {
+        return new ConflictException("MEMBERSHIP_RENEWAL_CONFLICT", "error.membership.renewal_conflict",
+                null, "Subscription chain needs review before renewal");
     }
 
     /**
@@ -212,6 +274,9 @@ public class MembershipSubscriptionService {
                     "Subscription does not belong to the authenticated member");
         }
 
+        members.findByUserIdForUpdate(current.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", current.getMember().getUserId()));
+        if (entityManager != null) entityManager.refresh(current);
         LocalDate today = LocalDate.now(clock);
         if (!STATUS_ACTIVE.equalsIgnoreCase(current.getStatus())
                 || (current.getEndDate() != null && current.getEndDate().isBefore(today))) {
@@ -231,6 +296,8 @@ public class MembershipSubscriptionService {
                     null,
                     "Member already has a pending payment subscription");
         }
+
+        if (hasPaidFutureRenewal(current.getMember().getUserId(), today)) throw futurePaidConflict();
 
         MembershipPackage targetPackage = findActivePackage(request.packageId());
         MembershipPackage currentPackage = current.getMembershipPackage();
@@ -290,6 +357,19 @@ public class MembershipSubscriptionService {
                     "Only a pending payment subscription can be cancelled");
         }
 
+        members.findByUserIdForUpdate(subscription.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", subscription.getMember().getUserId()));
+        if (entityManager != null) entityManager.refresh(subscription);
+        if (!STATUS_PENDING_PAYMENT.equalsIgnoreCase(subscription.getStatus())) {
+            throw new BadRequestException("MEMBERSHIP_CANCEL_NOT_PENDING", "error.membership.cancel_not_pending",
+                    null, "Only a pending payment subscription can be cancelled");
+        }
+        if (payments != null && payments.findAllBySubscriptionId(subscriptionId).stream()
+                .anyMatch(payment -> "pending".equalsIgnoreCase(payment.getStatus())
+                        || "success".equalsIgnoreCase(payment.getStatus()))) {
+            throw new ConflictException("RENEWAL_PAYMENT_IN_PROGRESS", "error.membership.payment_in_progress",
+                    null, "Payment must be resolved before cancellation");
+        }
         subscription.setStatus("cancelled");
         subscription.setUpdatedAt(LocalDateTime.now(clock));
 
@@ -390,6 +470,9 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
 
+        members.findByUserIdForUpdate(subscription.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", subscription.getMember().getUserId()));
+        if (entityManager != null) entityManager.refresh(subscription);
         if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())
                 || !STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())) {
             throw new BadRequestException(
@@ -398,6 +481,9 @@ public class MembershipSubscriptionService {
                     null,
                     "Subscription does not have a pending hold request");
         }
+
+        if (hasPaidFutureRenewal(subscription.getMember().getUserId(), LocalDate.now(clock)))
+            throw futurePaidConflict();
 
         LocalDateTime now = LocalDateTime.now(clock);
         subscription.setStatus(STATUS_FROZEN);
@@ -519,7 +605,13 @@ public class MembershipSubscriptionService {
                     "Subscription is not pending payment");
         }
 
-        LocalDate today = LocalDate.now(clock);
+        if (subscription.getMember() != null && subscriptions.findByMemberUserId(
+                subscription.getMember().getUserId()).stream()
+                .anyMatch(item -> STATUS_FROZEN.equalsIgnoreCase(item.getStatus()))) {
+            throw new ConflictException("MEMBERSHIP_FROZEN_PAYMENT",
+                    "error.membership.frozen_payment", null,
+                    "Membership on hold cannot be activated by payment");
+        }        LocalDate today = LocalDate.now(clock);
         MembershipSubscription previous = subscription.getPreviousSubscription();
         boolean isUpgrade = previous != null
                 && subscription.getMembershipPackage() != null
@@ -536,10 +628,18 @@ public class MembershipSubscriptionService {
             subscriptions.save(previous);
         }
 
-        LocalDate start = isUpgrade ? today : (subscription.getStartDate() != null ? subscription.getStartDate() : today);
-        int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
-        subscription.setStartDate(start);
-        subscription.setEndDate(start.plusDays(durationDays - 1L));
+        if (isUpgrade) {
+            int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
+            subscription.setStartDate(today);
+            subscription.setEndDate(today.plusDays(durationDays - 1L));
+        } else if (previous == null) {
+            LocalDate start = subscription.getStartDate() == null || subscription.getStartDate().isBefore(today)
+                    ? today : subscription.getStartDate();
+            subscription.setStartDate(start);
+            subscription.setEndDate(start.plusDays(Math.max(1, subscription.getMembershipPackage().getDurationDays()) - 1L));
+        } else if (!validPeriod(subscription)) {
+            throw renewalConflict();
+        }
         subscription.setQrCode(UUID.randomUUID().toString());
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -547,6 +647,18 @@ public class MembershipSubscriptionService {
         return toDto(subscriptions.saveAndFlush(subscription));
     }
 
+    private boolean hasPaidFutureRenewal(Long memberId, LocalDate today) {
+        return subscriptions.findByMemberUserId(memberId).stream()
+                .anyMatch(item -> item.getPreviousSubscription() != null
+                        && isPaidPeriod(item) && item.getStartDate() != null
+                        && item.getStartDate().isAfter(today));
+    }
+
+    private ConflictException futurePaidConflict() {
+        return new ConflictException("MEMBERSHIP_FUTURE_PAID_RENEWAL",
+                "error.membership.future_paid_renewal", null,
+                "Paid future renewal requires manager review");
+    }
     private Member findMember(Long userId) {
         return members.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", userId));
@@ -574,6 +686,22 @@ public class MembershipSubscriptionService {
                         && s.getMember().getUser().getDeletedAt() == null)
                 .map(this::toPendingDto)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto generateDynamicQr(AuthenticatedPrincipal principal) {
+        SubscriptionDto sub = current(principal);
+        if (sub == null || !STATUS_ACTIVE.equalsIgnoreCase(sub.status())) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_NOT_ACTIVE",
+                    "error.attendance.subscription_not_active",
+                    null,
+                    "No active subscription found to generate dynamic QR");
+        }
+        long nowMillis = clock.instant().toEpochMilli();
+        String qr = dynamicQrService.generate(principal.id(), sub.id(), nowMillis);
+        return new com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto(
+                qr, dynamicQrService.getTtlSeconds(), LocalDateTime.now(clock));
     }
 
     private SubscriptionDto toDto(MembershipSubscription s) {

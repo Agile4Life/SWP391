@@ -16,6 +16,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findBySubscriptionId(Long subscriptionId);
 
+    List<Payment> findAllBySubscriptionId(Long subscriptionId);
+
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 
     List<Payment> findByStatusAndPaidAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);

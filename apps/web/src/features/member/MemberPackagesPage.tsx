@@ -212,6 +212,49 @@ export function MemberPackagesPage() {
       : 0;
   }
 
+  function paidHistoryConflict(): boolean {
+    if (historyState.status !== 'success') return true;
+    const paid = historyState.data.filter((item) => item.status === 'active' || item.status === 'expired');
+    for (let i = 0; i < paid.length; i += 1) {
+      const a = paid[i];
+      if (!a.startDate || !a.endDate || a.startDate > a.endDate) return true;
+      for (let j = i + 1; j < paid.length; j += 1) {
+        const b = paid[j];
+        if (!b.startDate || !b.endDate || b.startDate > b.endDate) return true;
+        const upgradeTransition = (a.previousSubscriptionId === b.id && a.packageId !== b.packageId && a.startDate === b.endDate)
+          || (b.previousSubscriptionId === a.id && a.packageId !== b.packageId && b.startDate === a.endDate);
+        if (a.startDate <= b.endDate && b.startDate <= a.endDate && !upgradeTransition) return true;
+        if (a.previousSubscriptionId != null && a.previousSubscriptionId === b.previousSubscriptionId) return true;
+      }
+    }
+    return false;
+  }
+
+  function renewalPath(subscriptionId: number): { tail: MemberSubscription | null; conflict: boolean } {
+    if (historyState.status !== 'success' || paidHistoryConflict()
+      || historyState.data.some((item) => item.status === 'frozen')) return { tail: null, conflict: true };
+    let tail = historyState.data.find((item) => item.id === subscriptionId) ?? null;
+    const visited = new Set<number>();
+    while (tail) {
+      if (visited.has(tail.id)) return { tail: null, conflict: true };
+      visited.add(tail.id);
+      const next = historyState.data.filter((item) => item.previousSubscriptionId === tail?.id
+        && (item.status === 'active' || item.status === 'expired'));
+      if (next.length > 1) return { tail: null, conflict: true };
+      if (next.length === 0) return { tail, conflict: false };
+      if (next[0].startDate <= tail.endDate || next[0].packageId !== tail.packageId) {
+        return { tail: null, conflict: true };
+      }
+      tail = next[0];
+    }
+    return { tail: null, conflict: true };
+  }
+
+  const futurePeriods = historyState.status === 'success'
+    ? historyState.data.filter((item) => item.status === 'active' && item.startDate > todayKey())
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    : [];
+
   const isStatusSyncing =
     currentState.status === 'loading' ||
     historyState.status === 'loading' ||
@@ -234,7 +277,7 @@ export function MemberPackagesPage() {
       return;
     }
 
-    if (renewFrom && renewalCount(renewFrom.id) > 0) {
+    if (renewFrom && renewalPath(renewFrom.id).conflict) {
       return;
     }
 
@@ -476,6 +519,17 @@ export function MemberPackagesPage() {
         </section>
       )}
 
+      {futurePeriods.length > 0 && (
+        <section className="portal-card" aria-label="Các kỳ đã thanh toán tiếp theo" style={{ marginBottom: 24 }}>
+          <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
+          {futurePeriods.map((period) => (
+            <p className="row-card__meta" key={period.id}>
+              {period.packageName}: {formatDate(period.startDate)} – {formatDate(period.endDate)}
+            </p>
+          ))}
+        </section>
+      )}
+
       {currentState.status === 'success' && !current && !frozenSubscription && !pending && !isStatusSyncing && (
         <div className="portal-alert portal-alert--info" style={{ marginBottom: 24 }}>
           <span>Bạn chưa có gói đang hoạt động. Hãy chọn một gói tập bên dưới để đăng ký và kích hoạt thẻ hội viên.</span>
@@ -530,7 +584,7 @@ export function MemberPackagesPage() {
                   type="button"
                   className="btn-secondary"
                   style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                  disabled={isCancellingPending}
+                  disabled={isCancellingPending || relatedPayments.some((payment) => payment.status === 'pending' || payment.status === 'success')}
                   onClick={() => void handleCancelPending(pending.id)}
                 >
                   {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
@@ -566,7 +620,7 @@ export function MemberPackagesPage() {
                 type="button"
                 className="btn-secondary"
                 style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending}
+                disabled={isCancellingPending || relatedPayments.some((payment) => payment.status === 'pending' || payment.status === 'success')}
                 onClick={() => void handleCancelPending(pending.id)}
               >
                 {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
@@ -661,11 +715,8 @@ export function MemberPackagesPage() {
               current && !isCurrent && isHigherPackage(currentPackage, membershipPackage)
                 ? current
                 : null;
-            const nextRenewals = renewFrom
-              ? renewalCount(renewFrom.id)
-              : upgradeFrom
-                ? renewalCount(upgradeFrom.id)
-                : 0;
+            const renewalConflict = renewFrom && historyState.status === 'success' ? renewalPath(renewFrom.id).conflict : false;
+            const nextRenewals = upgradeFrom ? renewalCount(upgradeFrom.id) : 0;
 
             const isPending =
               pending?.packageId ===
@@ -684,6 +735,7 @@ export function MemberPackagesPage() {
               historyState.status !== 'success' || paymentsState.status !== 'success' ||
               pendingItems.length > 0 ||
               nextRenewals > 0 ||
+              renewalConflict ||
               ambiguousRenewal ||
               hasLowerOrNonUpgradableCurrentPackage;
 
@@ -692,7 +744,7 @@ export function MemberPackagesPage() {
 
             if (isSubmitting) {
               buttonText = 'Đang xử lý…';
-            } else if (nextRenewals > 1) {
+            } else if (renewalConflict || nextRenewals > 1) {
               buttonText = 'Cần kiểm tra gia hạn';
             } else if (nextRenewals === 1) {
               buttonText = renewFrom ? 'Đã gia hạn' : 'Có yêu cầu đang chờ';
@@ -770,9 +822,9 @@ export function MemberPackagesPage() {
                     Trọn gói {membershipPackage.durationDays} ngày • Kích hoạt ngay tại quầy
                   </div>
 
-                  {nextRenewals > 1 && (
+                  {(renewalConflict || nextRenewals > 1) && (
                     <p className="row-card__meta" role="alert">
-                      Có nhiều lượt gia hạn từ cùng gói. Vui lòng liên hệ nhân viên để kiểm tra.
+                      Lịch sử gói có kỳ trùng, chồng ngày hoặc chuỗi gia hạn bất thường. Vui lòng liên hệ nhân viên để kiểm tra.
                     </p>
                   )}
 
@@ -892,7 +944,7 @@ export function MemberPackagesPage() {
                 type="button"
                 className="btn-secondary"
                 style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending}
+                disabled={isCancellingPending || relatedPayments.some((payment) => payment.status === 'pending' || payment.status === 'success')}
                 onClick={() => void handleCancelPending(requestResult.subscription.id)}
               >
                 {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
