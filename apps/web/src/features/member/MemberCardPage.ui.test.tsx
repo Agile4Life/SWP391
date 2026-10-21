@@ -117,13 +117,16 @@ describe('MemberCardPage', () => {
     expect(host.querySelector('button')?.disabled).toBe(true);
   });
 
-  it('reports copy success only after the clipboard write completes', async () => {
+  it.each(['backend-qr', 'DYN:9:1:123:signed'])('copies the displayed QR %s and waits for clipboard completion', async (qrCode) => {
     let resolveWrite!: () => void;
     const writeText = vi.fn(() => new Promise<void>((resolve) => { resolveWrite = resolve; }));
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    if (qrCode.startsWith('DYN:')) {
+      vi.mocked(getDynamicQr).mockResolvedValue({ qrCode, expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' });
+    }
     await renderPage();
     await act(async () => { host.querySelector<HTMLButtonElement>('button.btn-secondary')?.click(); });
-    expect(writeText).toHaveBeenCalledWith('backend-qr');
+    expect(writeText).toHaveBeenCalledWith(qrCode);
     expect(document.querySelector('.sol-toast--success')).toBeNull();
     await act(async () => { resolveWrite(); });
     expect(document.querySelector('.sol-toast--success')?.textContent).toContain('Đã sao chép');

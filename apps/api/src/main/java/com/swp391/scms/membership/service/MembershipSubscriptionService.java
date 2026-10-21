@@ -261,7 +261,7 @@ public class MembershipSubscriptionService {
         long nowMillis = clock.instant().toEpochMilli();
         String qr = dynamicQrService.generate(principal.id(), sub.id(), nowMillis);
         return new com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto(
-                qr, DynamicQrService.DEFAULT_TTL_SECONDS, LocalDateTime.now(clock));
+                qr, dynamicQrService.getTtlSeconds(), LocalDateTime.now(clock));
     }
 
     private SubscriptionDto toDto(MembershipSubscription s) {

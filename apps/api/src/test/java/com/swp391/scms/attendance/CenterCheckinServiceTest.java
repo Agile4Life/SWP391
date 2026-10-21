@@ -57,6 +57,8 @@ class CenterCheckinServiceTest {
     private Clock clock;
     private MessageService messageService;
     private CenterCheckinService service;
+    private final com.swp391.scms.membership.service.DynamicQrService qrService =
+            new com.swp391.scms.membership.service.DynamicQrService("attendance-test-signing-secret", 60);
 
     private final AuthenticatedPrincipal receptionist = new AuthenticatedPrincipal(1L, "receptionist", "RECEPTIONIST");
     private final AuthenticatedPrincipal centerManager = new AuthenticatedPrincipal(2L, "manager", "CENTER_MANAGER");
@@ -70,7 +72,7 @@ class CenterCheckinServiceTest {
         source.setDefaultEncoding("UTF-8");
         messageService = new MessageService(source);
 
-        service = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService);
+        service = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService);
     }
 
     private Member mockMember(Long userId, String name) {
@@ -402,8 +404,6 @@ class CenterCheckinServiceTest {
         LocalDateTime now = LocalDateTime.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
 
-        com.swp391.scms.membership.service.DynamicQrService qrService =
-                new com.swp391.scms.membership.service.DynamicQrService();
         long currentMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli();
         String dynamicQr = qrService.generate(10L, 5L, currentMillis);
 
@@ -421,8 +421,6 @@ class CenterCheckinServiceTest {
     @DisplayName("Dynamic QR đã hết hạn (>60s) -> Bị từ chối với lỗi error.attendance.qr_expired")
     void expiredDynamicQr_deniedWithQrExpired() {
         LocalDateTime now = LocalDateTime.now(clock);
-        com.swp391.scms.membership.service.DynamicQrService qrService =
-                new com.swp391.scms.membership.service.DynamicQrService();
         long oldMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli() - 90000L;
         String expiredQr = qrService.generate(10L, 5L, oldMillis);
 

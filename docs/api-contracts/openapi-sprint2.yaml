@@ -387,6 +387,22 @@ components:
           type: string
           nullable: true
 
+    DynamicQrDto:
+      type: object
+      required: [qrCode, expiresInSeconds, generatedAt]
+      properties:
+        qrCode:
+          type: string
+          description: Short-lived HMAC-signed payload DYN:{userId}:{subscriptionId}:{timestampMillis}:{signature}
+        expiresInSeconds:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Configured lifetime of the returned QR code in seconds
+        generatedAt:
+          type: string
+          format: date-time
+
     ClassWaitlistDto:
       type: object
       properties:
@@ -403,6 +419,11 @@ components:
         requestedAt:
           type: string
           format: date-time
+        reservationExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Deadline for a notified member to claim their reserved seat
 
     # --- Attendance / Check-in Schemas (SCRUM-75) ---
     CheckinDto:
@@ -789,6 +810,31 @@ paths:
                   - properties:
                       data:
                         $ref: '#/components/schemas/SubscriptionDto'
+
+  /memberships/subscriptions/my/dynamic-qr:
+    get:
+      summary: Get a fresh signed QR for the current active subscription (SCRUM-71, SCRUM-87)
+      description: Requires MEMBER role and a subscription effective today. Clients refresh before expiresInSeconds elapses.
+      tags: [Memberships]
+      responses:
+        '200':
+          description: Signed QR and its configured lifetime
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/DynamicQrDto'
+        '400':
+          description: No active subscription effective today
+        '401':
+          description: Authentication required
+        '403':
+          description: Member role required
+        '429':
+          description: Rate limit exceeded; retry after the Retry-After header
 
   /memberships/subscriptions/history:
     get:

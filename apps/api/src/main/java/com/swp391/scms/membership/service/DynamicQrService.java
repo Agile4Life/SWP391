@@ -1,6 +1,7 @@
 package com.swp391.scms.membership.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -8,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.UUID;
 
 /**
  * Quản lý sinh và xác thực Dynamic QR bảo mật theo định dạng HMAC-SHA256(userId + subscriptionId + timestamp).
@@ -23,14 +25,22 @@ public class DynamicQrService {
     private final long ttlMillis;
 
     public DynamicQrService() {
-        this("scms-dynamic-qr-hmac-sha256-default-secret-key-391", DEFAULT_TTL_SECONDS);
+        this(UUID.randomUUID().toString() + UUID.randomUUID(), DEFAULT_TTL_SECONDS);
     }
 
+    @Autowired
     public DynamicQrService(
-            @Value("${app.qr.secret:scms-dynamic-qr-hmac-sha256-default-secret-key-391}") String secret,
+            @Value("${app.qr.secret:${app.jwt.secret}}") String secret,
             @Value("${app.qr.ttl-seconds:60}") long ttlSeconds) {
+        if (secret == null || secret.isBlank() || ttlSeconds <= 0) {
+            throw new IllegalArgumentException("QR signing secret and positive lifetime are required");
+        }
         this.secretKeyBytes = secret.getBytes(StandardCharsets.UTF_8);
         this.ttlMillis = ttlSeconds * 1000L;
+    }
+
+    public long getTtlSeconds() {
+        return ttlMillis / 1000L;
     }
 
     public record VerificationResult(

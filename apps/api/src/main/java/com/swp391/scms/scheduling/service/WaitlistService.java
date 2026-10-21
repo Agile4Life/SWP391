@@ -42,6 +42,7 @@ public class WaitlistService {
     private final MemberRepository members;
     private final GymClassRepository gymClasses;
     private final Clock clock;
+    private final EnrollmentService enrollmentService;
 
     public WaitlistService(ClassWaitlistRepository waitlists,
                            ClassEnrollmentRepository enrollments,
@@ -49,7 +50,8 @@ public class WaitlistService {
                            MembershipSubscriptionRepository subscriptions,
                            MemberRepository members,
                            GymClassRepository gymClasses,
-                           Clock clock) {
+                           Clock clock,
+                           EnrollmentService enrollmentService) {
         this.waitlists = waitlists;
         this.enrollments = enrollments;
         this.sessions = sessions;
@@ -57,6 +59,7 @@ public class WaitlistService {
         this.members = members;
         this.gymClasses = gymClasses;
         this.clock = clock;
+        this.enrollmentService = enrollmentService;
     }
 
     /**
@@ -156,7 +159,7 @@ public class WaitlistService {
         ClassWaitlist saved = waitlists.saveAndFlush(waitlist);
 
         if (wasNotified && waitlist.getGymClass() != null && waitlist.getGymClass().getId() != null) {
-            promoteNextWaitlistEntry(waitlist.getGymClass().getId(), LocalDateTime.now(clock));
+            enrollmentService.promoteNextWaitlistEntry(waitlist.getGymClass().getId(), LocalDateTime.now(clock));
         }
 
         return toDto(saved);
@@ -175,23 +178,10 @@ public class WaitlistService {
             expired.setStatus("expired");
             waitlists.save(expired);
             if (expired.getGymClass() != null && expired.getGymClass().getId() != null) {
-                promoteNextWaitlistEntry(expired.getGymClass().getId(), now);
+                enrollmentService.promoteNextWaitlistEntry(expired.getGymClass().getId(), now);
             }
         }
         return expiredList.size();
-    }
-
-    private void promoteNextWaitlistEntry(Long classId, LocalDateTime now) {
-        if (classId == null) return;
-        List<ClassWaitlist> waitingList =
-                waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(classId, WAITING);
-        if (waitingList != null && !waitingList.isEmpty()) {
-            ClassWaitlist nextWaiting = waitingList.get(0);
-            nextWaiting.setStatus("notified");
-            nextWaiting.setNotifiedAt(now);
-            nextWaiting.setReservationExpiresAt(now.plusMinutes(15));
-            waitlists.save(nextWaiting);
-        }
     }
 
     /**

@@ -4,10 +4,31 @@ import com.swp391.scms.membership.service.DynamicQrService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.core.env.MapPropertySource;
+
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class DynamicQrServiceTest {
+
+    @Test
+    void springBeanUsesConfiguredSigningSecretAndLifetime() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("qr-test", Map.of(
+                    "app.qr.secret", SECRET, "app.qr.ttl-seconds", "5")));
+            context.register(DynamicQrService.class);
+            context.refresh();
+            DynamicQrService managed = context.getBean(DynamicQrService.class);
+            long now = 1_000_000L;
+            String signed = new DynamicQrService(SECRET, 5).generate(10L, 5L, now);
+            assertTrue(managed.verify(signed, now).valid());
+            assertTrue(managed.verify(signed, now + 5_001).expired());
+            String foreign = new DynamicQrService("another-deployment-secret", 60).generate(10L, 5L, now);
+            assertFalse(managed.verify(foreign, now).valid());
+        }
+    }
 
     private DynamicQrService qrService;
     private static final String SECRET = "test-secret-key-for-hmac-sha256-scms-project";
