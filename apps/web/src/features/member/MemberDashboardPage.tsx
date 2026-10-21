@@ -171,8 +171,9 @@ export function MemberDashboardPage() {
                   className="portal-card member-membership-card"
                   aria-labelledby="membership-title"
                 >
-                  <img className="member-card-cover" src="/images/about-movement-studio.jpg" alt="" />
+                  <Link className="member-card-cover-link" to="/member/packages" aria-label="Xem gói tập của tôi"><img className="member-card-cover" src="/images/about-movement-studio.jpg" alt="" /></Link>
                   <div className="member-card-body">
+                    <Link className="member-card-details-link" to="/member/packages" aria-label="Xem chi tiết gói tập của tôi">
                     <span className="badge badge-success">Đang hoạt động</span>
                     <div className="meta-label" style={{ marginTop: 14 }}>Gói tập hiện tại</div>
 
@@ -217,6 +218,7 @@ export function MemberDashboardPage() {
                         }}
                       />
                     </div>
+                    </Link>
                     <Link className="member-text-link" to="/member/packages">Quản lý gói tập<PortalIcon name="arrow" size={14} /></Link>
                   </div>
                 </section>
@@ -269,6 +271,7 @@ export function MemberDashboardPage() {
               </h2>
             </div>
 
+            {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label="Xem lịch lớp học của tôi" />}
             {classesState.status === 'loading' && (
               <p className="row-card__meta" role="status">
                 Đang tải lịch học…
@@ -328,7 +331,7 @@ export function MemberDashboardPage() {
             <strong>{userName}</strong>
             <div className="member-digital-card-bottom"><span>Thẻ hội viên điện tử</span><PortalIcon name="arrow" size={17} /></div>
           </Link>
-          <div className="portal-card member-board-info"><span className="member-info-icon"><PortalIcon name="scan" size={20} /></span><h3>Chạm vào hành trình</h3><p>Mở thẻ hội viên để xem mã QR check-in và trạng thái gói tập của bạn.</p><Link className="member-text-link" to="/member/card">Mở thẻ hội viên<PortalIcon name="arrow" size={14} /></Link></div>
+          <Link className="portal-card member-board-info" to="/member/card"><span className="member-info-icon"><PortalIcon name="scan" size={20} /></span><h3>Chạm vào hành trình</h3><p>Mở thẻ hội viên để xem mã QR check-in và trạng thái gói tập của bạn.</p><span className="member-text-link">Mở thẻ hội viên<PortalIcon name="arrow" size={14} /></span></Link>
           <Link className="member-board-note" to="/member/packages"><PortalIcon name="card" size={18} /><span>Gói tập & thanh toán<small>Kiểm tra đăng ký và thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
