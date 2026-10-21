@@ -17,6 +17,7 @@ const profile = { fullName: 'Nguyễn Minh', membershipCode: 'MB-01' };
 const subscription = { id: 1, packageName: 'SÖL Gold', startDate: '2026-01-01', endDate: '2099-12-31', status: 'active', qrCode: 'backend-qr' };
 let host: HTMLDivElement;
 let root: Root;
+let clipboardDescriptor: PropertyDescriptor | undefined;
 
 async function renderPage() {
   await act(async () => { root.render(<MemoryRouter><MemberCardPage /></MemoryRouter>); });
@@ -30,6 +31,8 @@ async function finishQrLoading() {
 
 beforeEach(() => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  document.querySelectorAll('.sol-toast').forEach((node) => node.remove());
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -43,6 +46,9 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+  else Reflect.deleteProperty(navigator, 'clipboard');
+  document.querySelectorAll('.sol-toast').forEach((node) => node.remove());
   vi.clearAllMocks();
 });
 
@@ -73,6 +79,73 @@ describe('MemberCardPage', () => {
     expect(host.querySelector('button')?.disabled).toBe(true);
   });
 
+  it.each([0, -1])('allows QR when the start date is today or earlier (%i)', async (offset) => {
+    const start = new Date();
+    start.setDate(start.getDate() + offset);
+    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, startDate } as never);
+    await renderPage();
+    expect(QRCode.toDataURL).toHaveBeenCalledWith('backend-qr', expect.anything());
+    expect(host.querySelector('img')).not.toBeNull();
+  });
+
+  it('hides QR, copy and download when an active subscription starts tomorrow', async () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, startDate } as never);
+    await renderPage();
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+    expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('button')?.disabled).toBe(true);
+    expect(host.textContent).not.toContain('Sao chép mã QR Check-in');
+  });
+
+  it.each(['inactive', 'cancelled', 'pending_payment', 'expired'])('hides QR for %s status', async (status) => {
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, status } as never);
+    await renderPage();
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+    expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('button')?.disabled).toBe(true);
+  });
+
+  it.each(['2026-02-30', 'not-a-date'])('hides QR for invalid start date %s', async (startDate) => {
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, startDate } as never);
+    await renderPage();
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+    expect(host.querySelector('img')).toBeNull();
+    expect(host.querySelector('button')?.disabled).toBe(true);
+  });
+
+  it('reports copy success only after the clipboard write completes', async () => {
+    let resolveWrite!: () => void;
+    const writeText = vi.fn(() => new Promise<void>((resolve) => { resolveWrite = resolve; }));
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    await renderPage();
+    await act(async () => { host.querySelector<HTMLButtonElement>('button.btn-secondary')?.click(); });
+    expect(writeText).toHaveBeenCalledWith('backend-qr');
+    expect(document.querySelector('.sol-toast--success')).toBeNull();
+    await act(async () => { resolveWrite(); });
+    expect(document.querySelector('.sol-toast--success')?.textContent).toContain('Đã sao chép');
+  });
+
+  it('reports an error when the clipboard write rejects', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('permission denied'));
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    await renderPage();
+    await act(async () => { host.querySelector<HTMLButtonElement>('button.btn-secondary')?.click(); });
+    expect(writeText).toHaveBeenCalledWith('backend-qr');
+    expect(document.querySelector('.sol-toast--error')?.textContent).toContain('Không thể sao chép');
+    expect(document.querySelector('.sol-toast--success')).toBeNull();
+  });
+
+  it('reports an error when the Clipboard API is unavailable', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+    await renderPage();
+    await act(async () => { host.querySelector<HTMLButtonElement>('button.btn-secondary')?.click(); });
+    expect(document.querySelector('.sol-toast--error')?.textContent).toContain('Không thể sao chép');
+    expect(document.querySelector('.sol-toast--success')).toBeNull();
+  });
   it('shows an empty state only for a successful null response', async () => {
     vi.mocked(getMySubscription).mockResolvedValue(null);
     await renderPage();
