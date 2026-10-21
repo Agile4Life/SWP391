@@ -83,4 +83,40 @@ export const reportsApi = {
       recentTransactions,
     };
   },
+
+  /**
+   * SCRUM-79 / SCRUM-84: Lưu ảnh chụp báo cáo định kỳ (Snapshot JSONB)
+   */
+  createSnapshot: async (payload: CreateSnapshotPayload): Promise<ReportSnapshotDto> => {
+    return apiFetch<ReportSnapshotDto>('/reports/snapshots/generate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * Lấy danh sách các ảnh chụp snapshot đã lưu
+   */
+  getSnapshots: async (): Promise<ReportSnapshotDto[]> => {
+    return apiFetch<ReportSnapshotDto[]>('/reports/snapshots');
+  },
 };
+
+export interface CreateSnapshotPayload {
+  reportType: 'revenue' | 'membership' | 'class_utilization';
+  periodStart: string;
+  periodEnd: string;
+  data: string;
+  generatedById?: number;
+}
+
+export interface ReportSnapshotDto {
+  id: number;
+  reportType: string;
+  periodStart: string;
+  periodEnd: string;
+  data: string;
+  generatedById?: number;
+  generatedByName?: string;
+  generatedAt: string;
+}
