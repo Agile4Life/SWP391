@@ -60,23 +60,13 @@ export function MemberClassesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
-  const actionBusy = useRef(false);
-  const actionContext = useRef(0);
+  const busyRef = useRef<string | null>(null);
+  const actionGenRef = useRef(0);
 
-  function changeContext(update: () => void) {
-    actionContext.current += 1;
+  function clearActionFeedback() {
+    actionGenRef.current += 1;
     setActionError('');
     setNotice('');
-    update();
-  }
-
-  function beginAction(key: string): boolean {
-    if (actionBusy.current) return false;
-    actionBusy.current = true;
-    setBusyKey(key);
-    setNotice('');
-    setActionError('');
-    return true;
   }
 
   useEffect(() => {
@@ -122,65 +112,101 @@ export function MemberClassesPage() {
   }, [waitlistsRetry]);
 
   async function handleEnroll(session: ClassSessionDto) {
-    if (!beginAction(`session-${session.id}`)) return;
-    const context = actionContext.current;
+    const key = `session-${session.id}`;
+    if (busyRef.current) return;
+    busyRef.current = key;
+    setBusyKey(key);
+    const gen = ++actionGenRef.current;
+    setNotice('');
+    setActionError('');
     try {
       await enroll(session.id);
-      if (context === actionContext.current) setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
+      if (actionGenRef.current === gen) {
+        setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
+      }
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      if (context === actionContext.current) setActionError(errorMessage(cause));
+      if (actionGenRef.current === gen) {
+        setActionError(errorMessage(cause));
+      }
     } finally {
-      actionBusy.current = false;
+      busyRef.current = null;
       setBusyKey(null);
     }
   }
 
   async function handleJoinWaitlist(session: ClassSessionDto) {
-    if (!beginAction(`session-${session.id}`)) return;
-    const context = actionContext.current;
+    const key = `session-${session.id}`;
+    if (busyRef.current) return;
+    busyRef.current = key;
+    setBusyKey(key);
+    const gen = ++actionGenRef.current;
+    setNotice('');
+    setActionError('');
     try {
       await joinWaitlist(session.id);
-      if (context === actionContext.current) setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
+      if (actionGenRef.current === gen) {
+        setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
+      }
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      if (context === actionContext.current) setActionError(errorMessage(cause));
+      if (actionGenRef.current === gen) {
+        setActionError(errorMessage(cause));
+      }
     } finally {
-      actionBusy.current = false;
+      busyRef.current = null;
       setBusyKey(null);
     }
   }
 
   async function handleCancelEnrollment(enrollmentId: number, className: string) {
-    if (!beginAction(`enroll-${enrollmentId}`)) return;
-    const context = actionContext.current;
+    const key = `enroll-${enrollmentId}`;
+    if (busyRef.current) return;
+    busyRef.current = key;
+    setBusyKey(key);
+    const gen = ++actionGenRef.current;
+    setNotice('');
+    setActionError('');
     try {
       await cancelEnrollment(enrollmentId);
-      if (context === actionContext.current) setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
+      if (actionGenRef.current === gen) {
+        setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
+      }
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      if (context === actionContext.current) setActionError(errorMessage(cause));
+      if (actionGenRef.current === gen) {
+        setActionError(errorMessage(cause));
+      }
     } finally {
-      actionBusy.current = false;
+      busyRef.current = null;
       setBusyKey(null);
     }
   }
 
   async function handleLeaveWaitlist(waitlistId: number, className: string) {
-    if (!beginAction(`waitlist-${waitlistId}`)) return;
-    const context = actionContext.current;
+    const key = `waitlist-${waitlistId}`;
+    if (busyRef.current) return;
+    busyRef.current = key;
+    setBusyKey(key);
+    const gen = ++actionGenRef.current;
+    setNotice('');
+    setActionError('');
     try {
       await leaveWaitlist(waitlistId);
-      if (context === actionContext.current) setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
+      if (actionGenRef.current === gen) {
+        setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
+      }
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      if (context === actionContext.current) setActionError(errorMessage(cause));
+      if (actionGenRef.current === gen) {
+        setActionError(errorMessage(cause));
+      }
     } finally {
-      actionBusy.current = false;
+      busyRef.current = null;
       setBusyKey(null);
     }
   }
@@ -207,14 +233,20 @@ export function MemberClassesPage() {
           <button
             type="button"
             className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
-            onClick={() => changeContext(() => setWeekOffset(0))}
+            onClick={() => {
+              clearActionFeedback();
+              setWeekOffset(0);
+            }}
           >
             Tuần này
           </button>
           <button
             type="button"
             className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
-            onClick={() => changeContext(() => setWeekOffset(1))}
+            onClick={() => {
+              clearActionFeedback();
+              setWeekOffset(1);
+            }}
           >
             Tuần kế tiếp
           </button>
@@ -228,7 +260,10 @@ export function MemberClassesPage() {
             type="button"
             className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
             aria-pressed={discipline === value}
-            onClick={() => changeContext(() => setDiscipline(value))}
+            onClick={() => {
+              clearActionFeedback();
+              setDiscipline(value);
+            }}
           >
             {value === 'ALL' ? 'Tất cả bộ môn' : value}
           </button>
@@ -238,7 +273,14 @@ export function MemberClassesPage() {
       <div style={{ margin: '16px 0 24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
           <label htmlFor="member-classes-day" className="meta-label" style={{ marginRight: 12 }}>Thứ trong tuần</label>
-          <select id="member-classes-day" value={day} onChange={(event) => changeContext(() => setDay(event.target.value))}>
+          <select
+            id="member-classes-day"
+            value={day}
+            onChange={(event) => {
+              clearActionFeedback();
+              setDay(event.target.value);
+            }}
+          >
             {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
@@ -270,7 +312,10 @@ export function MemberClassesPage() {
           role="tab"
           aria-selected={tab === 'schedule'}
           className={`portal-tab ${tab === 'schedule' ? 'active' : ''}`}
-          onClick={() => changeContext(() => setTab('schedule'))}
+          onClick={() => {
+            clearActionFeedback();
+            setTab('schedule');
+          }}
         >
           Lịch lớp học
         </button>
@@ -279,7 +324,10 @@ export function MemberClassesPage() {
           role="tab"
           aria-selected={tab === 'my'}
           className={`portal-tab ${tab === 'my' ? 'active' : ''}`}
-          onClick={() => changeContext(() => setTab('my'))}
+          onClick={() => {
+            clearActionFeedback();
+            setTab('my');
+          }}
         >
           Lịch học của tôi {(activeEnrollments.length + activeWaitlists.length) > 0 ? `(${activeEnrollments.length + activeWaitlists.length})` : ''}
         </button>
@@ -318,7 +366,14 @@ export function MemberClassesPage() {
                 <h3>Chưa có lịch học</h3>
                 <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần kế tiếp.</p>
                 {weekOffset === 0 && (
-                  <button type="button" className="btn-secondary btn-sm" onClick={() => changeContext(() => setWeekOffset(1))}>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => {
+                      clearActionFeedback();
+                      setWeekOffset(1);
+                    }}
+                  >
                     Xem lịch tuần kế tiếp
                   </button>
                 )}
@@ -448,7 +503,14 @@ export function MemberClassesPage() {
             <div className="portal-card portal-empty">
               <h3>Chưa có lịch học đã đặt</h3>
               <p>Bạn chưa đặt chỗ buổi học nào hoặc chưa tham gia hàng chờ. Hãy chọn buổi học phù hợp tại tab Lịch lớp học.</p>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => changeContext(() => setTab('schedule'))}>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => {
+                  clearActionFeedback();
+                  setTab('schedule');
+                }}
+              >
                 Xem lịch lớp học
               </button>
             </div>

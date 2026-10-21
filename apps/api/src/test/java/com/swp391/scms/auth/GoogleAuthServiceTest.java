@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleLoginRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
 import com.swp391.scms.auth.dto.GoogleUserInfo;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.UnauthorizedException;
@@ -37,6 +39,13 @@ class GoogleAuthServiceTest {
     @Mock GoogleTokenVerifierPort googleTokenVerifierPort;
 
     private AuthService authService;
+    private com.swp391.scms.audit.AuditLogRepository auditRepository;
+
+    @org.junit.jupiter.api.AfterEach
+    void authenticationCredentialsNeverReachAuditPersistence() {
+        verifyNoInteractions(auditRepository);
+    }
+
 
     @BeforeEach
     void setUp() {
@@ -52,6 +61,10 @@ class GoogleAuthServiceTest {
                 null,
                 googleTokenVerifierPort
         );
+        auditRepository = mock(com.swp391.scms.audit.AuditLogRepository.class);
+        var proxyFactory = new org.springframework.aop.aspectj.annotation.AspectJProxyFactory(authService);
+        proxyFactory.addAspect(new com.swp391.scms.audit.AuditAspect(auditRepository, new com.fasterxml.jackson.databind.ObjectMapper()));
+        authService = proxyFactory.getProxy();
     }
 
     private Role createRole(String code) {
@@ -231,4 +244,56 @@ class GoogleAuthServiceTest {
         assertEquals("ACCOUNT_INACTIVE", ex.getErrorCode());
         verify(jwtService, never()).generateToken(any(), any(), any());
     }
+
+    @Test
+    @DisplayName("OAuth Callback -> Xác thực Google thành công, gửi mã OTP về email thay vì cấp JWT ngay")
+    void testRequestGoogleOAuthOtp_SendsEmailOtpInsteadOfImmediateJwt() {
+        GoogleUserInfo googleUser = new GoogleUserInfo(
+                "sub-oauth-999",
+                "oauthmember@gmail.com",
+                true,
+                "OAuth Member",
+                "https://avatar.com/oauth.jpg"
+        );
+        when(googleTokenVerifierPort.verifyAuthorizationCode("oauth-code-123", "http://localhost:8080/api/v1/auth/google/callback"))
+                .thenReturn(googleUser);
+        when(userRepository.findByGoogleSub("sub-oauth-999")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("oauthmember@gmail.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(createRole("MEMBER")));
+        when(userRepository.findByUsernameIgnoreCase(any())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("hashed-pwd");
+        when(userRepository.saveAndFlush(any())).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(105L);
+            return u;
+        });
+        when(otpService.generateOtp("oauthmember@gmail.com")).thenReturn("482910");
+
+        GoogleOAuthOtpChallenge challenge = authService.requestGoogleOAuthOtp(
+                new GoogleOAuthCallbackRequest(null, null, "oauth-code-123", "http://localhost:8080/api/v1/auth/google/callback")
+        );
+
+        assertNotNull(challenge);
+        assertEquals("oauthmember@gmail.com", challenge.email());
+        assertEquals("482910", challenge.otpCode());
+        verify(otpDeliveryPort).send("oauthmember@gmail.com", "482910");
+        verifyNoInteractions(jwtService);
+    }
+    @Test
+    void renamedGoogleEmailKeepsOtpBoundToResolvedLocalAccount() {
+        User member = new User();
+        member.setEmail("original@example.com");
+        member.setGoogleSub("stable-sub");
+        member.setStatus("active");
+        member.setRole(createRole("MEMBER"));
+        when(googleTokenVerifierPort.verify("renamed-token")).thenReturn(
+                new GoogleUserInfo("stable-sub", "renamed@example.com", true, "Member", null, "example.com"));
+        when(userRepository.findByGoogleSub("stable-sub")).thenReturn(Optional.of(member));
+        when(otpService.generateOtp("original@example.com")).thenReturn("123456");
+        var challenge = authService.requestGoogleOAuthOtp(new GoogleOAuthCallbackRequest("renamed-token"));
+        assertEquals("original@example.com", challenge.email());
+        verify(otpDeliveryPort).send("original@example.com", "123456");
+        verifyNoInteractions(jwtService);
+    }
+
 }

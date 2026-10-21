@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { googleSendOtp, googleVerifyOtp, register, sendOtp, verifyOtp } from './authApi';
+import { googleOAuthCallback, googleSendOtp, googleVerifyOtp, register, sendOtp, verifyOtp } from './authApi';
 
 describe('authApi.ts (Register and OTP flow)', () => {
   beforeEach(() => {
@@ -150,6 +150,34 @@ describe('authApi.ts (Register and OTP flow)', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ email: 'user@gmail.com', otpCode: '654321' }),
+      }),
+    );
+  });
+
+  it('googleOAuthCallback posts OAuth credential and returns OTP challenge response', async () => {
+    const mockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          email: 'oauth@gmail.com',
+          message: 'Đã gửi mã xác nhận đến gmail oauth@gmail.com',
+          expiresInMinutes: 5,
+          debugOtp: '112233',
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const res = await googleOAuthCallback({ idToken: 'google-id-token-123' });
+    expect(res.email).toBe('oauth@gmail.com');
+    expect(res.debugOtp).toBe('112233');
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/auth/google/oauth-callback',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ idToken: 'google-id-token-123' }),
       }),
     );
   });

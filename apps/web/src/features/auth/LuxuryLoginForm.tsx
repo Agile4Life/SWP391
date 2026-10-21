@@ -3,7 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, homePath, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
-import { googleLoginWithIdToken, googleSendOtp, googleVerifyOtp } from './authApi';
+import {
+  getGoogleOAuthAuthorizeUrl,
+  googleOAuthCallback,
+  googleSendOtp,
+  googleVerifyOtp,
+  type GoogleOAuthCallbackInput,
+} from './authApi';
 
 interface LuxuryLoginFormProps {
   onSuccess?: () => void;
@@ -64,17 +70,28 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     setShaking(true);
   }, []);
 
-  // BR-01, BR-06: Xác thực Google ID Token qua backend API và cấp JWT session
-  const processGoogleIdToken = useCallback(async (idToken: string) => {
+  // SCRUM-89: Xác thực Google OAuth Callback (ID Token / Access Token / Authorization Code)
+  // Sau khi Google callback về -> gửi mã OTP 6 số qua Gmail -> chuyển sang màn hình nhập OTP (mode = 'google_otp')
+  const processGoogleOAuthCallback = useCallback(async (payload: GoogleOAuthCallbackInput) => {
     setIsGoogleLoading(true);
     setFormError('');
     try {
-      const res = await googleLoginWithIdToken(idToken);
-      const user = setAuthSession(res.token, res.username, res.role);
-      toast('Đăng nhập bằng Google thành công!', 'success');
-      setSuccess(true);
-      if (onSuccess) onSuccess();
-      window.setTimeout(() => navigate(homePath(user.role), { viewTransition: true }), 600);
+      const res = await googleOAuthCallback(payload);
+      const verifiedEmail = (res.email || '').trim();
+      setGoogleEmail(verifiedEmail);
+      setOtpMessage(
+        res.message || `Đã gửi mã xác nhận đến gmail ${verifiedEmail}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`
+      );
+      if (res.debugOtp) {
+        setDebugOtpCode(res.debugOtp);
+        setOtpCode(res.debugOtp);
+      } else {
+        setDebugOtpCode('');
+        setOtpCode('');
+      }
+      setMode('google_otp');
+      setCountdown(30);
+      toast(`Mã xác nhận đã được gửi đến ${verifiedEmail}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Đăng nhập Google thất bại.';
       // BR-04 & BR-05: Chặn nhân sự (403) và tài khoản bị khóa
@@ -88,7 +105,81 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [fail, navigate, onSuccess]);
+  }, [fail]);
+
+  const processGoogleIdToken = useCallback(async (idToken: string) => {
+    await processGoogleOAuthCallback({ idToken });
+  }, [processGoogleOAuthCallback]);
+
+  // Xử lý khi Google OAuth 2.0 Redirect Callback trả về URL (/login?google_oauth=callback&email=... hoặc /login?code=...)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const oauthStatus = params.get('google_oauth');
+    const code = params.get('code');
+
+    if (!oauthStatus && !code) return;
+
+    const cleanSearchParams = () => {
+      const nextParams = new URLSearchParams(window.location.search);
+      nextParams.delete('google_oauth');
+      nextParams.delete('email');
+      nextParams.delete('message');
+      nextParams.delete('debug_otp');
+      nextParams.delete('debugOtp');
+      nextParams.delete('state');
+      nextParams.delete('error');
+      nextParams.delete('code');
+      nextParams.delete('scope');
+      nextParams.delete('authuser');
+      nextParams.delete('prompt');
+      const nextSearch = nextParams.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, document.title, nextUrl);
+    };
+
+    if (oauthStatus === 'callback') {
+      const email = (params.get('email') || '').trim();
+      const message = params.get('message') || `Đã gửi mã xác nhận đến gmail ${email}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`;
+      const debugOtp = params.get('debug_otp') || params.get('debugOtp') || '';
+      cleanSearchParams();
+      if (email) {
+        setGoogleEmail(email);
+        setOtpMessage(message);
+        if (debugOtp) {
+          setDebugOtpCode(debugOtp);
+          setOtpCode(debugOtp);
+        } else {
+          setDebugOtpCode('');
+          setOtpCode('');
+        }
+        setFormError('');
+        setMode('google_otp');
+        setCountdown(30);
+        toast(`Mã xác nhận đã được gửi đến ${email}`);
+      }
+      return;
+    }
+
+    if (oauthStatus === 'error') {
+      const errorMsg = params.get('error') || 'Xác thực Google OAuth thất bại.';
+      cleanSearchParams();
+      fail(errorMsg);
+      return;
+    }
+
+    if (oauthStatus === 'not_configured') {
+      cleanSearchParams();
+      setFormError('');
+      setMode('google_email');
+      return;
+    }
+
+    if (code) {
+      cleanSearchParams();
+      fail('Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
+    }
+  }, [fail, processGoogleOAuthCallback]);
 
   // Khởi tạo Google Identity Services (GIS)
   useEffect(() => {
@@ -137,6 +228,41 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       return () => window.clearInterval(interval);
     }
   }, [googleClientId, mode, processGoogleIdToken]);
+
+  // Trigger Google OAuth 2.0 Popup hoặc Redirect về Backend OAuth Authorize
+  const handleGoogleOAuthLogin = () => {
+    setFormError('');
+    if (googleClientId && window.google?.accounts?.oauth2?.initTokenClient) {
+      try {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'openid email profile',
+          prompt: 'select_account',
+          callback: (response) => {
+            if (response?.access_token) {
+              void processGoogleOAuthCallback({ accessToken: response.access_token });
+            } else if (response?.error) {
+              fail(response.error_description || 'Đã hủy hoặc không thể xác thực với Google.');
+            }
+          },
+          error_callback: () => {
+            fail('Không thể mở cửa sổ xác thực Google OAuth.');
+          },
+        });
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('Google OAuth2 tokenClient fallback to redirect:', err);
+      }
+    }
+
+    if (googleClientId) {
+      window.location.assign(getGoogleOAuthAuthorizeUrl());
+      return;
+    }
+
+    setMode('google_email');
+  };
 
   const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -437,7 +563,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             <div style={{ flex: 1, height: '1px', background: '#ECE7E1' }} />
           </div>
 
-          {/* Nút Đăng nhập bằng Google (SCRUM-89: Google Sign-In) */}
+          {/* Nút Đăng nhập bằng Google (SCRUM-89: Google OAuth -> Callback -> Xác nhận OTP qua Gmail) */}
           {googleClientId && (
             <div
               id="google-official-btn"
@@ -445,12 +571,36 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               aria-busy={isGoogleLoading}
             />
           )}
-          {isGoogleLoading && <p role="status">Đang kết nối Google...</p>}
+          <button
+            type="button"
+            id="google-oauth-btn"
+            className="btn-secondary"
+            disabled={isGoogleLoading}
+            style={{
+              width: '100%',
+              marginTop: googleClientId ? 10 : 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              fontWeight: 600,
+            }}
+            onClick={handleGoogleOAuthLogin}
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+            </svg>
+            <span>Đăng nhập bằng Google (OAuth 2.0)</span>
+          </button>
+          {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>Đang xác thực Google và gửi mã OTP...</p>}
           <button
             type="button"
             className="btn-secondary"
             disabled={isGoogleLoading}
-            style={{ width: '100%', marginTop: 12 }}
+            style={{ width: '100%', marginTop: 10 }}
             onClick={() => {
               setFormError('');
               setMode('google_email');
@@ -516,7 +666,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         </form>
       )}
 
-      {/* MODE 3: Google OTP Verification (Yêu cầu của Mentor/Lead) */}
+      {/* MODE 3: Google OTP Verification (Hiển thị sau khi Google OAuth callback hoặc gửi OTP qua mail) */}
       {mode === 'google_otp' && (
         <form onSubmit={handleGoogleVerifyOtp}>
           {/* Hộp thông báo màu xanh theo đúng yêu cầu đề bài */}
@@ -534,6 +684,11 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             <div style={{ fontSize: '0.92rem', color: '#1B5E20', fontWeight: 600, lineHeight: 1.4 }}>
               {otpMessage}
             </div>
+            {googleEmail && (
+              <div style={{ fontSize: '0.8rem', color: '#2E7D32', marginTop: '6px' }}>
+                Tài khoản Google: <strong>{googleEmail}</strong>
+              </div>
+            )}
           </div>
 
           {debugOtpCode && (
