@@ -20,6 +20,10 @@ export interface GoogleVerifyResponse {
   role: string;
 }
 
+export type GoogleOAuthResponse =
+  | ({ requiresOtp: true } & GoogleSendOtpResponse)
+  | { requiresOtp: false; email: string; authentication: GoogleVerifyResponse };
+
 export interface GoogleOAuthCallbackInput {
   idToken?: string;
   accessToken?: string;
@@ -47,14 +51,20 @@ export const googleVerifyOtp = (email: string, otpCode: string) =>
   });
 
 export const googleOAuthCallback = (input: GoogleOAuthCallbackInput) =>
-  apiFetch<GoogleSendOtpResponse>('/auth/google/oauth-callback', {
+  apiFetch<GoogleOAuthResponse>('/auth/google/oauth-callback', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 
-export const getGoogleOAuthAuthorizeUrl = () => {
+const GOOGLE_VERIFIER_KEY = 'scms_google_redirect_verifier';
+const toBase64Url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+export const getGoogleOAuthAuthorizeUrl = async () => {
+  const verifier = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = toBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+  sessionStorage.setItem(GOOGLE_VERIFIER_KEY, verifier);
   const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
-  return `${baseUrl}/auth/google/authorize`;
+  return `${baseUrl}/auth/google/authorize?code_challenge=${encodeURIComponent(challenge)}`;
 };
 
 export const googleLoginWithIdToken = (idToken: string) =>
@@ -62,3 +72,14 @@ export const googleLoginWithIdToken = (idToken: string) =>
     method: 'POST',
     body: JSON.stringify({ idToken }),
   });
+
+
+export const googleRedeemHandoff = (code: string) => {
+  const verifier = sessionStorage.getItem(GOOGLE_VERIFIER_KEY);
+  sessionStorage.removeItem(GOOGLE_VERIFIER_KEY);
+  if (!verifier) throw new Error('Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
+  return apiFetch<GoogleVerifyResponse>('/auth/google/handoff', {
+    method: 'POST',
+    body: JSON.stringify({ code, verifier }),
+  });
+};

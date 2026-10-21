@@ -355,6 +355,38 @@
   cursor: not-allowed;
 }
 
+/* Date & Time Picker Theme Styling (Modern Luxury Bronze-Gold) */
+.portal-input[type="date"],
+.portal-input[type="time"],
+.portal-input[type="datetime-local"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  accent-color: #8C6D46;
+  color-scheme: light;
+}
+
+.portal-input[type="date"]::-webkit-calendar-picker-indicator,
+.portal-input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 3px;
+  filter: invert(45%) sepia(25%) saturate(700%) hue-rotate(352deg) brightness(92%) contrast(90%);
+  opacity: 0.85;
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.portal-input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.portal-input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  transform: scale(1.1);
+  opacity: 1;
+  background-color: rgba(194, 166, 132, 0.2);
+}
+
 .portal-textarea {
   resize: vertical;
   min-height: 64px;
@@ -1005,6 +1037,14 @@
   background: #FFFFFF;
   color: #1A1614;
   box-shadow: 0 30px 70px rgba(26, 22, 20, 0.25);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.portal-dialog::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .portal-dialog[open] {
@@ -1018,6 +1058,14 @@
 
 .portal-dialog__body {
   padding: 24px 28px 28px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.portal-dialog__body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .portal-dialog__header {

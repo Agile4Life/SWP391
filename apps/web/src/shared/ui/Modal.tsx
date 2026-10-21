@@ -19,6 +19,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
     <dialog
       ref={ref}
       className="portal-dialog"
+      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby="portal-dialog-title"
       onCancel={(e) => {
         e.preventDefault();
@@ -26,7 +27,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="portal-dialog__body">
+      <div className="portal-dialog__body" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="portal-dialog__header">
           <h2 id="portal-dialog-title" className="portal-card-title">{title}</h2>
           <button type="button" className="portal-dialog__close" aria-label="Đóng" onClick={onClose}>

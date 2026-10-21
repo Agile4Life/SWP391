@@ -230,8 +230,10 @@
 .portal-v2 .portal-alert { border-radius: 12px; font-size: 13px; }
 .portal-v2 .seg-group { flex-wrap: wrap; }
 .portal-v2 .seg-btn { min-height: 38px; padding: 8px 12px; letter-spacing: 0; text-transform: none; font-size: 11px; }
-.portal-v2 .portal-dialog { border: 1px solid #e8ddd0; border-radius: 22px; color: #211c18; box-shadow: 0 30px 90px #382b2033; }
-.portal-v2 .portal-dialog__body { padding: 26px; }
+.portal-v2 .portal-dialog { border: 1px solid #e8ddd0; border-radius: 22px; color: #211c18; box-shadow: 0 30px 90px #382b2033; scrollbar-width: none; -ms-overflow-style: none; }
+.portal-v2 .portal-dialog::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.portal-v2 .portal-dialog__body { padding: 26px; scrollbar-width: none; -ms-overflow-style: none; }
+.portal-v2 .portal-dialog__body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .portal-v2 .portal-dialog__close { flex: 0 0 44px; width: 44px; height: 44px; background: #f3eee7; color: #6f5d4d; }
 .portal-v2 .portal-dialog::backdrop { background: #33271d70; backdrop-filter: blur(4px); }
 .portal-screen-results { display: grid; gap: 6px; margin-top: 16px; }

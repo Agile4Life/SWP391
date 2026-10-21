@@ -24,6 +24,8 @@
   font-family: var(--font-sans);
   color: var(--color-text-main);
   background-color: var(--color-bg-base);
+  accent-color: #8C6D46;
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

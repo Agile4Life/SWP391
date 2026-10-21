@@ -31,3 +31,13 @@ User requested one button labeled "Dang nhap bang Google" (Vietnamese UI label r
 Regression coverage checks a single visible entry, popup-to-OTP transition, redirect OTP, query cleanup, choosing another account and missing-client configuration. Full frontend suite, lint and build passed; independent review found no issues. Local browser verification is recorded with the PR.
 
 Production probe after the earlier release: frontend and backend deployment jobs succeeded, but backend Google authorize returned google_oauth=not_configured. Production Google environment configuration is still required and is separate from this UI correction; local configuration is present. Actual interactive Google account/OTP verification remains pending.
+
+## Returning active member follow-up
+
+User requested no repeated confirmation email for accounts already activated. After Google identity verification, account matching and role/deletion/status guards, active members now receive normal authentication immediately and last-login metadata is updated. OTP generation and delivery are not invoked. New or inactive members still receive activation OTP; locked/deleted/staff accounts remain rejected. Existing authoritative-email linking restrictions remain intact.
+
+Popup responses expose requiresOtp plus either authentication or OTP metadata. The frontend saves the normal session and navigates home for authenticated responses. Redirect completion uses a 60-second, single-use handoff fragment, bound to a browser-generated verifier via SHA-256. The verifier is retained only in sessionStorage; state binds its challenge to the backend browser session. Redeem uses POST and no-store responses. JWT never appears in redirect URLs, and auth results remain excluded from audit persistence. Handoffs are in-memory like existing browser sessions: instance restart or routing to another instance requires retry.
+
+Verification: backend 419 tests, zero failures/errors, 17 dedicated Supabase integration tests skipped; frontend 171 passed; lint/build passed; database runner 10 cases passed; OpenAPI parsed. Regression tests first reproduced active accounts being sent OTP and absent direct frontend session handling. Focused tests cover active linked/existing-email accounts, new/pending accounts, renamed pending email, locked/deleted/staff rejection, no repeated email, handoff expiry/replay/wrong verifier and frontend URL/storage cleanup. Independent final review found no blockers.
+
+Local API restart and runtime redirect checks use the final code. Real Google account selection and a successful interactive login are not simulated or claimed. Production Google credentials remain a separate deployment configuration requirement.
