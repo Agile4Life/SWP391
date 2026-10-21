@@ -23,3 +23,11 @@ Scope: Google popup/redirect credentials, email OTP challenge, login UI and envi
 - Credentials remain only in ignored local environment files. No secrets are intended for the PR.
 
 Existing Member Classes checkpoint commits are retained in history. Untracked docs/examples and graph caches are excluded.
+
+## Single Google entry follow-up
+
+User requested one button labeled "Dang nhap bang Google" (Vietnamese UI label retains accents). Removed the duplicate GIS-rendered button, standalone Gmail OTP entry and unused email-input screen. The remaining button uses the existing Google popup with protected backend redirect fallback. Google verification still precedes the OTP screen; resend remains available. Choosing another account returns to the single Google entry.
+
+Regression coverage checks a single visible entry, popup-to-OTP transition, redirect OTP, query cleanup, choosing another account and missing-client configuration. Full frontend suite, lint and build passed; independent review found no issues. Local browser verification is recorded with the PR.
+
+Production probe after the earlier release: frontend and backend deployment jobs succeeded, but backend Google authorize returned google_oauth=not_configured. Production Google environment configuration is still required and is separate from this UI correction; local configuration is present. Actual interactive Google account/OTP verification remains pending.
