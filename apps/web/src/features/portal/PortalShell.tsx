@@ -17,7 +17,9 @@ export function PortalShell() {
   const [query, setQuery] = useState('');
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
-  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role));
+  const isMember = user?.role === 'MEMBER';
+  const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
+  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => item.to === '/member/profile' ? { ...item, label: profileLabel } : item);
   const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? 'Không gian của bạn';
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
 
@@ -54,8 +56,8 @@ export function PortalShell() {
           </NavLink>)}
         </nav>
         <div className="portal-rail-footer">
-          <NavLink to="/member/profile" className="portal-rail-link portal-rail-profile" aria-label="Hồ sơ & Sức khỏe">
-            <span className="portal-avatar">{initials}</span><span className="portal-rail-tooltip">Hồ sơ & Sức khỏe</span>
+          <NavLink to="/member/profile" className="portal-rail-link portal-rail-profile" aria-label={profileLabel}>
+            <span className="portal-avatar">{initials}</span><span className="portal-rail-tooltip">{profileLabel}</span>
           </NavLink>
           <Link to="/" className="portal-rail-link" aria-label="Về trang chủ"><PortalIcon name="home" /><span className="portal-rail-tooltip">Về trang chủ</span></Link>
           <button type="button" className="portal-rail-link" aria-label="Đăng xuất" onClick={() => setDialog('logout')}>

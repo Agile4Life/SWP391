@@ -1082,6 +1082,11 @@
   overflow: hidden;
 }
 
+.profile-grid--single {
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 860px;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
