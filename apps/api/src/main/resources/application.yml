@@ -10,7 +10,13 @@ server:
 
 spring:
   profiles:
+<<<<<<< Updated upstream
     default: supabase
+=======
+    default: ${SPRING_PROFILES_ACTIVE:supabase},local
+    group:
+      supabase: postgresql
+>>>>>>> Stashed changes
   application:
     name: scms-api
   messages:
