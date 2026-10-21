@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import {
   cancelPendingMembershipSubscription,
@@ -109,6 +110,11 @@ function getPackageDetails(pkg: MembershipPackage): PackageDetails {
       extraBenefit,
     ],
   };
+}
+
+function renderModalOverlay(content: ReactNode) {
+  const portalShell = typeof document !== 'undefined' ? document.querySelector('.portal-v2') : null;
+  return portalShell ? createPortal(content, portalShell) : content;
 }
 
 export function MemberPackagesPage() {
@@ -792,17 +798,20 @@ export function MemberPackagesPage() {
         </div>
       ))}
 
-      {requestResult && (
+      {requestResult && renderModalOverlay(
         <div
           role="presentation"
+          onClick={(e) => e.target === e.currentTarget && setRequestResult(null)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.55)',
+            background: 'rgba(51, 39, 29, 0.48)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
             display: 'grid',
             placeItems: 'center',
             padding: 24,
-            zIndex: 1000,
+            zIndex: 1200,
           }}
         >
           <section
@@ -812,6 +821,9 @@ export function MemberPackagesPage() {
             aria-labelledby="membership-request-title"
             style={{
               width: 'min(520px, 100%)',
+              marginBottom: 0,
+              borderRadius: 22,
+              boxShadow: '0 30px 90px rgba(56, 43, 32, 0.25)',
             }}
           >
             <div className="meta-label">
@@ -894,20 +906,23 @@ export function MemberPackagesPage() {
               </button>
             </div>
           </section>
-        </div>
+        </div>,
       )}
 
-      {isHoldModalOpen && current && (
+      {isHoldModalOpen && current && renderModalOverlay(
         <div
           role="presentation"
+          onClick={(e) => e.target === e.currentTarget && !isSubmittingHold && setIsHoldModalOpen(false)}
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.55)',
+            background: 'rgba(51, 39, 29, 0.48)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
             display: 'grid',
             placeItems: 'center',
             padding: 24,
-            zIndex: 1000,
+            zIndex: 1200,
           }}
         >
           <section
@@ -917,6 +932,9 @@ export function MemberPackagesPage() {
             aria-labelledby="membership-hold-title"
             style={{
               width: 'min(520px, 100%)',
+              marginBottom: 0,
+              borderRadius: 22,
+              boxShadow: '0 30px 90px rgba(56, 43, 32, 0.25)',
             }}
           >
             <div className="meta-label">
@@ -978,7 +996,7 @@ export function MemberPackagesPage() {
               </div>
             </form>
           </section>
-        </div>
+        </div>,
       )}
     </div>
   );

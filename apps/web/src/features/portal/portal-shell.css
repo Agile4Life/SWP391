@@ -242,14 +242,14 @@
 .portal-screen-results a:is(:hover, .active) { background: #f4ece1; color: #806344; }
 .portal-search-empty { padding: 20px 4px; color: #70665d; font-size: 13px; }
 .portal-menu-home { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 18px; border-top: 1px solid #e7ded4; padding-top: 16px; color: #6f5d4d; font-size: 12px; }
-.portal-v2 .route-fade { animation: portal-enter 260ms cubic-bezier(.2,.7,.3,1) both; }
+.portal-v2 .route-fade { animation: portal-enter 260ms cubic-bezier(.2,.7,.3,1); }
 .portal-v2 .skip-link { position: fixed; top: 12px; left: 18px; transform: translateY(calc(-100% - 24px)); }
 .portal-v2 .skip-link:focus { transform: none; }
 .portal-v2 :focus-visible { outline: 2px solid #806344; outline-offset: 4px; }
 .portal-v2 .portal-input:focus-visible { outline: 2px solid #806344; outline-offset: 2px; }
 .portal-v2 button:disabled { transform: none; box-shadow: none; }
 
-@keyframes portal-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes portal-enter { from { opacity: 0; } to { opacity: 1; } }
 
 @media (min-width: 768px) and (max-height: 760px) {
   .portal-v2 .app-sidebar { gap: 12px; padding-block: 14px; min-height: 0; }

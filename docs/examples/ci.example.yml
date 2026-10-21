@@ -1,0 +1,107 @@
+name: CI # Copy file thanh .github/workflows/ci.yml; ten phai khop workflows trong CD. dong bo voi workflow_run.workflows trong CD.
+#
+# Can chinh: branch, Node/Java version, working-directory, cache paths,
+# cac lenh npm/Maven, Docker build context va Dockerfile.
+# Mac dinh: apps/web va apps/api; ca hai phai co Dockerfile multi-stage.
+# Repo SCMS hien CHUA co apps/web/Dockerfile: bo sung truoc khi dung mau.
+# Dockerfile frontend can ARG VITE_API_BASE_URL truoc lenh npm run build.
+# Neu khong dung Vite, thay build-args o CA CI va CD theo framework.
+# Chi dua cau hinh PUBLIC vao frontend build args, khong dua secrets.
+#
+# npm test phai chay mot lan roi thoat (vd: vitest run / jest --ci).
+# Maven verify chay integration tests neu pom.xml cau hinh Failsafe.
+# Test can DB: cau hinh DB test rieng va secrets tai step test backend.
+# Voi SCMS: giu profile supabase va cac database policy checks hien co;
+# mau nay khong thay the scripts/test-database-config.ps1 cua repo.
+# Gradle/pnpm/yarn: thay lenh va cache tuong ung, khong chi doi ten file.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop] # Doi theo cac nhanh can chay CI.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: example-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web # Thu muc React; doi neu repo co cau truc khac.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22' # Doi theo Node version cua du an.
+          cache: npm # Dung pnpm/yarn thi doi cache, lockfile va cac lenh npm ben duoi.
+          cache-dependency-path: apps/web/package-lock.json # Duong dan lockfile frontend.
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test # Phai chay mot lan roi thoat: vitest run / jest --ci.
+      - run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }} # Repository variable; public URL, cung gia tri voi CD.
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api # Thu muc Spring Boot.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21' # Doi theo Java version cua du an.
+          cache: maven # Dung Gradle thi doi setup/cache va lenh build ben duoi.
+          cache-dependency-path: apps/api/pom.xml # Duong dan pom.xml cua backend.
+      # Test can DB: cau hinh DB test rieng va secrets tai step nay.
+      # Voi SCMS: giu profile supabase va cac database policy checks hien co;
+      # mau khong thay the scripts/test-database-config.ps1 cua repo.
+      - name: Test and package backend
+        run: bash ./mvnw --batch-mode --no-transfer-progress verify # Integration tests can Failsafe trong pom.xml.
+
+  docker:
+    name: Verify Docker image (${{ matrix.service }})
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            context: apps/api # Thu muc duoc gui vao Docker build; doi dong bo voi CD.
+            file: apps/api/Dockerfile # Multi-stage, tu build source; khong COPY output tu may local.
+          - service: web
+            context: apps/web # Doi dong bo voi CD neu doi cau truc repo.
+            file: apps/web/Dockerfile # SCMS chua co file nay: can bo sung truoc khi dung mau.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64 # Server ARM64: doi CA CI va CD.
+          push: false # CI chi build thu, khong publish image.
+          # Dockerfile frontend can ARG VITE_API_BASE_URL truoc npm run build.
+          # Khong dung Vite: doi build-args o CA CI/CD; chi truyen gia tri PUBLIC.
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+          # Khong chia se build cache tu PR sang CD co quyen publish.
