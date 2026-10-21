@@ -201,13 +201,28 @@ components:
           format: date
         status:
           type: string
-          enum: [pending_payment, active, expired, cancelled]
+          enum: [pending_payment, active, frozen, expired, cancelled]
         qrCode:
           type: string
           nullable: true
         createdAt:
           type: string
           format: date-time
+        holdStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+          nullable: true
+        holdReason:
+          type: string
+          nullable: true
+        holdRequestedAt:
+          type: string
+          format: date-time
+          nullable: true
+        holdResolvedAt:
+          type: string
+          format: date-time
+          nullable: true
 
     SubscriptionCreateRequest:
       type: object
@@ -217,6 +232,24 @@ components:
         packageId:
           type: integer
           format: int64
+
+    SubscriptionUpgradeRequest:
+      type: object
+      required:
+        - packageId
+      properties:
+        packageId:
+          type: integer
+          format: int64
+
+    SubscriptionHoldRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          maxLength: 500
     # --- Scheduling Schemas (SCRUM-72, 73, 74) ---
     CreateClassRequest:
       type: object
@@ -794,6 +827,96 @@ paths:
           description: Gói tập không tồn tại
         '409':
           description: Gói tập đã có lượt gia hạn trước đó
+
+  /memberships/subscriptions/{id}/upgrade:
+    post:
+      summary: Nâng cấp gói tập đang hoạt động lên gói cao hơn chờ thanh toán (SCRUM-71)
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpgradeRequest'
+      responses:
+        '201':
+          description: Tạo yêu cầu nâng cấp thành công
+        '400':
+          description: Gói nâng cấp không hợp lệ hoặc không cao hơn gói hiện tại
+        '403':
+          description: Không phải chủ sở hữu gói
+        '409':
+          description: Đang có yêu cầu chờ thanh toán
+
+  /memberships/subscriptions/{id}/hold:
+    post:
+      summary: Hội viên chủ động gửi yêu cầu bảo lưu gói tập kèm lý do (SCRUM-71)
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionHoldRequest'
+      responses:
+        '200':
+          description: Gửi yêu cầu bảo lưu thành công
+        '400':
+          description: Gói tập không hoạt động hoặc thiếu lý do bảo lưu
+        '409':
+          description: Gói tập đã có yêu cầu bảo lưu đang chờ xử lý
+
+  /memberships/subscriptions/holds/pending:
+    get:
+      summary: Danh sách yêu cầu bảo lưu gói tập đang chờ lễ tân xử lý (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Memberships]
+      responses:
+        '200':
+          description: Thành công
+
+  /memberships/subscriptions/{id}/hold/approve:
+    post:
+      summary: Lễ tân duyệt bảo lưu gói tập và tự động hủy các lịch học đã đặt trong tương lai (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Đã xác nhận bảo lưu và hủy lịch học tương lai
+
+  /memberships/subscriptions/{id}/hold/reject:
+    post:
+      summary: Lễ tân từ chối yêu cầu bảo lưu gói tập (CENTER_MANAGER, RECEPTIONIST)
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Đã từ chối yêu cầu bảo lưu
 
   /memberships/subscriptions/my:
     get:

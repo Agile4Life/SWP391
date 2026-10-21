@@ -31,6 +31,25 @@ export interface PendingSubscriptionItem {
   createdAt: string;
 }
 
+export interface HoldRequestItem {
+  id: number;
+  memberId: number;
+  membershipCode: string | null;
+  memberName: string;
+  memberEmail: string;
+  memberPhone: string | null;
+  packageId: number;
+  packageName: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  holdStatus: string;
+  holdReason: string;
+  holdRequestedAt: string;
+  holdResolvedAt?: string | null;
+  cancelledEnrollmentsCount: number;
+}
+
 export type PaymentMethod = 'cash' | 'pos' | 'bank_transfer' | 'online_wallet';
 
 export interface ProcessPaymentPayload {
@@ -127,10 +146,35 @@ export const receptionApi = {
   },
 
   /**
-   * Lấy danh sách yêu cầu đăng ký/gia hạn gói tập đang chờ thanh toán (pending_payment)
+   * Lấy danh sách yêu cầu đăng ký/gia hạn/nâng cấp gói tập đang chờ thanh toán (pending_payment)
    */
   getPendingSubscriptions: async (): Promise<PendingSubscriptionItem[]> => {
     return apiFetch<PendingSubscriptionItem[]>('/memberships/subscriptions/pending');
+  },
+
+  /**
+   * Lấy danh sách yêu cầu bảo lưu gói tập đang chờ lễ tân xử lý
+   */
+  getPendingHoldRequests: async (): Promise<HoldRequestItem[]> => {
+    return apiFetch<HoldRequestItem[]>('/memberships/subscriptions/holds/pending');
+  },
+
+  /**
+   * Lễ tân xác nhận bảo lưu gói tập (tự động hủy các lịch học tương lai của hội viên)
+   */
+  approveHoldRequest: async (subscriptionId: number): Promise<HoldRequestItem> => {
+    return apiFetch<HoldRequestItem>(`/memberships/subscriptions/${subscriptionId}/hold/approve`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Lễ tân từ chối yêu cầu bảo lưu gói tập
+   */
+  rejectHoldRequest: async (subscriptionId: number): Promise<HoldRequestItem> => {
+    return apiFetch<HoldRequestItem>(`/memberships/subscriptions/${subscriptionId}/hold/reject`, {
+      method: 'POST',
+    });
   },
 
   /**

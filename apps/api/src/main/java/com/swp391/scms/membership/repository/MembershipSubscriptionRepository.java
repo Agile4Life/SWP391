@@ -24,6 +24,8 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
     List<MembershipSubscription> findByStatusOrderByCreatedAtDesc(String status);
 
+    List<MembershipSubscription> findByHoldStatusOrderByHoldRequestedAtDesc(String holdStatus);
+
     List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
 
     boolean existsByMemberUserIdAndStatus(Long memberId, String status);

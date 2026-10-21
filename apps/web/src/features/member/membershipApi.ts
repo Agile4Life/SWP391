@@ -21,6 +21,10 @@ export interface MemberSubscription {
   status: string;
   qrCode: string | null;
   createdAt: string;
+  holdStatus?: string | null;
+  holdReason?: string | null;
+  holdRequestedAt?: string | null;
+  holdResolvedAt?: string | null;
 }
 
 export interface Payment {
@@ -73,5 +77,29 @@ export const renewMembershipSubscription = (subscriptionId: number) =>
     `/memberships/subscriptions/${subscriptionId}/renew`,
     {
       method: 'POST',
+    },
+  );
+
+export const upgradeMembershipSubscription = (
+  subscriptionId: number,
+  packageId: number,
+) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/upgrade`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ packageId }),
+    },
+  );
+
+export const requestMembershipHold = (
+  subscriptionId: number,
+  reason: string,
+) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/hold`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     },
   );

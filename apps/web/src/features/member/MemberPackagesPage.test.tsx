@@ -6,7 +6,7 @@ import type { MemberSubscription } from './membershipApi';
 
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
-  create: vi.fn(), renew: vi.fn(), createPayment: vi.fn(),
+  create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), createPayment: vi.fn(),
 }));
 vi.mock('./membershipApi', () => ({
   getMembershipPackages: api.packages,
@@ -15,12 +15,22 @@ vi.mock('./membershipApi', () => ({
   getMyPayments: api.payments,
   createMembershipSubscription: api.create,
   renewMembershipSubscription: api.renew,
+  upgradeMembershipSubscription: api.upgrade,
+  requestMembershipHold: api.requestHold,
   createPaymentRequest: api.createPayment,
 }));
 
 const membershipPackage = {
   id: 5, name: 'Essential', description: null, price: 500000,
   durationDays: 30, classCreditLimit: null, status: 'active',
+};
+const higherPackage = {
+  id: 6, name: 'VIP Sanctuary', description: null, price: 1500000,
+  durationDays: 90, classCreditLimit: null, status: 'active',
+};
+const lowerPackage = {
+  id: 4, name: 'Starter', description: null, price: 250000,
+  durationDays: 15, classCreditLimit: 4, status: 'active',
 };
 const pending = {
   id: 12, memberId: 34, packageId: 5, packageName: 'Essential',
@@ -83,6 +93,79 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
     expect(api.create).not.toHaveBeenCalled();
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Gia hạn gói tập');
+  });
+
+  it('allows an active subscription to upgrade to a higher package and blocks lower packages', async () => {
+    const upgradePending = {
+      ...pending,
+      id: 18,
+      packageId: 6,
+      packageName: 'VIP Sanctuary',
+      previousSubscriptionId: 1,
+      status: 'pending_payment',
+    };
+    api.packages.mockResolvedValue([lowerPackage, membershipPackage, higherPackage]);
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    api.upgrade.mockResolvedValue(upgradePending);
+
+    await render();
+
+    expect(button('Đang có gói hoạt động')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
+    expect(button('Nâng cấp gói')?.disabled).toBe(false);
+
+    await act(async () => {
+      button('Nâng cấp gói')?.click();
+    });
+
+    expect(api.upgrade).toHaveBeenCalledExactlyOnceWith(1, 6);
+    expect(api.create).not.toHaveBeenCalled();
+    expect(api.renew).not.toHaveBeenCalled();
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Nâng cấp gói tập');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('VIP Sanctuary');
+  });
+
+  it('allows an active member to submit a hold request with a reason', async () => {
+    const heldPending = {
+      ...active,
+      holdStatus: 'PENDING',
+      holdReason: 'Đi công tác dài ngày tại Nhật Bản',
+    };
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    api.requestHold.mockResolvedValue(heldPending);
+
+    await render();
+
+    const holdBtn = button('Bảo lưu gói tập');
+    expect(holdBtn).toBeDefined();
+    expect(holdBtn?.disabled).toBe(false);
+
+    await act(async () => {
+      holdBtn?.click();
+    });
+
+    const textarea = host.querySelector('#hold-reason-input') as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+
+    await act(async () => {
+      const nativeValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        'value',
+      )?.set;
+      nativeValueSetter?.call(textarea, 'Đi công tác dài ngày tại Nhật Bản');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await act(async () => {
+      button('Gửi yêu cầu bảo lưu')?.click();
+    });
+
+    expect(api.requestHold).toHaveBeenCalledExactlyOnceWith(1, 'Đi công tác dài ngày tại Nhật Bản');
+    expect(host.textContent).toContain('Đang chờ Lễ tân xử lý yêu cầu bảo lưu');
+    expect(button('Đang chờ duyệt bảo lưu')?.disabled).toBe(true);
   });
 
   it.each(['active', 'pending_payment'])('blocks a %s successor restored from history without submitting renewal', async (status) => {
@@ -202,12 +285,12 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Gói hiện tại');
   });
 
-  it('restores a pending subscription without allowing transfer confirmation before configuration', async () => {
+  it('restores a pending subscription without rendering a transfer confirmation button', async () => {
     api.history.mockResolvedValue([pending]);
     await render();
     expect(host.textContent).toContain('Yêu cầu #12');
-    expect(host.textContent).toContain('Chưa cấu hình thông tin thanh toán');
-    expect(button('Tôi đã chuyển khoản')?.disabled).toBe(true);
+    expect(host.textContent).toContain('Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân');
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(host.querySelector('img')).toBeNull();
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -226,34 +309,23 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     api.payments.mockResolvedValue([{ ...payment, subscriptionId: 88 }]);
     await render();
-    expect(button('Tôi đã chuyển khoản')?.disabled).toBe(true);
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
   });
 
-  it('does not submit a payment for repeated clicks without transfer instructions', async () => {
-    api.history.mockResolvedValue([pending]);
-    await render();
-    await act(async () => {
-      button('Tôi đã chuyển khoản')?.click();
-      button('Tôi đã chuyển khoản')?.click();
-    });
-    expect(api.createPayment).not.toHaveBeenCalled();
-  });
-
-  it('shows missing instructions in the purchase modal without invented bank details or QR', async () => {
+  it('shows POS payment instructions in the purchase modal without a transfer confirmation button', async () => {
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
     const dialog = host.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain('Essential');
     expect(dialog?.textContent).toContain('500.000');
     expect(dialog?.textContent).toContain('#12');
-    expect(dialog?.textContent).toContain('Chưa cấu hình thông tin thanh toán');
+    expect(dialog?.textContent).toContain('Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân');
     expect(dialog?.textContent).not.toContain('Số tài khoản');
     expect(dialog?.textContent).not.toContain('Tên người nhận');
     expect(dialog?.querySelector('img, canvas')).toBeNull();
     const confirm = [...dialog!.querySelectorAll('button')].find((item) => item.textContent?.includes('Tôi đã chuyển khoản'));
-    expect(confirm?.disabled).toBe(true);
-    await act(async () => confirm?.click());
+    expect(confirm).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
   });
 
@@ -306,14 +378,13 @@ describe('SCRUM-86 packages', () => {
     expect(button('Có yêu cầu đang chờ')?.disabled).toBe(true);
   });
 
-  it('keeps the created subscription while transfer instructions are unavailable', async () => {
+  it('keeps the created subscription after closing the modal', async () => {
     api.history.mockResolvedValueOnce([]).mockResolvedValue([pending]);
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
     expect(api.create).toHaveBeenCalledTimes(1);
     await act(async () => button('Đóng')?.click());
-    expect(button('Tôi đã chuyển khoản')?.disabled).toBe(true);
-    await act(async () => button('Tôi đã chuyển khoản')?.click());
+    expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
     expect(api.create).toHaveBeenCalledTimes(1);
     expect(host.textContent).toContain('Yêu cầu #12');

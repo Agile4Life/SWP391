@@ -6,10 +6,13 @@ import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
+import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.membership.service.DynamicQrService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
+import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
@@ -19,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -45,15 +49,20 @@ class MembershipSubscriptionServiceTest {
     @Mock
     private MemberRepository members;
 
+    @Mock
+    private EnrollmentService enrollmentService;
+
     private Clock clock;
     private MembershipSubscriptionService service;
 
     private final AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member01", "MEMBER");
+    private final AuthenticatedPrincipal staffPrincipal = new AuthenticatedPrincipal(2L, "staff01", "RECEPTIONIST");
 
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
-        service = new MembershipSubscriptionService(subscriptions, packages, members, clock);
+        service = new MembershipSubscriptionService(
+                subscriptions, packages, members, clock, new DynamicQrService(), enrollmentService, null, null, null);
     }
 
     @Test
@@ -113,8 +122,6 @@ class MembershipSubscriptionServiceTest {
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
-        // Status is active in DB, but endDate < today so
-        // existsBy...EndDateGreaterThanEqual returns false
         when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(eq(10L), eq("active"), any()))
                 .thenReturn(false);
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -158,7 +165,7 @@ class MembershipSubscriptionServiceTest {
         prev.setMember(member);
         prev.setMembershipPackage(pack);
         prev.setStatus("active");
-        prev.setEndDate(LocalDate.now(clock).plusDays(10)); // still 10 days left
+        prev.setEndDate(LocalDate.now(clock).plusDays(10));
 
         when(subscriptions.findById(100L)).thenReturn(Optional.of(prev));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
@@ -188,7 +195,7 @@ class MembershipSubscriptionServiceTest {
         prev.setMember(member);
         prev.setMembershipPackage(pack);
         prev.setStatus("expired");
-        prev.setEndDate(LocalDate.now(clock).minusDays(5)); // expired 5 days ago
+        prev.setEndDate(LocalDate.now(clock).minusDays(5));
 
         when(subscriptions.findById(100L)).thenReturn(Optional.of(prev));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
@@ -231,6 +238,181 @@ class MembershipSubscriptionServiceTest {
             assertThatThrownBy(() -> service.renew(principal, 100L))
                     .isInstanceOf(BadRequestException.class);
         }
+    }
+
+    @Test
+    void upgrade_createsPendingSubscriptionForHigherPackage() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage basicPack = new MembershipPackage();
+        basicPack.setId(1L);
+        basicPack.setName("Gói 1 tháng");
+        basicPack.setPrice(new BigDecimal("500000"));
+        basicPack.setDurationDays(30);
+        basicPack.setStatus("active");
+
+        MembershipPackage vipPack = new MembershipPackage();
+        vipPack.setId(2L);
+        vipPack.setName("Gói VIP 3 tháng");
+        vipPack.setPrice(new BigDecimal("1500000"));
+        vipPack.setDurationDays(90);
+        vipPack.setStatus("active");
+
+        MembershipSubscription current = new MembershipSubscription();
+        current.setId(100L);
+        current.setMember(member);
+        current.setMembershipPackage(basicPack);
+        current.setStatus("active");
+        current.setStartDate(LocalDate.now(clock).minusDays(5));
+        current.setEndDate(LocalDate.now(clock).plusDays(25));
+
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+        when(packages.findById(2L)).thenReturn(Optional.of(vipPack));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto result = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
+
+        assertThat(result.status()).isEqualTo("pending_payment");
+        assertThat(result.packageId()).isEqualTo(2L);
+        assertThat(result.previousSubscriptionId()).isEqualTo(100L);
+        assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
+    }
+
+    @Test
+    void upgrade_failsWhenTargetPackageIsLowerOrEqual() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage vipPack = new MembershipPackage();
+        vipPack.setId(2L);
+        vipPack.setName("Gói VIP 3 tháng");
+        vipPack.setPrice(new BigDecimal("1500000"));
+        vipPack.setDurationDays(90);
+        vipPack.setStatus("active");
+
+        MembershipPackage basicPack = new MembershipPackage();
+        basicPack.setId(1L);
+        basicPack.setName("Gói 1 tháng");
+        basicPack.setPrice(new BigDecimal("500000"));
+        basicPack.setDurationDays(30);
+        basicPack.setStatus("active");
+
+        MembershipSubscription current = new MembershipSubscription();
+        current.setId(100L);
+        current.setMember(member);
+        current.setMembershipPackage(vipPack);
+        current.setStatus("active");
+        current.setStartDate(LocalDate.now(clock).minusDays(5));
+        current.setEndDate(LocalDate.now(clock).plusDays(85));
+
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+        when(packages.findById(1L)).thenReturn(Optional.of(basicPack));
+
+        assertThatThrownBy(() -> service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(1L)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void activateAfterPayment_expiresPreviousActiveSubscriptionWhenUpgrading() {
+        MembershipPackage basicPack = new MembershipPackage();
+        basicPack.setId(1L);
+        basicPack.setDurationDays(30);
+
+        MembershipPackage vipPack = new MembershipPackage();
+        vipPack.setId(2L);
+        vipPack.setDurationDays(90);
+
+        MembershipSubscription prev = new MembershipSubscription();
+        prev.setId(100L);
+        prev.setMembershipPackage(basicPack);
+        prev.setStatus("active");
+        prev.setStartDate(LocalDate.now(clock).minusDays(10));
+        prev.setEndDate(LocalDate.now(clock).plusDays(20));
+
+        MembershipSubscription upgradeSub = new MembershipSubscription();
+        upgradeSub.setId(101L);
+        upgradeSub.setMembershipPackage(vipPack);
+        upgradeSub.setPreviousSubscription(prev);
+        upgradeSub.setStatus("pending_payment");
+        upgradeSub.setStartDate(LocalDate.now(clock));
+
+        when(subscriptions.findById(101L)).thenReturn(Optional.of(upgradeSub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto result = service.activateAfterPayment(101L);
+
+        assertThat(result.status()).isEqualTo("active");
+        assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
+        assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
+        assertThat(prev.getStatus()).isEqualTo("expired");
+        assertThat(prev.getEndDate()).isEqualTo(LocalDate.now(clock));
+        verify(subscriptions).save(prev);
+    }
+
+    @Test
+    void requestHold_and_approveHold_freezesSubscriptionAndCancelsFutureEnrollments() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+        pack.setDurationDays(30);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(100L);
+        sub.setMember(member);
+        sub.setMembershipPackage(pack);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.now(clock).minusDays(5));
+        sub.setEndDate(LocalDate.now(clock).plusDays(25));
+
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any())).thenReturn(3);
+
+        SubscriptionDto holdRequested = service.requestHold(
+                principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác nước ngoài"));
+
+        assertThat(holdRequested.holdStatus()).isEqualTo("PENDING");
+        assertThat(holdRequested.holdReason()).isEqualTo("Đi công tác nước ngoài");
+        assertThat(holdRequested.status()).isEqualTo("active");
+
+        HoldRequestDto approved = service.approveHold(staffPrincipal, 100L);
+
+        assertThat(approved.status()).isEqualTo("frozen");
+        assertThat(approved.holdStatus()).isEqualTo("APPROVED");
+        assertThat(approved.cancelledEnrollmentsCount()).isEqualTo(3);
+        verify(enrollmentService).cancelFutureEnrollmentsForMember(eq(10L), any());
+    }
+
+    @Test
+    void rejectHold_keepsSubscriptionActiveAndMarksHoldRejected() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(100L);
+        sub.setMember(member);
+        sub.setMembershipPackage(pack);
+        sub.setStatus("active");
+        sub.setHoldStatus("PENDING");
+        sub.setHoldReason("Nghỉ phép ngắn hạn");
+
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        HoldRequestDto rejected = service.rejectHold(staffPrincipal, 100L);
+
+        assertThat(rejected.status()).isEqualTo("active");
+        assertThat(rejected.holdStatus()).isEqualTo("REJECTED");
+        assertThat(rejected.cancelledEnrollmentsCount()).isZero();
     }
 
     @Test
@@ -313,7 +495,6 @@ class MembershipSubscriptionServiceTest {
         pack.setId(1L);
         pack.setName("Gói 1 tháng");
 
-        // Currently active subscription covering today
         MembershipSubscription currentSub = new MembershipSubscription();
         currentSub.setId(100L);
         currentSub.setMember(member);

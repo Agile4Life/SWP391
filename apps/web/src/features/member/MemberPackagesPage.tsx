@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import {
   createMembershipSubscription,
-  createPaymentRequest,
   getCurrentMembership,
   getMembershipHistory,
   getMembershipPackages,
   getMyPayments,
   renewMembershipSubscription,
+  requestMembershipHold,
+  upgradeMembershipSubscription,
   type MemberSubscription,
   type MembershipPackage,
   type Payment,
@@ -21,7 +22,7 @@ type LoadState<T> =
 interface RequestResult {
   subscription: MemberSubscription;
   membershipPackage: MembershipPackage;
-  action: 'register' | 'renew';
+  action: 'register' | 'renew' | 'upgrade';
 }
 
 interface PackageDetails {
@@ -35,9 +36,7 @@ const priceFormatter = new Intl.NumberFormat('vi-VN', {
   currency: 'VND',
 });
 
-// Keep confirmation locked until the team supplies approved transfer instructions.
-const paymentInstructionsAvailable = false;
-const paymentInstructionsNotice = 'Chưa cấu hình thông tin thanh toán. Vui lòng liên hệ nhân viên để được hướng dẫn chuyển khoản.';
+const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.';
 
 function formatPrice(price: number): string {
   return priceFormatter.format(price);
@@ -51,6 +50,13 @@ function formatDate(value: string): string {
 function todayKey(): string {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+}
+
+function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: MembershipPackage): boolean {
+  if (!currentPkg || currentPkg.id === targetPkg.id) return false;
+  if (targetPkg.price > currentPkg.price) return true;
+  if (targetPkg.price === currentPkg.price && targetPkg.durationDays > currentPkg.durationDays) return true;
+  return false;
 }
 
 function getPackageDetails(pkg: MembershipPackage): PackageDetails {
@@ -112,15 +118,20 @@ export function MemberPackagesPage() {
 
   const [submittingPackageId, setSubmittingPackageId] =
     useState<number | null>(null);
-  const [sendingPayment, setSendingPayment] = useState(false);
   const requestBusy = useRef(false);
   const createdSubscriptions = useRef<MemberSubscription[]>([]);
-  const createdPayments = useRef<Payment[]>([]);
 
   const [actionError, setActionError] = useState<string | null>(null);
+  const [holdSuccessMessage, setHoldSuccessMessage] = useState<string | null>(null);
 
   const [requestResult, setRequestResult] =
     useState<RequestResult | null>(null);
+
+  // Bảo lưu gói tập modal state
+  const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
+  const [holdReason, setHoldReason] = useState('');
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [isSubmittingHold, setIsSubmittingHold] = useState(false);
 
   const loadPackages = useCallback(async () => {
     setPackagesState({ status: 'loading' });
@@ -150,12 +161,8 @@ export function MemberPackagesPage() {
     setPaymentsState({ status: 'loading' });
     try {
       const payments = await getMyPayments();
-      const data = [
-        ...payments,
-        ...createdPayments.current.filter((item) => !payments.some((saved) => saved.id === item.id)),
-      ];
-      setPaymentsState({ status: 'success', data });
-      return data;
+      setPaymentsState({ status: 'success', data: payments });
+      return payments;
     } catch {
       setPaymentsState({ status: 'error' });
       return null;
@@ -175,16 +182,19 @@ export function MemberPackagesPage() {
     currentState.data?.status?.toLowerCase() === 'active'
       ? currentState.data
       : null;
+  const currentPackage = current
+    ? packages.find((item) => item.id === current.packageId) ?? null
+    : null;
+  const frozenSubscription =
+    !current && historyState.status === 'success'
+      ? historyState.data.find((item) => item.status?.toLowerCase() === 'frozen') ?? null
+      : null;
   const pendingItems = historyState.status === 'success'
     ? historyState.data.filter((item) => item.status === 'pending_payment') : [];
   const pending = pendingItems.length === 1 ? pendingItems[0] : null;
   const relatedPayments = pending && paymentsState.status === 'success'
     ? paymentsState.data.filter((payment) => payment.subscriptionId === pending.id) : [];
   const pendingPackage = pending ? packages.find((item) => item.id === pending.packageId) : null;
-  const canRequest = paymentInstructionsAvailable && packagesState.status === 'success' && currentState.status === 'success'
-    && historyState.status === 'success' && paymentsState.status === 'success'
-    && pendingItems.length === 1 && pendingPackage != null
-    && pending?.memberId != null && relatedPayments.length === 0 && !sendingPayment;
 
   function renewalCount(subscriptionId: number): number {
     // Match MembershipSubscriptionService.renew(): only pending_payment/active block renewal.
@@ -199,28 +209,10 @@ export function MemberPackagesPage() {
     historyState.status === 'loading' ||
     paymentsState.status === 'loading';
 
-  async function handlePaymentRequest() {
-    if (!pending || !pendingPackage || !canRequest || requestBusy.current) return;
-    requestBusy.current = true;
-    setSendingPayment(true);
-    setActionError(null);
-    try {
-      const payment = await createPaymentRequest(pending, pendingPackage.price);
-      createdPayments.current.push(payment);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu thanh toán.');
-    } finally {
-      // A failed POST may have reached the server. Verify before enabling Retry.
-      const payments = await loadPayments();
-      if (payments?.some((item) => item.subscriptionId === pending.id)) setActionError(null);
-      setSendingPayment(false);
-      requestBusy.current = false;
-    }
-  }
-
   async function handleMembershipAction(
     membershipPackage: MembershipPackage,
     renewFrom: MemberSubscription | null,
+    upgradeFrom: MemberSubscription | null = null,
   ) {
     if (
       packagesState.status !== 'success' || currentState.status !== 'success' ||
@@ -230,11 +222,15 @@ export function MemberPackagesPage() {
       return;
     }
 
-    if (current && current.id !== renewFrom?.id) {
+    if (current && current.id !== renewFrom?.id && current.id !== upgradeFrom?.id) {
       return;
     }
 
     if (renewFrom && renewalCount(renewFrom.id) > 0) {
+      return;
+    }
+
+    if (upgradeFrom && renewalCount(upgradeFrom.id) > 0) {
       return;
     }
 
@@ -243,8 +239,9 @@ export function MemberPackagesPage() {
     setActionError(null);
 
     try {
-      const subscription =
-        renewFrom
+      const subscription = upgradeFrom
+        ? await upgradeMembershipSubscription(upgradeFrom.id, membershipPackage.id)
+        : renewFrom
           ? await renewMembershipSubscription(renewFrom.id)
           : await createMembershipSubscription(membershipPackage.id);
 
@@ -259,7 +256,7 @@ export function MemberPackagesPage() {
       setRequestResult({
         subscription,
         membershipPackage,
-        action: renewFrom ? 'renew' : 'register',
+        action: upgradeFrom ? 'upgrade' : renewFrom ? 'renew' : 'register',
       });
     } catch (error) {
       setActionError(
@@ -271,6 +268,36 @@ export function MemberPackagesPage() {
       await loadHistory();
       setSubmittingPackageId(null);
       requestBusy.current = false;
+    }
+  }
+
+  async function handleSubmitHold(e: React.FormEvent) {
+    e.preventDefault();
+    if (!current || isSubmittingHold) return;
+    const trimmed = holdReason.trim();
+    if (!trimmed) {
+      setHoldError('Vui lòng nhập lý do bảo lưu gói tập.');
+      return;
+    }
+
+    setIsSubmittingHold(true);
+    setHoldError(null);
+    setActionError(null);
+    try {
+      const updated = await requestMembershipHold(current.id, trimmed);
+      setCurrentState({ status: 'success', data: updated });
+      setIsHoldModalOpen(false);
+      setHoldReason('');
+      setHoldSuccessMessage('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.');
+      await loadHistory();
+    } catch (error) {
+      setHoldError(
+        error instanceof Error
+          ? error.message
+          : 'Không thể gửi yêu cầu bảo lưu. Vui lòng thử lại.',
+      );
+    } finally {
+      setIsSubmittingHold(false);
     }
   }
 
@@ -313,6 +340,12 @@ export function MemberPackagesPage() {
         </div>
       )}
 
+      {holdSuccessMessage && (
+        <div className="portal-alert" role="status" style={{ marginBottom: 24, borderColor: '#86EFAC', backgroundColor: '#F0FDF4', color: '#166534' }}>
+          <span>{holdSuccessMessage}</span>
+        </div>
+      )}
+
       {current && (
         <section
           className="portal-card portal-card--feature"
@@ -338,6 +371,16 @@ export function MemberPackagesPage() {
                     ✓ Gói đã kích hoạt. Bạn có thể sử dụng thẻ QR để check-in và đặt lịch lớp học.
                   </p>
                 )}
+              {current.holdStatus === 'PENDING' && (
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#996515', fontSize: '0.86rem' }}>
+                  ⏳ Đang chờ Lễ tân xử lý yêu cầu bảo lưu{current.holdReason ? ` • Lý do: "${current.holdReason}"` : ''}
+                </p>
+              )}
+              {current.holdStatus === 'REJECTED' && (
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#B91C1C', fontSize: '0.84rem' }}>
+                  Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.
+                </p>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="/member/card" className="btn-primary btn-sm">
@@ -346,12 +389,52 @@ export function MemberPackagesPage() {
               <a href="/member/classes" className="btn-secondary btn-sm">
                 Đặt lịch lớp học
               </a>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={current.holdStatus === 'PENDING'}
+                onClick={() => {
+                  setHoldError(null);
+                  setHoldReason(current.holdReason && current.holdStatus !== 'REJECTED' ? current.holdReason : '');
+                  setIsHoldModalOpen(true);
+                }}
+              >
+                {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
+              </button>
             </div>
           </div>
         </section>
       )}
 
-      {currentState.status === 'success' && !current && !pending && !isStatusSyncing && (
+      {frozenSubscription && (
+        <section
+          className="portal-card"
+          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: '#EFF6FF' }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div className="meta-label">
+              Gói tập đang bảo lưu
+            </div>
+            <span className="badge badge-info">ĐANG BẢO LƯU</span>
+          </div>
+          <h2 className="portal-card-title" style={{ marginTop: 10 }}>
+            {frozenSubscription.packageName}
+          </h2>
+          <p className="row-card__meta" style={{ marginTop: 4 }}>
+            Thời hạn gói: {formatDate(frozenSubscription.startDate)} đến {formatDate(frozenSubscription.endDate)}
+          </p>
+          {frozenSubscription.holdReason && (
+            <p className="row-card__meta" style={{ marginTop: 4, fontWeight: 600 }}>
+              Lý do bảo lưu: "{frozenSubscription.holdReason}"
+            </p>
+          )}
+          <p className="row-card__meta" style={{ marginTop: 6 }}>
+            Gói tập của bạn đã được Lễ tân xác nhận bảo lưu. Các lịch lớp học đặt trước trong tương lai đã được hủy tự động.
+          </p>
+        </section>
+      )}
+
+      {currentState.status === 'success' && !current && !frozenSubscription && !pending && !isStatusSyncing && (
         <div className="portal-alert portal-alert--info" style={{ marginBottom: 24 }}>
           <span>Bạn chưa có gói đang hoạt động. Hãy chọn một gói tập bên dưới để đăng ký và kích hoạt thẻ hội viên.</span>
         </div>
@@ -394,14 +477,6 @@ export function MemberPackagesPage() {
             <>
               <p className="row-card__meta" role="status">{paymentInstructionsNotice}</p>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={!canRequest}
-                  onClick={() => void handlePaymentRequest()}
-                >
-                  {sendingPayment ? 'Đang gửi…' : 'Tôi đã chuyển khoản'}
-                </button>
                 <button
                   type="button"
                   className="btn-secondary"
@@ -522,7 +597,15 @@ export function MemberPackagesPage() {
               expiredForPackage[0].endDate === expiredForPackage[1].endDate;
             const renewFrom = current && isCurrent ? current :
               !current && !ambiguousRenewal ? expiredForPackage[0] ?? null : null;
-            const nextRenewals = renewFrom ? renewalCount(renewFrom.id) : 0;
+            const upgradeFrom =
+              current && !isCurrent && isHigherPackage(currentPackage, membershipPackage)
+                ? current
+                : null;
+            const nextRenewals = renewFrom
+              ? renewalCount(renewFrom.id)
+              : upgradeFrom
+                ? renewalCount(upgradeFrom.id)
+                : 0;
 
             const isPending =
               pending?.packageId ===
@@ -532,8 +615,8 @@ export function MemberPackagesPage() {
               submittingPackageId ===
               membershipPackage.id;
 
-            const hasDifferentCurrentPackage =
-              current !== null && !isCurrent;
+            const hasLowerOrNonUpgradableCurrentPackage =
+              current !== null && !isCurrent && !upgradeFrom;
 
             const disabled =
               submittingPackageId !== null ||
@@ -542,7 +625,7 @@ export function MemberPackagesPage() {
               pendingItems.length > 0 ||
               nextRenewals > 0 ||
               ambiguousRenewal ||
-              hasDifferentCurrentPackage;
+              hasLowerOrNonUpgradableCurrentPackage;
 
             let buttonText = historyState.status === 'success' && historyState.data.length === 0
               ? 'Đăng ký lần đầu' : 'Đăng ký gói mới';
@@ -552,7 +635,7 @@ export function MemberPackagesPage() {
             } else if (nextRenewals > 1) {
               buttonText = 'Cần kiểm tra gia hạn';
             } else if (nextRenewals === 1) {
-              buttonText = 'Đã gia hạn';
+              buttonText = renewFrom ? 'Đã gia hạn' : 'Có yêu cầu đang chờ';
             } else if (pendingItems.length > 0) {
               buttonText = isPending
                 ? 'Đang chờ xác nhận'
@@ -562,7 +645,9 @@ export function MemberPackagesPage() {
             } else if (current) {
               buttonText = isCurrent
                 ? 'Gia hạn'
-                : 'Đang có gói hoạt động';
+                : upgradeFrom
+                  ? 'Nâng cấp gói'
+                  : 'Đang có gói hoạt động';
             } else if (renewFrom) {
               buttonText = 'Gia hạn';
             }
@@ -640,6 +725,7 @@ export function MemberPackagesPage() {
                       void handleMembershipAction(
                         membershipPackage,
                         renewFrom,
+                        upgradeFrom,
                       )
                     }
                   >
@@ -683,9 +769,11 @@ export function MemberPackagesPage() {
               className="portal-card-title"
               style={{ marginTop: 12 }}
             >
-              {requestResult.action === 'renew'
-                ? 'Gia hạn gói tập'
-                : 'Đăng ký gói tập'}
+              {requestResult.action === 'upgrade'
+                ? 'Nâng cấp gói tập'
+                : requestResult.action === 'renew'
+                  ? 'Gia hạn gói tập'
+                  : 'Đăng ký gói tập'}
             </h2>
 
             <div
@@ -725,9 +813,6 @@ export function MemberPackagesPage() {
             <p className="row-card__meta" role="status" style={{ marginTop: 20 }}>
               {paymentInstructionsNotice}
             </p>
-            <button type="button" className="btn-primary" disabled style={{ marginTop: 16 }}>
-              Tôi đã chuyển khoản
-            </button>
 
             <p
               className="row-card__meta"
@@ -747,7 +832,90 @@ export function MemberPackagesPage() {
           </section>
         </div>
       )}
+
+      {isHoldModalOpen && current && (
+        <div
+          role="presentation"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.55)',
+            display: 'grid',
+            placeItems: 'center',
+            padding: 24,
+            zIndex: 1000,
+          }}
+        >
+          <section
+            className="portal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="membership-hold-title"
+            style={{
+              width: 'min(520px, 100%)',
+            }}
+          >
+            <div className="meta-label">
+              Yêu cầu bảo lưu gói tập
+            </div>
+
+            <h2
+              id="membership-hold-title"
+              className="portal-card-title"
+              style={{ marginTop: 12 }}
+            >
+              Bảo lưu {current.packageName}
+            </h2>
+
+            <p className="row-card__meta" style={{ marginTop: 8 }}>
+              Khi Lễ tân xác nhận bảo lưu, gói tập hiện tại của bạn sẽ tạm dừng hoạt động và toàn bộ các lịch học bạn đã đặt trong tương lai sẽ được hủy tự động.
+            </p>
+
+            <form onSubmit={(e) => void handleSubmitHold(e)} style={{ marginTop: 18 }}>
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="hold-reason-input">
+                  Lý do bảo lưu gói tập *
+                </label>
+                <textarea
+                  id="hold-reason-input"
+                  className="portal-input"
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Nhập lý do bảo lưu (ví dụ: Đi công tác dài ngày, chấn thương cần nghỉ ngơi...)"
+                  value={holdReason}
+                  onChange={(e) => setHoldReason(e.target.value)}
+                  disabled={isSubmittingHold}
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+              </div>
+
+              {holdError && (
+                <p role="alert" style={{ color: '#B91C1C', fontSize: '0.86rem', marginTop: 8 }}>
+                  {holdError}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={isSubmittingHold}
+                  onClick={() => setIsHoldModalOpen(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSubmittingHold}
+                >
+                  {isSubmittingHold ? 'Đang gửi yêu cầu…' : 'Gửi yêu cầu bảo lưu'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
-

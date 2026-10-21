@@ -376,10 +376,26 @@ public class PaymentService {
 
     private void activateSubscription(MembershipSubscription subscription) {
         java.time.LocalDate today = java.time.LocalDate.now(clock);
-        if (subscription.getPreviousSubscription() == null
+        MembershipSubscription previous = subscription.getPreviousSubscription();
+        boolean isUpgrade = previous != null
+                && subscription.getMembershipPackage() != null
+                && previous.getMembershipPackage() != null
+                && previous.getMembershipPackage().getId() != null
+                && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
+
+        if (isUpgrade && "active".equalsIgnoreCase(previous.getStatus())) {
+            previous.setStatus("expired");
+            if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
+                previous.setEndDate(today);
+            }
+            previous.setUpdatedAt(LocalDateTime.now(clock));
+            membershipSubscriptionRepository.save(previous);
+        }
+
+        if ((subscription.getPreviousSubscription() == null || isUpgrade)
                 && subscription.getMembershipPackage() != null
                 && subscription.getMembershipPackage().getDurationDays() > 0
-                && (subscription.getStartDate() == null || subscription.getStartDate().isBefore(today))) {
+                && (isUpgrade || subscription.getStartDate() == null || subscription.getStartDate().isBefore(today))) {
             int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
             subscription.setStartDate(today);
             subscription.setEndDate(today.plusDays(durationDays - 1L));

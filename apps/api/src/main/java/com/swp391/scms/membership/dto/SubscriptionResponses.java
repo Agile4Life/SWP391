@@ -17,8 +17,26 @@ public final class SubscriptionResponses {
             LocalDate endDate,
             String status,
             String qrCode,
-            LocalDateTime createdAt
-    ) {}
+            LocalDateTime createdAt,
+            String holdStatus,
+            String holdReason,
+            LocalDateTime holdRequestedAt,
+            LocalDateTime holdResolvedAt
+    ) {
+        public SubscriptionDto(
+                Long id,
+                Long memberId,
+                Long packageId,
+                String packageName,
+                Long previousSubscriptionId,
+                LocalDate startDate,
+                LocalDate endDate,
+                String status,
+                String qrCode,
+                LocalDateTime createdAt) {
+            this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate, status, qrCode, createdAt, null, null, null, null);
+        }
+    }
 
     public record PendingSubscriptionDto(
             Long id,
@@ -35,6 +53,25 @@ public final class SubscriptionResponses {
             LocalDate endDate,
             String status,
             LocalDateTime createdAt
+    ) {}
+
+    public record HoldRequestDto(
+            Long id,
+            Long memberId,
+            String membershipCode,
+            String memberName,
+            String memberEmail,
+            String memberPhone,
+            Long packageId,
+            String packageName,
+            LocalDate startDate,
+            LocalDate endDate,
+            String status,
+            String holdStatus,
+            String holdReason,
+            LocalDateTime holdRequestedAt,
+            LocalDateTime holdResolvedAt,
+            int cancelledEnrollmentsCount
     ) {}
 
     public record DynamicQrDto(

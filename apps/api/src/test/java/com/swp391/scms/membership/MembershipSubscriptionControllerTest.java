@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.swp391.scms.common.GlobalExceptionHandler;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
+import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -22,12 +23,10 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
-import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -117,6 +116,59 @@ class MembershipSubscriptionControllerTest {
     }
 
     @Test
+    void upgrade_returnsCreated() throws Exception {
+        SubscriptionRequests.Upgrade request = new SubscriptionRequests.Upgrade(2L);
+        SubscriptionDto dto = new SubscriptionDto(
+                102L, 10L, 2L, "Gói VIP 3 tháng", 100L,
+                LocalDate.now(), LocalDate.now().plusDays(89), "pending_payment", null, LocalDateTime.now()
+        );
+        when(service.upgrade(any(), eq(100L), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/100/upgrade")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").value(102L))
+                .andExpect(jsonPath("$.data.packageId").value(2L))
+                .andExpect(jsonPath("$.data.previousSubscriptionId").value(100L));
+    }
+
+    @Test
+    void requestHold_returnsOk() throws Exception {
+        SubscriptionRequests.HoldRequest request = new SubscriptionRequests.HoldRequest("Đi công tác");
+        SubscriptionDto dto = new SubscriptionDto(
+                100L, 10L, 1L, "Gói 1 tháng", null,
+                LocalDate.now(), LocalDate.now().plusDays(30), "active", "QR-SUB-100", LocalDateTime.now(),
+                "PENDING", "Đi công tác", LocalDateTime.now(), null
+        );
+        when(service.requestHold(any(), eq(100L), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/100/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(100L))
+                .andExpect(jsonPath("$.data.holdStatus").value("PENDING"))
+                .andExpect(jsonPath("$.data.holdReason").value("Đi công tác"));
+    }
+
+    @Test
+    void approveHold_returnsOkWithCancelledCount() throws Exception {
+        HoldRequestDto dto = new HoldRequestDto(
+                100L, 10L, "MB-010", "Nguyen Van A", "a@example.com", "0900000001",
+                1L, "Gói 1 tháng", LocalDate.now(), LocalDate.now().plusDays(30),
+                "frozen", "APPROVED", "Đi công tác", LocalDateTime.now(), LocalDateTime.now(), 2
+        );
+        when(service.approveHold(any(), eq(100L))).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/100/hold/approve"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("frozen"))
+                .andExpect(jsonPath("$.data.holdStatus").value("APPROVED"))
+                .andExpect(jsonPath("$.data.cancelledEnrollmentsCount").value(2));
+    }
+
+    @Test
     void getMy_returnsOk_withSubscriptionObject() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
                 100L, 10L, 1L, "Gói 1 tháng", null,
@@ -129,7 +181,6 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.id").value(100L))
                 .andExpect(jsonPath("$.data.qrCode").value("QR-SUB-100"));
 
-        // Also works with /api/v1/subscriptions/my
         mockMvc.perform(get("/api/v1/subscriptions/my"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(100L));

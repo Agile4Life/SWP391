@@ -7,6 +7,7 @@ import { toast } from '../../shared/ui/toast';
 import {
   maskCitizenId,
   receptionApi,
+  type HoldRequestItem,
   type MemberLookupResult,
   type PaymentMethod,
   type PaymentResponseDto,
@@ -30,10 +31,15 @@ export function StaffReceptionPage() {
   const [searchResults, setSearchResults] = useState<MemberLookupResult[]>([]);
   const [selectedMember, setSelectedMember] = useState<MemberLookupResult | null>(null);
 
-  // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký)
+  // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
   const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
   const [loadingPending, setLoadingPending] = useState(true);
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
+
+  // Danh sách yêu cầu bảo lưu gói tập đang chờ xử lý
+  const [holdList, setHoldList] = useState<HoldRequestItem[]>([]);
+  const [loadingHolds, setLoadingHolds] = useState(true);
+  const [processingHoldId, setProcessingHoldId] = useState<number | null>(null);
 
   // Form thanh toán
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('pos');
@@ -77,9 +83,23 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  const loadPendingHolds = useCallback(async () => {
+    if (!hasAccess) return;
+    setLoadingHolds(true);
+    try {
+      const items = await receptionApi.getPendingHoldRequests();
+      setHoldList(items);
+    } catch {
+      setHoldList([]);
+    } finally {
+      setLoadingHolds(false);
+    }
+  }, [hasAccess]);
+
   useEffect(() => {
     void loadPendingSubscriptions();
-  }, [loadPendingSubscriptions]);
+    void loadPendingHolds();
+  }, [loadPendingSubscriptions, loadPendingHolds]);
 
   const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
@@ -94,6 +114,39 @@ export function StaffReceptionPage() {
       currentPackage: item.packageName,
       endDate: `${item.startDate} → ${item.endDate}`,
     });
+  };
+
+  const handleApproveHold = async (item: HoldRequestItem) => {
+    if (processingHoldId !== null) return;
+    setProcessingHoldId(item.id);
+    try {
+      const res = await receptionApi.approveHoldRequest(item.id);
+      toast(
+        `Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch học trong tương lai.`,
+        'success',
+      );
+      await loadPendingHolds();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Xác nhận bảo lưu thất bại.';
+      toast(msg, 'error');
+    } finally {
+      setProcessingHoldId(null);
+    }
+  };
+
+  const handleRejectHold = async (item: HoldRequestItem) => {
+    if (processingHoldId !== null) return;
+    setProcessingHoldId(item.id);
+    try {
+      await receptionApi.rejectHoldRequest(item.id);
+      toast(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success');
+      await loadPendingHolds();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Từ chối yêu cầu bảo lưu thất bại.';
+      toast(msg, 'error');
+    } finally {
+      setProcessingHoldId(null);
+    }
   };
 
   // BR-01: Forbidden Guard khi vai trò không hợp lệ
@@ -265,13 +318,13 @@ export function StaffReceptionPage() {
         )}
       </div>
 
-      {/* Mục Yêu Cầu Đăng Ký / Gia Hạn Gói Tập Đang Chờ Thanh Toán (pending_payment) */}
+      {/* Mục Yêu Cầu Đăng Ký / Gia Hạn / Nâng Cấp Gói Tập Đang Chờ Thanh Toán (pending_payment) */}
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 className="portal-card-title">Yêu Cầu Gói Tập Đang Chờ Thanh Toán ({pendingList.length})</h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#7E7771' }}>
-              Danh sách các gói tập do Hội viên đã tự chọn đăng ký/gia hạn và đang chờ Lễ tân xác nhận thu tiền.
+              Danh sách các gói tập do Hội viên đã tự chọn đăng ký/gia hạn/nâng cấp và đang chờ Lễ tân xác nhận thu tiền.
             </p>
           </div>
           <button
@@ -385,6 +438,125 @@ export function StaffReceptionPage() {
                       }}
                     >
                       {isSelected ? 'Đang chọn xử lý' : 'Chọn xác nhận'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Mục Yêu Cầu Bảo Lưu Gói Tập Đang Chờ Xử Lý */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 className="portal-card-title">Yêu Cầu Bảo Lưu Gói Tập Đang Chờ Xử Lý ({holdList.length})</h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#7E7771' }}>
+              Hội viên chủ động gửi yêu cầu bảo lưu kèm lý do. Khi Lễ tân xác nhận, các lịch học tương lai của hội viên sẽ được hủy tự động.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => void loadPendingHolds()}
+            disabled={loadingHolds}
+          >
+            {loadingHolds ? 'Đang tải...' : 'Làm mới bảo lưu'}
+          </button>
+        </div>
+
+        {loadingHolds ? (
+          <div style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+            <span className="sr-only">Đang tải danh sách yêu cầu bảo lưu...</span>
+            <div
+              aria-hidden="true"
+              style={{
+                padding: '14px 18px',
+                borderRadius: '10px',
+                border: '1px solid #E5DFD7',
+                backgroundColor: '#FFFFFF',
+              }}
+            >
+              <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
+              <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
+            </div>
+          </div>
+        ) : holdList.length === 0 ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#7E7771', fontSize: '0.9rem' }}>
+            Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+            {holdList.map((item) => {
+              const isBusy = processingHoldId === item.id;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    borderRadius: '10px',
+                    border: '1px solid #E5DFD7',
+                    backgroundColor: '#FAF8F5',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          color: '#996515',
+                          fontSize: '0.92rem',
+                        }}
+                      >
+                        Bảo lưu #{item.id}
+                      </span>
+                      <strong>{item.memberName}</strong>
+                      <span style={{ color: '#7E7771', fontSize: '0.85rem' }}>
+                        ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
+                      </span>
+                      <span className="badge badge-warning">CHỜ DUYỆT BẢO LƯU</span>
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: '#4A4541', marginTop: '6px' }}>
+                      Gói tập đang hoạt động: <strong>{item.packageName}</strong> ({item.startDate} → {item.endDate})
+                    </div>
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: '#FFFFFF',
+                        border: '1px solid #ECE7E1',
+                        fontSize: '0.88rem',
+                        color: '#1A1614',
+                      }}
+                    >
+                      <strong>Lý do hội viên nhập:</strong> {item.holdReason}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      disabled={processingHoldId !== null}
+                      onClick={() => void handleRejectHold(item)}
+                    >
+                      {isBusy ? 'Đang xử lý...' : 'Từ chối'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary btn-sm"
+                      disabled={processingHoldId !== null}
+                      onClick={() => void handleApproveHold(item)}
+                    >
+                      {isBusy ? 'Đang xử lý...' : 'Xác nhận bảo lưu & Hủy lịch tương lai'}
                     </button>
                   </div>
                 </div>
