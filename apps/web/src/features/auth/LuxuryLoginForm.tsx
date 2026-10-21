@@ -6,6 +6,8 @@ import { toast } from '../../shared/ui/toast';
 import {
   getGoogleOAuthAuthorizeUrl,
   googleOAuthCallback,
+  googleRedeemHandoff,
+  type GoogleVerifyResponse,
   googleSendOtp,
   googleVerifyOtp,
   type GoogleOAuthCallbackInput,
@@ -70,13 +72,24 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     setShaking(true);
   }, []);
 
-  // SCRUM-89: Xác thực Google OAuth Callback (ID Token / Access Token / Authorization Code)
-  // Sau khi Google callback về -> gửi mã OTP 6 số qua Gmail -> chuyển sang màn hình nhập OTP (mode = 'google_otp')
+  const completeGoogleLogin = useCallback((authentication: GoogleVerifyResponse) => {
+    const user = setAuthSession(authentication.token, authentication.username, authentication.role);
+    setIsExpired(false);
+    setSuccess(true);
+    if (onSuccess) onSuccess();
+    toast('Đăng nhập thành công!', 'success');
+    window.setTimeout(() => navigate(homePath(user.role), { viewTransition: true }), 700);
+  }, [navigate, onSuccess]);
+
   const processGoogleOAuthCallback = useCallback(async (payload: GoogleOAuthCallbackInput) => {
     setIsGoogleLoading(true);
     setFormError('');
     try {
       const res = await googleOAuthCallback(payload);
+      if (res.requiresOtp === false) {
+        completeGoogleLogin(res.authentication);
+        return;
+      }
       const verifiedEmail = (res.email || '').trim();
       setGoogleEmail(verifiedEmail);
       setOtpMessage(
@@ -105,7 +118,19 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [fail]);
+  }, [fail, completeGoogleLogin]);
+
+  const redeemGoogleRedirect = useCallback(async (code: string) => {
+    setIsGoogleLoading(true);
+    setFormError('');
+    try {
+      completeGoogleLogin(await googleRedeemHandoff(code));
+    } catch (error) {
+      fail(error instanceof Error ? error.message : 'Đăng nhập Google thất bại.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }, [completeGoogleLogin, fail]);
 
   // Xử lý khi Google OAuth 2.0 Redirect Callback trả về URL (/login?google_oauth=callback&email=... hoặc /login?code=...)
   useEffect(() => {
@@ -130,9 +155,20 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       nextParams.delete('authuser');
       nextParams.delete('prompt');
       const nextSearch = nextParams.toString();
-      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+      const fragment = new URLSearchParams(window.location.hash.slice(1));
+      fragment.delete('google_login_code');
+      const nextHash = fragment.toString();
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${nextHash ? `#${nextHash}` : ''}`;
       window.history.replaceState({}, document.title, nextUrl);
     };
+
+    if (oauthStatus === 'authenticated') {
+      const handoff = new URLSearchParams(window.location.hash.slice(1)).get('google_login_code');
+      cleanSearchParams();
+      if (handoff) void redeemGoogleRedirect(handoff);
+      else fail('Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
+      return;
+    }
 
     if (oauthStatus === 'callback') {
       const email = (params.get('email') || '').trim();
@@ -174,10 +210,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       cleanSearchParams();
       fail('Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.');
     }
-  }, [fail]);
+  }, [fail, redeemGoogleRedirect]);
 
   // One Google entry point: popup when ready, otherwise the state-protected backend redirect.
-  const handleGoogleOAuthLogin = () => {
+  const handleGoogleOAuthLogin = async () => {
     setFormError('');
     if (googleClientId && window.google?.accounts?.oauth2?.initTokenClient) {
       try {
@@ -204,7 +240,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
 
     if (googleClientId) {
-      window.location.assign(getGoogleOAuthAuthorizeUrl());
+      setIsGoogleLoading(true);
+      try {
+        window.location.assign(await getGoogleOAuthAuthorizeUrl());
+      } catch {
+        fail('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
+        setIsGoogleLoading(false);
+      }
       return;
     }
 
@@ -287,12 +329,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
     try {
       const res = await googleVerifyOtp(googleEmail.trim(), cleanOtp);
-      const user = setAuthSession(res.token, res.username, res.role);
-      if (onSuccess) onSuccess();
-
-      setSuccess(true);
-      toast('Kích hoạt tài khoản và đăng nhập thành công!', 'success');
-      window.setTimeout(() => navigate(homePath(user.role), { viewTransition: true }), 700);
+      completeGoogleLogin(res);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Mã xác nhận không chính xác hoặc đã hết hạn.';
       fail(msg);
