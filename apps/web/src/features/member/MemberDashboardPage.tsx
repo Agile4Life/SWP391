@@ -259,7 +259,7 @@ export function MemberDashboardPage() {
           <div className="member-column-heading"><h2 id="board-classes"><i />Lịch tập của tôi</h2><Link to="/member/classes" aria-label="Xem lịch lớp học"><PortalIcon name="arrow" size={16} /></Link></div>
 
           <section
-            className="portal-card"
+            className="portal-card member-classes-card"
             aria-labelledby="upcoming-title"
           >
             <div className="portal-card-header">
