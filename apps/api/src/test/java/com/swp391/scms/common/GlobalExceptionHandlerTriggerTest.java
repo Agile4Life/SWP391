@@ -31,12 +31,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** SCRUM-80: PostgreSQL trigger failures must retain localized HTTP responses. */
 class GlobalExceptionHandlerTriggerTest {
 
-    private static final String CAPACITY_VI = "Lớp học đã đầy chỗ (vượt quá capacity cho phép).";
-    private static final String CAPACITY_EN = "Class capacity exceeded.";
-    private static final String SCHEDULE_VI = "Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này.";
-    private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot.";
-    private static final String MEMBERSHIP_VI = "Gói tập của hội viên chưa được kích hoạt hoặc đã hết hạn.";
-    private static final String MEMBERSHIP_EN = "Member has no active or unexpired subscription.";
+    private static final String DB_CAPACITY_VI = "Lớp học đã đầy chỗ (vượt quá capacity cho phép).";
+    private static final String CAPACITY_VI = "Lớp học đã đầy chỗ; vui lòng tham gia danh sách chờ";
+    private static final String CAPACITY_EN = "Class is full; consider joining the waitlist";
+    private static final String SCHEDULE_VI = "Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này";
+    private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot";
+    private static final String MEMBERSHIP_VI = "Gói tập của hội viên chưa được kích hoạt hoặc đã hết hạn";
+    private static final String MEMBERSHIP_EN = "Member has no active or unexpired subscription";
 
     @ParameterizedTest
     @MethodSource("triggerFailures")
@@ -64,7 +65,7 @@ class GlobalExceptionHandlerTriggerTest {
 
     @Test
     void defaultsTriggerResponseToVietnamese() throws Exception {
-        mockMvcFor(translate(new SQLException(CAPACITY_VI, "23514"))).perform(get("/trigger-test"))
+        mockMvcFor(translate(new SQLException(DB_CAPACITY_VI, "23514"))).perform(get("/trigger-test"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CLASS_CAPACITY_EXCEEDED"))
                 .andExpect(jsonPath("$.message").value(CAPACITY_VI));
@@ -116,7 +117,7 @@ class GlobalExceptionHandlerTriggerTest {
 
     private static Stream<Arguments> triggerFailures() {
         return Stream.of(
-                new TriggerFailure(CAPACITY_VI, "trg_enrollments_check_capacity", "23514", 409,
+                new TriggerFailure(DB_CAPACITY_VI, "trg_enrollments_check_capacity", "23514", 409,
                         "CLASS_CAPACITY_EXCEEDED", CAPACITY_VI, CAPACITY_EN),
                 new TriggerFailure("Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.",
                         "trg_sessions_check_conflict", "23P01", 409,

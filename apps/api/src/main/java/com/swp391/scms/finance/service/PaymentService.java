@@ -254,7 +254,7 @@ public class PaymentService {
                 sub.setUpdatedAt(LocalDateTime.now(clock));
                 MembershipSubscription savedSub = membershipSubscriptionRepository.save(sub);
                 Long subId = savedSub != null && savedSub.getId() != null ? savedSub.getId() : sub.getId();
-                sub.setQrCode("SUB-" + (subId != null ? subId : "NEW") + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                sub.setQrCode(UUID.randomUUID().toString());
                 membershipSubscriptionRepository.save(sub);
                 resolvedSubscriptionId = subId;
             }
@@ -386,7 +386,7 @@ public class PaymentService {
         }
         subscription.setStatus("active");
         if (subscription.getQrCode() == null || subscription.getQrCode().isBlank()) {
-            subscription.setQrCode("SUB-" + subscription.getId() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            subscription.setQrCode(UUID.randomUUID().toString());
         }
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         membershipSubscriptionRepository.save(subscription);

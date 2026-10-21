@@ -18,4 +18,10 @@ public interface ClassWaitlistRepository extends JpaRepository<ClassWaitlist, Lo
     List<ClassWaitlist> findByGymClassIdAndStatusOrderByRequestedAtAsc(Long classId, String status);
 
     long countByGymClassIdAndStatus(Long classId, String status);
+
+    long countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(Long classId, String status, java.time.LocalDateTime now);
+
+    List<ClassWaitlist> findByGymClassIdAndStatusAndReservationExpiresAtLessThan(Long classId, String status, java.time.LocalDateTime now);
+
+    List<ClassWaitlist> findByStatusAndReservationExpiresAtLessThan(String status, java.time.LocalDateTime now);
 }

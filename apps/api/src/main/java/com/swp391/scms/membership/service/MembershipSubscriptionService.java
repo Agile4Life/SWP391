@@ -37,14 +37,26 @@ public class MembershipSubscriptionService {
     private final MemberRepository members;
     private final Clock clock;
 
+    private final DynamicQrService dynamicQrService;
+
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
             MemberRepository members,
             Clock clock) {
+        this(subscriptions, packages, members, clock, new DynamicQrService());
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
+            MembershipPackageRepository packages,
+            MemberRepository members,
+            Clock clock,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) DynamicQrService dynamicQrService) {
         this.subscriptions = subscriptions;
         this.packages = packages;
         this.members = members;
         this.clock = clock;
+        this.dynamicQrService = dynamicQrService != null ? dynamicQrService : new DynamicQrService();
     }
 
     /**
@@ -78,8 +90,9 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
         subscription.setMembershipPackage(membershipPackage);
+        int durationDays = Math.max(1, membershipPackage.getDurationDays());
         subscription.setStartDate(today);
-        subscription.setEndDate(today.plusDays(membershipPackage.getDurationDays()));
+        subscription.setEndDate(today.plusDays(durationDays - 1L));
         subscription.setStatus(STATUS_PENDING_PAYMENT);
         subscription.setCreatedAt(LocalDateTime.now(clock));
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -137,8 +150,9 @@ public class MembershipSubscriptionService {
         renewal.setMember(previous.getMember());
         renewal.setMembershipPackage(membershipPackage);
         renewal.setPreviousSubscription(previous);
+        int durationDays = Math.max(1, membershipPackage.getDurationDays());
         renewal.setStartDate(newStartDate);
-        renewal.setEndDate(newStartDate.plusDays(membershipPackage.getDurationDays()));
+        renewal.setEndDate(newStartDate.plusDays(durationDays - 1L));
         renewal.setStatus(STATUS_PENDING_PAYMENT);
         renewal.setCreatedAt(LocalDateTime.now(clock));
         renewal.setUpdatedAt(LocalDateTime.now(clock));
@@ -195,8 +209,9 @@ public class MembershipSubscriptionService {
         }
 
         LocalDate start = subscription.getStartDate() != null ? subscription.getStartDate() : LocalDate.now(clock);
+        int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
         subscription.setStartDate(start);
-        subscription.setEndDate(start.plusDays(subscription.getMembershipPackage().getDurationDays()));
+        subscription.setEndDate(start.plusDays(durationDays - 1L));
         subscription.setQrCode(UUID.randomUUID().toString());
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -231,6 +246,22 @@ public class MembershipSubscriptionService {
                         && s.getMember().getUser().getDeletedAt() == null)
                 .map(this::toPendingDto)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto generateDynamicQr(AuthenticatedPrincipal principal) {
+        SubscriptionDto sub = current(principal);
+        if (sub == null || !STATUS_ACTIVE.equalsIgnoreCase(sub.status())) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_NOT_ACTIVE",
+                    "error.attendance.subscription_not_active",
+                    null,
+                    "No active subscription found to generate dynamic QR");
+        }
+        long nowMillis = clock.instant().toEpochMilli();
+        String qr = dynamicQrService.generate(principal.id(), sub.id(), nowMillis);
+        return new com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto(
+                qr, DynamicQrService.DEFAULT_TTL_SECONDS, LocalDateTime.now(clock));
     }
 
     private SubscriptionDto toDto(MembershipSubscription s) {

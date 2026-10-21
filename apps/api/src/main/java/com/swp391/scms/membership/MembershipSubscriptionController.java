@@ -69,6 +69,13 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.current"), service.current(principal));
     }
 
+    @Operation(summary = "Get a fresh dynamic QR code for the authenticated member's active subscription")
+    @GetMapping("/my/dynamic-qr")
+    public ApiResponse<com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto> getDynamicQr(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("membership.subscription.qr_generated"), service.generateDynamicQr(principal));
+    }
+
     @Operation(summary = "Get the authenticated member's subscription history")
     @GetMapping("/history")
     public ApiResponse<List<SubscriptionDto>> getHistory(

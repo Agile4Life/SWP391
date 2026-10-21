@@ -249,7 +249,7 @@ class PaymentServiceTest {
         assertNotNull(result);
         assertEquals("active", sub.getStatus());
         assertNotNull(sub.getQrCode());
-        assertTrue(sub.getQrCode().startsWith("SUB-10-"));
+        assertFalse(sub.getQrCode().isBlank());
         verify(membershipSubscriptionRepository).save(sub);
         verify(paymentRepository).save(any(Payment.class));
     }

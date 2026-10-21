@@ -4,12 +4,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberCardPage } from './MemberCardPage';
 import { getProfile } from './profileApi';
-import { getMembershipHistory, getMySubscription } from './memberCardApi';
+import { getMembershipHistory, getMySubscription, getDynamicQr } from './memberCardApi';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 
 vi.mock('./profileApi', () => ({ getProfile: vi.fn() }));
-vi.mock('./memberCardApi', () => ({ getMySubscription: vi.fn(), getMembershipHistory: vi.fn() }));
+vi.mock('./memberCardApi', () => ({ getMySubscription: vi.fn(), getMembershipHistory: vi.fn(), getDynamicQr: vi.fn() }));
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn() } }));
 vi.mock('html2canvas', () => ({ default: vi.fn() }));
 
@@ -36,6 +36,7 @@ beforeEach(() => {
   vi.mocked(getProfile).mockResolvedValue(profile as never);
   vi.mocked(getMySubscription).mockResolvedValue(subscription as never);
   vi.mocked(getMembershipHistory).mockResolvedValue([]);
+  vi.mocked(getDynamicQr).mockRejectedValue(new Error('no dynamic qr'));
   vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,AA' as never);
 });
 
@@ -198,5 +199,16 @@ describe('MemberCardPage', () => {
     await act(async () => { image?.dispatchEvent(new Event('error')); });
     expect(host.textContent).toContain('Không thể hiển thị mã QR');
     expect(host.querySelector('button')?.disabled).toBe(true);
+  });
+
+  it('renders dynamic QR code when available', async () => {
+    vi.mocked(getDynamicQr).mockResolvedValue({
+      qrCode: 'DYN:1:1:1234567890:abcd',
+      expiresInSeconds: 60,
+      generatedAt: '2026-10-21T02:00:00Z',
+    });
+    await renderPage();
+    expect(host.textContent).toContain('Dynamic QR');
+    expect(vi.mocked(QRCode.toDataURL)).toHaveBeenCalledWith('DYN:1:1:1234567890:abcd', expect.anything());
   });
 });

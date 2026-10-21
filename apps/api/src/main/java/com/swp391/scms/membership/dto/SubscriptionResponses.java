@@ -36,4 +36,10 @@ public final class SubscriptionResponses {
             String status,
             LocalDateTime createdAt
     ) {}
+
+    public record DynamicQrDto(
+            String qrCode,
+            long expiresInSeconds,
+            LocalDateTime generatedAt
+    ) {}
 }

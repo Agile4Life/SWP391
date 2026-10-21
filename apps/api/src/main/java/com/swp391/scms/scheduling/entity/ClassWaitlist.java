@@ -28,6 +28,12 @@ public class ClassWaitlist {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "waiting";
 
+    @Column(name = "notified_at")
+    private LocalDateTime notifiedAt;
+
+    @Column(name = "reservation_expires_at")
+    private LocalDateTime reservationExpiresAt;
+
     public Long getId() { return id; }
     public GymClass getGymClass() { return gymClass; }
     public void setGymClass(GymClass gymClass) { this.gymClass = gymClass; }
@@ -37,4 +43,8 @@ public class ClassWaitlist {
     public void setRequestedAt(LocalDateTime requestedAt) { this.requestedAt = requestedAt; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getNotifiedAt() { return notifiedAt; }
+    public void setNotifiedAt(LocalDateTime notifiedAt) { this.notifiedAt = notifiedAt; }
+    public LocalDateTime getReservationExpiresAt() { return reservationExpiresAt; }
+    public void setReservationExpiresAt(LocalDateTime reservationExpiresAt) { this.reservationExpiresAt = reservationExpiresAt; }
 }

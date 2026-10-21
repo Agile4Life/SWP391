@@ -42,6 +42,9 @@ public class CenterCheckin {
     @Column(name = "denial_reason", length = 255)
     private String denialReason;
 
+    @Column(name = "notes", length = 255)
+    private String notes;
+
     public Long getId() { return id; }
     public Member getMember() { return member; }
     public void setMember(Member member) { this.member = member; }
@@ -61,4 +64,6 @@ public class CenterCheckin {
     public void setResult(String result) { this.status = result; }
     public String getDenialReason() { return denialReason; }
     public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

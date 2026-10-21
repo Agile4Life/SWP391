@@ -6,7 +6,7 @@ import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { toast } from '../../shared/ui/toast';
 import { cardStatus } from './cardStatus';
-import { getMembershipHistory, getMySubscription, type CardSubscription } from './memberCardApi';
+import { getMembershipHistory, getMySubscription, getDynamicQr, type CardSubscription } from './memberCardApi';
 
 function displayDate(value: string) {
   if (!validDate(value)) return '—';
@@ -27,6 +27,8 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const [qrLoaded, setQrLoaded] = useState(false);
   const [qrError, setQrError] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [dynamicQr, setDynamicQr] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number>(30);
   const status = cardStatus(subscription.status, subscription.endDate);
   const canShowQr =
     validDate(subscription.startDate) &&
@@ -35,17 +37,54 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     Boolean(subscription.qrCode?.trim());
   const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#C2A684' : '#A45A53';
 
+  // Fetch dynamic QR on interval
+  useEffect(() => {
+    if (!canShowQr || typeof getDynamicQr !== 'function') return;
+
+    let mounted = true;
+    let timerId: ReturnType<typeof setInterval> | null = null;
+
+    async function fetchDynamic() {
+      try {
+        const res = await getDynamicQr();
+        if (mounted && res?.qrCode) {
+          setDynamicQr(res.qrCode);
+          setCountdown(Math.min(res.expiresInSeconds || 30, 30));
+        }
+      } catch {
+        // Fallback to static QR
+      }
+    }
+
+    void fetchDynamic();
+    const intervalId = setInterval(() => {
+      void fetchDynamic();
+    }, 30000);
+
+    timerId = setInterval(() => {
+      setCountdown((prev) => (prev > 1 ? prev - 1 : 30));
+    }, 1000);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+      if (timerId) clearInterval(timerId);
+    };
+  }, [canShowQr]);
+
+  const activeQrCode = dynamicQr || subscription.qrCode;
+
   useEffect(() => {
     let cancelled = false;
     setQrImage('');
     setQrLoaded(false);
     setQrError(false);
-    if (!canShowQr) return;
-    QRCode.toDataURL(subscription.qrCode!, { width: 240, margin: 2 })
+    if (!canShowQr || !activeQrCode) return;
+    QRCode.toDataURL(activeQrCode, { width: 240, margin: 2 })
       .then((image) => { if (!cancelled) { setQrImage(image); setQrError(false); } })
       .catch(() => { if (!cancelled) setQrError(true); });
     return () => { cancelled = true; };
-  }, [canShowQr, subscription.qrCode]);
+  }, [canShowQr, activeQrCode]);
 
   async function downloadCard() {
     if (!cardRef.current || !canShowQr || !qrImage || !qrLoaded || qrError || downloading) return;
@@ -98,7 +137,14 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               }}
             />
             <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#D6C7B8', fontFamily: 'monospace' }}>
-              Mã QR định danh: <strong>{subscription.qrCode}</strong>
+              {dynamicQr ? (
+                <span>
+                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#48BB78', marginRight: 6 }} />
+                  Dynamic QR (Bảo mật) - Đổi mới sau <strong>{countdown}s</strong>
+                </span>
+              ) : (
+                <span>Mã QR định danh: <strong>{subscription.qrCode}</strong></span>
+              )}
             </div>
           </div>
         )}
@@ -119,16 +165,16 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
         >
           {downloading ? 'Đang tải…' : 'Tải thẻ về máy'}
         </button>
-        {canShowQr && subscription.qrCode && (
+        {canShowQr && activeQrCode && (
           <button
             type="button"
             className="btn-secondary"
             onClick={() => {
-              void navigator.clipboard?.writeText(subscription.qrCode ?? '');
-              toast('Đã sao chép mã QR check-in vào bộ nhớ tạm!');
+              void navigator.clipboard?.writeText(activeQrCode ?? '');
+              toast(dynamicQr ? 'Đã sao chép mã Dynamic QR vào bộ nhớ tạm!' : 'Đã sao chép mã QR check-in vào bộ nhớ tạm!');
             }}
           >
-            Sao chép mã QR Check-in
+            {dynamicQr ? 'Sao chép Dynamic QR' : 'Sao chép mã QR Check-in'}
           </button>
         )}
       </div>

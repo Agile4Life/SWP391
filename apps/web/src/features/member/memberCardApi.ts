@@ -18,3 +18,13 @@ export const getMySubscription = () =>
 
 export const getMembershipHistory = () =>
   apiFetch<CardSubscription[]>('/memberships/subscriptions/history');
+
+export interface DynamicQrResponse {
+  qrCode: string;
+  expiresInSeconds: number;
+  generatedAt: string;
+}
+
+export const getDynamicQr = () =>
+  apiFetch<DynamicQrResponse>('/memberships/subscriptions/my/dynamic-qr');
+
