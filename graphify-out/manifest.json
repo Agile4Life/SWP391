@@ -401,8 +401,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/AuthController.java": {
-    "mtime": 1792598794.0876448,
-    "ast_hash": "7a56e533279d9e161167add93d732c5f",
+    "mtime": 1792600425.492668,
+    "ast_hash": "06801efc92cc744f8418422f590dac7a",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/LoginRequest.java": {
@@ -661,8 +661,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LuxuryLoginForm.tsx": {
-    "mtime": 1792599234.0651915,
-    "ast_hash": "fb604f84a661abb02d8db8f769b53b82",
+    "mtime": 1792600294.8838718,
+    "ast_hash": "702d218f98fb754d5cd8476a4e378881",
     "semantic_hash": ""
   },
   "apps/web/src/features/classes/StaffClassesPage.tsx": {
@@ -1186,8 +1186,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java": {
-    "mtime": 1792598794.0886137,
-    "ast_hash": "0a419abfefc43aaf129074137d171606",
+    "mtime": 1792599985.1801243,
+    "ast_hash": "8cd0c12b289cb61c587712b89a091be6",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/OtpDeliveryPort.java": {
@@ -2931,8 +2931,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/authApi.ts": {
-    "mtime": 1792598794.1072817,
-    "ast_hash": "b91f43759379a29cbd8298f8bc4f7446",
+    "mtime": 1792600294.8818693,
+    "ast_hash": "0ed8d0ecdb4c5094592d774dde239d82",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/profileApi.ts": {
@@ -2941,8 +2941,8 @@
     "semantic_hash": ""
   },
   "docs/api-contracts/openapi-sprint1.yaml": {
-    "mtime": 1792598794.1092808,
-    "ast_hash": "f4d3cf4ce94fdb4284973e69cfaa1e2a",
+    "mtime": 1792600425.4946735,
+    "ast_hash": "7d828abb339291f67b249b78eb772c91",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/entity/AiChatMessage.java": {
@@ -3111,8 +3111,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/AuthControllerTest.java": {
-    "mtime": 1792598794.0987353,
-    "ast_hash": "b37c0adbe09cc13278dfd1248b982505",
+    "mtime": 1792600343.3138106,
+    "ast_hash": "7a2e89fc80f18ae170bf058e1e1b60b0",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/health/HealthMetricControllerTest.java": {
@@ -3136,8 +3136,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/authApi.test.ts": {
-    "mtime": 1792598794.1062517,
-    "ast_hash": "1aa7ad8623ce1c707d6cc99df3c5b9a0",
+    "mtime": 1792600343.317362,
+    "ast_hash": "45d321e5f6bd07321c1fb5fc6372bdba",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/catalogApi.test.ts": {
@@ -4242,8 +4242,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/GoogleAuthServiceTest.java": {
-    "mtime": 1792598794.0997348,
-    "ast_hash": "d1518ba2cea692b95762e7d5f3e17805",
+    "mtime": 1792600104.3576038,
+    "ast_hash": "4fa80299be94ccdb551eae98fc555a8a",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/GoogleIdTokenVerifierAdapterTest.java": {
@@ -4262,8 +4262,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LuxuryLoginForm.test.tsx": {
-    "mtime": 1792599234.0682006,
-    "ast_hash": "707fcc77fec47c1ce0cd8767f736e2a4",
+    "mtime": 1792600343.316321,
+    "ast_hash": "ea9b9dc432ca031e3a1ec95b65098715",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberProfilePage.test.tsx": {
@@ -4376,11 +4376,6 @@
     "ast_hash": "d378e401994244165b682148c5d49e35",
     "semantic_hash": ""
   },
-  "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleOAuthOtpChallenge.java": {
-    "mtime": 1792598794.0926442,
-    "ast_hash": "fa40ed461a0c8f19f58f0e8f6e23dc2d",
-    "semantic_hash": ""
-  },
   "docs/examples/cd.example.yml": {
     "mtime": 1792487519.147488,
     "ast_hash": "8ab3f3d36712461c1a743909dc5e3d38",
@@ -4392,23 +4387,43 @@
     "semantic_hash": ""
   },
   "docs/reviews/2026-10-21-SCRUM-89-commit-review.md": {
-    "mtime": 1792599271.728078,
-    "ast_hash": "cdeb8d9a2f2a20eddee6ab923e16545f",
+    "mtime": 1792600613.8891485,
+    "ast_hash": "cdb107496adeb98e9dedf06fe831e1b7",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/GoogleOAuthRedirectService.java": {
-    "mtime": 1792598794.090645,
-    "ast_hash": "0eae642b12f8489afd23098c40878d40",
+    "mtime": 1792600294.8768482,
+    "ast_hash": "8e74e82c20cc027daed305d671b3a6c8",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/GoogleOAuthRedirectServiceTest.java": {
-    "mtime": 1792598794.101735,
-    "ast_hash": "c4c31dd947878c85ee8f3a1e4c18a720",
+    "mtime": 1792600343.3128119,
+    "ast_hash": "ee37519c3dcdfbe9dd0eadad8f915101",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-10-21-google-oauth-hardening.md": {
     "mtime": 1792598794.1122816,
     "ast_hash": "81461e8b2f9946d0f6c022cdb9fda58b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleHandoffRequest.java": {
+    "mtime": 1792600294.879869,
+    "ast_hash": "0cb8cfc42405b6551bda9817d5634bed",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleOAuthResponse.java": {
+    "mtime": 1792599985.1761289,
+    "ast_hash": "36c7ce9196a39155d77c682dbcede735",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleOAuthResult.java": {
+    "mtime": 1792599985.175116,
+    "ast_hash": "e8c7f7ae9c306b319b4a6134ed750ea7",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-10-21-google-returning-member-login.md": {
+    "mtime": 1792600613.8912277,
+    "ast_hash": "8a15ec251bbcd0dfef60d56006017dfa",
     "semantic_hash": ""
   }
 }
