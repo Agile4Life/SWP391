@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberPackagesPage } from './MemberPackagesPage';
+import type { MemberSubscription } from './membershipApi';
 
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
@@ -64,6 +65,110 @@ describe('SCRUM-86 packages', () => {
   function button(label: string) {
     return [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
   }
+
+  const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
+  const renewal = { ...pending, id: 5, previousSubscriptionId: 1, status: 'active',
+    startDate: '2099-11-18', endDate: '2099-12-18' };
+
+  it('allows an active subscription without a successor to renew only once', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    api.renew.mockResolvedValue({ ...renewal, status: 'pending_payment' });
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(false);
+    await act(async () => {
+      button('Gia hạn')?.click();
+      button('Gia hạn')?.click();
+    });
+    expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
+    expect(api.create).not.toHaveBeenCalled();
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Gia hạn gói tập');
+  });
+
+  it.each(['active', 'pending_payment'])('blocks a %s successor restored from history without submitting renewal', async (status) => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, { ...renewal, status }]);
+    await render();
+    const action = button('Đã gia hạn')!;
+    expect(action?.disabled).toBe(true);
+    await act(async () => action.click());
+    expect(api.renew).not.toHaveBeenCalled();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('warns about multiple valid successors of the same subscription', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, renewal, { ...renewal, id: 9 }, { ...renewal, id: 10 }]);
+    await render();
+    expect(button('Cần kiểm tra gia hạn')?.disabled).toBe(true);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('nhiều lượt gia hạn');
+    expect(api.renew).not.toHaveBeenCalled();
+  });
+
+  it.each(['cancelled', 'expired'])('does not treat a %s child as a blocking successor', async (status) => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, { ...renewal, status }]);
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(false);
+  });
+
+  it('does not confuse another subscription successor with the selected source', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, { ...renewal, previousSubscriptionId: 99, packageId: 99 }]);
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(false);
+  });
+
+  it('still purchases a new package when eligible', async () => {
+    await render();
+    expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    expect(api.create).toHaveBeenCalledExactlyOnceWith(5);
+    expect(api.renew).not.toHaveBeenCalled();
+  });
+
+  it('blocks renewal while history loads and restores the successor state when it arrives', async () => {
+    let resolveHistory!: (items: MemberSubscription[]) => void;
+    api.current.mockResolvedValue(active);
+    api.history.mockReturnValue(new Promise((resolve) => { resolveHistory = resolve; }));
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(true);
+    await act(async () => button('Gia hạn')?.click());
+    expect(api.renew).not.toHaveBeenCalled();
+    await act(async () => resolveHistory([active, renewal]));
+    expect(button('Đã gia hạn')?.disabled).toBe(true);
+  });
+
+  it('blocks renewal on history failure and verifies it again on retry', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockRejectedValueOnce(new Error('offline')).mockResolvedValue([active, renewal]);
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(true);
+    expect(host.textContent).toContain('Không thể kiểm tra lịch sử gói');
+    await act(async () => button('Gia hạn')?.click());
+    expect(api.renew).not.toHaveBeenCalled();
+    await act(async () => button('Thử lại')?.click());
+    expect(button('Đã gia hạn')?.disabled).toBe(true);
+  });
+
+  it('blocks an expired source with a valid future successor', async () => {
+    api.history.mockResolvedValue([{ ...active, status: 'expired', endDate: '2020-01-01' }, renewal]);
+    await render();
+    expect(button('Đã gia hạn')?.disabled).toBe(true);
+    expect(api.renew).not.toHaveBeenCalled();
+  });
+
+  it('restores renewal protection after remounting the page', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, renewal]);
+    await render();
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render();
+    expect(api.history).toHaveBeenCalledTimes(2);
+    expect(button('Đã gia hạn')?.disabled).toBe(true);
+    expect(api.renew).not.toHaveBeenCalled();
+  });
 
   it('keeps catalog visible and blocks purchases when history fails', async () => {
     api.history.mockRejectedValue(new Error('offline'));

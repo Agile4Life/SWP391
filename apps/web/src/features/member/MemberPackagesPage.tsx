@@ -186,6 +186,14 @@ export function MemberPackagesPage() {
     && pendingItems.length === 1 && pendingPackage != null
     && pending?.memberId != null && relatedPayments.length === 0 && !sendingPayment;
 
+  function renewalCount(subscriptionId: number): number {
+    // Match MembershipSubscriptionService.renew(): only pending_payment/active block renewal.
+    return historyState.status === 'success'
+      ? historyState.data.filter((item) => item.previousSubscriptionId === subscriptionId
+        && (item.status === 'active' || item.status === 'pending_payment')).length
+      : 0;
+  }
+
   const isStatusSyncing =
     currentState.status === 'loading' ||
     historyState.status === 'loading' ||
@@ -223,6 +231,10 @@ export function MemberPackagesPage() {
     }
 
     if (current && current.id !== renewFrom?.id) {
+      return;
+    }
+
+    if (renewFrom && renewalCount(renewFrom.id) > 0) {
       return;
     }
 
@@ -510,6 +522,7 @@ export function MemberPackagesPage() {
               expiredForPackage[0].endDate === expiredForPackage[1].endDate;
             const renewFrom = current && isCurrent ? current :
               !current && !ambiguousRenewal ? expiredForPackage[0] ?? null : null;
+            const nextRenewals = renewFrom ? renewalCount(renewFrom.id) : 0;
 
             const isPending =
               pending?.packageId ===
@@ -527,6 +540,7 @@ export function MemberPackagesPage() {
               packagesState.status !== 'success' || currentState.status !== 'success' ||
               historyState.status !== 'success' || paymentsState.status !== 'success' ||
               pendingItems.length > 0 ||
+              nextRenewals > 0 ||
               ambiguousRenewal ||
               hasDifferentCurrentPackage;
 
@@ -535,6 +549,10 @@ export function MemberPackagesPage() {
 
             if (isSubmitting) {
               buttonText = 'Đang xử lý…';
+            } else if (nextRenewals > 1) {
+              buttonText = 'Cần kiểm tra gia hạn';
+            } else if (nextRenewals === 1) {
+              buttonText = 'Đã gia hạn';
             } else if (pendingItems.length > 0) {
               buttonText = isPending
                 ? 'Đang chờ xác nhận'
@@ -606,6 +624,12 @@ export function MemberPackagesPage() {
                   <div className="row-card__meta" style={{ fontSize: '0.76rem', marginTop: 2 }}>
                     Trọn gói {membershipPackage.durationDays} ngày • Kích hoạt ngay tại quầy
                   </div>
+
+                  {nextRenewals > 1 && (
+                    <p className="row-card__meta" role="alert">
+                      Có nhiều lượt gia hạn từ cùng gói. Vui lòng liên hệ nhân viên để kiểm tra.
+                    </p>
+                  )}
 
                   <button
                     type="button"
