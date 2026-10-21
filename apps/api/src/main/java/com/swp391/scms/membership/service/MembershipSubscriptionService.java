@@ -84,6 +84,7 @@ public class MembershipSubscriptionService {
         this.packages = packages;
         this.members = members;
         this.clock = clock;
+        this.dynamicQrService = dynamicQrService != null ? dynamicQrService : new DynamicQrService();
         this.enrollmentService = enrollmentService;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
@@ -125,8 +126,9 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
         subscription.setMembershipPackage(membershipPackage);
+        int durationDays = Math.max(1, membershipPackage.getDurationDays());
         subscription.setStartDate(today);
-        subscription.setEndDate(today.plusDays(membershipPackage.getDurationDays()));
+        subscription.setEndDate(today.plusDays(durationDays - 1L));
         subscription.setStatus(STATUS_PENDING_PAYMENT);
         subscription.setCreatedAt(LocalDateTime.now(clock));
         subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -184,8 +186,9 @@ public class MembershipSubscriptionService {
         renewal.setMember(previous.getMember());
         renewal.setMembershipPackage(membershipPackage);
         renewal.setPreviousSubscription(previous);
+        int durationDays = Math.max(1, membershipPackage.getDurationDays());
         renewal.setStartDate(newStartDate);
-        renewal.setEndDate(newStartDate.plusDays(membershipPackage.getDurationDays()));
+        renewal.setEndDate(newStartDate.plusDays(durationDays - 1L));
         renewal.setStatus(STATUS_PENDING_PAYMENT);
         renewal.setCreatedAt(LocalDateTime.now(clock));
         renewal.setUpdatedAt(LocalDateTime.now(clock));
@@ -252,6 +255,45 @@ public class MembershipSubscriptionService {
         upgradeSub.setUpdatedAt(LocalDateTime.now(clock));
 
         return toDto(subscriptions.saveAndFlush(upgradeSub));
+    }
+
+    /**
+     * Hủy yêu cầu gói tập đang ở trạng thái chờ thanh toán (pending_payment).
+     * Hội viên (chủ sở hữu) hoặc Lễ tân / Quản lý đều có thể hủy khi chưa thanh toán.
+     */
+    @Transactional
+    public SubscriptionDto cancelPending(AuthenticatedPrincipal principal, Long subscriptionId) {
+        MembershipSubscription subscription = subscriptions.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+
+        boolean isStaff = principal != null && ("CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                || "RECEPTIONIST".equalsIgnoreCase(principal.role())
+                || "MANAGER".equalsIgnoreCase(principal.role())
+                || "STAFF".equalsIgnoreCase(principal.role()));
+        boolean isOwner = principal != null
+                && subscription.getMember() != null
+                && subscription.getMember().getUserId().equals(principal.id());
+
+        if (!isStaff && !isOwner) {
+            throw new ForbiddenException(
+                    "MEMBERSHIP_NOT_OWNER",
+                    "error.membership.not_owner",
+                    null,
+                    "Subscription does not belong to the authenticated member");
+        }
+
+        if (!STATUS_PENDING_PAYMENT.equalsIgnoreCase(subscription.getStatus())) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_CANCEL_NOT_PENDING",
+                    "error.membership.cancel_not_pending",
+                    null,
+                    "Only a pending payment subscription can be cancelled");
+        }
+
+        subscription.setStatus("cancelled");
+        subscription.setUpdatedAt(LocalDateTime.now(clock));
+
+        return toDto(subscriptions.saveAndFlush(subscription));
     }
 
     private boolean isHigherPackage(MembershipPackage currentPackage, MembershipPackage targetPackage) {
@@ -495,8 +537,9 @@ public class MembershipSubscriptionService {
         }
 
         LocalDate start = isUpgrade ? today : (subscription.getStartDate() != null ? subscription.getStartDate() : today);
+        int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
         subscription.setStartDate(start);
-        subscription.setEndDate(start.plusDays(subscription.getMembershipPackage().getDurationDays()));
+        subscription.setEndDate(start.plusDays(durationDays - 1L));
         subscription.setQrCode(UUID.randomUUID().toString());
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setUpdatedAt(LocalDateTime.now(clock));

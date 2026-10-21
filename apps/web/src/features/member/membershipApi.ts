@@ -103,3 +103,13 @@ export const requestMembershipHold = (
       body: JSON.stringify({ reason }),
     },
   );
+
+export const cancelPendingMembershipSubscription = (
+  subscriptionId: number,
+) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/cancel`,
+    {
+      method: 'POST',
+    },
+  );

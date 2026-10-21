@@ -416,6 +416,46 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void cancelPending_cancelsPendingSubscriptionForOwnerOrStaff() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName("Gói 1 tháng");
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(150L);
+        sub.setMember(member);
+        sub.setMembershipPackage(pack);
+        sub.setStatus("pending_payment");
+
+        when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto cancelled = service.cancelPending(principal, 150L);
+
+        assertThat(cancelled.status()).isEqualTo("cancelled");
+        assertThat(cancelled.id()).isEqualTo(150L);
+    }
+
+    @Test
+    void cancelPending_failsWhenAlreadyActive() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setId(150L);
+        sub.setMember(member);
+        sub.setStatus("active");
+
+        when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.cancelPending(principal, 150L))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
     void mine_returnsListOrdered() {
         Member member = new Member();
         member.setUserId(10L);

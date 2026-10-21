@@ -153,6 +153,15 @@ export const receptionApi = {
   },
 
   /**
+   * Hủy yêu cầu đăng ký/gia hạn/nâng cấp gói tập đang chờ thanh toán (pending_payment)
+   */
+  cancelPendingSubscription: async (subscriptionId: number): Promise<void> => {
+    await apiFetch(`/memberships/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+    });
+  },
+
+  /**
    * Lấy danh sách yêu cầu bảo lưu gói tập đang chờ lễ tân xử lý
    */
   getPendingHoldRequests: async (): Promise<HoldRequestItem[]> => {

@@ -35,6 +35,7 @@ export function StaffReceptionPage() {
   const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
   const [loadingPending, setLoadingPending] = useState(true);
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
+  const [cancellingPendingId, setCancellingPendingId] = useState<number | null>(null);
 
   // Danh sách yêu cầu bảo lưu gói tập đang chờ xử lý
   const [holdList, setHoldList] = useState<HoldRequestItem[]>([]);
@@ -114,6 +115,21 @@ export function StaffReceptionPage() {
       currentPackage: item.packageName,
       endDate: `${item.startDate} → ${item.endDate}`,
     });
+  };
+
+  const handleCancelPendingItem = async (item: PendingSubscriptionItem) => {
+    if (cancellingPendingId !== null || isSubmittingPayment) return;
+    setCancellingPendingId(item.id);
+    try {
+      await receptionApi.cancelPendingSubscription(item.id);
+      toast(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success');
+      await loadPendingSubscriptions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Hủy yêu cầu gói tập thất bại.';
+      toast(msg, 'error');
+    } finally {
+      setCancellingPendingId(null);
+    }
   };
 
   const handleApproveHold = async (item: HoldRequestItem) => {
@@ -438,6 +454,18 @@ export function StaffReceptionPage() {
                       }}
                     >
                       {isSelected ? 'Đang chọn xử lý' : 'Chọn xác nhận'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                      disabled={cancellingPendingId !== null || isSubmittingPayment}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleCancelPendingItem(item);
+                      }}
+                    >
+                      {cancellingPendingId === item.id ? 'Đang hủy...' : 'Hủy yêu cầu'}
                     </button>
                   </div>
                 </div>

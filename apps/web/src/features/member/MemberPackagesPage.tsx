@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import {
+  cancelPendingMembershipSubscription,
   createMembershipSubscription,
   getCurrentMembership,
   getMembershipHistory,
@@ -132,6 +133,7 @@ export function MemberPackagesPage() {
   const [holdReason, setHoldReason] = useState('');
   const [holdError, setHoldError] = useState<string | null>(null);
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
+  const [isCancellingPending, setIsCancellingPending] = useState(false);
 
   const loadPackages = useCallback(async () => {
     setPackagesState({ status: 'loading' });
@@ -298,6 +300,40 @@ export function MemberPackagesPage() {
       );
     } finally {
       setIsSubmittingHold(false);
+    }
+  }
+
+  async function handleCancelPending(subscriptionId: number) {
+    if (isCancellingPending || requestBusy.current) return;
+    requestBusy.current = true;
+    setIsCancellingPending(true);
+    setActionError(null);
+    try {
+      const cancelled = await cancelPendingMembershipSubscription(subscriptionId);
+      createdSubscriptions.current = createdSubscriptions.current.map((item) =>
+        item.id === cancelled.id ? cancelled : item,
+      );
+      setHistoryState((previous) =>
+        previous.status === 'success'
+          ? {
+              status: 'success',
+              data: previous.data.map((item) =>
+                item.id === cancelled.id ? cancelled : item,
+              ),
+            }
+          : previous,
+      );
+      setRequestResult(null);
+      setHoldSuccessMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`);
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.',
+      );
+    } finally {
+      setIsCancellingPending(false);
+      requestBusy.current = false;
     }
   }
 
@@ -484,6 +520,15 @@ export function MemberPackagesPage() {
                 >
                   Tải lại trạng thái
                 </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                  disabled={isCancellingPending}
+                  onClick={() => void handleCancelPending(pending.id)}
+                >
+                  {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                </button>
               </div>
             </>
           )}
@@ -503,13 +548,22 @@ export function MemberPackagesPage() {
             <p role="alert">Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.</p>
           )}
           {!(paymentsState.status === 'success' && relatedPayments.length === 0 && pendingPackage) && (
-            <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
               <button
                 type="button"
                 className="btn-secondary"
                 onClick={() => { void loadCurrent(); void loadHistory(); void loadPayments(); }}
               >
                 Tải lại trạng thái
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                disabled={isCancellingPending}
+                onClick={() => void handleCancelPending(pending.id)}
+              >
+                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
               </button>
             </div>
           )}
@@ -821,14 +875,24 @@ export function MemberPackagesPage() {
               Yêu cầu đã được đồng bộ tới Quầy Lễ Tân. Gói tập sẽ được kích hoạt ngay sau khi nhân viên xác nhận thanh toán.
             </p>
 
-            <button
-              type="button"
-              className="btn-primary"
-              style={{ marginTop: 20 }}
-              onClick={() => setRequestResult(null)}
-            >
-              Đóng
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                disabled={isCancellingPending}
+                onClick={() => void handleCancelPending(requestResult.subscription.id)}
+              >
+                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setRequestResult(null)}
+              >
+                Đóng
+              </button>
+            </div>
           </section>
         </div>
       )}

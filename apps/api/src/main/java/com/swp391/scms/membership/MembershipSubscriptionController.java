@@ -73,6 +73,15 @@ public class MembershipSubscriptionController {
                 .body(ApiResponse.created(msg("membership.subscription.upgraded"), service.upgrade(principal, id, request)));
     }
 
+    @Operation(summary = "Cancel a pending payment membership subscription request")
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<SubscriptionDto> cancelPending(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.cancelled"), service.cancelPending(principal, id));
+    }
+
     @Operation(summary = "Request a hold/freeze on an active membership subscription")
     @PostMapping("/{id}/hold")
     public ApiResponse<SubscriptionDto> requestHold(

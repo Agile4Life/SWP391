@@ -169,6 +169,20 @@ class MembershipSubscriptionControllerTest {
     }
 
     @Test
+    void cancelPending_returnsOk() throws Exception {
+        SubscriptionDto dto = new SubscriptionDto(
+                100L, 10L, 1L, "Gói 1 tháng", null,
+                LocalDate.now(), LocalDate.now().plusDays(30), "cancelled", null, LocalDateTime.now()
+        );
+        when(service.cancelPending(any(), eq(100L))).thenReturn(dto);
+
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/100/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(100L))
+                .andExpect(jsonPath("$.data.status").value("cancelled"));
+    }
+
+    @Test
     void getMy_returnsOk_withSubscriptionObject() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
                 100L, 10L, 1L, "Gói 1 tháng", null,

@@ -855,6 +855,25 @@ paths:
         '409':
           description: Đang có yêu cầu chờ thanh toán
 
+  /memberships/subscriptions/{id}/cancel:
+    post:
+      summary: Hủy yêu cầu gói tập đang chờ Lễ tân xác nhận thanh toán (MEMBER, RECEPTIONIST, CENTER_MANAGER)
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Hủy yêu cầu gói tập thành công
+        '400':
+          description: Gói tập không ở trạng thái chờ thanh toán
+        '403':
+          description: Không có quyền hủy yêu cầu này
+
   /memberships/subscriptions/{id}/hold:
     post:
       summary: Hội viên chủ động gửi yêu cầu bảo lưu gói tập kèm lý do (SCRUM-71)

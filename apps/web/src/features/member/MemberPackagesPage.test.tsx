@@ -6,7 +6,7 @@ import type { MemberSubscription } from './membershipApi';
 
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
-  create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), createPayment: vi.fn(),
+  create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), cancelPending: vi.fn(), createPayment: vi.fn(),
 }));
 vi.mock('./membershipApi', () => ({
   getMembershipPackages: api.packages,
@@ -17,6 +17,7 @@ vi.mock('./membershipApi', () => ({
   renewMembershipSubscription: api.renew,
   upgradeMembershipSubscription: api.upgrade,
   requestMembershipHold: api.requestHold,
+  cancelPendingMembershipSubscription: api.cancelPending,
   createPaymentRequest: api.createPayment,
 }));
 
@@ -291,8 +292,27 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Yêu cầu #12');
     expect(host.textContent).toContain('Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
+    expect(button('Hủy yêu cầu')).toBeDefined();
     expect(host.querySelector('img')).toBeNull();
     expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('allows cancelling a pending subscription request awaiting receptionist confirmation', async () => {
+    const cancelledSub = { ...pending, status: 'cancelled' };
+    api.history.mockResolvedValue([pending]);
+    api.cancelPending.mockResolvedValue(cancelledSub);
+
+    await render();
+    expect(host.textContent).toContain('Yêu cầu #12');
+    expect(button('Hủy yêu cầu')?.disabled).toBe(false);
+
+    await act(async () => {
+      button('Hủy yêu cầu')?.click();
+    });
+
+    expect(api.cancelPending).toHaveBeenCalledExactlyOnceWith(12);
+    expect(host.textContent).toContain('Đã hủy yêu cầu gói tập #12');
+    expect(host.textContent).not.toContain('Thanh toán gói tập • Yêu cầu #12');
   });
 
   it('does not create a second payment when one is pending for this subscription', async () => {
