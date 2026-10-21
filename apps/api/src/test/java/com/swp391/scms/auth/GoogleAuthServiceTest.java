@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleLoginRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
 import com.swp391.scms.auth.dto.GoogleUserInfo;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.UnauthorizedException;
@@ -230,5 +232,40 @@ class GoogleAuthServiceTest {
                 () -> authService.loginWithGoogle(new GoogleLoginRequest("locked-token")));
         assertEquals("ACCOUNT_INACTIVE", ex.getErrorCode());
         verify(jwtService, never()).generateToken(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("OAuth Callback -> Xác thực Google thành công, gửi mã OTP về email thay vì cấp JWT ngay")
+    void testRequestGoogleOAuthOtp_SendsEmailOtpInsteadOfImmediateJwt() {
+        GoogleUserInfo googleUser = new GoogleUserInfo(
+                "sub-oauth-999",
+                "oauthmember@gmail.com",
+                true,
+                "OAuth Member",
+                "https://avatar.com/oauth.jpg"
+        );
+        when(googleTokenVerifierPort.verifyAuthorizationCode("oauth-code-123", "http://localhost:8080/api/v1/auth/google/callback"))
+                .thenReturn(googleUser);
+        when(userRepository.findByGoogleSub("sub-oauth-999")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("oauthmember@gmail.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(createRole("MEMBER")));
+        when(userRepository.findByUsernameIgnoreCase(any())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("hashed-pwd");
+        when(userRepository.saveAndFlush(any())).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(105L);
+            return u;
+        });
+        when(otpService.generateOtp("oauthmember@gmail.com")).thenReturn("482910");
+
+        GoogleOAuthOtpChallenge challenge = authService.requestGoogleOAuthOtp(
+                new GoogleOAuthCallbackRequest(null, null, "oauth-code-123", "http://localhost:8080/api/v1/auth/google/callback")
+        );
+
+        assertNotNull(challenge);
+        assertEquals("oauthmember@gmail.com", challenge.email());
+        assertEquals("482910", challenge.otpCode());
+        verify(otpDeliveryPort).send("oauthmember@gmail.com", "482910");
+        verifyNoInteractions(jwtService);
     }
 }

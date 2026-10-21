@@ -82,6 +82,71 @@ paths:
       summary: Verify Google OTP, activate account, and issue JWT token (public). data = { token, username, role }
       security: []
       responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '403': { description: ACCOUNT_INACTIVE }, '429': { description: MAX_ATTEMPTS } }
+  /auth/google/oauth-callback:
+    post:
+      summary: Verify Google credentials and send a login OTP (SCRUM-89, public)
+      description: >
+        Accepts an ID token, access token, or authorization code in that priority order.
+        Creates or links a MEMBER account and returns an OTP challenge without issuing a JWT.
+        Staff and deleted accounts are rejected. Complete login through /auth/google/verify-otp.
+        This local checkpoint still requires the security follow-ups in docs/reviews/2026-10-21-SCRUM-89-commit-review.md before production release.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              anyOf:
+                - required: [idToken]
+                - required: [accessToken]
+                - required: [code]
+              properties:
+                idToken: {type: string, minLength: 1}
+                accessToken: {type: string, minLength: 1}
+                code: {type: string, minLength: 1}
+                redirectUri: {type: string, format: uri}
+      responses:
+        '200':
+          description: OTP dispatched; data contains email, message, expiresInMinutes and debugOtp only when debug OTP is enabled
+        '401': {description: Invalid Google credentials, unverified email or account linking required}
+        '403': {description: Staff, deleted or locked account}
+        '429': {description: OTP request limit exceeded}
+        '503': {description: OTP delivery is not configured}
+  /auth/google/authorize:
+    get:
+      summary: Start Google authorization code redirect (SCRUM-89, public)
+      description: Requires GOOGLE_CLIENT_ID. Uses GOOGLE_REDIRECT_URI unless redirect_uri is provided. Pending browser-bound state validation before production release.
+      security: []
+      parameters:
+        - name: redirect_uri
+          in: query
+          schema: {type: string, format: uri}
+      responses:
+        '302':
+          description: Redirect to Google consent, or frontend login with google_oauth=not_configured
+          headers:
+            Location: {schema: {type: string, format: uri}}
+  /auth/google/callback:
+    get:
+      summary: Exchange Google authorization code and redirect to the frontend OTP form (SCRUM-89, public)
+      description: Requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and a registered GOOGLE_REDIRECT_URI. Pending state validation before production release.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          schema: {type: string}
+        - name: error
+          in: query
+          schema: {type: string}
+        - name: redirect_uri
+          in: query
+          schema: {type: string, format: uri}
+      responses:
+        '302':
+          description: Frontend login URL with google_oauth=callback and email, or google_oauth=error and a localized error
+          headers:
+            Location: {schema: {type: string, format: uri}}
   /auth/google:
     post:
       summary: Authenticate via Google ID Token (SCRUM-89, public). data = { token, username, role }
@@ -139,20 +204,20 @@ paths:
       summary: Reception member lookup (CENTER_MANAGER, RECEPTIONIST)
       parameters: [ { name: q, in: query, required: true, schema: { type: string, minLength: 2 } } ]
       responses:
-        '200': { description: data = MemberLookupItem[] }
+        '200': { description: "data = MemberLookupItem[]" }
         '400': { description: Keyword too short }
   /disciplines:
-    get: { summary: List disciplines (any authenticated user), responses: { '200': { description: data = Discipline[] } } }
+    get: { summary: List disciplines (any authenticated user), responses: { '200': { description: "data = Discipline[]" } } }
     post: { summary: Create discipline (CENTER_MANAGER), responses: { '201': { description: Created }, '409': { description: Name exists } } }
   /disciplines/{id}:
     put: { summary: Update discipline (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /rooms:
-    get: { summary: List rooms, responses: { '200': { description: data = Room[] } } }
+    get: { summary: List rooms, responses: { '200': { description: "data = Room[]" } } }
     post: { summary: Create room (CENTER_MANAGER), responses: { '201': { description: Created } } }
   /rooms/{id}:
     put: { summary: Update room incl. status (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
   /packages:
-    get: { summary: List membership packages, responses: { '200': { description: data = MembershipPackage[] } } }
+    get: { summary: List membership packages, responses: { '200': { description: "data = MembershipPackage[]" } } }
     post: { summary: Create package (audited; CENTER_MANAGER), responses: { '201': { description: Created } } }
   /packages/{id}:
     put: { summary: Update package (audited; CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }

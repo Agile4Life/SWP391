@@ -20,6 +20,13 @@ export interface GoogleVerifyResponse {
   role: string;
 }
 
+export interface GoogleOAuthCallbackInput {
+  idToken?: string;
+  accessToken?: string;
+  code?: string;
+  redirectUri?: string;
+}
+
 export const register = (input: RegisterInput) =>
   apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(input) });
 
@@ -41,9 +48,19 @@ export const googleVerifyOtp = (email: string, otpCode: string) =>
     body: JSON.stringify({ email, otpCode }),
   });
 
+export const googleOAuthCallback = (input: GoogleOAuthCallbackInput) =>
+  apiFetch<GoogleSendOtpResponse>('/auth/google/oauth-callback', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+export const getGoogleOAuthAuthorizeUrl = () => {
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
+  return `${baseUrl}/auth/google/authorize`;
+};
+
 export const googleLoginWithIdToken = (idToken: string) =>
   apiFetch<GoogleVerifyResponse>('/auth/google', {
     method: 'POST',
     body: JSON.stringify({ idToken }),
   });
-
