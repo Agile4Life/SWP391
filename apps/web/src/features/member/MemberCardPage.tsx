@@ -28,8 +28,11 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const [qrError, setQrError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const status = cardStatus(subscription.status, subscription.endDate);
+  const today = new Date();
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const canShowQr =
     validDate(subscription.startDate) &&
+    subscription.startDate <= localToday &&
     validDate(subscription.endDate) &&
     (status === 'active' || status === 'warning') &&
     Boolean(subscription.qrCode?.trim());
@@ -123,9 +126,14 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => {
-              void navigator.clipboard?.writeText(subscription.qrCode ?? '');
-              toast('Đã sao chép mã QR check-in vào bộ nhớ tạm!');
+            onClick={async () => {
+              try {
+                if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+                await navigator.clipboard.writeText(subscription.qrCode!);
+                toast('Đã sao chép mã QR check-in vào bộ nhớ tạm!');
+              } catch {
+                toast('Không thể sao chép mã QR. Vui lòng thử lại.', 'error');
+              }
             }}
           >
             Sao chép mã QR Check-in
