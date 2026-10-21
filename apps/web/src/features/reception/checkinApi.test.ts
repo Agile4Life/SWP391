@@ -67,7 +67,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
     );
   });
 
-  it('getHistory fetches from /api/v1/check-in/history and caps at 10 items', async () => {
+  it('getHistory preserves all visits so pending checkout entries are not truncated', async () => {
     const items = Array.from({ length: 15 }, (_, idx) => ({
       id: idx + 1,
       memberId: 2,
@@ -85,7 +85,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     const history = await checkinApi.getHistory();
-    expect(history).toHaveLength(10);
+    expect(history).toHaveLength(15);
     expect(mockFetch).toHaveBeenCalledWith('/api/v1/check-in/history', expect.anything());
   });
 });
