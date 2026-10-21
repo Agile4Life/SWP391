@@ -67,11 +67,9 @@ export const reportsApi = {
     const todayItem = daily.find((d) => d.date === todayStr);
     const todayRevenue = todayItem ? Number(todayItem.revenue) || 0 : 0;
 
-    // BR-03: Tỷ lệ gia hạn = số lượt gia hạn / số gói hết hạn trong kỳ; mẫu số bằng 0 hiển thị "—" thay vì lỗi chia 0
-    // Giả định số gói hết hạn trong kỳ: nếu không có gói hết hạn (expiredCount === 0), trả về null để UI hiện "—"
-    const expiredCount = packagesSoldCount > 0 ? packagesSoldCount : 0;
-    const renewedCount = Math.floor(packagesSoldCount * 0.7); // Số lượt khách tiếp tục gia hạn
-    const renewalRate = expiredCount > 0 ? (renewedCount / expiredCount) * 100 : null;
+    // The revenue endpoints do not provide expired/renewed subscription counts.
+    // Keep this unavailable rather than inventing a renewal rate from package sales.
+    const renewalRate = null;
 
     return {
       periodRevenue,

@@ -23,6 +23,14 @@ const formatTransactionTime = (paidAt: string) => {
   }
 };
 
+// CSV quoting alone does not stop spreadsheet formula evaluation.
+const csvText = (raw: string) => {
+  // eslint-disable-next-line no-control-regex -- include leading control characters in the formula guard
+  const unsafe = /^[\u0000-\u0020]*[=+@-]|^[\t\r\n]/.test(raw);
+  const value = unsafe ? "'" + raw : raw;
+  return `"${value.replace(/"/g, '""')}"`;
+};
+
 export function ManagerReportsPage() {
   const currentUser = getCurrentUser();
 
@@ -126,24 +134,20 @@ export function ManagerReportsPage() {
     setIsExporting(true);
     try {
       // 1. Lưu ảnh chụp báo cáo Snapshot lên Database Supabase qua API
-      try {
-        await reportsApi.createSnapshot({
-          reportType: 'revenue',
-          periodStart: appliedRange.startDate,
-          periodEnd: appliedRange.endDate,
-          data: JSON.stringify({
-            periodRevenue: summary.periodRevenue,
-            todayRevenue: summary.todayRevenue,
-            packagesSoldCount: summary.packagesSoldCount,
-            renewalRate: summary.renewalRate,
-            dailyRevenueCount: summary.dailyRevenue.length,
-            packageRevenueCount: summary.packageRevenue.length,
-            transactionCount: summary.recentTransactions.length,
-          }),
-        });
-      } catch (snapshotErr) {
-        console.warn('Lưu snapshot lên server thất bại hoặc chưa có kết nối:', snapshotErr);
-      }
+      await reportsApi.createSnapshot({
+        reportType: 'revenue',
+        periodStart: appliedRange.startDate,
+        periodEnd: appliedRange.endDate,
+        data: JSON.stringify({
+          periodRevenue: summary.periodRevenue,
+          todayRevenue: summary.todayRevenue,
+          packagesSoldCount: summary.packagesSoldCount,
+          renewalRate: summary.renewalRate,
+          dailyRevenueCount: summary.dailyRevenue.length,
+          packageRevenueCount: summary.packageRevenue.length,
+          transactionCount: summary.recentTransactions.length,
+        }),
+      });
 
       // 2. Tạo nội dung file CSV có BOM UTF-8 (\uFEFF) mở chuẩn trong Excel tiếng Việt
       let csv = '\uFEFF';
@@ -152,37 +156,39 @@ export function ManagerReportsPage() {
       csv += `Thời Gian Xuất: ${new Date().toLocaleString('vi-VN')}\n`;
       csv += `Người Xuất: Quản lý trung tâm (Center Manager)\n\n`;
 
-      csv += '=== 1. TỔNG QUAN CHỈ SỐ KPI ===\n';
+      csv += '1. TỔNG QUAN CHỈ SỐ KPI\n';
       csv += `Doanh Thu Kỳ Lọc,${summary.periodRevenue} VNĐ\n`;
       csv += `Doanh Thu Hôm Nay,${summary.todayRevenue} VNĐ\n`;
       csv += `Số Gói Đã Bán,${summary.packagesSoldCount} gói\n`;
       csv += `Tỷ Lệ Gia Hạn,${summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}\n\n`;
 
-      csv += '=== 2. DOANH THU THEO GÓI TẬP ===\n';
+      csv += '2. DOANH THU THEO GÓI TẬP\n';
       csv += 'Tên Gói Tập,Số Lượng Bán,Doanh Thu (VNĐ),Tỷ Trọng (%)\n';
       summary.packageRevenue.forEach((pkg) => {
-        csv += `"${pkg.packageName.replace(/"/g, '""')}",${pkg.subscriptionCount},${pkg.revenue},${pkg.percentage.toFixed(1)}%\n`;
+        csv += `${csvText(pkg.packageName)},${pkg.subscriptionCount},${pkg.revenue},${pkg.percentage.toFixed(1)}%\n`;
       });
       csv += '\n';
 
-      csv += '=== 3. DOANH THU THEO TỪNG NGÀY ===\n';
+      csv += '3. DOANH THU THEO TỪNG NGÀY\n';
       csv += 'Ngày,Doanh Thu (VNĐ),Số Lượng Giao Dịch\n';
       summary.dailyRevenue.forEach((d) => {
-        csv += `${d.date},${d.revenue},${d.transactionCount}\n`;
+        csv += `${csvText(d.date)},${d.revenue},${d.transactionCount}\n`;
       });
       csv += '\n';
 
-      csv += '=== 4. GIAO DỊCH GẦN NHẤT ===\n';
+      csv += '4. GIAO DỊCH GẦN NHẤT\n';
       csv += 'Mã Hóa Đơn,Hội Viên,Gói Tập,Số Tiền (VNĐ),Hình Thức,Thời Gian\n';
       summary.recentTransactions.forEach((tx) => {
         const timeObj = formatTransactionTime(tx.paidAt);
         const timeStr = `${timeObj.time} ${timeObj.date}`.trim();
-        csv += `"${tx.invoiceNumber ?? 'Chưa xuất'}",` +
-          `"${tx.memberName.replace(/"/g, '""')}",` +
-          `"${(tx.packageName ?? '—').replace(/"/g, '""')}",` +
-          `${tx.amount},` +
-          `"${paymentMethods[tx.method] ?? tx.method}",` +
-          `"${timeStr}"\n`;
+        csv += [
+          csvText(tx.invoiceNumber ?? 'Chưa xuất'),
+          csvText(tx.memberName),
+          csvText(tx.packageName ?? '—'),
+          tx.amount,
+          csvText(paymentMethods[tx.method] ?? tx.method),
+          csvText(timeStr),
+        ].join(',') + '\n';
       });
 
       // 3. Tải xuống file Excel/CSV về máy tính
@@ -396,7 +402,7 @@ export function ManagerReportsPage() {
               {summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}
             </div>
             <div className="metric-trend">
-              {summary.renewalRate !== null ? 'Khách hàng tiếp tục duy trì' : 'Không có gói hết hạn trong kỳ'}
+              {summary.renewalRate !== null ? 'Khách hàng tiếp tục duy trì' : 'Chưa có dữ liệu tỷ lệ gia hạn'}
             </div>
           </div>
         </div>

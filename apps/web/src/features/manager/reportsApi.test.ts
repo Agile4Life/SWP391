@@ -50,6 +50,7 @@ describe('reportsApi', () => {
     expect(summary.periodRevenue).toBe(5000000);
     expect(summary.todayRevenue).toBe(2000000);
     expect(summary.packagesSoldCount).toBe(3);
+    expect(summary.renewalRate).toBeNull();
     expect(summary.dailyRevenue).toHaveLength(2);
   });
   it('uses actual individual payments instead of synthesizing transactions from daily totals', async () => {
