@@ -47,7 +47,7 @@ export const checkinApi = {
   },
 
   /**
-   * Lấy lịch sử check-in (GET /api/v1/check-in/history), giới hạn tối đa 10 bản ghi gần nhất cho bảng sảnh
+   * Lấy toàn bộ lịch sử hôm nay; UI tự giới hạn nhật ký, giữ đủ các lượt chưa checkout.
    */
   getHistory: async (filter?: CheckinHistoryFilter): Promise<CheckinDto[]> => {
     const params = new URLSearchParams();
@@ -56,7 +56,7 @@ export const checkinApi = {
     if (filter?.toDate) params.set('toDate', filter.toDate);
     const qs = params.toString() ? `?${params.toString()}` : '';
     const list = await apiFetch<CheckinDto[]>(`/check-in/history${qs}`);
-    return Array.isArray(list) ? list.slice(0, 10) : [];
+    return Array.isArray(list) ? list : [];
   },
 };
 

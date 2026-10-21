@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { toast } from '../../shared/ui/toast';
 import { checkinApi, type CheckinDto } from './checkinApi';
+import './staff-check-in.css';
 
 const formatTime = (iso?: string | null): string => {
   if (!iso) return '—';
@@ -32,6 +33,8 @@ export function StaffCheckInPage() {
   const [selectedGate, setSelectedGate] = useState('Turnstile A1 - Sảnh Chính');
   const [isScanning, setIsScanning] = useState(false);
   const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
+  const checkoutBusy = useRef(false);
+  const [historyView, setHistoryView] = useState<'inside' | 'recent'>('inside');
 
   const [currentResult, setCurrentResult] = useState<CheckinDto | null>(null);
   const [recentCheckins, setRecentCheckins] = useState<CheckinDto[]>([]);
@@ -43,7 +46,7 @@ export function StaffCheckInPage() {
     setHistoryError(null);
     try {
       const list = await checkinApi.getHistory();
-      setRecentCheckins(list.slice(0, 10));
+      setRecentCheckins(list);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải lịch sử ra vào cổng.';
       setHistoryError(msg);
@@ -96,7 +99,7 @@ export function StaffCheckInPage() {
         gate: selectedGate,
       });
       setCurrentResult(res);
-      setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)].slice(0, 10));
+      setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)]);
       setScanCode('');
 
       if (isCheckinGranted(res.status)) {
@@ -130,7 +133,8 @@ export function StaffCheckInPage() {
   };
 
   const handleCheckout = async (checkinId: number) => {
-    if (checkingOutId !== null) return;
+    if (checkoutBusy.current) return;
+    checkoutBusy.current = true;
     setCheckingOutId(checkinId);
     try {
       const updated = await checkinApi.checkout(checkinId);
@@ -143,17 +147,20 @@ export function StaffCheckInPage() {
       const msg = err instanceof Error ? err.message : 'Checkout thất bại.';
       toast(msg, 'error');
     } finally {
+      checkoutBusy.current = false;
       setCheckingOutId(null);
     }
   };
 
   const isGranted = isCheckinGranted(currentResult?.status);
+  const openVisits = recentCheckins.filter((record) => isCheckinGranted(record.status) && !record.checkOutTime);
+  const visibleVisits = historyView === 'inside' ? openVisits : recentCheckins.slice(0, 10);
 
   return (
-    <div className="portal-container">
+    <div className="portal-container checkin-page">
       <PageHeader
         eyebrow="Lễ tân &amp; Kiểm soát sảnh"
-        title="Quét QR Check-in Cổng"
+        title="Check-in & Checkout tại cổng"
         actions={
           <button
             type="button"
@@ -166,7 +173,7 @@ export function StaffCheckInPage() {
         }
       />
 
-      <div className="grid-2">
+      <div className="checkin-layout">
         {/* Scanner Panel */}
         <div className="portal-card">
           <div className="portal-card-header">
@@ -263,10 +270,21 @@ export function StaffCheckInPage() {
           )}
         </div>
 
-        {/* Live Stream Table (Capped at 10 recent entries) */}
+        {/* Keep open visits separate from the latest ten audit entries. */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Nhật Ký 10 Lượt Ra Vào Gần Nhất</h2>
+            <h2 className="portal-card-title">Theo dõi ra vào hôm nay</h2>
+          </div>
+
+          <div className="portal-tabs" aria-label="Danh sách ra vào">
+            <button type="button" className={`portal-tab ${historyView === 'inside' ? 'active' : ''}`}
+              aria-pressed={historyView === 'inside'} onClick={() => setHistoryView('inside')}>
+              Đang trong trung tâm ({openVisits.length})
+            </button>
+            <button type="button" className={`portal-tab ${historyView === 'recent' ? 'active' : ''}`}
+              aria-pressed={historyView === 'recent'} onClick={() => setHistoryView('recent')}>
+              10 lượt gần nhất
+            </button>
           </div>
 
           {historyError && (
@@ -305,27 +323,50 @@ export function StaffCheckInPage() {
                 <div key={n} className="portal-skeleton" style={{ height: 52, borderRadius: 8 }} />
               ))}
             </div>
-          ) : recentCheckins.length === 0 ? (
+          ) : visibleVisits.length === 0 ? (
             <div style={{ padding: '40px 16px', textAlign: 'center', color: '#7E7771' }} data-testid="checkin-history-empty">
-              Chưa có lượt check-in nào được ghi nhận.
+              {historyView === 'inside'
+                ? 'Không có hội viên đang trong trung tâm từ các lượt vào hôm nay. Chọn “10 lượt gần nhất” để xem nhật ký.'
+                : 'Chưa có lượt check-in nào được ghi nhận.'}
             </div>
           ) : (
             <div className="portal-table-wrapper">
               <table className="portal-table">
                 <thead>
                   <tr>
-                    <th>Giờ vào / ra</th>
+                    <th className="checkin-actions">Ra về</th>
                     <th>Hội viên</th>
+                    <th>Giờ vào / ra</th>
                     <th>Cổng</th>
                     <th>Trạng thái</th>
-                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentCheckins.map((rec, i) => {
+                  {visibleVisits.map((rec, i) => {
                     const ok = isCheckinGranted(rec.status);
                     return (
                       <tr key={rec.id} className="row-in" style={{ '--i': i } as React.CSSProperties}>
+                        <td className="checkin-actions">
+                          {ok && !rec.checkOutTime ? (
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              aria-label={`Checkout / Ra về: ${rec.memberName || `HV #${rec.memberId}`}`}
+                              disabled={checkingOutId !== null}
+                              onClick={() => void handleCheckout(rec.id)}
+                            >
+                              {checkingOutId === rec.id ? 'Đang ghi nhận...' : 'Checkout / Ra về'}
+                            </button>
+                          ) : rec.checkOutTime ? (
+                            <span style={{ fontSize: '0.78rem', color: '#6A635D' }}>Đã ra về</span>
+                          ) : '—'}
+                        </td>
+                        <td>
+                          <div>{rec.memberName || 'Thẻ QR không xác định'}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>
+                            {rec.memberId ? `HV #${rec.memberId}` : 'Chưa định danh'}
+                          </div>
+                        </td>
                         <td style={{ fontWeight: 600 }}>
                           <div>Vào: {formatTime(rec.checkInTime)}</div>
                           {rec.checkOutTime && (
@@ -333,12 +374,6 @@ export function StaffCheckInPage() {
                               Ra: {formatTime(rec.checkOutTime)}
                             </div>
                           )}
-                        </td>
-                        <td>
-                          <div>{rec.memberName || 'Thẻ QR không xác định'}</div>
-                          <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>
-                            {rec.memberId ? `HV #${rec.memberId}` : 'Chưa định danh'}
-                          </div>
                         </td>
                         <td style={{ fontSize: '0.8rem' }}>{rec.gate || 'Sảnh chính'}</td>
                         <td>
@@ -349,22 +384,6 @@ export function StaffCheckInPage() {
                             <div style={{ fontSize: '0.72rem', color: '#B91C1C', marginTop: 2 }}>
                               {rec.denialReason}
                             </div>
-                          )}
-                        </td>
-                        <td>
-                          {ok && !rec.checkOutTime ? (
-                            <button
-                              type="button"
-                              className="btn-secondary btn-sm"
-                              disabled={checkingOutId === rec.id}
-                              onClick={() => void handleCheckout(rec.id)}
-                            >
-                              {checkingOutId === rec.id ? '...' : 'Checkout'}
-                            </button>
-                          ) : rec.checkOutTime ? (
-                            <span style={{ fontSize: '0.78rem', color: '#6A635D' }}>Đã ra về</span>
-                          ) : (
-                            '—'
                           )}
                         </td>
                       </tr>
