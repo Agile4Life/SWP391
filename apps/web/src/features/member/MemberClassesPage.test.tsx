@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassesPage } from './MemberClassesPage';
+import { ApiError } from '../../shared/api/client';
 
 const mocks = vi.hoisted(() => ({
   sessions: vi.fn(),
@@ -134,5 +135,103 @@ describe('MemberClassesPage', () => {
     mocks.sessions.mockResolvedValue([{ ...session, sessionDate: today, startTime: '00:00:00', endTime: '23:59:59', bookedCount: 2 }]);
     await render();
     expect(host.textContent).toContain('Không thể đặt');
+  });
+  it('clears rejected waitlist error when the week changes', async () => {
+    mocks.sessions.mockResolvedValueOnce([session]).mockResolvedValueOnce([]);
+    mocks.joinWaitlist.mockRejectedValue(new ApiError('Hội viên đã có chỗ trong lớp học này.', 400));
+    await render();
+    const join = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tham gia hàng chờ')!;
+    await act(async () => join.click());
+    expect(host.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần kế tiếp')!.click());
+    expect(host.textContent).toContain('Chưa có lịch học');
+    expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
+    expect(mocks.joinWaitlist).toHaveBeenCalledExactlyOnceWith(8);
+  });
+
+  it('clears old action error on discipline, day and tab changes', async () => {
+    mocks.sessions.mockResolvedValue([session]);
+    mocks.joinWaitlist.mockRejectedValue(new ApiError('Đã có chỗ', 400));
+    await render();
+    const join = () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tham gia hàng chờ')!;
+    await act(async () => join().click());
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Boxing')!.click());
+    expect(host.textContent).not.toContain('Đã có chỗ');
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Yoga')!.click());
+    await act(async () => join().click());
+    const day = host.querySelector('select')!;
+    await act(async () => { day.value = '2'; day.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(host.textContent).not.toContain('Đã có chỗ');
+    await act(async () => { day.value = 'ALL'; day.dispatchEvent(new Event('change', { bubbles: true })); });
+    await act(async () => join().click());
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Lịch học của tôi'))!.click());
+    expect(host.textContent).not.toContain('Đã có chỗ');
+  });
+
+  it('keeps a real schedule load error when changing filters', async () => {
+    mocks.sessions.mockRejectedValue(new Error('offline'));
+    await render();
+    expect(host.textContent).toContain('Không tải được lịch học');
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Boxing')!.click());
+    expect(host.textContent).toContain('Không tải được lịch học');
+  });
+
+  it('does not send duplicate waitlist requests while pending', async () => {
+    mocks.sessions.mockResolvedValue([session]);
+    let resolve!: (value: unknown) => void;
+    mocks.joinWaitlist.mockReturnValue(new Promise((done) => { resolve = done; }));
+    await render();
+    const join = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tham gia hàng chờ')!;
+    await act(async () => { join.click(); join.click(); });
+    expect(mocks.joinWaitlist).toHaveBeenCalledTimes(1);
+    expect(join.disabled).toBe(true);
+    await act(async () => resolve({ id: 30 }));
+  });
+
+  it('keeps booking and cancellation working and blocks duplicate booking', async () => {
+    const available = { ...session, bookedCount: 1 };
+    const booked = { id: 41, classId: 3, className: 'Yoga Flow', memberId: 9, sessionId: 8,
+      sessionDate: '2099-10-19', startTime: '08:00:00', endTime: '09:00:00', status: 'booked',
+      enrolledAt: '2099-10-01T08:00:00', cancelledAt: null, cancelReason: null };
+    mocks.sessions.mockResolvedValueOnce([available]).mockResolvedValueOnce([{ ...available, bookedCount: 2 }])
+      .mockResolvedValueOnce([available]);
+    mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([booked]).mockResolvedValueOnce([]);
+    let finishBooking!: (value: unknown) => void;
+    mocks.enroll.mockReturnValue(new Promise((done) => { finishBooking = done; }));
+    mocks.cancelEnrollment.mockResolvedValue({ ...booked, status: 'cancelled' });
+    await render();
+    const book = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Đặt chỗ ngay')!;
+    await act(async () => { book.click(); book.click(); });
+    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(8);
+    expect(book.disabled).toBe(true);
+    await act(async () => finishBooking(booked));
+    expect(host.textContent).toContain('2 / 12');
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!.click());
+    expect(mocks.cancelEnrollment).toHaveBeenCalledExactlyOnceWith(41);
+    expect(host.textContent).toContain('1 / 12');
+  });
+  it('does not revive an old action error after navigating while the request is pending', async () => {
+    mocks.sessions.mockResolvedValueOnce([session]).mockResolvedValueOnce([]);
+    let reject!: (reason: unknown) => void;
+    mocks.joinWaitlist.mockReturnValue(new Promise((_, fail) => { reject = fail; }));
+    await render();
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tham gia hàng chờ')!.click());
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần kế tiếp')!.click());
+    await act(async () => reject(new ApiError('Lỗi buổi cũ', 400)));
+    expect(host.textContent).toContain('Chưa có lịch học');
+    expect(host.textContent).not.toContain('Lỗi buổi cũ');
+  });
+
+  it('restores a class waitlist from the API after remounting', async () => {
+    mocks.sessions.mockResolvedValue([session]);
+    mocks.waitlists.mockResolvedValue([{ id: 30, classId: 3, className: 'Yoga Flow', memberId: 9,
+      status: 'waiting', requestedAt: '2099-10-01T08:00:00' }]);
+    await render();
+    expect(host.textContent).toContain('Đang chờ chỗ');
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render();
+    expect(host.textContent).toContain('Đang chờ chỗ');
+    expect(mocks.waitlists).toHaveBeenCalledTimes(2);
   });
 });

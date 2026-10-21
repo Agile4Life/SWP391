@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { ApiError } from '../../shared/api/client';
@@ -60,6 +60,24 @@ export function MemberClassesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
+  const actionBusy = useRef(false);
+  const actionContext = useRef(0);
+
+  function changeContext(update: () => void) {
+    actionContext.current += 1;
+    setActionError('');
+    setNotice('');
+    update();
+  }
+
+  function beginAction(key: string): boolean {
+    if (actionBusy.current) return false;
+    actionBusy.current = true;
+    setBusyKey(key);
+    setNotice('');
+    setActionError('');
+    return true;
+  }
 
   useEffect(() => {
     let active = true;
@@ -104,65 +122,65 @@ export function MemberClassesPage() {
   }, [waitlistsRetry]);
 
   async function handleEnroll(session: ClassSessionDto) {
-    setBusyKey(`session-${session.id}`);
-    setNotice('');
-    setActionError('');
+    if (!beginAction(`session-${session.id}`)) return;
+    const context = actionContext.current;
     try {
       await enroll(session.id);
-      setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
+      if (context === actionContext.current) setNotice(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`);
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      setActionError(errorMessage(cause));
+      if (context === actionContext.current) setActionError(errorMessage(cause));
     } finally {
+      actionBusy.current = false;
       setBusyKey(null);
     }
   }
 
   async function handleJoinWaitlist(session: ClassSessionDto) {
-    setBusyKey(`session-${session.id}`);
-    setNotice('');
-    setActionError('');
+    if (!beginAction(`session-${session.id}`)) return;
+    const context = actionContext.current;
     try {
       await joinWaitlist(session.id);
-      setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
+      if (context === actionContext.current) setNotice(`Đã tham gia hàng chờ lớp "${session.className}". Hệ thống sẽ tự động đôn chỗ khi có học viên hủy lịch.`);
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      setActionError(errorMessage(cause));
+      if (context === actionContext.current) setActionError(errorMessage(cause));
     } finally {
+      actionBusy.current = false;
       setBusyKey(null);
     }
   }
 
   async function handleCancelEnrollment(enrollmentId: number, className: string) {
-    setBusyKey(`enroll-${enrollmentId}`);
-    setNotice('');
-    setActionError('');
+    if (!beginAction(`enroll-${enrollmentId}`)) return;
+    const context = actionContext.current;
     try {
       await cancelEnrollment(enrollmentId);
-      setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
+      if (context === actionContext.current) setNotice(`Đã hủy đặt chỗ lớp "${className}".`);
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      setActionError(errorMessage(cause));
+      if (context === actionContext.current) setActionError(errorMessage(cause));
     } finally {
+      actionBusy.current = false;
       setBusyKey(null);
     }
   }
 
   async function handleLeaveWaitlist(waitlistId: number, className: string) {
-    setBusyKey(`waitlist-${waitlistId}`);
-    setNotice('');
-    setActionError('');
+    if (!beginAction(`waitlist-${waitlistId}`)) return;
+    const context = actionContext.current;
     try {
       await leaveWaitlist(waitlistId);
-      setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
+      if (context === actionContext.current) setNotice(`Đã rút khỏi hàng chờ lớp "${className}".`);
       setRetry((v) => v + 1);
       setWaitlistsRetry((v) => v + 1);
     } catch (cause) {
-      setActionError(errorMessage(cause));
+      if (context === actionContext.current) setActionError(errorMessage(cause));
     } finally {
+      actionBusy.current = false;
       setBusyKey(null);
     }
   }
@@ -189,14 +207,14 @@ export function MemberClassesPage() {
           <button
             type="button"
             className={`filter-chip ${weekOffset === 0 ? 'is-active' : ''}`}
-            onClick={() => setWeekOffset(0)}
+            onClick={() => changeContext(() => setWeekOffset(0))}
           >
             Tuần này
           </button>
           <button
             type="button"
             className={`filter-chip ${weekOffset === 1 ? 'is-active' : ''}`}
-            onClick={() => setWeekOffset(1)}
+            onClick={() => changeContext(() => setWeekOffset(1))}
           >
             Tuần kế tiếp
           </button>
@@ -210,7 +228,7 @@ export function MemberClassesPage() {
             type="button"
             className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
             aria-pressed={discipline === value}
-            onClick={() => setDiscipline(value)}
+            onClick={() => changeContext(() => setDiscipline(value))}
           >
             {value === 'ALL' ? 'Tất cả bộ môn' : value}
           </button>
@@ -220,7 +238,7 @@ export function MemberClassesPage() {
       <div style={{ margin: '16px 0 24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
           <label htmlFor="member-classes-day" className="meta-label" style={{ marginRight: 12 }}>Thứ trong tuần</label>
-          <select id="member-classes-day" value={day} onChange={(event) => setDay(event.target.value)}>
+          <select id="member-classes-day" value={day} onChange={(event) => changeContext(() => setDay(event.target.value))}>
             {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
@@ -252,7 +270,7 @@ export function MemberClassesPage() {
           role="tab"
           aria-selected={tab === 'schedule'}
           className={`portal-tab ${tab === 'schedule' ? 'active' : ''}`}
-          onClick={() => setTab('schedule')}
+          onClick={() => changeContext(() => setTab('schedule'))}
         >
           Lịch lớp học
         </button>
@@ -261,7 +279,7 @@ export function MemberClassesPage() {
           role="tab"
           aria-selected={tab === 'my'}
           className={`portal-tab ${tab === 'my' ? 'active' : ''}`}
-          onClick={() => setTab('my')}
+          onClick={() => changeContext(() => setTab('my'))}
         >
           Lịch học của tôi {(activeEnrollments.length + activeWaitlists.length) > 0 ? `(${activeEnrollments.length + activeWaitlists.length})` : ''}
         </button>
@@ -300,7 +318,7 @@ export function MemberClassesPage() {
                 <h3>Chưa có lịch học</h3>
                 <p>Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần kế tiếp.</p>
                 {weekOffset === 0 && (
-                  <button type="button" className="btn-secondary btn-sm" onClick={() => setWeekOffset(1)}>
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => changeContext(() => setWeekOffset(1))}>
                     Xem lịch tuần kế tiếp
                   </button>
                 )}
@@ -430,7 +448,7 @@ export function MemberClassesPage() {
             <div className="portal-card portal-empty">
               <h3>Chưa có lịch học đã đặt</h3>
               <p>Bạn chưa đặt chỗ buổi học nào hoặc chưa tham gia hàng chờ. Hãy chọn buổi học phù hợp tại tab Lịch lớp học.</p>
-              <button type="button" className="btn-secondary btn-sm" onClick={() => setTab('schedule')}>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => changeContext(() => setTab('schedule'))}>
                 Xem lịch lớp học
               </button>
             </div>
