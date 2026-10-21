@@ -1,6 +1,6 @@
 package com.swp391.scms.auth;
 
-import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
+import com.swp391.scms.auth.dto.GoogleOAuthResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class GoogleOAuthRedirectServiceTest {
+    private static final String VERIFIER = "v".repeat(43);
+    private static final String CHALLENGE = "7w_YNF9DSfIdPf_pRjSq646_kPr-2-o9NAl16JGghdM";
     private final AuthService auth = mock(AuthService.class);
     private static final Instant NOW = Instant.parse("2026-10-21T12:00:00Z");
     private GoogleOAuthRedirectService service(Instant now, boolean debug) {
@@ -16,22 +18,22 @@ class GoogleOAuthRedirectServiceTest {
                 "https://api.example.com/api/v1/auth/google/callback", "https://web.example.com", debug);
     }
     private String state(GoogleOAuthRedirectService service, MockHttpSession session) {
-        return UriComponentsBuilder.fromUri(service.authorize(session)).build().getQueryParams().getFirst("state");
+        return UriComponentsBuilder.fromUri(service.authorize(session, CHALLENGE)).build().getQueryParams().getFirst("state");
     }
     @Test void canonicalHopEstablishesCookieOnCallbackHost() {
-        assertEquals("https://api.example.com/api/v1/auth/google/authorize/start", service(NOW, false).entry(null).toString());
+        assertEquals("https://api.example.com/api/v1/auth/google/authorize/start?code_challenge=" + CHALLENGE, service(NOW, false).entry(null, CHALLENGE).toString());
     }
     @Test void rejectsWrongBrowserAndReplayWithoutExchangingCode() {
         var service = service(NOW, false);
         var browser = new MockHttpSession();
         String state = state(service, browser);
         assertTrue(service.complete(new MockHttpSession(), state, "code", null, null).toString().contains("google_oauth=error"));
-        when(auth.requestGoogleOAuthOtp(any())).thenReturn(new GoogleOAuthOtpChallenge("user@gmail.com", "123456"));
+        when(auth.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("user@gmail.com", "123456"));
         String result = service.complete(browser, state, "code", null, null).toString();
         assertTrue(result.contains("google_oauth=callback"));
         assertFalse(result.contains("123456"));
         assertTrue(service.complete(browser, state, "code", null, null).toString().contains("google_oauth=error"));
-        verify(auth, times(1)).requestGoogleOAuthOtp(argThat(r -> r.redirectUri().equals("https://api.example.com/api/v1/auth/google/callback")));
+        verify(auth, times(1)).authenticateGoogle(argThat(r -> r.redirectUri().equals("https://api.example.com/api/v1/auth/google/callback")));
     }
     @Test void rejectsExpiredAndMismatchedState() {
         var browser = new MockHttpSession();
@@ -49,7 +51,7 @@ class GoogleOAuthRedirectServiceTest {
         assertTrue(service.complete(browser, state, "code", null, null).toString().contains("google_oauth=error"));
         verifyNoInteractions(auth);
         state = state(service, browser);
-        when(auth.requestGoogleOAuthOtp(any())).thenReturn(new GoogleOAuthOtpChallenge("user@gmail.com", "123456"));
+        when(auth.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("user@gmail.com", "123456"));
         assertTrue(service.complete(browser, state, "code", null, null).toString().contains("debug_otp=123456"));
     }
     @Test void callbackCannotOverrideConfiguredRedirect() {
@@ -59,4 +61,48 @@ class GoogleOAuthRedirectServiceTest {
         assertTrue(service.complete(browser, state, "code", null, "https://attacker.example").toString().contains("google_oauth=error"));
         verifyNoInteractions(auth);
     }
+    @Test void returningMemberRedirectUsesSingleUseCodeWithoutJwtInUrl() {
+        var service = service(NOW, false);
+        var browser = new MockHttpSession();
+        String state = state(service, browser);
+        var authentication = new com.swp391.scms.auth.dto.AuthTokenResponse("private-jwt", "member", "MEMBER");
+        when(auth.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("member@gmail.com", null, authentication));
+        var redirect = service.complete(browser, state, "code", null, null);
+        assertTrue(redirect.toString().contains("google_oauth=authenticated"));
+        assertFalse(redirect.toString().contains("private-jwt"));
+        assertFalse(redirect.toString().contains("member@gmail.com"));
+        String code = redirect.getFragment().substring("google_login_code=".length());
+        assertEquals(43, code.length());
+        assertEquals(authentication, service.redeem(code, VERIFIER));
+        assertThrows(com.swp391.scms.common.exception.UnauthorizedException.class, () -> service.redeem(code, VERIFIER));
+    }
+
+    @Test void expiredOrMissingHandoffCannotAuthenticate() {
+        var clock = mock(Clock.class);
+        when(clock.instant()).thenReturn(NOW);
+        var service = new GoogleOAuthRedirectService(auth, null, clock, "client",
+                "https://api.example.com/api/v1/auth/google/callback", "https://web.example.com", false);
+        var browser = new MockHttpSession();
+        var state = state(service, browser);
+        when(auth.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("member@gmail.com", null,
+                new com.swp391.scms.auth.dto.AuthTokenResponse("private-jwt", "member", "MEMBER")));
+        var redirect = service.complete(browser, state, "code", null, null);
+        String code = redirect.getFragment().substring("google_login_code=".length());
+        when(clock.instant()).thenReturn(NOW.plusSeconds(60));
+        assertThrows(com.swp391.scms.common.exception.UnauthorizedException.class, () -> service.redeem(code, VERIFIER));
+        assertThrows(com.swp391.scms.common.exception.UnauthorizedException.class, () -> service.redeem("unknown", VERIFIER));
+    }
+
+    @Test void handoffFromAnotherBrowserCannotBeRedeemedWithWrongVerifier() {
+        var service = service(NOW, false);
+        var browser = new MockHttpSession();
+        var state = state(service, browser);
+        when(auth.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("member@gmail.com", null,
+                new com.swp391.scms.auth.dto.AuthTokenResponse("private-jwt", "member", "MEMBER")));
+        var redirect = service.complete(browser, state, "code", null, null);
+        String code = redirect.getFragment().substring("google_login_code=".length());
+        assertThrows(com.swp391.scms.common.exception.UnauthorizedException.class, () -> service.redeem(code, "x".repeat(43)));
+        assertThrows(com.swp391.scms.common.exception.UnauthorizedException.class, () -> service.redeem(code, VERIFIER));
+    }
+
 }

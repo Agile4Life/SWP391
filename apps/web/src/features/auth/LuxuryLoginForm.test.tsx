@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { getCurrentUser } from '../../shared/api/client';
 import { LuxuryLoginForm } from './LuxuryLoginForm';
 
 let host: HTMLDivElement;
@@ -12,6 +13,7 @@ const requestAccessToken = vi.fn();
 beforeEach(() => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   localStorage.clear();
+  sessionStorage.clear();
   oauthCallback = undefined;
   requestAccessToken.mockReset();
   window.history.replaceState({}, '', '/login');
@@ -39,6 +41,8 @@ afterEach(async () => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.clearAllTimers();
+  vi.useRealTimers();
 });
 
 async function renderForm() {
@@ -62,6 +66,7 @@ it('transitions to email OTP verification screen when the single Google button r
     json: async () => ({
       success: true,
       data: {
+        requiresOtp: true,
         email: 'oauthuser@gmail.com',
         message: 'Đã gửi mã xác nhận đến gmail oauthuser@gmail.com. Hãy nhập mã xác nhận để kích hoạt tài khoản.',
         expiresInMinutes: 5,
@@ -137,4 +142,56 @@ it('shows a configuration error instead of introducing a separate Gmail flow', a
   expect(host.textContent).toContain('Google chưa được cấu hình');
   expect(host.querySelector('input[type="email"]')).toBeNull();
   expect(requestAccessToken).not.toHaveBeenCalled();
+});
+
+
+it('signs in an existing active Google member immediately without showing OTP', async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+    ok: true, status: 200,
+    json: async () => ({ success: true, data: {
+      requiresOtp: false, email: 'returning@gmail.com',
+      authentication: { token: 'returning-jwt', username: 'returning-member', role: 'MEMBER' },
+    } }),
+  }));
+  await renderForm();
+  await act(async () => host.querySelector<HTMLButtonElement>('#google-oauth-btn')!.click());
+  await act(async () => oauthCallback!({ access_token: 'google-access-token' }));
+  expect(getCurrentUser()?.identifier).toBe('returning-member');
+  expect(localStorage.getItem('fitcenter_token')).toBe('returning-jwt');
+  expect(host.querySelector('#google-otp-code')).toBeNull();
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
+
+
+it('redeems a browser-bound redirect and signs in without showing OTP', async () => {
+  vi.useFakeTimers();
+  sessionStorage.setItem('scms_google_redirect_verifier', 'v'.repeat(43));
+  window.history.replaceState({}, '', '/login?google_oauth=authenticated#google_login_code=ticket-code');
+  const mockFetch = vi.fn().mockResolvedValueOnce({ ok: true, status: 200,
+    json: async () => ({ success: true, data: { token: 'redirect-jwt', username: 'redirect-member', role: 'MEMBER' } }),
+  });
+  vi.stubGlobal('fetch', mockFetch);
+  await renderForm();
+  expect(getCurrentUser()?.identifier).toBe('redirect-member');
+  expect(host.querySelector('#google-otp-code')).toBeNull();
+  expect(window.location.search).toBe('');
+  expect(window.location.hash).toBe('');
+  expect(sessionStorage.getItem('scms_google_redirect_verifier')).toBeNull();
+  expect(mockFetch).toHaveBeenCalledWith('/api/v1/auth/google/handoff', expect.objectContaining({
+    method: 'POST', body: JSON.stringify({ code: 'ticket-code', verifier: 'v'.repeat(43) }),
+  }));
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
+
+it('refuses a redirect handoff without the initiating browser verifier', async () => {
+  window.history.replaceState({}, '', '/login?google_oauth=authenticated#google_login_code=injected-ticket');
+  const mockFetch = vi.fn();
+  vi.stubGlobal('fetch', mockFetch);
+  await renderForm();
+  expect(mockFetch).not.toHaveBeenCalled();
+  expect(getCurrentUser()).toBeNull();
+  expect(window.location.hash).toBe('');
 });

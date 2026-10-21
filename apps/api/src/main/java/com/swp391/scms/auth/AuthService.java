@@ -9,7 +9,7 @@ import com.swp391.scms.common.exception.UnauthorizedException;
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleLoginRequest;
 import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
-import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
+import com.swp391.scms.auth.dto.GoogleOAuthResult;
 import com.swp391.scms.auth.dto.GoogleUserInfo;
 import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.security.JwtService;
@@ -179,10 +179,10 @@ public class AuthService {
 
     /**
      * Handles Google OAuth callback (via ID Token, OAuth2 Access Token, or Authorization Code):
-     * verifies the Google identity, links/creates the MEMBER account, and sends a 6-digit OTP to Gmail.
+     * verifies identity and account restrictions, signs in active members, or sends activation OTP to pending members.
      */
     @Transactional
-    public GoogleOAuthOtpChallenge requestGoogleOAuthOtp(GoogleOAuthCallbackRequest request) {
+    public GoogleOAuthResult authenticateGoogle(GoogleOAuthCallbackRequest request) {
         if (request == null) {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google OAuth payload is missing");
         }
@@ -268,9 +268,17 @@ public class AuthService {
 
         ensureGoogleOtpAccountAllowed(user);
 
+        if ("active".equalsIgnoreCase(user.getStatus())) {
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setLastLoginAt(now);
+            user.setUpdatedAt(now);
+            userRepository.save(user);
+            return new GoogleOAuthResult(normalize(user.getEmail()), null, issueTokenForUser(user));
+        }
+
         String accountEmail = normalize(user.getEmail());
         String otpCode = issueAndSendOtp(accountEmail);
-        return new GoogleOAuthOtpChallenge(accountEmail, otpCode);
+        return new GoogleOAuthResult(accountEmail, otpCode);
     }
 
     @Transactional
@@ -457,8 +465,7 @@ public class AuthService {
     }
 
     private void ensureGoogleOtpAccountAllowed(User user) {
-        if (user.getRole() != null && user.getRole().getCode() != null
-                && !"MEMBER".equalsIgnoreCase(user.getRole().getCode())) {
+        if (user.getRole() == null || !"MEMBER".equalsIgnoreCase(user.getRole().getCode())) {
             throw new ForbiddenException("STAFF_GOOGLE_NOT_ALLOWED", "auth.google.staff_not_allowed", null, "Staff accounts are not allowed to log in via Google");
         }
         String status = user.getStatus();

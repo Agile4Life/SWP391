@@ -7,7 +7,7 @@ import static org.mockito.Mockito.*;
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleLoginRequest;
 import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
-import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
+import com.swp391.scms.auth.dto.GoogleOAuthResult;
 import com.swp391.scms.auth.dto.GoogleUserInfo;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.UnauthorizedException;
@@ -269,7 +269,7 @@ class GoogleAuthServiceTest {
         });
         when(otpService.generateOtp("oauthmember@gmail.com")).thenReturn("482910");
 
-        GoogleOAuthOtpChallenge challenge = authService.requestGoogleOAuthOtp(
+        GoogleOAuthResult challenge = authService.authenticateGoogle(
                 new GoogleOAuthCallbackRequest(null, null, "oauth-code-123", "http://localhost:8080/api/v1/auth/google/callback")
         );
 
@@ -284,16 +284,70 @@ class GoogleAuthServiceTest {
         User member = new User();
         member.setEmail("original@example.com");
         member.setGoogleSub("stable-sub");
-        member.setStatus("active");
+        member.setStatus("inactive");
         member.setRole(createRole("MEMBER"));
         when(googleTokenVerifierPort.verify("renamed-token")).thenReturn(
                 new GoogleUserInfo("stable-sub", "renamed@example.com", true, "Member", null, "example.com"));
         when(userRepository.findByGoogleSub("stable-sub")).thenReturn(Optional.of(member));
         when(otpService.generateOtp("original@example.com")).thenReturn("123456");
-        var challenge = authService.requestGoogleOAuthOtp(new GoogleOAuthCallbackRequest("renamed-token"));
+        var challenge = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("renamed-token"));
         assertEquals("original@example.com", challenge.email());
         verify(otpDeliveryPort).send("original@example.com", "123456");
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void activeReturningGoogleMemberSignsInWithoutSendingAnotherOtp() {
+        User member = new User();
+        member.setId(77L);
+        member.setUsername("returning-member");
+        member.setEmail("member@gmail.com");
+        member.setGoogleSub("known-sub");
+        member.setStatus("active");
+        member.setRole(createRole("MEMBER"));
+        when(googleTokenVerifierPort.verify("known-token")).thenReturn(
+                new GoogleUserInfo("known-sub", "member@gmail.com", true, "Member", null));
+        when(userRepository.findByGoogleSub("known-sub")).thenReturn(Optional.of(member));
+        when(jwtService.generateToken(77L, "returning-member", "MEMBER")).thenReturn("member-jwt");
+        var result = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("known-token"));
+        assertEquals("member-jwt", result.authentication().token());
+        assertNull(result.otpCode());
+        verify(jwtService).generateToken(77L, "returning-member", "MEMBER");
+        verifyNoInteractions(otpService, otpDeliveryPort);
+        assertNotNull(member.getLastLoginAt());
+    }
+
+    @Test
+    void activeExistingEmailCanLinkTrustedGoogleIdentityWithoutAnotherOtp() {
+        var member = new User();
+        member.setId(80L);
+        member.setUsername("existing-member");
+        member.setEmail("existing@gmail.com");
+        member.setRole(createRole("MEMBER"));
+        member.setStatus("active");
+        when(googleTokenVerifierPort.verify("link-token")).thenReturn(
+                new GoogleUserInfo("new-google-sub", "existing@gmail.com", true, "Member", null));
+        when(userRepository.findByEmailIgnoreCase("existing@gmail.com")).thenReturn(Optional.of(member));
+        when(jwtService.generateToken(80L, "existing-member", "MEMBER")).thenReturn("existing-jwt");
+        var result = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("link-token"));
+        assertEquals("existing-jwt", result.authentication().token());
+        assertEquals("new-google-sub", member.getGoogleSub());
+        verifyNoInteractions(otpService, otpDeliveryPort);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"locked,MEMBER,false", "active,COACH,false", "active,MEMBER,true"})
+    void googleCallbackStillRejectsLockedStaffAndDeletedAccounts(String status, String role, boolean deleted) {
+        var member = new User();
+        member.setEmail("blocked@gmail.com");
+        member.setStatus(status);
+        member.setRole(createRole(role));
+        if (deleted) member.setDeletedAt(java.time.LocalDateTime.now());
+        when(googleTokenVerifierPort.verify("blocked-token")).thenReturn(
+                new GoogleUserInfo("blocked-sub", "blocked@gmail.com", true, "Blocked", null));
+        when(userRepository.findByGoogleSub("blocked-sub")).thenReturn(Optional.of(member));
+        assertThrows(ForbiddenException.class, () -> authService.authenticateGoogle(new GoogleOAuthCallbackRequest("blocked-token")));
+        verifyNoInteractions(jwtService, otpService, otpDeliveryPort);
     }
 
 }

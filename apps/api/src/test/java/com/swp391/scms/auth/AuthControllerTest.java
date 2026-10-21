@@ -3,7 +3,7 @@ package com.swp391.scms.auth;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
-import com.swp391.scms.auth.dto.GoogleOAuthOtpChallenge;
+import com.swp391.scms.auth.dto.GoogleOAuthResult;
 import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.common.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
+    private static final String CHALLENGE = "7w_YNF9DSfIdPf_pRjSq646_kPr-2-o9NAl16JGghdM";
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
@@ -164,8 +165,8 @@ class AuthControllerTest {
     @DisplayName("POST /api/v1/auth/google/oauth-callback verifies Google OAuth and sends OTP to email")
     void googleOAuthCallbackSuccess() throws Exception {
         GoogleOAuthCallbackRequest req = new GoogleOAuthCallbackRequest("valid-id-token", null, null, null);
-        when(authService.requestGoogleOAuthOtp(any()))
-                .thenReturn(new GoogleOAuthOtpChallenge("oauth@gmail.com", "123456"));
+        when(authService.authenticateGoogle(any()))
+                .thenReturn(new GoogleOAuthResult("oauth@gmail.com", "123456"));
 
         mockMvc.perform(post("/api/v1/auth/google/oauth-callback")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -174,13 +175,16 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.email").value("oauth@gmail.com"))
                 .andExpect(jsonPath("$.data.message").value("auth.google.otp.sent"))
-                .andExpect(jsonPath("$.data.expiresInMinutes").value(5));
+                .andExpect(jsonPath("$.data.expiresInMinutes").value(5))
+                .andExpect(jsonPath("$.data.requiresOtp").value(true))
+                .andExpect(jsonPath("$.data.authentication").doesNotExist())
+                .andExpect(jsonPath("$.data.debugOtp").doesNotExist());
     }
 
     @Test
     @DisplayName("GET /api/v1/auth/google/authorize redirects to Google OAuth 2.0 consent screen")
     void googleOAuthAuthorizeRedirectsToGoogle() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/google/authorize"))
+        mockMvc.perform(get("/api/v1/auth/google/authorize").param("code_challenge", CHALLENGE))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", containsString("http://localhost:8080/api/v1/auth/google/authorize/start")));
     }
@@ -188,10 +192,10 @@ class AuthControllerTest {
     @Test
     @DisplayName("GET /api/v1/auth/google/callback exchanges code, sends OTP and redirects back to /login?google_oauth=callback")
     void googleOAuthRedirectCallbackRedirectsToLoginOtpScreen() throws Exception {
-        when(authService.requestGoogleOAuthOtp(any()))
-                .thenReturn(new GoogleOAuthOtpChallenge("member@gmail.com", "998877"));
+        when(authService.authenticateGoogle(any()))
+                .thenReturn(new GoogleOAuthResult("member@gmail.com", "998877"));
 
-        var start = mockMvc.perform(get("/api/v1/auth/google/authorize/start")).andReturn();
+        var start = mockMvc.perform(get("/api/v1/auth/google/authorize/start").param("code_challenge", CHALLENGE)).andReturn();
         var session = (org.springframework.mock.web.MockHttpSession) start.getRequest().getSession(false);
         String state = org.springframework.web.util.UriComponentsBuilder.fromUriString(start.getResponse().getHeader("Location"))
                 .build().getQueryParams().getFirst("state");
@@ -210,7 +214,7 @@ class AuthControllerTest {
 
     @Test
     void authorizeRejectsUnconfiguredRedirect() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/google/authorize").param("redirect_uri", "https://attacker.example/callback"))
+        mockMvc.perform(get("/api/v1/auth/google/authorize").param("code_challenge", CHALLENGE).param("redirect_uri", "https://attacker.example/callback"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -219,6 +223,27 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/google/oauth-callback").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"code\":\"injected-code\"}"))
                 .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
+
+    @Test
+    void activeGoogleMemberReceivesAuthenticationWithoutOtpFields() throws Exception {
+        when(authService.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("member@gmail.com", null,
+                new AuthTokenResponse("member-jwt", "member", "MEMBER")));
+        mockMvc.perform(post("/api/v1/auth/google/oauth-callback").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"idToken\":\"valid-token\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.requiresOtp").value(false))
+                .andExpect(jsonPath("$.data.authentication.token").value("member-jwt"))
+                .andExpect(jsonPath("$.data.expiresInMinutes").doesNotExist())
+                .andExpect(jsonPath("$.data.debugOtp").doesNotExist());
+    }
+
+    @Test
+    void invalidHandoffCannotIssueJwt() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/google/handoff").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("code", "c".repeat(43), "verifier", "v".repeat(43)))))
+                .andExpect(status().isUnauthorized());
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
