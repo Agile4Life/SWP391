@@ -401,7 +401,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/AuthController.java": {
-    "mtime": 1792598438.2202847,
+    "mtime": 1792598794.0876448,
     "ast_hash": "7a56e533279d9e161167add93d732c5f",
     "semantic_hash": ""
   },
@@ -506,8 +506,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/vite-env.d.ts": {
-    "mtime": 1792595523.5314481,
-    "ast_hash": "77b52d59a601afb2962b639141f147c6",
+    "mtime": 1792598794.108282,
+    "ast_hash": "9341cc8b51458064b9fc1e0da0c112cf",
     "semantic_hash": ""
   },
   "apps/web/tsconfig.app.json": {
@@ -661,8 +661,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LuxuryLoginForm.tsx": {
-    "mtime": 1792598219.492661,
-    "ast_hash": "c1f9aa0ce873e8aa9ed75424dac7846b",
+    "mtime": 1792599234.0651915,
+    "ast_hash": "fb604f84a661abb02d8db8f769b53b82",
     "semantic_hash": ""
   },
   "apps/web/src/features/classes/StaffClassesPage.tsx": {
@@ -811,8 +811,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberClassesPage.tsx": {
-    "mtime": 1792595804.10593,
-    "ast_hash": "d2732316ee7ddb3ed641672dd1b2f8b1",
+    "mtime": 1792598794.108282,
+    "ast_hash": "b395bca7cc22e1340b3d0b6aaeaa0852",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberDashboardPage.tsx": {
@@ -1186,7 +1186,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java": {
-    "mtime": 1792598438.216803,
+    "mtime": 1792598794.0886137,
     "ast_hash": "0a419abfefc43aaf129074137d171606",
     "semantic_hash": ""
   },
@@ -2696,7 +2696,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/resources/application.yml": {
-    "mtime": 1792597988.4699464,
+    "mtime": 1792598794.0936403,
     "ast_hash": "664697d52eea6ea58cd7c576f6aab745",
     "semantic_hash": ""
   },
@@ -2931,7 +2931,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/authApi.ts": {
-    "mtime": 1792598438.2177708,
+    "mtime": 1792598794.1072817,
     "ast_hash": "b91f43759379a29cbd8298f8bc4f7446",
     "semantic_hash": ""
   },
@@ -2941,7 +2941,7 @@
     "semantic_hash": ""
   },
   "docs/api-contracts/openapi-sprint1.yaml": {
-    "mtime": 1792598129.86088,
+    "mtime": 1792598794.1092808,
     "ast_hash": "f4d3cf4ce94fdb4284973e69cfaa1e2a",
     "semantic_hash": ""
   },
@@ -3111,7 +3111,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/AuthControllerTest.java": {
-    "mtime": 1792598129.858883,
+    "mtime": 1792598794.0987353,
     "ast_hash": "b37c0adbe09cc13278dfd1248b982505",
     "semantic_hash": ""
   },
@@ -3136,8 +3136,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/authApi.test.ts": {
-    "mtime": 1792595633.6740263,
-    "ast_hash": "5c06bba3e0733dfed894e30b70e89947",
+    "mtime": 1792598794.1062517,
+    "ast_hash": "1aa7ad8623ce1c707d6cc99df3c5b9a0",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/catalogApi.test.ts": {
@@ -4212,13 +4212,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/GoogleIdTokenVerifierAdapter.java": {
-    "mtime": 1792598202.6416652,
+    "mtime": 1792598794.089614,
     "ast_hash": "cba661660ebc53cd66a4f1b059a46b57",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/GoogleTokenVerifierPort.java": {
-    "mtime": 1792595196.5374463,
-    "ast_hash": "3a26cf9dec35aa4c5d63a97d5a3984df",
+    "mtime": 1792598794.0916133,
+    "ast_hash": "4b0d52fb90c2d407bdb565246b8fd1a3",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleLoginRequest.java": {
@@ -4242,12 +4242,12 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/GoogleAuthServiceTest.java": {
-    "mtime": 1792598410.2259421,
+    "mtime": 1792598794.0997348,
     "ast_hash": "d1518ba2cea692b95762e7d5f3e17805",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/GoogleIdTokenVerifierAdapterTest.java": {
-    "mtime": 1792598202.64267,
+    "mtime": 1792598794.1007352,
     "ast_hash": "76d240c7cead38a551dfdb47d4e8e20e",
     "semantic_hash": ""
   },
@@ -4262,8 +4262,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LuxuryLoginForm.test.tsx": {
-    "mtime": 1792597835.4476721,
-    "ast_hash": "b5949222ee4dfdf1b599298f76751fad",
+    "mtime": 1792599234.0682006,
+    "ast_hash": "707fcc77fec47c1ce0cd8767f736e2a4",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberProfilePage.test.tsx": {
@@ -4372,13 +4372,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleOAuthCallbackRequest.java": {
-    "mtime": 1792598438.2177708,
+    "mtime": 1792598794.0926442,
     "ast_hash": "d378e401994244165b682148c5d49e35",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/dto/GoogleOAuthOtpChallenge.java": {
-    "mtime": 1792595182.8458865,
-    "ast_hash": "94feedf5e7ed5c5b6b4722118e0d2428",
+    "mtime": 1792598794.0926442,
+    "ast_hash": "fa40ed461a0c8f19f58f0e8f6e23dc2d",
     "semantic_hash": ""
   },
   "docs/examples/cd.example.yml": {
@@ -4392,22 +4392,22 @@
     "semantic_hash": ""
   },
   "docs/reviews/2026-10-21-SCRUM-89-commit-review.md": {
-    "mtime": 1792598592.4915214,
-    "ast_hash": "86f1771a12b21aff737e7176f4120783",
+    "mtime": 1792599271.728078,
+    "ast_hash": "cdeb8d9a2f2a20eddee6ab923e16545f",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/GoogleOAuthRedirectService.java": {
-    "mtime": 1792597988.460948,
+    "mtime": 1792598794.090645,
     "ast_hash": "0eae642b12f8489afd23098c40878d40",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/auth/GoogleOAuthRedirectServiceTest.java": {
-    "mtime": 1792598129.8568804,
+    "mtime": 1792598794.101735,
     "ast_hash": "c4c31dd947878c85ee8f3a1e4c18a720",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-10-21-google-oauth-hardening.md": {
-    "mtime": 1792598592.4925225,
+    "mtime": 1792598794.1122816,
     "ast_hash": "81461e8b2f9946d0f6c022cdb9fda58b",
     "semantic_hash": ""
   }
