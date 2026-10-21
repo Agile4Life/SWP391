@@ -1,0 +1,258 @@
+/* ==========================================================================
+   SCMS LUXURY DATE PICKER STYLES
+   ========================================================================== */
+
+.luxury-datepicker-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.luxury-datepicker-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  min-height: 42px;
+  background: #FFFFFF;
+  border: 1px solid #D6C7B8;
+  border-radius: 6px;
+  color: #211C18;
+  font-family: var(--font-sans, inherit);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  user-select: none;
+}
+
+.luxury-datepicker-trigger:hover:not(:disabled) {
+  border-color: #C2A684;
+  background-color: #FFFEFC;
+}
+
+.luxury-datepicker-trigger:focus-visible,
+.luxury-datepicker-trigger.is-open {
+  outline: none;
+  border-color: #8C6D46;
+  box-shadow: 0 0 0 3px rgba(194, 166, 132, 0.22);
+}
+
+.luxury-datepicker-trigger:disabled {
+  background: #F4F1EC;
+  color: #8C847C;
+  cursor: not-allowed;
+  border-color: #E2DBD4;
+}
+
+.luxury-datepicker-value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.luxury-datepicker-placeholder {
+  color: #9E958C;
+}
+
+.luxury-datepicker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8C6D46;
+  margin-left: 8px;
+  opacity: 0.85;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.luxury-datepicker-trigger:hover .luxury-datepicker-icon {
+  color: #6E5333;
+  transform: scale(1.06);
+}
+
+/* Dropdown Calendar Popover */
+.luxury-datepicker-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1050;
+  width: 290px;
+  background: #FFFFFF;
+  border: 1px solid #E8DDD0;
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(33, 28, 24, 0.16), 0 4px 12px rgba(33, 28, 24, 0.06);
+  padding: 16px;
+  animation: ldp-fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ldp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header with Navigation */
+.ldp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F2EBE3;
+}
+
+.ldp-title {
+  font-family: var(--font-sans, inherit);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #211C18;
+  letter-spacing: -0.01em;
+}
+
+.ldp-nav-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ldp-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #FAF8F5;
+  border: 1px solid #E8DDD0;
+  border-radius: 6px;
+  color: #6E5F52;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ldp-nav-btn:hover:not(:disabled) {
+  background: #8C6D46;
+  border-color: #8C6D46;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.ldp-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Weekday column headers */
+.ldp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.ldp-weekday {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8C847C;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 0;
+}
+
+/* Day grid */
+.ldp-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.ldp-day-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #332B25;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.ldp-day-cell:hover:not(.is-disabled):not(.is-selected) {
+  background: #F4ECE1;
+  color: #6E5333;
+}
+
+.ldp-day-cell.is-selected {
+  background: #806344;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  border-color: #806344;
+  box-shadow: 0 2px 6px rgba(128, 99, 68, 0.35);
+}
+
+.ldp-day-cell.is-today:not(.is-selected) {
+  border-color: #C2A684;
+  color: #806344;
+  font-weight: 700;
+  background: #FCF9F5;
+}
+
+.ldp-day-cell.is-other-month {
+  color: #C7BDB3;
+}
+
+.ldp-day-cell.is-disabled {
+  color: #D6C7B8;
+  cursor: not-allowed;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Footer with Clear & Today */
+.ldp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #F2EBE3;
+}
+
+.ldp-action-btn {
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans, inherit);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8C6D46;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.ldp-action-btn:hover {
+  background: #F4ECE1;
+  color: #604526;
+}
+
+.ldp-action-btn.btn-clear {
+  color: #A34E36;
+}
+
+.ldp-action-btn.btn-clear:hover {
+  background: #FDF2F0;
+  color: #8B2C15;
+}

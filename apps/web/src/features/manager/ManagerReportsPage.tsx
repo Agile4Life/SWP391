@@ -1,12 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { DatePicker } from '../../shared/ui/DatePicker';
 import { toast } from '../../shared/ui/toast';
 import { reportsApi, type ReportSummary } from './reportsApi';
 
 const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} đ`;
 const paymentMethods: Record<string, string> = {
   cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
+};
+
+const formatTransactionTime = (paidAt: string) => {
+  try {
+    const d = new Date(paidAt);
+    if (isNaN(d.getTime())) return { date: paidAt, time: '' };
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const date = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return { date, time };
+  } catch {
+    return { date: paidAt, time: '' };
+  }
+};
+
+// CSV quoting alone does not stop spreadsheet formula evaluation.
+const csvText = (raw: string) => {
+  // eslint-disable-next-line no-control-regex -- include leading control characters in the formula guard
+  const unsafe = /^[\u0000-\u0020]*[=+@-]|^[\t\r\n]/.test(raw);
+  const value = unsafe ? "'" + raw : raw;
+  return `"${value.replace(/"/g, '""')}"`;
 };
 
 export function ManagerReportsPage() {
@@ -36,12 +58,13 @@ export function ManagerReportsPage() {
   const [summary, setSummary] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
 
-  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleStartDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     setStartDate(val);
     if (val && endDate && val > endDate) {
@@ -49,11 +72,10 @@ export function ManagerReportsPage() {
     }
   };
 
-  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (startDate && val && val < startDate) {
       toast('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.', 'error');
-      e.target.value = startDate;
       setEndDate(startDate);
       return;
     }
@@ -104,6 +126,91 @@ export function ManagerReportsPage() {
     void fetchReports(start, end);
   };
 
+  /**
+   * SCRUM-84 & SCRUM-79: Xuất báo cáo doanh thu tài chính & Lưu Snapshot JSONB
+   */
+  const handleExportReport = async () => {
+    if (!summary || isExporting) return;
+    setIsExporting(true);
+    try {
+      // 1. Lưu ảnh chụp báo cáo Snapshot lên Database Supabase qua API
+      await reportsApi.createSnapshot({
+        reportType: 'revenue',
+        periodStart: appliedRange.startDate,
+        periodEnd: appliedRange.endDate,
+        data: JSON.stringify({
+          periodRevenue: summary.periodRevenue,
+          todayRevenue: summary.todayRevenue,
+          packagesSoldCount: summary.packagesSoldCount,
+          renewalRate: summary.renewalRate,
+          dailyRevenueCount: summary.dailyRevenue.length,
+          packageRevenueCount: summary.packageRevenue.length,
+          transactionCount: summary.recentTransactions.length,
+        }),
+      });
+
+      // 2. Tạo nội dung file CSV có BOM UTF-8 (\uFEFF) mở chuẩn trong Excel tiếng Việt
+      let csv = '\uFEFF';
+      csv += 'TRUNG TÂM THỂ THAO SCMS - BÁO CÁO DOANH THU & THỐNG KÊ TÀI CHÍNH\n';
+      csv += `Kỳ Báo Cáo: Từ ngày ${appliedRange.startDate} đến ngày ${appliedRange.endDate}\n`;
+      csv += `Thời Gian Xuất: ${new Date().toLocaleString('vi-VN')}\n`;
+      csv += `Người Xuất: Quản lý trung tâm (Center Manager)\n\n`;
+
+      csv += '1. TỔNG QUAN CHỈ SỐ KPI\n';
+      csv += `Doanh Thu Kỳ Lọc,${summary.periodRevenue} VNĐ\n`;
+      csv += `Doanh Thu Hôm Nay,${summary.todayRevenue} VNĐ\n`;
+      csv += `Số Gói Đã Bán,${summary.packagesSoldCount} gói\n`;
+      csv += `Tỷ Lệ Gia Hạn,${summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}\n\n`;
+
+      csv += '2. DOANH THU THEO GÓI TẬP\n';
+      csv += 'Tên Gói Tập,Số Lượng Bán,Doanh Thu (VNĐ),Tỷ Trọng (%)\n';
+      summary.packageRevenue.forEach((pkg) => {
+        csv += `${csvText(pkg.packageName)},${pkg.subscriptionCount},${pkg.revenue},${pkg.percentage.toFixed(1)}%\n`;
+      });
+      csv += '\n';
+
+      csv += '3. DOANH THU THEO TỪNG NGÀY\n';
+      csv += 'Ngày,Doanh Thu (VNĐ),Số Lượng Giao Dịch\n';
+      summary.dailyRevenue.forEach((d) => {
+        csv += `${csvText(d.date)},${d.revenue},${d.transactionCount}\n`;
+      });
+      csv += '\n';
+
+      csv += '4. GIAO DỊCH GẦN NHẤT\n';
+      csv += 'Mã Hóa Đơn,Hội Viên,Gói Tập,Số Tiền (VNĐ),Hình Thức,Thời Gian\n';
+      summary.recentTransactions.forEach((tx) => {
+        const timeObj = formatTransactionTime(tx.paidAt);
+        const timeStr = `${timeObj.time} ${timeObj.date}`.trim();
+        csv += [
+          csvText(tx.invoiceNumber ?? 'Chưa xuất'),
+          csvText(tx.memberName),
+          csvText(tx.packageName ?? '—'),
+          tx.amount,
+          csvText(paymentMethods[tx.method] ?? tx.method),
+          csvText(timeStr),
+        ].join(',') + '\n';
+      });
+
+      // 3. Tải xuống file Excel/CSV về máy tính
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `BaoCao_DoanhThu_${appliedRange.startDate}_${appliedRange.endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast('Đã lưu Snapshot đối soát và xuất file báo cáo Excel thành công!', 'success');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Xuất báo cáo thất bại.';
+      toast(msg, 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // 403 Forbidden Guard
   if (!hasAccess) {
     return (
@@ -142,9 +249,30 @@ export function ManagerReportsPage() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => toast('Tính năng xuất file Excel/PDF đang chuẩn bị triển khai.', 'success')}
+              onClick={handleExportReport}
+              disabled={isExporting || loading || !summary}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 600,
+              }}
             >
-              Xuất Báo Cáo
+              {isExporting ? (
+                <>
+                  <span className="spinner" />
+                  <span>Đang xuất...</span>
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  <span>Xuất Báo Cáo</span>
+                </>
+              )}
             </button>
           </div>
         }
@@ -155,25 +283,21 @@ export function ManagerReportsPage() {
         <form onSubmit={handleApplyFilter} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.88rem', color: '#7E7771', fontWeight: 600 }}>Từ ngày:</span>
-            <input
-              type="date"
-              className="portal-input"
-              style={{ width: '160px', padding: '8px 12px' }}
+            <DatePicker
               value={startDate}
               max={endDate || undefined}
               onChange={handleStartDateChange}
+              style={{ width: '160px' }}
             />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.88rem', color: '#7E7771', fontWeight: 600 }}>Đến ngày:</span>
-            <input
-              type="date"
-              className="portal-input"
-              style={{ width: '160px', padding: '8px 12px' }}
+            <DatePicker
               value={endDate}
               min={startDate || undefined}
               onChange={handleEndDateChange}
+              style={{ width: '160px' }}
             />
           </div>
 
@@ -252,7 +376,7 @@ export function ManagerReportsPage() {
       {!loading && !error && summary && (
         <div className="metrics-grid" style={{ marginBottom: '24px' }}>
           <div className="metric-card">
-            <div className="metric-label">DOANH THU NGÀY (HÔM NAY)</div>
+            <div className="metric-label">DOANH THU NGÀY</div>
             <div className="metric-value">{vnd(summary.todayRevenue)}</div>
             <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? '#2E7D32' : '#7E7771' }}>
               {summary.todayRevenue > 0 ? '↑ Giao dịch phát sinh trong ngày' : 'Chưa có giao dịch hôm nay'}
@@ -260,7 +384,7 @@ export function ManagerReportsPage() {
           </div>
 
           <div className="metric-card">
-            <div className="metric-label">DOANH THU THÁNG (TOÀN KỲ)</div>
+            <div className="metric-label">DOANH THU THÁNG</div>
             <div className="metric-value">{vnd(summary.periodRevenue)}</div>
             <div className="metric-trend">Từ {appliedRange.startDate} đến {appliedRange.endDate}</div>
           </div>
@@ -278,7 +402,7 @@ export function ManagerReportsPage() {
               {summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}
             </div>
             <div className="metric-trend">
-              {summary.renewalRate !== null ? 'Khách hàng tiếp tục duy trì' : 'Không có gói hết hạn trong kỳ'}
+              {summary.renewalRate !== null ? 'Khách hàng tiếp tục duy trì' : 'Chưa có dữ liệu tỷ lệ gia hạn'}
             </div>
           </div>
         </div>
@@ -291,7 +415,6 @@ export function ManagerReportsPage() {
           <div className="portal-card" style={{ minWidth: 0, overflow: 'hidden' }}>
             <div className="portal-card-header" style={{ marginBottom: '16px' }}>
               <h2 className="portal-card-title">Biểu Đồ Doanh Thu Theo Ngày</h2>
-              <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>Rê chuột vào cột để xem chi tiết</span>
             </div>
 
             {dailyData.length === 0 || dailyData.every((d) => d.revenue === 0) ? (
@@ -301,13 +424,11 @@ export function ManagerReportsPage() {
             ) : (
               <div>
                 {/* Khu vực tooltip hiển thị khi hover */}
-                <div style={{ height: '32px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
-                  {hoveredBar ? (
+                <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
+                  {hoveredBar && (
                     <span style={{ color: '#A06D3B' }}>
                       📅 Ngày {hoveredBar.date}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
                     </span>
-                  ) : (
-                    <span style={{ color: '#7E7771', fontWeight: 400 }}>Di chuột lên cột để xem doanh thu cụ thể</span>
                   )}
                 </div>
 
@@ -447,7 +568,23 @@ export function ManagerReportsPage() {
                           {paymentMethods[tx.method] ?? tx.method}
                         </span>
                       </td>
-                      <td style={{ color: '#7E7771', fontSize: '0.84rem' }}>{new Date(tx.paidAt).toLocaleString('vi-VN')}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {(() => {
+                          const { date, time } = formatTransactionTime(tx.paidAt);
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontWeight: 600, color: '#211C18', fontSize: '0.86rem' }}>
+                                {date}
+                              </span>
+                              {time && (
+                                <span style={{ fontSize: '0.78rem', color: '#8C6D46', fontWeight: 500, letterSpacing: '0.02em' }}>
+                                  {time}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -2,6 +2,10 @@ package com.swp391.scms.auth;
 
 import com.swp391.scms.auth.dto.AuthTokenResponse;
 import com.swp391.scms.auth.dto.GoogleLoginRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthResult;
+import com.swp391.scms.auth.dto.GoogleOAuthResponse;
+import com.swp391.scms.auth.dto.GoogleHandoffRequest;
 import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.exception.BadRequestException;
@@ -9,15 +13,18 @@ import com.swp391.scms.common.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Tag(name = "Authentication", description = "Đăng ký tài khoản, đăng nhập JWT, gửi và xác thực mã OTP")
+@Tag(name = "Authentication", description = "Đăng ký tài khoản, đăng nhập JWT, Google OAuth và xác thực mã OTP")
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -25,19 +32,24 @@ public class AuthController {
     private final AuthService authService;
     private final boolean debugOtpEnabled;
     private final MessageService messageService;
+    private final GoogleOAuthRedirectService googleOAuthRedirectService;
 
-    public AuthController(AuthService authService,
-                          @Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled) {
-        this(authService, debugOtpEnabled, null);
+    public AuthController(AuthService authService, boolean debugOtpEnabled) {
+        this(authService, debugOtpEnabled, null, null);
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
+    public AuthController(AuthService authService, boolean debugOtpEnabled, MessageService messageService) {
+        this(authService, debugOtpEnabled, messageService, null);
+    }
+
+    @Autowired
     public AuthController(AuthService authService,
                           @Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
-                          MessageService messageService) {
+                          MessageService messageService, GoogleOAuthRedirectService googleOAuthRedirectService) {
         this.authService = authService;
         this.debugOtpEnabled = debugOtpEnabled;
         this.messageService = messageService;
+        this.googleOAuthRedirectService = googleOAuthRedirectService;
     }
 
     private String msg(String key, Object... args) {
@@ -97,6 +109,48 @@ public class AuthController {
             data.put("debugOtp", code);
         }
         return ApiResponse.ok(msg("auth.otp.sent"), data);
+    }
+
+    @Operation(summary = "Authenticate Google members or request activation OTP (SCRUM-89)",
+            description = "Active members receive authentication immediately; pending members receive activation OTP. Authorization codes use the state-protected redirect callback.")
+    @PostMapping("/google/oauth-callback")
+    public ApiResponse<GoogleOAuthResponse> handleGoogleOAuthCallback(@Valid @RequestBody GoogleOAuthCallbackRequest request) {
+        GoogleOAuthResult result = authService.authenticateGoogle(request);
+        boolean requiresOtp = result.authentication() == null;
+        String message = requiresOtp ? msg("auth.google.otp.sent", result.email()) : msg("auth.login.success");
+        return ApiResponse.ok(message, new GoogleOAuthResponse(requiresOtp, result.email(), result.authentication(),
+                message, requiresOtp ? 5 : null, requiresOtp && debugOtpEnabled ? result.otpCode() : null));
+    }
+
+    @PostMapping("/google/handoff")
+    public ResponseEntity<ApiResponse<AuthTokenResponse>> redeemGoogleHandoff(@Valid @RequestBody GoogleHandoffRequest request) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(ApiResponse.ok(msg("auth.login.success"), googleOAuthRedirectService.redeem(request.code(), request.verifier())));
+    }
+
+    @GetMapping("/google/authorize")
+    public ResponseEntity<Void> authorizeGoogleOAuth(
+            @RequestParam(value = "redirect_uri", required = false) String redirectUri,
+            @RequestParam("code_challenge") String challenge) {
+        return redirect(googleOAuthRedirectService.entry(redirectUri, challenge));
+    }
+
+    @GetMapping("/google/authorize/start")
+    public ResponseEntity<Void> startGoogleOAuth(HttpServletRequest request, @RequestParam("code_challenge") String challenge) {
+        return redirect(googleOAuthRedirectService.authorize(request.getSession(true), challenge));
+    }
+
+    @GetMapping("/google/callback")
+    public ResponseEntity<Void> googleOAuthRedirectCallback(HttpServletRequest request,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "code", required = false) String code,
+            @RequestParam(value = "error", required = false) String error,
+            @RequestParam(value = "redirect_uri", required = false) String redirectUri) {
+        return redirect(googleOAuthRedirectService.complete(request.getSession(false), state, code, error, redirectUri));
+    }
+
+    private ResponseEntity<Void> redirect(URI location) {
+        return ResponseEntity.status(HttpStatus.FOUND).cacheControl(org.springframework.http.CacheControl.noStore()).location(location).build();
     }
 
     @Operation(summary = "Xác thực mã OTP Google và đăng nhập", description = "Xác thực mã OTP gửi về Gmail, kích hoạt tài khoản và trả về JWT Token")

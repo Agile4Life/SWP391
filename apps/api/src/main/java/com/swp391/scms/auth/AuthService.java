@@ -7,6 +7,10 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.exception.TooManyRequestsException;
 import com.swp391.scms.common.exception.UnauthorizedException;
 import com.swp391.scms.auth.dto.AuthTokenResponse;
+import com.swp391.scms.auth.dto.GoogleLoginRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthCallbackRequest;
+import com.swp391.scms.auth.dto.GoogleOAuthResult;
+import com.swp391.scms.auth.dto.GoogleUserInfo;
 import com.swp391.scms.auth.dto.RegistrationResponse;
 import com.swp391.scms.security.JwtService;
 import com.swp391.scms.users.RoleRepository;
@@ -22,9 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import com.swp391.scms.auth.dto.GoogleLoginRequest;
-import com.swp391.scms.auth.dto.GoogleUserInfo;
-import com.swp391.scms.audit.Audited;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -164,27 +165,120 @@ public class AuthService {
         }
         String email = normalize(rawEmail);
 
-        java.util.Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
         if (userOpt.isEmpty()) {
-            String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
-            if (baseUsername.length() < 3) {
-                baseUsername = "user_" + baseUsername;
-            }
-            if (baseUsername.length() > 40) {
-                baseUsername = baseUsername.substring(0, 40);
-            }
-            String username = baseUsername;
-            int suffix = 1;
-            while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
-                username = baseUsername + suffix++;
-            }
-            createPendingMemberUser(username, email, null, java.util.UUID.randomUUID().toString());
+            String username = generateUniqueUsernameFromEmail(email);
+            createPendingMemberUser(username, email, null, UUID.randomUUID().toString());
         } else {
             User user = userOpt.get();
             ensureGoogleOtpAccountAllowed(user);
         }
 
         return issueAndSendOtp(email);
+    }
+
+    /**
+     * Handles Google OAuth callback (via ID Token, OAuth2 Access Token, or Authorization Code):
+     * verifies identity and account restrictions, signs in active members, or sends activation OTP to pending members.
+     */
+    @Transactional
+    public GoogleOAuthResult authenticateGoogle(GoogleOAuthCallbackRequest request) {
+        if (request == null) {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google OAuth payload is missing");
+        }
+        if (googleTokenVerifierPort == null) {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google Token Verifier is not available");
+        }
+
+        GoogleUserInfo googleUser;
+        if (request.idToken() != null && !request.idToken().isBlank()) {
+            googleUser = googleTokenVerifierPort.verify(request.idToken());
+        } else if (request.accessToken() != null && !request.accessToken().isBlank()) {
+            googleUser = googleTokenVerifierPort.verifyAccessToken(request.accessToken());
+        } else if (request.code() != null && !request.code().isBlank()) {
+            googleUser = googleTokenVerifierPort.verifyAuthorizationCode(request.code(), request.redirectUri());
+        } else {
+            throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google OAuth token or authorization code is missing");
+        }
+
+        if (googleUser == null || !googleUser.emailVerified()) {
+            throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_not_verified", null, "Google email is not verified");
+        }
+
+        String email = normalize(googleUser.email());
+        String googleSub = googleUser.sub();
+
+        Optional<User> bySub = (googleSub != null && !googleSub.isBlank())
+                ? userRepository.findByGoogleSub(googleSub)
+                : Optional.empty();
+        Optional<User> byEmail = userRepository.findByEmailIgnoreCase(email);
+
+        User user;
+        if (bySub.isPresent()) {
+            user = bySub.get();
+        } else if (byEmail.isPresent()) {
+            user = byEmail.get();
+            String linkedSub = user.getGoogleSub();
+            if (linkedSub != null && !linkedSub.isBlank() && !linkedSub.equals(googleSub)) {
+                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+            }
+            boolean googleManagedEmail = email.endsWith("@gmail.com")
+                    || (googleUser.hostedDomain() != null && !googleUser.hostedDomain().isBlank());
+            if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
+                throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
+            }
+            user.setGoogleSub(googleSub);
+            if (googleUser.picture() != null && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
+                user.setAvatarUrl(googleUser.picture());
+            }
+            if (googleUser.name() != null && !googleUser.name().isBlank()
+                    && (user.getFullName() == null || user.getFullName().equals(user.getUsername()))) {
+                user.setFullName(googleUser.name());
+            }
+            user.setUpdatedAt(LocalDateTime.now(clock));
+            userRepository.save(user);
+        } else {
+            Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
+
+            String username = generateUniqueUsernameFromEmail(email);
+
+            user = new User();
+            user.setUsername(username);
+            user.setRole(memberRole);
+            user.setFullName(googleUser.name() != null && !googleUser.name().isBlank() ? googleUser.name() : username);
+            user.setEmail(email);
+            user.setGoogleSub(googleSub);
+            user.setAvatarUrl(googleUser.picture());
+            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+            user.setStatus("inactive");
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setCreatedAt(now);
+            user.setUpdatedAt(now);
+            userRepository.saveAndFlush(user);
+
+            Member member = new Member();
+            member.setUser(user);
+            member.setMembershipCode("MEM-" + user.getId());
+            member.setJoinDate(LocalDate.now(clock));
+            member.setFitnessLevel("beginner");
+            user.setMember(member);
+            userRepository.save(user);
+        }
+
+        ensureGoogleOtpAccountAllowed(user);
+
+        if ("active".equalsIgnoreCase(user.getStatus())) {
+            LocalDateTime now = LocalDateTime.now(clock);
+            user.setLastLoginAt(now);
+            user.setUpdatedAt(now);
+            userRepository.save(user);
+            return new GoogleOAuthResult(normalize(user.getEmail()), null, issueTokenForUser(user));
+        }
+
+        String accountEmail = normalize(user.getEmail());
+        String otpCode = issueAndSendOtp(accountEmail);
+        return new GoogleOAuthResult(accountEmail, otpCode);
     }
 
     @Transactional
@@ -211,6 +305,22 @@ public class AuthService {
         userRepository.save(user);
 
         return issueTokenForUser(user);
+    }
+
+    private String generateUniqueUsernameFromEmail(String email) {
+        String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
+        if (baseUsername.length() < 3) {
+            baseUsername = "user_" + baseUsername;
+        }
+        if (baseUsername.length() > 40) {
+            baseUsername = baseUsername.substring(0, 40);
+        }
+        String username = baseUsername;
+        int suffix = 1;
+        while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+            username = baseUsername + suffix++;
+        }
+        return username;
     }
 
     private User createPendingMemberUser(String username, String email, String phone, String rawPassword) {
@@ -254,7 +364,6 @@ public class AuthService {
     }
 
     @Transactional
-    @Audited(action = "LOGIN_GOOGLE", entity = "users")
     public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
         if (request == null || request.idToken() == null || request.idToken().isBlank()) {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google ID Token is missing");
@@ -300,13 +409,7 @@ public class AuthService {
             Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
                     .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
 
-            String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
-            if (baseUsername.length() < 3) baseUsername = "user_" + baseUsername;
-            String username = baseUsername;
-            int suffix = 1;
-            while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
-                username = baseUsername + suffix++;
-            }
+            String username = generateUniqueUsernameFromEmail(email);
 
             user = new User();
             user.setUsername(username);
@@ -362,6 +465,9 @@ public class AuthService {
     }
 
     private void ensureGoogleOtpAccountAllowed(User user) {
+        if (user.getRole() == null || !"MEMBER".equalsIgnoreCase(user.getRole().getCode())) {
+            throw new ForbiddenException("STAFF_GOOGLE_NOT_ALLOWED", "auth.google.staff_not_allowed", null, "Staff accounts are not allowed to log in via Google");
+        }
         String status = user.getStatus();
         boolean allowedStatus = "active".equalsIgnoreCase(status) || "inactive".equalsIgnoreCase(status);
         if (user.getDeletedAt() != null || !allowedStatus) {

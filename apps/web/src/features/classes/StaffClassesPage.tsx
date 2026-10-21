@@ -3,6 +3,8 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
+import { DatePicker } from '../../shared/ui/DatePicker';
+import { TimePicker } from '../../shared/ui/TimePicker';
 import { toast } from '../../shared/ui/toast';
 import {
   classesApi,
@@ -68,6 +70,13 @@ export function StaffClassesPage() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [pendingClassId, setPendingClassId] = useState<number | null>(null);
   const [pendingClassSignature, setPendingClassSignature] = useState<string | null>(null);
+
+  // BR-04: Kiểm tra trùng tên lớp học ngay lập tức sau khi nhập (realtime validation)
+  const isDuplicateClassName = useMemo(() => {
+    const trimmed = formData.name.trim().toLowerCase();
+    if (!trimmed) return false;
+    return classes.some((c) => c.name.trim().toLowerCase() === trimmed);
+  }, [formData.name, classes]);
 
   // Tải dữ liệu các danh mục phụ trợ (Phòng available, HLV active, Bộ môn)
   const loadCatalogs = useCallback(async () => {
@@ -168,6 +177,13 @@ export function StaffClassesPage() {
     // BR-03: Validate phía Frontend trước khi gửi
     if (!formData.name.trim()) {
       const msg = 'Vui lòng nhập tên lớp học.';
+      setModalError(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    if (isDuplicateClassName) {
+      const msg = `Tên lớp học "${formData.name.trim()}" đã tồn tại trong hệ thống. Vui lòng chọn tên khác.`;
       setModalError(msg);
       toast(msg, 'error');
       return;
@@ -474,7 +490,7 @@ export function StaffClassesPage() {
       {/* Modal: Tạo lớp học và xếp lịch */}
       {showModal && (
         <Modal title="Tạo Lớp Học &amp; Xếp Lịch HLV" onClose={handleCloseModal}>
-          <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 14 }}>
+          <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-name">
                 Tên Lớp Học *
@@ -486,10 +502,38 @@ export function StaffClassesPage() {
                 autoFocus
                 placeholder="Ví dụ: Reformer Pilates Level 2..."
                 className="portal-input"
+                style={
+                  isDuplicateClassName
+                    ? { borderColor: '#E02424', backgroundColor: '#FFF5F5' }
+                    : undefined
+                }
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (modalError) setModalError(null);
+                }}
                 disabled={isSubmitting}
               />
+              {isDuplicateClassName && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '5px',
+                    color: '#E02424',
+                    fontSize: '0.84rem',
+                    fontWeight: 600,
+                  }}
+                  role="alert"
+                  data-testid="duplicate-class-warning"
+                >
+                  <span style={{ fontSize: '1rem' }}>⚠️</span>
+                  <span>
+                    Tên lớp &quot;{formData.name.trim()}&quot; đã tồn tại trong hệ thống. Vui lòng đặt tên khác!
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="grid-2">
@@ -515,7 +559,7 @@ export function StaffClassesPage() {
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="class-capacity">
-                  Sức Chứa Tối Đa * (Capacity &gt; 0)
+                  Sức Chứa Tối Đa *
                 </label>
                 <input
                   id="class-capacity"
@@ -534,7 +578,7 @@ export function StaffClassesPage() {
             {/* BR-02: Dropdown HLV chỉ liệt kê HLV đang active */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-coach">
-                Huấn Luyện Viên Phụ Trách * (Chỉ HLV active)
+                Huấn Luyện Viên Phụ Trách *
               </label>
               <Select
                 id="class-coach"
@@ -555,7 +599,7 @@ export function StaffClassesPage() {
             {/* BR-02: Dropdown Phòng chỉ liệt kê phòng available */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-room">
-                Phòng Tập * (Chỉ phòng available)
+                Phòng Tập *
               </label>
               <Select
                 id="class-room"
@@ -582,14 +626,12 @@ export function StaffClassesPage() {
               <div className="grid-2" style={{ marginBottom: 10 }}>
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-date">
-                    Ngày Học * (Không ở quá khứ)
+                    Ngày Học *
                   </label>
-                  <input
+                  <DatePicker
                     id="session-date"
-                    type="date"
                     required
                     min={getTodayString()}
-                    className="portal-input"
                     value={formData.sessionDate}
                     onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
                     disabled={isSubmitting}
@@ -620,11 +662,9 @@ export function StaffClassesPage() {
                   <label className="portal-label" htmlFor="session-start">
                     Giờ Bắt Đầu *
                   </label>
-                  <input
+                  <TimePicker
                     id="session-start"
-                    type="time"
                     required
-                    className="portal-input"
                     value={formData.startTime}
                     onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                     disabled={isSubmitting}
@@ -633,13 +673,11 @@ export function StaffClassesPage() {
 
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-end">
-                    Giờ Kết Thúc * (&gt; Giờ bắt đầu)
+                    Giờ Kết Thúc *
                   </label>
-                  <input
+                  <TimePicker
                     id="session-end"
-                    type="time"
                     required
-                    className="portal-input"
                     value={formData.endTime}
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                     disabled={isSubmitting}
@@ -685,8 +723,8 @@ export function StaffClassesPage() {
               </div>
             )}
 
-            {/* BR-05: Chặn bấm đúp (disable nút khi đang gửi) */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+            {/* BR-05: Chặn bấm đúp (disable nút khi đang gửi hoặc khi tên bị trùng) */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
               <button
                 type="button"
                 className="btn-secondary"
@@ -698,7 +736,7 @@ export function StaffClassesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDuplicateClassName}
                 data-testid="submit-class-button"
               >
                 {isSubmitting ? (
