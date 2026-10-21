@@ -86,3 +86,16 @@
   .member-board-info p, .member-profile-card p { font-size: 12px; }
   .member-digital-card { min-height: 200px; }
 }
+
+/* Navigation cards keep their existing actions as separate links. */
+.member-card-cover-link, .member-card-details-link { display: block; }
+.member-card-cover-link { border-radius: 12px; overflow: hidden; }
+.member-card-details-link { color: inherit; }
+.member-classes-card { position: relative; }
+.member-card-overlay-link { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.member-classes-card .member-text-link { position: relative; z-index: 2; }
+.member-board-info { display: block; }
+.member-membership-card, .member-classes-card, .member-board-info, .member-discover-card, .member-digital-card { transition: box-shadow 180ms ease, border-color 180ms ease; }
+.member-membership-card:has(a:hover), .member-classes-card:has(a:hover), .member-board-info:hover, .member-discover-card:hover, .member-digital-card:hover { box-shadow: 0 10px 24px -14px #59443030; }
+.member-membership-card a, .member-classes-card a, .member-board-info, .member-discover-card, .member-digital-card { cursor: pointer; }
+.member-membership-card a:focus-visible, .member-classes-card a:focus-visible, .member-board-info:focus-visible, .member-discover-card:focus-visible, .member-digital-card:focus-visible { outline: 2px solid #806344; outline-offset: 3px; }

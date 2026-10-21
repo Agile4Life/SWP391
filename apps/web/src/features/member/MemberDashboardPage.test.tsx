@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberDashboardPage } from './MemberDashboardPage';
 
@@ -13,6 +13,11 @@ vi.mock('./memberDashboardApi', () => ({
   getCurrentMembership: api.membership,
   getBookedEnrollments: api.bookings,
 }));
+
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname}</span>;
+}
 
 const membership = {
   id: 1, memberId: 1, packageId: 2, packageName: 'Essential',
@@ -44,10 +49,45 @@ describe('SCRUM-85 dashboard', () => {
 
   async function renderDashboard() {
     await act(async () => {
-      root.render(<MemoryRouter><MemberDashboardPage /></MemoryRouter>);
+      root.render(<MemoryRouter><MemberDashboardPage /><LocationProbe /></MemoryRouter>);
     });
   }
 
+  it('opens Packages from the membership image and card details', async () => {
+    await renderDashboard();
+    const image = host.querySelector<HTMLImageElement>('.member-card-cover');
+    const imageLink = image?.closest('a');
+    expect(imageLink?.getAttribute('href')).toBe('/member/packages');
+    await act(async () => imageLink?.click());
+    expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/packages');
+
+    const detailsLink = host.querySelector<HTMLAnchorElement>('.member-card-details-link');
+    expect(detailsLink?.getAttribute('href')).toBe('/member/packages');
+    expect(detailsLink?.textContent).toContain('Essential');
+    expect(host.querySelector('.member-membership-card .member-text-link')?.getAttribute('href')).toBe('/member/packages');
+  });
+
+  it('opens Classes from the class card and discovery image', async () => {
+    await renderDashboard();
+    const classLink = host.querySelector<HTMLAnchorElement>('.member-card-overlay-link');
+    expect(classLink?.getAttribute('href')).toBe('/member/classes');
+    await act(async () => classLink?.click());
+    expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/classes');
+    expect(host.querySelector('.member-discover-card img')?.closest('a')?.getAttribute('href')).toBe('/member/classes');
+  });
+
+  it('opens Digital Card from the member cards and supports keyboard focus', async () => {
+    await renderDashboard();
+    const card = host.querySelector<HTMLAnchorElement>('.member-board-info');
+    expect(card?.getAttribute('href')).toBe('/member/card');
+    expect(card?.querySelector('a, button')).toBeNull();
+    card?.focus();
+    expect(document.activeElement).toBe(card);
+    expect(card?.tabIndex).toBe(0);
+    await act(async () => card?.click());
+    expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/card');
+    expect(host.querySelector('.member-digital-card')?.getAttribute('href')).toBe('/member/card');
+  });
   it('shows an empty class list independently of membership', async () => {
     await renderDashboard();
     expect(host.textContent).toContain('Essential');
