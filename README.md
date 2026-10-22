@@ -16,7 +16,7 @@
 
 <br />
 
-<img src="docs/qa/portal-redesign/landing-1440.png" alt="SÖL Wellness Sanctuary Landing Page" width="100%" />
+<img src="docs/ui-review/fitness-reference/hero-desktop.png" alt="SÖL Wellness Sanctuary Landing Page" width="100%" />
 
 </div>
 
@@ -34,11 +34,14 @@
 ## 🖥️ Các màn hình chính của hệ thống (Main Screens Showcase)
 
 ### 1. Trang chủ & Cổng Đăng nhập (`/` & `/login`)
+
+**Quy chuẩn thiết kế chính:** [DESIGN.md](DESIGN.md). Phần công khai dùng SÖL Fitness charcoal–salmon, bố cục full width, scrollbar đồng bộ và animation xuất hiện từng component khi cuộn dọc. Portal giữ thiết kế riêng hiện có.
+
 Giao diện giới thiệu dịch vụ cao cấp tích hợp trợ lý AI và cổng đăng nhập phân luồng tự động theo 4 vai trò (**Hội viên**, **Lễ tân**, **Huấn luyện viên**, **Quản lý trung tâm**):
 
 | Trang chủ SÖL Wellness Sanctuary (`/`) | Cổng Đăng nhập Đa vai trò (`/login`) |
 | :---: | :---: |
-| <img src="docs/qa/portal-redesign/landing-1440.png" alt="Landing Page" width="100%" /> | <img src="docs/qa/portal-redesign/login-1440.png" alt="Login Page" width="100%" /> |
+| <img src="docs/ui-review/fitness-reference/hero-desktop.png" alt="Landing Page" width="100%" /> | <img src="docs/ui-review/fitness-reference/login-desktop.png" alt="Login Page" width="100%" /> |
 
 ---
 

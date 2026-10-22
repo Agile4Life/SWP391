@@ -16,6 +16,15 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 4. Frontend: đặt UI trong `features/<feature>`, page chỉ compose feature; luôn có loading, empty và error state.
 5. Chạy test/lint phù hợp trước khi mở PR và ghi Jira key trong mô tả PR.
 
+## Quy chuẩn thiết kế frontend
+
+- Bắt buộc đọc [DESIGN.md](DESIGN.md) trước khi tạo, sửa hoặc review UI. Đây là quy chuẩn thiết kế chính đang có hiệu lực.
+- Trang công khai (`/`, `/login`, `/register`, OTP và trang công khai mới): **SÖL Fitness charcoal–salmon**, font Plus Jakarta Sans, bố cục full width không có viền ngoài; scrollbar salmon trên nền than. Tái sử dụng `PublicLayout`, `AuthLayout` và `fitness-public.css`.
+- Quyết định animation mới nhất: **animation xuất hiện của từng component, cuộn dọc native**. Hiệu ứng lặp lại khi component rời rồi quay vào viewport ở cả hai chiều; không reset khi component vẫn còn nhìn thấy một phần. Không dựng lại slide trang ngang–dọc, fullpage scroll hijacking hoặc khóa wheel/touch/keyboard. Tôn trọng `prefers-reduced-motion` và focus bàn phím.
+- Portal giữ theme hiện tại kem/cát/espresso và bố cục nghiệp vụ; không tự đồng bộ portal sang theme tối.
+- Không khôi phục theme Quiet Luxury/serif/nền kem cho trang công khai từ file CSS cũ, ảnh chụp cũ, knowledge graph hoặc gợi ý skill. Hồ sơ tại `docs/qa/portal-redesign*` chỉ là lịch sử đối với landing/login.
+- Khi người dùng thay đổi quyết định thiết kế, cập nhật `DESIGN.md` cùng phạm vi liên quan để agent sau không tiếp tục theo hướng cũ.
+
 ## Bất biến nghiệp vụ và kiến trúc dữ liệu
 
 - **Code-First & ORM Polymorphism bắt buộc:** Toàn bộ bảng, cột, khóa và quan hệ định nghĩa qua Java Entity; chuyển đổi CSDL không viết lại DDL thủ công mà dùng Hibernate ORM đẩy thẳng (`ddl-auto: update`).

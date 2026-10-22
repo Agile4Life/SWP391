@@ -2,7 +2,13 @@
 
 Phạm vi đã thống nhất: toàn bộ trang công khai (`/`, `/login`, `/register`, bước OTP). Portal dùng giao diện và luồng hiện có.
 
+Quy chuẩn thiết kế chính dành cho các agent tiếp theo: [DESIGN.md](../../../DESIGN.md), được tham chiếu từ `AGENTS.md`. Báo cáo này lưu đối chiếu và kiểm chứng, không thay thế quy chuẩn chính.
+
 Cập nhật theo yêu cầu tiếp theo: các trang công khai phủ kín chiều rộng viewport, bỏ viền salmon/padding ngoài và giới hạn canvas 1500px. Nội dung vẫn giữ khoảng cách bên trong để đọc và thao tác. Scrollbar dùng thumb salmon trên track than đậm; theme chỉ áp dụng khi layout công khai hiện diện.
+
+Quyết định chuyển động cuối cùng: giữ cuộn dọc native, bỏ ý tưởng slide trang ngang–dọc. Hero, heading, card và form có animation xuất hiện; các card stagger, replay khi quay vào viewport ở cả hai chiều cuộn và chỉ reset sau khi rời hoàn toàn màn hình; đổi ảnh/nhóm HLV có fade. Reduced motion và môi trường không có IntersectionObserver hiển thị nội dung đầy đủ.
+
+Áp dụng cùng quy tắc cho các component mới: chỉ số CLB, lịch lớp, các bước tham gia, BMI, FAQ và phần hướng dẫn nhóm cơ trong hero. Thẻ sau khi lọc lịch lớp được đăng ký tự động; câu trả lời FAQ có fade + nâng trong 320ms mỗi lần mở. Focus giữ chuyển động vị trí liên tục để không làm nút nhảy khỏi con trỏ khi bấm lúc reveal đang chạy.
 
 ## Cơ sở đối chiếu
 
@@ -52,11 +58,12 @@ Xem bản chạy: `http://localhost:5173/`, `/login`, `/register` khi Vite đang
 - Lint: chạy `npm --prefix apps/web run lint`.
 - Test frontend: chạy `npm --prefix apps/web run test`.
 - Browser: `scripts/verify-public-ui.cjs`, cần Playwright có trong môi trường và Vite đang chạy. Nếu dùng bản Playwright cài global trên PowerShell: `$env:NODE_PATH = npm root -g; node scripts/verify-public-ui.cjs`.
+- Animation: `scripts/verify-public-animation.cjs`, kiểm tra khi animation bật, replay hai chiều, không nhấp nháy khi còn một phần component trên màn hình, chuyển nội dung, đăng ký thẻ mới sau khi lọc, stagger, nhập BMI, mở/đóng FAQ nhiều lần, tương tác form, mobile, thay đổi reduced motion khi đang chạy và fallback khi không có IntersectionObserver. Kiểm tra các section mới được thực hiện khi section đã có trong trang.
 - Browser kiểm tra landing ở 320 / 375 / 390 / 768 / 1024 / 1440 / 1920 / 2560px; auth ở mobile, tablet và desktop. Xác nhận canvas chạm hai mép viewport, không có padding ngoài, không tràn ngang, scrollbar dùng đúng màu, document theme không áp dụng ngoài layout công khai. Kiểm tra thêm chuyển trainer, gallery, lọc gói; menu mobile; hiện mật khẩu; lỗi đăng nhập; đăng ký → OTP; đếm ngược và lỗi OTP.
 - Các request auth trong browser check được chặn bằng response giả lập. Kết quả này xác nhận UI và payload gửi đi, không xác nhận email/OTP hoặc Google OAuth end-to-end với backend thật.
 - [Kết quả browser](browser-verification.json).
 
-Kết quả tại bản triển khai: build và lint thành công; 28 file test / 195 test qua; browser check qua và không có lỗi JavaScript chưa xử lý. Build có cảnh báo bundle JavaScript lớn hơn 500kB (khoảng 821kB trước gzip) do ứng dụng vẫn đóng gói chung các route. Ba PNG tạo mới khoảng 2MB/ảnh; ảnh dưới hero dùng lazy loading. Bản này chưa xử lý tối ưu bundle hoặc chuyển đổi định dạng ảnh.
+Kết quả kiểm tra ngày 22/10/2026: build và lint thành công; 28 file test / 195 test qua; browser UI và animation check qua, không có lỗi JavaScript chưa xử lý. Build vẫn có cảnh báo bundle JavaScript lớn hơn 500kB do ứng dụng đóng gói chung các route. Ba PNG tạo mới khoảng 2MB/ảnh; ảnh dưới hero dùng lazy loading. Bản này chưa xử lý tối ưu bundle hoặc chuyển đổi định dạng ảnh.
 
 ## Ảnh và nguồn
 
@@ -84,6 +91,8 @@ Theo yêu cầu chia commit để dễ quay lại, thay đổi được lưu the
 | `a04eeaa` | Giao diện đăng nhập, đăng ký và OTP | Cần layout từ commit landing |
 | `test(web): document and verify public UI redesign` | Script browser, ảnh chụp, báo cáo và hướng dẫn này | Kiểm chứng bản UI đầy đủ |
 | `fix(web): fill public viewport and theme scrollbars` | Bỏ khung ngoài, phủ kín trang, scrollbar theo palette; kiểm tra đến 2560px và cập nhật ảnh | Mở rộng bản UI đầy đủ |
+| `b9fadb9` | Animation xuất hiện ban đầu cho component công khai | Cần layout công khai |
+| `44da88d` | Replay hai chiều, đăng ký component mới, stagger và FAQ, sửa focus khi đang reveal | Cần animation ban đầu; không gồm nội dung/layout các section được bổ sung song song |
 
 Mốc trước thay đổi UI: `0182b12`. Các commit chỉ gồm file UI/ảnh/tài liệu của tác vụ này; thay đổi backend đang có trong workspace không được đưa vào.
 
