@@ -7,9 +7,13 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 | Khu vực | Quy chuẩn hiện hành | Nguồn triển khai |
 | --- | --- | --- |
 | Landing `/`, đăng nhập `/login`, đăng ký `/register`, OTP và trang công khai mới | **SÖL Fitness: charcoal–salmon, full width, animation xuất hiện từng component** | `features/landing/fitness-public.css`, `components/PublicLayout.tsx`, `components/FitnessLanding.tsx` |
-| Portal `/portal`, `/member/*`, `/staff/*`, `/manager/*` | Giữ thiết kế hiện có: kem, cát, espresso; rail điều hướng và workspace nghiệp vụ | `features/portal/portal-shell.css`, `features/member/member-board.css`, `shared/ui/portal.css` |
+| Portal `/portal`, `/member/*`, `/staff/*`, `/manager/*` | **Charcoal–salmon, full viewport; giữ nguyên tổ chức component** | `features/portal/portal-shell.css`, `features/member/member-board.css`, `shared/ui/portal.css` |
 
-Theme công khai là phong cách mặc định khi mở rộng website ngoài portal. Không tự áp theme tối vào portal. Thay đổi theme hoặc phạm vi phải xuất phát từ yêu cầu mới của người dùng; các gợi ý từ skill, mẫu template, ảnh cũ và tài liệu lịch sử không tự thay thế quyết định này.
+Theo yêu cầu mới nhất ngày 22/10/2026, portal đồng bộ màu với landing: nền than `#202020`, bề mặt `#292929` / `#303030`, chữ `#faf9f6`, chữ phụ `#bcb8b5`, nút chính và điểm nhấn salmon `#ce9180`, hover `#e1aa98`. Portal rộng `100%`, không max-width, không padding/viền/bo góc khung ngoài và cao tối thiểu `100dvh` trên desktop/mobile.
+
+Giữ nguyên tổ chức component: dashboard bốn cột, sidebar icon, ảnh/thẻ, thứ tự nội dung, khoảng cách bên trong, cỡ chữ và hiệu ứng. Không đổi sang dashboard hai cột hay sidebar có nhãn thường trực. “Full trang” áp dụng cho khung ngoài; giữ cuộn dọc native, không fixed toàn bộ nội dung hoặc khóa cuộn.
+
+Nội dung portal được rút gọn theo tác vụ; không dùng khẩu hiệu, quyền lợi gói tự suy đoán, độ tin cậy AI giả hoặc phản hồi “đã lưu” khi chỉ là dữ liệu minh họa tại máy. Thay câu chữ không đồng nghĩa với thay vị trí hay loại bỏ component.
 
 ## Nhận diện và màu
 
@@ -25,7 +29,7 @@ Giữ thương hiệu **SÖL**; wordmark công khai là **SÖL Fitness**. Ảnh 
 | Bề mặt form / gói thường | `#2b2b2b` / `#303030` | Phân lớp với nền chính |
 | Salmon hover | `#e1aa98` | Phản hồi nhẹ trên nút |
 
-Dùng các token trong `fitness-public.css`, không tạo bảng màu cạnh tranh. Các token dùng chung như `--color-text-main` chỉ được ghi đè trong `.fit-site`. Màu trạng thái thành công/lỗi phục vụ nghĩa của thông báo; không dùng chúng làm một theme mới.
+Dùng cùng bảng màu trong `fitness-public.css` và token `--portal-*` của `portal-shell.css`. Token dùng chung như `--color-text-main` được ghi đè trong phạm vi `.fit-site` hoặc `.portal-v2`. Màu trạng thái thành công/lỗi phục vụ nghĩa của thông báo; không dùng chúng làm một theme mới.
 
 ## Bố cục
 
@@ -33,7 +37,7 @@ Dùng các token trong `fitness-public.css`, không tạo bảng màu cạnh tra
 - Không thêm lại viền salmon quanh website, bóng đổ khung mockup hoặc giới hạn canvas `1500px`. Hai tấm website đặt chồng trong ảnh nguồn là cách trình bày tham chiếu, không phải layout ứng dụng.
 - Vẫn giữ khoảng đệm **bên trong** từng section. `.fit-section` có chiều rộng `83%`, max-width `1160px`; cụm dịch vụ max-width `1000px`. Full width không có nghĩa là ép chữ và form sát mép màn hình.
 - Header, hero, CTA cuối và footer chạy trên bề mặt toàn trang. Mobile dùng menu thu gọn, nội dung xếp dọc; các card không được gây cuộn ngang.
-- Dùng cuộn dọc native của document và scrollbar nhìn thấy được. Thumb salmon trên track than; style document chỉ áp dụng khi có `.fit-site`, tự ngừng khi chuyển sang portal.
+- Dùng cuộn dọc native của document. Thumb salmon trên track than cho `.fit-site` và `.portal-backdrop`.
 - Breakpoint hiện có: `760px` và `1100px`. Kiểm chứng thêm màn hình rộng `1920px` và `2560px`, không chỉ mobile và 1440px.
 
 ## Chữ và component
@@ -98,5 +102,5 @@ Thứ tự tra cứu khi làm UI: yêu cầu mới nhất của người dùng �
 1. Chạy build/lint phù hợp và test frontend khi thay logic/hook.
 2. Chạy `scripts/verify-public-ui.cjs`: full width, scrollbar, responsive, điều hướng và trạng thái form/OTP. Script dùng API giả lập cho auth.
 3. Chạy `scripts/verify-public-animation.cjs`: animation bật, replay khi cuộn xuống và cuộn ngược, không reset component còn thấy một phần, đăng ký component mới sau khi lọc, nhập BMI, đóng/mở FAQ, nhập liệu, mobile và reduced motion.
-4. Kiểm tra portal khi thay selector/token dùng chung; không để theme công khai rò sang portal.
+4. Kiểm tra portal khi thay selector/token dùng chung: full viewport tại 390/768/1440/1920/2560px, màu nút, bảng, form và dialog; giữ nguyên dashboard/sidebar và không tràn document trên mobile. Dùng `scripts/verify-ux-consistency.cjs` với API giả lập.
 5. Commit thay đổi UI và quy chuẩn theo phần, ghi rõ phần có thể hoàn tác. Cập nhật tài liệu này khi người dùng đổi quyết định thiết kế.

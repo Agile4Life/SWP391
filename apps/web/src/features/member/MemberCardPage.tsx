@@ -41,7 +41,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     (periodStatus === 'active' || periodStatus === 'warning') &&
     (status === 'active' || status === 'warning') &&
     Boolean(subscription.qrCode?.trim());
-  const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#C2A684' : '#A45A53';
+  const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#ce9180' : '#A45A53';
 
   // Fetch dynamic QR on interval
   useEffect(() => {
@@ -96,7 +96,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     if (!cardRef.current || !canShowQr || !qrImage || !qrLoaded || qrError || downloading) return;
     setDownloading(true);
     try {
-      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#1A1614', scale: 2 });
+      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#202020', scale: 2 });
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
       link.download = 'the-hoi-vien.png';
@@ -111,8 +111,8 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
 
   return (
     <>
-      <div ref={cardRef} className="pass-card" style={{ background: '#1A1614', color: '#FAF8F5', border: `2px solid ${border}`, borderRadius: 16, padding: 32, maxWidth: 620 }}>
-        <div style={{ color: '#C2A684', fontFamily: 'var(--font-serif)', fontSize: 24 }}>SÖL WELLNESS SANCTUARY</div>
+      <div ref={cardRef} className="pass-card" style={{ background: '#202020', color: '#faf9f6', border: `2px solid ${border}`, borderRadius: 16, padding: 32, maxWidth: 620 }}>
+        <div style={{ color: '#ce9180', fontFamily: 'var(--font-serif)', fontSize: 24 }}>SÖL WELLNESS SANCTUARY</div>
         <p style={{ fontSize: '0.75rem', letterSpacing: '0.16em', color: '#ABA49D', marginTop: 4 }}>THẺ HỘI VIÊN ĐIỆN TỬ</p>
         <h2 style={{ margin: '14px 0 8px' }}>{profile.fullName}</h2>
         <p style={{ margin: '4px 0' }}>Mã hội viên: {profile.membershipCode || 'Chưa có mã hội viên'}</p>
@@ -142,7 +142,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
                 setQrError(true);
               }}
             />
-            <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#D6C7B8', fontFamily: 'monospace' }}>
+            <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#bcb8b5', fontFamily: 'monospace' }}>
               {dynamicQr ? (
                 <span>
                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#48BB78', marginRight: 6 }} />

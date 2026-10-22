@@ -173,7 +173,7 @@ export function ManagerCatalogsPage() {
             {tab === 'rooms' && (
               <>
                 <div className="portal-form-group">
-                  <label className="portal-label" htmlFor="cat-location">Vị trí / Tầng</label>
+                  <label className="portal-label" htmlFor="cat-location">Vị trí / tầng</label>
                   <input
                     id="cat-location"
                     className="portal-input"
@@ -327,7 +327,7 @@ export function ManagerCatalogsPage() {
               {tab === 'rooms' && 'Chưa có cơ sở phòng tập nào'}
               {tab === 'packages' && 'Chưa có gói hội viên nào'}
             </h3>
-            <p style={{ color: '#7E7771' }}>
+            <p style={{ color: 'var(--color-text-muted)' }}>
               Hãy nhấn nút thêm để cấu hình danh mục phục vụ vận hành.
             </p>
             <button
@@ -356,7 +356,7 @@ export function ManagerCatalogsPage() {
                     {disciplines.map((d) => (
                       <tr key={d.id}>
                         <td><strong>{d.name}</strong></td>
-                        <td style={{ color: '#6A635D' }}>{d.description || <span className="muted">Không có mô tả</span>}</td>
+                        <td style={{ color: 'var(--color-text-muted)' }}>{d.description || <span className="muted">Không có mô tả</span>}</td>
                         <td className="actions">
                           <button
                             type="button"

@@ -153,7 +153,7 @@ export function ManagerReportsPage() {
       let csv = '\uFEFF';
       csv += 'TRUNG TÂM THỂ THAO SCMS - BÁO CÁO DOANH THU & THỐNG KÊ TÀI CHÍNH\n';
       csv += `Kỳ Báo Cáo: Từ ngày ${appliedRange.startDate} đến ngày ${appliedRange.endDate}\n`;
-      csv += `Thời Gian Xuất: ${new Date().toLocaleString('vi-VN')}\n`;
+      csv += `Thời gian Xuất: ${new Date().toLocaleString('vi-VN')}\n`;
       csv += `Người Xuất: Quản lý trung tâm (Center Manager)\n\n`;
 
       csv += '1. TỔNG QUAN CHỈ SỐ KPI\n';
@@ -177,7 +177,7 @@ export function ManagerReportsPage() {
       csv += '\n';
 
       csv += '4. GIAO DỊCH GẦN NHẤT\n';
-      csv += 'Mã Hóa Đơn,Hội Viên,Gói Tập,Số Tiền (VNĐ),Hình Thức,Thời Gian\n';
+      csv += 'Mã hóa đơn,Hội viên,Gói Tập,Số tiền (VNĐ),Hình thức,Thời gian\n';
       summary.recentTransactions.forEach((tx) => {
         const timeObj = formatTransactionTime(tx.paidAt);
         const timeStr = `${timeObj.time} ${timeObj.date}`.trim();
@@ -202,7 +202,7 @@ export function ManagerReportsPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast('Đã lưu Snapshot đối soát và xuất file báo cáo Excel thành công!', 'success');
+      toast('Đã lưu báo cáo đối soát và xuất tệp CSV.', 'success');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Xuất báo cáo thất bại.';
       toast(msg, 'error');
@@ -223,7 +223,7 @@ export function ManagerReportsPage() {
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
             </h2>
-            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Quản lý trung tâm (Center Manager) mới có quyền truy cập báo cáo tài chính &amp; doanh thu.
             </p>
             <a href="/portal" className="btn-secondary">
@@ -243,7 +243,7 @@ export function ManagerReportsPage() {
     <div className="portal-container">
       <PageHeader
         eyebrow="Quản lý trung tâm"
-        title="Báo cáo Doanh thu & Thống kê"
+        title="Báo cáo doanh thu"
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -270,7 +270,7 @@ export function ManagerReportsPage() {
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
-                  <span>Xuất Báo Cáo</span>
+                  <span>Xuất báo cáo</span>
                 </>
               )}
             </button>
@@ -282,7 +282,7 @@ export function ManagerReportsPage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <form onSubmit={handleApplyFilter} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.88rem', color: '#7E7771', fontWeight: 600 }}>Từ ngày:</span>
+            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Từ ngày:</span>
             <DatePicker
               value={startDate}
               max={endDate || undefined}
@@ -292,7 +292,7 @@ export function ManagerReportsPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.88rem', color: '#7E7771', fontWeight: 600 }}>Đến ngày:</span>
+            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Đến ngày:</span>
             <DatePicker
               value={endDate}
               min={startDate || undefined}
@@ -302,7 +302,7 @@ export function ManagerReportsPage() {
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading || isInvalidRange}>
-            {loading ? 'Đang lọc...' : 'Áp Dụng Lọc'}
+            {loading ? 'Đang lọc...' : 'Áp dụng'}
           </button>
 
           {isInvalidRange && (
@@ -338,9 +338,9 @@ export function ManagerReportsPage() {
           <div className="portal-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚠️</div>
             <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Lỗi khi tải dữ liệu báo cáo</h3>
-            <p style={{ color: '#7E7771', marginBottom: '16px' }}>{error}</p>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>{error}</p>
             <button type="button" className="btn-primary" onClick={() => fetchReports(startDate, endDate)}>
-              Thử Lại
+              Thử lại
             </button>
           </div>
         </div>
@@ -376,27 +376,27 @@ export function ManagerReportsPage() {
       {!loading && !error && summary && (
         <div className="metrics-grid" style={{ marginBottom: '24px' }}>
           <div className="metric-card">
-            <div className="metric-label">DOANH THU NGÀY</div>
+            <div className="metric-label">Doanh thu hôm nay</div>
             <div className="metric-value">{vnd(summary.todayRevenue)}</div>
-            <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? '#2E7D32' : '#7E7771' }}>
+            <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? '#86efac' : 'var(--color-text-muted)' }}>
               {summary.todayRevenue > 0 ? '↑ Giao dịch phát sinh trong ngày' : 'Chưa có giao dịch hôm nay'}
             </div>
           </div>
 
           <div className="metric-card">
-            <div className="metric-label">DOANH THU THÁNG</div>
+            <div className="metric-label">Doanh thu trong kỳ</div>
             <div className="metric-value">{vnd(summary.periodRevenue)}</div>
             <div className="metric-trend">Từ {appliedRange.startDate} đến {appliedRange.endDate}</div>
           </div>
 
           <div className="metric-card">
-            <div className="metric-label">SỐ GÓI BÁN RA</div>
+            <div className="metric-label">Gói đã bán</div>
             <div className="metric-value">{summary.packagesSoldCount}</div>
             <div className="metric-trend">Gói dịch vụ đã thanh toán</div>
           </div>
 
           <div className="metric-card">
-            <div className="metric-label">TỶ LỆ GIA HẠN</div>
+            <div className="metric-label">Tỷ lệ gia hạn</div>
             {/* BR-03: Tỷ lệ gia hạn = số lượt gia hạn / số gói hết hạn trong kỳ; mẫu số bằng 0 hiển thị "—" thay vì lỗi chia 0 */}
             <div className="metric-value">
               {summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}
@@ -414,11 +414,11 @@ export function ManagerReportsPage() {
           {/* Biểu đồ cột SVG */}
           <div className="portal-card" style={{ minWidth: 0, overflow: 'hidden' }}>
             <div className="portal-card-header" style={{ marginBottom: '16px' }}>
-              <h2 className="portal-card-title">Biểu Đồ Doanh Thu Theo Ngày</h2>
+              <h2 className="portal-card-title">Doanh thu theo ngày</h2>
             </div>
 
             {dailyData.length === 0 || dailyData.every((d) => d.revenue === 0) ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#7E7771' }}>
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-muted)' }}>
                 Không có dữ liệu phát sinh doanh thu trong kỳ được chọn.
               </div>
             ) : (
@@ -426,7 +426,7 @@ export function ManagerReportsPage() {
                 {/* Khu vực tooltip hiển thị khi hover */}
                 <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
                   {hoveredBar && (
-                    <span style={{ color: '#A06D3B' }}>
+                    <span style={{ color: 'var(--color-accent-gold)' }}>
                       📅 Ngày {hoveredBar.date}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
                     </span>
                   )}
@@ -440,7 +440,7 @@ export function ManagerReportsPage() {
                     gap: dailyData.length > 15 ? '4px' : '8px',
                     height: '210px',
                     paddingBottom: '32px',
-                    borderBottom: '1px solid #ECE7E1',
+                    borderBottom: '1px solid var(--color-border-subtle)',
                     overflowX: 'auto',
                     overflowY: 'hidden',
                   }}
@@ -468,7 +468,7 @@ export function ManagerReportsPage() {
                           style={{
                             width: '100%',
                             height: `${heightPercent}%`,
-                            background: isHovered ? '#8B572A' : '#1A1614',
+                            background: isHovered ? 'var(--portal-hover)' : 'var(--color-text-main)',
                             borderRadius: '4px 4px 0 0',
                             transition: 'all 0.2s ease',
                             cursor: 'pointer',
@@ -477,7 +477,7 @@ export function ManagerReportsPage() {
                         <span
                           style={{
                             fontSize: '0.65rem',
-                            color: '#7E7771',
+                            color: 'var(--color-text-muted)',
                             marginTop: '8px',
                             transform: 'rotate(-45deg)',
                             whiteSpace: 'nowrap',
@@ -497,11 +497,11 @@ export function ManagerReportsPage() {
           {/* Cơ cấu doanh thu theo gói */}
           <div className="portal-card" style={{ minWidth: 0, overflow: 'hidden' }}>
             <div className="portal-card-header" style={{ marginBottom: '16px' }}>
-              <h2 className="portal-card-title">Cơ Cấu Doanh Thu Theo Gói Tập</h2>
+              <h2 className="portal-card-title">Doanh thu theo gói tập</h2>
             </div>
 
             {summary.packageRevenue.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#7E7771' }}>
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-muted)' }}>
                 Chưa có gói tập nào phát sinh doanh thu trong kỳ này.
               </div>
             ) : (
@@ -512,12 +512,12 @@ export function ManagerReportsPage() {
                       <span><strong>{pkg.packageName}</strong> ({pkg.subscriptionCount} lượt)</span>
                       <span><strong>{vnd(pkg.revenue)}</strong> ({pkg.percentage}%)</span>
                     </div>
-                    <div style={{ width: '100%', height: '8px', background: '#F0ECE6', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '8px', background: 'var(--color-bg-warm)', borderRadius: '4px', overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${Math.min(100, pkg.percentage)}%`,
                           height: '100%',
-                          background: '#1A1614',
+                          background: 'var(--color-text-main)',
                           borderRadius: '4px',
                           transition: 'width 0.4s ease',
                         }}
@@ -535,12 +535,12 @@ export function ManagerReportsPage() {
       {!loading && !error && summary && (
         <div className="portal-card">
           <div className="portal-card-header" style={{ marginBottom: '16px' }}>
-            <h2 className="portal-card-title">Giao Dịch Thanh Toán Gần Nhất</h2>
-            <span style={{ fontSize: '0.82rem', color: '#7E7771' }}>10 thanh toán thành công gần nhất trong kỳ</span>
+            <h2 className="portal-card-title">Giao dịch gần đây</h2>
+            <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>10 thanh toán thành công gần nhất trong kỳ</span>
           </div>
 
           {summary.recentTransactions.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#7E7771' }}>
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
               Chưa có giao dịch thanh toán nào được ghi nhận.
             </div>
           ) : (
@@ -548,12 +548,12 @@ export function ManagerReportsPage() {
               <table className="portal-table">
                 <thead>
                   <tr>
-                    <th>Mã Hóa Đơn</th>
-                    <th>Hội Viên</th>
-                    <th>Dịch Vụ / Gói Tập</th>
-                    <th>Số Tiền</th>
-                    <th>Hình Thức</th>
-                    <th>Thời Gian</th>
+                    <th>Mã hóa đơn</th>
+                    <th>Hội viên</th>
+                    <th>Dịch vụ / gói tập</th>
+                    <th>Số tiền</th>
+                    <th>Hình thức</th>
+                    <th>Thời gian</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -562,7 +562,7 @@ export function ManagerReportsPage() {
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tx.invoiceNumber ?? 'Chưa xuất hóa đơn'}</td>
                       <td>{tx.memberName}</td>
                       <td>{tx.packageName ?? '—'}</td>
-                      <td style={{ fontWeight: 600, color: '#2E7D32' }}>{vnd(tx.amount)}</td>
+                      <td style={{ fontWeight: 600, color: '#86efac' }}>{vnd(tx.amount)}</td>
                       <td>
                         <span className="badge badge-success" style={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>
                           {paymentMethods[tx.method] ?? tx.method}
@@ -573,11 +573,11 @@ export function ManagerReportsPage() {
                           const { date, time } = formatTransactionTime(tx.paidAt);
                           return (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontWeight: 600, color: '#211C18', fontSize: '0.86rem' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: '0.86rem' }}>
                                 {date}
                               </span>
                               {time && (
-                                <span style={{ fontSize: '0.78rem', color: '#8C6D46', fontWeight: 500, letterSpacing: '0.02em' }}>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--color-accent-gold)', fontWeight: 500, letterSpacing: '0.02em' }}>
                                   {time}
                                 </span>
                               )}

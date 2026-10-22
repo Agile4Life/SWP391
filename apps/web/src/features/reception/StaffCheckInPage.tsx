@@ -72,7 +72,7 @@ export function StaffCheckInPage() {
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
             </h2>
-            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền vận hành cổng kiểm soát QR Check-in.
             </p>
             <a href="/portal" className="btn-secondary">
@@ -159,8 +159,8 @@ export function StaffCheckInPage() {
   return (
     <div className="portal-container checkin-page">
       <PageHeader
-        eyebrow="Lễ tân &amp; Kiểm soát sảnh"
-        title="Check-in & Checkout tại cổng"
+        eyebrow="Lễ tân"
+        title="Check-in & checkout"
         actions={
           <button
             type="button"
@@ -177,13 +177,13 @@ export function StaffCheckInPage() {
         {/* Scanner Panel */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Mắt đọc mã QR cổng turnstile</h2>
+            <h2 className="portal-card-title">Quét mã hội viên</h2>
           </div>
 
           <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
             <div>
               <label className="portal-label" htmlFor="checkin-gate-select">
-                Cổng kiểm soát (Turnstile Gate)
+                Cổng kiểm soát
               </label>
               <Select
                 id="checkin-gate-select"
@@ -200,7 +200,7 @@ export function StaffCheckInPage() {
 
             <div>
               <label className="portal-label" htmlFor="checkin-qr-input">
-                Quét hoặc Nhập Chuỗi Mã QR:
+                Mã QR hội viên
               </label>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <input
@@ -236,7 +236,7 @@ export function StaffCheckInPage() {
                 borderRadius: '6px',
                 padding: '24px',
                 textAlign: 'center',
-                backgroundColor: isGranted ? '#F0FDF4' : '#FEF2F2',
+                backgroundColor: isGranted ? '#20372b' : '#3d2828',
                 border: `2px solid ${isGranted ? '#86EFAC' : '#FCA5A5'}`,
               }}
             >
@@ -247,22 +247,22 @@ export function StaffCheckInPage() {
               <h3
                 style={{
                   margin: '0 0 8px 0',
-                  color: isGranted ? '#15803D' : '#B91C1C',
+                  color: isGranted ? '#86efac' : '#fca5a5',
                 }}
               >
                 {isGranted ? 'CỬA MỞ: XÁC THỰC HỢP LỆ' : 'CỬA KHÓA: TỪ CHỐI CHECK-IN'}
               </h3>
 
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1A1614', marginBottom: '4px' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '4px' }}>
                 {currentResult.memberName || 'Mã QR không xác định'} {currentResult.memberId ? `(HV #${currentResult.memberId})` : ''}
               </div>
 
-              <div style={{ fontSize: '0.82rem', color: '#6A635D' }}>
+              <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                 {currentResult.gate || selectedGate} — {formatTime(currentResult.checkInTime)}
               </div>
 
               {currentResult.denialReason && (
-                <div style={{ marginTop: '10px', color: '#B91C1C', fontWeight: 600, fontSize: '0.85rem' }}>
+                <div style={{ marginTop: '10px', color: '#fca5a5', fontWeight: 600, fontSize: '0.85rem' }}>
                   ⚠️ {currentResult.denialReason}
                 </div>
               )}
@@ -292,7 +292,7 @@ export function StaffCheckInPage() {
               style={{
                 marginBottom: 16,
                 padding: '12px 16px',
-                backgroundColor: '#FDF2F2',
+                backgroundColor: '#3d2828',
                 border: '1px solid #F8B4B4',
                 borderRadius: 6,
                 display: 'flex',
@@ -302,7 +302,7 @@ export function StaffCheckInPage() {
               }}
               data-testid="checkin-history-error"
             >
-              <span style={{ color: '#9B1C1C', fontSize: '0.88rem' }}>{historyError}</span>
+              <span style={{ color: '#fca5a5', fontSize: '0.88rem' }}>{historyError}</span>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
@@ -324,7 +324,7 @@ export function StaffCheckInPage() {
               ))}
             </div>
           ) : visibleVisits.length === 0 ? (
-            <div style={{ padding: '40px 16px', textAlign: 'center', color: '#7E7771' }} data-testid="checkin-history-empty">
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }} data-testid="checkin-history-empty">
               {historyView === 'inside'
                 ? 'Không có hội viên đang trong trung tâm từ các lượt vào hôm nay. Chọn “10 lượt gần nhất” để xem nhật ký.'
                 : 'Chưa có lượt check-in nào được ghi nhận.'}
@@ -358,19 +358,19 @@ export function StaffCheckInPage() {
                               {checkingOutId === rec.id ? 'Đang ghi nhận...' : 'Checkout / Ra về'}
                             </button>
                           ) : rec.checkOutTime ? (
-                            <span style={{ fontSize: '0.78rem', color: '#6A635D' }}>Đã ra về</span>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Đã ra về</span>
                           ) : '—'}
                         </td>
                         <td>
                           <div>{rec.memberName || 'Thẻ QR không xác định'}</div>
-                          <div style={{ fontSize: '0.72rem', color: '#8C847C' }}>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
                             {rec.memberId ? `HV #${rec.memberId}` : 'Chưa định danh'}
                           </div>
                         </td>
                         <td style={{ fontWeight: 600 }}>
                           <div>Vào: {formatTime(rec.checkInTime)}</div>
                           {rec.checkOutTime && (
-                            <div style={{ fontSize: '0.75rem', color: '#6A635D' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                               Ra: {formatTime(rec.checkOutTime)}
                             </div>
                           )}
@@ -381,7 +381,7 @@ export function StaffCheckInPage() {
                             {ok ? 'Mở Cổng' : 'Từ Chối'}
                           </span>
                           {rec.denialReason && (
-                            <div style={{ fontSize: '0.72rem', color: '#B91C1C', marginTop: 2 }}>
+                            <div style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: 2 }}>
                               {rec.denialReason}
                             </div>
                           )}

@@ -54,7 +54,7 @@ export function CoachAttendancePage() {
   };
 
   const handleSaveAttendance = () => {
-    toast('Đã lưu dữ liệu điểm danh và đánh giá buổi học!', 'success');
+    toast('Đây là bản xem thử. Thay đổi chỉ giữ trong trang này và sẽ mất khi tải lại.', 'success');
   };
 
   return (
@@ -64,7 +64,7 @@ export function CoachAttendancePage() {
         title="Điểm danh buổi học"
         actions={
           <button type="button" className="btn-primary" onClick={handleSaveAttendance}>
-            Lưu điểm danh
+            Giữ bản xem thử
           </button>
         }
       />
@@ -73,9 +73,9 @@ export function CoachAttendancePage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <div className="meta-label">BUỔI HỌC ĐANG CHỌN</div>
+            <div className="meta-label">Buổi học minh họa</div>
             <h3 className="row-card__title" style={{ fontSize: '1.5rem', margin: '8px 0 6px' }}>
-              Reformer Core Architecture • 17:30 - 18:30 Hôm nay
+              Reformer Core • 17:30 - 18:30
             </h3>
             <div className="row-card__meta">
               📍 Studio 01 (Level 2) • Sĩ số: <strong>4 học viên đăng ký</strong>
@@ -89,9 +89,9 @@ export function CoachAttendancePage() {
               onChange={(e) => setSelectedSession(e.target.value)}
               style={{ width: 'auto' }}
             >
-              <option value="session-1">Lớp 17:30 (Reformer Core) - Hôm nay</option>
-              <option value="session-2">Lớp 19:00 (Yin Yoga Deep) - Hôm nay</option>
-              <option value="session-3">Lớp 08:00 (Olympic Barbell) - Ngày mai</option>
+              <option value="session-1">Minh họa: Reformer Core, 17:30</option>
+              <option value="session-2">Minh họa: Yin Yoga, 19:00 (chưa có danh sách riêng)</option>
+              <option value="session-3">Minh họa: Barbell, 08:00 (chưa có danh sách riêng)</option>
             </Select>
           </div>
         </div>
@@ -101,7 +101,7 @@ export function CoachAttendancePage() {
         {/* Attendance List */}
         <div className="portal-card" style={{ flex: 1.4 }}>
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Danh Sách Học Viên Điểm Danh</h2>
+            <h2 className="portal-card-title">Danh sách học viên</h2>
           </div>
 
           <div className="stack" style={{ gap: '18px' }}>
@@ -122,7 +122,7 @@ export function CoachAttendancePage() {
                   {/* Attendance segmented pills */}
                   <div className="seg-group" role="group" aria-label={`Điểm danh ${stu.name}`}>
                     {([
-                      ['PRESENT', 'Có Mặt', 'seg-btn--ok'],
+                      ['PRESENT', 'Có mặt', 'seg-btn--ok'],
                       ['LATE', 'Trễ', 'seg-btn--warn'],
                       ['ABSENT', 'Vắng', 'seg-btn--bad'],
                     ] as const).map(([value, label, tone]) => (
@@ -143,7 +143,7 @@ export function CoachAttendancePage() {
                   <input
                     type="text"
                     className="portal-input"
-                    placeholder="Ghi chú đánh giá thể trạng, kỹ thuật động tác..."
+                    placeholder="Ghi chú buổi học"
                     value={stu.evaluation}
                     onChange={(e) => updateEval(stu.id, e.target.value)}
                     style={{ fontSize: '0.8rem', padding: '8px 12px' }}
@@ -157,17 +157,17 @@ export function CoachAttendancePage() {
         {/* AI Coaching Assistant Panel */}
         <div className="portal-card portal-card--feature">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">✨ Trợ Lý AI Gợi Ý Giáo Án</h2>
+            <h2 className="portal-card-title">Hướng dẫn điểm danh</h2>
           </div>
 
-          <p style={{ fontSize: '0.86rem', color: '#4A433D', lineHeight: 1.65 }}>
-            Trợ lý AI phân tích hồ sơ sức khỏe và tiền sử căng cơ của học viên{' '}
-            <strong>Nguyễn Văn An (MB-2026-089)</strong> để đề xuất điều chỉnh bài tập cho Coach:
+          <p style={{ fontSize: '0.86rem', color: 'var(--color-text-muted)', lineHeight: 1.65 }}>
+            Chọn trạng thái và nhập ghi chú cho từng học viên. Dữ liệu của{' '}
+            <strong>Nguyễn Văn An (MB-2026-089)</strong> và danh sách bên cạnh chỉ dùng để minh họa.
           </p>
 
           <div
             style={{
-              background: '#FFFFFF',
+              background: 'var(--color-bg-card)',
               borderRadius: '6px',
               padding: '16px',
               border: '1px solid rgba(33, 28, 24, 0.08)',
@@ -177,11 +177,11 @@ export function CoachAttendancePage() {
               lineHeight: 1.6,
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: '6px' }}>⚡ Điều chỉnh kỹ thuật gợi ý:</div>
-            <div>• Giảm 1 lò xo đỏ xuống 1 lò xo xanh khi tập chuỗi động tác Elephant trên Reformer.</div>
-            <div>• Tăng thêm 5 phút kéo dãn cơ tam đầu đùi sau buổi tập để chống căng cứng.</div>
-            <div style={{ marginTop: '8px', color: '#8C7765' }}>
-              Độ tin cậy mô hình: <strong>96.4%</strong> (Dựa trên 18 logs trước đó)
+            <div style={{ fontWeight: 600, marginBottom: '6px' }}>Cách sử dụng bản xem thử</div>
+            <div>• Chọn Có mặt, Trễ hoặc Vắng cho từng học viên.</div>
+            <div>• Ghi lại nhận xét buổi học trong ô bên dưới tên học viên.</div>
+            <div style={{ marginTop: '8px', color: 'var(--color-text-muted)' }}>
+              Thay đổi <strong>chỉ giữ trong trang này</strong> và sẽ mất khi tải lại.
             </div>
           </div>
 
@@ -189,9 +189,9 @@ export function CoachAttendancePage() {
             type="button"
             className="btn-primary"
             style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => toast('Đã duyệt và lưu kế hoạch bài tập cho học viên!', 'success')}
+            onClick={() => toast('Bản xem thử chưa lưu điểm danh hoặc giao bài tập vào hệ thống.', 'success')}
           >
-            Duyệt &amp; Giao Bài Tập Cho Học Viên
+            Thông tin bản xem thử
           </button>
         </div>
       </div>
