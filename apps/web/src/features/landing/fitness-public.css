@@ -133,14 +133,16 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-hero-lines::after { content: ''; position: absolute; inset: 45px -70px -30px 25px; border: 1px solid #08080890; }
 .fit-services { position: relative; z-index: 3; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 13px; max-width: 1000px; margin: 0 auto; padding: 0 20px 30px; align-items: start; }
 .fit-services-glow { position: absolute; inset: 70px -80px 0; background: radial-gradient(ellipse at center, #eeeeee29, transparent 68%); z-index: -1; filter: blur(20px); }
-.fit-service { position: relative; isolation: isolate; color: #fff8f2; padding: 26px 26px 28px; min-height: 245px; text-align: center; display: flex; flex-direction: column; align-items: center; background: #292929; border: 1px solid #ffffff16; border-radius: 20px; transition: transform 220ms var(--fit-ease-out), border-color 220ms, background-color 220ms; }
-.fit-service-surface { display: none; }
-.fit-service-0, .fit-service-1, .fit-service-2 { margin-top: 0; min-height: 245px; }
-.fit-service:hover { transform: translateY(-5px); border-color: var(--fit-salmon); background: #2f2c2a; }
+.fit-service { position: relative; isolation: isolate; color: #fff8f2; padding: 25px 34px 32px; min-height: 260px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.fit-service-surface { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; fill: var(--fit-salmon); transition: transform 220ms, fill 220ms; }
+.fit-service-0, .fit-service-2 { margin-top: 27px; }
+.fit-service-1 { min-height: 295px; padding-top: 26px; }
+.fit-service:hover { transform: translateY(-5px); }
+.fit-service:hover .fit-service-surface { fill: #d49a87; }
 .fit-service .fit-service-icon { width: 54px; height: 54px; margin-bottom: 15px; flex-shrink: 0; }
 .fit-service h2 { color: #fffaf5; font-size: 19px; font-weight: 700; letter-spacing: .025em; white-space: nowrap; }
-.fit-service-rule { height: 1px; background: #ce918066; width: 80%; max-width: 176px; margin-top: 15px; }
-.fit-service p { margin-top: 16px; font-size: 10px; line-height: 1.95; max-width: 230px; color: #dcd6d0; text-wrap: balance; }
+.fit-service-rule { height: 1px; background: #fff5eec4; width: 80%; max-width: 176px; margin-top: 17px; }
+.fit-service p { margin-top: 19px; font-size: 10px; line-height: 2.1; max-width: 200px; color: #fff9f2; text-wrap: balance; }
 .fit-ticker {
   position: relative;
   z-index: 2;
