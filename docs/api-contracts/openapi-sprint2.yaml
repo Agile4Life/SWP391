@@ -174,6 +174,40 @@ components:
           format: date-time
           nullable: true
 
+
+
+    CreateSupportMessageDto:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          maxLength: 2000
+          example: "Toi da thu mo lai nhung van chua duoc."
+
+    SupportRequestMessageDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        supportRequestId:
+          type: integer
+          format: int64
+        senderId:
+          type: integer
+          format: int64
+        senderName:
+          type: string
+        senderRole:
+          type: string
+          example: "MEMBER"
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     # --- Membership Subscriptions Schemas (SCRUM-71) ---
     SubscriptionDto:
       type: object
@@ -784,6 +818,67 @@ paths:
         '404':
           description: Phiếu hỗ trợ không tồn tại
 
+  /support/requests/{id}/messages:
+    post:
+      summary: Gui tin nhan phan hoi vao phieu ho tro (SCRUM-106)
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupportMessageDto'
+      responses:
+        '200':
+          description: Gui tin nhan thanh cong
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SupportRequestMessageDto'
+        '400':
+          description: Phieu ho tro da dong hoac noi dung tin nhan khong hop le
+        '403':
+          description: Quyen truy cap bi tu choi (FORBIDDEN)
+        '404':
+          description: Phieu ho tro khong ton tai
+    get:
+      summary: Lay toan bo lich su trao doi trong phieu ho tro theo thu tu thoi gian (SCRUM-106)
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Lay danh sach tin nhan thanh cong
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SupportRequestMessageDto'
+        '403':
+          description: Quyen truy cap bi tu choi (FORBIDDEN)
+        '404':
+          description: Phieu ho tro khong ton tai
   # ==========================================
   # Membership Subscriptions (SCRUM-71)
   # ==========================================

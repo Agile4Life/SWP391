@@ -31,7 +31,17 @@ public class SupportRequestMessage {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    public SupportRequestMessage() {}
+
+    public SupportRequestMessage(SupportRequest supportRequest, User sender, String message) {
+        this.supportRequest = supportRequest;
+        this.sender = sender;
+        this.message = message;
+        this.createdAt = LocalDateTime.now();
+    }
+
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public SupportRequest getSupportRequest() { return supportRequest; }
     public void setSupportRequest(SupportRequest supportRequest) { this.supportRequest = supportRequest; }
     public User getSender() { return sender; }
