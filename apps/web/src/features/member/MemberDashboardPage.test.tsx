@@ -67,6 +67,18 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.querySelector('.member-membership-card .member-text-link')?.getAttribute('href')).toBe('/member/packages');
   });
 
+  it('shows paid renewal expiry and remaining days across 120 days', async () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start); end.setDate(end.getDate() + 29);
+    const paid = new Date(start); paid.setDate(paid.getDate() + 119);
+    const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    api.membership.mockResolvedValue({ ...membership, startDate: key(start), endDate: key(end), paidThroughDate: key(paid) });
+    await renderDashboard();
+    expect(host.querySelector('.member-card-details-link')?.textContent).toContain(paid.toLocaleDateString('vi-VN'));
+    expect(host.querySelector('.member-card-details-link')?.textContent).toContain('Còn 120 ngày');
+  });
+
   it('opens Classes from the class card and discovery image', async () => {
     await renderDashboard();
     const classLink = host.querySelector<HTMLAnchorElement>('.member-card-overlay-link');

@@ -83,6 +83,12 @@ describe('SCRUM-86 packages', () => {
   }
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
+  it('shows the same paid-through expiry as the member card and dashboard', async () => {
+    api.current.mockResolvedValue({ ...active, paidThroughDate: '2100-03-01' });
+    api.history.mockResolvedValue([active]);
+    await render();
+    expect(host.textContent).toContain('đến 1/3/2100');
+  });
   it('resumes a frozen subscription without creating a purchase or payment', async () => {
     const frozen = { ...active, status: 'frozen', holdStatus: 'APPROVED' };
     api.history.mockResolvedValue([frozen]);

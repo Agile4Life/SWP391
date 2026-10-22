@@ -21,8 +21,17 @@ public final class SubscriptionResponses {
             String holdStatus,
             String holdReason,
             LocalDateTime holdRequestedAt,
-            LocalDateTime holdResolvedAt
+            LocalDateTime holdResolvedAt,
+            LocalDate paidThroughDate
     ) {
+        public SubscriptionDto(Long id, Long memberId, Long packageId, String packageName,
+                Long previousSubscriptionId, LocalDate startDate, LocalDate endDate, String status,
+                String qrCode, LocalDateTime createdAt, String holdStatus, String holdReason,
+                LocalDateTime holdRequestedAt, LocalDateTime holdResolvedAt) {
+            this(id, memberId, packageId, packageName, previousSubscriptionId, startDate, endDate,
+                    status, qrCode, createdAt, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, null);
+        }
+
         public SubscriptionDto(
                 Long id,
                 Long memberId,

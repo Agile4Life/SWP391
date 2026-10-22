@@ -619,6 +619,49 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void current_reportsPaidThroughDateAcrossFourPeriodsWithoutChangingCurrentQrOrDates() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription first = period(100L, member, pack, null, today, today.plusDays(29));
+        first.setQrCode("current-qr");
+        MembershipSubscription second = period(101L, member, pack, first, today.plusDays(30), today.plusDays(59));
+        MembershipSubscription third = period(102L, member, pack, second, today.plusDays(60), today.plusDays(89));
+        MembershipSubscription fourth = period(103L, member, pack, third, today.plusDays(90), today.plusDays(119));
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(first));
+        when(subscriptions.findByMemberUserId(10L))
+                .thenReturn(List.of(third, first, fourth, second));
+        SubscriptionDto result = service.current(principal);
+        assertThat(result.paidThroughDate()).isEqualTo(today.plusDays(119));
+        assertThat(result.endDate()).isEqualTo(today.plusDays(29));
+        assertThat(result.qrCode()).isEqualTo("current-qr");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"pending_payment", "cancelled", "frozen", "expired", "gap", "branch", "different_package"})
+    void current_doesNotExtendPaidThroughDateForUnavailableOrBrokenRenewals(String scenario) {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription first = period(100L, member, pack, null, today, today.plusDays(29));
+        MembershipSubscription next = period(101L, member, pack, first, today.plusDays(30), today.plusDays(59));
+        List<MembershipSubscription> history = List.of(first, next);
+        if ("gap".equals(scenario)) next.setStartDate(today.plusDays(31));
+        else if ("branch".equals(scenario)) history = List.of(first, next,
+                period(102L, member, pack, first, today.plusDays(30), today.plusDays(59)));
+        else if ("different_package".equals(scenario)) {
+            MembershipPackage other = new MembershipPackage(); other.setId(2L); next.setMembershipPackage(other);
+        } else next.setStatus(scenario);
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(first));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(history);
+        assertThat(service.current(principal).paidThroughDate()).isEqualTo(first.getEndDate());
+    }
+
+    @Test
     void current_returnsActiveSubscription_whenValidAndUnexpired() {
         Member member = new Member();
         member.setUserId(10L);

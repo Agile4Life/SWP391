@@ -36,7 +36,7 @@ function dayNumber(date: Date): number {
 }
 
 function remainingDays(endDate: string, today: Date): number {
-  return Math.max(0, dayNumber(localDate(endDate)) - dayNumber(today));
+  return Math.max(0, dayNumber(localDate(endDate)) - dayNumber(today) + 1);
 }
 
 function membershipProgress(
@@ -44,8 +44,8 @@ function membershipProgress(
   today: Date,
 ): number {
   const start = dayNumber(localDate(subscription.startDate));
-  const end = dayNumber(localDate(subscription.endDate));
-  const duration = end - start;
+  const end = dayNumber(localDate(subscription.paidThroughDate ?? subscription.endDate));
+  const duration = end - start + 1;
 
   if (duration <= 0) return 0;
 
@@ -188,9 +188,9 @@ export function MemberDashboardPage() {
                     <p className="row-card__meta">
                       {formatDate(membership.startDate)}
                       {' – '}
-                      {formatDate(membership.endDate)}
+                      {formatDate(membership.paidThroughDate ?? membership.endDate)}
                       {' · Còn '}
-                      {remainingDays(membership.endDate, today)}
+                      {remainingDays(membership.paidThroughDate ?? membership.endDate, today)}
                       {' ngày'}
                     </p>
 

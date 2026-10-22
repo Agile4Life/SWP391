@@ -522,7 +522,7 @@ export function MemberPackagesPage() {
                 {current.packageName}
               </h2>
               <p className="row-card__meta" style={{ marginTop: 4 }}>
-                Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.endDate)}
+                Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.paidThroughDate ?? current.endDate)}
               </p>
               {current.status === 'active' && paymentsState.status === 'success' &&
                 paymentsState.data.some((payment) => payment.subscriptionId === current.id && payment.status === 'success') && (
