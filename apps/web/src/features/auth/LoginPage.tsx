@@ -1,3 +1,4 @@
+import '../landing/landing.css';
 import { Link } from 'react-router-dom';
 import { LuxuryLoginForm } from './LuxuryLoginForm';
 import { LANDING_IMAGES } from '../landing/assets/images';

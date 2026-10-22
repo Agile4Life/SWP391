@@ -1,3 +1,4 @@
+import '../landing/landing.css';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
