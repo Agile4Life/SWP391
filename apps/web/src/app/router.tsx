@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LandingPage } from '../features/landing/LandingPage';
 import { TrainerStoryPage } from '../features/landing/TrainerStoryPage';
+import { SportPage } from '../features/landing/SportPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { AppLayout } from '../shared/ui/AppLayout';
@@ -29,6 +30,9 @@ import { ManagerCancellationPage } from '../features/manager/ManagerCancellation
 export const router = createBrowserRouter([
   // Public Routes
   { path: '/', element: <LandingPage /> },
+  { path: '/swimming', element: <SportPage forcedSport="swimming" /> },
+  { path: '/tennis', element: <SportPage forcedSport="tennis" /> },
+  { path: '/sports/:sportId', element: <SportPage /> },
   { path: '/trainers', element: <TrainerStoryPage /> },
   { path: '/trainers/:trainerId', element: <TrainerStoryPage /> },
   { path: '/login', element: <LoginPage /> },

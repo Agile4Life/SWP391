@@ -54,12 +54,6 @@ export function TrainerStoryPage() {
               </h1>
               <blockquote className="fit-trainer-quote">“{trainer.quote}”</blockquote>
 
-              <div className="fit-trainer-paragraphs">
-                {trainer.bio.map((paragraph, idx) => (
-                  <p key={idx}>{paragraph}</p>
-                ))}
-              </div>
-
               <div className="fit-trainer-stats-row">
                 <div className="fit-trainer-stat-box">
                   <strong>{trainer.experienceYears}+ năm</strong>

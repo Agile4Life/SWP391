@@ -31,13 +31,12 @@ export const trainerProfiles: TrainerProfile[] = [
     weeklySessions: 14,
     quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.',
     bio: [
-      'Xuất thân là kỹ sư phần mềm từng bị đau lưng mãn tính do ngồi lâu, Derek đến với tạ rời để tự cải thiện thể lực và tư thế.',
-      'Tại SÖL, Derek phụ trách khu vực Strength Floor — hướng dẫn hội viên mới kiểm soát kỹ thuật Squat, Press, Deadlift an toàn và xây dựng nền tảng sức mạnh bổ trợ cho Bơi lội, Tennis.',
+      'Phụ trách khu vực Strength Floor — chuẩn hóa kỹ thuật Squat, Press, Deadlift và phát triển sức mạnh nền tảng.',
     ],
     specialties: [
       'Kỹ thuật tạ rời cơ bản cho người mới',
       'Tăng cơ – Giảm mỡ (Hypertrophy)',
-      'Sức mạnh thân dưới & Core bổ trợ thể thao',
+      'Sức mạnh thân dưới & Core',
     ],
     schedulePreview: [
       { day: 'T2 · T4 · T6', time: '06:30 — 07:20', className: 'Morning Strength Foundation', zone: 'Strength floor' },
@@ -58,17 +57,16 @@ export const trainerProfiles: TrainerProfile[] = [
     weeklySessions: 12,
     quote: 'Cơ thể khỏe là khi vai nhẹ, lưng êm và từng chuyển động đều linh hoạt.',
     bio: [
-      'Từng gặp chấn thương cổ chân khi thi đấu phong trào vì bỏ qua giãn cơ, Elena chuyển hướng sang nghiên cứu chuyên sâu về Core Stability và Mobility.',
-      'Các lớp của Elena tập trung mở khớp vai – hông, giải tỏa căng cứng cổ vai gáy cho dân văn phòng và phòng ngừa chấn thương cho người bơi lội, đánh Tennis.',
+      'Phụ trách khu vực Movement Studio — tập trung mở khớp vai – hông, làm khỏe cơ lõi và phục hồi tư thế.',
     ],
     specialties: [
-      'Giãn cơ giải tỏa mỏi cổ vai gáy & thắt lưng',
+      'Giãn cơ cổ vai gáy & thắt lưng',
       'Làm khỏe cơ lõi (Core) & Cân bằng tư thế',
-      'Mở biên độ khớp vai cho Bơi lội & Tennis',
+      'Mở biên độ khớp vai & hông',
     ],
     schedulePreview: [
       { day: 'T2 · T4 · T6', time: '09:00 — 09:50', className: 'Reformer Core & Shoulder Mobility', zone: 'Movement studio' },
-      { day: 'T3 · T5', time: '18:30 — 19:20', className: 'Dynamic Mobility & Hydro-Recovery', zone: 'Movement & Pool' },
+      { day: 'T3 · T5', time: '18:30 — 19:20', className: 'Dynamic Mobility & Recovery', zone: 'Movement studio' },
     ],
   },
   {
@@ -85,8 +83,7 @@ export const trainerProfiles: TrainerProfile[] = [
     weeklySessions: 16,
     quote: 'Không chỉ là thay đổi vóc dáng. Tôi muốn bạn thấy khỏe và tự tin hơn mỗi tuần.',
     bio: [
-      'Hơn 7 năm kèm 1:1 cho những người bận rộn từng bỏ dở việc tập luyện nhiều lần vì giáo án rập khuôn.',
-      'Jhon thiết kế các buổi tập gọn 45 phút, luân phiên giữa phòng tạ, hồ bơi và bài tập phản xạ ngoài sân để bạn duy trì thói quen lâu dài mà không nhàm chán.',
+      'Thiết kế lộ trình kèm 1:1 gọn 45 phút theo thể trạng và lịch sinh hoạt cá nhân.',
     ],
     specialties: [
       'Huấn luyện 1:1 cho người mới bắt đầu',
@@ -112,17 +109,16 @@ export const trainerProfiles: TrainerProfile[] = [
     weeklySessions: 15,
     quote: 'Tôi tìm được nhịp tập phù hợp dưới nước và giúp học viên lướt nhẹ mà không tốn sức.',
     bio: [
-      'Anthony đã hướng dẫn hơn 500 học viên người lớn xóa tâm lý sợ nước và hoàn thành cự ly bơi 500m–1000m liên tục.',
-      'Tại hồ bơi 25m của SÖL, Anthony phụ trách các lớp chuẩn hóa nhịp thở hai bên, chỉnh sải tay giảm lực cản nước và bơi thả lỏng phục hồi khớp.',
+      'Hướng dẫn nhịp thở, kỹ thuật bơi sải – bơi ếch và bơi sức bền cho người lớn.',
     ],
     specialties: [
       'Xóa sợ nước & Dạy bơi người lớn',
-      'Chỉnh kỹ thuật Bơi sải, Bơi ếch đỡ mất sức',
-      'Bơi sức bền tim mạch & Phục hồi khớp dưới nước',
+      'Chỉnh kỹ thuật Bơi sải, Bơi ếch',
+      'Bơi sức bền & Thả lỏng dưới nước',
     ],
     schedulePreview: [
-      { day: 'T3 · T5 · T7', time: '07:30 — 08:25', className: 'Aquatics Stroke & Endurance Clinic', zone: 'Aquatics pool 25m' },
-      { day: 'T2 · T4 · T6', time: '17:00 — 18:00', className: 'Lớp Bơi cơ bản & Kỹ thuật thở', zone: 'Aquatics pool 25m' },
+      { day: 'T3 · T5 · T7', time: '07:30 — 08:25', className: 'Aquatics Stroke & Endurance Clinic', zone: 'Aquatics pool' },
+      { day: 'T2 · T4 · T6', time: '17:00 — 18:00', className: 'Lớp Bơi cơ bản & Kỹ thuật thở', zone: 'Aquatics pool' },
     ],
   },
   {
@@ -139,12 +135,11 @@ export const trainerProfiles: TrainerProfile[] = [
     weeklySessions: 14,
     quote: 'Có người đồng hành chỉnh từng bước chân giúp bạn tự tin trong mọi đường bóng.',
     bio: [
-      'Bắt đầu từ các giải Tennis câu lạc bộ, Ezekiel hiểu rõ những lỗi cầm vợt và gồng cổ tay khiến người mới dễ mỏi hoặc đau khuỷu tay.',
-      'Ezekiel chia nhỏ kỹ thuật Forehand, Backhand, giao bóng và bước di chuyển Split-Step để người mới dễ dàng đánh qua lưới và ghép cặp giao lưu cuối tuần.',
+      'Hướng dẫn kỹ thuật Forehand, Backhand, giao bóng và di chuyển Split-Step từ cơ bản đến đánh đôi.',
     ],
     specialties: [
       'Tennis nhập môn cho người mới cầm vợt',
-      'Kỹ thuật Forehand / Backhand & Giao bóng an toàn khớp vai',
+      'Kỹ thuật Forehand / Backhand & Giao bóng',
       'Bộ chân Split-Step & Chiến thuật đánh đôi',
     ],
     schedulePreview: [

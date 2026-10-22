@@ -31,7 +31,9 @@ export function Modal({ title, onClose, children }: ModalProps) {
         <div className="portal-dialog__header">
           <h2 id="portal-dialog-title" className="portal-card-title">{title}</h2>
           <button type="button" className="portal-dialog__close" aria-label="Đóng" onClick={onClose}>
-            ✕
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" style={{ display: 'block', flexShrink: 0 }}>
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
           </button>
         </div>
         {children}

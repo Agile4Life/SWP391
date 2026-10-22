@@ -649,15 +649,18 @@ button:not(:disabled):active,
 .sol-toast .status-mark--success { stroke: #86EFAC; }
 
 .sol-toast__icon {
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   background: rgba(134, 239, 172, .16);
   color: #86EFAC;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .sol-toast--error .sol-toast__icon {
