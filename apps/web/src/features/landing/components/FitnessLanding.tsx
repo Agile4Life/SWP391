@@ -170,6 +170,132 @@ const spaces = [
   { title: 'Làn nước tĩnh lặng chuẩn 25 mét.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: '6 làn bơi 25m · Điện phân muối khoáng 28°C', load: '48%', status: 'Nước ấm 28°C · Làn bơi thông thoáng' },
   { title: 'Mặt sân chuẩn giải đấu giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Mặt sân Cushion Acrylic 7 lớp · Đèn LED 750 Lux', load: '62%', status: 'Độ nảy chuẩn ITF · Sẵn sàng giao bóng' },
 ];
+const multiSportShowcase = [
+  {
+    id: 'swimming' as const,
+    kicker: 'AQUATICS & HYDRO-RECOVERY · 25M LAP POOL',
+    title: 'Bơi Lội Chuẩn Thủy Động Lực Học',
+    subtitle: 'Hồ bơi bốn mùa 6 làn phân luồng · Xử lý nước điện phân muối khoáng & tia UV không mùi Clo',
+    image: '/images/fitness/aquatics-pool.jpg',
+    tags: ['6 làn 25m × 16m', 'Nhiệt độ 27.5°C — 28.5°C', 'Muối khoáng sinh học'],
+    hoverMeta: 'Dây phao chắn sóng Anti-Turbulence · Độ sâu 1.35m — 1.80m · Phân luồng tốc độ',
+    cta: 'Khám phá chuyên sâu Bơi lội',
+  },
+  {
+    id: 'tennis' as const,
+    kicker: 'CHAMPIONSHIP COURT · ITF PACE CATEGORY 3',
+    title: 'Tennis Kỹ Thuật & Phản Xạ Thi Đấu',
+    subtitle: 'Cụm sân Cushion Acrylic 7 lớp giảm chấn · Chiếu sáng LED Asymmetric 750 Lux chống chói',
+    image: '/images/fitness/tennis-court.jpg',
+    tags: ['ITF Cat 3 Medium-Fast', 'Giảm 28% xung lực khớp', 'Smart Ball Machine'],
+    hoverMeta: 'Phân tích chuỗi động học Forehand / Serve · Tập luyện bộ chân Split-Step & Match Play',
+    cta: 'Khám phá chuyên sâu Tennis',
+  },
+] as const;
+const multiSportDeepDive = {
+  swimming: {
+    kicker: 'AQUATICS BIOMECHANICS & ENDURANCE',
+    title: 'Bơi Lội Kỹ Thuật Cao & Thủy Trị Liệu Phục Hồi',
+    overview: 'Tại SÖL Aquatics, bơi lội không dừng lại ở vận động giải trí. Từng buổi tập được thiết kế dựa trên nguyên lý thủy động lực học nhằm giảm lực cản dòng nước, tối ưu hiệu suất trao đổi oxy (VO₂ Max) và giải phóng hoàn toàn áp lực đè nén lên cột sống sau các buổi tập tạ nặng.',
+    pillars: [
+      {
+        code: '01 · HYDRODYNAMICS & STROKE EFFICIENCY',
+        heading: 'Chuẩn hóa 4 kiểu bơi & Tư thế lướt nước (Streamline)',
+        detail: 'Chỉnh sửa vị trí đầu – cột sống – hông nằm ngang trên mặt nước, kỹ thuật tì nước khuỷu tay cao (High-Elbow Catch), xoay trục thân người (Body Roll) và nhịp thở hai bên cân bằng cho Bơi sải, Bơi ếch, Bơi ngửa và Bơi bướm.',
+        metric: 'Giảm 18–25% số nhịp quạt tay trên mỗi 25m (chỉ số SWOLF)',
+      },
+      {
+        code: '02 · CRITICAL SWIM SPEED & VO₂ MAX',
+        heading: 'Bơi sức bền ngưỡng Lactate & Phân phối nhịp độ',
+        detail: 'Xác định tốc độ bơi ngưỡng cá nhân (CSS Pace), áp dụng giáo án biến tốc Interval 50m / 100m / 400m kết hợp kỹ thuật xuất phát và quay vòng Flip Turn giúp bứt phá dung tích phổi và sức bền tim mạch.',
+        metric: 'Tiêu hao 550–750 kcal/giờ · Không gây chấn động lên sụn khớp',
+      },
+      {
+        code: '03 · ARCHIMEDES HYDRO-RECOVERY',
+        heading: 'Thủy trị liệu & Giải phóng cơ sâu trong nước ấm 28°C',
+        detail: 'Tận dụng lực đẩy Archimedes và áp suất thủy tĩnh tự nhiên của nước ấm để giãn cơ chủ động, tăng tuần hoàn máu ngoại vi, đào thải axit lactic và giảm đau mỏi cơ khởi phát muộn (DOMS) sau các buổi Squat hoặc chạy bộ.',
+        metric: 'Rút ngắn 40% thời gian phục hồi hệ cơ – thần kinh giữa tuần',
+      },
+    ],
+    specsTitle: 'Chuẩn Kỹ Thuật Hồ Bơi Bốn Mùa SÖL',
+    load: '48%',
+    status: 'Nước ấm 28.0°C · Độ pH 7.3 chuẩn sinh học · Làn bơi thông thoáng',
+    specs: [
+      { label: 'Quy chuẩn hình học', value: '25m × 16m · 6 làn tiêu chuẩn', sub: 'Độ sâu chuyển tiếp 1.35m – 1.80m · Dây phao triệt tiêu sóng ngang' },
+      { label: 'Công nghệ lọc nước', value: 'Điện phân muối khoáng & UV', sub: 'Không mùi Clo nồng · Không gây cay mắt, khô da hay xơ tóc' },
+      { label: 'Nhiệt độ bốn mùa', value: '27.5°C — 28.5°C ổn định', sub: 'Hệ thống gia nhiệt Heat-Pump tự động duy trì nhiệt độ quanh năm' },
+      { label: 'Phân luồng làn bơi', value: 'Fast · Medium · Coaching · Rehab', sub: 'Tách biệt làn bơi tốc độ liên tục, làn học kỹ thuật 1:1 và làn phục hồi' },
+    ],
+  },
+  tennis: {
+    kicker: 'COURT BIOMECHANICS, FOOTWORK & TACTICS',
+    title: 'Huấn Luyện Tennis Hiện Đại & Phản Xạ Đa Hướng',
+    overview: 'Cụm sân SÖL Tennis được xây dựng theo tiêu chuẩn giải đấu ITF với bề mặt đệm giảm chấn đa lớp và mái vòm thông khí. Giáo án tập trung vào chuỗi truyền lực sinh học (Kinetic Chain), tốc độ bước chân và tư duy chiến thuật thực chiến.',
+    pillars: [
+      {
+        code: '01 · KINETIC CHAIN & MODERN GROUNDSTROKES',
+        heading: 'Chuỗi động học & Kỹ thuật Forehand / Backhand Topspin',
+        detail: 'Tối ưu hóa lực đạp từ mặt sân qua khớp cổ chân, xoay hông – vai (Unit Turn) đến điểm tiếp xúc bóng phía trước thân người; làm chủ độ xoáy Topspin sâu cuối sân và cú cắt bóng Slice phòng thủ chuyển trạng thái.',
+        metric: 'Tăng tốc độ đầu vợt & độ ổn định đường bóng sâu qua lưới',
+      },
+      {
+        code: '02 · SERVE MECHANICS & NET DOMINANCE',
+        heading: 'Cơ học Giao bóng, Trả giao & Kiểm soát trên lưới',
+        detail: 'Chuẩn hóa chuỗi Trophy Pose → Leg Drive → Pronation giúp tăng uy lực giao bóng 1 (Flat / Slice Serve) và độ nảy cao ở giao bóng 2 (Kick Serve) mà vẫn bảo vệ tuyệt đối nhóm cơ xoay vai (Rotator Cuff).',
+        metric: 'Phân tích góc tung bóng (Toss) & phản xạ trả giao bóng chuẩn nhịp',
+      },
+      {
+        code: '03 · SPLIT-STEP FOOTWORK & MATCH TACTICS',
+        heading: 'Bộ chân đa hướng & Chiến thuật thi đấu Đơn / Đôi',
+        detail: 'Rèn nhịp bật nhảy Split-Step đúng khoảnh khắc đối thủ chạm bóng, kỹ thuật vào bộ Open / Semi-Open Stance, bước thu hồi vị trí (Recovery Step) và chiến thuật điều bóng mở góc sân giành quyền chủ động.',
+        metric: 'Cải thiện tốc độ bứt tốc 5m đầu tiên & sức bền trong loạt Rally dài',
+      },
+    ],
+    specsTitle: 'Chuẩn Kỹ Thuật Cụm Sân Tennis SÖL',
+    load: '62%',
+    status: 'Độ nảy bóng chuẩn ITF Cat 3 · Ánh sáng chống chói sẵn sàng',
+    specs: [
+      { label: 'Bề mặt thi đấu', value: 'Cushion Acrylic 7 lớp đàn hồi', sub: 'ITF Court Pace Category 3 (Medium-Fast) — Độ nảy bóng đồng nhất' },
+      { label: 'Giảm chấn sinh học', value: 'Hấp thụ 28% xung lực mặt sân', sub: 'Bảo vệ sụn chêm khớp gối, cổ chân và gân gót Achilles khi phanh gấp' },
+      { label: 'Chiếu sáng chuyên dụng', value: 'LED Asymmetric 750 Lux', sub: 'Góc chiếu bất đối xứng chống lóa mắt khi tung bóng giao và bắt bóng bổng' },
+      { label: 'Trợ lý công nghệ', value: 'Smart Ball Machine & Video', sub: 'Máy bắn bóng lập trình điểm rơi, tốc độ 30–130 km/h và độ xoáy Topspin/Underspin' },
+    ],
+  },
+  crosstrain: {
+    kicker: 'MULTI-SPORT ATHLETIC ECOSYSTEM',
+    title: 'Hệ Sinh Thái Đa Bộ Môn: Sức Mạnh · Tốc Độ · Phục Hồi',
+    overview: 'Thay vì bó buộc cơ thể trong một hình thức tập luyện cố định dễ gây nhàm chán và quá tải cục bộ, mô hình Tổ hợp Đa bộ môn tại SÖL cho phép bạn luân chuyển khoa học giữa Gym, Pilates, Bơi lội và Tennis trong cùng một thẻ hội viên.',
+    pillars: [
+      {
+        code: '01 · ROTATIONAL POWER & JOINT ARMOR',
+        heading: 'Gym Strength bổ trợ lực đánh Tennis & lực quạt nước',
+        detail: 'Các bài Medicine Ball Rotational Throw, Landmine Press, Lat Pulldown và Bulgarian Split Squat tại khu Free Weights giúp gia tăng trực tiếp sức mạnh chuỗi xoay thân trên và gia cố dây chằng cổ chân, khớp gối.',
+        metric: 'Chuyển hóa sức mạnh phòng tạ thành tốc độ thực tế trên sân & dưới nước',
+      },
+      {
+        code: '02 · MOBILITY & INJURY PREVENTION',
+        heading: 'Reformer Pilates cân bằng cơ xoay vai & trục cột sống',
+        detail: 'Mở rộng biên độ xoay cột sống ngực (Thoracic Mobility) và kích hoạt nhóm cơ ổn định bả vai trên máy Reformer — chìa khóa phòng ngừa hội chứng Tennis Elbow và đau vai người bơi (Swimmer’s Shoulder).',
+        metric: 'Cân bằng đối xứng hai bên cơ thể sau các môn thể thao cầm vợt',
+      },
+      {
+        code: '03 · WEEKLY PERIODIZATION FLOW',
+        heading: 'Chu trình Tuần Đa Môn: Không chững cân, Không quá tải',
+        detail: 'Ví dụ lịch chuẩn tại SÖL: Thứ 2 & 5 Tập tạ phát triển cơ bắp → Thứ 4 Đánh Tennis rèn phản xạ & đốt mỡ biến tốc → Thứ 7 Bơi 25m & Thủy trị liệu giải phóng áp lực khớp, làm mới hoàn toàn hệ thần kinh.',
+        metric: 'Tối ưu đồng thời 5 tố chất: Sức mạnh · Sức bền · Tốc độ · Linh hoạt · Phục hồi',
+      },
+    ],
+    specsTitle: 'Chuẩn Vận Hành Tổ Hợp Đa Môn SÖL',
+    load: '56%',
+    status: '05 Phân khu đang hoạt động · Đặt lịch liên thông trên 1 ứng dụng',
+    specs: [
+      { label: 'Quy mô tổ hợp', value: '05 Phân khu thể chất chuyên biệt', sub: 'Strength Floor · Free Weights · Movement Studio · Pool 25m · Tennis Courts' },
+      { label: 'Trải nghiệm liền mạch', value: '01 Thẻ QR Pass duy nhất', sub: 'Quét 1 chạm qua cổng Gym, khu vực Hồ bơi bốn mùa và cụm sân Tennis' },
+      { label: 'Linh hoạt chuyển đổi', value: 'Đổi bộ môn theo thể trạng ngày', sub: 'Ngày sung sức tập tạ & đánh Tennis; ngày mỏi cơ chuyển sang Bơi ấm & Mobility' },
+      { label: 'Tiện ích tiêu chuẩn', value: 'Khu Locker, Sauna & Lounge', sub: 'Khăn tắm cao cấp, tủ đồ khóa từ, phòng tắm nước ấm & quầy bù điện giải' },
+    ],
+  },
+} as const;
 const scheduleItems = [
   { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Strength coach', level: 'Mọi cấp độ' },
   { time: '07:30 — 08:25', title: 'Aquatics Stroke & Endurance Clinic', category: 'conditioning', studio: 'Aquatics pool 25m', coach: 'Aquatics coach', level: 'Cơ bản — Nâng cao' },
@@ -318,6 +444,8 @@ export function FitnessLanding() {
   const [goalType, setGoalType] = useState<'lean' | 'muscle' | 'balance'>('muscle');
   const [openFaq, setOpenFaq] = useState<number>(0);
   const [activeStep, setActiveStep] = useState<number>(0);
+  const [activeSportTab, setActiveSportTab] = useState<keyof typeof multiSportDeepDive>('swimming');
+  const activeSportData = multiSportDeepDive[activeSportTab];
 
   const activateMuscle = (id: (typeof muscleGroups)[number]['id']) => {
     if (closeTimerRef.current !== null) {
@@ -512,6 +640,84 @@ export function FitnessLanding() {
         </div>
         <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><img src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span aria-hidden="true">↗</span></button>)}</div>
         <span className="fit-space-number">0{space + 1} / 0{spaces.length}</span>
+      </div>
+    </section>
+    <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
+      <div className="fit-section-heading fit-centered" data-reveal="soft">
+        <span className="fit-kicker">MULTI-SPORT ATHLETIC SANCTUARY</span>
+        <SplitHeading id="multisport-title" lines={['Bơi Lội 4 Mùa &', 'Sân Tennis Chuẩn Giải Đấu']} />
+        <p>Phá vỡ giới hạn của một phòng tập cố định. SÖL kết hợp nền tảng sức mạnh Gym &amp; Pilates với Hồ bơi 25m điện phân muối khoáng và cụm sân Tennis Cushion Acrylic 7 lớp — tạo nên chu trình huấn luyện đa bộ môn hoàn chỉnh.</p>
+      </div>
+      <div className="fit-sport-bento-grid">
+        {multiSportShowcase.map((sport) => <article
+          key={sport.id}
+          className={`fit-sport-card ${activeSportTab === sport.id ? 'is-selected' : ''}`}
+          data-reveal="lift"
+          onPointerMove={handleCardPointerMove}
+          onPointerLeave={handleCardPointerLeave}
+        >
+          <img src={sport.image} alt={sport.title} loading="lazy" />
+          <div className="fit-sport-card-shade" />
+          <div className="fit-sport-card-body">
+            <span className="fit-kicker">{sport.kicker}</span>
+            <h3>{sport.title}</h3>
+            <p>{sport.subtitle}</p>
+            <div className="fit-sport-tag-row">
+              {sport.tags.map((tag) => <span key={tag} className="fit-sport-tag">{tag}</span>)}
+            </div>
+            <span className="fit-card-meta-reveal">{sport.hoverMeta}</span>
+            <button
+              type="button"
+              className="fit-sport-trigger"
+              onClick={() => setActiveSportTab(sport.id)}
+              aria-pressed={activeSportTab === sport.id}
+            >
+              {sport.cta} <RoundArrow diagonal />
+            </button>
+          </div>
+        </article>)}
+      </div>
+      <div className="fit-pricing-switch fit-sport-switch" data-reveal="soft" aria-label="Chọn chuyên đề bộ môn chuyên sâu">
+        <button type="button" onClick={() => setActiveSportTab('swimming')} aria-pressed={activeSportTab === 'swimming'}>Bơi lội · Aquatics 25m</button>
+        <button type="button" onClick={() => setActiveSportTab('tennis')} aria-pressed={activeSportTab === 'tennis'}>Tennis · ITF Court</button>
+        <button type="button" onClick={() => setActiveSportTab('crosstrain')} aria-pressed={activeSportTab === 'crosstrain'}>Phối hợp Đa môn · Cross-Training</button>
+      </div>
+      <div key={activeSportTab} className="fit-sport-deepdive fit-blur-morph">
+        <div className="fit-sport-curriculum">
+          <span className="fit-kicker">{activeSportData.kicker}</span>
+          <h3>{activeSportData.title}</h3>
+          <p className="fit-sport-overview">{activeSportData.overview}</p>
+          <div className="fit-sport-pillars">
+            {activeSportData.pillars.map((pillar) => <article key={pillar.code} className="fit-sport-pillar">
+              <span className="fit-sport-pillar-code">{pillar.code}</span>
+              <h4>{pillar.heading}</h4>
+              <p>{pillar.detail}</p>
+              <span className="fit-sport-pillar-metric"><i aria-hidden="true">✦</i>{pillar.metric}</span>
+            </article>)}
+          </div>
+        </div>
+        <aside className="fit-sport-specs" aria-label={activeSportData.specsTitle}>
+          <span className="fit-kicker">TECHNICAL SPECIFICATIONS</span>
+          <h4>{activeSportData.specsTitle}</h4>
+          <dl className="fit-sport-spec-list">
+            {activeSportData.specs.map((spec) => <div key={spec.label} className="fit-sport-spec-item">
+              <dt>{spec.label}</dt>
+              <dd>
+                <strong>{spec.value}</strong>
+                <span>{spec.sub}</span>
+              </dd>
+            </div>)}
+          </dl>
+          <div className="fit-space-live fit-sport-live" style={{ '--space-load': activeSportData.load } as CSSProperties}>
+            <div className="fit-space-live-head">
+              <span>Trạng thái vận hành thời gian thực</span>
+              <strong>{activeSportData.load} công suất</strong>
+            </div>
+            <div className="fit-space-meter"><i /></div>
+            <span className="fit-space-status"><b />{activeSportData.status}</span>
+          </div>
+          <Link to={joinPath} className="fit-pill">Đăng ký trải nghiệm Đa bộ môn<RoundArrow diagonal /></Link>
+        </aside>
       </div>
     </section>
     <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">
