@@ -70,6 +70,46 @@ public class HealthMetricService {
         return toDto(progressLogRepository.save(log));
     }
 
+    @Transactional
+    public HealthMetricDto updateMetric(Long memberId, Long metricId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
+        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null, null);
+        }
+        MemberProgressLog log = progressLogRepository.findById(metricId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
+        if (!log.getMember().getUserId().equals(memberId)) {
+            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null, null);
+        }
+
+        if (request.metricName() != null && !request.metricName().isBlank()) {
+            String metricName = request.metricName().toLowerCase(Locale.ROOT);
+            if (!ALLOWED_METRICS.contains(metricName)) {
+                throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null, null);
+            }
+            log.setMetricName(metricName);
+        }
+        if (request.metricValue() != null) {
+            log.setMetricValue(request.metricValue());
+        }
+        if (request.unit() != null) {
+            log.setUnit(request.unit());
+        }
+        return toDto(progressLogRepository.save(log));
+    }
+
+    @Transactional
+    public void deleteMetric(Long memberId, Long metricId, Long currentUserId, String currentUserRole) {
+        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null, null);
+        }
+        MemberProgressLog log = progressLogRepository.findById(metricId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
+        if (!log.getMember().getUserId().equals(memberId)) {
+            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null, null);
+        }
+        progressLogRepository.delete(log);
+    }
+
     private HealthMetricDto toDto(MemberProgressLog log) {
         return new HealthMetricDto(log.getId(), log.getMetricName(), log.getMetricValue(), log.getUnit(),
                 log.getRecordedBy().getId(), log.getRecordedAt());

@@ -41,3 +41,14 @@ export const listHealthMetrics = (memberId: number) =>
 
 export const addHealthMetric = (memberId: number, metric: NewHealthMetric) =>
   apiFetch(`/members/${memberId}/health-metrics`, { method: 'POST', body: JSON.stringify(metric) });
+
+export const updateHealthMetric = (memberId: number, metricId: number, metric: NewHealthMetric) =>
+  apiFetch<HealthMetric>(`/members/${memberId}/health-metrics/${metricId}`, {
+    method: 'PUT',
+    body: JSON.stringify(metric),
+  });
+
+export const deleteHealthMetric = (memberId: number, metricId: number) =>
+  apiFetch(`/members/${memberId}/health-metrics/${metricId}`, {
+    method: 'DELETE',
+  });

@@ -298,3 +298,136 @@
 @media (prefers-reduced-motion: reduce) {
   .portal-v2 *, .portal-v2 *::before, .portal-v2 *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+
+/* Health Metrics Compact Table & Action Buttons (No horizontal scrollbar) */
+.portal-v2 .profile-metric-table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  border-radius: 12px;
+  border: 1px solid #e7ded4;
+  background: #ffffff;
+}
+
+.portal-v2 .profile-metric-table {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.portal-v2 .profile-metric-table th,
+.portal-v2 .profile-metric-table td {
+  padding: 10px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-bottom: 1px solid #eee6de;
+  vertical-align: middle;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.portal-v2 .profile-metric-table th {
+  background: #f7f3ee;
+  color: #756351;
+  font-weight: 600;
+  font-size: 11px;
+  text-align: left;
+}
+
+.portal-v2 .profile-metric-table th:first-child,
+.portal-v2 .profile-metric-table td:first-child {
+  padding-left: 12px;
+}
+
+.portal-v2 .profile-metric-table th:last-child,
+.portal-v2 .profile-metric-table td:last-child {
+  padding-right: 12px;
+  text-align: right;
+  white-space: nowrap !important;
+}
+
+.portal-v2 .profile-metric-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.portal-v2 .profile-metric-table tbody tr:hover td {
+  background: #faf7f2;
+}
+
+.portal-v2 .profile-metric-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+
+.portal-v2 .btn-metric-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  min-height: 28px;
+  min-width: 44px;
+  line-height: 1.2;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  flex-shrink: 0;
+}
+
+.portal-v2 .btn-metric-edit {
+  background: #f4ece1;
+  color: #806344;
+  border-color: #d8c8b6;
+}
+
+.portal-v2 .btn-metric-edit:hover:not(:disabled) {
+  background: #e9decb;
+  color: #5c432b;
+}
+
+.portal-v2 .btn-metric-delete {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.portal-v2 .btn-metric-delete:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.portal-v2 .profile-metric-editing-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #fef9ee;
+  border: 1px solid #fae2b6;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #8a5b14;
+}
+
+.portal-v2 .profile-metric-editing-bar button {
+  padding: 4px 10px;
+  min-height: 28px;
+  font-size: 11px;
+}
+
+.portal-v2 .profile-metric-form-btns {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}

@@ -491,6 +491,22 @@ public class MembershipSubscriptionService {
      * SCRUM-71 BR-06:
      * Lấy danh sách lịch sử gói tập của chính hội viên.
      */
+        @Transactional(readOnly = true)
+    public com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto generateDynamicQr(AuthenticatedPrincipal principal) {
+        SubscriptionDto sub = current(principal);
+        if (sub == null || !STATUS_ACTIVE.equalsIgnoreCase(sub.status())) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_NOT_ACTIVE",
+                    "error.attendance.subscription_not_active",
+                    null,
+                    "No active subscription found to generate dynamic QR");
+        }
+        long nowMillis = clock.instant().toEpochMilli();
+        String qr = dynamicQrService.generate(principal.id(), sub.id(), nowMillis);
+        return new com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto(
+                qr, DynamicQrService.DEFAULT_TTL_SECONDS, LocalDateTime.now(clock));
+    }
+
     @Transactional(readOnly = true)
     public List<SubscriptionDto> mine(AuthenticatedPrincipal principal) {
         findMember(principal.id());
