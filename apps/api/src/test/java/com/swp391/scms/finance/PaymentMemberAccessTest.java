@@ -85,8 +85,10 @@ class PaymentMemberAccessTest {
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
         subscription.setMembershipPackage(membershipPackage);
+        subscription.setId(10L);
         subscription.setStatus("pending_payment");
         when(members.findById(2L)).thenReturn(Optional.of(member));
+        when(members.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(subscriptions.findById(10L)).thenReturn(Optional.of(subscription));
         Payment saved = new Payment();
         when(mapper.toEntity(any())).thenReturn(saved);

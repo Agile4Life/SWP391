@@ -821,12 +821,14 @@ paths:
       responses:
         '201':
           description: Tạo lượt gia hạn thành công
+        '400':
+          description: Kỳ nguồn không phải gói đã thanh toán hợp lệ
         '403':
           description: Không phải chủ sở hữu gói
         '404':
           description: Gói tập không tồn tại
         '409':
-          description: Gói tập đã có lượt gia hạn trước đó
+          description: Chuỗi gia hạn có kỳ chờ thanh toán, kỳ chồng lấn hoặc dữ liệu bất thường
 
   /memberships/subscriptions/{id}/upgrade:
     post:
@@ -853,7 +855,7 @@ paths:
         '403':
           description: Không phải chủ sở hữu gói
         '409':
-          description: Đang có yêu cầu chờ thanh toán
+          description: Có yêu cầu chờ thanh toán hoặc kỳ gia hạn tương lai đã thanh toán
 
   /memberships/subscriptions/{id}/cancel:
     post:
@@ -874,6 +876,8 @@ paths:
         '403':
           description: Không có quyền hủy yêu cầu này
 
+        '409':
+          description: Payment đang chờ hoặc đã thành công; chưa thể hủy yêu cầu
   /memberships/subscriptions/{id}/hold:
     post:
       summary: Hội viên chủ động gửi yêu cầu bảo lưu gói tập kèm lý do (SCRUM-71)
@@ -922,6 +926,8 @@ paths:
         '200':
           description: Đã xác nhận bảo lưu và hủy lịch học tương lai
 
+        '409':
+          description: Có kỳ gia hạn tương lai đã thanh toán; cần quản lý xử lý
   /memberships/subscriptions/{id}/hold/reject:
     post:
       summary: Lễ tân từ chối yêu cầu bảo lưu gói tập (CENTER_MANAGER, RECEPTIONIST)

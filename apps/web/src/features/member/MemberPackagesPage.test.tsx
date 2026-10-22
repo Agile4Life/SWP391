@@ -96,6 +96,19 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Gia hạn gói tập');
   });
 
+  it('allows a third paid period and displays future renewal dates', async () => {
+    const third = { ...renewal, id: 6, previousSubscriptionId: 5,
+      startDate: '2099-12-19', endDate: '2100-01-18' };
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, renewal, third]);
+    api.renew.mockResolvedValue({ ...pending, id: 7, previousSubscriptionId: 6 });
+    await render();
+    expect(host.textContent).toContain('Kỳ đã thanh toán tiếp theo');
+
+    expect(button('Gia hạn')?.disabled).toBe(false);
+    await act(async () => button('Gia hạn')?.click());
+    expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
+  });
   it('allows an active subscription to upgrade to a higher package and blocks lower packages', async () => {
     const upgradePending = {
       ...pending,
@@ -169,23 +182,26 @@ describe('SCRUM-86 packages', () => {
     expect(button('Đang chờ duyệt bảo lưu')?.disabled).toBe(true);
   });
 
-  it.each(['active', 'pending_payment'])('blocks a %s successor restored from history without submitting renewal', async (status) => {
+  it('allows another renewal after a paid successor', async () => {
     api.current.mockResolvedValue(active);
-    api.history.mockResolvedValue([active, { ...renewal, status }]);
+    api.history.mockResolvedValue([active, renewal]);
     await render();
-    const action = button('Đã gia hạn')!;
-    expect(action?.disabled).toBe(true);
-    await act(async () => action.click());
-    expect(api.renew).not.toHaveBeenCalled();
-    expect(api.create).not.toHaveBeenCalled();
+    expect(button('Gia hạn')?.disabled).toBe(false);
   });
 
+  it('blocks another renewal while a successor awaits payment', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, { ...renewal, status: 'pending_payment' }]);
+    await render();
+    expect(button('Đang chờ xác nhận')?.disabled).toBe(true);
+    expect(api.renew).not.toHaveBeenCalled();
+  });
   it('warns about multiple valid successors of the same subscription', async () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active, renewal, { ...renewal, id: 9 }, { ...renewal, id: 10 }]);
     await render();
     expect(button('Cần kiểm tra gia hạn')?.disabled).toBe(true);
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('nhiều lượt gia hạn');
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('chuỗi gia hạn bất thường');
     expect(api.renew).not.toHaveBeenCalled();
   });
 
@@ -220,7 +236,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => button('Gia hạn')?.click());
     expect(api.renew).not.toHaveBeenCalled();
     await act(async () => resolveHistory([active, renewal]));
-    expect(button('Đã gia hạn')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
   });
 
   it('blocks renewal on history failure and verifies it again on retry', async () => {
@@ -232,13 +248,13 @@ describe('SCRUM-86 packages', () => {
     await act(async () => button('Gia hạn')?.click());
     expect(api.renew).not.toHaveBeenCalled();
     await act(async () => button('Thử lại')?.click());
-    expect(button('Đã gia hạn')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
   });
 
   it('blocks an expired source with a valid future successor', async () => {
-    api.history.mockResolvedValue([{ ...active, status: 'expired', endDate: '2020-01-01' }, renewal]);
+    api.history.mockResolvedValue([{ ...active, status: 'expired', startDate: '2019-12-01', endDate: '2020-01-01' }, renewal]);
     await render();
-    expect(button('Đã gia hạn')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
     expect(api.renew).not.toHaveBeenCalled();
   });
 
@@ -250,7 +266,7 @@ describe('SCRUM-86 packages', () => {
     root = createRoot(host);
     await render();
     expect(api.history).toHaveBeenCalledTimes(2);
-    expect(button('Đã gia hạn')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
     expect(api.renew).not.toHaveBeenCalled();
   });
 
@@ -411,8 +427,8 @@ describe('SCRUM-86 packages', () => {
   });
 
   it('renews the latest expired subscription of the selected package', async () => {
-    const older = { ...pending, id: 20, status: 'expired', endDate: '2020-01-01' };
-    const latest = { ...pending, id: 21, status: 'expired', endDate: '2021-01-01' };
+    const older = { ...pending, id: 20, status: 'expired', startDate: '2019-12-01', endDate: '2020-01-01' };
+    const latest = { ...pending, id: 21, status: 'expired', startDate: '2020-02-01', endDate: '2021-01-01' };
     api.history.mockResolvedValue([older, latest]);
     api.renew.mockResolvedValue({ ...pending, previousSubscriptionId: 21 });
     await render();
