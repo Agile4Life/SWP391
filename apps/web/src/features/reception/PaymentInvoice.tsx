@@ -1,0 +1,72 @@
+import { createPortal } from 'react-dom';
+import { Modal } from '../../shared/ui/Modal';
+import type { PaymentResponseDto } from './receptionApi';
+import './payment-invoice.css';
+
+interface InvoiceProps {
+  payment: PaymentResponseDto;
+  memberName: string;
+  membershipCode?: string | null;
+  packageName: string;
+  cashierName?: string;
+}
+
+const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+const methods: Record<string, string> = {
+  cash: 'Tiền mặt', pos: 'Thẻ / POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
+};
+
+function InvoiceDocument({ payment, memberName, membershipCode, packageName, cashierName }: InvoiceProps) {
+  const paidAt = new Date(payment.paidAt);
+  return <article className="invoice-document" aria-label="Hóa đơn thanh toán">
+    <header className="invoice-document__header">
+      <strong className="invoice-document__brand">SÖL</strong>
+      <span>Wellness Sanctuary</span>
+      <h3>HÓA ĐƠN THANH TOÁN</h3>
+      <strong className="invoice-document__number">{payment.invoiceNumber || 'Chưa cấp số hóa đơn'}</strong>
+      <span>{Number.isNaN(paidAt.getTime()) ? 'Chưa có thời gian thanh toán' : paidAt.toLocaleString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+      })}</span>
+    </header>
+
+    <dl className="invoice-document__details">
+      <div><dt>Hội viên</dt><dd>{memberName || payment.memberName || 'Chưa có tên hội viên'}</dd></div>
+      {membershipCode && <div><dt>Mã hội viên</dt><dd>{membershipCode}</dd></div>}
+      <div><dt>Giao dịch</dt><dd>#{payment.id}</dd></div>
+      {cashierName && <div><dt>Thu ngân</dt><dd>{cashierName}</dd></div>}
+      <div><dt>Thanh toán</dt><dd>{methods[payment.method.toLowerCase()] ?? payment.method}</dd></div>
+    </dl>
+
+    <table className="invoice-document__items">
+      <caption className="sr-only">Chi tiết dịch vụ đã thanh toán</caption>
+      <colgroup><col /><col className="invoice-document__amount-column" /></colgroup>
+      <thead><tr><th scope="col">Nội dung</th><th scope="col">Thành tiền</th></tr></thead>
+      <tbody><tr>
+        <td><strong>{packageName}</strong><small>1 × {money.format(payment.amount)}</small></td>
+        <td>{money.format(payment.amount)}</td>
+      </tr></tbody>
+      <tfoot><tr><th scope="row">Tổng tiền đã thu</th><td>{money.format(payment.amount)}</td></tr></tfoot>
+    </table>
+
+    <footer className="invoice-document__footer">
+      <strong>ĐÃ THANH TOÁN</strong>
+      <p>Cảm ơn quý khách đã lựa chọn SÖL.</p>
+      <p>Vui lòng giữ hóa đơn để đối chiếu khi cần.</p>
+    </footer>
+  </article>;
+}
+
+export function PaymentInvoice({ onClose, ...invoice }: InvoiceProps & { onClose: () => void }) {
+  return <>
+    <Modal title="Hóa đơn thanh toán" onClose={onClose}>
+      <p className="payment-invoice__success" role="status">Đã ghi nhận thanh toán thành công.</p>
+      <div className="payment-invoice__preview"><InvoiceDocument {...invoice} /></div>
+      <p className="payment-invoice__hint">Giấy in nhiệt 80 mm · Tỷ lệ 100% · Tắt đầu/chân trang khi in.</p>
+      <div className="payment-invoice__actions">
+        <button type="button" className="btn-secondary" onClick={onClose}>Đóng</button>
+        <button type="button" className="btn-primary" onClick={() => window.print()}>In hóa đơn (80 mm)</button>
+      </div>
+    </Modal>
+    {createPortal(<div className="invoice-print-root" aria-hidden="true"><InvoiceDocument {...invoice} /></div>, document.body)}
+  </>;
+}

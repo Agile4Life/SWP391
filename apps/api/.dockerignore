@@ -1,10 +1,26 @@
+# Build context là apps/api; Dockerfile cần pom.xml và src/ để build bằng Maven.
+# Giữ source, resources, Maven Wrapper và cấu hình Maven cần cho quá trình build.
+
+# Kết quả build trên máy; Maven sẽ tạo lại bên trong Docker.
 target/
+
+# Biến môi trường ở mọi thư mục, gồm docker/.env.
+# docker run --env-file vẫn đọc được các file này từ máy host.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Git và cấu hình IDE không cần cho image.
 .git/
 .idea/
 .vscode/
-.env
-.env.*
-**/.env
-**/.env.*
-*.log
+*.iml
+
+# Log và báo cáo lỗi JVM trên máy.
 **/*.log
+**/hs_err_pid*
+**/replay_pid*
+
+# File hệ điều hành.
+**/.DS_Store
+**/Thumbs.db

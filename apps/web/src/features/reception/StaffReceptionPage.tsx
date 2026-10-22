@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
-import { Modal } from '../../shared/ui/Modal';
+import { PaymentInvoice } from './PaymentInvoice';
 import { toast } from '../../shared/ui/toast';
 import {
   maskCitizenId,
@@ -51,6 +51,7 @@ export function StaffReceptionPage() {
   const [completedPayment, setCompletedPayment] = useState<PaymentResponseDto | null>(null);
   const [completedPackageName, setCompletedPackageName] = useState<string>('');
   const [completedMemberName, setCompletedMemberName] = useState<string>('');
+  const [completedMembershipCode, setCompletedMembershipCode] = useState<string | null>(null);
 
   const loadPendingSubscriptions = useCallback(async () => {
     if (!hasAccess) return;
@@ -261,6 +262,7 @@ export function StaffReceptionPage() {
       // BR-04: Chỉ hiển thị hóa đơn khi Payment API trả thành công
       setCompletedPackageName(selectedPending.packageName);
       setCompletedMemberName(selectedPending.memberName);
+      setCompletedMembershipCode(selectedPending.membershipCode);
       setCompletedPayment(result);
       toast(`Đã xác nhận thu tiền thành công! Hóa đơn: ${result.invoiceNumber}`, 'success');
       await loadPendingSubscriptions();
@@ -270,10 +272,6 @@ export function StaffReceptionPage() {
     } finally {
       setIsSubmittingPayment(false);
     }
-  };
-
-  const handlePrintInvoice = () => {
-    window.print();
   };
 
   return (
@@ -786,80 +784,14 @@ export function StaffReceptionPage() {
 
       {/* BR-04: Popup Hóa đơn điện tử chỉ hiện khi Payment thành công */}
       {completedPayment && (
-        <Modal
-          title={`Hóa Đơn Điện Tử: ${completedPayment.invoiceNumber}`}
+        <PaymentInvoice
+          payment={completedPayment}
+          memberName={completedMemberName}
+          membershipCode={completedMembershipCode}
+          packageName={completedPackageName}
+          cashierName={currentUser?.name}
           onClose={() => setCompletedPayment(null)}
-        >
-          <div style={{ display: 'grid', gap: '16px' }}>
-            <div
-              style={{
-                backgroundColor: '#F0FDF4',
-                border: '1px solid #86EFAC',
-                borderRadius: '8px',
-                padding: '20px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '2.5rem', marginBottom: '6px' }}>🧾</div>
-              <h3 style={{ margin: '0 0 4px 0', color: '#166534', fontSize: '1.25rem' }}>
-                Thanh Toán Thành Công!
-              </h3>
-              <p style={{ margin: 0, color: '#15803D', fontSize: '0.9rem' }}>
-                Giao dịch đã được ghi nhận, gói tập đã kích hoạt và cấp mã hóa đơn điện tử hợp lệ.
-              </p>
-            </div>
-
-            {/* Thông tin chi tiết hóa đơn */}
-            <div className="kv-list" style={{ backgroundColor: '#FAF8F5', padding: '16px', borderRadius: '8px' }}>
-              <div className="kv-row">
-                <span>Số hóa đơn</span>
-                <strong style={{ fontFamily: 'monospace', color: '#996515', fontSize: '1rem' }}>
-                  {completedPayment.invoiceNumber}
-                </strong>
-              </div>
-              <div className="kv-row">
-                <span>Khách hàng</span>
-                <strong>{completedMemberName || selectedMember?.fullName}</strong>
-              </div>
-              <div className="kv-row">
-                <span>Gói dịch vụ</span>
-                <strong>{completedPackageName}</strong>
-              </div>
-              <div className="kv-row">
-                <span>Phương thức</span>
-                <span className="badge badge-info">{completedPayment.method.toUpperCase()}</span>
-              </div>
-              <div className="kv-row">
-                <span>Thời gian thanh toán</span>
-                <span>{new Date(completedPayment.paidAt).toLocaleString('vi-VN')}</span>
-              </div>
-              <div className="kv-row" style={{ borderTop: '1px dashed #D6CEC5', paddingTop: '10px' }}>
-                <span style={{ fontSize: '1rem', fontWeight: 600 }}>TỔNG TIỀN ĐÃ THU</span>
-                <strong style={{ fontSize: '1.2rem', color: '#15803d' }}>
-                  {vnd(completedPayment.amount)}
-                </strong>
-              </div>
-            </div>
-
-            {/* Nút hành động trong Modal Hóa đơn */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setCompletedPayment(null)}
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handlePrintInvoice}
-              >
-                🖨️ In Hóa Đơn
-              </button>
-            </div>
-          </div>
-        </Modal>
+        />
       )}
     </div>
   );
