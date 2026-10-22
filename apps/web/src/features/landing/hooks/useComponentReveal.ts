@@ -1,6 +1,8 @@
 import { useLayoutEffect, type RefObject } from 'react';
 
-/** Replay entrances on viewport re-entry; document scrolling stays native. */
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+/** Replay entrances on viewport re-entry and drive scroll-linked UI progress; document scrolling stays native. */
 export function useComponentReveal(container: RefObject<HTMLDivElement | null>, route: string) {
   useLayoutEffect(() => {
     const root = container.current;
@@ -10,10 +12,55 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     const selector = `[data-reveal], ${heroSelector}`;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let observer: IntersectionObserver | undefined;
+    let sectionObserver: IntersectionObserver | undefined;
     let previousScrollY = window.scrollY;
     let direction: 'up' | 'down' = 'down';
+
+    const syncScrollEffects = () => {
+      const currentScrollY = window.scrollY;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const progress = clamp(currentScrollY / maxScroll, 0, 1);
+      root.style.setProperty('--fit-scroll-progress', preference.matches ? '0' : progress.toFixed(4));
+
+      const header = root.querySelector<HTMLElement>('.fit-header');
+      if (header) {
+        header.classList.toggle('is-scrolled', currentScrollY > 36);
+      }
+
+      if (preference.matches) return;
+
+      const hero = root.querySelector<HTMLElement>('.fit-hero');
+      if (hero) {
+        const heroHeight = Math.max(1, hero.offsetHeight);
+        const heroProgress = clamp(currentScrollY / heroHeight, 0, 1);
+        hero.style.setProperty('--fit-hero-scroll', heroProgress.toFixed(3));
+      }
+
+      root.querySelectorAll<HTMLElement>('[data-scroll-scrub="manifesto"]').forEach((manifesto) => {
+        const rect = manifesto.getBoundingClientRect();
+        const start = window.innerHeight * 0.88;
+        const end = window.innerHeight * 0.28;
+        const scrub = clamp((start - rect.top) / Math.max(1, start - end), 0, 1);
+        const words = manifesto.querySelectorAll<HTMLElement>('.fit-manifesto-word > span');
+        const total = Math.max(1, words.length);
+        words.forEach((word, index) => {
+          const wordStart = (index / total) * 0.76;
+          const wordProgress = clamp((scrub - wordStart) / 0.24, 0, 1);
+          word.style.opacity = (0.18 + wordProgress * 0.82).toFixed(3);
+        });
+      });
+
+      const finalCta = root.querySelector<HTMLElement>('.fit-final-cta');
+      if (finalCta) {
+        const rect = finalCta.getBoundingClientRect();
+        const ctaProgress = clamp((window.innerHeight - rect.top) / Math.max(1, window.innerHeight * 0.72), 0, 1);
+        finalCta.style.setProperty('--fit-cta-progress', ctaProgress.toFixed(3));
+      }
+    };
+
     const onScroll = () => {
       const currentScrollY = window.scrollY;
+      syncScrollEffects();
       if (currentScrollY === previousScrollY) return;
       const nextDirection = currentScrollY < previousScrollY ? 'up' : 'down';
       previousScrollY = currentScrollY;
@@ -48,8 +95,17 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     };
     const configure = () => {
       observer?.disconnect();
+      sectionObserver?.disconnect();
       [...targets].forEach(unregister);
-      if (preference.matches) return;
+      if (preference.matches) {
+        root.style.setProperty('--fit-scroll-progress', '0');
+        root.querySelector<HTMLElement>('.fit-hero')?.style.removeProperty('--fit-hero-scroll');
+        root.querySelectorAll<HTMLElement>('.fit-manifesto-word > span').forEach((word) => {
+          word.style.opacity = '1';
+        });
+        root.querySelector<HTMLElement>('.fit-final-cta')?.style.removeProperty('--fit-cta-progress');
+        return;
+      }
       observer = new IntersectionObserver((entries) => {
         if (preference.matches) return;
         onScroll();
@@ -65,6 +121,23 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
         });
       }, { threshold: [0, .12] });
       root.querySelectorAll<HTMLElement>(selector).forEach(register);
+
+      const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
+      if (trackedSections.length > 0) {
+        sectionObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const id = entry.target.getAttribute('id');
+            if (!id) return;
+            root.querySelectorAll<HTMLElement>('.fit-nav a[data-nav-target]').forEach((link) => {
+              link.classList.toggle('is-active', link.dataset.navTarget === id);
+            });
+          });
+        }, { rootMargin: '-40% 0px -50% 0px' });
+        trackedSections.forEach((section) => sectionObserver?.observe(section));
+      }
+
+      syncScrollEffects();
     };
     const onFocus = (event: FocusEvent) => {
       const element = (event.target as HTMLElement).closest<HTMLElement>('[data-reveal]');
@@ -79,12 +152,15 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     mutations.observe(root, { childList: true, subtree: true });
     preference.addEventListener('change', configure);
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', syncScrollEffects, { passive: true });
     root.addEventListener('focusin', onFocus);
     return () => {
       observer?.disconnect();
+      sectionObserver?.disconnect();
       mutations.disconnect();
       preference.removeEventListener('change', configure);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', syncScrollEffects);
       root.removeEventListener('focusin', onFocus);
       [...targets].forEach(unregister);
     };

@@ -33,12 +33,13 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   }, [pathname, hash]);
 
   return <div className="fit-site" ref={root}>
+    <div className="fit-scroll-progress" aria-hidden="true" />
     <a className="fit-skip" href="#public-main">Đến nội dung chính</a>
     <div className="fit-canvas">
       <header className="fit-header">
         <Link className="fit-brand" to="/" aria-label="SÖL Fitness · Trang chủ"><span>SÖL</span>Fitness<span className="fit-brand-dot">®</span></Link>
         <nav className={`fit-nav ${menuOpen ? 'is-open' : ''}`} id="public-navigation" aria-label="Điều hướng chính">
-          {links.map(({ hash: target, label }) => <Link key={target} to={`/#${target}`} onClick={() => setMenuOpen(false)}>{label}</Link>)}
+          {links.map(({ hash: target, label }) => <Link key={target} to={`/#${target}`} data-nav-target={target} onClick={() => setMenuOpen(false)}>{label}</Link>)}
         </nav>
         <div className="fit-header-actions">
           <Link to={user ? homePath(user.role) : pathname === '/login' ? '/register' : '/login'} className="fit-pill fit-header-cta">
@@ -54,7 +55,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <nav aria-label="Điều hướng chân trang">{links.map(({ hash: target, label }) => <Link key={target} to={`/#${target}`}>{label}</Link>)}</nav>
           <address><span>120 Hai Bà Trưng, Quận 1, TP.HCM</span><a href="tel:19006868">1900 6868 ↗</a><a href="mailto:concierge@sol-wellness.vn">concierge@sol-wellness.vn</a></address>
         </div>
-        <div className="fit-footer-bottom"><span>© 2026 SÖL Wellness Sanctuary</span><span>06:00 — 22:00 mỗi ngày</span><Link to={user ? homePath(user.role) : '/login'}>{user ? 'Không gian hội viên' : 'Đăng nhập hội viên'} ↗</Link></div>
+        <div className="fit-footer-bottom"><span>© 2026 SÖL Fitness</span><span>06:00 — 22:00 mỗi ngày</span><Link to={user ? homePath(user.role) : '/login'}>{user ? 'Không gian hội viên' : 'Đăng nhập hội viên'} ↗</Link></div>
+        <div className="fit-footer-watermark" aria-hidden="true">SÖL FITNESS</div>
       </footer>
     </div>
     {pathname === '/' && <LiquidGlassChatbot />}
@@ -65,11 +67,9 @@ export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'log
   return <PublicLayout>
     <main id="public-main" className="fit-auth">
       <div className="fit-auth-story" data-reveal="soft">
-        <span className="fit-kicker">YOUR NEXT CHAPTER STARTS HERE</span>
-        <h1>{mode === 'login' ? <>GOOD TO HAVE<br />YOU <em>BACK.</em></> : <>STRONGER.<br />TOGETHER.<br /><em>START HERE.</em></>}</h1>
-        <p>{mode === 'login' ? 'Trở lại nhịp tập luyện của bạn. Lịch học, gói tập và hành trình tiến bộ — tất cả trong một không gian.' : 'Một tài khoản. Nhiều cách để chuyển động. Bắt đầu hành trình tập luyện và tìm phiên bản khỏe hơn của chính mình.'}</p>
+        <h1>{mode === 'login' ? <>Trở lại<br /><em>lịch tập của bạn.</em></> : <>Bắt đầu<br /><em>cùng SÖL.</em></>}</h1>
+        <p>{mode === 'login' ? 'Đăng nhập để xem gói tập, đặt lịch lớp và theo dõi lịch tập của bạn.' : 'Tạo tài khoản và xác thực email để bắt đầu chọn gói tập.'}</p>
         <div className="fit-auth-photo"><img src="/images/fitness/strength-session.jpg" alt="Vận động viên tập luyện sức mạnh với tạ tại phòng gym" /><span>SHOW UP FOR YOURSELF.<RoundArrow diagonal /></span></div>
-        <div className="fit-auth-note"><span className="fit-small-star">✳</span> Mỗi buổi tập là một khởi đầu mới.</div>
       </div>
       <div className="fit-auth-form" data-reveal="lift">{children}</div>
     </main>
