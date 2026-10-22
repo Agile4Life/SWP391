@@ -387,10 +387,11 @@ public class PaymentService {
                     throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH",
                             "finance.payment.amount_mismatch", null, "Existing payment does not match checkout");
                 }
+                updatePaymentStatus(existing.getId(), "success");
                 existing.setReceivedBy(receiver);
                 existing.setMethod(dto.getMethod().toLowerCase(Locale.ROOT));
                 existing.setNote(dto.getNote());
-                return updatePaymentStatus(existing.getId(), "success");
+                return paymentMapper.toDto(existing);
             }
             if (!existingPayments.isEmpty()) {
                 throw new ConflictException("RENEWAL_PAYMENT_EXISTS",

@@ -494,7 +494,19 @@ class PaymentServiceTest {
         pendingPayment.setId(11L); pendingPayment.setMember(member); pendingPayment.setSubscriptionId(10L);
         pendingPayment.setStatus("pending"); pendingPayment.setAmount(pack.getPrice());
         pendingPayment.setMethod("bank_transfer");
-        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, pack.getPrice(), "pos", null, null);
+        User cashier = new User(); cashier.setId(1L);
+        jakarta.persistence.EntityManager entityManager = mock(jakarta.persistence.EntityManager.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "entityManager", entityManager);
+        // Refresh reloads the stored values and discards unflushed cashier edits.
+        doAnswer(invocation -> {
+            if (invocation.getArgument(0) != pendingPayment) return null;
+            pendingPayment.setMethod("bank_transfer");
+            pendingPayment.setReceivedBy(null);
+            pendingPayment.setNote(null);
+            return null;
+        }).when(entityManager).refresh(any());
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(cashier));
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, pack.getPrice(), "pos", 1L, "Paid at desk");
         dto.setPackageId(5L);
         when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
@@ -503,6 +515,9 @@ class PaymentServiceTest {
         when(paymentRepository.findById(11L)).thenReturn(Optional.of(pendingPayment));
         when(paymentMapper.toDto(pendingPayment)).thenReturn(new PaymentDto());
         paymentService.processPayment(dto);
+        assertEquals("pos", pendingPayment.getMethod());
+        assertSame(cashier, pendingPayment.getReceivedBy());
+        assertEquals("Paid at desk", pendingPayment.getNote());
         assertEquals("success", pendingPayment.getStatus());
         assertEquals("active", renewal.getStatus());
         verify(paymentRepository, never()).save(any());
