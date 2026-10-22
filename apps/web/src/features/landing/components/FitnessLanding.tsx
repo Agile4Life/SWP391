@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
-import { trainerProfiles } from '../data/trainersData';
+import { usePublicCatalog } from '../publicCatalog';
+import { CatalogPackages, CatalogSchedule, CatalogStatus, CatalogTrainers } from './CatalogSections';
 import { RoundArrow } from './PublicLayout';
 
 const tickerItems = [
@@ -154,12 +155,11 @@ const muscleGroups = [
   },
 ] as const;
 
-const trainers = trainerProfiles;
 const stories = [
   { slug: 'strength-coach', name: 'Derek', image: 'coach-strength.png', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH COACH', meta: '6 năm kinh nghiệm · Strength Floor' },
-  { slug: 'aquatics-coach', name: 'Anthony', image: 'trainer-strength.jpg', quote: 'Tôi tìm được nhịp tập phù hợp dưới nước và giúp học viên lướt nhẹ mà không tốn sức.', focus: 'AQUATICS COACH', meta: '8 năm kinh nghiệm · Hồ bơi 25m' },
-  { slug: 'personal-coach', name: 'Jhon', image: 'strength-session.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi muốn bạn thấy khỏe và tự tin hơn mỗi tuần.', focus: 'PERSONAL COACH', meta: '7 năm kinh nghiệm · Kèm 1:1 Đa môn' },
-  { slug: 'tennis-coach', name: 'Ezekiel', image: 'hero-athlete.png', quote: 'Có người đồng hành chỉnh từng bước chân giúp bạn tự tin trong mọi đường bóng.', focus: 'TENNIS COACH', meta: '7 năm kinh nghiệm · Sân Tennis' },
+  { slug: 'aquatics-coach', name: 'Anthony', image: 'coach-aquatics.jpg', quote: 'Tôi tìm được nhịp tập phù hợp dưới nước và giúp học viên lướt nhẹ mà không tốn sức.', focus: 'AQUATICS COACH', meta: '8 năm kinh nghiệm · Hồ bơi 25m' },
+  { slug: 'personal-coach', name: 'Jhon', image: 'coach-personal.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi muốn bạn thấy khỏe và tự tin hơn mỗi tuần.', focus: 'PERSONAL COACH', meta: '7 năm kinh nghiệm · Kèm 1:1 Đa môn' },
+  { slug: 'tennis-coach', name: 'Ezekiel', image: 'coach-tennis.jpg', quote: 'Có người đồng hành chỉnh từng bước chân giúp bạn tự tin trong mọi đường bóng.', focus: 'TENNIS COACH', meta: '7 năm kinh nghiệm · Sân Tennis' },
 ];
 
 const dailyRhythmItems = [
@@ -228,23 +228,10 @@ const multiSportShowcase = [
   },
 ] as const;
 
-const scheduleItems = [
-  { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Derek', level: 'Mọi cấp độ' },
-  { time: '07:30 — 08:25', title: 'Aquatics Stroke & Endurance', category: 'conditioning', studio: 'Aquatics pool', coach: 'Anthony', level: 'Cơ bản — Nâng cao' },
-  { time: '09:00 — 09:50', title: 'Reformer Core & Mobility', category: 'movement', studio: 'Movement studio', coach: 'Elena', level: 'Mọi cấp độ' },
-  { time: '17:30 — 18:25', title: 'Hypertrophy & Barbell Club', category: 'strength', studio: 'Free weights', coach: 'Derek', level: 'Trung bình — Nâng cao' },
-  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Recovery', category: 'movement', studio: 'Movement studio', coach: 'Elena', level: 'Mọi cấp độ' },
-  { time: '19:30 — 20:30', title: 'Tennis Footwork & Match Play', category: 'conditioning', studio: 'Tennis courts', coach: 'Ezekiel', level: 'Mọi cấp độ' },
-];
 const journeySteps = [
   { step: '01', title: 'Tạo tài khoản & chọn gói tập', description: 'Đăng ký trực tuyến nhanh gọn.' },
   { step: '02', title: 'Cập nhật chỉ số & mục tiêu', description: 'Nhận gợi ý lộ trình theo BMI.' },
   { step: '03', title: 'Đặt lịch & quét QR check-in', description: 'Giữ chỗ & vào cửa bằng thẻ QR.' },
-];
-const plans = [
-  { period: 'Tháng', name: 'Gói Cơ Bản · 1 Tháng', price: '1.200.000', duration: '30 ngày', perks: ['Khu Gym, Free Weights & Hồ bơi', 'Lớp giãn cơ & bơi cơ bản', 'Thẻ QR check-in điện tử'] },
-  { period: 'Quý', name: 'Gói Đa Môn · 3 Tháng', price: '3.100.000', duration: '90 ngày', perks: ['Toàn bộ 05 phân khu & Sân Tennis', 'Lớp kỹ thuật Bơi, Tennis & Core', 'Đặt lịch trực tuyến trên Portal'] },
-  { period: 'Năm', name: 'Gói Đồng Hành · 12 Tháng', price: '10.800.000', duration: '365 ngày', perks: ['Không giới hạn 05 phân khu', 'Định hướng cùng Huấn luyện viên', 'Hỗ trợ bảo lưu (Freeze) trực tuyến'] },
 ];
 const memberBenefits = [
   {
@@ -409,14 +396,13 @@ const handleCardPointerLeave = (event: PointerEvent<HTMLElement>) => {
 
 export function FitnessLanding() {
   const user = getCurrentUser();
+  const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
+  const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
   const muscleDetailPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/login';
   const [activeMuscleId, setActiveMuscleId] = useState<(typeof muscleGroups)[number]['id'] | null>(null);
   const closeTimerRef = useRef<number | null>(null);
-  const [trainerPage, setTrainerPage] = useState(0);
   const [space, setSpace] = useState(0);
-  const [planMode, setPlanMode] = useState<'all' | 'long'>('all');
-  const [scheduleFilter, setScheduleFilter] = useState<'all' | 'strength' | 'movement' | 'conditioning'>('all');
   const [heightCm, setHeightCm] = useState('170');
   const [weightKg, setWeightKg] = useState('65');
   const [goalType, setGoalType] = useState<'lean' | 'muscle' | 'balance'>('muscle');
@@ -424,11 +410,6 @@ export function FitnessLanding() {
   const [activeStep, setActiveStep] = useState<number>(0);
   const [activeRhythmIdx, setActiveRhythmIdx] = useState<number>(0);
   const activeRhythm = dailyRhythmItems[activeRhythmIdx];
-  const visibleTrainers = trainerPage === 0
-    ? trainers.slice(0, 2)
-    : trainerPage === 1
-      ? trainers.slice(1, 3)
-      : trainers.slice(3, 5);
 
   const activateMuscle = (id: (typeof muscleGroups)[number]['id']) => {
     if (closeTimerRef.current !== null) {
@@ -468,7 +449,6 @@ export function FitnessLanding() {
       ? 'Gói Đa Môn · 3 Tháng'
       : 'Gói Cơ Bản · 1 Tháng';
 
-  const visibleSchedule = scheduleItems.filter((item) => scheduleFilter === 'all' || item.category === scheduleFilter);
 
   return <main id="public-main">
     <section className="fit-hero" id="hero" aria-labelledby="hero-title">
@@ -680,58 +660,12 @@ export function FitnessLanding() {
       <div className="fit-section-heading" data-reveal="soft">
         <span className="fit-kicker">BETTER WITH A COACH</span>
         <SplitHeading id="trainers-title" lines={['Our Trainers']} />
-        <div className="fit-trainer-quick-links" aria-label="Xem nhanh trang giới thiệu huấn luyện viên">
-          {trainers.map((item) => <Link key={item.slug} to={`/trainers/${item.slug}`} className="fit-trainer-chip">
-            <strong>{item.personName}</strong>
-            <span>{item.name} ↗</span>
-          </Link>)}
-        </div>
-        <a href="#contact" className="fit-text-link">Trao đổi về mục tiêu của bạn <RoundArrow diagonal /></a>
-        <div className="fit-slider-controls" aria-label="Chọn nhóm huấn luyện">
-          {[0, 1, 2].map((index) => <button key={index} type="button" className={trainerPage === index ? 'is-active' : ''} onClick={() => setTrainerPage(index)} aria-label={`Nhóm huấn luyện ${index + 1}`} aria-pressed={trainerPage === index} />)}
-        </div>
       </div>
-      <div className="fit-trainer-grid" key={trainerPage}>
-        {visibleTrainers.map((trainer) => <article className="fit-trainer-card" data-reveal="lift" key={trainer.slug} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
-          <Link to={`/trainers/${trainer.slug}`} className="fit-trainer-card-link" aria-label={`Xem câu chuyện của ${trainer.personName} (${trainer.name})`}>
-            <img src={`/images/fitness/${trainer.image}`} alt={trainer.personName} loading="lazy" />
-            <div className="fit-trainer-card-info">
-              <span className="fit-trainer-vn-name">{trainer.personName}</span>
-              <h3>{trainer.name}</h3>
-              <p>{trainer.specialty}</p>
-              <span className="fit-card-meta-reveal">{trainer.meta}</span>
-              <span className="fit-trainer-story-cta">Xem trang giới thiệu →</span>
-            </div>
-            <RoundArrow diagonal />
-          </Link>
-        </article>)}
-      </div>
+      <div>{catalog ? <CatalogTrainers catalog={catalog} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} />}</div>
     </section>
     <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <SplitHeading id="schedule-title" lines={['Weekly Class', 'Schedule']} />
-      </div>
-      <div className="fit-pricing-switch fit-schedule-switch" data-reveal="soft" aria-label="Lọc bộ môn trong lịch lớp">
-        <button type="button" onClick={() => setScheduleFilter('all')} aria-pressed={scheduleFilter === 'all'}>Tất cả khung giờ</button>
-        <button type="button" onClick={() => setScheduleFilter('strength')} aria-pressed={scheduleFilter === 'strength'}>Strength &amp; Barbell</button>
-        <button type="button" onClick={() => setScheduleFilter('movement')} aria-pressed={scheduleFilter === 'movement'}>Movement &amp; Core</button>
-        <button type="button" onClick={() => setScheduleFilter('conditioning')} aria-pressed={scheduleFilter === 'conditioning'}>Aquatics &amp; Tennis</button>
-      </div>
-      <div key={scheduleFilter} className="fit-schedule-grid">
-        {visibleSchedule.map((item) => <article key={`${item.time}-${item.title}`} className="fit-schedule-card" data-reveal="lift">
-          <div className="fit-schedule-top">
-            <span className="fit-schedule-time">{item.time}</span>
-            <span className="fit-schedule-spots">{item.studio}</span>
-          </div>
-          <h3>{item.title}</h3>
-          <div className="fit-schedule-meta">
-            <span>HLV: {item.coach}</span>
-            <span>•</span>
-            <span>{item.level}</span>
-          </div>
-          <Link to={joinPath} className="fit-text-link">Đặt lớp <RoundArrow diagonal /></Link>
-        </article>)}
-      </div>
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="schedule-title" lines={['Weekly Class', 'Schedule']} /></div>
+      {catalog ? <CatalogSchedule catalog={catalog} joinPath={classPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} />}
     </section>
     <section className="fit-section fit-journey" id="journey" aria-labelledby="journey-title">
       <div className="fit-journey-steps" data-reveal="soft">
@@ -840,12 +774,13 @@ export function FitnessLanding() {
         <Link to={joinPath} className="fit-pill">Nhận lộ trình<RoundArrow diagonal /></Link>
       </div>
     </section>
-    <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title"><div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div><div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập"><button type="button" onClick={() => setPlanMode('all')} aria-pressed={planMode === 'all'}>Tất cả gói tập</button><button type="button" onClick={() => setPlanMode('long')} aria-pressed={planMode === 'long'}>Đồng hành dài hạn</button></div>
-      <div key={planMode} className={`fit-pricing-grid ${planMode === 'long' ? 'fit-pricing-grid-two' : ''}`}>{plans.filter((_, index) => planMode === 'all' || index > 0).map((plan) => <article key={plan.name} data-reveal="lift" className={`fit-plan ${plan.period === 'Quý' ? 'fit-plan-featured' : ''}`}><span className="fit-plan-period">{plan.period}</span><h3>{plan.name}</h3><div className="fit-plan-price">{plan.price}<span>VNĐ / {plan.duration}</span></div><ul>{plan.perks.map((perk) => <li key={perk}><span aria-hidden="true">✓</span>{perk}</li>)}</ul><Link className="fit-pill" to={joinPath}>Tham gia ngay<RoundArrow diagonal /></Link></article>)}</div>
+    <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title">
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
+      {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} />}
     </section>
     <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /></div>
-      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to={`/trainers/${story.slug}`} className="fit-story-link"><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
+      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to="/#trainers" className="fit-story-link"><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
     </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
