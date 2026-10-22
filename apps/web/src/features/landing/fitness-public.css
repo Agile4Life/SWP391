@@ -349,11 +349,12 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   to { opacity: 1; scale: 1; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .fit-site .fit-hero-title > span:first-child { animation: fit-title-left 900ms cubic-bezier(.2,.75,.25,1) 100ms both; }
-  .fit-site .fit-hero-title > span:last-child { animation: fit-title-right 900ms cubic-bezier(.2,.75,.25,1) 220ms both; }
-  .fit-site .fit-hero-athlete { animation: fit-athlete-entrance 1100ms cubic-bezier(.2,.75,.25,1) 120ms both; }
-  .fit-site .fit-hero-copy { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 350ms both; }
-  .fit-site .fit-hero-action { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 500ms both; }
+  .fit-site .fit-hero-title.is-visible > span:first-child { animation: fit-title-left 900ms cubic-bezier(.2,.75,.25,1) 100ms both; }
+  .fit-site .fit-hero-title.is-visible > span:last-child { animation: fit-title-right 900ms cubic-bezier(.2,.75,.25,1) 220ms both; }
+  .fit-site .fit-hero-athlete.is-visible, .fit-site .fit-hero-anatomy.is-visible { animation: fit-athlete-entrance 1100ms cubic-bezier(.2,.75,.25,1) 120ms both; }
+  .fit-site .fit-hero-copy.is-visible { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 350ms both; }
+  .fit-site .fit-hero-action.is-visible { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 500ms both; }
+  .fit-site .fit-muscle-guide.is-visible { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 580ms both; }
   .fit-site .fit-reveal-ready {
     opacity: 0;
     translate: 0 34px;
@@ -361,13 +362,20 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   }
   .fit-site .fit-reveal-ready[data-reveal='soft'] { translate: 0 20px; }
   .fit-site .fit-reveal-ready[data-reveal='image'] { translate: 0 20px; scale: .965; }
-  .fit-site .fit-reveal-ready.is-visible, .fit-site .fit-reveal-ready:focus-within { opacity: 1; translate: 0 0; scale: 1; }
-  .fit-site .fit-reveal-ready:focus-within { transition: none; }
-  .fit-service-1, .fit-story:nth-child(2), .fit-trainer-card:nth-child(2), .fit-plan:nth-child(2), .fit-auth-form { --fit-reveal-delay: 100ms; }
-  .fit-service-2, .fit-story:nth-child(3), .fit-plan:nth-child(3) { --fit-reveal-delay: 200ms; }
-  .fit-story:nth-child(4) { --fit-reveal-delay: 300ms; }
-  .fit-site .fit-trainer-grid, .fit-site .fit-pricing-grid { animation: fit-content-fade 450ms ease both; }
+  .fit-site .fit-reveal-ready[data-reveal-direction='up'] { translate: 0 -34px; }
+  .fit-site .fit-reveal-ready[data-reveal='soft'][data-reveal-direction='up'], .fit-site .fit-reveal-ready[data-reveal='image'][data-reveal-direction='up'] { translate: 0 -20px; }
+  .fit-site .fit-reveal-ready[data-reveal='hero'] { translate: 0 0; }
+  .fit-site .fit-reveal-ready:not(.is-visible):not(:focus-within) { transition-duration: 0ms; transition-delay: 0ms; }
+  .fit-site .fit-reveal-ready[data-reveal].is-visible, .fit-site .fit-reveal-ready[data-reveal]:focus-within { opacity: 1; translate: 0 0; scale: 1; }
+  .fit-site .fit-reveal-ready:focus-within { transition-duration: 0ms, 900ms, 900ms, 220ms, 180ms, 220ms; transition-delay: 0ms; }
+  .fit-service-1, .fit-story:nth-child(2), .fit-trainer-card:nth-child(2), .fit-plan:nth-child(2), .fit-metric-card:nth-child(2), .fit-schedule-card:nth-child(3n + 2), .fit-step-item:nth-child(2), .fit-faq-item:nth-child(3n + 2), .fit-auth-form { --fit-reveal-delay: 100ms; }
+  .fit-service-2, .fit-story:nth-child(3), .fit-plan:nth-child(3), .fit-metric-card:nth-child(3), .fit-schedule-card:nth-child(3n), .fit-step-item:nth-child(3), .fit-faq-item:nth-child(3n) { --fit-reveal-delay: 200ms; }
+  .fit-story:nth-child(4), .fit-metric-card:nth-child(4) { --fit-reveal-delay: 300ms; }
+  .fit-site .fit-trainer-grid, .fit-site .fit-pricing-grid, .fit-site .fit-schedule-grid { animation: fit-content-fade 450ms ease both; }
   .fit-site .fit-space-image > img { animation: fit-photo-entrance 650ms ease both; }
+  .fit-site .fit-faq-answer { animation: fit-component-lift 320ms cubic-bezier(.2,.75,.25,1) both; }
+  .fit-site .fit-bmi-goals button, .fit-site .fit-faq-icon { transition: background-color 180ms, color 180ms, transform 180ms; }
+  .fit-site .fit-bmi-goals button:active { transform: scale(.97); }
   .fit-site .fit-trainer-card > img { transition: transform 550ms cubic-bezier(.2,.75,.25,1); }
   .fit-site .fit-trainer-card:hover > img { transform: scale(1.04); }
   .fit-site .fit-plan:hover { transform: translateY(-5px); box-shadow: 0 14px 30px #0003; }
