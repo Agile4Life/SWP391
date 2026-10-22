@@ -6,7 +6,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     const root = container.current;
     if (!root || typeof IntersectionObserver === 'undefined') return;
     const targets = new Set<HTMLElement>();
-    const heroSelector = '.fit-hero-title, .fit-hero-copy, .fit-hero-athlete, .fit-hero-anatomy, .fit-hero-action, .fit-muscle-guide';
+    const heroSelector = '.fit-hero-title, .fit-hero-copy, .fit-hero-athlete, .fit-hero-anatomy-stage, .fit-hero-action';
     const selector = `[data-reveal], ${heroSelector}`;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let observer: IntersectionObserver | undefined;
