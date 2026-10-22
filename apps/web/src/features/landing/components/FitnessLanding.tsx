@@ -1,7 +1,20 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { RoundArrow } from './PublicLayout';
+
+const tickerItems = [
+  'STRENGTH FLOOR',
+  'MOVEMENT STUDIO',
+  'PERSONAL TRAINING',
+  'ATHLETIC CONDITIONING',
+  'BARBELL CLUB',
+  'MOBILITY & RECOVERY',
+  'BODY METRIC LAB',
+  'SMALL GROUP COACHING',
+];
+
+const manifestoWords = 'Không chỉ là một phòng tập. SÖL là khoảng lặng có kỷ luật — nơi từng nhịp thở, từng mức tạ và từng chuyển động đều được thiết kế để bạn mạnh mẽ hơn mỗi ngày.'.split(' ');
 
 const services = [
   { title: 'WeightLifting', description: 'Xây nền thể lực, cải thiện sức bền. Tiến bộ từ những chuyển động cơ bản, vững vàng trong từng buổi tập.', icon: 'weights' },
@@ -14,10 +27,10 @@ const serviceShapes = [
   'M61 0L283 30Q325 40 319 80L293 241Q287 280 248 280H41Q-3 280 1 231L25 32Q30-2 61 0Z',
 ];
 const clubMetrics = [
-  { value: '06:00 — 22:00', label: 'MỞ CỬA MỖI NGÀY', detail: 'Linh hoạt lịch tập sáng sớm, giờ nghỉ trưa hoặc sau giờ làm.' },
-  { value: '03 Zones', label: 'KHÔNG GIAN CHUYÊN BIỆT', detail: 'Strength Floor, Free Weights và Movement Studio tách biệt.' },
-  { value: 'AI + 1:1', label: 'GIÁO ÁN CÁ NHÂN HÓA', detail: 'Kết hợp huấn luyện viên trực tiếp và gợi ý lộ trình theo chỉ số cơ thể.' },
-  { value: 'QR Pass', label: 'CHECK-IN & ĐẶT LỚP NHANH', detail: 'Quản lý gói tập, đặt chỗ lớp học và theo dõi tiến độ trên một nền tảng.' },
+  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, label: 'MỞ CỬA MỖI NGÀY', detail: 'Linh hoạt lịch tập sáng sớm, giờ nghỉ trưa hoặc sau giờ làm.' },
+  { value: '03 Zones', countTo: 3, format: (n: number) => `${String(n).padStart(2, '0')} Zones`, label: 'KHÔNG GIAN CHUYÊN BIỆT', detail: 'Strength Floor, Free Weights và Movement Studio tách biệt.' },
+  { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN', detail: 'Xem lịch, kiểm tra chỗ trống và quản lý lớp đã đặt trong tài khoản hội viên.' },
+  { value: 'QR Pass', label: 'THẺ HỘI VIÊN ĐIỆN TỬ', detail: 'Mở thẻ QR trong tài khoản để check-in khi gói tập còn hiệu lực.' },
 ];
 const muscleGroups = [
   {
@@ -140,33 +153,33 @@ const muscleGroups = [
   },
 ] as const;
 const stories = [
-  { name: 'Derek', image: 'coach-strength.png', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH' },
-  { name: 'Anthony', image: 'trainer-strength.jpg', quote: 'Tôi tìm được nhịp tập phù hợp và học cách kiên trì với chính mình.', focus: 'CONSISTENCY' },
-  { name: 'Jhon', image: 'strength-session.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi thấy khỏe và tự tin hơn.', focus: 'BALANCE' },
-  { name: 'Ezekiel', image: 'hero-athlete.png', quote: 'Có người đồng hành giúp tôi đi đúng hướng trong từng buổi tập.', focus: 'PROGRESS' },
+  { name: 'Derek', image: 'coach-strength.png', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH', meta: '12 tuần kỷ luật · Strength Floor' },
+  { name: 'Anthony', image: 'trainer-strength.jpg', quote: 'Tôi tìm được nhịp tập phù hợp và học cách kiên trì với chính mình.', focus: 'CONSISTENCY', meta: '4 buổi/tuần · Personal Training' },
+  { name: 'Jhon', image: 'strength-session.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi thấy khỏe và tự tin hơn.', focus: 'BALANCE', meta: '16 tuần · Movement & Core' },
+  { name: 'Ezekiel', image: 'hero-athlete.png', quote: 'Có người đồng hành giúp tôi đi đúng hướng trong từng buổi tập.', focus: 'PROGRESS', meta: 'Câu chuyện minh họa · Barbell Club' },
 ];
 const trainers = [
-  { name: 'Strength coach', specialty: 'SỨC MẠNH & THỂ LỰC', image: 'coach-strength.png' },
-  { name: 'Movement coach', specialty: 'CHUYỂN ĐỘNG & CÂN BẰNG', image: 'coach-movement.png' },
-  { name: 'Personal coach', specialty: 'HUẤN LUYỆN CÁ NHÂN', image: 'strength-session.jpg' },
+  { name: 'Strength coach', specialty: 'SỨC MẠNH & THỂ LỰC', image: 'coach-strength.png', meta: '12+ lớp/tuần · Cử tạ & Hypertrophy' },
+  { name: 'Movement coach', specialty: 'CHUYỂN ĐỘNG & CÂN BẰNG', image: 'coach-movement.png', meta: '10+ lớp/tuần · Mobility & Reformer' },
+  { name: 'Personal coach', specialty: 'HUẤN LUYỆN CÁ NHÂN', image: 'strength-session.jpg', meta: 'Huấn luyện 1:1 · Giáo án cá nhân hóa' },
 ];
 const spaces = [
-  { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor' },
-  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights' },
-  { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/pilates-reformer-studio.jpg', label: 'Movement studio' },
+  { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: '18 thiết bị chuẩn Olympic · Trần thoáng 6.5m', load: '68%', status: 'Đang thoáng · Sẵn sàng tập ngay' },
+  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Tạ đơn 2–50kg · 6 khung Power Rack chuyên sâu', load: '54%', status: 'Mật độ lý tưởng · Đủ tạ & rack' },
+  { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/pilates-reformer-studio.jpg', label: 'Movement studio', meta: '12 máy Reformer · Không gian yên tĩnh tách biệt', load: '42%', status: 'Yên tĩnh · Ánh sáng dịu cân bằng' },
 ];
 const scheduleItems = [
-  { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Strength coach', level: 'Mọi cấp độ', spots: 'Còn 6 chỗ' },
-  { time: '08:00 — 08:50', title: 'Reformer Core & Posture', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Cơ bản — Trung bình', spots: 'Còn 4 chỗ' },
-  { time: '12:00 — 12:45', title: 'Midday Metabolic Conditioning', category: 'conditioning', studio: 'Free weights', coach: 'Personal coach', level: 'Trung bình', spots: 'Còn 8 chỗ' },
-  { time: '17:30 — 18:25', title: 'Hypertrophy & Barbell Club', category: 'strength', studio: 'Free weights', coach: 'Strength coach', level: 'Trung bình — Nâng cao', spots: 'Còn 5 chỗ' },
-  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Flow', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Mọi cấp độ', spots: 'Còn 7 chỗ' },
-  { time: '19:30 — 20:20', title: 'Athletic Endurance Circuit', category: 'conditioning', studio: 'Strength floor', coach: 'Personal coach', level: 'Mọi cấp độ', spots: 'Còn 9 chỗ' },
+  { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Strength coach', level: 'Mọi cấp độ' },
+  { time: '08:00 — 08:50', title: 'Reformer Core & Posture', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Cơ bản — Trung bình' },
+  { time: '12:00 — 12:45', title: 'Midday Metabolic Conditioning', category: 'conditioning', studio: 'Free weights', coach: 'Personal coach', level: 'Trung bình' },
+  { time: '17:30 — 18:25', title: 'Hypertrophy & Barbell Club', category: 'strength', studio: 'Free weights', coach: 'Strength coach', level: 'Trung bình — Nâng cao' },
+  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Flow', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Mọi cấp độ' },
+  { time: '19:30 — 20:20', title: 'Athletic Endurance Circuit', category: 'conditioning', studio: 'Strength floor', coach: 'Personal coach', level: 'Mọi cấp độ' },
 ];
 const journeySteps = [
-  { step: '01', title: 'Đăng ký & Nhận thẻ QR hội viên', description: 'Tạo tài khoản trực tuyến trong 1 phút, chọn gói tập phù hợp và kích hoạt mã QR check-in cá nhân ngay trên hệ thống.' },
-  { step: '02', title: 'Đánh giá thể trạng & Thiết kế giáo án', description: 'Cập nhật chiều cao, cân nặng, mục tiêu để nhận giáo án gợi ý từ AI hoặc đặt lịch tư vấn kỹ thuật trực tiếp cùng huấn luyện viên.' },
-  { step: '03', title: 'Đặt lịch lớp & Theo dõi tiến độ mỗi tuần', description: 'Chủ động giữ chỗ các lớp học nhóm, ghi nhận chỉ số cơ thể và xem biểu đồ tiến bộ sau từng buổi tập.' },
+  { step: '01', title: 'Tạo tài khoản và chọn gói tập', description: 'Đăng ký, xác thực email và xem các gói đang mở bán trong tài khoản hội viên.' },
+  { step: '02', title: 'Cập nhật mục tiêu tập luyện', description: 'Lưu chiều cao, cân nặng và mục tiêu để theo dõi thay đổi của bạn.' },
+  { step: '03', title: 'Đặt lớp và mở thẻ QR', description: 'Khi gói tập có hiệu lực, chọn lớp còn chỗ và dùng thẻ QR để check-in tại câu lạc bộ.' },
 ];
 const plans = [
   { period: 'Tháng', name: 'The Essential', price: '2.800.000', duration: '30 ngày', description: 'Bắt đầu thói quen tập luyện với một lựa chọn linh hoạt.', perks: ['Không gian tập Gym & Cardio', 'Các lớp học nhóm cơ bản', 'Thẻ hội viên QR điện tử'] },
@@ -196,6 +209,70 @@ const faqs = [
   },
 ];
 
+function SplitHeading({ id, lines }: { id: string; lines: string[] }) {
+  let wordIndex = 0;
+  return <h2 id={id} className="fit-split-heading">
+    {lines.map((line, lineIdx) => {
+      const words = line.split(' ');
+      return <span key={lineIdx} className="fit-heading-line">
+        {words.map((word, idx) => {
+          const currentIdx = wordIndex++;
+          const isLastWord = lineIdx === lines.length - 1 && idx === words.length - 1;
+          return <span key={`${lineIdx}-${idx}`}>
+            <span className="fit-word">
+              <span style={{ '--word-index': currentIdx } as CSSProperties}>
+                {word}{isLastWord && <span className="fit-title-dot">.</span>}
+              </span>
+            </span>
+            {idx < words.length - 1 ? ' ' : ''}
+          </span>;
+        })}
+        {lineIdx < lines.length - 1 && <br />}
+      </span>;
+    })}
+  </h2>;
+}
+
+function CountUpMetric({ value, countTo, format }: { value: string; countTo: number; format: (n: number) => string }) {
+  const ref = useRef<HTMLElement>(null);
+  const [display, setDisplay] = useState(value);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (preference.matches) {
+      setDisplay(value);
+      return;
+    }
+    let rafId = 0;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !preference.matches) {
+          cancelAnimationFrame(rafId);
+          const start = performance.now();
+          const duration = 1200;
+          const step = (now: number) => {
+            const elapsed = Math.min(1, (now - start) / duration);
+            const eased = 1 - ((1 - elapsed) ** 3);
+            const current = Math.max(1, Math.round(eased * countTo));
+            setDisplay(elapsed >= 1 ? value : format(current));
+            if (elapsed < 1) rafId = requestAnimationFrame(step);
+          };
+          rafId = requestAnimationFrame(step);
+        }
+      });
+    }, { threshold: 0.25 });
+    observer.observe(node);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, [value, countTo, format]);
+
+  return <strong ref={ref}>{display}</strong>;
+}
+
 function ServiceIcon({ type }: { type: string }) {
   return <svg className="fit-service-icon" viewBox="0 0 64 64" fill="none" stroke="#805e50" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {type === 'weights' ? <>
@@ -211,6 +288,19 @@ function ServiceIcon({ type }: { type: string }) {
   </svg>;
 }
 
+const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const px = (((event.clientX - rect.left) / Math.max(1, rect.width)) - 0.5) * -10;
+  const py = (((event.clientY - rect.top) / Math.max(1, rect.height)) - 0.5) * -10;
+  event.currentTarget.style.setProperty('--fit-px', `${px.toFixed(2)}px`);
+  event.currentTarget.style.setProperty('--fit-py', `${py.toFixed(2)}px`);
+};
+
+const handleCardPointerLeave = (event: PointerEvent<HTMLElement>) => {
+  event.currentTarget.style.setProperty('--fit-px', '0px');
+  event.currentTarget.style.setProperty('--fit-py', '0px');
+};
+
 export function FitnessLanding() {
   const user = getCurrentUser();
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
@@ -225,6 +315,7 @@ export function FitnessLanding() {
   const [weightKg, setWeightKg] = useState('65');
   const [goalType, setGoalType] = useState<'lean' | 'muscle' | 'balance'>('muscle');
   const [openFaq, setOpenFaq] = useState<number>(0);
+  const [activeStep, setActiveStep] = useState<number>(0);
 
   const activateMuscle = (id: (typeof muscleGroups)[number]['id']) => {
     if (closeTimerRef.current !== null) {
@@ -271,7 +362,7 @@ export function FitnessLanding() {
       <div className="fit-hero-lines" aria-hidden="true" />
       <h1 id="hero-title" className="fit-hero-title"><span>BUILD YOUR</span><span>BODY SHAPES<span className="fit-title-dot">.</span></span></h1>
       <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p><p>Mỗi người một điểm bắt đầu. Tìm cách tập luyện của bạn, cùng SÖL xây dựng một cơ thể khỏe và một tinh thần cân bằng.</p>
-        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <img key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow">↗</span></span><span className="fit-review-label"><span aria-hidden="true">★★★★★</span> Mỗi hành trình đều đáng giá</span></a>
+        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <img key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow">↗</span></span><span className="fit-review-label">Mỗi hành trình đều đáng giá</span></a>
       </div>
       <img className="fit-hero-athlete" src="/images/fitness/hero-athlete.png" alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối" fetchPriority="high" />
       <div className="fit-hero-anatomy-stage" onPointerLeave={scheduleClearMuscle}>
@@ -369,32 +460,62 @@ export function FitnessLanding() {
       <div className="fit-services-glow" aria-hidden="true" />
       {services.map((service, index) => <a key={service.title} className={`fit-service fit-service-${index}`} data-reveal="lift" href="#packages"><svg className="fit-service-surface" viewBox="0 0 320 280" preserveAspectRatio="none" aria-hidden="true"><path d={serviceShapes[index]} /></svg><ServiceIcon type={service.icon} /><h2>{service.title}</h2><span className="fit-service-rule" /><p>{service.description}</p></a>)}
     </section>
+    <div className="fit-ticker" aria-hidden="true">
+      <div className="fit-marquee-track">
+        {[0, 1].map((groupIndex) => <div key={groupIndex} className="fit-marquee-group">
+          {tickerItems.map((item) => <span key={`${groupIndex}-${item}`} className="fit-marquee-item">{item}<i /></span>)}
+        </div>)}
+      </div>
+    </div>
     <section className="fit-section fit-metrics" aria-label="Tiêu chuẩn câu lạc bộ">
       <div className="fit-metrics-grid">
         {clubMetrics.map((item) => <article key={item.label} className="fit-metric-card" data-reveal="lift">
           <span className="fit-kicker">{item.label}</span>
-          <strong>{item.value}</strong>
+          {'countTo' in item && item.countTo !== undefined
+            ? <CountUpMetric value={item.value} countTo={item.countTo} format={item.format} />
+            : <strong>{item.value}</strong>}
           <p>{item.detail}</p>
         </article>)}
       </div>
     </section>
     <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">REAL EFFORT. REAL CHANGE.</span><h2 id="stories-title">Member’s Success<br />Story<span className="fit-title-dot">.</span></h2><p>Những mục tiêu khác nhau. Chung một tinh thần bền bỉ.<br />Tìm động lực cho hành trình của riêng bạn.</p></div>
-      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name}><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={`Ảnh minh họa hành trình ${story.focus.toLowerCase()}`} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-stars" aria-label="Minh họa đánh giá 5 sao">★★★★★</span></div></div><p>“{story.quote}”</p></article>)}</div>
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /><p>Những câu chuyện minh họa về mục tiêu và thói quen tập luyện.</p></div>
+      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={`Ảnh minh họa hành trình ${story.focus.toLowerCase()}`} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></article>)}</div>
       <p className="fit-disclosure">Câu chuyện và hình ảnh minh họa cho bản thiết kế.</p>
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
-      <div className="fit-section-heading" data-reveal="soft"><span className="fit-kicker">BETTER WITH A COACH</span><h2 id="trainers-title">Our Trainers<span className="fit-title-dot">.</span></h2><p>Đúng kỹ thuật. Đúng nhịp độ. Đúng với bạn. Khám phá những cách tập luyện cùng người hướng dẫn, từ nền tảng đến mục tiêu tiếp theo.</p><a href="#contact" className="fit-text-link">Trao đổi về mục tiêu của bạn <RoundArrow diagonal /></a><div className="fit-slider-controls" aria-label="Chọn nhóm huấn luyện">{[0, 1].map((index) => <button key={index} type="button" className={trainerPage === index ? 'is-active' : ''} onClick={() => setTrainerPage(index)} aria-label={`Nhóm huấn luyện ${index + 1}`} aria-pressed={trainerPage === index} />)}</div></div>
-      <div className="fit-trainer-grid" key={trainerPage}>{trainers.slice(trainerPage, trainerPage + 2).map((trainer) => <article className="fit-trainer-card" data-reveal="lift" key={trainer.name}><img src={`/images/fitness/${trainer.image}`} alt={`Ảnh minh họa ${trainer.name}`} loading="lazy" /><div><h3>{trainer.name}</h3><p>{trainer.specialty}</p><span>Ảnh minh họa</span></div><RoundArrow diagonal /></article>)}</div>
+      <div className="fit-section-heading" data-reveal="soft"><span className="fit-kicker">BETTER WITH A COACH</span><SplitHeading id="trainers-title" lines={['Our Trainers']} /><p>Đúng kỹ thuật. Đúng nhịp độ. Đúng với bạn. Khám phá những cách tập luyện cùng người hướng dẫn, từ nền tảng đến mục tiêu tiếp theo.</p><a href="#contact" className="fit-text-link">Trao đổi về mục tiêu của bạn <RoundArrow diagonal /></a><div className="fit-slider-controls" aria-label="Chọn nhóm huấn luyện">{[0, 1].map((index) => <button key={index} type="button" className={trainerPage === index ? 'is-active' : ''} onClick={() => setTrainerPage(index)} aria-label={`Nhóm huấn luyện ${index + 1}`} aria-pressed={trainerPage === index} />)}</div></div>
+      <div className="fit-trainer-grid" key={trainerPage}>{trainers.slice(trainerPage, trainerPage + 2).map((trainer) => <article className="fit-trainer-card" data-reveal="lift" key={trainer.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><img src={`/images/fitness/${trainer.image}`} alt={`Ảnh minh họa ${trainer.name}`} loading="lazy" /><div><h3>{trainer.name}</h3><p>{trainer.specialty}</p><span className="fit-card-meta-reveal">{trainer.meta}</span><span>Ảnh minh họa</span></div><RoundArrow diagonal /></article>)}</div>
     </section>
     <section className="fit-section fit-space" id="about" aria-labelledby="space-title"><span id="intelligence" />
-      <div className="fit-space-image" data-reveal="image"><img key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" /><div className="fit-space-shade" /><div className="fit-space-content"><span className="fit-kicker">A PLACE TO SHOW UP</span><h2 id="space-title">{spaces[space].title}</h2><p>Không gian tập luyện, nguồn năng lượng mới và thời gian dành riêng cho bạn.</p><a className="fit-pill" href="#contact">Ghé thăm SÖL<RoundArrow diagonal /></a></div><div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><img src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span aria-hidden="true">↗</span></button>)}</div><span className="fit-space-number">0{space + 1} / 03</span></div>
+      <p className="fit-manifesto" data-scroll-scrub="manifesto" data-reveal="soft">
+        {manifestoWords.map((word, idx) => <span key={idx} className="fit-manifesto-word"><span>{word}</span> </span>)}
+      </p>
+      <div className="fit-space-image" data-reveal="image" onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
+        <img key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
+        <div className="fit-space-shade" />
+        <div key={space} className="fit-space-content fit-blur-morph">
+          <span className="fit-kicker">A PLACE TO SHOW UP</span>
+          <h2 id="space-title">{spaces[space].title}</h2>
+          <p>Không gian tập luyện, nguồn năng lượng mới và thời gian dành riêng cho bạn.</p>
+          <div className="fit-space-live" style={{ '--space-load': spaces[space].load } as CSSProperties}>
+            <div className="fit-space-live-head">
+              <span>{spaces[space].meta}</span>
+              <strong>{spaces[space].load} công suất</strong>
+            </div>
+            <div className="fit-space-meter"><i /></div>
+            <span className="fit-space-status"><b />{spaces[space].status}</span>
+          </div>
+          <a className="fit-pill" href="#contact">Ghé thăm SÖL<RoundArrow diagonal /></a>
+        </div>
+        <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><img src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span aria-hidden="true">↗</span></button>)}</div>
+        <span className="fit-space-number">0{space + 1} / 03</span>
+      </div>
     </section>
     <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">FIND YOUR RHYTHM EVERY DAY</span>
-        <h2 id="schedule-title">Weekly Class<br />Schedule<span className="fit-title-dot">.</span></h2>
-        <p>Các khung giờ tập luyện trải dài từ sáng sớm đến tối muộn.<br />Chọn bộ môn phù hợp và giữ chỗ trực tiếp trên hệ thống.</p>
+        <SplitHeading id="schedule-title" lines={['Weekly Class', 'Schedule']} />
+        <p>Lịch minh họa các bộ môn và khung giờ.<br />Đăng nhập để xem lịch thực tế và số chỗ còn trống.</p>
       </div>
       <div className="fit-pricing-switch fit-schedule-switch" data-reveal="soft" aria-label="Lọc bộ môn trong lịch lớp">
         <button type="button" onClick={() => setScheduleFilter('all')} aria-pressed={scheduleFilter === 'all'}>Tất cả khung giờ</button>
@@ -406,7 +527,7 @@ export function FitnessLanding() {
         {visibleSchedule.map((item) => <article key={`${item.time}-${item.title}`} className="fit-schedule-card" data-reveal="lift">
           <div className="fit-schedule-top">
             <span className="fit-schedule-time">{item.time}</span>
-            <span className="fit-schedule-spots">{item.spots}</span>
+            <span className="fit-schedule-spots">Lịch minh họa</span>
           </div>
           <h3>{item.title}</h3>
           <div className="fit-schedule-meta">
@@ -416,7 +537,7 @@ export function FitnessLanding() {
             <span>•</span>
             <span>{item.level}</span>
           </div>
-          <Link to={joinPath} className="fit-text-link">Đặt lịch lớp này <RoundArrow diagonal /></Link>
+          <Link to={joinPath} className="fit-text-link">Xem lịch &amp; đặt lớp <RoundArrow diagonal /></Link>
         </article>)}
       </div>
       <p className="fit-disclosure">Lịch lớp tiêu biểu minh họa theo khung giờ trong ngày. Hội viên xem lịch thực tế và đặt chỗ trực tiếp trong Portal.</p>
@@ -425,11 +546,17 @@ export function FitnessLanding() {
       <div className="fit-journey-steps" data-reveal="soft">
         <div className="fit-section-heading">
           <span className="fit-kicker">HOW YOUR ROUTINE BEGINS</span>
-          <h2 id="journey-title">Your First Week<br />At SÖL<span className="fit-title-dot">.</span></h2>
+          <SplitHeading id="journey-title" lines={['Your First Week', 'At SÖL']} />
           <p>Mọi thứ được thiết kế rõ ràng để bạn không bỡ ngỡ trong buổi tập đầu tiên — từ lúc nhận thẻ QR đến khi hoàn thành tuần tập luyện đầu tiên.</p>
         </div>
-        <ol className="fit-step-list">
-          {journeySteps.map((item) => <li key={item.step} className="fit-step-item" data-reveal="lift">
+        <ol className="fit-step-list" style={{ '--active-step': activeStep } as CSSProperties}>
+          {journeySteps.map((item, index) => <li
+            key={item.step}
+            className={`fit-step-item ${activeStep === index ? 'is-active' : ''}`}
+            data-reveal="lift"
+            onPointerEnter={() => setActiveStep(index)}
+            onClick={() => setActiveStep(index)}
+          >
             <span className="fit-step-badge">{item.step}</span>
             <div>
               <h3>{item.title}</h3>
@@ -437,8 +564,71 @@ export function FitnessLanding() {
             </div>
           </li>)}
         </ol>
+        <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label="Minh họa trực quan theo từng bước">
+          {activeStep === 0 ? <div className="fit-preview-widget fit-preview-qr">
+            <div className="fit-preview-head">
+              <span className="fit-kicker">01 · DIGITAL PASS &amp; SLOT CHECK</span>
+              <span className="fit-preview-live"><i />QR Active · Quét 1 chạm</span>
+            </div>
+            <div className="fit-preview-slots" aria-hidden="true">
+              {['06:30', '08:00', '09:30', '12:00', '16:00', '17:30', '18:30', '19:30'].map((slot, idx) => <span
+                key={slot}
+                className={`fit-slot-pill ${idx === 5 ? 'is-selected' : idx === 1 || idx === 6 ? 'is-busy' : ''}`}
+                style={{ '--slot-idx': idx } as CSSProperties}
+              >
+                {slot}
+              </span>)}
+            </div>
+            <p className="fit-preview-caption">Khung giờ minh họa. Đăng nhập để xem lịch thực tế và mở thẻ QR hội viên.</p>
+          </div> : activeStep === 1 ? <div className="fit-preview-widget fit-preview-ai">
+            <div className="fit-preview-head">
+              <span className="fit-kicker">02 · LỊCH TẬP MINH HỌA</span>
+              <span className="fit-preview-live"><i />Ví dụ tham khảo</span>
+            </div>
+            <div className="fit-preview-chat" aria-hidden="true">
+              <div className="fit-chat-user">Mục tiêu tăng cơ săn chắc · 4 buổi/tuần sau 17:30</div>
+              <div className="fit-chat-bot">
+                <strong>Ví dụ lịch tập:</strong> Upper / Lower kết hợp 1 buổi Mobility phục hồi:
+                <div className="fit-chat-tags">
+                  <span>T2 · Upper Strength</span>
+                  <span>T4 · Lower &amp; Core</span>
+                  <span>T6 · Hypertrophy</span>
+                  <span>CN · Mobility Flow</span>
+                </div>
+              </div>
+            </div>
+          </div> : <div className="fit-preview-widget fit-preview-chart">
+            <div className="fit-preview-head">
+              <span className="fit-kicker">03 · STRENGTH &amp; CONSISTENCY CURVE</span>
+              <span className="fit-preview-live"><i />Dữ liệu minh họa</span>
+            </div>
+            <svg className="fit-progress-svg" viewBox="0 0 320 92" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="fit-curve-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ce9180" stopOpacity="0.42" />
+                  <stop offset="100%" stopColor="#ce9180" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path className="fit-curve-area" d="M12 74 C 70 68, 110 52, 162 44 C 214 36, 256 22, 308 14 L 308 84 L 12 84 Z" fill="url(#fit-curve-fill)" />
+              <path className="fit-curve-line" d="M12 74 C 70 68, 110 52, 162 44 C 214 36, 256 22, 308 14" />
+              {[
+                { cx: 12, cy: 74, label: 'W1' },
+                { cx: 110, cy: 55, label: 'W2' },
+                { cx: 208, cy: 34, label: 'W3' },
+                { cx: 308, cy: 14, label: 'W4' },
+              ].map((pt, idx) => <g key={pt.label} className="fit-curve-dot" style={{ '--dot-idx': idx } as CSSProperties}>
+                <circle cx={pt.cx} cy={pt.cy} r="4.5" />
+              </g>)}
+            </svg>
+            <div className="fit-preview-bar-row">
+              <span>Tỷ lệ hoàn thành lịch tập tuần này</span>
+              <strong>85%</strong>
+            </div>
+            <div className="fit-space-meter"><i style={{ '--space-load': '85%' } as CSSProperties} /></div>
+          </div>}
+        </div>
       </div>
-      <div className="fit-bmi-card" data-reveal="lift" aria-labelledby="bmi-title">
+      <div className="fit-bmi-card" data-reveal="tilt" aria-labelledby="bmi-title">
         <span className="fit-kicker">BODY METRIC &amp; GOAL CHECK</span>
         <h3 id="bmi-title">Tính Nhanh BMI &amp; Lộ Trình Gợi Ý<span className="fit-title-dot">.</span></h3>
         <p>Nhập chỉ số cơ bản để tham khảo mức BMI hiện tại và gợi ý tần suất tập luyện phù hợp tại SÖL.</p>
@@ -468,13 +658,13 @@ export function FitnessLanding() {
         <Link to={joinPath} className="fit-pill">Nhận lộ trình cá nhân hóa<RoundArrow diagonal /></Link>
       </div>
     </section>
-    <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title"><div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><h2 id="pricing-title">Membership Pricing<span className="fit-title-dot">.</span></h2><p>Chọn khoảng thời gian phù hợp.<br />Bắt đầu một cam kết với chính mình.</p></div><div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập"><button type="button" onClick={() => setPlanMode('all')} aria-pressed={planMode === 'all'}>Tất cả gói tập</button><button type="button" onClick={() => setPlanMode('long')} aria-pressed={planMode === 'long'}>Đồng hành dài hạn</button></div>
+    <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title"><div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /><p>Chọn khoảng thời gian phù hợp.<br />Bắt đầu một cam kết với chính mình.</p></div><div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập"><button type="button" onClick={() => setPlanMode('all')} aria-pressed={planMode === 'all'}>Tất cả gói tập</button><button type="button" onClick={() => setPlanMode('long')} aria-pressed={planMode === 'long'}>Đồng hành dài hạn</button></div>
       <div key={planMode} className={`fit-pricing-grid ${planMode === 'long' ? 'fit-pricing-grid-two' : ''}`}>{plans.filter((_, index) => planMode === 'all' || index > 0).map((plan) => <article key={plan.name} data-reveal="lift" className={`fit-plan ${plan.period === 'Quý' ? 'fit-plan-featured' : ''}`}><span className="fit-plan-period">{plan.period}</span><h3>{plan.name}</h3><p>{plan.description}</p><div className="fit-plan-price">{plan.price}<span>VNĐ / {plan.duration}</span></div><ul>{plan.perks.map((perk) => <li key={perk}><span aria-hidden="true">✓</span>{perk}</li>)}</ul><Link className="fit-pill" to={joinPath}>Tham gia ngay<RoundArrow diagonal /></Link></article>)}</div><p className="fit-disclosure">Giá và quyền lợi tham khảo từ nội dung giới thiệu hiện có. Xem gói đang mở bán trong portal hoặc liên hệ lễ tân để xác nhận.</p>
     </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
         <span className="fit-kicker">EVERYTHING YOU NEED TO KNOW</span>
-        <h2 id="faq-title">Frequently Asked<br />Questions<span className="fit-title-dot">.</span></h2>
+        <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />
         <p>Giải đáp nhanh những câu hỏi phổ biến trước khi bạn bắt đầu buổi tập đầu tiên tại SÖL.</p>
       </div>
       <div className="fit-faq-list">
