@@ -27,6 +27,21 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
         header.classList.toggle('is-scrolled', currentScrollY > 36);
       }
 
+      const benefits = root.querySelector<HTMLElement>('.fit-benefits');
+      if (benefits) {
+        const rect = benefits.getBoundingClientRect();
+        const scrollable = Math.max(1, benefits.offsetHeight - window.innerHeight);
+        const benefitProgress = benefits.offsetHeight > window.innerHeight * 1.15
+          ? clamp(-rect.top / scrollable, 0, 1)
+          : clamp((window.innerHeight * 0.72 - rect.top) / Math.max(1, window.innerHeight * 0.8), 0, 1);
+        const track = benefits.querySelector<HTMLElement>('.fit-benefits-track');
+        const maxShift = track && window.innerWidth > 1100
+          ? Math.max(0, track.scrollWidth - benefits.clientWidth)
+          : 0;
+        benefits.style.setProperty('--fit-benefits-progress', benefitProgress.toFixed(4));
+        benefits.style.setProperty('--fit-benefits-shift', `${(-benefitProgress * maxShift).toFixed(1)}px`);
+      }
+
       if (preference.matches) return;
 
       const hero = root.querySelector<HTMLElement>('.fit-hero');
@@ -104,6 +119,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
           word.style.opacity = '1';
         });
         root.querySelector<HTMLElement>('.fit-final-cta')?.style.removeProperty('--fit-cta-progress');
+        syncScrollEffects();
         return;
       }
       observer = new IntersectionObserver((entries) => {
@@ -128,7 +144,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
           const mapSectionToNav = (id: string): string => {
             if (id === 'about' || id === 'multisport') return 'about';
             if (id === 'trainers' || id === 'schedule' || id === 'journey') return 'trainers';
-            if (id === 'packages') return 'packages';
+            if (id === 'packages' || id === 'benefits') return 'packages';
             if (id === 'stories' || id === 'faq') return 'stories';
             return '';
           };

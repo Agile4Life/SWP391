@@ -246,6 +246,56 @@ const plans = [
   { period: 'Quý', name: 'Gói Đa Môn · 3 Tháng', price: '3.100.000', duration: '90 ngày', perks: ['Toàn bộ 05 phân khu & Sân Tennis', 'Lớp kỹ thuật Bơi, Tennis & Core', 'Đặt lịch trực tuyến trên Portal'] },
   { period: 'Năm', name: 'Gói Đồng Hành · 12 Tháng', price: '10.800.000', duration: '365 ngày', perks: ['Không giới hạn 05 phân khu', 'Định hướng cùng Huấn luyện viên', 'Hỗ trợ bảo lưu (Freeze) trực tuyến'] },
 ];
+const memberBenefits = [
+  {
+    tag: 'Sân & Hồ bơi',
+    idx: '01',
+    title: 'Đặt sân & lịch bơi online',
+    description: 'Mở Portal, chọn sân hoặc làn bơi, chọn giờ — 24/7. Thành viên có gói được ưu tiên giữ chỗ; hủy trước giờ tập không mất phí.',
+    perks: [
+      'Hồ bơi bốn mùa 25m · 02 sân Tennis tiêu chuẩn',
+      'Khu Strength Floor, Free Weights & Movement Studio',
+      'Thấy ngay khung giờ nào đang thoáng',
+      'Vào cửa bằng mã QR, không cần giấy tờ',
+    ],
+  },
+  {
+    tag: 'Lớp',
+    idx: '02',
+    title: 'Lớp nhóm không giới hạn',
+    description: 'Vào thẳng các lớp đang mở: Strength, Barbell Club, Core & Mobility, Bơi kỹ thuật, Tennis nhập môn theo đúng gói thành viên.',
+    perks: [
+      'Lịch lớp sáng — chiều — tối mỗi ngày',
+      'Biết trước HLV, studio, giờ, còn bao nhiêu chỗ',
+      'Điểm danh bằng mã QR thành viên',
+      'Đổi lớp nếu lịch cá nhân thay đổi',
+    ],
+  },
+  {
+    tag: 'HLV',
+    idx: '03',
+    title: 'HLV theo dõi từng buổi tập',
+    description: 'Mỗi buổi HLV ghi lại chỉ số của bạn — mức tạ, thời gian, cự ly bơi, nhịp đánh bóng. Bạn xem lại tiến độ cá nhân bất cứ lúc nào.',
+    perks: [
+      'HLV có chứng chỉ đúng từng bộ môn',
+      'Kết quả từng buổi, lưu trên Portal',
+      'Theo dõi chuỗi ngày tập theo tuần / tháng',
+      'Đánh giá định kỳ từ HLV',
+    ],
+  },
+  {
+    tag: 'Kế hoạch',
+    idx: '04',
+    title: 'Kế hoạch tuần cho riêng bạn',
+    description: 'Dựa trên chỉ số BMI và mục tiêu cá nhân, hệ thống đề xuất lịch tập tuần cân bằng giữa Gym, Bơi và Tennis; có trợ lý giải đáp 24/7.',
+    perks: [
+      'Kế hoạch theo mục tiêu: giảm mỡ, tăng cơ, sức bền',
+      'HLV định hướng lộ trình đa bộ môn',
+      'Nhắc lịch tập và lịch sân trực tuyến',
+      'Hỏi đáp bài tập & bảo lưu (Freeze) dễ dàng',
+    ],
+  },
+] as const;
 const faqs = [
   {
     question: 'Người mới bắt đầu có theo kịp không?',
@@ -824,6 +874,45 @@ export function FitnessLanding() {
             {expanded && <p className="fit-faq-answer">{item.answer}</p>}
           </article>;
         })}
+      </div>
+    </section>
+    <section className="fit-benefits" id="benefits" aria-labelledby="benefits-title">
+      <div className="fit-benefits-sticky">
+        <div className="fit-benefits-bg" aria-hidden="true">THÀNH VIÊN</div>
+        <div className="fit-benefits-head" data-reveal="soft">
+          <div>
+            <span className="fit-benefits-eyebrow"><i aria-hidden="true" />Quyền lợi thành viên</span>
+            <h2 id="benefits-title" className="fit-benefits-title">
+              Bạn nhận được<br />
+              gì <span>khi có gói.</span>
+            </h2>
+          </div>
+          <div className="fit-benefits-progress" aria-hidden="true"><i /></div>
+        </div>
+        <div className="fit-benefits-track">
+          {memberBenefits.map((benefit) => <article key={benefit.idx} className="fit-benefit-card" data-reveal="lift">
+            <div className="fit-benefit-top">
+              <span className="fit-benefit-tag">{benefit.tag}</span>
+              <span className="fit-benefit-idx">{benefit.idx}</span>
+            </div>
+            <h3>{benefit.title}</h3>
+            <p>{benefit.description}</p>
+            <ul>
+              {benefit.perks.map((perk) => <li key={perk}>{perk}</li>)}
+            </ul>
+          </article>)}
+          <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
+            <h3>Chưa có gói vẫn trải nghiệm được</h3>
+            <p>Tạo tài khoản miễn phí, xem lịch lớp và đặt lịch trải nghiệm trước. Muốn mở toàn bộ phân khu và ưu đãi thì mua gói sau, lúc nào cũng được.</p>
+            <Link to={joinPath} className="fit-benefit-end-btn">
+              Tạo tài khoản
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </Link>
+          </article>
+        </div>
       </div>
     </section>
     <section className="fit-final-cta" data-reveal="soft"><span className="fit-kicker">ONE SMALL STEP. A STRONGER YOU.</span><h2>READY WHEN<br /><em>YOU ARE.</em></h2><Link to={joinPath} className="fit-pill">Bắt đầu hành trình<RoundArrow diagonal /></Link><span className="fit-cta-star" aria-hidden="true">✳</span></section>

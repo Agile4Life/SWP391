@@ -564,6 +564,35 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-sport-page-program-card h2 { font-size: 14px; font-weight: 750; line-height: 1.3; color: var(--fit-paper); }
 .fit-sport-page-tag { font-size: 9px; font-weight: 600; color: var(--fit-muted); }
 
+.fit-benefits { margin-top: 90px; background: #181716; border-block: 1px solid #ffffff14; color: var(--fit-paper); height: 240vh; position: relative; }
+.fit-benefits-sticky { display: flex; flex-direction: column; justify-content: center; gap: 36px; height: 100vh; position: sticky; top: 0; overflow: hidden; }
+.fit-benefits-bg { font-size: 28vw; font-weight: 900; line-height: 1; letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 1.5px #ffffff12; white-space: nowrap; pointer-events: none; user-select: none; position: absolute; top: 58%; left: 0; transform: translate3d(calc(10% - var(--fit-benefits-progress, 0) * 28%), -50%, 0); }
+.fit-benefits-head { width: 78%; max-width: 1240px; margin: 0 auto; position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+.fit-benefits-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #e2ddd7; margin-bottom: 14px; }
+.fit-benefits-eyebrow > i { width: 8px; height: 8px; background: var(--fit-salmon); display: inline-block; flex-shrink: 0; }
+.fit-benefits-title { font-size: clamp(32px, 4.4vw, 60px); font-weight: 900; line-height: .98; letter-spacing: -.035em; text-transform: uppercase; color: var(--fit-paper); margin: 0; }
+.fit-benefits-title > span { color: var(--fit-salmon); }
+.fit-benefits-progress { background: #ffffff26; width: 220px; height: 3px; overflow: hidden; flex-shrink: 0; margin-bottom: 8px; }
+.fit-benefits-progress > i { background: var(--fit-salmon); height: 100%; width: calc(max(.18, var(--fit-benefits-progress, .25)) * 100%); display: block; transition: width 80ms linear; }
+.fit-benefits-track { display: flex; gap: 16px; padding-left: max(24px, 50vw - 620px); padding-right: 80px; position: relative; z-index: 1; will-change: transform; transform: translate3d(var(--fit-benefits-shift, 0px), 0, 0); }
+.fit-benefit-card { background: #ffffff0a; border: 1px solid #ffffff1f; border-radius: 8px; flex: 0 0 390px; padding: 30px 28px; display: flex; flex-direction: column; position: relative; transition: background-color 260ms var(--fit-ease-out), border-color 260ms var(--fit-ease-out), transform 420ms var(--fit-ease-out); }
+.fit-benefit-card:hover { background: #ffffff14; border-color: #ce918066; transform: translateY(-6px); }
+.fit-benefit-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 34px; }
+.fit-benefit-tag { letter-spacing: .12em; text-transform: uppercase; color: var(--fit-salmon); font-size: 12px; font-weight: 800; }
+.fit-benefit-idx { color: #ffffff26; font-size: 52px; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.fit-benefit-card h3 { text-transform: uppercase; margin: 0 0 12px; font-size: clamp(22px, 2.1vw, 30px); font-weight: 800; line-height: 1.08; letter-spacing: -.02em; color: var(--fit-paper); }
+.fit-benefit-card p { color: #ffffffb8; margin: 0 0 22px; font-size: 13px; line-height: 1.6; }
+.fit-benefit-card ul { border-top: 1px solid #ffffff24; margin: auto 0 0; padding: 0; list-style: none; display: grid; }
+.fit-benefit-card li { border-bottom: 1px solid #ffffff24; padding: 9.5px 0; font-size: 12.5px; color: #f2ece6; line-height: 1.45; }
+.fit-benefit-card li:last-child { border-bottom: 0; padding-bottom: 0; }
+.fit-benefit-end { background: var(--fit-salmon); border-color: var(--fit-salmon); color: #1c1513; flex-basis: 410px; justify-content: center; }
+.fit-benefit-end:hover { background: #d89e8e; border-color: #d89e8e; }
+.fit-benefit-end h3 { font-size: clamp(25px, 2.4vw, 34px); color: #1c1513; margin-bottom: 14px; }
+.fit-benefit-end p { color: #362723; margin-bottom: 24px; }
+.fit-benefit-end-btn { align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 22px; border-radius: 8px; background: #1c1513; color: var(--fit-paper); font-size: 13px; font-weight: 700; transition: background-color 180ms, transform 180ms; }
+.fit-benefit-end-btn svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
+.fit-benefit-end-btn:hover { background: #2b211e; transform: translateY(-2px); }
+
 .fit-site .liquid-glass-chat-trigger { z-index: 10; right: 18px; bottom: 18px; }
 .fit-site .liquid-glass-chat-trigger .glass-button { background: #8b6559 !important; border-color: #d8a18e !important; box-shadow: 0 5px 20px #0003 !important; width: 48px !important; height: 48px !important; }
 .fit-site .liquid-glass-chat-trigger .glass-button-content { color: #fff7f0 !important; text-shadow: none !important; }
@@ -603,6 +632,12 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   .fit-trainer-steps-grid { grid-template-columns: 1fr; }
   .fit-schedule-grid { grid-template-columns: repeat(2, 1fr); }
   .fit-journey { grid-template-columns: 1fr; gap: 30px; }
+  .fit-benefits { height: auto; margin-top: 75px; }
+  .fit-benefits-sticky { height: auto; padding: 72px 0; position: static; overflow: hidden; }
+  .fit-benefits-bg, .fit-benefits-progress { display: none; }
+  .fit-benefits-head { width: 86%; }
+  .fit-benefits-track { flex-direction: column; padding: 0 7%; transform: none !important; }
+  .fit-benefit-card, .fit-benefit-end { flex-basis: auto; }
   .fit-auth { gap: 6%; padding-inline: 6%; }
   .fit-auth .luxury-login-container, .fit-auth-card { padding: 28px 24px !important; }
 }
