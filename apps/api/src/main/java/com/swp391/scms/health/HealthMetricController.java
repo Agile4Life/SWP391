@@ -50,4 +50,23 @@ public class HealthMetricController {
         return ApiResponse.ok(msg("health.metrics.add.success"),
                 healthMetricService.addMetric(memberId, request, principal.id(), principal.role()));
     }
+
+    @Operation(summary = "Cập nhật chỉ số sức khỏe", description = "Chỉnh sửa giá trị chỉ số thể chất đã đo")
+    @PutMapping("/{metricId}")
+    public ApiResponse<HealthMetricDto> updateMetric(@PathVariable Long memberId,
+                                                     @PathVariable Long metricId,
+                                                     @Valid @RequestBody HealthMetricDto request,
+                                                     @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("health.metrics.update.success"),
+                healthMetricService.updateMetric(memberId, metricId, request, principal.id(), principal.role()));
+    }
+
+    @Operation(summary = "Xóa chỉ số sức khỏe", description = "Xóa một bản ghi chỉ số thể chất")
+    @DeleteMapping("/{metricId}")
+    public ApiResponse<Void> deleteMetric(@PathVariable Long memberId,
+                                          @PathVariable Long metricId,
+                                          @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        healthMetricService.deleteMetric(memberId, metricId, principal.id(), principal.role());
+        return ApiResponse.ok(msg("health.metrics.delete.success"), null);
+    }
 }

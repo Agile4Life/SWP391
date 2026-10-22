@@ -26,9 +26,12 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -113,5 +116,35 @@ class HealthMetricControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/members/{id}/health-metrics/{metricId} updates metric successfully")
+    void updateMetricSuccess() throws Exception {
+        HealthMetricDto request = new HealthMetricDto(
+                null, "weight", new BigDecimal("72.5"), "kg", null, null
+        );
+        HealthMetricDto updated = new HealthMetricDto(
+                5L, "weight", new BigDecimal("72.5"), "kg", 101L, LocalDateTime.now()
+        );
+        when(healthMetricService.updateMetric(eq(101L), eq(5L), any(), eq(101L), eq("MEMBER"))).thenReturn(updated);
+
+        mockMvc.perform(put("/api/v1/members/101/health-metrics/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(5))
+                .andExpect(jsonPath("$.data.metricValue").value(72.5));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/v1/members/{id}/health-metrics/{metricId} deletes metric successfully")
+    void deleteMetricSuccess() throws Exception {
+        doNothing().when(healthMetricService).deleteMetric(eq(101L), eq(5L), eq(101L), eq("MEMBER"));
+
+        mockMvc.perform(delete("/api/v1/members/101/health-metrics/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }
