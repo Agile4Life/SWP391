@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface MemberProgressLogRepository extends JpaRepository<MemberProgressLog, Long> {
     List<MemberProgressLog> findByMemberUserIdOrderByRecordedAtDesc(Long memberId);
+
+    List<MemberProgressLog> findByMemberUserIdOrderByRecordedAtAsc(Long memberId);
 }

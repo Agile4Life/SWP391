@@ -84,6 +84,9 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/ai/generate-workout-plan", "/api/v1/ai/recommend",
                             "/api/v1/ai/recommendations/**").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coaching/evaluations").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
