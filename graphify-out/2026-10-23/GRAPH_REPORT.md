@@ -1,27 +1,27 @@
-# Graph Report - SWP391_GROUP1  (2026-10-22)
+# Graph Report - SWP391_GROUP1  (2026-10-23)
 
 ## Corpus Check
-- 861 files · ~2,085,099 words
+- 868 files · ~2,160,602 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 9375 nodes · 21457 edges · 597 communities (471 shown, 126 thin omitted)
-- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 3020 edges (avg confidence: 0.79)
+- 9407 nodes · 21651 edges · 578 communities (449 shown, 129 thin omitted)
+- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 3080 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `301cd042`
+- Built from commit: `c8bdf354`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- UserRepository
-- MembershipSubscription
+- MemberRepository
+- Member
 - server.cjs
 - SupportRequestMessage
 - org.junit.jupiter.api.extension.ExtendWith
 - org.junit.jupiter.api.DisplayName
-- AuthControllerTest
+- client.ts
 - CenterCheckin
 - .createInvoice
 - MembershipCancellationRequest
@@ -30,9 +30,9 @@
 - verify-ux-consistency.cjs
 - ref_fs
 - .processPayment
-- OperationsConcurrencyPostgreSqlTest
+- .createPayment
 - ApiResponse
-- TrainingPlan
+- TrainingPlanItem
 - AuthService
 - LiquidGlassEngine.ts
 - list
@@ -47,20 +47,20 @@
 - slide_search_core.py
 - generate-slide.py
 - Tailwind CSS Utility Reference
-- ClassSession
-- design_system.py
+- MembershipPackage
+- persist_design_system
 - StaffReceptionPage.tsx
 - Invoice
-- AuditLog
+- org.springframework.stereotype.Component
 - TrainingPlanDto
 - BM25
-- ponytail-config.js
+- pi-extension/index.js
 - run.py
 - MemberProfilePage.tsx
 - tasks.py
 - uninstall.test.js
 - Brand Guidelines v1.0
-- ponytail-activate.js
+- ponytail-config.js
 - Design
 - InvoiceDto
 - Canvas Design System
@@ -76,13 +76,13 @@
 - MemberClassesPage.tsx
 - Form & Input Components
 - Tailwind CSS Responsive Design
-- Discipline
-- Coach
+- PackageService
+- detect_domain
 - apiFetch
 - .createPlan
-- Member
+- MembershipSubscriptionServiceTest
 - .generateWorkoutPlan
-- GlobalExceptionHandlerTriggerTest
+- GlobalExceptionHandlerTriggerTest.java
 - robustness-audit.js
 - Typography Specifications
 - .created
@@ -98,17 +98,17 @@
 - shadcn/ui Accessibility Patterns
 - CenterCheckinSchemaUpgradePostgreSqlTest.java
 - test_sync_brand_to_tokens.py
-- GymClass
+- .decide
 - __init__.py
 - Logo Usage Rules
 - Component Specifications
-- org.springframework.data.domain.Pageable
+- graphify reference: query, path, explain
 - TriggerProvidersTest.java
 - search
-- Role
+- .findByIdAndDeletedAtIsNull
 - MemberProgressLog
 - Notification
-- client.ts
+- LuxuryLoginForm.tsx
 - PHẦN 2: KỊCH BẢN TRÌNH BÀY THEO 6 TÍNH NĂNG (UI/UX + BACKEND ĐẦY ĐỦ)
 - TrainingPlanItemCreateDto
 - UserDto
@@ -128,30 +128,30 @@
 - States and Variants
 - What You Must Do When Invoked
 - tasteskill: Anti-Slop Frontend Skill
-- GlobalExceptionHandlerTriggerTest.java
-- .ok
+- DatabaseProfilesTest
+- AuthController.java
 - .createUser
-- correctness.js
+- cursor-hooks.test.js
 - Workflow
 - Design System
 - ReportSnapshotDto
 - GoogleIdTokenVerifierAdapter.java
 - fetch-background.py
 - Tailwind CSS Customization
-- MembershipSubscriptionService
+- MembershipSubscription
 - MemberDashboardPage.tsx
 - object
-- color
+- DisciplineService
 - Appendix B - Canonical Sources (read these before reinventing)
 - High-Agency Frontend Skill
-- pathlib
+- design_system.py
 - DynamicQrService
-- AiRecommendationLog
-- SchedulingServiceTest.java
-- ClassEnrollment
-- Permission
+- Discipline
+- Coach
+- Room
+- Role
 - scripts
-- org.springframework.stereotype.Component
+- SmtpOtpDeliveryAdapter.java
 - 3. Chi tiết Kế hoạch cá nhân Sprint 2 (Định dạng Jira Tickets)
 - Visual Companion Guide
 - Routing by Task Type
@@ -159,20 +159,20 @@
 - fontSize
 - Creation Log: Systematic Debugging Skill
 - shadcn/ui Theming & Customization
-- WebConfig.java
+- RoomRequest
 - map
 - 🏛️ SÖL Wellness Sanctuary — Sports Center Management System (SCMS)
 - Asset Organization Guide
-- react
+- DisciplinesSection.tsx
 - Primary Color Meanings
 - Core Logo Types
-- PackageRevenueDto
+- .create
 - gray
 - .authenticateGoogle
 - color
 - Session diagnosis: <session-id>
 - Design Audit
-- SupportRequestServiceTest.java
+- RoleController
 - Brand Consistency Checklist
 - CIP Mockup Prompt Engineering
 - Color Semantics
@@ -199,7 +199,7 @@
 - Copywriting Formulas
 - Finishing a Development Branch
 - Copywriting Formulas
-- GoogleAuthServiceTest.java
+- RoomService
 - CatalogRefreshTest
 - Using Git Worktrees
 - Writing Skills
@@ -223,7 +223,7 @@
 - SCMS development
 - OpenApiConfig.java
 - TrainingPlanItemDto
-- ManagerReportsPage.tsx
+- react
 - ponytail/README.md
 - Instalación
 - brand/references/update.md
@@ -231,15 +231,15 @@
 - Logo Design Reference
 - Token Architecture
 - design-tokens-starter.json
-- RoleService
+- hermes-plugin.test.js
 - ponytail-mcp/package.json
 - Testing Skills With Subagents
 - org.junit.jupiter.api.Test
-- .createSession
-- InvoiceServiceTest.java
-- cursor-hooks.test.js
+- ClassServiceTest.java
+- AiRecommendationController
+- ref_node_test
 - DisciplineDto
-- EnrollmentController
+- WaitlistController
 - compilerOptions
 - Chi tiết các bước chuyển trạng thái (State Transitions):
 - Thiết kế refactor kiến trúc backend SCMS
@@ -250,11 +250,11 @@
 - card
 - Defense-in-Depth Validation
 - 4. DESIGN ENGINEERING DIRECTIVES (Bias Correction)
-- CenterCheckinController
-- GoogleOAuthRedirectService
+- RoomController
+- AuthTokenResponse
 - Writing Plans
 - [Analysis Title]
-- RoleControllerTest
+- CodeFirstSchemaTest
 - SCRUM-91 — Chuyển sang Supabase PostgreSQL bằng Code-First
 - 3. Các Bước Thực Hiện Chi Tiết (Bite-Sized Tasks)
 - Review Focus
@@ -266,7 +266,7 @@
 - Brand
 - CIP Design Style Guide
 - SecurityConfig.java
-- embed-tokens.cjs
+- 3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Partial Indexes
 - io.swagger.v3.oas.annotations.Operation
 - Returns: "OK" or lists conflicts
 - ShadcnInstaller
@@ -282,12 +282,12 @@
 - 22. STYLE VARIATION ENGINE
 - Slide Strategies
 - 10. REFERENCE VOCABULARY (Pattern Names the Agent Should Know)
-- PermissionDto
+- .connect
 - Verification Before Completion
 - Skill structure
 - mvnw
 - SCRUM-72 / SCRUM-73 / SCRUM-74 / SCRUM-75: review sau merge
-- .join
+- GymClass
 - CẨM NANG TOÀN TẬP DỰ ÁN HỆ THỐNG QUẢN LÝ TRUNG TÂM THỂ THAO (SPORTS CENTER MANAGEMENT SYSTEM)
 - Benchmark
 - Robustness audit: does ponytail degrade weak models? (2026-06-16)
@@ -312,7 +312,7 @@
 - examples/README.md
 - Email Validation Function
 - Ponytail Help
-- .refundPayment
+- CatalogSummaryLineEndingsTest
 - Ponytail Help
 - Payment
 - issue.md
@@ -322,8 +322,8 @@
 - 9. AI TELLS (Forbidden Patterns)
 - OperationsConcurrencyPostgreSqlTest.java
 - org.springframework.http.ResponseEntity
-- SupportRequestController
-- landing/types.ts
+- TestTextLayoutDataContracts
+- PublicCatalogController
 - validate_data.py
 - Portal SÖL: thiết kế và kiểm chứng UI
 - Caveman vs Ponytail — 2026-06-12
@@ -343,11 +343,11 @@
 - 11. REDESIGN PROTOCOL
 - 3. DEFAULT ARCHITECTURE & CONVENTIONS
 - Gemini CLI Tool Mapping
-- .enroll
+- PostgreSqlTriggerProvider
 - REFACTOR Phase: Close Loopholes (Stay Green)
 - .generate_config_string
 - ux-cleanup/README.md
-- AGILE_SCRUM_JIRA_PLAN.md
+- TestMetricMath
 - SÖL Fitness — UI công khai đã triển khai cục bộ
 - Phong review fixes: SCRUM-76, SCRUM-80, SCRUM-91
 - CI/CD: GitHub Actions → Vercel + Render
@@ -358,7 +358,7 @@
 - Agent workspace
 - 29. ANTI-AI-SLOP RULES
 - 5. IMAGE COUNT & PAGE SLICING
-- HealthMetricDto
+- 1. THE THREE DIALS (Core Configuration)
 - Muse Tool Mapping
 - using-superpowers/SKILL.md
 - Skill Discovery Optimization (SDO)
@@ -367,7 +367,7 @@
 - radius
 - User
 - org.springframework.context.annotation.Configuration
-- Kế hoạch cá nhân
+- AGILE_SCRUM_JIRA_PLAN.md
 - .openclaw/skills/ponytail-audit/SKILL.md
 - Ponytail Gain
 - .openclaw/skills/ponytail-review/SKILL.md
@@ -375,7 +375,7 @@
 - Ponytail Gain
 - ponytail/skills/ponytail-review/SKILL.md
 - Brand Guidelines Template
-- WaitlistDto
+- CatalogRequests
 - 🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 22 Story Points
 - ._base_config
 - 21. MOBILE ANTI-AI-TELLS RULE
@@ -385,7 +385,7 @@
 - Pressure Test 1: Emergency Production Fix
 - Pressure Test 2: Sunk Cost + Exhaustion
 - Pressure Test 3: Authority + Social Pressure
-- Hướng dẫn cho contributor và coding agent
+- FacilitiesControllerTest
 - SCRUM-86 — PR #46 review
 - TestStackFlagWithDesignSystem
 - anthropic-best-practices.md
@@ -394,7 +394,7 @@
 - RED-GREEN-REFACTOR for Skills
 - VERIFY GREEN: Pressure Testing
 - Workflow: Ponytail - Lazy Senior Dev Mode
-- 50
+- 6. BỘ CÔNG CỤ TỰ ĐỘNG HÓA & QUẢN TRỊ SƠ ĐỒ (TOOLING & SCRIPTS)
 - TestGeneratedConfigIsValidJs
 - Deep Clone
 - Group By
@@ -406,7 +406,6 @@
 - ponytail/skills/ponytail-debt/SKILL.md
 - Quy trình phát triển tính năng & Tuân thủ Rules dự án SCMS
 - dependencies
-- RoleDto
 - TestShadcnInstaller
 - GitHub issues
 - graphify reference: add a URL and watch a folder
@@ -431,18 +430,14 @@
 - react-countdown.md
 - opencode.json
 - start-server.sh
-- SCRUM-91 Implementation Plan
-- duration
-- 🟢 AN — Backend (Core Operations & Membership Squad) — 18 Story Points
+- primitive
 - SupabaseConfiguration.java
-- $type
 - $type
 - Cursor hooks
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - .getMessage
 - sdd-workspace
-- input
 - Antigravity CLI (`agy`) Tool Mapping
 - THƯ MỤC SƠ ĐỒ HỆ THỐNG (SYSTEM DIAGRAMS)
 - JwtAuthenticationFilter.java
@@ -479,21 +474,15 @@
 - task-brief
 - find-polluter.sh
 - test-academic.md
-- PackageDto
+- PackageController
 - SCRUM-86 — PR #45 and #46 integration
-- radius
 - Quy chuẩn thiết kế chính — SÖL
-- 🟢 AN — Backend (Core Operations & Membership Squad) — 23 Story Points
-- 🔵 TÀI — Backend (Identity, Security & Support Squad) — 19 Story Points
-- 🟡 THỊNH — Frontend (Member Portal & App) — 17 Story Points
-- lg
 - sm
 - Quy tắc bắt buộc cho AI Agent & Contributor trong SCMS
 - APPENDICES - Real Source-Backed Reference Material
 - Evaluation and iteration
 - SCRUM-89 Returning Google member login
 - Hermes Agent Tool Mapping
-- destructive-foreground
 - .test_add_colors_multiple_times
 - .test_add_fonts
 - plan-document-reviewer-prompt.md
@@ -504,7 +493,6 @@
 - dataaccessexception
 - .test_recommend_plugins_nextjs
 - TestThresholdGate
-- muted
 - pattern
 - com.swp391:scms-api
 - TestFixtureValidation
@@ -526,20 +514,13 @@
 - .test_add_colors
 - Backend architecture rules
 - 2026-06-16-correctness-gate-fix.md
-- .entities
 - scripts
 - vercel.json
-- primary-foreground
-- ring
 - 🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 21 Story Points
-- 🔵 TÀI — Backend (Identity, Security & Support Squad) — 19 Story Points
 - ponytail-mcp
-- secondary-foreground
-- padding-y
 - 12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)
 - 5. CONTEXT-AWARE PROACTIVITY
 - 8. DARK MODE PROTOCOL
-- destructive
 - web/package.json
 - SCRUM-86 — PR #45 review
 - EnrollmentControllerTest
@@ -589,9 +570,9 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `Member` - 203 edges
-2. `User` - 197 edges
-3. `ApiResponse` - 176 edges
-4. `MessageService` - 155 edges
+2. `User` - 199 edges
+3. `ApiResponse` - 178 edges
+4. `MessageService` - 158 edges
 5. `AuthenticatedPrincipal` - 133 edges
 6. `MembershipSubscription` - 127 edges
 7. `ResourceNotFoundException` - 111 edges
@@ -600,7 +581,9 @@
 10. `GymClass` - 68 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `TestDomainDetection` --uses--> `BM25`  [INFERRED]
+- `TestBm25CoreBehavior` --uses--> `BM25`  [INFERRED]
+  .agents/skills/ui-ux-pro-max/scripts/tests/test_core.py → .agents/skills/design/scripts/cip/core.py
+- `TestDiagnosticsContracts` --uses--> `BM25`  [INFERRED]
   .agents/skills/ui-ux-pro-max/scripts/tests/test_core.py → .agents/skills/design/scripts/cip/core.py
 - `TestPersistence` --uses--> `BM25`  [INFERRED]
   .agents/skills/ui-ux-pro-max/scripts/tests/test_core.py → .agents/skills/design/scripts/cip/core.py
@@ -608,21 +591,19 @@
   .agents/skills/ui-ux-pro-max/scripts/tests/test_core.py → .agents/skills/design/scripts/cip/core.py
 - `TestSearchDomains` --uses--> `BM25`  [INFERRED]
   .agents/skills/ui-ux-pro-max/scripts/tests/test_core.py → .agents/skills/design/scripts/cip/core.py
-- `TestShadcnInstaller` --uses--> `ShadcnInstaller`  [INFERRED]
-  .agents/skills/ui-styling/scripts/tests/test_shadcn_add.py → .agents/skills/ui-styling/scripts/shadcn_add.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (597 total, 126 thin omitted)
+## Communities (578 total, 129 thin omitted)
 
-### Community 0 - "UserRepository"
-Cohesion: 0.05
-Nodes (45): PaymentMapper, PaymentRepository, PaymentService, MembershipSubscriptionRepository, MembershipCancellationService, ClassUtilizationDto, RecentTransactionDto, SessionAttendanceReportRepository (+37 more)
+### Community 0 - "MemberRepository"
+Cohesion: 0.06
+Nodes (48): PaymentMapper, PaymentRepository, PaymentService, MembershipCancellationRequestRepository, MembershipSubscriptionRepository, MembershipCancellationService, NotificationService, MemberLookupService (+40 more)
 
-### Community 1 - "MembershipSubscription"
-Cohesion: 0.08
-Nodes (13): Entity, org.hibernate.annotations.Check, PrePersist, PreUpdate, Table, MembershipPackage, Entity, org.hibernate.annotations.Check (+5 more)
+### Community 1 - "Member"
+Cohesion: 0.14
+Nodes (6): Entity, org.hibernate.annotations.Check, Table, Member, PaymentServiceTest, MembershipCancellationRequest
 
 ### Community 2 - "server.cjs"
 Cohesion: 0.06
@@ -633,36 +614,36 @@ Cohesion: 0.17
 Nodes (3): Entity, Table, SupportRequestMessage
 
 ### Community 4 - "org.junit.jupiter.api.extension.ExtendWith"
-Cohesion: 0.10
-Nodes (66): acceptheaderlocaleresolver, any, anylong, Status, GlobalExceptionHandler, AiChatControllerTest, ObjectMapper, AiRecommendationControllerTest (+58 more)
+Cohesion: 0.08
+Nodes (76): acceptheaderlocaleresolver, any, anylong, api, Status, GlobalExceptionHandler, NotificationDto, ObjectMapper (+68 more)
 
 ### Community 5 - "org.junit.jupiter.api.DisplayName"
 Cohesion: 0.06
-Nodes (13): CoachProfileUpdateDto, ReceptionistProfileUpdateDto, MessageServiceTest, InvoiceControllerTest, ObjectMapper, MethodSecurityPolicyTest, ProfileControllerTest, ObjectMapper (+5 more)
+Nodes (11): MessageServiceTest, NotificationServiceTest, MethodSecurityPolicyTest, ObjectMapper, UserDto, UserControllerTest, assertdoesnotthrow, org.junit.jupiter.api.DisplayName (+3 more)
 
-### Community 6 - "AuthControllerTest"
-Cohesion: 0.08
-Nodes (8): GoogleOtpRequest, GoogleVerifyOtpRequest, LoginRequest, OtpRequest, RegisterRequest, AuthControllerTest, ObjectMapper, email
+### Community 6 - "client.ts"
+Cohesion: 0.09
+Nodes (28): ScrollNavbar(), ScrollNavbarProps, CreateSnapshotPayload, DailyRevenue, PackageRevenue, RecentTransaction, reportsApi, ReportSnapshotDto (+20 more)
 
 ### Community 7 - "CenterCheckin"
-Cohesion: 0.08
-Nodes (8): CenterCheckin, Entity, org.hibernate.annotations.Check, Table, CenterCheckinRepository, CenterCheckinService, CheckinDto, org.springframework.scheduling.annotation.Scheduled
+Cohesion: 0.07
+Nodes (10): Scan, CenterCheckin, Entity, org.hibernate.annotations.Check, Table, CenterCheckinRepository, CenterCheckinService, CheckinDto (+2 more)
 
 ### Community 8 - ".createInvoice"
-Cohesion: 0.07
-Nodes (4): InvoiceCreateDto, InvoiceItemCreateDto, InvoiceServiceTest, org.mapstruct.Mapping
+Cohesion: 0.06
+Nodes (10): InvoiceCreateDto, InvoiceItemCreateDto, InvoiceMapper, InvoiceRepository, InvoiceService, InvoiceControllerTest, InvoiceServiceTest, mappingtarget (+2 more)
 
 ### Community 9 - "MembershipCancellationRequest"
-Cohesion: 0.07
-Nodes (8): Decision, Entity, org.hibernate.annotations.Check, Table, MembershipCancellationRequest, MembershipCancellationRequestRepository, MembershipCancellationRequest, MembershipCancellationServiceTest
+Cohesion: 0.08
+Nodes (4): Entity, org.hibernate.annotations.Check, Table, MembershipCancellationRequest
 
 ### Community 10 - "logo/generate.py"
-Cohesion: 0.08
-Nodes (43): call_ollama(), count_loc(), load_arms(), main(), Ponytail local benchmark — runs the same 5 tasks against any Ollama model. No…, Non-blank, non-comment lines of code: fenced blocks, or the whole response when…, run(), _atlas_prediction_data() (+35 more)
+Cohesion: 0.12
+Nodes (29): _atlas_prediction_data(), _download_atlas_image(), _download_image(), _download_muapi_image(), enhance_prompt(), generate_batch(), generate_logo(), _generate_with_atlas() (+21 more)
 
 ### Community 11 - "org.springframework.transaction.annotation.Transactional"
-Cohesion: 0.05
-Nodes (54): BadRequestException, ConflictException, ForbiddenException, ResourceNotFoundException, HealthMetricService, CancellationDtos, MembershipService, NotificationService (+46 more)
+Cohesion: 0.04
+Nodes (63): airecommendationlog, CheckinRequests, GoogleOAuthCallbackRequest, BadRequestException, ConflictException, ForbiddenException, ResourceNotFoundException, UnauthorizedException (+55 more)
 
 ### Community 12 - "verify-ux-consistency.cjs"
 Cohesion: 0.11
@@ -670,22 +651,18 @@ Nodes (16): assert, audit(), cancellation, check(), { chromium }, enrollment, fi
 
 ### Community 13 - "ref_fs"
 Cohesion: 0.04
-Nodes (45): fs, path, system, fs, path, system, distinct, fs (+37 more)
-
-### Community 15 - "OperationsConcurrencyPostgreSqlTest"
-Cohesion: 0.23
-Nodes (3): CheckinDto, CheckinResponses, OperationsConcurrencyPostgreSqlTest
+Nodes (46): fs, path, system, fs, path, system, distinct, fs (+38 more)
 
 ### Community 16 - "ApiResponse"
 Cohesion: 0.08
 Nodes (11): ApiResponse, ErrorResponse, DeleteMapping, GetMapping, org.springframework.beans.factory.annotation.Autowired, PatchMapping, PostMapping, PutMapping (+3 more)
 
-### Community 17 - "TrainingPlan"
-Cohesion: 0.12
-Nodes (5): Entity, org.hibernate.annotations.Check, PreUpdate, Table, TrainingPlan
+### Community 17 - "TrainingPlanItem"
+Cohesion: 0.11
+Nodes (4): Entity, org.hibernate.annotations.Check, Table, TrainingPlanItem
 
 ### Community 18 - "AuthService"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (4): AuthService, OtpDeliveryPort, VerifyOtpRequest, AuthServiceTest
 
 ### Community 19 - "LiquidGlassEngine.ts"
@@ -693,8 +670,8 @@ Cohesion: 0.09
 Nodes (24): apps_web_src_shared_liquid_glass_liquid_glass, LiquidGlassButton(), LiquidGlassButtonProps, ChatMessage, createMessage(), INITIAL_MESSAGES, LiquidGlassChatbot(), SuggestionItem (+16 more)
 
 ### Community 20 - "list"
-Cohesion: 0.10
-Nodes (24): aiclientconfig, airecommendationlog, airecommendationservice, AiRecommendationLogRepository, ObjectMapper, TrainingPlanItemRepository, TrainingPlanRepository, TrainingPlanService (+16 more)
+Cohesion: 0.08
+Nodes (30): aiclientconfig, airecommendationservice, AiRecommendationLogRepository, AiRecommendationService, ObjectMapper, SessionEvaluationRepository, TrainingPlanItemRepository, TrainingPlanRepository (+22 more)
 
 ### Community 21 - "TestTailwindConfigGenerator"
 Cohesion: 0.06
@@ -702,15 +679,15 @@ Nodes (17): Test adding full color palette., Test adding custom spacing., Test T
 
 ### Community 22 - "StaffClassesPage.tsx"
 Cohesion: 0.05
-Nodes (49): classesApi, ClassItem, ClassSessionDto, CoachUser, CreateClassPayload, CreateSessionPayload, UserDto, ClassFormData (+41 more)
+Nodes (50): classesApi, ClassItem, ClassSessionDto, CoachUser, CreateClassPayload, CreateSessionPayload, UserDto, ClassFormData (+42 more)
 
 ### Community 23 - "Subagent-Driven Development"
 Cohesion: 0.04
 Nodes (39): 1. Take the task, 2. Work the steps, 3. The completion contract, 4. Complete the task, Common Rationalizations, Example Workflow, Executing Plans, Final Review (+31 more)
 
 ### Community 24 - "SupportRequest"
-Cohesion: 0.12
-Nodes (9): CreateSupportRequestDto, SupportRequestDto, UpdateSupportRequestStatusDto, Entity, org.hibernate.annotations.Check, Table, SupportRequest, SupportRequestMapper (+1 more)
+Cohesion: 0.09
+Nodes (13): CreateSupportRequestDto, SupportRequestDto, UpdateSupportRequestStatusDto, Entity, org.hibernate.annotations.Check, Table, SupportRequest, SupportRequestMapper (+5 more)
 
 ### Community 26 - "devDependencies"
 Cohesion: 0.13
@@ -736,13 +713,13 @@ Nodes (21): _e(), generate_chart_slide(), generate_cta_slide(), generate_deck(),
 Cohesion: 0.05
 Nodes (43): Arbitrary Values, Aspect Ratio, Background Colors, Border Color, Border Radius, Border Style, Border Width, Borders (+35 more)
 
-### Community 32 - "ClassSession"
-Cohesion: 0.06
-Nodes (10): Entity, org.hibernate.annotations.Check, Table, SessionAttendance, ClassSession, Entity, org.hibernate.annotations.Check, PreUpdate (+2 more)
+### Community 32 - "MembershipPackage"
+Cohesion: 0.08
+Nodes (6): Entity, org.hibernate.annotations.Check, PrePersist, PreUpdate, Table, MembershipPackage
 
-### Community 33 - "design_system.py"
-Cohesion: 0.04
-Nodes (55): ansi_ljust(), _contrast_ratio(), _derive_dark_palette(), _detect_page_type(), _filter_anti_patterns_for_mode(), format_ascii_box(), format_markdown(), format_master_md() (+47 more)
+### Community 33 - "persist_design_system"
+Cohesion: 0.14
+Nodes (15): _detect_page_type(), format_master_md(), format_page_override_md(), _generate_intelligent_overrides(), persist_design_system(), Path, Format design system as MASTER.md with hierarchical override logic., Format a page-specific override file with intelligent AI-generated content. (+7 more)
 
 ### Community 34 - "StaffReceptionPage.tsx"
 Cohesion: 0.16
@@ -752,17 +729,21 @@ Nodes (16): apps_web_src_features_reception_payment_invoice, InvoiceProps, metho
 Cohesion: 0.07
 Nodes (7): Invoice, Entity, Table, InvoiceItem, Entity, Table, InvoiceComputedColumnTest
 
-### Community 36 - "AuditLog"
+### Community 36 - "org.springframework.stereotype.Component"
 Cohesion: 0.07
-Nodes (16): AuditAspect, AuditLog, Entity, org.hibernate.annotations.Check, Table, AuditLogRepository, AuditAspectTest, authentication (+8 more)
+Nodes (19): AuditAspect, AuditLog, Entity, org.hibernate.annotations.Check, Table, AuditLogRepository, NotificationMapper, AuditAspectTest (+11 more)
+
+### Community 37 - "TrainingPlanDto"
+Cohesion: 0.06
+Nodes (6): TrainingPlanDto, Entity, org.hibernate.annotations.Check, PreUpdate, Table, TrainingPlan
 
 ### Community 38 - "BM25"
-Cohesion: 0.08
-Nodes (14): BM25, BM25 ranking algorithm for text search, Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query, BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords (+6 more)
+Cohesion: 0.12
+Nodes (8): BM25, BM25 ranking algorithm for text search, Lowercase, normalize synonyms, split, remove punctuation, filter stopwords, Build BM25 index from documents, Score all documents against query, All indexed terms, for suggestion/typo-recovery purposes., TestBm25CoreBehavior, TestTokenizer
 
-### Community 39 - "ponytail-config.js"
+### Community 39 - "pi-extension/index.js"
 Cohesion: 0.06
-Nodes (57): agents_plugins_ponytail_hooks_ponytail_config_default_mode, fs, getConfigDir(), getConfigPath(), getDefaultMode(), getHideStatus(), getQuietStartup(), isDeactivationCommand() (+49 more)
+Nodes (45): agents_plugins_ponytail_hooks_ponytail_config_default_mode, getHideStatus(), getQuietStartup(), normalizeMode(), normalizePersistedMode(), { DEFAULT_MODE, normalizeMode, normalizePersistedMode }, filterSkillBodyForMode(), fs (+37 more)
 
 ### Community 40 - "run.py"
 Cohesion: 0.11
@@ -773,37 +754,42 @@ Cohesion: 0.11
 Nodes (26): cardStatus(), CardSubscription, DynamicQrResponse, getDynamicQr(), getMembershipHistory(), getMySubscription(), displayDate(), MemberCard() (+18 more)
 
 ### Community 42 - "tasks.py"
-Cohesion: 0.13
-Nodes (34): _contained(), _fail(), _find(), _find_class(), _import(), _import_pkg(), _ok(), Path (+26 more)
+Cohesion: 0.14
+Nodes (33): _contained(), _fail(), _find(), _find_class(), _import(), _import_pkg(), _ok(), Path (+25 more)
 
 ### Community 43 - "uninstall.test.js"
-Cohesion: 0.07
-Nodes (26): assert, cases, loc, score(), assert, claudeDir, configDir, configPath (+18 more)
+Cohesion: 0.06
+Nodes (31): assert, cases, check, debounceTask, emailTask, assert, cases, loc (+23 more)
 
 ### Community 44 - "Brand Guidelines v1.0"
 Cohesion: 0.05
 Nodes (37): 1. Color Palette, 2. Typography, 3. Logo Usage, 4. Voice & Tone, 5. Imagery Guidelines, 6. Design Components, Accessibility, AI Image Generation (+29 more)
 
-### Community 45 - "ponytail-activate.js"
+### Community 45 - "ponytail-config.js"
 Cohesion: 0.06
-Nodes (39): claudeDir, {
-  clearMode,
-  cursorRuleNotice,
-  cursorRulePath,
-  isCodex,
-  isCopilot,
-  isCursor,
-  setMode,
-  writeHookOutput,
-}, fs, { getDefaultMode, getClaudeDir, isShellSafe }, { getPonytailInstructions }, mode, output, path (+31 more)
+Nodes (50): claudeDir, {
+
+  clearMode,
+
+  cursorRuleNotice,
+
+  cursorRulePath,
+
+  isCodex,
+
+  isCopilot,
+
+  isCursor,
+
+  setMode,
+
+  writeHookOutput,
+
+}, fs, { getDefaultMode, getClaudeDir, isShellSafe }, { getPonytailInstructions }, mode, output, path (+42 more)
 
 ### Community 46 - "Design"
 Cohesion: 0.05
 Nodes (36): Banner Design (Built-in), Banner: Design Rules, Banner: Quick Size Reference, Banner: Top Art Styles, Banner: Workflow, CIP Design (Built-in), CIP: Generate Brief, CIP: Generate Mockups (+28 more)
-
-### Community 47 - "InvoiceDto"
-Cohesion: 0.05
-Nodes (4): InvoiceDto, InvoiceItemDto, mappingtarget, nullvaluepropertymappingstrategy
 
 ### Community 48 - "Canvas Design System"
 Cohesion: 0.06
@@ -818,8 +804,8 @@ Cohesion: 0.06
 Nodes (34): 10. DEVICE MOCKUP FRAME RULE, 11. ONBOARDING FLOW RULE, 12. FIRST SCREEN CLEANLINESS RULE, 13. SAFE AREA AND SYSTEM REGION RULE, 14. NAVIGATION RULE, 15. CLEAN LAYOUT RULE, 16. CREATIVE IMAGE DIRECTION RULE, 17. BACKGROUND TEXTURE AND SURFACE RULE (+26 more)
 
 ### Community 51 - "logo/core.py"
-Cohesion: 0.10
-Nodes (20): BM25, detect_domain(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection, Search across all domains and combine results (+12 more)
+Cohesion: 0.11
+Nodes (19): BM25, detect_domain(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection, Search across all domains and combine results (+11 more)
 
 ### Community 52 - "Prerequisites"
 Cohesion: 0.06
@@ -834,8 +820,8 @@ Cohesion: 0.08
 Nodes (14): main(), Add full color palette (50-950 shades) for a base color. Args: name: Color name…, Add custom font families. Args: fonts: Dict of font_type: [font_names] e.g.,…, Add custom spacing values. Args: spacing: Dict of name: value e.g., {'18':…, Add custom breakpoints. Args: breakpoints: Dict of name: width e.g., {'3xl':…, Add plugin requirements. Args: plugins: List of plugin names e.g.,…, Get plugin recommendations based on configuration. Returns: List of recommended…, Generate Tailwind CSS configuration files. (+6 more)
 
 ### Community 55 - "MessageService"
-Cohesion: 0.09
-Nodes (26): annotation, AiChatController, SessionEvaluationController, org.springframework.beans.factory.annotation.Autowired, MessageService, HealthController, org.springframework.beans.factory.annotation.Autowired, MemberLookupController (+18 more)
+Cohesion: 0.10
+Nodes (23): annotation, AiChatController, SessionEvaluationDto, SessionEvaluationController, org.springframework.beans.factory.annotation.Autowired, MessageService, HealthController, org.springframework.beans.factory.annotation.Autowired (+15 more)
 
 ### Community 56 - "spacing"
 Cohesion: 0.06
@@ -857,29 +843,29 @@ Nodes (32): Accordion, Alert, Alert Dialog, Avatar, Badge, Button, Card, Checkbo
 Cohesion: 0.06
 Nodes (32): 1. Mobile-First Design, 2. Consistent Breakpoint Usage, 3. Test at Breakpoint Boundaries, 4. Use Container for Content Width, 5. Progressive Enhancement, 6. Avoid Too Many Breakpoints, Best Practices, Breakpoint System (+24 more)
 
-### Community 61 - "Discipline"
-Cohesion: 0.04
-Nodes (32): accessdeniedexception, CatalogSeeder, Override, CatalogRequests, DisciplineRequest, PackageRequest, RoomRequest, Discipline (+24 more)
+### Community 61 - "PackageService"
+Cohesion: 0.25
+Nodes (5): PackageRequest, PackageDto, MembershipPackage, PackageService, PackageServiceTest
 
-### Community 62 - "Coach"
-Cohesion: 0.11
-Nodes (4): Coach, Entity, org.hibernate.annotations.Check, Table
+### Community 62 - "detect_domain"
+Cohesion: 0.13
+Nodes (8): BM25, BM25 ranking algorithm for text search, Lowercase, split, remove punctuation, filter short words, Build BM25 index from documents, Score all documents against query, detect_domain(), Auto-detect the most relevant domain from query. Matches are weighted by…, TestDomainDetection
 
 ### Community 63 - "apiFetch"
-Cohesion: 0.09
-Nodes (42): decideRequest(), loadRequests(), ManagerCancellationPage(), statusLabel, api, pending, formatDate(), formatPrice() (+34 more)
+Cohesion: 0.10
+Nodes (40): decideRequest(), loadRequests(), ManagerCancellationPage(), statusLabel, api, pending, formatDate(), isHigherPackage() (+32 more)
 
-### Community 65 - "Member"
-Cohesion: 0.11
-Nodes (12): Create, HoldRequest, SubscriptionRequests, Upgrade, Entity, org.hibernate.annotations.Check, Table, Member (+4 more)
+### Community 65 - "MembershipSubscriptionServiceTest"
+Cohesion: 0.17
+Nodes (5): Upgrade, MembershipPackage, org.junit.jupiter.params.ParameterizedTest, org.junit.jupiter.params.provider.ValueSource, MembershipSubscriptionServiceTest
 
 ### Community 66 - ".generateWorkoutPlan"
-Cohesion: 0.09
-Nodes (3): AiWorkoutPlanRequest, AiWorkoutPlanResponse, AiRecommendationService
+Cohesion: 0.06
+Nodes (5): AiWorkoutPlanRequest, AiWorkoutPlanResponse, AiRecommendationLog, Entity, Table
 
-### Community 67 - "GlobalExceptionHandlerTriggerTest"
-Cohesion: 0.22
-Nodes (8): FailingController, GlobalExceptionHandlerTriggerTest, SQLException, TriggerFailure, java.sql.SQLException, org.junit.jupiter.params.provider.Arguments, org.junit.jupiter.params.provider.MethodSource, org.springframework.dao.DataAccessException
+### Community 67 - "GlobalExceptionHandlerTriggerTest.java"
+Cohesion: 0.14
+Nodes (15): FailingController, GlobalExceptionHandlerTriggerTest, SQLException, TriggerFailure, assertinstanceof, hibernatejpadialect, java.sql.SQLException, jdbcexception (+7 more)
 
 ### Community 68 - "robustness-audit.js"
 Cohesion: 0.08
@@ -891,7 +877,7 @@ Nodes (30): Accessibility, Base System, Best Practices, Clean & Modern, Common F
 
 ### Community 70 - ".created"
 Cohesion: 0.12
-Nodes (12): InvoiceController, GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, RequestMapping, RestController, ClassController, GetMapping (+4 more)
+Nodes (13): InvoiceController, GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, RequestMapping, RestController, ClassController, GetMapping (+5 more)
 
 ### Community 71 - "Test-Driven Development (TDD)"
 Cohesion: 0.06
@@ -899,11 +885,11 @@ Nodes (29): Common Rationalizations, Debugging Integration, Example: Bug Fix, Fi
 
 ### Community 72 - "AiChatServiceTest.java"
 Cohesion: 0.08
-Nodes (16): AiChatMessageCreateDto, AiChatMessageDto, AiChatReplyDto, AiChatSessionCreateDto, AiChatSessionDto, AiChatMessage, Entity, org.hibernate.annotations.Check (+8 more)
+Nodes (20): accessdeniedexception, AiChatMessageCreateDto, AiChatMessageDto, AiChatReplyDto, AiChatSessionCreateDto, AiChatSessionDto, AiChatMessage, Entity (+12 more)
 
 ### Community 73 - "org.springframework.jdbc.core.JdbcTemplate"
-Cohesion: 0.11
-Nodes (22): DatabaseTriggerInitializer, Override, Override, PostgreSqlDataSecurityInitializer, Target, DatabaseTriggerProvider, CenterCheckinSchemaUpgradePostgreSqlTest, JdbcTemplate (+14 more)
+Cohesion: 0.16
+Nodes (17): DatabaseTriggerInitializer, Override, Override, PostgreSqlDataSecurityInitializer, Target, DatabaseTriggerProvider, comparator, jakarta.persistence.EntityManagerFactory (+9 more)
 
 ### Community 74 - "icon/generate.py"
 Cohesion: 0.17
@@ -914,8 +900,8 @@ Cohesion: 0.17
 Nodes (9): agents, canonical, copies, fs, INVARIANTS, path, root, skill (+1 more)
 
 ### Community 76 - "judge.py"
-Cohesion: 0.20
-Nodes (21): main(), parse_complete(), _rank_ok(), scores: {(task_id, label): {SCORE_KEY: int}}. For each task the 'complete'…, Live: the judge model must rank each complete ref above its stub., No API, no key: prove the GATE catches under-delivery. A well-ordered matrix…, run(), selftest() (+13 more)
+Cohesion: 0.21
+Nodes (20): main(), parse_complete(), _rank_ok(), scores: {(task_id, label): {SCORE_KEY: int}}. For each task the 'complete'…, Live: the judge model must rank each complete ref above its stub., No API, no key: prove the GATE catches under-delivery. A well-ordered matrix…, run(), selftest() (+12 more)
 
 ### Community 77 - "PaymentController"
 Cohesion: 0.22
@@ -935,15 +921,15 @@ Nodes (28): Accordion, Alert, ARIA Labels, Checkbox and Radio, Color Contrast, C
 
 ### Community 81 - "CenterCheckinSchemaUpgradePostgreSqlTest.java"
 Cohesion: 0.10
-Nodes (18): annotationtypefilter, DatabasePolicyTest, AssertTrue, classpathscanningcandidatecomponentprovider, dataintegrityviolationexception, entity, files, inputstream (+10 more)
+Nodes (17): annotationtypefilter, CenterCheckinSchemaUpgradePostgreSqlTest, JdbcTemplate, DatabasePolicyTest, classpathscanningcandidatecomponentprovider, dataintegrityviolationexception, entity, files (+9 more)
 
 ### Community 82 - "test_sync_brand_to_tokens.py"
 Cohesion: 0.09
 Nodes (33): CompletedProcess, Path, Regression test for sync-brand-to-tokens.cjs. The color parser required a…, The missing-guidelines path is the one that breaks a locale-decoded pipe. It is…, A first sync should create assets/ instead of failing with ENOENT., The script must not silently replace its own existing token source., Common app CSS token sources must be named instead of duplicated., A :root selector list is still an existing project token source. (+25 more)
 
-### Community 83 - "GymClass"
-Cohesion: 0.08
-Nodes (7): GymClass, Entity, org.hibernate.annotations.Check, PreUpdate, Table, ClassSessionDto, GymClassDto
+### Community 83 - ".decide"
+Cohesion: 0.20
+Nodes (4): Decision, Request, MembershipCancellationRequest, MembershipCancellationServiceTest
 
 ### Community 84 - "__init__.py"
 Cohesion: 0.19
@@ -957,57 +943,61 @@ Nodes (28): Absolute Don'ts, Approved Backgrounds, Before Using Logo, Clear Spac
 Cohesion: 0.07
 Nodes (28): Alert, Anatomy, Anatomy, Anatomy, Anatomy, Anatomy, Badge, Button (+20 more)
 
-### Community 87 - "org.springframework.data.domain.Pageable"
-Cohesion: 0.15
-Nodes (9): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal, NotificationDto, SupportRequestRepository, org.springframework.data.domain.Page (+1 more)
+### Community 87 - "graphify reference: query, path, explain"
+Cohesion: 0.33
+Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
 
 ### Community 88 - "TriggerProvidersTest.java"
-Cohesion: 0.07
-Nodes (24): anystring, CenterCheckinSchemaUpgrade, Override, PostgreSqlTriggerProvider, DatabaseTriggerInitializerTest, JdbcTemplate, SQLException, TriggerProvidersTest (+16 more)
+Cohesion: 0.08
+Nodes (21): anystring, CenterCheckinSchemaUpgrade, PostgreSqlDataSecurityInitializerTest, argumentmatchers, assertfalse, connection, connectioncallback, databasemetadata (+13 more)
 
 ### Community 89 - "search"
 Cohesion: 0.03
-Nodes (62): _contains_phrase(), detect_domain(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _exact_stack_identifier(), _file_signature(), _get_bm25() (+54 more)
+Nodes (61): _contains_phrase(), _domain_keywords(), _exact_match_diagnostic(), _exact_row_identity(), _exact_stack_identifier(), _file_signature(), _get_bm25(), _legacy_successor_guidance() (+53 more)
 
-### Community 90 - "Role"
-Cohesion: 0.07
-Nodes (8): Entity, org.hibernate.annotations.Check, Table, Receptionist, Entity, Table, Role, Override
+### Community 90 - ".findByIdAndDeletedAtIsNull"
+Cohesion: 0.09
+Nodes (7): CoachProfileUpdateDto, ReceptionistProfileUpdateDto, Entity, org.hibernate.annotations.Check, Table, Receptionist, ProfileControllerTest
 
 ### Community 91 - "MemberProgressLog"
 Cohesion: 0.11
-Nodes (3): Entity, Table, MemberProgressLog
+Nodes (7): HealthMetricCreateDto, HealthMetricDto, Entity, Table, MemberProgressLog, HealthMetricService, HealthMetricControllerTest
 
 ### Community 92 - "Notification"
 Cohesion: 0.11
 Nodes (4): Entity, org.hibernate.annotations.Check, Table, Notification
 
-### Community 93 - "client.ts"
-Cohesion: 0.07
-Nodes (44): getGoogleOAuthAuthorizeUrl(), googleLoginWithIdToken(), googleOAuthCallback(), GoogleOAuthCallbackInput, GoogleOAuthResponse, googleRedeemHandoff(), googleSendOtp(), GoogleSendOtpResponse (+36 more)
+### Community 93 - "LuxuryLoginForm.tsx"
+Cohesion: 0.11
+Nodes (25): getGoogleOAuthAuthorizeUrl(), googleLoginWithIdToken(), googleOAuthCallback(), GoogleOAuthCallbackInput, GoogleOAuthResponse, googleRedeemHandoff(), googleSendOtp(), GoogleSendOtpResponse (+17 more)
 
 ### Community 94 - "PHẦN 2: KỊCH BẢN TRÌNH BÀY THEO 6 TÍNH NĂNG (UI/UX + BACKEND ĐẦY ĐỦ)"
 Cohesion: 0.07
 Nodes (27): 1.1. Tóm tắt kết quả Sprint 2 (Mở đầu 1 phút), 1.2. Chuẩn bị máy tính trước khi vào báo cáo 10 phút, Bước 1: Demo Giao diện & Swagger UI cho Hồ sơ, Thông báo, Phiếu hỗ trợ & RBAC (Tài trình bày), Bước 1: Demo Giao diện UI/UX Báo cáo Doanh thu (`/manager/reports` — Khoa trình bày), Bước 1: Demo Giao diện UI/UX (`/staff/classes` — Khoa trình bày), Bước 1: Demo Giao diện UI/UX Đặt lớp & Hàng chờ (`/member/classes` — Thịnh trình bày), Bước 1: Demo UI/UX Hội viên tự chọn mua/gia hạn gói tập (`/member` & `/member/packages` — Thịnh trình bày), Bước 1: Demo UI/UX Thẻ Hội viên Điện tử (`/member/card` — Thịnh trình bày) (+19 more)
 
-### Community 95 - "TrainingPlanItemCreateDto"
-Cohesion: 0.08
-Nodes (5): TrainingPlanItemCreateDto, Entity, org.hibernate.annotations.Check, Table, TrainingPlanItem
+### Community 96 - "UserDto"
+Cohesion: 0.05
+Nodes (16): Audited, org.springframework.beans.factory.annotation.Autowired, UserDto, UserUpdateDto, IdentitySeeder, UserMapper, RoleRepository, UserService (+8 more)
 
 ### Community 97 - "PaymentDto"
-Cohesion: 0.04
-Nodes (4): PaymentCreateDto, PaymentDto, ObjectMapper, PaymentControllerTest
+Cohesion: 0.05
+Nodes (3): PaymentDto, PaymentRefundRequest, PaymentControllerTest
+
+### Community 98 - "PostgreSqlDatabaseIntegrationTest"
+Cohesion: 0.23
+Nodes (3): Test, PostgreSqlDatabaseIntegrationTest, org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 
 ### Community 99 - "bigdecimal"
-Cohesion: 0.08
-Nodes (13): PaymentStatusUpdateRequest, DailyRevenueDto, arraylist, bigdecimal, constraints, decimalmin, generatedcolumn, io.swagger.v3.oas.annotations.media.Schema (+5 more)
+Cohesion: 0.06
+Nodes (16): GoogleVerifyOtpRequest, RegisterRequest, PaymentStatusUpdateRequest, DailyRevenueDto, PackageRevenueDto, arraylist, bigdecimal, decimalmin (+8 more)
 
 ### Community 100 - "3. Chi tiết Kế hoạch cá nhân Sprint 3 (Định dạng Jira Tickets)"
-Cohesion: 0.22
-Nodes (9): 1. Lịch sinh hoạt Scrum (Sprint 3), 2. Bảng tổng hợp Jira Backlog Sprint 3 (46 Tickets / 91 Points), 3. Chi tiết Kế hoạch cá nhân Sprint 3 (Định dạng Jira Tickets), 🟣 KHOA — Frontend (Staff & Admin Console) — 16 Story Points, 📌 SCRUM-121: [UI Coach] Xây dựng Màn hình Danh sách Lớp & Học viên Phụ trách của HLV, 📌 SCRUM-122: [UI Coach] Xây dựng Giao diện Soạn Giáo án Bài tập Tích hợp AI Gợi ý, 📌 SCRUM-123: [UI Coach] Hoàn thiện Màn hình HLV Điểm danh Buổi học & Đánh giá (Attendance), 📌 SCRUM-124: [UI Manager] Xây dựng Màn hình Giám sát Audit Log & Báo cáo Lấp đầy Lớp (+1 more)
+Cohesion: 0.07
+Nodes (27): 1. Lịch sinh hoạt Scrum (Sprint 3), 2. Bảng tổng hợp Jira Backlog Sprint 3 (46 Tickets / 91 Points), 3. Chi tiết Kế hoạch cá nhân Sprint 3 (Định dạng Jira Tickets), 🟢 AN — Backend (Core Operations & Membership Squad) — 18 Story Points, 🟣 KHOA — Frontend (Staff & Admin Console) — 16 Story Points, 📌 SCRUM-106: [Support] Xây dựng Hệ thống Trao đổi trong Phiếu Hỗ trợ (Support Messages), 📌 SCRUM-107: [Scheduler] Xây dựng Background Jobs Thông báo Tự động (Expiry & Reminders), 📌 SCRUM-108: [Notification] Tích hợp Bộ điều phối Thông báo Đa kênh (Multi-channel Port) (+19 more)
 
 ### Community 101 - "cursor-hooks.js"
-Cohesion: 0.12
-Nodes (22): getClaudeDir(), isShellSafe(), fs, hooksPath(), install(), isPonytailHook(), { isShellSafe }, os (+14 more)
+Cohesion: 0.22
+Nodes (15): isShellSafe(), fs, hooksPath(), install(), isPonytailHook(), { isShellSafe }, os, path (+7 more)
 
 ### Community 102 - "ponytail/package.json"
 Cohesion: 0.05
@@ -1030,8 +1020,8 @@ Cohesion: 0.08
 Nodes (25): Accessibility Patterns, Alternative: Tailwind-Only Setup, Best Practices, Common Patterns, Component Layer: shadcn/ui, Component Library Guide, Component + Styling Setup, Core Stack (+17 more)
 
 ### Community 107 - "3.2. Chi tiết từng Module và quan hệ khóa ngoại (FK)"
-Cohesion: 0.11
-Nodes (19): 1. Partial Unique Indexes (Đánh chỉ mục duy nhất có điều kiện), 2. Trigger kiểm tra sĩ số lớp học ([P2 — Class Capacity]), 3.1. Tổng quan 10 Modules & 33 Bảng CSDL, 3.2. Chi tiết từng Module và quan hệ khóa ngoại (FK), 3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Partial Indexes, 3. THIẾT KẾ CƠ SỞ DỮ LIỆU CHUYÊN SÂU (DATABASE SCHEMA DEEP-DIVE), 3. Trigger chống trùng lịch Huấn luyện viên & Phòng học ([P3 — Schedule Conflict]), 4. Trigger kiểm tra gói thành viên còn hạn ([P4 — Membership Validation]) (+11 more)
+Cohesion: 0.18
+Nodes (11): 3.2. Chi tiết từng Module và quan hệ khóa ngoại (FK), Module A: Định danh & Phân quyền (Identity & RBAC), Module B: Danh mục & Cơ sở vật chất, Module C: Gói thành viên, Module D: Lớp học & Lịch học, Module E: Check-in & Điểm danh, Module F: Thanh toán & Báo cáo, Module G: Huấn luyện & Đánh giá thể lực (+3 more)
 
 ### Community 108 - "Color Palette Management"
 Cohesion: 0.08
@@ -1050,24 +1040,20 @@ Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native AGENTS.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 112 - "tasteskill: Anti-Slop Frontend Skill"
-Cohesion: 0.13
-Nodes (15): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 1.A Dial Inference (design read → dial values) (+7 more)
+Cohesion: 0.18
+Nodes (11): 0.A Read these signals first, 0.B Output a one-line "Design Read" before generating, 0. BRIEF INFERENCE (Read the Room Before Anything Else), 0.C If the brief is ambiguous, ask one question, do not guess, 0.D Anti-Default Discipline, 13. OUT OF SCOPE, 14. FINAL PRE-FLIGHT CHECK, 2.A When to reach for a real design system (use official packages) (+3 more)
 
-### Community 113 - "GlobalExceptionHandlerTriggerTest.java"
-Cohesion: 0.25
-Nodes (7): assertinstanceof, hibernatejpadialect, jdbcexception, postgresqldialect, sqlstateconversiondelegate, standardsqlexceptionconverter, stream
+### Community 113 - "DatabaseProfilesTest"
+Cohesion: 0.19
+Nodes (7): ApplicationContextRunner, DatabaseProfilesTest, autoconfigurations, configdataapplicationcontextinitializer, datasourceautoconfiguration, hikaridatasource, org.springframework.boot.test.context.runner.ApplicationContextRunner
 
-### Community 114 - ".ok"
+### Community 114 - "AuthController.java"
 Cohesion: 0.11
-Nodes (16): AuthController, PostMapping, RequestMapping, RestController, AuthTokenResponse, GoogleHandoffRequest, GoogleOAuthResponse, DeleteMapping (+8 more)
+Nodes (13): AuthController, GetMapping, PostMapping, RequestMapping, RestController, GoogleHandoffRequest, GoogleOAuthResponse, RegistrationResponse (+5 more)
 
-### Community 115 - ".createUser"
-Cohesion: 0.09
-Nodes (10): Audited, UserCreateDto, UserUpdateDto, UserMapper, UserService, UserServiceTest, elementtype, java.lang.annotation.Retention (+2 more)
-
-### Community 116 - "correctness.js"
-Cohesion: 0.10
-Nodes (17): CHECKS, correctnessTimeoutMs(), exec(), { execSync }, fs, os, path, python() (+9 more)
+### Community 116 - "cursor-hooks.test.js"
+Cohesion: 0.06
+Nodes (23): CHECKS, correctnessTimeoutMs(), exec(), { execSync }, fs, os, path, python() (+15 more)
 
 ### Community 117 - "Workflow"
 Cohesion: 0.08
@@ -1079,11 +1065,11 @@ Nodes (23): Best Practices, Chart.js Integration, Command, Component Spec Patter
 
 ### Community 119 - "ReportSnapshotDto"
 Cohesion: 0.05
-Nodes (8): ReportSnapshotCreateDto, ReportSnapshotDto, Entity, org.hibernate.annotations.Check, Table, ReportSnapshot, ReportSnapshotRepository, ReportSnapshotDto
+Nodes (7): ReportSnapshotCreateDto, ReportSnapshotDto, Entity, org.hibernate.annotations.Check, Table, ReportSnapshot, ReportSnapshotDto
 
 ### Community 120 - "GoogleIdTokenVerifierAdapter.java"
 Cohesion: 0.13
-Nodes (17): GoogleUserInfo, GoogleIdTokenVerifierAdapter, Override, GoogleTokenVerifierPort, com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier, com.google.api.client.http.GenericUrl, com.google.api.client.http.HttpTransport, com.google.api.client.json.GenericJson (+9 more)
+Nodes (16): GoogleUserInfo, GoogleIdTokenVerifierAdapter, Override, com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier, com.google.api.client.http.GenericUrl, com.google.api.client.http.HttpTransport, com.google.api.client.json.GenericJson, com.google.api.client.json.gson.GsonFactory (+8 more)
 
 ### Community 121 - "fetch-background.py"
 Cohesion: 0.16
@@ -1093,21 +1079,21 @@ Nodes (17): generate_css_for_background(), get_background_image(), get_curated_i
 Cohesion: 0.09
 Nodes (22): @apply Directive, Best Practices, Color Customization, Complete Tailwind Config, Configuration Examples, Content Configuration, Custom Color Palette, Custom Font Sizes (+14 more)
 
-### Community 123 - "MembershipSubscriptionService"
-Cohesion: 0.10
-Nodes (5): HoldRequestDto, PendingSubscriptionDto, SubscriptionDto, SubscriptionResponses, MembershipSubscriptionService
+### Community 123 - "MembershipSubscription"
+Cohesion: 0.08
+Nodes (12): HoldRequest, HoldRequestDto, PendingSubscriptionDto, SubscriptionDto, SubscriptionResponses, Entity, org.hibernate.annotations.Check, PreUpdate (+4 more)
 
 ### Community 124 - "MemberDashboardPage.tsx"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (16): apps_web_src_features_member_member_board, BookedClass, getBookedEnrollments(), getCurrentMembership(), MemberSubscription, ClassesState, dayNumber(), formatDate() (+8 more)
 
 ### Community 125 - "object"
 Cohesion: 0.20
 Nodes (3): AtlasGenerationTests, MuapiGenerationTests, object
 
-### Community 126 - "color"
-Cohesion: 0.15
-Nodes (21): $type, $value, $type, $value, 500, 600, blue, green (+13 more)
+### Community 126 - "DisciplineService"
+Cohesion: 0.28
+Nodes (4): DisciplineRequest, DisciplineService, Discipline, DisciplineServiceTest
 
 ### Community 127 - "Appendix B - Canonical Sources (read these before reinventing)"
 Cohesion: 0.13
@@ -1117,41 +1103,41 @@ Nodes (15): Appendix B - Canonical Sources (read these before reinventing), Appl
 Cohesion: 0.06
 Nodes (30): 10. FINAL PRE-FLIGHT CHECK, 1. ACTIVE BASELINE CONFIGURATION, 2. DEFAULT ARCHITECTURE & CONVENTIONS, 3. DESIGN ENGINEERING DIRECTIVES (Bias Correction), 4. CREATIVE PROACTIVITY (Anti-Slop Implementation), 5. PERFORMANCE GUARDRAILS, 6. TECHNICAL REFERENCE (Dial Definitions), 7. AI TELLS (Forbidden Patterns) (+22 more)
 
-### Community 129 - "pathlib"
-Cohesion: 0.07
-Nodes (33): main(), Delegate to unified html-token-validator.py with --type slides., CompletedProcess, Path, Regression tests for validate-tokens.cjs. The validator used to skip any line…, A hardcoded hex on the same line as a var() token is still a violation., A line that references only tokens produces no false positives., _run() (+25 more)
+### Community 129 - "design_system.py"
+Cohesion: 0.04
+Nodes (69): call_ollama(), count_loc(), load_arms(), main(), Ponytail local benchmark — runs the same 5 tasks against any Ollama model. No…, Non-blank, non-comment lines of code: fenced blocks, or the whole response when…, run(), main() (+61 more)
 
 ### Community 130 - "DynamicQrService"
-Cohesion: 0.17
-Nodes (6): annotationconfigapplicationcontext, DynamicQrDto, DynamicQrService, VerificationResult, DynamicQrServiceTest, mappropertysource
+Cohesion: 0.19
+Nodes (5): annotationconfigapplicationcontext, DynamicQrService, VerificationResult, DynamicQrServiceTest, mappropertysource
 
-### Community 131 - "AiRecommendationLog"
-Cohesion: 0.13
-Nodes (3): AiRecommendationLog, Entity, Table
-
-### Community 132 - "SchedulingServiceTest.java"
-Cohesion: 0.07
-Nodes (27): SessionEvaluationCreateDto, SessionEvaluationDto, Entity, Table, SessionEvaluation, SessionEvaluationRepository, SessionEvaluationService, DisciplineRepository (+19 more)
-
-### Community 133 - "ClassEnrollment"
+### Community 131 - "Discipline"
 Cohesion: 0.12
-Nodes (5): ClassEnrollment, Entity, org.hibernate.annotations.Check, Table, EnrollmentDto
+Nodes (5): CatalogResponses, Discipline, Entity, PrePersist, Table
 
-### Community 134 - "Permission"
+### Community 132 - "Coach"
+Cohesion: 0.04
+Nodes (16): Entity, org.hibernate.annotations.Check, Table, SessionAttendance, SessionEvaluationCreateDto, Entity, Table, SessionEvaluation (+8 more)
+
+### Community 133 - "Room"
 Cohesion: 0.12
-Nodes (4): Entity, Table, Permission, PermissionRepository
+Nodes (4): Entity, org.hibernate.annotations.Check, Table, Room
+
+### Community 134 - "Role"
+Cohesion: 0.05
+Nodes (14): PermissionDto, RoleDto, Entity, Table, Permission, Entity, Table, Role (+6 more)
 
 ### Community 135 - "scripts"
 Cohesion: 0.08
 Nodes (24): author, description, keywords, license, name, private, scripts, build (+16 more)
 
-### Community 136 - "org.springframework.stereotype.Component"
+### Community 136 - "SmtpOtpDeliveryAdapter.java"
 Cohesion: 0.16
-Nodes (11): org.springframework.beans.factory.annotation.Autowired, Override, SmtpOtpDeliveryAdapter, Override, UnavailableOtpDeliveryAdapter, ServiceUnavailableException, org.springframework.boot.autoconfigure.condition.ConditionalOnProperty, org.springframework.mail.javamail.JavaMailSender (+3 more)
+Nodes (10): org.springframework.beans.factory.annotation.Autowired, Override, SmtpOtpDeliveryAdapter, Override, UnavailableOtpDeliveryAdapter, ServiceUnavailableException, org.springframework.boot.autoconfigure.condition.ConditionalOnProperty, org.springframework.mail.javamail.JavaMailSender (+2 more)
 
 ### Community 137 - "3. Chi tiết Kế hoạch cá nhân Sprint 2 (Định dạng Jira Tickets)"
-Cohesion: 0.14
-Nodes (14): 1. Lịch sinh hoạt Scrum (Sprint 2), 2. Bảng tổng hợp Jira Backlog Sprint 2 (104 Points theo cập nhật Jira), 3. Chi tiết Kế hoạch cá nhân Sprint 2 (Định dạng Jira Tickets), 🟣 KHOA — Frontend (Staff & Admin Console) — 18 Story Points, 📌 SCRUM-81: [UI Staff] Hoàn thiện Màn hình Quản lý Lớp học & Xếp lịch HLV (StaffClassesPage), 📌 SCRUM-82: [UI Staff] Hoàn thiện Màn hình Lễ tân: Tra cứu & Thu ngân tại quầy (StaffReception), 📌 SCRUM-83: [UI Staff] Hoàn thiện Màn hình Quét QR Check-in Sảnh (StaffCheckInPage), 📌 SCRUM-84: [UI Manager] Hoàn thiện Màn hình Báo cáo Doanh thu Trung tâm (ManagerReports) (+6 more)
+Cohesion: 0.08
+Nodes (26): 1. Lịch sinh hoạt Scrum (Sprint 2), 2. Bảng tổng hợp Jira Backlog Sprint 2 (104 Points theo cập nhật Jira), 3. Chi tiết Kế hoạch cá nhân Sprint 2 (Định dạng Jira Tickets), 🟢 AN — Backend (Core Operations & Membership Squad) — 23 Story Points, 🟣 KHOA — Frontend (Staff & Admin Console) — 18 Story Points, 📌 SCRUM-66: [Identity] Mở rộng API cập nhật Hồ sơ cá nhân Coach & Receptionist, 📌 SCRUM-67: [Notification] Xây dựng Notification Module & In-App Notification API, 📌 SCRUM-68: [Support] Xây dựng Support Requests Module (Ticket Management) (+18 more)
 
 ### Community 138 - "Visual Companion Guide"
 Cohesion: 0.10
@@ -1177,9 +1163,9 @@ Nodes (19): Bulletproofing Elements, Creation Log: Systematic Debugging Skill, E
 Cohesion: 0.10
 Nodes (19): Base Color Presets, Best Practices, Color Customization, Color Format, Component Customization, CSS Variable System, Customize Styles, Customize Variants (+11 more)
 
-### Community 144 - "WebConfig.java"
-Cohesion: 0.32
-Nodes (4): Override, WebConfig, org.springframework.web.servlet.config.annotation.CorsRegistry, org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+### Community 144 - "RoomRequest"
+Cohesion: 0.29
+Nodes (5): RoomRequest, RoomDto, PutMapping, Room, RoomServiceTest
 
 ### Community 146 - "🏛️ SÖL Wellness Sanctuary — Sports Center Management System (SCMS)"
 Cohesion: 0.11
@@ -1189,9 +1175,9 @@ Nodes (19): 1. Trang chủ & Cổng Đăng nhập (`/` & `/login`), 2. Phân h�
 Cohesion: 0.11
 Nodes (18): Asset Entry (manifest.json), Asset Organization Guide, By Campaign, By Status, By Type, Cleanup Workflow, Components, Directory Structure (+10 more)
 
-### Community 148 - "react"
+### Community 148 - "DisciplinesSection.tsx"
 Cohesion: 0.06
-Nodes (27): LANDING_IMAGES, ArrowButton(), ArrowButtonProps, FullpageScrollManagerProps, SECTION_NAMES, RevealImage(), RevealImageProps, DISCIPLINES_LIST (+19 more)
+Nodes (31): LANDING_IMAGES, ArrowButton(), ArrowButtonProps, InfiniteMarquee(), InfiniteMarqueeProps, RevealImage(), RevealImageProps, DISCIPLINES_LIST (+23 more)
 
 ### Community 149 - "Primary Color Meanings"
 Cohesion: 0.11
@@ -1202,16 +1188,16 @@ Cohesion: 0.11
 Nodes (18): 1. Wordmark (Logotype), 2. Lettermark (Monogram), 3. Pictorial Mark (Brand Mark), 4. Abstract Mark, 5. Mascot, 6. Emblem, 7. Combination Mark, Aesthetic Styles (+10 more)
 
 ### Community 152 - "gray"
-Cohesion: 0.09
-Nodes (23): $type, $value, $type, $value, $type, $value, $type, $value (+15 more)
+Cohesion: 0.05
+Nodes (53): $type, $value, $type, $value, $type, $value, $type, $value (+45 more)
 
 ### Community 153 - ".authenticateGoogle"
-Cohesion: 0.17
-Nodes (4): GoogleLoginRequest, GoogleAuthServiceTest, org.junit.jupiter.params.ParameterizedTest, org.junit.jupiter.params.provider.CsvSource
+Cohesion: 0.15
+Nodes (5): GoogleLoginRequest, GoogleTokenVerifierPort, GoogleAuthServiceTest, org.junit.jupiter.params.ParameterizedTest, org.junit.jupiter.params.provider.CsvSource
 
 ### Community 154 - "color"
-Cohesion: 0.11
-Nodes (19): $type, $value, background, foreground, muted-foreground, primary, primary-hover, secondary (+11 more)
+Cohesion: 0.05
+Nodes (37): $type, $value, background, destructive, destructive-foreground, foreground, muted, muted-foreground (+29 more)
 
 ### Community 155 - "Session diagnosis: <session-id>"
 Cohesion: 0.11
@@ -1221,9 +1207,9 @@ Nodes (18): 1. Problem statement (REQUIRED), 2. Triage verdict (REQUIRED), 3. En
 Cohesion: 0.10
 Nodes (19): Code Quality, Color and Surfaces, Component Patterns, Content, Design Audit, Fix Priority, How This Works, Iconography (+11 more)
 
-### Community 157 - "SupportRequestServiceTest.java"
-Cohesion: 0.15
-Nodes (6): NotificationMapper, NotificationServiceTest, assertthat, assertthatthrownby, page, pageable
+### Community 157 - "RoleController"
+Cohesion: 0.22
+Nodes (7): DeleteMapping, GetMapping, org.springframework.beans.factory.annotation.Autowired, PutMapping, RequestMapping, RestController, RoleController
 
 ### Community 158 - "Brand Consistency Checklist"
 Cohesion: 0.11
@@ -1246,8 +1232,8 @@ Cohesion: 0.11
 Nodes (18): 1. Define the Atmosphere, 2. Map the Color Palette, 3. Establish Typography Rules, 4. Define the Hero Section, 5. Describe Component Stylings, 6. Define Layout Principles, 7. Define Responsive Rules, 8. Encode Motion Philosophy (+10 more)
 
 ### Community 163 - "docs/README.md"
-Cohesion: 0.12
-Nodes (12): ADR 0001: Modular monolith for MVP, Consequences, Decision, API contract workflow, 1. Kế Hoạch Tổng Thể & Sprint Backlog (Jira), 2. Kế Hoạch Triển Khai Tính Năng (Feature Implementation Plans), 3. Liên Kết Tài Liệu Hướng Dẫn Kỹ Thuật, KẾ HOẠCH DỰ ÁN & TIẾN ĐỘ PHÁT TRIỂN (PROJECT PLANS & ROADMAP) (+4 more)
+Cohesion: 0.09
+Nodes (16): ADR 0001: Modular monolith for MVP, Consequences, Decision, API contract workflow, Chạy local SCMS với Supabase PostgreSQL, Cấu hình, Khởi chạy, Xử lý sự cố (+8 more)
 
 ### Community 164 - "Install"
 Cohesion: 0.12
@@ -1298,16 +1284,16 @@ Cohesion: 0.19
 Nodes (9): checkinApi, CheckinDto, CheckinHistoryFilter, ScanCheckinPayload, apps_web_src_features_reception_staff_check_in, formatTime(), isCheckinGranted(), StaffCheckInPage() (+1 more)
 
 ### Community 176 - "Chạy SCMS trên Supabase PostgreSQL — SCRUM-91"
-Cohesion: 0.10
-Nodes (16): Database Supabase PostgreSQL, Chạy local SCMS với Supabase PostgreSQL, Cấu hình, Khởi chạy, Xử lý sự cố, Chạy SCMS trên Supabase PostgreSQL — SCRUM-91, Khởi động, Kiểm thử trên PostgreSQL thật (+8 more)
+Cohesion: 0.13
+Nodes (12): Database Supabase PostgreSQL, Chạy SCMS trên Supabase PostgreSQL — SCRUM-91, Khởi động, Kiểm thử trên PostgreSQL thật, Lấy thông tin kết nối, Nguồn, SSL, pooler và Data API, BỘ CÔNG CỤ KHỞI CHẠY HỆ THỐNG (LOCAL RUNNER SCRIPTS) (+4 more)
 
 ### Community 177 - "compilerOptions"
 Cohesion: 0.10
 Nodes (19): compilerOptions, esModuleInterop, isolatedModules, jsx, lib, module, moduleResolution, noEmit (+11 more)
 
 ### Community 178 - "router.tsx"
-Cohesion: 0.06
-Nodes (45): router, LoginPage(), clubMetrics, dailyRhythmItems, faqs, FitnessLanding(), journeySteps, manifestoWords (+37 more)
+Cohesion: 0.10
+Nodes (30): router, LoginPage(), FitnessLanding(), Navbar(), NavbarProps, AuthLayout(), links, PublicLayout() (+22 more)
 
 ### Community 179 - "CIP Design Reference"
 Cohesion: 0.13
@@ -1329,9 +1315,9 @@ Nodes (14): Common Rationalizations, Finishing a Development Branch, If your hum
 Cohesion: 0.13
 Nodes (14): AIDA (Attention-Interest-Desire-Action), Before-After-Bridge, Contrast Patterns, Copywriting Formulas, Core Formulas, Cost of Inaction, FAB (Features-Advantages-Benefits), Formula-to-Slide Mapping (+6 more)
 
-### Community 184 - "GoogleAuthServiceTest.java"
-Cohesion: 0.11
-Nodes (17): org.springframework.beans.factory.annotation.Autowired, GoogleOAuthCallbackRequest, UnauthorizedException, IdentitySeeder, RoleRepository, authtokenresponse, base64, com.fasterxml.jackson.annotation.JsonIgnore (+9 more)
+### Community 184 - "RoomService"
+Cohesion: 0.22
+Nodes (7): CatalogSeeder, Override, RoomService, CatalogSeederTest, disciplinerequest, packagerequest, roomrequest
 
 ### Community 186 - "Using Git Worktrees"
 Cohesion: 0.13
@@ -1417,9 +1403,9 @@ Nodes (5): 1. Bắt buộc đọc Rules & Tài liệu trước khi làm việc, 
 Cohesion: 0.15
 Nodes (12): OpenApiConfig, components, contact, info, io.swagger.v3.oas.models.OpenAPI, license, OpenAPI, org.springdoc.core.models.GroupedOpenApi (+4 more)
 
-### Community 208 - "ManagerReportsPage.tsx"
-Cohesion: 0.10
-Nodes (21): csvText(), formatTransactionTime(), ManagerReportsPage(), paymentMethods, api, vnd(), CreateSnapshotPayload, DailyRevenue (+13 more)
+### Community 208 - "react"
+Cohesion: 0.05
+Nodes (35): CatalogPackages(), CatalogSchedule(), CatalogStatus(), CatalogTrainers(), clubMetrics, dailyRhythmItems, faqs, journeySteps (+27 more)
 
 ### Community 209 - "ponytail/README.md"
 Cohesion: 0.15
@@ -1446,8 +1432,12 @@ Cohesion: 0.15
 Nodes (12): Categories, Dark Mode, File Organization, Layer 1: Primitive Tokens, Layer 2: Semantic Tokens, Layer 3: Component Tokens, Layer Overview, Migration from Flat Tokens (+4 more)
 
 ### Community 215 - "design-tokens-starter.json"
-Cohesion: 0.15
-Nodes (12): component, $type, $value, dark, semantic, $schema, $type, $value (+4 more)
+Cohesion: 0.17
+Nodes (11): $type, $value, dark, semantic, $schema, $type, $value, semantic (+3 more)
+
+### Community 216 - "hermes-plugin.test.js"
+Cohesion: 0.18
+Nodes (11): assert, commands, fs, os, path, python(), pythonExe(), root (+3 more)
 
 ### Community 217 - "ponytail-mcp/package.json"
 Cohesion: 0.14
@@ -1458,28 +1448,28 @@ Cohesion: 0.15
 Nodes (13): Common Mistakes (Same as TDD), GREEN Phase: Write Minimal Skill (Make It Pass), Meta-Testing (When GREEN Isn't Working), Overview, Quick Reference (TDD Cycle), Real-World Impact, RED Phase: Baseline Testing (Watch It Fail), TDD Mapping for Skill Testing (+5 more)
 
 ### Community 219 - "org.junit.jupiter.api.Test"
+Cohesion: 0.04
+Nodes (19): GoogleOtpRequest, GetMapping, AuthControllerTest, ObjectMapper, GoogleIdTokenVerifierAdapterTest, org.junit.jupiter.params.ParameterizedTest, org.junit.jupiter.params.provider.ValueSource, MessageBundlesConsistencyTest (+11 more)
+
+### Community 220 - "ClassServiceTest.java"
+Cohesion: 0.08
+Nodes (21): CatalogDto, CoachDto, PublicCatalogService, DisciplineRepository, MembershipPackageRepository, RoomRepository, CreateClassRequest, CreateSessionRequest (+13 more)
+
+### Community 221 - "AiRecommendationController"
+Cohesion: 0.29
+Nodes (5): AiRecommendationController, GetMapping, PostMapping, RequestMapping, RestController
+
+### Community 222 - "ref_node_test"
 Cohesion: 0.06
-Nodes (18): ApplicationContextRunner, Scan, CenterCheckinServiceTest, GoogleIdTokenVerifierAdapterTest, org.junit.jupiter.params.ParameterizedTest, org.junit.jupiter.params.provider.ValueSource, MessageBundlesConsistencyTest, CodeFirstSchemaTest (+10 more)
-
-### Community 220 - ".createSession"
-Cohesion: 0.11
-Nodes (6): CreateClassRequest, CreateSessionRequest, SchedulingRequests, ClassSessionDto, GymClassDto, SchedulingResponses
-
-### Community 221 - "InvoiceServiceTest.java"
-Cohesion: 0.24
-Nodes (9): InvoiceMapper, InvoiceRepository, InvoiceService, assertnull, invoice, invoicecreatedto, invoicedto, invoiceitem (+1 more)
-
-### Community 222 - "cursor-hooks.test.js"
-Cohesion: 0.05
-Nodes (36): CHECKS, agents_plugins_ponytail_hooks_ponytail_runtime_iscursor, assert, behavior, check(), test, assert, fs (+28 more)
+Nodes (29): CHECKS, agents_plugins_ponytail_hooks_ponytail_runtime_isqoder, assert, behavior, check(), test, assert, commands (+21 more)
 
 ### Community 223 - "DisciplineDto"
-Cohesion: 0.10
-Nodes (17): DisciplineController, GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, PutMapping, RequestMapping, RestController, CatalogResponses (+9 more)
-
-### Community 224 - "EnrollmentController"
 Cohesion: 0.22
-Nodes (8): EnrollmentDto, EnrollmentController, DeleteMapping, GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, RequestMapping, RestController
+Nodes (8): DisciplineController, GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, PutMapping, RequestMapping, RestController, DisciplineDto
+
+### Community 224 - "WaitlistController"
+Cohesion: 0.10
+Nodes (15): EnrollmentDto, EnrollmentResponses, WaitlistDto, EnrollmentController, DeleteMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, RequestMapping (+7 more)
 
 ### Community 225 - "compilerOptions"
 Cohesion: 0.13
@@ -1498,7 +1488,7 @@ Cohesion: 0.18
 Nodes (11): assert, fs, loadManifest(), path, read(), REUSED_COMMANDS, REUSED_SKILLS, root (+3 more)
 
 ### Community 229 - "generate-examples.mjs"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (17): isHaiku(), j, meta, pick(), rows, tbl, ref_node_fs, ref_node_path (+9 more)
 
 ### Community 230 - "Primitive Tokens"
@@ -1511,7 +1501,7 @@ Nodes (11): extensions, formatReport(), fs, getFiles(), main(), parseArgs(), pat
 
 ### Community 232 - "card"
 Cohesion: 0.20
-Nodes (12): $type, $value, bg, bg, padding, shadow, card, bg (+4 more)
+Nodes (12): radius, padding, radius, shadow, card, radius, $type, $value (+4 more)
 
 ### Community 233 - "Defense-in-Depth Validation"
 Cohesion: 0.17
@@ -1521,13 +1511,13 @@ Nodes (11): Applying the Pattern, Defense-in-Depth Validation, Example from Sess
 Cohesion: 0.17
 Nodes (12): 4.10 Quotes & Testimonials, 4.11 Page Theme Lock (Light / Dark Mode Consistency), 4.1 Typography, 4.2 Color Calibration, 4.3 Layout Diversification, 4.4 Materiality, Shadows, Cards, 4.5 Interactive UI States, 4.6 Data & Form Patterns (+4 more)
 
-### Community 235 - "CenterCheckinController"
-Cohesion: 0.29
-Nodes (5): CenterCheckinController, GetMapping, PostMapping, RequestMapping, RestController
+### Community 235 - "RoomController"
+Cohesion: 0.24
+Nodes (6): GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, RequestMapping, RestController, RoomController
 
-### Community 236 - "GoogleOAuthRedirectService"
-Cohesion: 0.12
-Nodes (10): GoogleOAuthResult, GoogleOAuthRedirectService, PendingLogin, PendingState, GoogleOAuthRedirectServiceTest, jakarta.servlet.http.HttpSession, java.net.URI, MockHttpSession (+2 more)
+### Community 236 - "AuthTokenResponse"
+Cohesion: 0.09
+Nodes (14): AuthTokenResponse, GoogleOAuthResult, GoogleOAuthRedirectService, PendingLogin, PendingState, LoginRequest, org.springframework.data.jpa.repository.Query, GoogleOAuthRedirectServiceTest (+6 more)
 
 ### Community 237 - "Writing Plans"
 Cohesion: 0.17
@@ -1537,12 +1527,8 @@ Nodes (11): Bite-Sized Task Granularity, Execution Handoff, File Structure, No P
 Cohesion: 0.17
 Nodes (12): Advanced: Skills with executable code, [Analysis Title], Anti-patterns to avoid, Avoid offering too many options, Avoid Windows-style paths, Conditional workflow pattern, Examples pattern, Executive summary (+4 more)
 
-### Community 239 - "RoleControllerTest"
-Cohesion: 0.24
-Nodes (3): PermissionDto, RoleDto, RoleControllerTest
-
 ### Community 240 - "SCRUM-91 — Chuyển sang Supabase PostgreSQL bằng Code-First"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (7): File dự kiến thay đổi, Kiểm chứng và giới hạn, Mục tiêu và quyết định đã chốt, Nguồn kỹ thuật, SCRUM-91 — Chuyển sang Supabase PostgreSQL bằng Code-First, Thiết kế được đề xuất, Đối chiếu codebase
 
 ### Community 241 - "3. Các Bước Thực Hiện Chi Tiết (Bite-Sized Tasks)"
@@ -1585,13 +1571,13 @@ Nodes (10): Bold Dynamic, CIP Design Style Guide, Classic Traditional, Color Psy
 Cohesion: 0.23
 Nodes (9): SecurityConfig, bcryptpasswordencoder, httpmethod, org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity, org.springframework.security.config.annotation.web.builders.HttpSecurity, org.springframework.security.config.annotation.web.configuration.EnableWebSecurity, org.springframework.security.web.SecurityFilterChain, sessioncreationpolicy (+1 more)
 
-### Community 251 - "embed-tokens.cjs"
-Cohesion: 0.18
-Nodes (8): args, fs, minimal, MINIMAL_TOKENS, path, projectRoot, tokensPath, wrapStyle
+### Community 251 - "3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Partial Indexes"
+Cohesion: 0.25
+Nodes (8): 1. Partial Unique Indexes (Đánh chỉ mục duy nhất có điều kiện), 2. Trigger kiểm tra sĩ số lớp học ([P2 — Class Capacity]), 3.1. Tổng quan 10 Modules & 33 Bảng CSDL, 3.3. Các ràng buộc nghiệp vụ nâng cao, Triggers & Partial Indexes, 3. THIẾT KẾ CƠ SỞ DỮ LIỆU CHUYÊN SÂU (DATABASE SCHEMA DEEP-DIVE), 3. Trigger chống trùng lịch Huấn luyện viên & Phòng học ([P3 — Schedule Conflict]), 4. Trigger kiểm tra gói thành viên còn hạn ([P4 — Membership Validation]), 5. Computed Columns STORED (Cột tính toán lưu vật lý)
 
 ### Community 252 - "io.swagger.v3.oas.annotations.Operation"
-Cohesion: 0.08
-Nodes (22): AiRecommendationController, GetMapping, PostMapping, RequestMapping, RestController, GetMapping, PostMapping, RequestMapping (+14 more)
+Cohesion: 0.06
+Nodes (35): CenterCheckinController, GetMapping, PostMapping, RequestMapping, RestController, CheckinDto, CheckinResponses, HealthMetricController (+27 more)
 
 ### Community 253 - "Returns: "OK" or lists conflicts"
 Cohesion: 0.18
@@ -1626,8 +1612,8 @@ Cohesion: 0.36
 Nodes (9): flattenTokens(), fs, generateCSS(), generateTailwind(), main(), parseArgs(), path, resolveReference() (+1 more)
 
 ### Community 261 - "button"
-Cohesion: 0.20
-Nodes (10): fg, font-size, hover-bg, button, $type, $value, $type, $value (+2 more)
+Cohesion: 0.09
+Nodes (28): $type, $value, bg, fg, font-size, hover-bg, padding-x, padding-y (+20 more)
 
 ### Community 262 - "ProfileController"
 Cohesion: 0.20
@@ -1665,13 +1651,13 @@ Nodes (6): mvnw script, clean(), die(), exec_maven(), set_java_home(), verbose()
 Cohesion: 0.40
 Nodes (4): Kiểm chứng, Những lỗi còn sót đã xử lý, Những lỗi đã được sửa trước lượt này, SCRUM-72 / SCRUM-73 / SCRUM-74 / SCRUM-75: review sau merge
 
-### Community 272 - ".join"
-Cohesion: 0.11
-Nodes (7): ClassWaitlist, Entity, org.hibernate.annotations.Check, Table, ClassWaitlistRepository, WaitlistDto, WaitlistService
+### Community 272 - "GymClass"
+Cohesion: 0.03
+Nodes (30): ClassEnrollment, Entity, org.hibernate.annotations.Check, Table, ClassSession, Entity, org.hibernate.annotations.Check, PreUpdate (+22 more)
 
 ### Community 273 - "CẨM NANG TOÀN TẬP DỰ ÁN HỆ THỐNG QUẢN LÝ TRUNG TÂM THỂ THAO (SPORTS CENTER MANAGEMENT SYSTEM)"
-Cohesion: 0.12
-Nodes (16): 1.1. Mục tiêu hệ thống, 1.2. Các chủ thể tham gia (6 Actors), 1. TỔNG QUAN ĐỀ TÀI & BỐI CẢNH NGHIỆP VỤ, 2. CẤU TRÚC THƯ MỤC & BẢN ĐỒ TÀI NGUYÊN KHO LƯU TRỮ, 5. HỆ THỐNG 12 BIỂU ĐỒ TRẠNG THÁI UML (12 STATE MACHINE DIAGRAMS), 6.1. Script sinh State Diagrams tự động: [build_state_diagrams.js](file:///d:/SWP391_PROJECT/SWP391/build_state_diagrams.js), 6.2. Script sinh Swimlane Diagrams tự động: [build_clean_swimlane.js](file:///d:/SWP391_PROJECT/SWP391/build_clean_swimlane.js), 6.3. Script kiểm thử tĩnh tính hợp lệ: [verify_diagrams.js](file:///d:/SWP391_PROJECT/SWP391/verify_diagrams.js) (+8 more)
+Cohesion: 0.17
+Nodes (12): 1.1. Mục tiêu hệ thống, 1.2. Các chủ thể tham gia (6 Actors), 1. TỔNG QUAN ĐỀ TÀI & BỐI CẢNH NGHIỆP VỤ, 2. CẤU TRÚC THƯ MỤC & BẢN ĐỒ TÀI NGUYÊN KHO LƯU TRỮ, 5. HỆ THỐNG 12 BIỂU ĐỒ TRẠNG THÁI UML (12 STATE MACHINE DIAGRAMS), 7.1. Kiến trúc Công nghệ Khuyến nghị (Recommended Tech Stack), 7.2. Thiết Kế RESTful API Blueprint, 7.3. Những quy tắc "Sống Còn" (Critical Gotchas) Dành Cho Agent Code (+4 more)
 
 ### Community 274 - "Benchmark"
 Cohesion: 0.22
@@ -1710,8 +1696,8 @@ Cohesion: 0.42
 Nodes (7): connect(), nextReconnectDelay(), reloadAfterRecovery(), sessionKey(), setStatus(), showTombstone(), websocketUrl()
 
 ### Community 283 - "DesignSystemGenerator"
-Cohesion: 0.04
-Nodes (31): DesignSystemGenerator, Generates design system recommendations from aggregated searches., Load reasoning rules from CSV., Execute searches across multiple domains., Find matching reasoning rule for a category., Apply reasoning rules to search results., Select best matching result based on priority keywords., Extract results list from search result dict. (+23 more)
+Cohesion: 0.03
+Nodes (43): _contrast_ratio(), _derive_dark_palette(), DesignSystemGenerator, _filter_anti_patterns_for_mode(), _palette_is_dark(), _query_wants_dark(), WCAG relative luminance of a #RRGGBB string, or None if unparseable., True when a colors.csv row's Background is a dark surface. (+35 more)
 
 ### Community 284 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.22
@@ -1734,8 +1720,8 @@ Cohesion: 0.22
 Nodes (8): Boundaries, Intensity, Output, Persistence, Ponytail, Rules, The ladder, When NOT to be lazy
 
 ### Community 289 - "JwtService"
-Cohesion: 0.24
-Nodes (6): JwtService, date, io.jsonwebtoken.Claims, javax.crypto.SecretKey, jwts, keys
+Cohesion: 0.20
+Nodes (7): JwtService, date, io.jsonwebtoken.Claims, javax.crypto.SecretKey, jwts, keys, standardcharsets
 
 ### Community 290 - "codex-tools.md"
 Cohesion: 0.22
@@ -1764,6 +1750,10 @@ Nodes (7): Comparison, Email Validation, Email Validation Function, More Robust 
 ### Community 296 - "Ponytail Help"
 Cohesion: 0.25
 Nodes (7): Configure Default Mode, Deactivate, Levels, More, Ponytail Help, Skills, Update
+
+### Community 297 - "CatalogSummaryLineEndingsTest"
+Cohesion: 0.40
+Nodes (3): CatalogSummaryLineEndingsTest, _load_generator(), Simulate a Windows checkout: the recorded hashes must still validate.
 
 ### Community 298 - "Ponytail Help"
 Cohesion: 0.25
@@ -1794,28 +1784,24 @@ Cohesion: 0.25
 Nodes (8): 9.A Visual & CSS, 9. AI TELLS (Forbidden Patterns), 9.B Typography, 9.C Layout & Spacing, 9.D Content & Data ("Jane Doe" Effect), 9.E External Resources & Components, 9.F Production-Test Tells (banned outright), 9.G EM-DASH BAN (the single most-violated Tell)
 
 ### Community 305 - "OperationsConcurrencyPostgreSqlTest.java"
-Cohesion: 0.07
-Nodes (26): api, CheckinRequests, AfterAll, SupabaseTestDatabase, concurrent, countdownlatch, credential, drivermanager (+18 more)
+Cohesion: 0.08
+Nodes (22): OperationsConcurrencyPostgreSqlTest, countdownlatch, drivermanager, duration, executionexception, executors, executorservice, future (+14 more)
 
 ### Community 306 - "org.springframework.http.ResponseEntity"
-Cohesion: 0.08
-Nodes (22): GetMapping, AppException, TooManyRequestsException, Override, JsonAccessDeniedHandler, Override, JsonAuthenticationEntryPoint, hashmap (+14 more)
+Cohesion: 0.10
+Nodes (16): AppException, TooManyRequestsException, Override, JsonAuthenticationEntryPoint, hashmap, jakarta.validation.ConstraintViolationException, org.springframework.dao.DataIntegrityViolationException, org.springframework.http.converter.HttpMessageNotReadableException (+8 more)
 
-### Community 307 - "SupportRequestController"
-Cohesion: 0.22
-Nodes (7): GetMapping, org.springframework.beans.factory.annotation.Autowired, PatchMapping, PostMapping, RequestMapping, RestController, SupportRequestController
-
-### Community 308 - "landing/types.ts"
-Cohesion: 0.32
-Nodes (5): ThumbnailStripProps, DisciplineItem, InquiryFormData, SlideId, SlideItem
+### Community 308 - "PublicCatalogController"
+Cohesion: 0.33
+Nodes (4): org.springframework.beans.factory.annotation.Autowired, RequestMapping, RestController, PublicCatalogController
 
 ### Community 309 - "validate_data.py"
-Cohesion: 0.08
-Nodes (46): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _catalog_date(), _check_app_interface_contract(), _check_catalog_contract() (+38 more)
+Cohesion: 0.07
+Nodes (47): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _catalog_date(), _check_app_interface_contract(), _check_catalog_contract() (+39 more)
 
 ### Community 310 - "Portal SÖL: thiết kế và kiểm chứng UI"
-Cohesion: 0.25
-Nodes (7): Bổ sung: lỗi sau đăng nhập, Giới hạn kiểm chứng, Kiểm chứng, Portal SÖL: thiết kế và kiểm chứng UI, Thiết kế theo từng phần, Yêu cầu và phân tích, Ảnh kiểm chứng
+Cohesion: 0.13
+Nodes (13): Bất biến nghiệp vụ và kiến trúc dữ liệu, Bối cảnh, Cách làm một ticket, Hướng dẫn cho contributor và coding agent, Phạm vi MVP, Quy chuẩn thiết kế frontend, Bổ sung: lỗi sau đăng nhập, Giới hạn kiểm chứng (+5 more)
 
 ### Community 311 - "Caveman vs Ponytail — 2026-06-12"
 Cohesion: 0.29
@@ -1885,9 +1871,9 @@ Nodes (7): 3.A Stack, 3.B State, 3.C Icons, 3.D Emoji Policy, 3. DEFAULT ARCHITE
 Cohesion: 0.29
 Nodes (7): Additional Gemini CLI tools, Gemini CLI Tool Mapping, Instructions file, Parallel dispatch, Personal skills directory, Prompt filling, Subagent support
 
-### Community 328 - ".enroll"
-Cohesion: 0.21
-Nodes (4): TriggerPolymorphismIntegrationTest, SchedulingServiceTest, org.junit.jupiter.params.ParameterizedTest, org.junit.jupiter.params.provider.ValueSource
+### Community 328 - "PostgreSqlTriggerProvider"
+Cohesion: 0.14
+Nodes (9): Override, PostgreSqlTriggerProvider, DatabaseTriggerInitializerTest, TriggerPolymorphismIntegrationTest, JdbcTemplate, SQLException, TriggerProvidersTest, BadSqlGrammarException (+1 more)
 
 ### Community 329 - "REFACTOR Phase: Close Loopholes (Stay Green)"
 Cohesion: 0.29
@@ -1896,10 +1882,6 @@ Nodes (7): 1. Explicit Negation in Rules, 2. Entry in Rationalization Table, 3. 
 ### Community 330 - ".generate_config_string"
 Cohesion: 0.20
 Nodes (6): Generate configuration file content. Returns: Configuration file as string, Generate TypeScript configuration., Generate JavaScript configuration., Format plugins array for config. Validates each plugin name against a strict…, Add indentation to JSON string., Write configuration to file. Returns: Tuple of (success, message)
-
-### Community 332 - "AGILE_SCRUM_JIRA_PLAN.md"
-Cohesion: 0.25
-Nodes (5): 1. Ma trận Story Points qua 3 Sprint, 2. Hướng dẫn nhanh đưa Kế hoạch lên Jira (Jira Import Guide), KẾ HOẠCH CHI TIẾT THEO SPRINT — CHO TỪNG NGƯỜI, Sports Center Management System (SWP391) — GROUP1_SWP, TỔNG KẾT PHÂN BỔ TẢI CÔNG VIỆC TOÀN DỰ ÁN
 
 ### Community 333 - "SÖL Fitness — UI công khai đã triển khai cục bộ"
 Cohesion: 0.13
@@ -1941,9 +1923,9 @@ Nodes (6): 29. ANTI-AI-SLOP RULES, Content slop, Density slop, Layout slop, Typo
 Cohesion: 0.33
 Nodes (6): 5. IMAGE COUNT & PAGE SLICING, Continuity Rule, Counting rule, Format, Section size variety, THIS IS THE PRIMARY OUTPUT RULE
 
-### Community 343 - "HealthMetricDto"
-Cohesion: 0.26
-Nodes (7): HealthMetricCreateDto, HealthMetricDto, HealthMetricController, GetMapping, org.springframework.beans.factory.annotation.Autowired, PostMapping, RestController
+### Community 343 - "1. THE THREE DIALS (Core Configuration)"
+Cohesion: 0.50
+Nodes (4): 1.A Dial Inference (design read → dial values), 1.B Use-Case Presets, 1.C How the Dials Drive Output, 1. THE THREE DIALS (Core Configuration)
 
 ### Community 344 - "Muse Tool Mapping"
 Cohesion: 0.33
@@ -1966,20 +1948,20 @@ Cohesion: 0.08
 Nodes (37): detect_domain(), get_cip_brief(), _load_csv(), Load CSV and return list of dicts, Core search function using BM25, Auto-detect the most relevant domain from query, Main search function with auto-domain detection, Search across all domains and combine results (+29 more)
 
 ### Community 349 - "radius"
-Cohesion: 0.15
-Nodes (18): $type, $value, $type, $value, $type, $value, $type, $value (+10 more)
+Cohesion: 0.13
+Nodes (22): $type, $value, lg, $type, $value, $type, $value, $type (+14 more)
 
 ### Community 350 - "User"
-Cohesion: 0.05
-Nodes (10): RegistrationResponse, CenterManager, Entity, Table, Entity, org.hibernate.annotations.Check, PreUpdate, Table (+2 more)
+Cohesion: 0.06
+Nodes (9): CenterManager, Entity, Table, Entity, org.hibernate.annotations.Check, PreUpdate, Table, User (+1 more)
 
 ### Community 351 - "org.springframework.context.annotation.Configuration"
-Cohesion: 0.33
-Nodes (4): AiClientConfig, I18nConfig, org.springframework.context.annotation.Configuration, org.springframework.web.servlet.LocaleResolver
+Cohesion: 0.16
+Nodes (9): AiClientConfig, I18nConfig, Override, WebConfig, org.springframework.context.annotation.Configuration, org.springframework.web.servlet.config.annotation.CorsRegistry, org.springframework.web.servlet.config.annotation.WebMvcConfigurer, org.springframework.web.servlet.LocaleResolver (+1 more)
 
-### Community 352 - "Kế hoạch cá nhân"
-Cohesion: 0.25
-Nodes (8): 🟢 An — Backend, Operations Squad, 🟣 Khoa — Frontend, Staff & Admin Console, Kế hoạch cá nhân, Lịch sinh hoạt Scrum, 🟠 Phong — Backend, Finance & AI Squad, SPRINT 1 — Nền tảng & Định danh (19/09 – 02/10/2026), 🟡 Thịnh — Frontend, Member App, 🔵 Tài — Backend, Identity Squad
+### Community 352 - "AGILE_SCRUM_JIRA_PLAN.md"
+Cohesion: 0.09
+Nodes (21): Global Constraints, Progress ledger, Review Focus, SCRUM-91 Implementation Plan, Task 1: Profile và guard schema, Task 2: Trigger bắt buộc và RLS, Task 3: Runner Windows và PostgreSQL integration test, Task 4: Tài liệu và kiểm chứng cuối (+13 more)
 
 ### Community 353 - ".openclaw/skills/ponytail-audit/SKILL.md"
 Cohesion: 0.40
@@ -2008,10 +1990,6 @@ Nodes (4): Boundaries, Examples, Format, Scoring
 ### Community 359 - "Brand Guidelines Template"
 Cohesion: 0.40
 Nodes (4): Brand Guidelines Template, Document Structure, Extractable Fields, Usage
-
-### Community 360 - "WaitlistDto"
-Cohesion: 0.24
-Nodes (4): EnrollmentResponses, WaitlistDto, WaitlistDto, WaitlistControllerTest
 
 ### Community 361 - "🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 22 Story Points"
 Cohesion: 0.29
@@ -2049,10 +2027,6 @@ Nodes (4): Choose A, B, or C, Pressure Test 2: Sunk Cost + Exhaustion, Scenario,
 Cohesion: 0.40
 Nodes (4): Choose A, B, or C, Pressure Test 3: Authority + Social Pressure, Scenario, Your Options
 
-### Community 370 - "Hướng dẫn cho contributor và coding agent"
-Cohesion: 0.33
-Nodes (6): Bất biến nghiệp vụ và kiến trúc dữ liệu, Bối cảnh, Cách làm một ticket, Hướng dẫn cho contributor và coding agent, Phạm vi MVP, Quy chuẩn thiết kế frontend
-
 ### Community 371 - "SCRUM-86 — PR #46 review"
 Cohesion: 0.40
 Nodes (4): Contribution history, Findings and fixes, SCRUM-86 — PR #46 review, Validation before integration
@@ -2081,9 +2055,9 @@ Nodes (5): Key Elements of Good Scenarios, Pressure Types, Testing Setup, VERIFY
 Cohesion: 0.40
 Nodes (4): Các bậc thang Ponytail (The Ladder), Các cấp độ (Intensity Levels), Sửa lỗi = Sửa tận gốc (Root Cause), Workflow: Ponytail - Lazy Senior Dev Mode
 
-### Community 379 - "50"
-Cohesion: 0.67
-Nodes (4): $type, $value, 50, 50
+### Community 379 - "6. BỘ CÔNG CỤ TỰ ĐỘNG HÓA & QUẢN TRỊ SƠ ĐỒ (TOOLING & SCRIPTS)"
+Cohesion: 0.50
+Nodes (4): 6.1. Script sinh State Diagrams tự động: [build_state_diagrams.js](file:///d:/SWP391_PROJECT/SWP391/build_state_diagrams.js), 6.2. Script sinh Swimlane Diagrams tự động: [build_clean_swimlane.js](file:///d:/SWP391_PROJECT/SWP391/build_clean_swimlane.js), 6.3. Script kiểm thử tĩnh tính hợp lệ: [verify_diagrams.js](file:///d:/SWP391_PROJECT/SWP391/verify_diagrams.js), 6. BỘ CÔNG CỤ TỰ ĐỘNG HÓA & QUẢN TRỊ SƠ ĐỒ (TOOLING & SCRIPTS)
 
 ### Community 380 - "TestGeneratedConfigIsValidJs"
 Cohesion: 0.25
@@ -2128,10 +2102,6 @@ Nodes (7): Bước 1: Đọc và nắm vững bộ Rules dự án (BẮT BUỘC)
 ### Community 390 - "dependencies"
 Cohesion: 0.15
 Nodes (13): dependencies, html2canvas, qrcode, react, react-dom, react-router-dom, @vitejs/plugin-react, html2canvas (+5 more)
-
-### Community 391 - "RoleDto"
-Cohesion: 0.16
-Nodes (3): RoleDto, RoleMapper, org.mapstruct.Mapper
 
 ### Community 392 - "TestShadcnInstaller"
 Cohesion: 0.13
@@ -2213,25 +2183,13 @@ Nodes (4): Example: TDD Skill Bulletproofing, Initial Test (Failed), Iteration 1
 Cohesion: 0.50
 Nodes (3): plugin, $schema, ./.opencode/plugins/ponytail.mjs
 
-### Community 416 - "SCRUM-91 Implementation Plan"
-Cohesion: 0.25
-Nodes (8): Global Constraints, Progress ledger, Review Focus, SCRUM-91 Implementation Plan, Task 1: Profile và guard schema, Task 2: Trigger bắt buộc và RLS, Task 3: Runner Windows và PostgreSQL integration test, Task 4: Tài liệu và kiểm chứng cuối
-
-### Community 417 - "duration"
-Cohesion: 0.20
-Nodes (10): fast, normal, slow, $type, $value, $type, $value, duration (+2 more)
-
-### Community 418 - "🟢 AN — Backend (Core Operations & Membership Squad) — 18 Story Points"
-Cohesion: 0.33
-Nodes (6): 🟢 AN — Backend (Core Operations & Membership Squad) — 18 Story Points, 📌 SCRUM-111: [Attendance] Xây dựng API Điểm danh Buổi học 4 Trạng thái (Session Attendance), 📌 SCRUM-112: [Scheduler] Xây dựng Tác vụ Tự động Hết hạn Waitlist & Đôn hàng chờ (24h Promotion), 📌 SCRUM-113: [Scheduling] Xử lý Hủy Buổi học bởi HLV & Tự động Thông báo Học viên, 📌 SCRUM-114: [Testing] Kiểm thử Tải (Concurrency) & Kiểm tra Tính Toàn vẹn Dữ liệu Operations, 📌 SCRUM-115: [Docs] Xuất bản Toàn bộ Postman Collection & Tài liệu API Phân hệ Operations
+### Community 417 - "primitive"
+Cohesion: 0.18
+Nodes (11): fast, normal, slow, $type, $value, $type, $value, primitive (+3 more)
 
 ### Community 419 - "SupabaseConfiguration.java"
 Cohesion: 0.43
 Nodes (4): SupabaseConfiguration, arrays, org.springframework.beans.factory.config.BeanFactoryPostProcessor, org.springframework.core.env.Environment
-
-### Community 420 - "$type"
-Cohesion: 0.60
-Nodes (5): $type, $value, 700, 700, 700
 
 ### Community 421 - "$type"
 Cohesion: 0.60
@@ -2242,12 +2200,8 @@ Cohesion: 0.20
 Nodes (10): Automated compatibility check, Behavior, Client source check, Cursor 3.20.17 on Windows, 2026-09-14, Coexistence with `.cursor/rules/ponytail.mdc`, Contract, Cursor hooks, Install and uninstall, Limitations (+2 more)
 
 ### Community 425 - ".getMessage"
-Cohesion: 0.14
-Nodes (8): Request, Response, GetMapping, PostMapping, RequestMapping, RestController, MembershipCancellationController, MemberLookupDto
-
-### Community 427 - "input"
-Cohesion: 0.29
-Nodes (8): padding-x, input, $type, $value, focus-ring, padding-x, $type, $value
+Cohesion: 0.16
+Nodes (10): Response, GetMapping, PostMapping, RequestMapping, RestController, MembershipCancellationController, Override, JsonAccessDeniedHandler (+2 more)
 
 ### Community 429 - "THƯ MỤC SƠ ĐỒ HỆ THỐNG (SYSTEM DIAGRAMS)"
 Cohesion: 0.33
@@ -2255,7 +2209,7 @@ Nodes (6): 1. Danh Mục Sơ Đồ CSDL & Thực Thể (ERD & Data Models), 2. D
 
 ### Community 430 - "JwtAuthenticationFilter.java"
 Cohesion: 0.10
-Nodes (21): Override, JwtAuthenticationFilter, Override, RateLimitingFilter, WindowCounter, org.springframework.beans.factory.annotation.Autowired, RateLimitingFilterTest, atomicinteger (+13 more)
+Nodes (20): Override, JwtAuthenticationFilter, Override, RateLimitingFilter, WindowCounter, org.springframework.beans.factory.annotation.Autowired, RateLimitingFilterTest, atomicinteger (+12 more)
 
 ### Community 434 - "Condition-Based Waiting"
 Cohesion: 0.20
@@ -2265,37 +2219,17 @@ Nodes (9): Common Mistakes, Condition-Based Waiting, Core Pattern, Implementatio
 Cohesion: 0.33
 Nodes (5): Corrections, Evidence, Returning active member follow-up, SCRUM-89 OAuth verification and review, Single Google entry follow-up
 
-### Community 464 - "PackageDto"
-Cohesion: 0.18
-Nodes (10): PackageStatusRequest, PackageDto, GetMapping, org.springframework.beans.factory.annotation.Autowired, PatchMapping, PostMapping, PutMapping, RequestMapping (+2 more)
+### Community 464 - "PackageController"
+Cohesion: 0.17
+Nodes (9): PackageStatusRequest, GetMapping, org.springframework.beans.factory.annotation.Autowired, PatchMapping, PostMapping, PutMapping, RequestMapping, RestController (+1 more)
 
 ### Community 465 - "SCRUM-86 — PR #45 and #46 integration"
 Cohesion: 0.33
 Nodes (5): Combined validation, Conflict resolution, Contributions and workspace, Review fixes, SCRUM-86 — PR #45 and #46 integration
 
-### Community 466 - "radius"
-Cohesion: 0.60
-Nodes (5): radius, radius, radius, $type, $value
-
 ### Community 467 - "Quy chuẩn thiết kế chính — SÖL"
 Cohesion: 0.22
 Nodes (9): Bố cục, Chuyển động đã chốt, Chữ và component, Kiểm chứng trước khi hoàn tất UI, Nguồn hiện hành và nguồn lịch sử, Nhận diện và màu, Phạm vi, Quy chuẩn thiết kế chính — SÖL (+1 more)
-
-### Community 468 - "🟢 AN — Backend (Core Operations & Membership Squad) — 23 Story Points"
-Cohesion: 0.33
-Nodes (6): 🟢 AN — Backend (Core Operations & Membership Squad) — 23 Story Points, 📌 SCRUM-71: [Membership] Xây dựng API Quản lý Gói thành viên & Sinh mã QR định danh, 📌 SCRUM-72: [Scheduling] Xây dựng API Lớp học & Lịch học cụ thể (Xử lý Trigger P3 Conflict), 📌 SCRUM-73: [Scheduling] Xây dựng API Đăng ký & Hủy lớp học (Xử lý Trigger P2 & P4), 📌 SCRUM-74: [Scheduling] Xây dựng Hàng chờ thông minh khi lớp đầy (Class Waitlists), 📌 SCRUM-75: [Attendance] Xây dựng API Check-in cổng trung tâm bằng QR Code (Trigger P4)
-
-### Community 469 - "🔵 TÀI — Backend (Identity, Security & Support Squad) — 19 Story Points"
-Cohesion: 0.33
-Nodes (6): 📌 SCRUM-106: [Support] Xây dựng Hệ thống Trao đổi trong Phiếu Hỗ trợ (Support Messages), 📌 SCRUM-107: [Scheduler] Xây dựng Background Jobs Thông báo Tự động (Expiry & Reminders), 📌 SCRUM-108: [Notification] Tích hợp Bộ điều phối Thông báo Đa kênh (Multi-channel Port), 📌 SCRUM-109: [Audit] Xây dựng API Quản trị & Tra cứu Nhật ký Kiểm toán (Audit Log Viewer), 📌 SCRUM-110: [Security & DevOps] Hoàn thiện CORS, Rate Limiting, Dockerfile & Production Prep, 🔵 TÀI — Backend (Identity, Security & Support Squad) — 19 Story Points
-
-### Community 470 - "🟡 THỊNH — Frontend (Member Portal & App) — 17 Story Points"
-Cohesion: 0.33
-Nodes (6): 📌 SCRUM-125: [UI Member] Xây dựng Màn hình Lịch sử Giao dịch & Hóa đơn Điện tử, 📌 SCRUM-126: [UI Member] Tích hợp Trợ lý Trí tuệ Nhân tạo AI Chatbot (LiquidGlass Chatbot), 📌 SCRUM-127: [UI Member] Xây dựng Trung tâm Thông báo Đẩy In-App (MemberNotifications), 📌 SCRUM-128: [UI Member] Xây dựng Màn hình Gửi Yêu cầu Hỗ trợ & Khiếu nại (MemberSupport), 📌 SCRUM-129: [UI Member] Xây dựng Màn hình Theo dõi Tiến độ Thể lực & Giáo án (Progress), 🟡 THỊNH — Frontend (Member Portal & App) — 17 Story Points
-
-### Community 471 - "lg"
-Cohesion: 0.60
-Nodes (5): lg, $type, $value, lg, lg
 
 ### Community 472 - "sm"
 Cohesion: 0.60
@@ -2321,17 +2255,9 @@ Nodes (4): Design, Ledger, SCRUM-89 Returning Google member login, Steps
 Cohesion: 0.29
 Nodes (6): Hermes Agent Tool Mapping, Instructions file, Invoking a skill, Subagent dispatch, Task tracking, Tools
 
-### Community 478 - "destructive-foreground"
-Cohesion: 0.67
-Nodes (3): destructive-foreground, $type, $value
-
 ### Community 504 - "vite-env.d.ts"
 Cohesion: 0.50
 Nodes (3): ImportMeta, ImportMetaEnv, Window
-
-### Community 508 - "muted"
-Cohesion: 0.67
-Nodes (3): muted, $type, $value
 
 ### Community 531 - "Backend architecture rules"
 Cohesion: 0.29
@@ -2345,33 +2271,13 @@ Nodes (5): Claude re-score of committed responses through the fixed gate, Correc
 Cohesion: 0.33
 Nodes (6): scripts, build, dev, lint, preview, test
 
-### Community 536 - "primary-foreground"
-Cohesion: 0.67
-Nodes (3): primary-foreground, $type, $value
-
-### Community 537 - "ring"
-Cohesion: 0.67
-Nodes (3): ring, $type, $value
-
 ### Community 538 - "🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 21 Story Points"
 Cohesion: 0.33
 Nodes (6): 🟠 PHONG — Backend (Finance, System Architecture & AI Squad) — 21 Story Points, 📌 SCRUM-116: [Coaching] Xây dựng API Quản lý Kế hoạch Huấn luyện & Bài tập (Training Plans), 📌 SCRUM-117: [AI Engine] Tích hợp AI Gợi ý Giáo án Huấn luyện Cá nhân hóa (/ai/recommend), 📌 SCRUM-118: [AI Engine] Xây dựng Trợ lý Ảo AI Chatbot Tư vấn Hội viên 24/7 (AI Chatbot), 📌 SCRUM-119: [Coaching] Xây dựng API Đánh giá Buổi tập & Tiến độ Học viên (Evaluations), 📌 SCRUM-120: [Reporting] Xây dựng Báo cáo Công suất Sử dụng & Tỷ lệ Lấp đầy Lớp học
 
-### Community 539 - "🔵 TÀI — Backend (Identity, Security & Support Squad) — 19 Story Points"
-Cohesion: 0.33
-Nodes (6): 📌 SCRUM-66: [Identity] Mở rộng API cập nhật Hồ sơ cá nhân Coach & Receptionist, 📌 SCRUM-67: [Notification] Xây dựng Notification Module & In-App Notification API, 📌 SCRUM-68: [Support] Xây dựng Support Requests Module (Ticket Management), 📌 SCRUM-69: [Security] Chuẩn hóa @PreAuthorize & Security Policy cho toàn bộ API Sprint 2, 📌 SCRUM-70: [Testing] Unit & Integration Tests cho Identity, Notification & Support, 🔵 TÀI — Backend (Identity, Security & Support Squad) — 19 Story Points
-
 ### Community 540 - "ponytail-mcp"
 Cohesion: 0.40
 Nodes (4): ponytail-mcp, Run it, Test, What it exposes
-
-### Community 541 - "secondary-foreground"
-Cohesion: 0.67
-Nodes (3): secondary-foreground, $type, $value
-
-### Community 542 - "padding-y"
-Cohesion: 0.67
-Nodes (4): padding-y, padding-y, $type, $value
 
 ### Community 543 - "12. THE BLOCK LIBRARY (Contract - Implementations Land Here Iteratively)"
 Cohesion: 0.40
@@ -2384,10 +2290,6 @@ Nodes (5): 5.A Sticky-Stack - Canonical Skeleton, 5.B Horizontal-Pan - Canonical
 ### Community 545 - "8. DARK MODE PROTOCOL"
 Cohesion: 0.40
 Nodes (5): 8.A Token Strategy (pick one, stick to it), 8.B Do Not Prescribe Specific Colors Here, 8.C Default Mode, 8.D Test in Both Modes Before Finishing, 8. DARK MODE PROTOCOL
-
-### Community 546 - "destructive"
-Cohesion: 0.67
-Nodes (3): destructive, $type, $value
 
 ### Community 547 - "web/package.json"
 Cohesion: 0.40
@@ -2406,24 +2308,24 @@ Cohesion: 0.50
 Nodes (3): Build va chay tren may, Chay backend bang Docker, Deploy len Render
 
 ## Knowledge Gaps
-- **3009 isolated node(s):** `$schema`, `name`, `description`, `name`, `url` (+3004 more)
+- **3008 isolated node(s):** `$schema`, `name`, `description`, `name`, `url` (+3003 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **126 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **129 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `User` connect `User` to `UserRepository`, `MembershipSubscription`, `SupportRequestMessage`, `org.junit.jupiter.api.extension.ExtendWith`, `ClassEnrollment`, `org.junit.jupiter.api.DisplayName`, `CenterCheckin`, `MembershipCancellationRequest`, `org.springframework.transaction.annotation.Transactional`, `.processPayment`, `AuthService`, `list`, `SupportRequest`, `.authenticateGoogle`, `SupportRequestServiceTest.java`, `AuditLog`, `TrainingPlanDto`, `Payment`, `JwtAuthenticationFilter.java`, `GoogleAuthServiceTest.java`, `Coach`, `Member`, `GymClass`, `org.springframework.data.domain.Pageable`, `Role`, `MemberProgressLog`, `Notification`, `org.junit.jupiter.api.Test`, `UserDto`, `PaymentDto`, `.createUser`, `ReportSnapshotDto`, `MembershipSubscriptionService`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
-- **Why does `MessageService` connect `MessageService` to `UserRepository`, `org.junit.jupiter.api.extension.ExtendWith`, `org.junit.jupiter.api.DisplayName`, `ProfileController`, `CenterCheckin`, `org.springframework.stereotype.Component`, `MembershipCancellationRequest`, `org.springframework.transaction.annotation.Transactional`, `ApiResponse`, `AuthService`, `SupportRequest`, `org.springframework.context.annotation.Bean`, `.getMessage`, `org.springframework.http.ResponseEntity`, `SupportRequestController`, `GoogleAuthServiceTest.java`, `ReportController`, `Discipline`, `.created`, `AiChatServiceTest.java`, `PaymentController`, `TrainingPlanController`, `PackageDto`, `HealthMetricDto`, `org.junit.jupiter.api.Test`, `InvoiceServiceTest.java`, `DisciplineDto`, `EnrollmentController`, `CenterCheckinController`, `GoogleOAuthRedirectService`, `GlobalExceptionHandlerTriggerTest.java`, `.ok`, `MembershipSubscriptionService`, `io.swagger.v3.oas.annotations.Operation`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **Why does `Member` connect `Member` to `UserRepository`, `MembershipSubscription`, `AiRecommendationLog`, `SchedulingServiceTest.java`, `ClassEnrollment`, `org.junit.jupiter.api.extension.ExtendWith`, `CenterCheckin`, `MembershipCancellationRequest`, `org.springframework.transaction.annotation.Transactional`, `.join`, `TrainingPlan`, `list`, `SupportRequest`, `.authenticateGoogle`, `SupportRequestServiceTest.java`, `ClassSession`, `TrainingPlanDto`, `Payment`, `.createPlan`, `.generateWorkoutPlan`, `AiChatServiceTest.java`, `GymClass`, `MemberProgressLog`, `org.junit.jupiter.api.Test`, `User`, `TrainingPlanItemCreateDto`, `PaymentDto`, `.createUser`, `MembershipSubscriptionService`?**
+- **Why does `User` connect `User` to `MemberRepository`, `Member`, `SupportRequestMessage`, `Coach`, `org.junit.jupiter.api.extension.ExtendWith`, `Role`, `CenterCheckin`, `org.junit.jupiter.api.DisplayName`, `MembershipCancellationRequest`, `org.springframework.transaction.annotation.Transactional`, `.processPayment`, `.createPayment`, `GymClass`, `AuthService`, `list`, `SupportRequest`, `.authenticateGoogle`, `MembershipPackage`, `org.springframework.stereotype.Component`, `Payment`, `JwtAuthenticationFilter.java`, `.createPlan`, `.decide`, `TriggerProvidersTest.java`, `.findByIdAndDeletedAtIsNull`, `MemberProgressLog`, `Notification`, `UserDto`, `AuthTokenResponse`, `.createUser`, `ReportSnapshotDto`, `MembershipSubscription`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `MessageService` connect `MessageService` to `MemberRepository`, `org.junit.jupiter.api.extension.ExtendWith`, `org.junit.jupiter.api.DisplayName`, `ProfileController`, `CenterCheckin`, `SmtpOtpDeliveryAdapter.java`, `.createInvoice`, `org.springframework.transaction.annotation.Transactional`, `GymClass`, `ApiResponse`, `AuthService`, `SupportRequest`, `org.springframework.context.annotation.Bean`, `RoleController`, `.getMessage`, `org.springframework.http.ResponseEntity`, `PublicCatalogController`, `ReportController`, `GlobalExceptionHandlerTriggerTest.java`, `.created`, `AiChatServiceTest.java`, `PaymentController`, `TrainingPlanController`, `PackageController`, `.decide`, `.findByIdAndDeletedAtIsNull`, `org.junit.jupiter.api.Test`, `AiRecommendationController`, `DisciplineDto`, `UserDto`, `WaitlistController`, `RoomController`, `AuthTokenResponse`, `AuthController.java`, `MembershipSubscription`, `io.swagger.v3.oas.annotations.Operation`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+- **Why does `Member` connect `Member` to `MemberRepository`, `Coach`, `org.junit.jupiter.api.DisplayName`, `org.junit.jupiter.api.extension.ExtendWith`, `CenterCheckin`, `MembershipCancellationRequest`, `org.springframework.transaction.annotation.Transactional`, `.processPayment`, `.createPayment`, `GymClass`, `TrainingPlanItem`, `list`, `.create`, `SupportRequest`, `.authenticateGoogle`, `TrainingPlanDto`, `Payment`, `.createPlan`, `MembershipSubscriptionServiceTest`, `.generateWorkoutPlan`, `AiChatServiceTest.java`, `.decide`, `MemberProgressLog`, `User`, `.createUser`, `MembershipSubscription`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Are the 39 inferred relationships involving `Member` (e.g. with `.authenticateGoogle()` and `.createPendingMemberUser()`) actually correct?**
   _`Member` has 39 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 28 inferred relationships involving `User` (e.g. with `.seedManager()` and `.mockMember()`) actually correct?**
-  _`User` has 28 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 29 inferred relationships involving `User` (e.g. with `.seedManager()` and `.mockMember()`) actually correct?**
+  _`User` has 29 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `name`, `description` to the rest of the system?**
-  _3009 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `UserRepository` be split into smaller, more focused modules?**
-  _Cohesion score 0.05381400208986416 - nodes in this community are weakly interconnected._
+  _3008 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `MemberRepository` be split into smaller, more focused modules?**
+  _Cohesion score 0.05880780539962577 - nodes in this community are weakly interconnected._

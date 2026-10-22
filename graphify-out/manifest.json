@@ -2721,8 +2721,8 @@
     "semantic_hash": ""
   },
   "docs/api-contracts/README.md": {
-    "mtime": 1789741769.0622551,
-    "ast_hash": "05da65566366e5c15cd7f4e74e473974",
+    "mtime": 1792691170.0940068,
+    "ast_hash": "f4d62ba858751dba4e0d9ab7b2a985f3",
     "semantic_hash": ""
   },
   ".agents/plugins/ponytail/assets/benchmark-3model.svg": {
@@ -4692,8 +4692,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/FitnessLanding.tsx": {
-    "mtime": 1792690776.8695507,
-    "ast_hash": "1faddc7a21dcdfa748fd5e527e8a96ec",
+    "mtime": 1792691168.4701574,
+    "ast_hash": "673555cb3d5b777215131c62b7ee2e46",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/PublicLayout.tsx": {
@@ -4707,18 +4707,18 @@
     "semantic_hash": ""
   },
   "scripts/verify-public-animation.cjs": {
-    "mtime": 1792660525.1842935,
-    "ast_hash": "312b88569463263fc3274188e4e84a50",
+    "mtime": 1792691458.6936285,
+    "ast_hash": "51b41e9fc6cfb4a30fbd70aa9185e43f",
     "semantic_hash": ""
   },
   "scripts/verify-public-ui.cjs": {
-    "mtime": 1792660525.1842935,
-    "ast_hash": "4a5cebe6ac1f91d935844b33896a4f67",
+    "mtime": 1792691084.81489,
+    "ast_hash": "d13f1ecaaf8c4c281e2dfdc12f80cc1b",
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1792690189.7573235,
-    "ast_hash": "49f4561eccaf03f79c45d7ae28034e13",
+    "mtime": 1792691169.2527342,
+    "ast_hash": "1d3d9183dd08fb8f2bef7d835eeed72b",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/README.md": {
@@ -4762,8 +4762,8 @@
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/animation-pricing-desktop.png": {
-    "mtime": 1792660524.6212494,
-    "ast_hash": "f3e846b1ddfa599bb33ae7dc84771c41",
+    "mtime": 1792691468.6491606,
+    "ast_hash": "154bb8007e62accf1104145cec69957f",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/before-desktop.png": {
@@ -4772,73 +4772,73 @@
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/hero-desktop.png": {
-    "mtime": 1792664814.0009732,
-    "ast_hash": "5b083e7c6b13cad20e087e5419277dc5",
+    "mtime": 1792691101.6258833,
+    "ast_hash": "85ce2caefeea3e536f4ef69df7577c28",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/hero-mobile.png": {
-    "mtime": 1792664814.0029764,
-    "ast_hash": "5d42c1dcf60190e1103f6f13b3863ccf",
+    "mtime": 1792691098.6808484,
+    "ast_hash": "5efc7cd78e078d018617f482982685fc",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/hero-wide.png": {
-    "mtime": 1792664814.0069747,
-    "ast_hash": "9a92b8a9184b14a13285c0bab70d8dbf",
+    "mtime": 1792691102.3695943,
+    "ast_hash": "ff3fa719e41824d8863620e97e1ad6aa",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/landing-desktop.png": {
-    "mtime": 1792664814.0201502,
-    "ast_hash": "3c4451f5abde1e8f33ec75924f0a2cb5",
+    "mtime": 1792691101.4489975,
+    "ast_hash": "c2c520f541c281200ed8f0aa2dfefcac",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/landing-mobile.png": {
-    "mtime": 1792664814.0272748,
-    "ast_hash": "89d6938ec64c5d7508e08eb5e0383493",
+    "mtime": 1792691098.545851,
+    "ast_hash": "19b6a1363998b8fdf1e9274837a55315",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/login-desktop.png": {
-    "mtime": 1792664814.0308323,
-    "ast_hash": "556b972f389a3779c7e9325737141bb9",
+    "mtime": 1792691106.7787151,
+    "ast_hash": "67cb6c9deb07ffd8427acff14e8f71b4",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/login-error-desktop.png": {
-    "mtime": 1792664814.0328348,
-    "ast_hash": "35e71ea1152002a585c6713b7b9cb40e",
+    "mtime": 1792691104.0045438,
+    "ast_hash": "11c1b28500aa8c6c7351eedaa1edc20e",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/login-mobile.png": {
-    "mtime": 1792664814.0338347,
-    "ast_hash": "46040b42e4d6e0914e8c52541aea4c6c",
+    "mtime": 1792691104.6058376,
+    "ast_hash": "3d649f760fe7c056ec984562d27282f5",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/otp-desktop.png": {
-    "mtime": 1792664814.0372083,
-    "ast_hash": "4685918bc39d920651f2f7f09a5612ba",
+    "mtime": 1792691107.807814,
+    "ast_hash": "b8b3e45e427fc680385bd99c97c5ec7d",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/otp-mobile.png": {
-    "mtime": 1792664814.0392098,
-    "ast_hash": "49602fc3b863cdd72d76b7e888a8f9a6",
+    "mtime": 1792691107.8658142,
+    "ast_hash": "2c493a1f4933319d5a09006b81ad2d41",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/register-desktop.png": {
-    "mtime": 1792664814.0416713,
-    "ast_hash": "eb80195799fbe74b2ef814c2392c26bf",
+    "mtime": 1792691107.2697134,
+    "ast_hash": "1610b07015936392f3663a651c576a9a",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/register-mobile.png": {
-    "mtime": 1792664814.0436993,
-    "ast_hash": "7d11ca78edacfa7a63c8c6d36bbd59c3",
+    "mtime": 1792691105.28363,
+    "ast_hash": "8cbfb1018575170be2d89af14b862f4a",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/services-desktop.png": {
-    "mtime": 1792664814.0446713,
-    "ast_hash": "0b38668c8f64c79c79a47ac825183b0d",
+    "mtime": 1792691101.5408833,
+    "ast_hash": "de143c0dc25ac267acbcb99aada7be24",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/services-mobile.png": {
-    "mtime": 1792664814.0456727,
-    "ast_hash": "d6383de7a40096cb114b9762caa375d9",
+    "mtime": 1792691098.635849,
+    "ast_hash": "b037b1c7697efbfa46e96a7474798329",
     "semantic_hash": ""
   },
   "scripts/verify-ux-consistency.cjs": {
@@ -4862,188 +4862,188 @@
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-cancellations-1440.png": {
-    "mtime": 1792665390.053437,
-    "ast_hash": "3e4a0266e5814adecc590d105985450f",
+    "mtime": 1792691453.1559973,
+    "ast_hash": "1ca55e0fde0c8c756d19b70b0f98b483",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-cancellations-390.png": {
-    "mtime": 1792665381.2475412,
-    "ast_hash": "3aa3f998f75170bb9d09611398b77159",
+    "mtime": 1792691442.2881422,
+    "ast_hash": "1624ae9028ffe3cbd8c5335046f48970",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-catalogs-1440.png": {
-    "mtime": 1792665389.410208,
-    "ast_hash": "26daaed6f6ce99b34481ec0434a6d921",
+    "mtime": 1792691452.3386645,
+    "ast_hash": "16ed3ddd9e8a98ac8538184fca353ad3",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-catalogs-390.png": {
-    "mtime": 1792665380.577346,
-    "ast_hash": "d0d77d72d0c72d1d8bba816444d9aac8",
+    "mtime": 1792691441.5467372,
+    "ast_hash": "f17ff7153a7d503637605c34e18307d2",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-catalogs-create.png": {
-    "mtime": 1792665393.7225842,
-    "ast_hash": "a18913bb448e4ef268c4b992c1108d24",
+    "mtime": 1792691457.7253945,
+    "ast_hash": "5c92509fa354e0e836fba25a7aa8240f",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-reports-1440.png": {
-    "mtime": 1792665390.716493,
-    "ast_hash": "9d5a68e163f50a64dc1649f158abbf25",
+    "mtime": 1792691454.014025,
+    "ast_hash": "9c3fc6633efdd106582ea6b1b1a8bfa9",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-reports-390.png": {
-    "mtime": 1792665381.9746203,
-    "ast_hash": "42672dc7d2f99abf918c31b4decb3746",
+    "mtime": 1792691443.142196,
+    "ast_hash": "76c8c90f1ff1937544b441c953361ef5",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-users-1440.png": {
-    "mtime": 1792665388.7584932,
-    "ast_hash": "504a11f11a7d628e9120d826bb958994",
+    "mtime": 1792691451.5238051,
+    "ast_hash": "2c47456084f7450b3ec2798082662b57",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-users-390.png": {
-    "mtime": 1792665379.8924527,
-    "ast_hash": "33ad82da1b7b8423675b117058651cd2",
+    "mtime": 1792691440.7982035,
+    "ast_hash": "0e93df805c5c4b22875cc5019eabbfa2",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-users-create.png": {
-    "mtime": 1792665394.4855375,
-    "ast_hash": "54338c5fe2c9fef38f732e0580b57609",
+    "mtime": 1792691458.6946237,
+    "ast_hash": "d28fbf182e752e67037456a233d9f50d",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-card-1440.png": {
-    "mtime": 1792665384.7185464,
-    "ast_hash": "d420ca56e4f7fef6e09526fea0616538",
+    "mtime": 1792691446.4851458,
+    "ast_hash": "86e88deff82e82c5109a507467c71a7d",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-card-390.png": {
-    "mtime": 1792668557.2878313,
-    "ast_hash": "b0b13484307a7965be80828e6fbb01a9",
+    "mtime": 1792691435.899502,
+    "ast_hash": "f378ec6f1b4c5eaff36e8fb2e6fb063d",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-classes-1440.png": {
-    "mtime": 1792665384.029292,
-    "ast_hash": "49a2f0a6309d145b5873e3eebdf50b15",
+    "mtime": 1792691445.643613,
+    "ast_hash": "51399cf0694537586216d7dc788e4d6f",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-classes-390.png": {
-    "mtime": 1792668556.504094,
-    "ast_hash": "98879c85f4c8d8efb744840ccf73a317",
+    "mtime": 1792691435.0501473,
+    "ast_hash": "d15615f9d04e8f9857506e04a29e20a4",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-1440.png": {
-    "mtime": 1792665382.7223277,
-    "ast_hash": "3a4f44f396b791e502957a34b1b61618",
+    "mtime": 1792691444.0262089,
+    "ast_hash": "ba87cd99ae1153d2c1a38f7526c64066",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-1920.png": {
-    "mtime": 1792665392.1812332,
-    "ast_hash": "90acd7932f08cd7b7e5472d236796380",
+    "mtime": 1792691455.8182733,
+    "ast_hash": "0c406ef98568ac0df1bccda6d00b2a43",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-2560.png": {
-    "mtime": 1792665392.966462,
-    "ast_hash": "748fb3a5479037d946397bfa12c8cb62",
+    "mtime": 1792691456.7419658,
+    "ast_hash": "aa13ed2ccc4686bf01fad050e3d4a69b",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-390.png": {
-    "mtime": 1792668554.9267302,
-    "ast_hash": "08bcf7a99c9e5af8e94d9cc87b6559ce",
+    "mtime": 1792691433.3416877,
+    "ast_hash": "a564641fe7e43316101bd4f04bae57ce",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-768.png": {
-    "mtime": 1792665391.4153676,
-    "ast_hash": "b1032798b8a0ce744152db9ca56886c8",
+    "mtime": 1792691454.8951929,
+    "ast_hash": "a9b21977c71caa986feacf9b37541a98",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-empty.png": {
-    "mtime": 1792665395.9715896,
-    "ast_hash": "4323ad23ae31f305467d4a99d7f36845",
+    "mtime": 1792691460.7590556,
+    "ast_hash": "6cdeeba44978a460ba92b00e53ef5ee0",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-error.png": {
-    "mtime": 1792665396.6325476,
-    "ast_hash": "3caa996e72ccd1016946f7d0656cfaae",
+    "mtime": 1792691461.8009126,
+    "ast_hash": "a24ebc807e08e7e5b6fa469e630afdd1",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-packages-1440.png": {
-    "mtime": 1792665383.382512,
-    "ast_hash": "d39541f1086c88fa28601f3e84f86e29",
+    "mtime": 1792691444.8564336,
+    "ast_hash": "fe9f536bcdbd47cf39a3facf8347a25c",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-packages-390.png": {
-    "mtime": 1792668555.7292361,
-    "ast_hash": "6e381049cabd8acd02008de8fa42f897",
+    "mtime": 1792691434.2088935,
+    "ast_hash": "bc0969a2f9852fbec6b0c7b98600255c",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-profile-1440.png": {
-    "mtime": 1792665385.413271,
-    "ast_hash": "03726e00314713c409437218d1ac793d",
+    "mtime": 1792691447.3389156,
+    "ast_hash": "bd25e71c77139c3b734ca94cf0a67c14",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-profile-390.png": {
-    "mtime": 1792668558.1139028,
-    "ast_hash": "f1aa4a218a1c43d00eed7f98591c6092",
+    "mtime": 1792691436.707893,
+    "ast_hash": "3652ec76215e2be741c78d2d8780fcc3",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-attendance-1440.png": {
-    "mtime": 1792665386.069353,
-    "ast_hash": "374df9f210b6091da32a770612f6bcda",
+    "mtime": 1792691448.1510751,
+    "ast_hash": "4506e8deac45f9afd67678a1a23b64a1",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-attendance-390.png": {
-    "mtime": 1792668558.9741957,
-    "ast_hash": "3b4371c5921a6b0a6c939033a88e97c6",
+    "mtime": 1792691437.5018373,
+    "ast_hash": "1541f557a4145c1e76539b8179aa063a",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-check-in-1440.png": {
-    "mtime": 1792665388.111501,
-    "ast_hash": "a23832c14e0b92e62f18af1141652dd8",
+    "mtime": 1792691450.6856701,
+    "ast_hash": "6b844b5a1cc8f76f6f96ca95ac032ce7",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-check-in-390.png": {
-    "mtime": 1792665379.2367127,
-    "ast_hash": "29abbac21414d0d881d6aa2f45bee692",
+    "mtime": 1792691439.9698677,
+    "ast_hash": "61e10dee47976d117ea057ad6e93f217",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-classes-1440.png": {
-    "mtime": 1792665386.7222128,
-    "ast_hash": "9a9e00f6d6ce6d745db2dc40b2c702f4",
+    "mtime": 1792691448.9487014,
+    "ast_hash": "2175bb39c144ef1327cdd1f94625c348",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-classes-390.png": {
-    "mtime": 1792665377.8966315,
-    "ast_hash": "daa7ccb71a9f716d17603aae2e473461",
+    "mtime": 1792691438.2694623,
+    "ast_hash": "61ce2dc42d640f19cb465c1b2fc4670c",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-classes-create.png": {
-    "mtime": 1792665395.2966018,
-    "ast_hash": "0cac3619aac52c234182c744110690af",
+    "mtime": 1792691459.7760148,
+    "ast_hash": "01e5f949267d548173292857cf701010",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-reception-1440.png": {
-    "mtime": 1792665387.4445565,
-    "ast_hash": "d0f6ff93e69e0a85deb111e06b11a70d",
+    "mtime": 1792691449.825611,
+    "ast_hash": "40ee429c1a4beddd83238d0b952f9468",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-reception-390.png": {
-    "mtime": 1792665378.594272,
-    "ast_hash": "8ffa4d6918591ff64a96270d3dbed475",
+    "mtime": 1792691439.1594253,
+    "ast_hash": "2af1aaac46a3fae5d0859f4e5a02121a",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/TrainerStoryPage.tsx": {
-    "mtime": 1792673399.0652616,
-    "ast_hash": "f114c927c09d2be2bf6eb911962a47e8",
+    "mtime": 1792690887.4675071,
+    "ast_hash": "c1137162846e777dc44ca8bdde5ff862",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/data/trainersData.ts": {
-    "mtime": 1792690756.0969512,
+    "mtime": 1792691280.1539047,
     "ast_hash": "0844d11bfe6c485b679932d238694a03",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/SportPage.tsx": {
-    "mtime": 1792673307.206718,
-    "ast_hash": "e5362990b03e51650990fa5089ec9e3d",
+    "mtime": 1792691171.153565,
+    "ast_hash": "02fe468293b29c5a1c740175522dc89f",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/catalog/PublicCatalogController.java": {
@@ -5062,18 +5062,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/CatalogSections.tsx": {
-    "mtime": 1792690704.0844996,
-    "ast_hash": "0aa668b05b63eafa91fae01c89e1e1e4",
+    "mtime": 1792691083.8236723,
+    "ast_hash": "1643b92ede701bd484c9ee9e73a3df4b",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/publicCatalog.test.tsx": {
-    "mtime": 1792690632.2813735,
-    "ast_hash": "5bab4ae2144a99d8b0c4b982403984d8",
+    "mtime": 1792691240.5978642,
+    "ast_hash": "e827eae6a23d7c3abf0e9420efb7abc8",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/publicCatalog.ts": {
-    "mtime": 1792690703.286278,
-    "ast_hash": "ce466171d71750c8bd50964a01c7f0c5",
+    "mtime": 1792691122.405761,
+    "ast_hash": "c8b098be0840c83715c55efb1e91a866",
     "semantic_hash": ""
   },
   "apps/web/src/shared/lib/membershipPresentation.ts": {
@@ -5082,8 +5082,8 @@
     "semantic_hash": ""
   },
   "docs/api-contracts/openapi-public.yaml": {
-    "mtime": 1792690739.8089063,
-    "ast_hash": "bec07a872241b9422e80050653b6f2d0",
+    "mtime": 1792690884.011259,
+    "ast_hash": "fe3de0ef3fb056c96c8a6250b34b1c61",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/coach-aquatics.jpg": {
@@ -5099,6 +5099,61 @@
   "apps/web/public/images/fitness/coach-tennis.jpg": {
     "mtime": 1792690634.8305793,
     "ast_hash": "de9c34fbcb0eb33640cbdb88c65cd7b9",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/catalog/PublicCatalogSecurityTest.java": {
+    "mtime": 1792690961.8588865,
+    "ast_hash": "23811f1e4371e8fba7a782578dbe12c4",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/components/LiveTrainerProfile.tsx": {
+    "mtime": 1792690886.3991454,
+    "ast_hash": "f74d117d4bb7b666b2f916ae4403c821",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/lib/coachIllustration.ts": {
+    "mtime": 1792690884.8084626,
+    "ast_hash": "1e12dde337fa758ce3fb033fbecc2824",
+    "semantic_hash": ""
+  },
+  "scripts/public-catalog-fixture.cjs": {
+    "mtime": 1792691064.7642987,
+    "ast_hash": "b8f8fffbb90fd105d46ffcb02ef64c5d",
+    "semantic_hash": ""
+  },
+  "scripts/verify-catalog-sync.cjs": {
+    "mtime": 1792691241.3962176,
+    "ast_hash": "943cff1532e59f02f544cf3021b51946",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/packages-1440.png": {
+    "mtime": 1792691392.6719074,
+    "ast_hash": "07663c77635843f08a7d5ad4b6a80385",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/packages-390.png": {
+    "mtime": 1792691390.243363,
+    "ast_hash": "a3a9a1997cf9a4a75e9fcc076928f5d0",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/schedule-1440.png": {
+    "mtime": 1792691393.0196323,
+    "ast_hash": "ce20987d66ffd23e9a1e8fae78ef317a",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/schedule-390.png": {
+    "mtime": 1792691390.6522043,
+    "ast_hash": "de2c986c6f9180cab2142658996b9086",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/trainers-1440.png": {
+    "mtime": 1792691392.9291093,
+    "ast_hash": "7b28782a7b3008c279052d29b050db7d",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/trainers-390.png": {
+    "mtime": 1792691390.5392053,
+    "ast_hash": "a00ec6ad28dc419427839ec3a19dfd38",
     "semantic_hash": ""
   }
 }
