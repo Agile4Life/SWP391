@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { LiquidGlassChatbot } from '../../../shared/liquid-glass/LiquidGlassChatbot';
+import { useComponentReveal } from '../hooks/useComponentReveal';
 import '../fitness-public.css';
 
 const links = [
@@ -19,6 +20,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname, hash } = useLocation();
   const user = getCurrentUser();
+  const root = useRef<HTMLDivElement>(null);
+  useComponentReveal(root, pathname);
 
   useEffect(() => {
     document.title = `${pathname === '/login' ? 'Đăng nhập' : pathname === '/register' ? 'Đăng ký hội viên' : 'Build your body. Find your balance.'} · SÖL Fitness`;
@@ -29,7 +32,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     window.scrollTo(0, 0);
   }, [pathname, hash]);
 
-  return <div className="fit-site">
+  return <div className="fit-site" ref={root}>
     <a className="fit-skip" href="#public-main">Đến nội dung chính</a>
     <div className="fit-canvas">
       <header className="fit-header">
@@ -61,14 +64,14 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'login' | 'register' }) {
   return <PublicLayout>
     <main id="public-main" className="fit-auth">
-      <div className="fit-auth-story">
+      <div className="fit-auth-story" data-reveal="soft">
         <span className="fit-kicker">YOUR NEXT CHAPTER STARTS HERE</span>
         <h1>{mode === 'login' ? <>GOOD TO HAVE<br />YOU <em>BACK.</em></> : <>STRONGER.<br />TOGETHER.<br /><em>START HERE.</em></>}</h1>
         <p>{mode === 'login' ? 'Trở lại nhịp tập luyện của bạn. Lịch học, gói tập và hành trình tiến bộ — tất cả trong một không gian.' : 'Một tài khoản. Nhiều cách để chuyển động. Bắt đầu hành trình tập luyện và tìm phiên bản khỏe hơn của chính mình.'}</p>
         <div className="fit-auth-photo"><img src="/images/fitness/strength-session.jpg" alt="Vận động viên tập luyện sức mạnh với tạ tại phòng gym" /><span>SHOW UP FOR YOURSELF.<RoundArrow diagonal /></span></div>
         <div className="fit-auth-note"><span className="fit-small-star">✳</span> Mỗi buổi tập là một khởi đầu mới.</div>
       </div>
-      <div className="fit-auth-form">{children}</div>
+      <div className="fit-auth-form" data-reveal="lift">{children}</div>
     </main>
   </PublicLayout>;
 }

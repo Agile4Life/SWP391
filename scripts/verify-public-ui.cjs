@@ -17,6 +17,8 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
   await page.route('**/accounts.google.com/gsi/**', (route) => route.fulfill({ body: '', contentType: 'text/javascript' }));
   const check = (label) => console.log(`PASS ${label}`);
   const assertFullWidth = async () => {
+    await page.locator('.fit-site').waitFor({ state: 'visible' });
+    await page.evaluate(() => new Promise(requestAnimationFrame));
     const layout = await page.evaluate(() => {
       const site = document.querySelector('.fit-site');
       const canvas = document.querySelector('.fit-canvas');

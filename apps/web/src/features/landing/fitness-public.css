@@ -148,7 +148,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-pricing-switch button[aria-pressed='true'] { color: #30201b; background: var(--fit-salmon); }
 .fit-pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
 .fit-pricing-grid-two { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: auto; }
-.fit-plan { padding: 25px; border-radius: 34px; background: #303030; display: flex; flex-direction: column; min-height: 405px; }
+.fit-plan { padding: 25px; border-radius: 34px; background: #303030; display: flex; flex-direction: column; min-height: 405px; transition: transform 220ms, box-shadow 220ms; }
 .fit-plan-period { background: #fbf9f6; color: #63473c; border-radius: 20px; padding: 9px 34px; align-self: center; font-size: 10px; }
 .fit-plan h3 { margin-top: 24px; font-size: 17px; }
 .fit-plan > p { font-size: 10px; line-height: 1.85; color: #c6c0bb; min-height: 55px; margin-top: 11px; }
@@ -323,7 +323,57 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   .fit-auth-photo, .fit-auth-note { display: none; }
   .fit-auth .luxury-login-container, .fit-auth-card { padding: 28px 22px !important; border-radius: 24px !important; }
 }
+/* Component entrances only: no pinned tracks or intercepted document scrolling. */
+@keyframes fit-component-lift {
+  from { opacity: 0; translate: 0 26px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes fit-title-left {
+  from { opacity: 0; translate: -28px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes fit-title-right {
+  from { opacity: 0; translate: 28px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes fit-athlete-entrance {
+  from { opacity: 0; translate: 0 28px; scale: .97; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes fit-content-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fit-photo-entrance {
+  from { opacity: .25; scale: 1.035; }
+  to { opacity: 1; scale: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fit-site .fit-hero-title > span:first-child { animation: fit-title-left 900ms cubic-bezier(.2,.75,.25,1) 100ms both; }
+  .fit-site .fit-hero-title > span:last-child { animation: fit-title-right 900ms cubic-bezier(.2,.75,.25,1) 220ms both; }
+  .fit-site .fit-hero-athlete { animation: fit-athlete-entrance 1100ms cubic-bezier(.2,.75,.25,1) 120ms both; }
+  .fit-site .fit-hero-copy { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 350ms both; }
+  .fit-site .fit-hero-action { animation: fit-component-lift 850ms cubic-bezier(.2,.75,.25,1) 500ms both; }
+  .fit-site .fit-reveal-ready {
+    opacity: 0;
+    translate: 0 34px;
+    transition: opacity 700ms var(--fit-reveal-delay, 0ms), translate 900ms cubic-bezier(.2,.75,.25,1) var(--fit-reveal-delay, 0ms), scale 900ms cubic-bezier(.2,.75,.25,1) var(--fit-reveal-delay, 0ms), transform 220ms, background-color 180ms, box-shadow 220ms;
+  }
+  .fit-site .fit-reveal-ready[data-reveal='soft'] { translate: 0 20px; }
+  .fit-site .fit-reveal-ready[data-reveal='image'] { translate: 0 20px; scale: .965; }
+  .fit-site .fit-reveal-ready.is-visible, .fit-site .fit-reveal-ready:focus-within { opacity: 1; translate: 0 0; scale: 1; }
+  .fit-site .fit-reveal-ready:focus-within { transition: none; }
+  .fit-service-1, .fit-story:nth-child(2), .fit-trainer-card:nth-child(2), .fit-plan:nth-child(2), .fit-auth-form { --fit-reveal-delay: 100ms; }
+  .fit-service-2, .fit-story:nth-child(3), .fit-plan:nth-child(3) { --fit-reveal-delay: 200ms; }
+  .fit-story:nth-child(4) { --fit-reveal-delay: 300ms; }
+  .fit-site .fit-trainer-grid, .fit-site .fit-pricing-grid { animation: fit-content-fade 450ms ease both; }
+  .fit-site .fit-space-image > img { animation: fit-photo-entrance 650ms ease both; }
+  .fit-site .fit-trainer-card > img { transition: transform 550ms cubic-bezier(.2,.75,.25,1); }
+  .fit-site .fit-trainer-card:hover > img { transform: scale(1.04); }
+  .fit-site .fit-plan:hover { transform: translateY(-5px); box-shadow: 0 14px 30px #0003; }
+}
 @media (prefers-reduced-motion: reduce) {
   html:has(.fit-site) { scroll-behavior: auto; }
   .fit-site *, .fit-site *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .fit-site .fit-reveal-ready { opacity: 1; translate: none; scale: none; }
 }
