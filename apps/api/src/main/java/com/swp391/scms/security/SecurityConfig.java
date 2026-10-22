@@ -83,6 +83,7 @@ public class SecurityConfig {
                             "/api/v1/training-plans/**", "/api/v1/training-plans").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/ai/generate-workout-plan", "/api/v1/ai/recommend",
                             "/api/v1/ai/recommendations/**").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
 
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
