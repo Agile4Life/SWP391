@@ -341,8 +341,9 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   if (currentUser && !isExpired) {
     return (
       <div
+        className="luxury-login-container"
         style={{
-          background: '#FFFFFF',
+          background: 'var(--color-bg-card)',
           borderRadius: '8px',
           padding: '48px 40px',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(33, 28, 24, 0.06)',
@@ -372,17 +373,17 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
         <h2
           style={{
-            fontFamily: 'var(--font-serif)',
+            fontFamily: 'var(--fit-font, var(--font-sans))',
             fontSize: '1.8rem',
             fontWeight: 600,
             marginBottom: '8px',
-            color: '#1A1614',
+            color: 'var(--color-text-main)',
           }}
         >
           Phiên đăng nhập đang hoạt động
         </h2>
 
-        <p style={{ color: '#7E7771', fontSize: '0.95rem', marginBottom: '24px' }}>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '24px' }}>
           Đang đăng nhập với tài khoản <strong>{currentUser.name}</strong> ({ROLE_NAMES[currentUser.role]})
         </p>
 
@@ -415,7 +416,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       className={`luxury-login-container ${shaking ? 'anim-shake' : ''}`}
       onAnimationEnd={() => setShaking(false)}
       style={{
-        background: '#FFFFFF',
+        background: 'var(--color-bg-card)',
         borderRadius: '8px',
         padding: '40px 36px',
         boxShadow: '0 20px 50px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(33, 28, 24, 0.06)',
@@ -429,7 +430,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             fontSize: '0.72rem',
             letterSpacing: '0.24em',
             textTransform: 'uppercase',
-            color: '#8B572A',
+            color: 'var(--color-accent-gold)',
             display: 'block',
             marginBottom: '6px',
             fontWeight: 600,
@@ -439,11 +440,11 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         </span>
         <h3
           style={{
-            fontFamily: 'var(--font-serif)',
+            fontFamily: 'var(--fit-font, var(--font-sans))',
             fontSize: '1.85rem',
             fontWeight: 600,
             margin: 0,
-            color: '#1A1614',
+            color: 'var(--color-text-main)',
             letterSpacing: '0.02em',
           }}
         >
@@ -499,7 +500,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                     background: 'none',
                     border: 'none',
                     fontSize: '0.72rem',
-                    color: '#8C847C',
+                    color: 'var(--color-text-muted)',
                     cursor: 'pointer',
                     padding: 0,
                   }}
@@ -539,11 +540,11 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
           {/* Đường phân cách */}
           <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '12px' }}>
-            <div style={{ flex: 1, height: '1px', background: '#ECE7E1' }} />
-            <span style={{ fontSize: '0.75rem', color: '#7E7771', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--color-border-medium)' }} />
+            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               HOẶC
             </span>
-            <div style={{ flex: 1, height: '1px', background: '#ECE7E1' }} />
+            <div style={{ flex: 1, height: '1px', background: 'var(--color-border-medium)' }} />
           </div>
 
           {/* Nút Đăng nhập bằng Google (SCRUM-89: Google OAuth -> Callback -> Xác nhận OTP qua Gmail) */}
@@ -574,7 +575,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>Đang xác thực Google và gửi mã OTP...</p>}
           <p style={{ marginTop: '20px', fontSize: '0.85rem', textAlign: 'center' }}>
             Chưa có tài khoản?{' '}
-            <Link to="/register" viewTransition style={{ color: '#8B572A', fontWeight: 600 }}>
+            <Link to="/register" viewTransition style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
               Đăng ký hội viên
             </Link>
           </p>
@@ -675,7 +676,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: '#8B572A',
+                color: 'var(--color-accent-gold)',
                 cursor: countdown > 0 || isLoading || success ? 'not-allowed' : 'pointer',
                 opacity: countdown > 0 || isLoading || success ? 0.6 : 1,
                 padding: 0,
@@ -693,7 +694,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: '#7E7771',
+                color: 'var(--color-text-muted)',
                 cursor: isLoading || success ? 'not-allowed' : 'pointer',
                 opacity: isLoading || success ? 0.6 : 1,
                 padding: 0,
