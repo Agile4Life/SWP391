@@ -278,7 +278,7 @@ public class PaymentService {
                         || !pkg.getId().equals(pendingSub.getMembershipPackage().getId())) {
                     throw new ConflictException("PAYMENT_USE_SUBSCRIPTION", "finance.payment.use_subscription", null, null);
                 }
-                pendingToSettle = payableExistingPayment(pendingSub.getId(), dto.getAmount());
+                pendingToSettle = payableExistingPayment(pendingSub.getId(), dto.getAmount(), dto.getClassEnrollmentId());
                 pendingSub.setCreatedBy(receiver);
                 activateSubscription(pendingSub);
                 resolvedSubscriptionId = pendingSub.getId();
@@ -331,7 +331,7 @@ public class PaymentService {
                 }
             }
 
-            pendingToSettle = payableExistingPayment(subscription.getId(), dto.getAmount());
+            pendingToSettle = payableExistingPayment(subscription.getId(), dto.getAmount(), dto.getClassEnrollmentId());
 
             activateSubscription(subscription);
         }
@@ -353,6 +353,8 @@ public class PaymentService {
             pendingToSettle.setStatus("success");
             pendingToSettle.setPaidAt(LocalDateTime.now(clock));
             pendingToSettle.setReceivedBy(receiver);
+            pendingToSettle.setMethod(dto.getMethod() != null ? dto.getMethod().toLowerCase(Locale.ROOT) : "cash");
+            pendingToSettle.setNote(dto.getNote());
             return paymentMapper.toDto(paymentRepository.save(pendingToSettle));
         }
 
@@ -474,7 +476,7 @@ public class PaymentService {
         membershipSubscriptionRepository.save(subscription);
     }
 
-    private Payment payableExistingPayment(Long subscriptionId, BigDecimal amount) {
+    private Payment payableExistingPayment(Long subscriptionId, BigDecimal amount, Long enrollmentId) {
         List<Payment> related = paymentRepository.findAllBySubscriptionId(subscriptionId);
         if (related == null || related.isEmpty()) return null;
         List<Payment> unsettled = related.stream().filter(payment ->
@@ -483,6 +485,9 @@ public class PaymentService {
         if (unsettled.size() != 1 || !"pending".equalsIgnoreCase(unsettled.get(0).getStatus())
                 || unsettled.get(0).getAmount().compareTo(amount) != 0) {
             throw new ConflictException("PAYMENT_ALREADY_EXISTS", "finance.payment.already_exists", null, null);
+        }
+        if (enrollmentId != null) {
+            throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null, null);
         }
         return unsettled.get(0);
     }

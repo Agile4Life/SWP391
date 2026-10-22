@@ -4,6 +4,7 @@ import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.dto.CancellationDtos;
 import com.swp391.scms.membership.entity.MembershipCancellationRequest;
@@ -43,6 +44,7 @@ class MembershipCancellationServiceTest {
     @Mock UserRepository users;
     @Mock EnrollmentService enrollments;
     @Mock MessageService messages;
+    @Mock PaymentRepository payments;
     MembershipCancellationService service;
     Member member;
     MembershipSubscription active;
@@ -53,7 +55,7 @@ class MembershipCancellationServiceTest {
     @BeforeEach
     void setup() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-22T08:00:00Z"), ZoneOffset.UTC);
-        service = new MembershipCancellationService(requests, subscriptions, members, users, enrollments, messages, clock);
+        service = new MembershipCancellationService(requests, subscriptions, members, users, enrollments, messages, clock, payments, null);
         member = new Member(); member.setUserId(10L);
         User user = new User(); user.setId(10L); user.setFullName("Member"); member.setUser(user);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L); pack.setName("Essential");
@@ -101,6 +103,19 @@ class MembershipCancellationServiceTest {
         assertThat(active.getStatus()).isEqualTo("cancelled");
         assertThat(pending.getStatus()).isEqualTo("APPROVED");
         verify(enrollments).cancelFutureEnrollmentsForMember(eq(10L), any());
+    }
+
+    @Test
+    void approvalPreservesSeparatelyPaidUpcomingClass() {
+        stubDecision();
+        when(payments.hasUnsettledUpcomingEnrollmentPayment(eq(10L), any(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class);
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(pending.getStatus()).isEqualTo("PENDING");
+        verifyNoInteractions(enrollments);
+        verify(subscriptions, never()).saveAndFlush(any());
     }
 
     @Test

@@ -277,17 +277,42 @@ class PaymentServiceTest {
         sub.setMember(member); sub.setMembershipPackage(pkg); sub.setStatus("pending_payment");
         Payment pending = new Payment(); pending.setId(90L); pending.setMember(member);
         pending.setSubscriptionId(10L); pending.setStatus("pending"); pending.setAmount(new BigDecimal("500000"));
+        pending.setMethod("bank_transfer"); pending.setNote("Awaiting transfer");
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
         when(paymentRepository.findAllBySubscriptionId(10L)).thenReturn(List.of(pending));
         when(paymentRepository.save(pending)).thenReturn(pending);
         when(paymentMapper.toDto(pending)).thenReturn(new PaymentDto());
         paymentService.processPayment(new PaymentProcessDto(2L, 10L, null,
-                new BigDecimal("500000"), "pos", null, null));
+                new BigDecimal("500000"), "pos", null, "Paid at desk"));
+        assertEquals("pos", pending.getMethod());
+        assertEquals("Paid at desk", pending.getNote());
         assertEquals("success", pending.getStatus());
         assertEquals("active", sub.getStatus());
         verify(paymentRepository).save(pending);
         verify(paymentRepository, times(1)).save(any());
+    }
+
+    @Test
+    void existingSubscriptionPaymentCannotSettleAnotherEnrollment() {
+        Member member = new Member(); member.setUserId(2L);
+        MembershipPackage pkg = new MembershipPackage(); pkg.setPrice(new BigDecimal("500000"));
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(10L);
+        sub.setMember(member); sub.setMembershipPackage(pkg); sub.setStatus("pending_payment");
+        Payment pending = new Payment(); pending.setId(90L); pending.setMember(member);
+        pending.setSubscriptionId(10L); pending.setStatus("pending"); pending.setAmount(pkg.getPrice());
+        ClassEnrollment enrollment = new ClassEnrollment(); enrollment.setMember(member); enrollment.setStatus("cancelled");
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
+        when(paymentRepository.findAllBySubscriptionId(10L)).thenReturn(List.of(pending));
+        lenient().when(classEnrollmentRepository.findById(20L)).thenReturn(Optional.of(enrollment));
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, 20L, pkg.getPrice(), "pos", null, null);
+
+        assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
+        assertEquals("pending_payment", sub.getStatus());
+        assertEquals("pending", pending.getStatus());
+        assertEquals("cancelled", enrollment.getStatus());
+        verify(paymentRepository, never()).save(any());
     }
 
     @Test

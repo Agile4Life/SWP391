@@ -937,7 +937,7 @@ paths:
         '200': {description: Đã duyệt; gói ngừng cấp quyền và booking tương lai bị chấm dứt}
         '403': {description: Chỉ Center Manager có quyền duyệt}
         '404': {description: Không tìm thấy yêu cầu}
-        '409': {description: Gói không còn active hoặc có quyền lợi khác không thể phân định}
+        '409': {description: Gói không còn active, còn lớp học sắp tới có payment pending/success hoặc có quyền lợi khác không thể phân định}
 
   /memberships/cancellations/{id}/reject:
     post:

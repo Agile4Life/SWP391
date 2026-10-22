@@ -5,6 +5,7 @@ import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.dto.CancellationDtos;
 import com.swp391.scms.membership.entity.MembershipCancellationRequest;
 import com.swp391.scms.membership.entity.MembershipSubscription;
@@ -17,7 +18,6 @@ import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.EntityManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,13 +35,13 @@ public class MembershipCancellationService {
     private final EnrollmentService enrollments;
     private final MessageService messages;
     private final Clock clock;
-
-    @Autowired(required = false)
-    private EntityManager entityManager;
+    private final PaymentRepository payments;
+    private final EntityManager entityManager;
 
     public MembershipCancellationService(MembershipCancellationRequestRepository requests,
             MembershipSubscriptionRepository subscriptions, MemberRepository members,
-            UserRepository users, EnrollmentService enrollments, MessageService messages, Clock clock) {
+            UserRepository users, EnrollmentService enrollments, MessageService messages, Clock clock,
+            PaymentRepository payments, EntityManager entityManager) {
         this.requests = requests;
         this.subscriptions = subscriptions;
         this.members = members;
@@ -49,6 +49,8 @@ public class MembershipCancellationService {
         this.enrollments = enrollments;
         this.messages = messages;
         this.clock = clock;
+        this.payments = payments;
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -131,6 +133,10 @@ public class MembershipCancellationService {
 
     private void ensureSoleEntitlement(Long memberId, Long cancellingId) {
         LocalDate today = LocalDate.now(clock);
+        if (payments.hasUnsettledUpcomingEnrollmentPayment(memberId, today, LocalDateTime.now(clock).toLocalTime())) {
+            throw new ConflictException("CANCELLATION_PAID_ENROLLMENT",
+                    "error.membership.cancellation_paid_enrollment", null, null);
+        }
         List<MembershipSubscription> history = subscriptions.findByMemberUserId(memberId);
         for (MembershipSubscription other : history) {
             if (other.getId().equals(cancellingId)) continue;
