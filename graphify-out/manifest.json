@@ -461,8 +461,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/security/SecurityConfig.java": {
-    "mtime": 1792660524.5153124,
-    "ast_hash": "3c6c8177b98501b66fa9470ce34eb79f",
+    "mtime": 1792690605.4356859,
+    "ast_hash": "b24e85bc5feb498d96a408af9fe0aaad",
     "semantic_hash": ""
   },
   "apps/web/eslint.config.js": {
@@ -1336,8 +1336,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/facilities/repository/MembershipPackageRepository.java": {
-    "mtime": 1791008172.0963995,
-    "ast_hash": "5c962a52b54fb5bd7312b0d048668b7c",
+    "mtime": 1792690600.0309994,
+    "ast_hash": "4382d65c21903cbc942136daee15197c",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/facilities/repository/RoomRepository.java": {
@@ -3571,8 +3571,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/users/CoachRepository.java": {
-    "mtime": 1791287068.585564,
-    "ast_hash": "0bf8792fd01a4d527fcbe56479007cc2",
+    "mtime": 1792690600.8065584,
+    "ast_hash": "fc946780033fde461d35ca65f9ef429d",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/users/ReceptionistRepository.java": {
@@ -3861,8 +3861,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/repository/ClassSessionRepository.java": {
-    "mtime": 1792342588.3030472,
-    "ast_hash": "a524e0a7523e3ab946937faf33c1b996",
+    "mtime": 1792690601.567282,
+    "ast_hash": "0be4cf1d6e25203af37e4c24b9d83a6d",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/repository/ClassWaitlistRepository.java": {
@@ -4081,8 +4081,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberPackagesPage.tsx": {
-    "mtime": 1792668418.2333534,
-    "ast_hash": "e5069cc4c48d0d29bc636039d6126e2a",
+    "mtime": 1792690776.873102,
+    "ast_hash": "d3d88750823eac69cc1c9a3b1ecad3f2",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/cardStatus.ts": {
@@ -4692,8 +4692,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/FitnessLanding.tsx": {
-    "mtime": 1792683216.6151402,
-    "ast_hash": "48f17608c56b2b8bd39bdbb7f082b140",
+    "mtime": 1792690776.8695507,
+    "ast_hash": "1faddc7a21dcdfa748fd5e527e8a96ec",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/PublicLayout.tsx": {
@@ -4702,7 +4702,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/hooks/useComponentReveal.ts": {
-    "mtime": 1792683352.855309,
+    "mtime": 1792683680.487808,
     "ast_hash": "73ea376a52e7993e96ee929335ffbec4",
     "semantic_hash": ""
   },
@@ -4717,8 +4717,8 @@
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1792665351.4337306,
-    "ast_hash": "bbb5f576d191711eadaccb2449b62c65",
+    "mtime": 1792690189.7573235,
+    "ast_hash": "49f4561eccaf03f79c45d7ae28034e13",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/README.md": {
@@ -5037,13 +5037,68 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/data/trainersData.ts": {
-    "mtime": 1792673399.282353,
-    "ast_hash": "def1b44bdd89e3f11eebfbc0b3d851d0",
+    "mtime": 1792690756.0969512,
+    "ast_hash": "0844d11bfe6c485b679932d238694a03",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/SportPage.tsx": {
     "mtime": 1792673307.206718,
     "ast_hash": "e5362990b03e51650990fa5089ec9e3d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/catalog/PublicCatalogController.java": {
+    "mtime": 1792690604.6685297,
+    "ast_hash": "10f9466ebe1436fc8c370b05b1465131",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/catalog/PublicCatalogService.java": {
+    "mtime": 1792690631.4709098,
+    "ast_hash": "0f1304d7af86d55ca9972cb8b5f4d70e",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/catalog/PublicCatalogServiceTest.java": {
+    "mtime": 1792690515.5196888,
+    "ast_hash": "b96341611b21922febf86ab5f952fd10",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/components/CatalogSections.tsx": {
+    "mtime": 1792690704.0844996,
+    "ast_hash": "0aa668b05b63eafa91fae01c89e1e1e4",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/publicCatalog.test.tsx": {
+    "mtime": 1792690632.2813735,
+    "ast_hash": "5bab4ae2144a99d8b0c4b982403984d8",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/publicCatalog.ts": {
+    "mtime": 1792690703.286278,
+    "ast_hash": "ce466171d71750c8bd50964a01c7f0c5",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/lib/membershipPresentation.ts": {
+    "mtime": 1792690702.4562354,
+    "ast_hash": "503177c0a242f3ae31ec34729c17d976",
+    "semantic_hash": ""
+  },
+  "docs/api-contracts/openapi-public.yaml": {
+    "mtime": 1792690739.8089063,
+    "ast_hash": "bec07a872241b9422e80050653b6f2d0",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/coach-aquatics.jpg": {
+    "mtime": 1792690655.775094,
+    "ast_hash": "c5a632178efaf02c47508efa72515781",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/coach-personal.jpg": {
+    "mtime": 1792690677.147833,
+    "ast_hash": "083a3fe929371cae37705faf1617408c",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/coach-tennis.jpg": {
+    "mtime": 1792690634.8305793,
+    "ast_hash": "de9c34fbcb0eb33640cbdb88c65cd7b9",
     "semantic_hash": ""
   }
 }
