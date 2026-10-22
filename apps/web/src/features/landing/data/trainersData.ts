@@ -23,7 +23,7 @@ export const trainerProfiles: TrainerProfile[] = [
   {
     slug: 'strength-coach',
     name: 'Strength coach',
-    vietnameseName: 'HLV Minh Khôi',
+    vietnameseName: 'Coach Marcus Cole',
     specialty: 'SỨC MẠNH & THỂ LỰC NỀN TẢNG',
     shortRole: 'Huấn luyện viên Gym & Sức mạnh cơ bản',
     image: 'coach-strength.png',
@@ -36,9 +36,9 @@ export const trainerProfiles: TrainerProfile[] = [
     introSummary:
       'Đồng hành cùng người mới bắt đầu, nhân viên văn phòng và sinh viên muốn xây dựng nền tảng thể lực, cải thiện tư thế và làm quen với tạ rời một cách gần gũi, dễ hiểu.',
     storyParagraphs: [
-      'Cách đây hơn 7 năm, Minh Khôi từng là một nhân viên kỹ thuật ngồi máy tính gần 10 tiếng mỗi ngày, thường xuyên đau mỏi lưng dưới và hụt hơi chỉ sau vài tầng cầu thang. Những ngày đầu bước vào phòng tập, cảm giác ngại ngùng trước dàn máy móc phức tạp từng khiến Khôi muốn bỏ cuộc.',
-      'Chính trải nghiệm đó đã định hình cách hướng dẫn của Khôi tại SÖL: không dùng thuật ngữ phức tạp, không ép nâng tạ nặng lấy thành tích, mà bắt đầu từ cách hít thở, cách đứng vững và kiểm soát từng chuyển động cơ bản nhất.',
-      'Ngoài khu vực Gym & Free Weights, Khôi còn thiết kế các bài tập bổ trợ sức mạnh chân và cơ lõi (Core) rất thực tế để hội viên có thêm thể lực khi bơi lội hoặc chơi Tennis cuối tuần cùng bạn bè.',
+      'Cách đây hơn 7 năm, Marcus Cole từng là một kỹ sư phần mềm ngồi bàn làm việc gần 10 tiếng mỗi ngày, thường xuyên đau mỏi lưng dưới và hụt hơi chỉ sau vài tầng cầu thang. Những ngày đầu bước vào phòng tập, cảm giác ngại ngùng trước dàn máy móc phức tạp từng khiến Marcus muốn bỏ cuộc.',
+      'Chính trải nghiệm đó đã định hình cách hướng dẫn của Marcus tại SÖL: không dùng thuật ngữ phức tạp, không ép nâng tạ nặng lấy thành tích, mà bắt đầu từ cách hít thở, cách đứng vững và kiểm soát từng chuyển động cơ bản nhất.',
+      'Ngoài khu vực Gym & Free Weights, Marcus còn thiết kế các bài tập bổ trợ sức mạnh chân và cơ lõi (Core) rất thực tế để hội viên có thêm thể lực khi bơi lội hoặc chơi Tennis cuối tuần cùng bạn bè.',
     ],
     milestones: [
       {
@@ -89,7 +89,7 @@ export const trainerProfiles: TrainerProfile[] = [
   {
     slug: 'movement-coach',
     name: 'Movement coach',
-    vietnameseName: 'HLV Thanh Hà',
+    vietnameseName: 'Coach Elena Vance',
     specialty: 'CHUYỂN ĐỘNG, GIÃN CƠ & CÂN BẰNG',
     shortRole: 'Huấn luyện viên Linh hoạt khớp, Core & Phục hồi',
     image: 'coach-movement.png',
@@ -102,9 +102,9 @@ export const trainerProfiles: TrainerProfile[] = [
     introSummary:
       'Chuyên thiết kế các lớp vận động nhẹ nhàng, giãn cơ chuyên sâu và làm khỏe cơ trọng tâm giúp giảm căng thẳng sau giờ làm và phòng ngừa chấn thương thể thao.',
     storyParagraphs: [
-      'Thanh Hà từng tham gia nhiều giải chạy bộ và cầu lông phong trào thời sinh viên nhưng liên tục gặp chấn thương cổ chân và đau khớp vai vì thói quen vào sân là đánh ngay mà bỏ qua sự linh hoạt của khớp.',
-      'Khi tìm hiểu sâu về vận động trị liệu và kiểm soát cơ lõi (Core & Mobility), Hà nhận ra rất nhiều người đi làm cũng đang chịu đựng cảm giác cứng khớp hông, mỏi cổ vai gáy mỗi ngày mà nghĩ rằng đó là chuyện bình thường.',
-      'Các buổi tập của Hà tại SÖL luôn có nhịp điệu vừa phải, gần gũi và dễ theo kịp. Dù bạn chưa từng tập thể thao hay đang muốn tìm một buổi giãn cơ để bơi sải mượt hơn, vung vợt Tennis thoải mái hơn, Hà đều có cách điều chỉnh bài tập phù hợp với bạn.',
+      'Elena Vance từng tham gia nhiều giải chạy bộ và thể thao phong trào thời đại học nhưng liên tục gặp chấn thương cổ chân và đau khớp vai vì thói quen vào sân là vận động mạnh ngay mà bỏ qua sự linh hoạt của khớp.',
+      'Khi tìm hiểu sâu về vận động trị liệu và kiểm soát cơ lõi (Core & Mobility), Elena nhận ra rất nhiều người đi làm cũng đang chịu đựng cảm giác cứng khớp hông, mỏi cổ vai gáy mỗi ngày mà nghĩ rằng đó là chuyện bình thường.',
+      'Các buổi tập của Elena tại SÖL luôn có nhịp điệu vừa phải, gần gũi và dễ theo kịp. Dù bạn chưa từng tập thể thao hay đang muốn tìm một buổi giãn cơ để bơi sải mượt hơn, vung vợt Tennis thoải mái hơn, Elena đều có cách điều chỉnh bài tập phù hợp với bạn.',
     ],
     milestones: [
       {
@@ -155,7 +155,7 @@ export const trainerProfiles: TrainerProfile[] = [
   {
     slug: 'personal-coach',
     name: 'Personal coach',
-    vietnameseName: 'HLV Quốc Bảo',
+    vietnameseName: 'Coach Liam Brooks',
     specialty: 'HUẤN LUYỆN CÁ NHÂN ĐA BỘ MÔN',
     shortRole: 'Huấn luyện viên Kèm 1:1 & Xây dựng thói quen tập luyện',
     image: 'strength-session.jpg',
@@ -168,9 +168,9 @@ export const trainerProfiles: TrainerProfile[] = [
     introSummary:
       'Chuyên kèm 1:1 cho người bận rộn hoặc từng bỏ dở việc tập luyện nhiều lần — kết hợp linh hoạt giữa tập tạ, bơi lội và vận động sân bãi để mỗi tuần đi tập đều mới mẻ.',
     storyParagraphs: [
-      'Trong 7 năm làm nghề, Quốc Bảo gặp rất nhiều hội viên mua thẻ tập cả năm nhưng chỉ đi được 2 tuần đầu vì cảm thấy lạc lõng, bài tập lặp đi lặp lại nhàm chán hoặc thực đơn ăn kiêng quá xa rời bữa cơm gia đình Việt Nam.',
-      'Vì vậy, khi kèm 1:1 tại SÖL, Bảo luôn bắt đầu bằng việc lắng nghe lịch sinh hoạt thực tế của bạn: bạn có thể dành 45 phút vào giờ nghỉ trưa hay sau 6 giờ chiều? Hôm nào bạn muốn tập tạ đổ mồ hôi, hôm nào bạn chỉ muốn xuống hồ bơi vận động nhẹ nhàng?',
-      'Sự linh hoạt của mô hình đa bộ môn giúp học viên của Bảo duy trì thói quen đều đặn suốt nhiều tháng liền mà không cảm thấy bị ép buộc.',
+      'Trong 7 năm làm nghề, Liam Brooks gặp rất nhiều hội viên đăng ký thẻ tập cả năm nhưng chỉ đi được 2 tuần đầu vì cảm thấy lạc lõng, bài tập lặp đi lặp lại nhàm chán hoặc thực đơn ăn kiêng quá khắt khe.',
+      'Vì vậy, khi kèm 1:1 tại SÖL, Liam luôn bắt đầu bằng việc lắng nghe lịch sinh hoạt thực tế của bạn: bạn có thể dành 45 phút vào giờ nghỉ trưa hay sau 6 giờ chiều? Hôm nào bạn muốn tập tạ đổ mồ hôi, hôm nào bạn chỉ muốn xuống hồ bơi vận động nhẹ nhàng?',
+      'Sự linh hoạt của mô hình đa bộ môn giúp học viên của Liam duy trì thói quen đều đặn suốt nhiều tháng liền mà không cảm thấy bị ép buộc.',
     ],
     milestones: [
       {
@@ -203,7 +203,7 @@ export const trainerProfiles: TrainerProfile[] = [
       {
         step: '03',
         title: 'Đồng hành dinh dưỡng đời thường dễ áp dụng',
-        description: 'Gợi ý cách chọn món ăn ngay trong bữa cơm gia đình hoặc cơm văn phòng mà không cần cân đo phức tạp.',
+        description: 'Gợi ý cách chọn món ăn cân bằng ngay trong bữa ăn hàng ngày mà không cần cân đo phức tạp.',
       },
     ],
     specialties: [
@@ -221,7 +221,7 @@ export const trainerProfiles: TrainerProfile[] = [
   {
     slug: 'aquatics-coach',
     name: 'Aquatics coach',
-    vietnameseName: 'HLV Hải Đăng',
+    vietnameseName: 'Coach Noah Grant',
     specialty: 'BƠI LỘI 4 KIỂU & XÓA SỢ NƯỚC',
     shortRole: 'Huấn luyện viên Bơi lội cơ bản, Kỹ thuật & Sức bền',
     image: 'trainer-strength.jpg',
@@ -234,9 +234,9 @@ export const trainerProfiles: TrainerProfile[] = [
     introSummary:
       'Tận tâm hướng dẫn từ người lớn chưa biết bơi, còn tâm lý sợ nước cho đến những hội viên muốn chỉnh lại kỹ thuật Bơi sải, Bơi ếch để bơi được dài hơn mà không bị đuối sức.',
     storyParagraphs: [
-      'Nhiều người lớn khi đến hồ bơi SÖL thường ngại ngùng chia sẻ với Hải Đăng rằng họ đã ngoài 30, 40 tuổi nhưng vẫn sợ úp mặt xuống nước hoặc chỉ bơi được 15 mét là thở dốc. Đăng luôn mỉm cười trấn an: học bơi ở tuổi nào cũng hoàn toàn bình thường khi có phương pháp đúng.',
-      'Thay vì yêu cầu học viên quạt tay thật mạnh ngay từ đầu, Đăng chia nhỏ từng bước rất dễ làm quen ở làn nước nông ấm áp: tập thở bong bóng đều đặn, cảm nhận lực nâng tự nhiên của nước giúp cơ thể nổi ngang, rồi mới ghép nhịp chân và tay.',
-      'Với những hội viên đã biết bơi cơ bản, Đăng hướng dẫn cách vươn dài sải tay và xoay người nhẹ nhàng để bạn có thể bơi liên tục 10–20 vòng hồ 25m như một cách thư giãn đầu óc tuyệt vời sau giờ làm việc.',
+      'Nhiều người lớn khi đến hồ bơi SÖL thường ngại ngùng chia sẻ với Noah Grant rằng họ đã ngoài 30, 40 tuổi nhưng vẫn sợ úp mặt xuống nước hoặc chỉ bơi được 15 mét là thở dốc. Noah luôn mỉm cười trấn an: học bơi ở tuổi nào cũng hoàn toàn bình thường khi có phương pháp đúng.',
+      'Thay vì yêu cầu học viên quạt tay thật mạnh ngay từ đầu, Noah chia nhỏ từng bước rất dễ làm quen ở làn nước nông ấm áp: tập thở bong bóng đều đặn, cảm nhận lực nâng tự nhiên của nước giúp cơ thể nổi ngang, rồi mới ghép nhịp chân và tay.',
+      'Với những hội viên đã biết bơi cơ bản, Noah hướng dẫn cách vươn dài sải tay và xoay người nhẹ nhàng để bạn có thể bơi liên tục 10–20 vòng hồ 25m như một cách thư giãn đầu óc tuyệt vời sau giờ làm việc.',
     ],
     milestones: [
       {
@@ -287,7 +287,7 @@ export const trainerProfiles: TrainerProfile[] = [
   {
     slug: 'tennis-coach',
     name: 'Tennis coach',
-    vietnameseName: 'HLV Tuấn Kiệt',
+    vietnameseName: 'Coach Julian Reed',
     specialty: 'TENNIS PHONG TRÀO, BỘ CHÂN & PHẢN XẠ',
     shortRole: 'Huấn luyện viên Tennis cơ bản & Giao lưu sân đấu',
     image: 'hero-athlete.png',
@@ -300,9 +300,9 @@ export const trainerProfiles: TrainerProfile[] = [
     introSummary:
       'Mang bộ môn Tennis đến gần hơn với mọi người qua giáo án nhập môn dễ hiểu, không gây mỏi cổ tay, kết hợp rèn phản xạ nhanh nhạy và những giờ giao lưu vui vẻ trên sân.',
     storyParagraphs: [
-      'Tuấn Kiệt bắt đầu chơi Tennis từ những buổi chiều nhặt bóng và tập ké ở cụm sân khu phố. Kiệt nhận thấy rất nhiều người thích Tennis nhưng ngại bắt đầu vì sợ kỹ thuật khó, sợ đau khuỷu tay (Tennis Elbow) hoặc chưa có nhóm bạn cùng trình độ để ghép sân.',
-      'Tại cụm sân Tennis của SÖL, Kiệt xây dựng các lớp học từ cơ bản nhất: có sẵn vợt tập trọng lượng nhẹ, máy thả bóng tốc độ chậm ổn định để người mới dễ dàng căn điểm chạm bóng ngay trước mặt mà không phải chạy vất vả.',
-      'Khi bạn đã quen tay, Kiệt sẽ hướng dẫn cách bật nhảy bước nhỏ (Split-Step), cách giao bóng nhẹ nhàng qua lưới và kết nối bạn vào các nhóm hội viên cùng trình độ để mỗi tuần đều có những trận đánh đôi sảng khoái, tràn đầy tiếng cười.',
+      'Julian Reed bắt đầu chơi Tennis từ những buổi chiều tập luyện tại câu lạc bộ thể thao cộng đồng. Julian nhận thấy rất nhiều người thích Tennis nhưng ngại bắt đầu vì sợ kỹ thuật khó, sợ đau khuỷu tay (Tennis Elbow) hoặc chưa có nhóm bạn cùng trình độ để ghép sân.',
+      'Tại cụm sân Tennis của SÖL, Julian xây dựng các lớp học từ cơ bản nhất: có sẵn vợt tập trọng lượng nhẹ, máy thả bóng tốc độ chậm ổn định để người mới dễ dàng căn điểm chạm bóng ngay trước mặt mà không phải chạy vất vả.',
+      'Khi bạn đã quen tay, Julian sẽ hướng dẫn cách bật nhảy bước nhỏ (Split-Step), cách giao bóng nhẹ nhàng qua lưới và kết nối bạn vào các nhóm hội viên cùng trình độ để mỗi tuần đều có những trận đánh đôi sảng khoái.',
     ],
     milestones: [
       {
