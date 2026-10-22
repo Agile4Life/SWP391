@@ -53,6 +53,30 @@ afterEach(async () => {
 });
 
 describe('MemberCardPage', () => {
+  it('shows paid renewal expiry instead of the current period expiry', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, paidThroughDate: '2100-03-01' } as never);
+    await renderPage();
+    expect(host.textContent).toContain('Ngày hết hạn: 01/03/2100');
+    expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('backend-qr');
+  });
+
+  it('avoids an expiry warning when a contiguous renewal has been paid', async () => {
+    const today = new Date();
+    const key = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, endDate: key, paidThroughDate: '2099-12-31' } as never);
+    await renderPage();
+    expect(host.textContent).toContain('Gói tập đang hoạt động');
+    expect(host.textContent).not.toContain('Gói tập sắp hết hạn');
+    expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).not.toBeNull();
+  });
+
+  it('never enables an expired period QR merely because paidThroughDate is later', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, endDate: '2020-01-01', paidThroughDate: '2099-12-31' } as never);
+    await renderPage();
+    expect(QRCode.toDataURL).not.toHaveBeenCalled();
+    expect(host.querySelector('button')?.disabled).toBe(true);
+  });
+
   it('shows a real active card and renders the backend QR value', async () => {
     vi.mocked(QRCode.toDataURL).mockResolvedValue('https://example.invalid/qr.png' as never);
     await renderPage();

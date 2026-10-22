@@ -620,8 +620,30 @@ public class MembershipSubscriptionService {
         LocalDate today = LocalDate.now(clock);
         return subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
                         principal.id(), STATUS_ACTIVE, today, today)
-                .map(this::toDto)
+                .map(current -> toDto(current, paidThroughDate(current,
+                        subscriptions.findByMemberUserId(principal.id()))))
                 .orElse(null);
+    }
+
+    private LocalDate paidThroughDate(MembershipSubscription current, List<MembershipSubscription> history) {
+        MembershipSubscription tail = current;
+        java.util.Set<Long> visited = new java.util.HashSet<>();
+        while (visited.add(tail.getId())) {
+            Long tailId = tail.getId();
+            List<MembershipSubscription> successors = history.stream()
+                    .filter(item -> item.getPreviousSubscription() != null
+                            && tailId.equals(item.getPreviousSubscription().getId())
+                            && STATUS_ACTIVE.equalsIgnoreCase(item.getStatus()))
+                    .toList();
+            if (successors.size() != 1) break;
+            MembershipSubscription next = successors.get(0);
+            if (visited.contains(next.getId()) || !validPeriod(next)
+                    || !next.getStartDate().equals(tail.getEndDate().plusDays(1))
+                    || next.getMembershipPackage() == null || tail.getMembershipPackage() == null
+                    || !next.getMembershipPackage().getId().equals(tail.getMembershipPackage().getId())) break;
+            tail = next;
+        }
+        return tail.getEndDate();
     }
 
     /**
@@ -756,6 +778,10 @@ public class MembershipSubscriptionService {
     }
 
     private SubscriptionDto toDto(MembershipSubscription s) {
+        return toDto(s, null);
+    }
+
+    private SubscriptionDto toDto(MembershipSubscription s, LocalDate paidThroughDate) {
         return new SubscriptionDto(
                 s.getId(),
                 s.getMember() != null ? s.getMember().getUserId() : null,
@@ -770,7 +796,8 @@ public class MembershipSubscriptionService {
                 s.getHoldStatus(),
                 s.getHoldReason(),
                 s.getHoldRequestedAt(),
-                s.getHoldResolvedAt());
+                s.getHoldResolvedAt(),
+                paidThroughDate);
     }
 
     private com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto toPendingDto(MembershipSubscription s) {

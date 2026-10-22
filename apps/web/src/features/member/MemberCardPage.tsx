@@ -29,13 +29,16 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const [downloading, setDownloading] = useState(false);
   const [dynamicQr, setDynamicQr] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(30);
-  const status = cardStatus(subscription.status, subscription.endDate);
+  const paidThroughDate = subscription.paidThroughDate ?? subscription.endDate;
+  const status = cardStatus(subscription.status, paidThroughDate);
+  const periodStatus = cardStatus(subscription.status, subscription.endDate);
   const today = new Date();
   const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const canShowQr =
     validDate(subscription.startDate) &&
     subscription.startDate <= localToday &&
     validDate(subscription.endDate) &&
+    (periodStatus === 'active' || periodStatus === 'warning') &&
     (status === 'active' || status === 'warning') &&
     Boolean(subscription.qrCode?.trim());
   const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#C2A684' : '#A45A53';
@@ -115,7 +118,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
         <p style={{ margin: '4px 0' }}>Mã hội viên: {profile.membershipCode || 'Chưa có mã hội viên'}</p>
         <p style={{ margin: '4px 0' }}>Gói tập: {subscription.packageName}</p>
         <p style={{ margin: '4px 0' }}>Ngày bắt đầu: {displayDate(subscription.startDate)}</p>
-        <p style={{ margin: '4px 0 12px' }}>Ngày hết hạn: {displayDate(subscription.endDate)}</p>
+        <p style={{ margin: '4px 0 12px' }}>Ngày hết hạn: {displayDate(paidThroughDate)}</p>
         <p style={{ color: border, fontWeight: 600 }}>
           {status === 'warning'
             ? 'Gói tập sắp hết hạn'

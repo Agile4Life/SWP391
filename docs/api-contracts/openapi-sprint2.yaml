@@ -199,6 +199,12 @@ components:
         endDate:
           type: string
           format: date
+          description: Ngày kết thúc kỳ hiện tại, dùng kiểm tra quyền và QR.
+        paidThroughDate:
+          type: string
+          format: date
+          nullable: true
+          description: GET /memberships/subscriptions/my trả hạn cuối chuỗi gia hạn cùng gói, liên tiếp và đã thanh toán (status active), bao gồm kỳ hiện tại. Không cộng pending_payment, frozen, cancelled, kỳ có khoảng trống hoặc chuỗi phân nhánh. Các response khác có thể trả null; client dùng endDate khi null. Không thay đổi ngày hoặc QR của từng kỳ.
         status:
           type: string
           enum: [pending_payment, active, frozen, expired, cancelled]
