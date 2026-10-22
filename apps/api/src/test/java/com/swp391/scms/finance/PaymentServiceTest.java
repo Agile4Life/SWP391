@@ -1,6 +1,7 @@
 package com.swp391.scms.finance;
 
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.finance.dto.PaymentCreateDto;
 import com.swp391.scms.finance.dto.PaymentDto;
@@ -238,7 +239,7 @@ class PaymentServiceTest {
         sub.setMembershipPackage(pkg);
         sub.setStatus("pending_payment");
 
-        when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(paymentMapper.toDto(any(Payment.class))).thenReturn(new PaymentDto());
@@ -255,6 +256,55 @@ class PaymentServiceTest {
     }
 
     @Test
+    void posCannotActivateCancelledSubscription() {
+        Member member = new Member(); member.setUserId(2L);
+        MembershipSubscription cancelled = new MembershipSubscription(); cancelled.setId(10L);
+        cancelled.setMember(member); cancelled.setStatus("cancelled");
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(cancelled));
+        PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null,
+                new BigDecimal("500000"), "pos", null, null);
+        assertThrows(ConflictException.class, () -> paymentService.processPayment(dto));
+        verify(paymentRepository, never()).save(any());
+        assertEquals("cancelled", cancelled.getStatus());
+    }
+
+    @Test
+    void posSettlesExistingPendingPaymentWithoutCreatingDuplicate() {
+        Member member = new Member(); member.setUserId(2L);
+        MembershipPackage pkg = new MembershipPackage(); pkg.setPrice(new BigDecimal("500000"));
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(10L);
+        sub.setMember(member); sub.setMembershipPackage(pkg); sub.setStatus("pending_payment");
+        Payment pending = new Payment(); pending.setId(90L); pending.setMember(member);
+        pending.setSubscriptionId(10L); pending.setStatus("pending"); pending.setAmount(new BigDecimal("500000"));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
+        when(paymentRepository.findAllBySubscriptionId(10L)).thenReturn(List.of(pending));
+        when(paymentRepository.save(pending)).thenReturn(pending);
+        when(paymentMapper.toDto(pending)).thenReturn(new PaymentDto());
+        paymentService.processPayment(new PaymentProcessDto(2L, 10L, null,
+                new BigDecimal("500000"), "pos", null, null));
+        assertEquals("success", pending.getStatus());
+        assertEquals("active", sub.getStatus());
+        verify(paymentRepository).save(pending);
+        verify(paymentRepository, times(1)).save(any());
+    }
+
+    @Test
+    void paymentConfirmationCannotReactivateCancelledRequest() {
+        Member member = new Member(); member.setUserId(2L);
+        Payment payment = new Payment(); payment.setId(90L); payment.setMember(member);
+        payment.setSubscriptionId(10L); payment.setStatus("pending");
+        MembershipSubscription cancelled = new MembershipSubscription(); cancelled.setId(10L);
+        cancelled.setMember(member); cancelled.setStatus("cancelled");
+        when(paymentRepository.findById(90L)).thenReturn(Optional.of(payment));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(cancelled));
+        assertThrows(ConflictException.class, () -> paymentService.updatePaymentStatus(90L, "success"));
+        assertEquals("cancelled", cancelled.getStatus());
+    }
+
+    @Test
     @DisplayName("Should reject payment processing when amount does not match package price")
     void shouldRejectPaymentWhenAmountMismatches() {
         Member member = new Member();
@@ -268,7 +318,7 @@ class PaymentServiceTest {
         sub.setMember(member);
         sub.setMembershipPackage(pkg);
 
-        when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
 
         PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, null, new BigDecimal("1000000.00"), "pos", null, null);

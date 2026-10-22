@@ -869,10 +869,97 @@ paths:
       responses:
         '200':
           description: Hủy yêu cầu gói tập thành công
-        '400':
-          description: Gói tập không ở trạng thái chờ thanh toán
         '403':
           description: Không có quyền hủy yêu cầu này
+        '404':
+          description: Không tìm thấy subscription
+        '409':
+          description: Đã kích hoạt hoặc có payment đã hoàn tất/chưa đối soát
+
+  /memberships/cancellations/subscriptions/{subscriptionId}:
+    post:
+      summary: Member gửi yêu cầu hủy gói đang hoạt động; quyền lợi giữ nguyên khi chờ duyệt
+      tags: [Memberships]
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 1, maxLength: 500}
+      responses:
+        '201': {description: Đã gửi yêu cầu chờ quản lý duyệt}
+        '400': {description: Thiếu lý do}
+        '403': {description: Không phải chủ gói}
+        '404': {description: Không tìm thấy gói}
+        '409': {description: Gói không active hoặc đã có yêu cầu pending}
+
+  /memberships/cancellations/my:
+    get:
+      summary: Lịch sử yêu cầu hủy của member đang đăng nhập
+      tags: [Memberships]
+      responses:
+        '200': {description: Thành công}
+
+  /memberships/cancellations:
+    get:
+      summary: Manager xem các yêu cầu hủy gói tập
+      tags: [Memberships]
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Chỉ Center Manager có quyền xem}
+
+  /memberships/cancellations/{id}/approve:
+    post:
+      summary: Manager duyệt hủy gói active; không hoàn tiền
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Đã duyệt; gói ngừng cấp quyền và booking tương lai bị chấm dứt}
+        '403': {description: Chỉ Center Manager có quyền duyệt}
+        '404': {description: Không tìm thấy yêu cầu}
+        '409': {description: Gói không còn active hoặc có quyền lợi khác không thể phân định}
+
+  /memberships/cancellations/{id}/reject:
+    post:
+      summary: Manager từ chối yêu cầu; gói giữ nguyên quyền lợi
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Đã từ chối yêu cầu}
+        '403': {description: Chỉ Center Manager có quyền từ chối}
+        '409': {description: Yêu cầu đã được xử lý}
 
   /memberships/subscriptions/{id}/hold:
     post:

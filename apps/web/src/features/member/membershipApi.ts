@@ -44,6 +44,28 @@ export interface Payment {
   invoiceNumber: string | null;
 }
 
+export interface MembershipCancellationRequest {
+  id: number;
+  memberId: number;
+  memberName: string | null;
+  subscriptionId: number;
+  packageName: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  resolvedById: number | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+}
+
+export const getMyMembershipCancellations = () =>
+  apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations/my');
+
+export const requestMembershipCancellation = (subscriptionId: number, reason: string) =>
+  apiFetch<MembershipCancellationRequest>(`/memberships/cancellations/subscriptions/${subscriptionId}`, {
+    method: 'POST', body: JSON.stringify({ reason }),
+  });
+
 export const getMembershipPackages = () =>
   apiFetch<MembershipPackage[]>('/packages');
 
