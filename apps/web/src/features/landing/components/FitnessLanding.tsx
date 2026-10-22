@@ -5,21 +5,21 @@ import { RoundArrow } from './PublicLayout';
 
 const tickerItems = [
   'STRENGTH FLOOR',
+  'HEATED LAP POOL 25M',
+  'CHAMPIONSHIP TENNIS',
   'MOVEMENT STUDIO',
-  'PERSONAL TRAINING',
+  'HYDRO-RECOVERY',
   'ATHLETIC CONDITIONING',
   'BARBELL CLUB',
-  'MOBILITY & RECOVERY',
-  'BODY METRIC LAB',
-  'SMALL GROUP COACHING',
+  'MULTI-SPORT PASS',
 ];
 
-const manifestoWords = 'Không chỉ là một phòng tập. SÖL là khoảng lặng có kỷ luật — nơi từng nhịp thở, từng mức tạ và từng chuyển động đều được thiết kế để bạn mạnh mẽ hơn mỗi ngày.'.split(' ');
+const manifestoWords = 'Không chỉ là một phòng tập cố định. SÖL là tổ hợp thể chất đa bộ môn — nơi sức mạnh tạ rời, làn nước ấm 25m, mặt sân Tennis chuẩn giải đấu và nhịp thở Pilates giao thoa để bạn bứt phá mỗi ngày.'.split(' ');
 
 const services = [
-  { title: 'WeightLifting', description: 'Xây nền thể lực, cải thiện sức bền. Tiến bộ từ những chuyển động cơ bản, vững vàng trong từng buổi tập.', icon: 'weights' },
-  { title: 'Private Training', description: 'Một mục tiêu riêng. Một lộ trình riêng. Tập đúng kỹ thuật cùng người hướng dẫn, bền bỉ theo nhịp độ của bạn.', icon: 'training' },
-  { title: 'Build Muscle', description: 'Tập đúng kỹ thuật, bền bỉ từng ngày. Phát triển cơ bắp và xây dựng phiên bản mạnh mẽ hơn.', icon: 'muscle' },
+  { title: 'WeightLifting', description: 'Xây nền sức mạnh, phát triển khối cơ và lực phát bùng nổ bổ trợ trực tiếp cho Bơi lội, Tennis và vận động hàng ngày.', icon: 'weights' },
+  { title: 'Private Training', description: 'Huấn luyện 1:1 đa bộ môn — từ chỉnh kỹ thuật Squat, sải tay bơi chuẩn thủy động lực học đến bộ chân Split-Step trên sân Tennis.', icon: 'training' },
+  { title: 'Build Muscle', description: 'Phối hợp tập tạ chuyên sâu, bơi kháng lực nước và vận động linh hoạt giúp cơ thể săn chắc, dẻo dai mà không quá tải khớp.', icon: 'muscle' },
 ];
 const serviceShapes = [
   'M37 30L259 0Q290-2 295 32L319 231Q323 280 279 280H72Q33 280 27 241L1 80Q-5 40 37 30Z',
@@ -27,10 +27,10 @@ const serviceShapes = [
   'M61 0L283 30Q325 40 319 80L293 241Q287 280 248 280H41Q-3 280 1 231L25 32Q30-2 61 0Z',
 ];
 const clubMetrics = [
-  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, label: 'MỞ CỬA MỖI NGÀY', detail: 'Linh hoạt lịch tập sáng sớm, giờ nghỉ trưa hoặc sau giờ làm.' },
-  { value: '03 Zones', countTo: 3, format: (n: number) => `${String(n).padStart(2, '0')} Zones`, label: 'KHÔNG GIAN CHUYÊN BIỆT', detail: 'Strength Floor, Free Weights và Movement Studio tách biệt.' },
-  { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN', detail: 'Xem lịch, kiểm tra chỗ trống và quản lý lớp đã đặt trong tài khoản hội viên.' },
-  { value: 'QR Pass', label: 'THẺ HỘI VIÊN ĐIỆN TỬ', detail: 'Mở thẻ QR trong tài khoản để check-in khi gói tập còn hiệu lực.' },
+  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, label: 'MỞ CỬA MỖI NGÀY', detail: 'Linh hoạt lịch tập Gym, bơi sáng sớm, đánh Tennis chiều muộn hoặc phục hồi sau giờ làm.' },
+  { value: '05 Zones', countTo: 5, format: (n: number) => `${String(n).padStart(2, '0')} Zones`, label: 'TỔ HỢP ĐA BỘ MÔN', detail: 'Strength Floor, Free Weights, Movement Studio, Hồ bơi 4 mùa 25m & Sân Tennis chuẩn ITF.' },
+  { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN', detail: 'Đặt lịch lớp nhóm, giữ làn bơi phân luồng hoặc đặt khung giờ sân Tennis trực tiếp trong tài khoản.' },
+  { value: 'QR Pass', label: 'THẺ ĐA MÔN ĐIỆN TỬ', detail: 'Một thẻ QR duy nhất để check-in toàn bộ phân khu Gym, Hồ bơi và Sân Tennis khi gói tập còn hiệu lực.' },
 ];
 const muscleGroups = [
   {
@@ -167,45 +167,47 @@ const spaces = [
   { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: '18 thiết bị chuẩn Olympic · Trần thoáng 6.5m', load: '68%', status: 'Đang thoáng · Sẵn sàng tập ngay' },
   { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Tạ đơn 2–50kg · 6 khung Power Rack chuyên sâu', load: '54%', status: 'Mật độ lý tưởng · Đủ tạ & rack' },
   { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/pilates-reformer-studio.jpg', label: 'Movement studio', meta: '12 máy Reformer · Không gian yên tĩnh tách biệt', load: '42%', status: 'Yên tĩnh · Ánh sáng dịu cân bằng' },
+  { title: 'Làn nước tĩnh lặng chuẩn 25 mét.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: '6 làn bơi 25m · Điện phân muối khoáng 28°C', load: '48%', status: 'Nước ấm 28°C · Làn bơi thông thoáng' },
+  { title: 'Mặt sân chuẩn giải đấu giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Mặt sân Cushion Acrylic 7 lớp · Đèn LED 750 Lux', load: '62%', status: 'Độ nảy chuẩn ITF · Sẵn sàng giao bóng' },
 ];
 const scheduleItems = [
   { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Strength coach', level: 'Mọi cấp độ' },
-  { time: '08:00 — 08:50', title: 'Reformer Core & Posture', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Cơ bản — Trung bình' },
-  { time: '12:00 — 12:45', title: 'Midday Metabolic Conditioning', category: 'conditioning', studio: 'Free weights', coach: 'Personal coach', level: 'Trung bình' },
+  { time: '07:30 — 08:25', title: 'Aquatics Stroke & Endurance Clinic', category: 'conditioning', studio: 'Aquatics pool 25m', coach: 'Aquatics coach', level: 'Cơ bản — Nâng cao' },
+  { time: '09:00 — 09:50', title: 'Reformer Core & Shoulder Mobility', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Mọi cấp độ' },
   { time: '17:30 — 18:25', title: 'Hypertrophy & Barbell Club', category: 'strength', studio: 'Free weights', coach: 'Strength coach', level: 'Trung bình — Nâng cao' },
-  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Flow', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Mọi cấp độ' },
-  { time: '19:30 — 20:20', title: 'Athletic Endurance Circuit', category: 'conditioning', studio: 'Strength floor', coach: 'Personal coach', level: 'Mọi cấp độ' },
+  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Hydro-Recovery', category: 'movement', studio: 'Movement & Pool', coach: 'Movement coach', level: 'Mọi cấp độ' },
+  { time: '19:30 — 20:30', title: 'Tennis Footwork, Spin & Match Play', category: 'conditioning', studio: 'Championship Court', coach: 'Tennis coach', level: 'Trung bình — Thi đấu' },
 ];
 const journeySteps = [
-  { step: '01', title: 'Tạo tài khoản và chọn gói tập', description: 'Đăng ký, xác thực email và xem các gói đang mở bán trong tài khoản hội viên.' },
-  { step: '02', title: 'Cập nhật mục tiêu tập luyện', description: 'Lưu chiều cao, cân nặng và mục tiêu để theo dõi thay đổi của bạn.' },
-  { step: '03', title: 'Đặt lớp và mở thẻ QR', description: 'Khi gói tập có hiệu lực, chọn lớp còn chỗ và dùng thẻ QR để check-in tại câu lạc bộ.' },
+  { step: '01', title: 'Tạo tài khoản và chọn gói tập đa môn', description: 'Đăng ký, xác thực email và chọn gói tập linh hoạt mở quyền truy cập Gym, Hồ bơi 25m và Sân Tennis.' },
+  { step: '02', title: 'Thiết lập lộ trình phối hợp bộ môn', description: 'Cập nhật chỉ số cơ thể và mục tiêu để kết hợp giữa tập tạ tăng lực, bơi sải sức bền và Tennis phản xạ.' },
+  { step: '03', title: 'Đặt lớp, giữ làn bơi & mở thẻ QR', description: 'Khi gói tập có hiệu lực, chọn lớp nhóm, làn bơi hoặc khung giờ sân Tennis và dùng 1 thẻ QR duy nhất để check-in.' },
 ];
 const plans = [
-  { period: 'Tháng', name: 'The Essential', price: '2.800.000', duration: '30 ngày', description: 'Bắt đầu thói quen tập luyện với một lựa chọn linh hoạt.', perks: ['Không gian tập Gym & Cardio', 'Các lớp học nhóm cơ bản', 'Thẻ hội viên QR điện tử'] },
-  { period: 'Quý', name: 'The Sanctuary', price: '7.500.000', duration: '90 ngày', description: 'Dành thời gian cho mục tiêu và xây dựng nền tảng bền vững.', perks: ['Đa dạng bộ môn tập luyện', 'Lớp học nhóm và studio', 'Theo dõi lịch tập tại portal'] },
-  { period: 'Năm', name: 'The Sovereign', price: '26.000.000', duration: '365 ngày', description: 'Đồng hành dài lâu cùng hành trình nâng cao thể chất.', perks: ['Trải nghiệm các khu tập luyện', 'Lên kế hoạch tập luyện dài hạn', 'Quản lý hội viên tại portal'] },
+  { period: 'Tháng', name: 'The Essential', price: '2.800.000', duration: '30 ngày', description: 'Khởi động thói quen vận động đa môn linh hoạt mỗi tuần.', perks: ['Khu vực Gym, Free Weights & Hồ bơi 25m', 'Các lớp học nhóm & bơi thả lỏng phục hồi', 'Thẻ hội viên QR điện tử đa phân khu'] },
+  { period: 'Quý', name: 'The Sanctuary', price: '7.500.000', duration: '90 ngày', description: 'Phối hợp toàn diện giữa sức mạnh, bơi lội và phản xạ trên sân Tennis.', perks: ['Toàn quyền 05 phân khu: Gym, Studio, Hồ bơi & Tennis', 'Lớp kỹ thuật Bơi lội, Tennis Clinic & Reformer', 'Ưu tiên đặt khung giờ sân và làn bơi tại Portal'] },
+  { period: 'Năm', name: 'The Sovereign', price: '26.000.000', duration: '365 ngày', description: 'Đặc quyền thể thao đa bộ môn trọn vẹn suốt 4 mùa.', perks: ['Không giới hạn 05 phân khu & khung giờ sân Tennis', 'Đánh giá cơ sinh học & thiết kế giáo án đa môn', 'Đặc quyền bảo lưu (Freeze) và khách mời đi cùng'] },
 ];
 const faqs = [
   {
-    question: 'Người mới bắt đầu chưa từng tập gym có theo kịp lộ trình tại SÖL không?',
-    answer: 'Hoàn toàn phù hợp. Khi bắt đầu, bạn được định hướng từ các chuyển động nền tảng, kết hợp công cụ gợi ý giáo án cá nhân hóa và các lớp học phân cấp rõ ràng để tập đúng kỹ thuật ngay từ tuần đầu tiên.',
+    question: 'Người mới bắt đầu chưa từng tập gym, bơi kỹ thuật hay đánh Tennis có theo kịp lộ trình tại SÖL không?',
+    answer: 'Hoàn toàn phù hợp. SÖL thiết kế các lớp nhập môn riêng biệt cho từng bộ môn: làm quen chuyển động tạ cơ bản, chuẩn hóa nhịp thở và tư thế nổi ngang trong bơi lội, cũng như kỹ thuật cầm vợt và bộ chân nền tảng trong Tennis.',
   },
   {
-    question: 'Gói hội viên đã bao gồm các lớp tập nhóm và tiện ích câu lạc bộ chưa?',
-    answer: 'Tất cả gói hội viên tại SÖL đều bao gồm quyền sử dụng khu vực Gym & Cardio, lớp học nhóm theo quyền lợi gói, tủ đồ cá nhân, phòng tắm tiêu chuẩn và thẻ QR check-in điện tử trên Portal.',
+    question: 'Gói hội viên đã bao gồm quyền sử dụng Hồ bơi 4 mùa 25m và Sân Tennis chưa?',
+    answer: 'Tất cả gói hội viên tại SÖL đều mở quyền tiếp cận tổ hợp đa môn theo hạng gói: từ khu Gym & Hồ bơi nước ấm 28°C ở gói The Essential cho đến đặc quyền toàn bộ 05 phân khu (bao gồm Sân Tennis Cushion Acrylic và lớp chuyên đề) ở gói The Sanctuary và The Sovereign.',
   },
   {
     question: 'Tôi có thể tạm dừng (bảo lưu) gói tập khi đi công tác hoặc bận lịch cá nhân không?',
     answer: 'Có. Hội viên có thể gửi yêu cầu bảo lưu (Freeze) trực tiếp trên không gian hội viên trực tuyến. Số ngày còn lại của gói tập sẽ được giữ nguyên và mở lại dễ dàng khi bạn quay lại tập luyện.',
   },
   {
-    question: 'Làm thế nào để đặt chỗ lớp học và kiểm tra tình trạng phòng tập?',
-    answer: 'Sau khi đăng nhập vào Portal hội viên, bạn có thể xem lịch lớp theo thời gian thực, kiểm tra số chỗ trống, đặt lịch trước chỉ với một chạm hoặc tham gia danh sách chờ (Waitlist) tự động khi lớp đầy.',
+    question: 'Làm thế nào để đặt chỗ lớp học, giữ làn bơi hoặc đặt sân Tennis?',
+    answer: 'Sau khi đăng nhập vào Portal hội viên, bạn có thể xem lịch thực tế của cả 05 phân khu, kiểm tra mật độ làn bơi, khung giờ trống của sân Tennis và đặt chỗ trước chỉ với một chạm hoặc tham gia danh sách chờ (Waitlist) tự động.',
   },
   {
-    question: 'Tôi cần chuẩn bị gì cho buổi tập đầu tiên tại SÖL Fitness?',
-    answer: 'Bạn chỉ cần trang phục thể thao thoải mái và giày tập sạch. Khăn tập, nước uống bổ sung và lộ trình hướng dẫn khởi động đều đã sẵn sàng tại câu lạc bộ.',
+    question: 'Tại sao mô hình tập luyện đa môn (Gym + Bơi lội + Tennis) lại hiệu quả hơn tập cố định 1 môn?',
+    answer: 'Phối hợp đa bộ môn (Cross-Training) giúp cơ thể phát triển toàn diện: tập tạ xây dựng sức mạnh cơ lõi và bảo vệ dây chằng; Tennis rèn phản xạ thần kinh – cơ và tốc độ đổi hướng; còn Bơi lội giúp tăng dung tích phổi (VO₂ Max) và giải phóng áp lực lên cột sống, khớp gối.',
   },
 ];
 
@@ -350,10 +352,10 @@ export function FitnessLanding() {
           ? 'Thừa cân nhẹ — tối ưu đốt mỡ'
           : 'Ưu tiên giảm mỡ & bảo vệ khớp';
   const recommendedPlan = goalType === 'lean'
-    ? 'The Sanctuary (90 ngày) · 3 buổi Strength + 2 buổi Conditioning/tuần'
+    ? 'The Sanctuary (90 ngày) · 2 buổi Strength + 2 buổi Bơi sải đốt mỡ + 1 buổi Tennis phản xạ/tuần'
     : goalType === 'muscle'
-      ? 'The Sanctuary (90 ngày) · 4 buổi Hypertrophy & Free Weights/tuần'
-      : 'The Essential (30 ngày) · 3 buổi Movement Studio & Core/tuần';
+      ? 'The Sanctuary (90 ngày) · 3 buổi Hypertrophy + 1 buổi Tennis bùng nổ + 1 buổi Thủy trị liệu/tuần'
+      : 'The Essential (30 ngày) · 2 buổi Reformer Mobility + 2 buổi Bơi 4 mùa giải phóng khớp/tuần';
 
   const visibleSchedule = scheduleItems.filter((item) => scheduleFilter === 'all' || item.category === scheduleFilter);
 
@@ -509,7 +511,7 @@ export function FitnessLanding() {
           <a className="fit-pill" href="#contact">Ghé thăm SÖL<RoundArrow diagonal /></a>
         </div>
         <div className="fit-space-tabs" aria-label="Khám phá không gian">{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><img src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span aria-hidden="true">↗</span></button>)}</div>
-        <span className="fit-space-number">0{space + 1} / 03</span>
+        <span className="fit-space-number">0{space + 1} / 0{spaces.length}</span>
       </div>
     </section>
     <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">

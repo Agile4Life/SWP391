@@ -7,6 +7,7 @@ import '../fitness-public.css';
 
 const links = [
   { hash: 'about', label: 'Về SÖL' },
+  { hash: 'multisport', label: 'Bơi & Tennis' },
   { hash: 'trainers', label: 'Huấn luyện viên' },
   { hash: 'packages', label: 'Gói tập' },
   { hash: 'stories', label: 'Câu chuyện' },
