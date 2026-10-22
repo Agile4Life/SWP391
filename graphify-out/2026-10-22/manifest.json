@@ -4692,18 +4692,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/FitnessLanding.tsx": {
-    "mtime": 1792673263.87902,
-    "ast_hash": "deaa708b67c2feb01edc9d313cb28b10",
+    "mtime": 1792673807.9134402,
+    "ast_hash": "3d10e1aa6e0c25a3980a2bd6d2e981db",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/PublicLayout.tsx": {
-    "mtime": 1792672759.6569219,
-    "ast_hash": "a83df2d740e94da30d8b271e30c85704",
+    "mtime": 1792673866.5338068,
+    "ast_hash": "b1d5051cf9642e8baaa0f82a67c8a81e",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/hooks/useComponentReveal.ts": {
-    "mtime": 1792663570.0243182,
-    "ast_hash": "89e706e7aa159f686d80ec23dcae555c",
+    "mtime": 1792673700.736085,
+    "ast_hash": "0315428cb212be39958abdf08e83fe96",
     "semantic_hash": ""
   },
   "scripts/verify-public-animation.cjs": {
@@ -5032,12 +5032,12 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/TrainerStoryPage.tsx": {
-    "mtime": 1792673195.573215,
+    "mtime": 1792673399.0652616,
     "ast_hash": "f114c927c09d2be2bf6eb911962a47e8",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/data/trainersData.ts": {
-    "mtime": 1792673174.1314857,
+    "mtime": 1792673399.282353,
     "ast_hash": "def1b44bdd89e3f11eebfbc0b3d851d0",
     "semantic_hash": ""
   },

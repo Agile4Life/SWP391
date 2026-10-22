@@ -4692,18 +4692,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/FitnessLanding.tsx": {
-    "mtime": 1792673807.9134402,
-    "ast_hash": "3d10e1aa6e0c25a3980a2bd6d2e981db",
+    "mtime": 1792683216.6151402,
+    "ast_hash": "48f17608c56b2b8bd39bdbb7f082b140",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/PublicLayout.tsx": {
-    "mtime": 1792673866.5338068,
+    "mtime": 1792683046.6703937,
     "ast_hash": "b1d5051cf9642e8baaa0f82a67c8a81e",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/hooks/useComponentReveal.ts": {
-    "mtime": 1792673700.736085,
-    "ast_hash": "0315428cb212be39958abdf08e83fe96",
+    "mtime": 1792683352.855309,
+    "ast_hash": "73ea376a52e7993e96ee929335ffbec4",
     "semantic_hash": ""
   },
   "scripts/verify-public-animation.cjs": {
