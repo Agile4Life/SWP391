@@ -3,6 +3,7 @@ package com.swp391.scms.notifications;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.notifications.dto.NotificationDto;
 import com.swp391.scms.notifications.entity.Notification;
+import com.swp391.scms.notifications.port.NotificationDispatcher;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
 import org.springframework.data.domain.Page;
@@ -16,13 +17,22 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final NotificationMapper notificationMapper;
+    private final NotificationDispatcher notificationDispatcher;
 
     public NotificationService(NotificationRepository notificationRepository, 
                                UserRepository userRepository,
                                NotificationMapper notificationMapper) {
+        this(notificationRepository, userRepository, notificationMapper, null);
+    }
+
+    public NotificationService(NotificationRepository notificationRepository, 
+                               UserRepository userRepository,
+                               NotificationMapper notificationMapper,
+                               NotificationDispatcher notificationDispatcher) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.notificationMapper = notificationMapper;
+        this.notificationDispatcher = notificationDispatcher;
     }
 
     @Transactional(readOnly = true)
@@ -58,5 +68,16 @@ public class NotificationService {
         
         Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);
         notificationRepository.save(notification);
+    }
+
+    /**
+     * Dispatches notification asynchronously across multiple channels (Port & Adapter) (SCRUM-108).
+     */
+    public void dispatchMultiChannel(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
+        if (notificationDispatcher != null) {
+            notificationDispatcher.dispatch(userId, title, message, type, relatedEntityType, relatedEntityId);
+        } else {
+            send(userId, title, message, type, relatedEntityType, relatedEntityId);
+        }
     }
 }
