@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 /** Entity mapping table membership_subscriptions (schema is generated code-first by Hibernate). */
 @Entity
-@org.hibernate.annotations.Check(name = "ck_subscriptions_status", constraints = "status IN ('pending_payment','active','expired','cancelled')")
+@org.hibernate.annotations.Check(name = "ck_subscriptions_status", constraints = "status IN ('pending_payment','active','frozen','expired','cancelled')")
 @Table(name = "membership_subscriptions", indexes = {@Index(name = "ix_subscriptions_member_status", columnList = "member_id, status"), @Index(name = "ix_subscriptions_end_date", columnList = "end_date")})
 public class MembershipSubscription {
 
@@ -40,6 +40,22 @@ public class MembershipSubscription {
 
     @Column(name = "qr_code", length = 255, unique = true)
     private String qrCode;
+
+    @Column(name = "hold_status", length = 20)
+    private String holdStatus;
+
+    @Column(name = "hold_reason", length = 500)
+    private String holdReason;
+
+    @Column(name = "hold_requested_at")
+    private LocalDateTime holdRequestedAt;
+
+    @Column(name = "hold_resolved_at")
+    private LocalDateTime holdResolvedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hold_resolved_by")
+    private User holdResolvedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
@@ -72,6 +88,16 @@ public class MembershipSubscription {
     public void setStatus(String status) { this.status = status; }
     public String getQrCode() { return qrCode; }
     public void setQrCode(String qrCode) { this.qrCode = qrCode; }
+    public String getHoldStatus() { return holdStatus; }
+    public void setHoldStatus(String holdStatus) { this.holdStatus = holdStatus; }
+    public String getHoldReason() { return holdReason; }
+    public void setHoldReason(String holdReason) { this.holdReason = holdReason; }
+    public LocalDateTime getHoldRequestedAt() { return holdRequestedAt; }
+    public void setHoldRequestedAt(LocalDateTime holdRequestedAt) { this.holdRequestedAt = holdRequestedAt; }
+    public LocalDateTime getHoldResolvedAt() { return holdResolvedAt; }
+    public void setHoldResolvedAt(LocalDateTime holdResolvedAt) { this.holdResolvedAt = holdResolvedAt; }
+    public User getHoldResolvedBy() { return holdResolvedBy; }
+    public void setHoldResolvedBy(User holdResolvedBy) { this.holdResolvedBy = holdResolvedBy; }
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }

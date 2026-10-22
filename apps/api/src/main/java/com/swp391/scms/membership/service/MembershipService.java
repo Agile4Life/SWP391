@@ -52,11 +52,26 @@ public class MembershipService {
                     "Membership package is inactive");
         }
 
-        LocalDate startDate = LocalDate.now(clock);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate startDate = today;
         MembershipSubscription previous = subscription.getPreviousSubscription();
-        if (previous != null && previous.getEndDate() != null && !previous.getEndDate().isBefore(startDate)) {
+        boolean isUpgrade = previous != null
+                && subscription.getMembershipPackage() != null
+                && previous.getMembershipPackage() != null
+                && previous.getMembershipPackage().getId() != null
+                && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
+
+        if (isUpgrade && ACTIVE.equalsIgnoreCase(previous.getStatus())) {
+            previous.setStatus("expired");
+            if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
+                previous.setEndDate(today);
+            }
+            previous.setUpdatedAt(LocalDateTime.now(clock));
+            membershipSubscriptionRepository.save(previous);
+        } else if (previous != null && previous.getEndDate() != null && !previous.getEndDate().isBefore(startDate)) {
             startDate = previous.getEndDate().plusDays(1);
         }
+
         LocalDate activationStartDate = startDate;
         LocalDate endDate = activationStartDate.plusDays(subscription.getMembershipPackage().getDurationDays());
 

@@ -226,7 +226,7 @@ a {
 
 /* App Shell & Navigation Transitions */
 .route-fade {
-  animation: route-fade-up var(--dur-base) var(--ease-luxury) both;
+  animation: route-fade-up var(--dur-base) var(--ease-luxury);
 }
 
 .nav-indicator {

@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -207,6 +208,91 @@ public class EnrollmentService {
         }
 
         return toDto(saved, resolveSessionForClass(enrollment.getGymClass()));
+    }
+
+    /**
+     * Hủy toàn bộ các lịch lớp học đã đặt trong tương lai của hội viên khi gói tập được bảo lưu.
+     * Đồng thời giải phóng chỗ trống và đôn hàng chờ (waitlist) cho từng lớp bị ảnh hưởng.
+     */
+    @Transactional
+    public int cancelFutureEnrollmentsForMember(Long memberId, String cancelReason) {
+        if (memberId == null || enrollments == null) {
+            return 0;
+        }
+        LocalDate today = LocalDate.now(clock);
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalTime nowTime = now.toLocalTime();
+        String resolvedReason = (cancelReason != null && !cancelReason.isBlank())
+                ? cancelReason
+                : msg("scheduling.enrollment.cancelled_by_hold");
+
+        int cancelledCount = 0;
+        List<ClassEnrollment> memberEnrollments = enrollments.findByMemberUserId(memberId);
+        if (memberEnrollments != null) {
+            for (ClassEnrollment enrollment : memberEnrollments) {
+                if (enrollment == null || !BOOKED.equalsIgnoreCase(enrollment.getStatus())) {
+                    continue;
+                }
+                if (!hasUpcomingOrActiveSession(enrollment.getGymClass(), today, nowTime)) {
+                    continue;
+                }
+                enrollment.setStatus(CANCELLED);
+                enrollment.setCancelledAt(now);
+                enrollment.setCancelReason(resolvedReason);
+                ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
+                cancelledCount++;
+
+                if (notifications != null) {
+                    notifications.send(memberId,
+                            msg("notifications.booking.cancelled.title"),
+                            msg("notifications.booking.cancelled.body"),
+                            "system",
+                            "class_enrollment",
+                            saved != null ? saved.getId() : enrollment.getId());
+                }
+
+                if (enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
+                    promoteNextWaitlistEntry(enrollment.getGymClass().getId(), now);
+                }
+            }
+        }
+
+        if (waitlists != null) {
+            List<com.swp391.scms.scheduling.entity.ClassWaitlist> memberWaitlists =
+                    waitlists.findByMemberUserIdOrderByRequestedAtAsc(memberId);
+            if (memberWaitlists != null) {
+                for (com.swp391.scms.scheduling.entity.ClassWaitlist wl : memberWaitlists) {
+                    if (wl == null) continue;
+                    boolean wasNotified = "notified".equalsIgnoreCase(wl.getStatus());
+                    if (WAITING.equalsIgnoreCase(wl.getStatus()) || wasNotified) {
+                        wl.setStatus("expired");
+                        waitlists.save(wl);
+                        if (wasNotified && wl.getGymClass() != null && wl.getGymClass().getId() != null) {
+                            promoteNextWaitlistEntry(wl.getGymClass().getId(), now);
+                        }
+                    }
+                }
+            }
+        }
+
+        return cancelledCount;
+    }
+
+    private boolean hasUpcomingOrActiveSession(GymClass gymClass, LocalDate today, LocalTime nowTime) {
+        if (gymClass == null || gymClass.getId() == null || sessions == null) {
+            return true;
+        }
+        List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(gymClass.getId());
+        if (classSessions == null || classSessions.isEmpty()) {
+            return true;
+        }
+        return classSessions.stream()
+                .filter(s -> !"cancelled".equalsIgnoreCase(s.getStatus())
+                        && !"completed".equalsIgnoreCase(s.getStatus()))
+                .anyMatch(s -> s.getSessionDate() == null
+                        || s.getSessionDate().isAfter(today)
+                        || (s.getSessionDate().isEqual(today)
+                            && (s.getEndTime() == null || !s.getEndTime().isBefore(nowTime))));
     }
 
     /**

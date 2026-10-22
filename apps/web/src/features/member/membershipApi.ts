@@ -21,6 +21,10 @@ export interface MemberSubscription {
   status: string;
   qrCode: string | null;
   createdAt: string;
+  holdStatus?: string | null;
+  holdReason?: string | null;
+  holdRequestedAt?: string | null;
+  holdResolvedAt?: string | null;
 }
 
 export interface Payment {
@@ -39,6 +43,28 @@ export interface Payment {
   createdAt: string;
   invoiceNumber: string | null;
 }
+
+export interface MembershipCancellationRequest {
+  id: number;
+  memberId: number;
+  memberName: string | null;
+  subscriptionId: number;
+  packageName: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedAt: string;
+  resolvedById: number | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+}
+
+export const getMyMembershipCancellations = () =>
+  apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations/my');
+
+export const requestMembershipCancellation = (subscriptionId: number, reason: string) =>
+  apiFetch<MembershipCancellationRequest>(`/memberships/cancellations/subscriptions/${subscriptionId}`, {
+    method: 'POST', body: JSON.stringify({ reason }),
+  });
 
 export const getMembershipPackages = () =>
   apiFetch<MembershipPackage[]>('/packages');
@@ -71,6 +97,40 @@ export const createMembershipSubscription = (packageId: number) =>
 export const renewMembershipSubscription = (subscriptionId: number) =>
   apiFetch<MemberSubscription>(
     `/memberships/subscriptions/${subscriptionId}/renew`,
+    {
+      method: 'POST',
+    },
+  );
+
+export const upgradeMembershipSubscription = (
+  subscriptionId: number,
+  packageId: number,
+) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/upgrade`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ packageId }),
+    },
+  );
+
+export const requestMembershipHold = (
+  subscriptionId: number,
+  reason: string,
+) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/hold`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  );
+
+export const cancelPendingMembershipSubscription = (
+  subscriptionId: number,
+) =>
+  apiFetch<MemberSubscription>(
+    `/memberships/subscriptions/${subscriptionId}/cancel`,
     {
       method: 'POST',
     },

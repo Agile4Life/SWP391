@@ -3,6 +3,7 @@ package com.swp391.scms.membership;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
+import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -21,7 +22,7 @@ import java.util.List;
 /**
  * Controller for managing membership subscriptions (SCRUM-71).
  */
-@Tag(name = "Membership Subscriptions", description = "Purchase, renewal and member subscription status (SCRUM-71)")
+@Tag(name = "Membership Subscriptions", description = "Purchase, renewal, upgrade, hold and member subscription status (SCRUM-71)")
 @PreAuthorize("hasRole('MEMBER')")
 @RestController
 @RequestMapping({"/api/v1/memberships/subscriptions", "/api/v1/subscriptions"})
@@ -62,6 +63,34 @@ public class MembershipSubscriptionController {
                 .body(ApiResponse.created(msg("membership.subscription.renewed"), service.renew(principal, id)));
     }
 
+    @Operation(summary = "Upgrade an active membership subscription to a higher package")
+    @PostMapping("/{id}/upgrade")
+    public ResponseEntity<ApiResponse<SubscriptionDto>> upgrade(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody SubscriptionRequests.Upgrade request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(msg("membership.subscription.upgraded"), service.upgrade(principal, id, request)));
+    }
+
+    @Operation(summary = "Cancel a pending payment membership subscription request")
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<SubscriptionDto> cancelPending(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.cancelled"), service.cancelPending(principal, id));
+    }
+
+    @Operation(summary = "Request a hold/freeze on an active membership subscription")
+    @PostMapping("/{id}/hold")
+    public ApiResponse<SubscriptionDto> requestHold(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody SubscriptionRequests.HoldRequest request) {
+        return ApiResponse.ok(msg("membership.subscription.hold_requested"), service.requestHold(principal, id, request));
+    }
+
     @Operation(summary = "Get the authenticated member's current active subscription (or null if none)")
     @GetMapping("/my")
     public ApiResponse<SubscriptionDto> getMy(
@@ -88,5 +117,30 @@ public class MembershipSubscriptionController {
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<List<com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto>> getPending() {
         return ApiResponse.ok(msg("membership.subscription.list"), service.listPending());
+    }
+
+    @Operation(summary = "List all pending hold requests for receptionist processing")
+    @GetMapping("/holds/pending")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<List<HoldRequestDto>> getPendingHolds() {
+        return ApiResponse.ok(msg("membership.subscription.hold_list"), service.listPendingHolds());
+    }
+
+    @Operation(summary = "Approve a hold request and cancel future booked class schedules")
+    @PostMapping("/{id}/hold/approve")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<HoldRequestDto> approveHold(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.hold_approved"), service.approveHold(principal, id));
+    }
+
+    @Operation(summary = "Reject a hold request")
+    @PostMapping("/{id}/hold/reject")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<HoldRequestDto> rejectHold(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.hold_rejected"), service.rejectHold(principal, id));
     }
 }

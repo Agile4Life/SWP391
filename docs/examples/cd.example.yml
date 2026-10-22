@@ -1,0 +1,163 @@
+name: CD # Copy thanh .github/workflows/cd.yml; day la luot chay rieng voi CI.
+
+on:
+  # File CD phai nam tren default branch (mau nay la main).
+  # Khong co workflow_dispatch: re-run CI cua push main de thu lai.
+  workflow_run:
+    workflows: [CI] # Phai trung chinh xac name cua CI, khong phai ten file.
+    types: [completed]
+    branches: [main] # Doi dong bo voi cac lenh gh api .../commits/main ben duoi.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: example-production-deployment
+  cancel-in-progress: false # Khong huy giua chung mot deploy dang chay.
+
+jobs:
+  release:
+    # Chi deploy CI thanh cong tu push cua chinh repo, khong deploy PR/fork.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      current: ${{ steps.commit.outputs.current }}
+      sha: ${{ steps.commit.outputs.sha }}
+      image_prefix: ${{ steps.commit.outputs.image_prefix }}
+    steps:
+      - name: Select tested commit; skip superseded main
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          echo "sha=$TESTED_SHA" >> "$GITHUB_OUTPUT"
+          echo "image_prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          if [[ "$TESTED_SHA" == "$latest_sha" ]]; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'current=false' >> "$GITHUB_OUTPUT"
+            echo 'Skipped: main has a newer commit.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  publish:
+    needs: release
+    if: needs.release.outputs.current == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # GITHUB_TOKEN can quyen nay de push GHCR.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            context: apps/api # Build context backend; doi dong bo voi CI.
+            file: apps/api/Dockerfile # Dockerfile multi-stage tu build source.
+          - service: web
+            context: apps/web # Build context frontend; doi dong bo voi CI.
+            file: apps/web/Dockerfile # Can bo sung cho SCMS; static server can SPA fallback.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.sha }} # Build dung commit da qua CI.
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io # Mau dung GHCR; registry khac can doi login va image_prefix.
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: linux/amd64 # Server ARM64: doi CA CI va CD.
+          push: true
+          # Tag theo commit + run attempt de re-run khong ghi de release cu.
+          tags: ${{ needs.release.outputs.image_prefix }}-${{ matrix.service }}:${{ needs.release.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          # Repository variable PUBLIC, cung gia tri voi CI; khong truyen secrets.
+          # Dockerfile can ARG nay truoc build; doi ten neu khong dung Vite.
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+
+  deploy:
+    needs: [release, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Tao GitHub Environment production neu muon approval/branch rules.
+    environment: production
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TESTED_SHA: ${{ needs.release.outputs.sha }}
+      IMAGE_PREFIX: ${{ needs.release.outputs.image_prefix }}
+      RELEASE_TAG: ${{ needs.release.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }} # Repository variable: hostname/IPv4 cua Linux server.
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }} # Repository variable: SSH user co quyen Docker.
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }} # Repository variable: SSH port, mac dinh 22.
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }} # Repository variable: thu muc tren server, vd /opt/my-app.
+    steps:
+      - name: Deploy tested images using Compose
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }} # Repository secret: private key cua SSH user.
+          # Host key da xac minh qua kenh tin cay; port rieng dung [host]:port.
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }} # Repository secret.
+        run: |
+          set -euo pipefail
+          : "${DEPLOY_HOST:?Set DEPLOY_HOST}"
+          : "${DEPLOY_USER:?Set DEPLOY_USER}"
+          : "${DEPLOY_PATH:?Set DEPLOY_PATH}"
+          : "${SSH_KEY:?Set DEPLOY_SSH_KEY}"
+          : "${KNOWN_HOSTS:?Set DEPLOY_KNOWN_HOSTS}"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9_./-]+$ ]]
+
+          latest_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [[ "$TESTED_SHA" != "$latest_sha" ]]; then
+            echo 'Skipped deployment: main changed during image build.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          ssh_dir=$(mktemp -d)
+          trap 'rm -rf -- "$ssh_dir"' EXIT
+          printf '%s\n' "$SSH_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/key" "$ssh_dir/known_hosts"
+          api_image="$IMAGE_PREFIX-api:$RELEASE_TAG"
+          web_image="$IMAGE_PREFIX-web:$RELEASE_TAG"
+          # Path duoc gioi han ky tu; image/tag deu sinh tu GitHub metadata.
+          ssh -i "$ssh_dir/key" -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$ssh_dir/known_hosts" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash -s -- '$DEPLOY_PATH' '$api_image' '$web_image'" <<'REMOTE'
+          set -euo pipefail
+          cd "$1" # Tao san thu muc nay, compose.yml, .env va reverse proxy/TLS tren server.
+          # Server can Docker Engine + Compose v2; mau khong danh cho Kubernetes/ECS/Swarm.
+          # compose.yml can services api/web voi image: ${API_IMAGE} va ${WEB_IMAGE}.
+          # Them env_file: .env, ports/networks va restart: unless-stopped theo du an.
+          # JDBC/JWT va runtime secrets nam tren server/secret manager.
+          # Voi SCMS: SPRING_PROFILES_ACTIVE=supabase va PostgreSQL TLS tu env.
+          export API_IMAGE="$2" WEB_IMAGE="$3"
+          docker compose -f compose.yml config --quiet
+          # Image private: dang nhap GHCR tren server truoc bang token read:packages.
+          # Khong dung GITHUB_TOKEN tam thoi cua workflow lam credential tren server.
+          docker compose -f compose.yml pull api web
+          # Can healthcheck thuc cho CA api/web de --wait kiem tra readiness.
+          docker compose -f compose.yml up -d --wait --wait-timeout 180 api web
+          # Luu image cua release thanh cong. Loi deploy bao fail, khong tu rollback.
+          # Rollback thu cong bang image release truoc; khong xoa volume/database.
+          umask 077
+          printf 'API_IMAGE=%s\nWEB_IMAGE=%s\n' "$API_IMAGE" "$WEB_IMAGE" > .release.env
+          REMOTE
+          echo "Deployed commit $TESTED_SHA" >> "$GITHUB_STEP_SUMMARY"

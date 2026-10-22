@@ -79,8 +79,17 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/reports/**").hasRole("CENTER_MANAGER")
 
                     // Membership Subscriptions (SCRUM-71)
-                    .requestMatchers(HttpMethod.GET, "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending")
+                    .requestMatchers(HttpMethod.GET,
+                            "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
+                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST,
+                            "/api/v1/memberships/subscriptions/*/hold/approve", "/api/v1/subscriptions/*/hold/approve",
+                            "/api/v1/memberships/subscriptions/*/hold/reject", "/api/v1/subscriptions/*/hold/reject")
+                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST,
+                            "/api/v1/memberships/subscriptions/*/cancel", "/api/v1/subscriptions/*/cancel")
+                            .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 

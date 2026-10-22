@@ -23,6 +23,7 @@ import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
 import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
 import { UserManagerPage } from '../features/manager/UserManagerPage';
 import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
+import { ManagerCancellationPage } from '../features/manager/ManagerCancellationPage';
 
 export const router = createBrowserRouter([
   // Public Routes
@@ -135,6 +136,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/reports',
             element: <ManagerReportsPage />,
+          },
+          {
+            path: '/manager/cancellations',
+            element: <ManagerCancellationPage />,
           },
         ],
       },
