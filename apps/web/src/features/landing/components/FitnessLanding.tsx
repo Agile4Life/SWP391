@@ -238,7 +238,7 @@ const memberBenefits = [
     tag: 'Sân & Hồ bơi',
     idx: '01',
     title: 'Đặt sân & lịch bơi online',
-    description: 'Mở Portal, chọn sân hoặc làn bơi, chọn giờ — 24/7. Thành viên có gói được ưu tiên giữ chỗ; hủy trước giờ tập không mất phí.',
+    description: 'Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.',
     perks: [
       'Hồ bơi bốn mùa 25m · 02 sân Tennis tiêu chuẩn',
       'Khu Strength Floor, Free Weights & Movement Studio',
@@ -249,8 +249,8 @@ const memberBenefits = [
   {
     tag: 'Lớp',
     idx: '02',
-    title: 'Lớp nhóm không giới hạn',
-    description: 'Vào thẳng các lớp đang mở: Strength, Barbell Club, Core & Mobility, Bơi kỹ thuật, Tennis nhập môn theo đúng gói thành viên.',
+    title: 'Lớp nhóm theo gói tập',
+    description: 'Xem bộ môn, huấn luyện viên và chỗ trống trên lịch lớp. Số lượt đặt lớp phụ thuộc vào gói tập bạn đã kích hoạt.',
     perks: [
       'Lịch lớp sáng — chiều — tối mỗi ngày',
       'Biết trước HLV, studio, giờ, còn bao nhiêu chỗ',
@@ -290,7 +290,7 @@ const faqs = [
   },
   {
     question: 'Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?',
-    answer: 'Gói 1 Tháng mở khu Gym & Hồ bơi; Gói 3 Tháng và 12 Tháng mở toàn bộ 05 phân khu gồm cả Sân Tennis.',
+    answer: 'Quyền lợi, thời hạn và số lượt đặt lớp được hiển thị theo từng gói tại bảng giá và Portal. Hãy xem mô tả gói hoặc liên hệ lễ tân để xác nhận phạm vi sử dụng.',
   },
   {
     question: 'Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?',
@@ -298,7 +298,7 @@ const faqs = [
   },
   {
     question: 'Làm sao để đặt lớp học hoặc đặt sân?',
-    answer: 'Đăng nhập vào Portal để xem chỗ trống và đặt lịch trước.',
+    answer: 'Đăng nhập vào Portal để xem lịch lớp và chỗ trống. Để đặt lớp, bạn cần có gói tập đang hoạt động, còn hạn và còn lượt đặt theo gói.',
   },
 ];
 
@@ -443,11 +443,6 @@ export function FitnessLanding() {
         : bmiValue < 25
           ? 'Thừa cân nhẹ — tối ưu đốt mỡ'
           : 'Ưu tiên giảm mỡ & bảo vệ khớp';
-  const recommendedPlan = goalType === 'lean'
-    ? 'Gói Đa Môn · 3 Tháng'
-    : goalType === 'muscle'
-      ? 'Gói Đa Môn · 3 Tháng'
-      : 'Gói Cơ Bản · 1 Tháng';
 
 
   return <main id="public-main">
@@ -769,7 +764,7 @@ export function FitnessLanding() {
             <strong>{bmiValue !== null ? bmiValue : '—'}</strong>
             <span>{bmiStatus}</span>
           </div>
-          <p><strong>Gợi ý:</strong> {recommendedPlan}</p>
+          <p><strong>Gợi ý:</strong> Xem các gói đang mở tại bảng giá và trao đổi mục tiêu với huấn luyện viên.</p>
         </div>
         <Link to={joinPath} className="fit-pill">Nhận lộ trình<RoundArrow diagonal /></Link>
       </div>
@@ -838,7 +833,7 @@ export function FitnessLanding() {
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
             <h3>Chưa có gói vẫn trải nghiệm được</h3>
-            <p>Tạo tài khoản miễn phí, xem lịch lớp và đặt lịch trải nghiệm trước. Muốn mở toàn bộ phân khu và ưu đãi thì mua gói sau, lúc nào cũng được.</p>
+            <p>Tạo tài khoản miễn phí để xem lịch lớp và chọn gói phù hợp. Thanh toán tại quầy lễ tân để kích hoạt gói trước khi đặt lớp và check-in.</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
               Tạo tài khoản
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

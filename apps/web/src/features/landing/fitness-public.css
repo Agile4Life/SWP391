@@ -61,10 +61,11 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-header { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 32px 5.4%; position: sticky; top: 0; z-index: 15; transition: padding 260ms var(--fit-ease-out), background-color 260ms var(--fit-ease-out), border-color 260ms var(--fit-ease-out), backdrop-filter 260ms var(--fit-ease-out); border-bottom: 1px solid transparent; }
 .fit-header.is-scrolled { padding-block: 16px; background: #202020de; backdrop-filter: blur(12px); border-bottom-color: #ffffff14; }
 .fit-brand { display: inline-flex; align-items: baseline; font-size: 22px; font-weight: 700; letter-spacing: -.9px; white-space: nowrap; }
+.fit-header .fit-brand { font-size: 26px; }
 .fit-brand > span:first-child { color: var(--fit-salmon); margin-right: 2px; }
 .fit-brand-dot { font-size: 10px; line-height: 1; margin-left: 3px; align-self: flex-start; transform: translateY(2px); }
 .fit-nav { display: flex; align-items: center; gap: 30px; }
-.fit-nav a { position: relative; padding: 4px 0; font-size: 11px; font-weight: 500; color: #d6d3d0; }
+.fit-nav a { position: relative; padding: 4px 0; font-size: 15px; font-weight: 600; color: #d6d3d0; }
 .fit-nav a::after {
   content: '';
   position: absolute;
@@ -86,7 +87,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-round-arrow { display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; line-height: 1; color: #fff; background: var(--fit-salmon); transition: transform 240ms var(--fit-ease-out); }
 .fit-round-arrow svg { width: 52%; height: 52%; display: block; flex-shrink: 0; }
 .fit-pill:hover .fit-round-arrow, .fit-text-link:hover .fit-round-arrow { transform: translate(2px, -1px) scale(1.05); }
-.fit-header-cta { min-height: 34px; padding: 4px 4px 4px 16px; gap: 16px; font-size: 10px; }
+.fit-header-cta { min-height: 34px; padding: 4px 4px 4px 16px; gap: 16px; font-size: 14px; }
 .fit-header-cta .fit-round-arrow { width: 26px; height: 26px; }
 .fit-menu { display: none; align-items: center; justify-content: center; padding: 0; line-height: 1; background: transparent; color: #fff; border: 1px solid #ffffff30; width: 40px; height: 40px; border-radius: 50%; }
 .fit-menu svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
@@ -412,6 +413,15 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-pricing-switch button { border: none; background: transparent; color: #67524b; border-radius: 24px; padding: 12px 25px; font-size: 10px; }
 .fit-pricing-switch button[aria-pressed='true'] { color: #30201b; background: var(--fit-salmon); }
 .fit-pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.fit-pricing-grid > *, .fit-schedule-grid > *, .fit-trainers > * { min-width: 0; }
+.fit-catalog-state { padding: 28px 0; color: var(--fit-muted); font-size: 14px; line-height: 1.7; }
+.fit-catalog-state .fit-pill { margin-top: 16px; }
+.fit-catalog-caption { margin: 18px 0; color: var(--fit-muted); font-size: 13px; line-height: 1.7; text-align: center; }
+.fit-catalog-heading { margin-top: 48px; font-size: 24px; }
+.fit-plan-summary { margin: 16px 0; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.fit-plan h3, .fit-plan-price, .fit-trainer-card h3 { overflow-wrap: anywhere; }
+.fit-image-caption { position: absolute; top: 16px; left: 16px; z-index: 2; padding: 5px 9px; border-radius: 12px; background: #202020d9; color: var(--fit-paper); font-size: 11px; }
+.fit-coach-bio { margin-block: 24px; color: var(--fit-muted); font-size: 15px; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; }
 .fit-pricing-grid-two { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin: auto; }
 .fit-plan { padding: 25px; border-radius: 34px; background: #303030; display: flex; flex-direction: column; min-height: 405px; transition: transform 220ms, box-shadow 220ms; }
 .fit-plan-period { background: #fbf9f6; color: #63473c; border-radius: 20px; padding: 9px 34px; align-self: center; font-size: 10px; }
@@ -608,7 +618,10 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 
 @media (min-width: 1600px) { .fit-hero-title { font-size: 48px; } }
 @media (max-width: 1100px) {
-  .fit-nav { gap: 20px; }
+  .fit-menu { display: inline-flex; }
+  .fit-nav { display: none; position: absolute; top: calc(100% - 2px); left: 0; right: 0; padding: 20px 6%; background: #292929; border-block: 1px solid #ffffff20; }
+  .fit-nav.is-open { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  .fit-nav a { padding: 14px 0; font-size: 15px; }
   .fit-hero { min-height: 530px; }
   .fit-hero-title { padding-top: 100px; font-size: 3.15vw; }
   .fit-hero-athlete, .fit-hero-anatomy-stage { height: 530px; width: 390px; top: -5px; }
@@ -644,11 +657,8 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 @media (max-width: 760px) {
   .fit-header { padding: 23px 6%; gap: 12px; }
   .fit-brand { font-size: 20px; }
+  .fit-header .fit-brand { font-size: 24px; }
   .fit-header-actions { gap: 10px; }
-  .fit-menu { display: inline-flex; }
-  .fit-nav { display: none; position: absolute; top: calc(100% - 2px); left: 0; right: 0; padding: 20px 6%; background: #292929; border-block: 1px solid #ffffff20; }
-  .fit-nav.is-open { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
-  .fit-nav a { padding: 14px 0; font-size: 13px; }
   .fit-hero { min-height: 600px; margin-inline: 6%; }
   .fit-hero-title { display: flex; flex-direction: column; gap: 0; padding-top: 30px; font-size: clamp(28px, 7.1vw, 48px); letter-spacing: -.02em; }
   .fit-hero-title > span:last-child { margin-left: 0; }

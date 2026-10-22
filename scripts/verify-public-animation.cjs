@@ -1,13 +1,14 @@
 // Requires the local Vite server and Playwright through NODE_PATH.
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-core');
 const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';
 const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'no-preference' });
+  await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/accounts.google.com/gsi/**', (route) => route.fulfill({ body: '', contentType: 'text/javascript' }));
@@ -50,7 +51,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
 
     await page.locator('.fit-nav').getByRole('link', { name: 'Huấn luyện viên' }).click();
     await page.getByRole('button', { name: 'Nhóm huấn luyện 2' }).click();
-    await page.getByRole('heading', { name: 'Personal coach' }).waitFor();
+    await page.getByRole('heading', { name: 'HLV kiểm chứng 3' }).waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll('.fit-trainer-card')].every((card) => card.classList.contains('fit-reveal-ready')));
     await page.locator('.fit-trainer-card').first().scrollIntoViewIfNeeded();
     await page.waitForFunction(() => document.querySelector('.fit-trainer-card')?.classList.contains('is-visible'));
@@ -70,7 +71,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
       assert.equal(await page.locator('.fit-schedule-card').count(), 2);
       await page.locator('.fit-schedule-card').first().scrollIntoViewIfNeeded();
       await page.waitForFunction(() => [...document.querySelectorAll('.fit-schedule-card')].every((card) => card.classList.contains('is-visible')));
-      await page.getByRole('button', { name: 'Tất cả khung giờ' }).click();
+      await page.getByRole('button', { name: 'Tất cả bộ môn' }).click();
       await page.waitForFunction(() => document.querySelectorAll('.fit-schedule-card').length === 6);
       assert.equal(await page.locator('.fit-schedule-card').count(), 6);
       await page.waitForFunction(() => [...document.querySelectorAll('.fit-schedule-card')].every((card) => card.classList.contains('fit-reveal-ready')));

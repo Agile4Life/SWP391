@@ -3,15 +3,16 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-core');
 
 const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';
 const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
 
 (async () => {
   fs.mkdirSync(output, { recursive: true });
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/accounts.google.com/gsi/**', (route) => route.fulfill({ body: '', contentType: 'text/javascript' }));
@@ -56,7 +57,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     await page.locator('.fit-muscle-zone[data-muscle="chest"] path').first().hover({ force: true });
     await page.locator('.fit-muscle-callout h3').filter({ hasText: 'Cơ Ngực' }).waitFor();
     await page.getByRole('button', { name: 'Nhóm huấn luyện 2' }).click();
-    await page.getByRole('heading', { name: 'Personal coach' }).waitFor();
+    await page.getByRole('heading', { name: 'HLV kiểm chứng 3' }).waitFor();
     await page.getByRole('button', { name: 'Nhóm huấn luyện 1' }).click();
     await page.getByRole('button', { name: 'Free weights' }).click();
     await page.getByRole('heading', { name: 'Tập trung vào từng chuyển động.' }).waitFor();
@@ -68,7 +69,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     check('trainer navigation, gallery switch and pricing filter');
     await page.getByRole('button', { name: 'Strength & Barbell' }).click();
     assert.equal(await page.locator('.fit-schedule-card').count(), 2);
-    await page.getByRole('button', { name: 'Tất cả khung giờ' }).click();
+    await page.getByRole('button', { name: 'Tất cả bộ môn' }).click();
     assert.equal(await page.locator('.fit-schedule-card').count(), 6);
     await page.locator('#fit-bmi-height').fill('175');
     await page.locator('#fit-bmi-weight').fill('70');

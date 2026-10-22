@@ -1,3 +1,4 @@
+import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -31,22 +32,7 @@ interface RequestResult {
   action: 'register' | 'renew' | 'upgrade';
 }
 
-interface PackageDetails {
-  tierBadge: string;
-  summary: string;
-  benefits: string[];
-}
-
-const priceFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-});
-
 const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.';
-
-function formatPrice(price: number): string {
-  return priceFormatter.format(price);
-}
 
 function formatDate(value: string): string {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
@@ -63,19 +49,6 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   if (targetPkg.price > currentPkg.price) return true;
   if (targetPkg.price === currentPkg.price && targetPkg.durationDays > currentPkg.durationDays) return true;
   return false;
-}
-
-function getPackageDetails(pkg: MembershipPackage): PackageDetails {
-  return {
-    tierBadge: `Gói tập • ${pkg.durationDays} ngày`,
-    summary: pkg.description?.trim() || `Gói tập có thời hạn ${pkg.durationDays} ngày.`,
-    benefits: [
-      `Hiệu lực ${pkg.durationDays} ngày kể từ khi kích hoạt`,
-      pkg.classCreditLimit != null ? `Tối đa ${pkg.classCreditLimit} lượt đặt lớp mỗi kỳ` : 'Không giới hạn lượt đặt lớp',
-      'Đặt lớp và check-in khi gói còn hiệu lực',
-      'Thanh toán và kích hoạt tại quầy lễ tân',
-    ],
-  };
 }
 
 function renderModalOverlay(content: ReactNode) {

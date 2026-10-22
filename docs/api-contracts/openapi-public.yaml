@@ -1,0 +1,71 @@
+openapi: 3.0.3
+info:
+  title: SCMS public catalog (SCRUM-60, SCRUM-66, SCRUM-72, SCRUM-86, SCRUM-88)
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /public/catalog:
+    get:
+      summary: Live packages, coaches and upcoming seven-day schedule
+      description: >-
+        Uses the same ORM entities as the portal. Packages are active and ordered by price.
+        Coaches require active employment, an active user and no deleted_at. Excludes contact
+        information, credentials, health data and employment details. Sessions must start in
+        the future within today through today+6 using the application clock, be scheduled,
+        have an active class, an available room and an active, non-deleted coach.
+        Booked counts match the existing portal class enrollment count. No writes are public.
+      security: []
+      responses:
+        '200':
+          description: ApiResponse envelope; localized message via Accept-Language (default vi).
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  status: { type: integer }
+                  message: { type: string }
+                  data:
+                    type: object
+                    required: [packages, coaches, sessions]
+                    properties:
+                      packages:
+                        type: array
+                        items: { $ref: './openapi-sprint1.yaml#/components/schemas/MembershipPackage' }
+                      coaches:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer, format: int64 }
+                            name: { type: string }
+                            specialization: { type: string, nullable: true }
+                            bio: { type: string, nullable: true }
+                            certification: { type: string, nullable: true }
+                            avatarUrl: { type: string, nullable: true }
+                      sessions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer, format: int64 }
+                            classId: { type: integer, format: int64 }
+                            className: { type: string }
+                            disciplineId: { type: integer, format: int64 }
+                            disciplineName: { type: string }
+                            coachId: { type: integer, format: int64 }
+                            coachName: { type: string }
+                            roomId: { type: integer, format: int64 }
+                            roomName: { type: string }
+                            sessionDate: { type: string, format: date }
+                            startTime: { type: string, example: '09:00:00' }
+                            endTime: { type: string, example: '10:00:00' }
+                            status: { type: string, enum: [scheduled] }
+                            cancelReason: { type: string, nullable: true }
+                            capacity: { type: integer }
+                            bookedCount: { type: integer }

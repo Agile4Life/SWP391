@@ -1,3 +1,5 @@
+import { usePublicCatalog } from './publicCatalog';
+import { CatalogSchedule, CatalogStatus } from './components/CatalogSections';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../shared/api/client';
 import { PublicLayout, RoundArrow } from './components/PublicLayout';
@@ -9,11 +11,8 @@ interface SportPageData {
   title: string;
   subtitle: string;
   image: string;
-  coachSlug: string;
-  coachName: string;
   stats: { value: string; label: string }[];
   programs: { code: string; title: string; tag: string }[];
-  schedule: { day: string; time: string; title: string; level: string }[];
 }
 
 const SPORT_PAGES: Record<'swimming' | 'tennis', SportPageData> = {
@@ -24,8 +23,6 @@ const SPORT_PAGES: Record<'swimming' | 'tennis', SportPageData> = {
     title: 'Hồ Bơi Bốn Mùa',
     subtitle: 'Bơi lội · Sức bền · Thả lỏng',
     image: '/images/fitness/aquatics-pool.jpg',
-    coachSlug: 'aquatics-coach',
-    coachName: 'Anthony',
     stats: [
       { value: '06 Làn', label: 'Phân luồng tốc độ' },
       { value: 'Nước Ấm', label: 'Bơi thoải mái 4 mùa' },
@@ -36,11 +33,6 @@ const SPORT_PAGES: Record<'swimming' | 'tennis', SportPageData> = {
       { code: '02', title: 'Bơi Sải & Sức Bền', tag: 'Kỹ thuật lướt nước' },
       { code: '03', title: 'Thả Lỏng Dưới Nước', tag: 'Phục hồi sau buổi tập' },
     ],
-    schedule: [
-      { day: 'T3 · T5 · T7', time: '07:30 — 08:25', title: 'Aquatics Stroke & Endurance', level: 'Cơ bản — Nâng cao' },
-      { day: 'T2 · T4 · T6', time: '17:00 — 18:00', title: 'Bơi Cơ Bản & Nhịp Thở', level: 'Người mới bắt đầu' },
-      { day: 'T3 · T5', time: '18:30 — 19:20', title: 'Mobility & Hydro-Recovery', level: 'Mọi cấp độ' },
-    ],
   },
   tennis: {
     id: 'tennis',
@@ -49,8 +41,6 @@ const SPORT_PAGES: Record<'swimming' | 'tennis', SportPageData> = {
     title: 'Sân Tennis Câu Lạc Bộ',
     subtitle: 'Kỹ thuật · Bộ chân · Đánh đôi',
     image: '/images/fitness/tennis-court.jpg',
-    coachSlug: 'tennis-coach',
-    coachName: 'Ezekiel',
     stats: [
       { value: '02 Sân', label: 'Mặt sân tiêu chuẩn' },
       { value: 'Máy Tập', label: 'Hỗ trợ tập cá nhân' },
@@ -61,11 +51,6 @@ const SPORT_PAGES: Record<'swimming' | 'tennis', SportPageData> = {
       { code: '02', title: 'Giao Bóng & Lên Lưới', tag: 'Forehand · Backhand · Serve' },
       { code: '03', title: 'Bộ Chân & Đánh Đôi', tag: 'Giao lưu cuối tuần' },
     ],
-    schedule: [
-      { day: 'T2 · T4 · T6', time: '07:00 — 08:00', title: 'Morning Tennis & Footwork', level: 'Người mới bắt đầu' },
-      { day: 'T2 · T4 · T6', time: '19:30 — 20:30', title: 'Tennis Spin & Match Play', level: 'Mọi cấp độ' },
-      { day: 'T7 · CN', time: '16:30 — 18:30', title: 'Giao Lưu Đánh Đôi Cuối Tuần', level: 'Mọi cấp độ' },
-    ],
   },
 };
 
@@ -75,6 +60,7 @@ export function SportPage({ forcedSport }: { forcedSport?: 'swimming' | 'tennis'
   const key: 'swimming' | 'tennis' =
     forcedSport ?? (sportId === 'tennis' || pathname.includes('tennis') ? 'tennis' : 'swimming');
   const sport = SPORT_PAGES[key];
+  const { catalog, error, retry } = usePublicCatalog();
   const user = getCurrentUser();
   const joinPath = user ? (user.role === 'MEMBER' ? '/member/packages' : homePath(user.role)) : '/register';
 
@@ -146,26 +132,15 @@ export function SportPage({ forcedSport }: { forcedSport?: 'swimming' | 'tennis'
                 </div>
               </div>
 
-              <div className="fit-trainer-schedule-list">
-                <span className="fit-kicker">KHUNG GIỜ LỚP TIÊU BIỂU</span>
-                {sport.schedule.map((slot) => (
-                  <div key={`${slot.day}-${slot.time}`} className="fit-trainer-slot-item">
-                    <div>
-                      <span className="fit-schedule-time">{slot.day} · {slot.time}</span>
-                      <h3>{slot.title}</h3>
-                    </div>
-                    <span className="fit-schedule-spots">{slot.level}</span>
-                  </div>
-                ))}
-              </div>
+              {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={user?.role === 'MEMBER' ? '/member/classes' : '/login'} /> : <CatalogStatus loading={!error} retry={retry} />}
 
               <div className="fit-trainer-hero-actions">
                 <Link to={joinPath} className="fit-pill">
-                  Đăng ký tập thử
+                  Xem gói tập
                   <RoundArrow diagonal />
                 </Link>
-                <Link to={`/trainers/${sport.coachSlug}`} className="fit-text-link">
-                  HLV phụ trách: {sport.coachName} <RoundArrow diagonal />
+                <Link to="/#trainers" className="fit-text-link">
+                  Đội ngũ huấn luyện viên <RoundArrow diagonal />
                 </Link>
               </div>
             </div>
