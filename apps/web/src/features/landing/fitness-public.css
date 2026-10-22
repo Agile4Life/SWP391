@@ -1,4 +1,16 @@
 /* Public pages only. Portal keeps its existing design tokens and components. */
+html:has(.fit-site) {
+  background: #202020;
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: #ce9180 #202020;
+  scroll-behavior: smooth;
+}
+body:has(.fit-site) { background: #202020; }
+html:has(.fit-site)::-webkit-scrollbar, .fit-site ::-webkit-scrollbar { width: 10px; height: 10px; }
+html:has(.fit-site)::-webkit-scrollbar-track, .fit-site ::-webkit-scrollbar-track { background: #202020; }
+html:has(.fit-site)::-webkit-scrollbar-thumb, .fit-site ::-webkit-scrollbar-thumb { background: #ce9180; border: 2px solid #202020; border-radius: 10px; }
+html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollbar-thumb:hover { background: #e1aa98; }
 .fit-site {
   --fit-salmon: #ce9180;
   --fit-ink: #202020;
@@ -14,13 +26,15 @@
   --color-bg-warm: #2b2b2b;
   --color-bg-card: #292929;
   color: var(--fit-paper);
-  background: var(--fit-salmon);
+  background: var(--fit-ink);
   font-family: var(--fit-font);
-  padding: 28px;
+  width: 100%;
+  padding: 0;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
 }
 .fit-site * { box-sizing: border-box; }
+.fit-site, .fit-site * { scrollbar-width: thin; scrollbar-color: var(--fit-salmon) var(--fit-ink); }
 .fit-site ::selection { color: var(--fit-ink); background: var(--fit-salmon); }
 .fit-site :is(h1,h2,h3,p) { margin: 0; }
 .fit-site :is(a,button,input) { -webkit-tap-highlight-color: transparent; }
@@ -29,7 +43,7 @@
 .fit-site button:disabled { cursor: not-allowed; opacity: .55; }
 .fit-site :focus-visible { outline: 2px solid var(--fit-salmon); outline-offset: 5px; }
 .fit-site section, .fit-footer { scroll-margin-top: 24px; }
-.fit-canvas { max-width: 1500px; margin: auto; background: var(--fit-ink); overflow: clip; box-shadow: 12px 16px 30px #38251f30; }
+.fit-canvas { width: 100%; min-height: 100dvh; background: var(--fit-ink); overflow: clip; }
 .fit-header { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 32px 5.4%; position: relative; z-index: 5; }
 .fit-brand { display: inline-flex; align-items: baseline; font-size: 22px; font-weight: 700; letter-spacing: -.9px; white-space: nowrap; }
 .fit-brand > span:first-child { color: var(--fit-salmon); margin-right: 2px; }
@@ -212,7 +226,6 @@
 
 @media (min-width: 1600px) { .fit-hero-title { font-size: 48px; } }
 @media (max-width: 1100px) {
-  .fit-site { padding: 20px; }
   .fit-nav { gap: 20px; }
   .fit-hero { min-height: 530px; }
   .fit-hero-title { padding-top: 100px; font-size: 3.15vw; }
@@ -236,7 +249,6 @@
   .fit-auth .luxury-login-container, .fit-auth-card { padding: 28px 24px !important; }
 }
 @media (max-width: 760px) {
-  .fit-site { padding: 12px; }
   .fit-header { padding: 23px 6%; gap: 12px; }
   .fit-brand { font-size: 20px; }
   .fit-header-actions { gap: 10px; }
@@ -311,4 +323,7 @@
   .fit-auth-photo, .fit-auth-note { display: none; }
   .fit-auth .luxury-login-container, .fit-auth-card { padding: 28px 22px !important; border-radius: 24px !important; }
 }
-@media (prefers-reduced-motion: reduce) { .fit-site *, .fit-site *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) {
+  html:has(.fit-site) { scroll-behavior: auto; }
+  .fit-site *, .fit-site *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

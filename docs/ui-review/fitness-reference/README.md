@@ -2,6 +2,8 @@
 
 Phạm vi đã thống nhất: toàn bộ trang công khai (`/`, `/login`, `/register`, bước OTP). Portal dùng giao diện và luồng hiện có.
 
+Cập nhật theo yêu cầu tiếp theo: các trang công khai phủ kín chiều rộng viewport, bỏ viền salmon/padding ngoài và giới hạn canvas 1500px. Nội dung vẫn giữ khoảng cách bên trong để đọc và thao tác. Scrollbar dùng thumb salmon trên track than đậm; theme chỉ áp dụng khi layout công khai hiện diện.
+
 ## Cơ sở đối chiếu
 
 - Ảnh tổng quan do người dùng cung cấp: hai bản website đặt chồng trên nền salmon. Khung trước cho thấy header, hero, dịch vụ và câu chuyện hội viên. Khung sau cho thấy trainer, không gian tập và bảng gói.
@@ -12,7 +14,7 @@ Phạm vi đã thống nhất: toàn bộ trang công khai (`/`, `/login`, `/reg
 
 | Thành phần | Chi tiết nhìn thấy trong mẫu | Cách dựng trong bản mới | Độ khớp ước lượng |
 | --- | --- | --- | --- |
-| Nền và khung | Nền hồng đất, canvas than đậm, chữ trắng ngà; hai khung có bóng đổ | Salmon `#ce9180`, charcoal `#202020`, trắng `#faf9f6`; một canvas chạy liên tục với viền salmon | 90–95% cho màu và bề mặt; không sao chép cách xếp hai mockup |
+| Nền và khung | Nền hồng đất, canvas than đậm, chữ trắng ngà; hai khung có bóng đổ | Salmon `#ce9180`, charcoal `#202020`, trắng `#faf9f6`; canvas phủ kín trang theo yêu cầu cập nhật, không còn viền salmon ngoài | Giữ bảng màu; cách trình bày đã chuyển sang full width theo yêu cầu |
 | Header | Wordmark nhỏ bên trái, menu giữa, nút trắng nhỏ bên phải | Giữ thương hiệu SÖL; menu anchor và nút đăng nhập/portal; menu thu gọn trên điện thoại | 85–90% |
 | Hero — tiêu đề | BUILD YOUR bên trái, BODY SHAPES bên phải; chữ in hoa, đậm và giãn nhẹ | Cùng câu chữ và bố cục hai vế trên desktop; thu thành hai dòng trên mobile | 85–90% |
 | Hero — nhân vật | Người đàn ông ngồi cầm tạ, quần tối, giày xanh, ảnh tách nền nằm giữa | Ảnh mới được tạo và tách nền; giữ mô típ ngồi cầm tạ nhưng nhân vật, chân và hướng đầu khác | 75–85% |
@@ -34,6 +36,7 @@ Phạm vi đã thống nhất: toàn bộ trang công khai (`/`, `/login`, `/reg
 ## Ảnh để duyệt
 
 - [Hero desktop](hero-desktop.png), [toàn bộ landing desktop](landing-desktop.png).
+- [Hero trên màn hình rộng 1920px](hero-wide.png).
 - [Cụm dịch vụ desktop](services-desktop.png), [cụm dịch vụ mobile](services-mobile.png).
 - [Landing mobile](landing-mobile.png).
 - [Đăng nhập desktop](login-desktop.png), [đăng nhập mobile](login-mobile.png), [trạng thái lỗi](login-error-desktop.png).
@@ -49,7 +52,7 @@ Xem bản chạy: `http://localhost:5173/`, `/login`, `/register` khi Vite đang
 - Lint: chạy `npm --prefix apps/web run lint`.
 - Test frontend: chạy `npm --prefix apps/web run test`.
 - Browser: `scripts/verify-public-ui.cjs`, cần Playwright có trong môi trường và Vite đang chạy. Nếu dùng bản Playwright cài global trên PowerShell: `$env:NODE_PATH = npm root -g; node scripts/verify-public-ui.cjs`.
-- Browser kiểm tra landing ở 320 / 375 / 390 / 768 / 1024 / 1440px; auth ở mobile, tablet và desktop; không tràn ngang; chuyển trainer, gallery, lọc gói; menu mobile; hiện mật khẩu; lỗi đăng nhập; đăng ký → OTP; đếm ngược và lỗi OTP.
+- Browser kiểm tra landing ở 320 / 375 / 390 / 768 / 1024 / 1440 / 1920 / 2560px; auth ở mobile, tablet và desktop. Xác nhận canvas chạm hai mép viewport, không có padding ngoài, không tràn ngang, scrollbar dùng đúng màu, document theme không áp dụng ngoài layout công khai. Kiểm tra thêm chuyển trainer, gallery, lọc gói; menu mobile; hiện mật khẩu; lỗi đăng nhập; đăng ký → OTP; đếm ngược và lỗi OTP.
 - Các request auth trong browser check được chặn bằng response giả lập. Kết quả này xác nhận UI và payload gửi đi, không xác nhận email/OTP hoặc Google OAuth end-to-end với backend thật.
 - [Kết quả browser](browser-verification.json).
 
@@ -80,6 +83,7 @@ Theo yêu cầu chia commit để dễ quay lại, thay đổi được lưu the
 | `373f4b4` | Layout chung, landing và style charcoal–salmon | Cần commit ảnh trước đó |
 | `a04eeaa` | Giao diện đăng nhập, đăng ký và OTP | Cần layout từ commit landing |
 | `test(web): document and verify public UI redesign` | Script browser, ảnh chụp, báo cáo và hướng dẫn này | Kiểm chứng bản UI đầy đủ |
+| `fix(web): fill public viewport and theme scrollbars` | Bỏ khung ngoài, phủ kín trang, scrollbar theo palette; kiểm tra đến 2560px và cập nhật ảnh | Mở rộng bản UI đầy đủ |
 
 Mốc trước thay đổi UI: `0182b12`. Các commit chỉ gồm file UI/ảnh/tài liệu của tác vụ này; thay đổi backend đang có trong workspace không được đưa vào.
 
@@ -95,7 +99,7 @@ Quay về giao diện trước khi đổi, giữ ảnh và tài liệu tham chi�
 git revert a04eeaa 373f4b4
 ```
 
-Hai lệnh trên là hai lựa chọn thay thế nhau, chạy từ bản đầy đủ; không chạy liên tiếp cả hai. Ở commit landing, hai trang tài khoản cũ có import CSS riêng nên vẫn hiển thị đầy đủ khi chỉ hoàn tác commit auth. Dùng `git revert` tạo commit hoàn tác và giữ nguyên lịch sử.
+Hai lệnh trên là hai lựa chọn thay thế nhau, áp dụng từ mốc `b8bc3ac`; không chạy liên tiếp cả hai. Nếu đã có các commit chỉnh giao diện tiếp theo, hoàn tác các commit đó trước. Riêng thay đổi full width/scrollbar có commit riêng để hoàn tác độc lập. Ở commit landing, hai trang tài khoản cũ có import CSS riêng nên vẫn hiển thị đầy đủ khi chỉ hoàn tác commit auth. Dùng `git revert` tạo commit hoàn tác và giữ nguyên lịch sử.
 
 ## Liên hệ backlog
 

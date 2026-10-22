@@ -6,8 +6,12 @@
     390,
     768,
     1024,
-    1440
+    1440,
+    1920,
+    2560
   ],
+  "fullWidth": true,
+  "publicScrollbar": "salmon on charcoal",
   "auth": "mocked API; no real accounts created",
   "errors": []
 }

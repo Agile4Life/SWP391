@@ -16,6 +16,27 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/accounts.google.com/gsi/**', (route) => route.fulfill({ body: '', contentType: 'text/javascript' }));
   const check = (label) => console.log(`PASS ${label}`);
+  const assertFullWidth = async () => {
+    const layout = await page.evaluate(() => {
+      const site = document.querySelector('.fit-site');
+      const canvas = document.querySelector('.fit-canvas');
+      return {
+        viewport: document.documentElement.clientWidth,
+        siteLeft: site.getBoundingClientRect().left,
+        canvasLeft: canvas.getBoundingClientRect().left,
+        canvasRight: canvas.getBoundingClientRect().right,
+        padding: getComputedStyle(site).padding,
+        scrollbar: getComputedStyle(document.documentElement).scrollbarColor,
+        scheme: getComputedStyle(document.documentElement).colorScheme,
+      };
+    });
+    assert.equal(layout.siteLeft, 0, 'Public page must start at the viewport edge');
+    assert.equal(layout.canvasLeft, 0, 'Canvas must have no outer frame');
+    assert.ok(Math.abs(layout.canvasRight - layout.viewport) <= 1, 'Canvas must fill the viewport width');
+    assert.equal(layout.padding, '0px', 'Public page must have no outer padding');
+    assert.equal(layout.scrollbar, 'rgb(206, 145, 128) rgb(32, 32, 32)', 'Scrollbar must use the public palette');
+    assert.equal(layout.scheme, 'dark', 'Public browser surfaces must use the dark palette');
+  };
   try {
     await page.goto(base);
     await page.evaluate(() => document.fonts.ready);
@@ -34,9 +55,10 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     assert.equal(await page.locator('.fit-plan').count(), 3);
     check('trainer navigation, gallery switch and pricing filter');
 
-    for (const width of [320, 375, 390, 768, 1024, 1440]) {
+    for (const width of [320, 375, 390, 768, 1024, 1440, 1920, 2560]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto(base);
+      await assertFullWidth();
       await page.locator('.fit-hero-athlete').evaluate((image) => image.decode());
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
       assert.ok(overflow <= 1, `Landing overflows at ${width}px by ${overflow}px`);
@@ -54,8 +76,9 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
         await page.locator('.fit-nav').getByRole('link', { name: 'Gói tập' }).click();
         assert.equal(await page.getByRole('button', { name: 'Mở menu' }).getAttribute('aria-expanded'), 'false');
       }
+      if (width === 1920) await page.screenshot({ path: path.join(output, 'hero-wide.png') });
     }
-    check('landing: six viewport widths, local images and mobile menu');
+    check('landing: eight viewport widths, full-width canvas, scrollbar palette, local images and mobile menu');
 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${base}/login`);
@@ -74,6 +97,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
       await page.setViewportSize({ width, height: 1000 });
       for (const route of ['login', 'register']) {
         await page.goto(`${base}/${route}`);
+        await assertFullWidth();
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
         assert.ok(overflow <= 1, `${route} overflows at ${width}px`);
         if (width !== 768) await page.screenshot({ path: path.join(output, `${route}-${width === 390 ? 'mobile' : 'desktop'}.png`), fullPage: true });
@@ -119,9 +143,18 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     await page.evaluate(() => localStorage.removeItem('fitcenter_auth_session'));
     check('signed-in member CTAs lead to existing portal routes');
 
+    const restoredScheme = await page.locator('.fit-site').evaluate((site) => {
+      site.classList.remove('fit-site');
+      const scheme = getComputedStyle(document.documentElement).colorScheme;
+      site.classList.add('fit-site');
+      return scheme;
+    });
+    assert.equal(restoredScheme, 'light', 'Public theme must not persist outside public pages');
+    check('public document theme stops applying outside the public layout');
+
     assert.deepEqual(errors, [], 'Browser must have no unhandled JavaScript errors');
     check('no uncaught browser errors');
-    fs.writeFileSync(path.join(output, 'browser-verification.json'), JSON.stringify({ status: 'passed', widths: [320, 375, 390, 768, 1024, 1440], auth: 'mocked API; no real accounts created', errors }, null, 2));
+    fs.writeFileSync(path.join(output, 'browser-verification.json'), JSON.stringify({ status: 'passed', widths: [320, 375, 390, 768, 1024, 1440, 1920, 2560], fullWidth: true, publicScrollbar: 'salmon on charcoal', auth: 'mocked API; no real accounts created', errors }, null, 2));
   } finally {
     await browser.close();
   }
