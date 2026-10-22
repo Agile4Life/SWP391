@@ -3,8 +3,10 @@ package com.swp391.scms.reports;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.swp391.scms.common.GlobalExceptionHandler;
+import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.service.RevenueReportService;
@@ -21,11 +23,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import com.swp391.scms.reports.dto.RecentTransactionDto;
-import static org.mockito.Mockito.verify;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -78,6 +79,24 @@ class ReportControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/v1/reports/class-utilization should return 200 OK")
+    void shouldGetClassUtilization() throws Exception {
+        ClassUtilizationDto dto = new ClassUtilizationDto(
+                10L, "Morning Yoga", 2L, "Yoga", 20, 15L, 12L, 75.0, 80.0
+        );
+        when(reportService.getClassUtilization(
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31), 2L))
+                .thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/v1/reports/class-utilization?startDate=2026-10-01&endDate=2026-10-31&disciplineId=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].className").value("Morning Yoga"))
+                .andExpect(jsonPath("$.data[0].utilizationRate").value(75.0))
+                .andExpect(jsonPath("$.data[0].attendanceRate").value(80.0));
+    }
+
+    @Test
     @DisplayName("POST /api/v1/reports/snapshots/generate should return 201 Created")
     void shouldGenerateSnapshot() throws Exception {
         ReportSnapshotCreateDto request = new ReportSnapshotCreateDto(
@@ -114,6 +133,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].id").value(1L));
     }
+
     @Test
     void shouldExposeRecentTransactionsForSelectedPeriod() throws Exception {
         var start = LocalDate.of(2026, 10, 1);
@@ -130,5 +150,4 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data[0].amount").value(750000));
         verify(reportService).getRecentTransactions(start, end);
     }
-
 }

@@ -2,24 +2,33 @@ package com.swp391.scms.reports.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swp391.scms.attendance.entity.SessionAttendance;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
-import com.swp391.scms.reports.dto.RecentTransactionDto;
-import com.swp391.scms.reports.repository.TransactionReportRepository;
-import org.springframework.data.domain.PageRequest;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.entity.ReportSnapshot;
 import com.swp391.scms.reports.repository.ReportSnapshotRepository;
+import com.swp391.scms.reports.repository.SessionAttendanceReportRepository;
+import com.swp391.scms.reports.repository.TransactionReportRepository;
+import com.swp391.scms.scheduling.entity.ClassEnrollment;
+import com.swp391.scms.scheduling.entity.GymClass;
+import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
+import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +51,9 @@ public class RevenueReportService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final TransactionReportRepository transactionReportRepository;
+    private final GymClassRepository gymClassRepository;
+    private final ClassEnrollmentRepository classEnrollmentRepository;
+    private final SessionAttendanceReportRepository sessionAttendanceReportRepository;
 
     public RevenueReportService(PaymentRepository paymentRepository,
                                 MembershipSubscriptionRepository subscriptionRepository,
@@ -50,6 +62,21 @@ public class RevenueReportService {
                                 ObjectMapper objectMapper,
                                 Clock clock,
                                 TransactionReportRepository transactionReportRepository) {
+        this(paymentRepository, subscriptionRepository, snapshotRepository, userRepository,
+                objectMapper, clock, transactionReportRepository, null, null, null);
+    }
+
+    @Autowired
+    public RevenueReportService(PaymentRepository paymentRepository,
+                                MembershipSubscriptionRepository subscriptionRepository,
+                                ReportSnapshotRepository snapshotRepository,
+                                UserRepository userRepository,
+                                ObjectMapper objectMapper,
+                                Clock clock,
+                                TransactionReportRepository transactionReportRepository,
+                                @Autowired(required = false) GymClassRepository gymClassRepository,
+                                @Autowired(required = false) ClassEnrollmentRepository classEnrollmentRepository,
+                                @Autowired(required = false) SessionAttendanceReportRepository sessionAttendanceReportRepository) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.snapshotRepository = snapshotRepository;
@@ -57,6 +84,9 @@ public class RevenueReportService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.transactionReportRepository = transactionReportRepository;
+        this.gymClassRepository = gymClassRepository;
+        this.classEnrollmentRepository = classEnrollmentRepository;
+        this.sessionAttendanceReportRepository = sessionAttendanceReportRepository;
     }
 
     @Transactional(readOnly = true)
@@ -155,6 +185,109 @@ public class RevenueReportService {
 
         dtoList.sort(Comparator.comparing(PackageRevenueDto::getRevenue).reversed());
         return dtoList;
+    }
+
+    /**
+     * SCRUM-120: Calculates class utilization (enrolled / capacity) and attendance rate (present / booked)
+     * filtered by optional date range and disciplineId. Safely handles division by zero when capacity = 0 or booked = 0.
+     */
+    @Transactional(readOnly = true)
+    public List<ClassUtilizationDto> getClassUtilization(LocalDate startDate,
+                                                         LocalDate endDate,
+                                                         Long disciplineId) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
+                    "Start date cannot be after end date");
+        }
+        if (gymClassRepository == null) {
+            return List.of();
+        }
+
+        List<GymClass> classes = gymClassRepository.findAll();
+        List<ClassUtilizationDto> results = new ArrayList<>();
+
+        for (GymClass gymClass : classes) {
+            Discipline discipline = gymClass.getDiscipline();
+            Long dId = discipline != null ? discipline.getId() : null;
+            if (disciplineId != null && !disciplineId.equals(dId)) {
+                continue;
+            }
+
+            long enrolledCount = countActiveEnrollments(gymClass.getId(), startDate, endDate);
+            long presentCount = countPresentAttendances(gymClass.getId(), startDate, endDate);
+            int capacity = gymClass.getCapacity();
+
+            double utilizationRate = 0.0;
+            if (capacity > 0) {
+                utilizationRate = BigDecimal.valueOf(enrolledCount * 100.0)
+                        .divide(BigDecimal.valueOf(capacity), 1, RoundingMode.HALF_UP)
+                        .doubleValue();
+            }
+
+            double attendanceRate = 0.0;
+            if (enrolledCount > 0) {
+                attendanceRate = BigDecimal.valueOf(presentCount * 100.0)
+                        .divide(BigDecimal.valueOf(enrolledCount), 1, RoundingMode.HALF_UP)
+                        .doubleValue();
+            }
+
+            results.add(new ClassUtilizationDto(
+                    gymClass.getId(),
+                    gymClass.getName(),
+                    dId,
+                    discipline != null ? discipline.getName() : null,
+                    capacity,
+                    enrolledCount,
+                    presentCount,
+                    utilizationRate,
+                    attendanceRate
+            ));
+        }
+
+        return results;
+    }
+
+    private long countActiveEnrollments(Long classId, LocalDate startDate, LocalDate endDate) {
+        if (classEnrollmentRepository == null || classId == null) {
+            return 0L;
+        }
+        List<ClassEnrollment> enrollments = classEnrollmentRepository.findByGymClassId(classId);
+        if (enrollments == null) {
+            return 0L;
+        }
+        return enrollments.stream()
+                .filter(e -> "booked".equalsIgnoreCase(e.getStatus()) || "completed".equalsIgnoreCase(e.getStatus()))
+                .filter(e -> {
+                    if (e.getEnrolledAt() == null) return true;
+                    LocalDate d = e.getEnrolledAt().toLocalDate();
+                    if (startDate != null && d.isBefore(startDate)) return false;
+                    if (endDate != null && d.isAfter(endDate)) return false;
+                    return true;
+                })
+                .count();
+    }
+
+    private long countPresentAttendances(Long classId, LocalDate startDate, LocalDate endDate) {
+        if (sessionAttendanceReportRepository == null || classId == null) {
+            return 0L;
+        }
+        List<SessionAttendance> attendances = sessionAttendanceReportRepository.findBySessionGymClassId(classId);
+        if (attendances == null) {
+            return 0L;
+        }
+        return attendances.stream()
+                .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
+                .filter(a -> {
+                    LocalDate sessionDate = a.getSession() != null ? a.getSession().getSessionDate() : null;
+                    if (sessionDate == null && a.getCheckedInAt() != null) {
+                        sessionDate = a.getCheckedInAt().toLocalDate();
+                    }
+                    if (sessionDate == null) return true;
+                    if (startDate != null && sessionDate.isBefore(startDate)) return false;
+                    if (endDate != null && sessionDate.isAfter(endDate)) return false;
+                    return true;
+                })
+                .count();
     }
 
     public ReportSnapshotDto generateSnapshot(ReportSnapshotCreateDto dto, Long currentUserId) {

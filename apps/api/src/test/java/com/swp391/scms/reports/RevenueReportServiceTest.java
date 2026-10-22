@@ -1,22 +1,30 @@
 package com.swp391.scms.reports;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swp391.scms.attendance.entity.SessionAttendance;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
+import com.swp391.scms.reports.dto.RecentTransactionDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.entity.ReportSnapshot;
 import com.swp391.scms.reports.repository.ReportSnapshotRepository;
+import com.swp391.scms.reports.repository.SessionAttendanceReportRepository;
 import com.swp391.scms.reports.repository.TransactionReportRepository;
-import com.swp391.scms.reports.dto.RecentTransactionDto;
-import org.springframework.data.domain.PageRequest;
 import com.swp391.scms.reports.service.RevenueReportService;
+import com.swp391.scms.scheduling.entity.ClassEnrollment;
+import com.swp391.scms.scheduling.entity.ClassSession;
+import com.swp391.scms.scheduling.entity.GymClass;
+import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
+import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.*;
@@ -53,6 +63,15 @@ class RevenueReportServiceTest {
     @Mock
     private TransactionReportRepository transactionReportRepository;
 
+    @Mock
+    private GymClassRepository gymClassRepository;
+
+    @Mock
+    private ClassEnrollmentRepository classEnrollmentRepository;
+
+    @Mock
+    private SessionAttendanceReportRepository sessionAttendanceReportRepository;
+
     private ObjectMapper objectMapper;
     private Clock clock;
     private RevenueReportService service;
@@ -61,8 +80,11 @@ class RevenueReportServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         clock = Clock.fixed(Instant.parse("2026-10-05T10:00:00Z"), ZoneOffset.UTC);
-        service = new RevenueReportService(paymentRepository, subscriptionRepository,
-                snapshotRepository, userRepository, objectMapper, clock, transactionReportRepository);
+        service = new RevenueReportService(
+                paymentRepository, subscriptionRepository,
+                snapshotRepository, userRepository, objectMapper, clock,
+                transactionReportRepository, gymClassRepository,
+                classEnrollmentRepository, sessionAttendanceReportRepository);
     }
 
     @Test
@@ -169,13 +191,63 @@ class RevenueReportServiceTest {
     }
 
     @Test
-    @DisplayName("Should generate snapshot when json data is valid")
+    @DisplayName("Should calculate class utilization and safely handle zero capacity or zero booked")
+    void shouldCalculateClassUtilizationSafely() {
+        Discipline yoga = new Discipline();
+        ReflectionTestUtils.setField(yoga, "id", 2L);
+        yoga.setName("Yoga");
+
+        GymClass class1 = new GymClass();
+        ReflectionTestUtils.setField(class1, "id", 10L);
+        class1.setName("Morning Yoga");
+        class1.setDiscipline(yoga);
+        class1.setCapacity(20);
+
+        GymClass zeroCapClass = new GymClass();
+        ReflectionTestUtils.setField(zeroCapClass, "id", 11L);
+        zeroCapClass.setName("Open Workshop");
+        zeroCapClass.setDiscipline(yoga);
+        zeroCapClass.setCapacity(0);
+
+        ClassEnrollment e1 = new ClassEnrollment();
+        e1.setStatus("booked");
+        e1.setEnrolledAt(LocalDateTime.of(2026, 10, 2, 8, 0));
+
+        ClassEnrollment e2 = new ClassEnrollment();
+        e2.setStatus("completed");
+        e2.setEnrolledAt(LocalDateTime.of(2026, 10, 3, 8, 0));
+
+        ClassSession s1 = new ClassSession();
+        s1.setSessionDate(LocalDate.of(2026, 10, 3));
+
+        SessionAttendance a1 = new SessionAttendance();
+        a1.setSession(s1);
+        a1.setStatus("present");
+
+        when(gymClassRepository.findAll()).thenReturn(List.of(class1, zeroCapClass));
+        when(classEnrollmentRepository.findByGymClassId(10L)).thenReturn(List.of(e1, e2));
+        when(classEnrollmentRepository.findByGymClassId(11L)).thenReturn(List.of());
+        when(sessionAttendanceReportRepository.findBySessionGymClassId(10L)).thenReturn(List.of(a1));
+        when(sessionAttendanceReportRepository.findBySessionGymClassId(11L)).thenReturn(List.of());
+
+        List<ClassUtilizationDto> list = service.getClassUtilization(
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), 2L);
+
+        assertEquals(2, list.size());
+        assertEquals(10.0, list.get(0).utilizationRate()); // 2 / 20 = 10%
+        assertEquals(50.0, list.get(0).attendanceRate());  // 1 / 2 = 50%
+        assertEquals(0.0, list.get(1).utilizationRate());  // zero capacity -> 0.0
+        assertEquals(0.0, list.get(1).attendanceRate());   // zero booked -> 0.0
+    }
+
+    @Test
+    @DisplayName("Should generate snapshot when json data is valid including class_utilization type")
     void shouldGenerateSnapshotWhenJsonIsValid() {
         ReportSnapshotCreateDto dto = new ReportSnapshotCreateDto(
-                "revenue",
+                "class_utilization",
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 5),
-                "{\"totalRevenue\": 3000000, \"orders\": 1}",
+                "{\"averageUtilization\": 75.0}",
                 null
         );
 
@@ -187,7 +259,7 @@ class RevenueReportServiceTest {
 
         ReportSnapshotDto result = service.generateSnapshot(dto, 1L);
         assertNotNull(result);
-        assertEquals("revenue", result.getReportType());
+        assertEquals("class_utilization", result.getReportType());
         verify(snapshotRepository).save(any(ReportSnapshot.class));
     }
 

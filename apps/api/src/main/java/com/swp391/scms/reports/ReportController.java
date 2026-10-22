@@ -2,6 +2,7 @@ package com.swp391.scms.reports;
 
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.RecentTransactionDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
@@ -71,6 +72,16 @@ public class ReportController {
                 reportService.getRecentTransactions(startDate, endDate)));
     }
 
+    @Operation(summary = "Báo cáo công suất sử dụng và tỷ lệ lấp đầy lớp học (SCRUM-120)")
+    @GetMapping("/class-utilization")
+    public ResponseEntity<ApiResponse<List<ClassUtilizationDto>>> getClassUtilization(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long disciplineId) {
+        List<ClassUtilizationDto> list = reportService.getClassUtilization(startDate, endDate, disciplineId);
+        return ResponseEntity.ok(ApiResponse.ok(msg("reports.class_utilization.list"), list));
+    }
+
     @Operation(summary = "Lưu ảnh chụp báo cáo định kỳ", description = "Tạo ảnh chụp báo cáo (snapshot) định dạng JSON phục vụ đối soát cho Quản lý")
     @PostMapping("/snapshots/generate")
     public ResponseEntity<ApiResponse<ReportSnapshotDto>> generateSnapshot(
@@ -96,4 +107,3 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.ok(msg("reports.snapshot.detail"), snapshot));
     }
 }
-
