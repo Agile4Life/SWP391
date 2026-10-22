@@ -82,6 +82,14 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.cancelled"), service.cancelPending(principal, id));
     }
 
+    @Operation(summary = "Resume a frozen subscription without payment, preserving remaining days")
+    @PostMapping("/{id}/resume")
+    public ApiResponse<SubscriptionDto> resume(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.resumed"), service.resume(principal, id));
+    }
+
     @Operation(summary = "Request a hold/freeze on an active membership subscription")
     @PostMapping("/{id}/hold")
     public ApiResponse<SubscriptionDto> requestHold(

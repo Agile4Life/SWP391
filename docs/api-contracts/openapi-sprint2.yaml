@@ -965,6 +965,23 @@ paths:
 
         '409':
           description: Payment đang chờ hoặc đã thành công; chưa thể hủy yêu cầu
+  /memberships/subscriptions/{id}/resume:
+    post:
+      summary: Mở lại gói bảo lưu miễn phí (MEMBER, SCRUM-71)
+      description: Giữ nguyên subscription, QR và số buổi đã dùng. Cộng số ngày từ ngày duyệt bảo lưu đến ngày mở lại vào endDate. Không tạo payment. Mua mới bị chặn khi còn gói frozen. Yêu cầu thanh toán cũ phải được xử lý trước khi mở lại.
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: ApiResponse với SubscriptionDto đã active và ngày hết hạn được cộng thời gian bảo lưu}
+        '400': {description: Gói không frozen hoặc dữ liệu ngày bảo lưu không hợp lệ}
+        '403': {description: Không phải chủ sở hữu hoặc không có role MEMBER}
+        '404': {description: Không tìm thấy gói}
+        '409': {description: Đã có gói active hoặc yêu cầu thanh toán đang chờ}
+
   /memberships/subscriptions/{id}/hold:
     post:
       summary: Hội viên chủ động gửi yêu cầu bảo lưu gói tập kèm lý do (SCRUM-71)

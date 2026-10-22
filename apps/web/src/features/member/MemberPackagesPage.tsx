@@ -11,6 +11,7 @@ import {
   getMyPayments,
   renewMembershipSubscription,
   requestMembershipHold,
+  resumeMembershipSubscription,
   requestMembershipCancellation,
   upgradeMembershipSubscription,
   type MemberSubscription,
@@ -143,6 +144,7 @@ export function MemberPackagesPage() {
   const [holdReason, setHoldReason] = useState('');
   const [holdError, setHoldError] = useState<string | null>(null);
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
   const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
@@ -287,7 +289,7 @@ export function MemberPackagesPage() {
     if (
       packagesState.status !== 'success' || currentState.status !== 'success' ||
       historyState.status !== 'success' || paymentsState.status !== 'success' ||
-      pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
+      frozenSubscription || pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
     ) {
       return;
     }
@@ -337,6 +339,26 @@ export function MemberPackagesPage() {
     } finally {
       await loadHistory();
       setSubmittingPackageId(null);
+      requestBusy.current = false;
+    }
+  }
+
+  async function handleResume() {
+    if (!frozenSubscription || requestBusy.current) return;
+    requestBusy.current = true;
+    setIsResuming(true);
+    setActionError(null);
+    try {
+      const resumed = await resumeMembershipSubscription(frozenSubscription.id);
+      setCurrentState({ status: 'success', data: resumed });
+      setHistoryState((previous) => previous.status === 'success'
+        ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
+        : previous);
+      setHoldSuccessMessage('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.');
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Không thể mở lại gói tập. Vui lòng thử lại.');
+    } finally {
+      setIsResuming(false);
       requestBusy.current = false;
     }
   }
@@ -598,6 +620,11 @@ export function MemberPackagesPage() {
           <p className="row-card__meta" style={{ marginTop: 6 }}>
             Gói tập của bạn đã được Lễ tân xác nhận bảo lưu. Các lịch lớp học đặt trước trong tương lai đã được hủy tự động.
           </p>
+          <p className="row-card__meta">Mở lại để tiếp tục sử dụng số ngày còn lại, không cần thanh toán lại. Bạn có thể đặt lại lịch học sau khi mở gói.</p>
+          <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
+            onClick={() => void handleResume()}>
+            {isResuming ? 'Đang mở lại…' : 'Mở lại gói tập miễn phí'}
+          </button>
         </section>
       )}
 
@@ -812,6 +839,7 @@ export function MemberPackagesPage() {
               current !== null && !isCurrent && !upgradeFrom;
 
             const disabled =
+              frozenSubscription !== null ||
               submittingPackageId !== null ||
               packagesState.status !== 'success' || currentState.status !== 'success' ||
               historyState.status !== 'success' || paymentsState.status !== 'success' ||
@@ -826,6 +854,8 @@ export function MemberPackagesPage() {
 
             if (isSubmitting) {
               buttonText = 'Đang xử lý…';
+            } else if (frozenSubscription) {
+              buttonText = 'Đang có gói bảo lưu';
             } else if (renewalConflict || nextRenewals > 1) {
               buttonText = 'Cần kiểm tra gia hạn';
             } else if (nextRenewals === 1) {
