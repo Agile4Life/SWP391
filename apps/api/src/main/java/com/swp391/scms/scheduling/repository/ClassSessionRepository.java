@@ -48,4 +48,15 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     }
 
     long countByGymClassIdAndStatus(Long classId, String status);
+
+    @Query("""
+            select s from ClassSession s
+            join fetch s.gymClass c
+            where s.status = 'scheduled'
+              and s.sessionDate >= :startDate
+              and s.sessionDate <= :endDate
+            """)
+    List<ClassSession> findScheduledSessionsBetweenDates(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }
