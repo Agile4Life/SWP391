@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LandingPage } from '../features/landing/LandingPage';
+import { TrainerStoryPage } from '../features/landing/TrainerStoryPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { AppLayout } from '../shared/ui/AppLayout';
@@ -28,6 +29,8 @@ import { ManagerCancellationPage } from '../features/manager/ManagerCancellation
 export const router = createBrowserRouter([
   // Public Routes
   { path: '/', element: <LandingPage /> },
+  { path: '/trainers', element: <TrainerStoryPage /> },
+  { path: '/trainers/:trainerId', element: <TrainerStoryPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
 
