@@ -6,21 +6,21 @@ import { RoundArrow } from './PublicLayout';
 
 const tickerItems = [
   'STRENGTH FLOOR',
-  'HEATED LAP POOL 25M',
-  'CHAMPIONSHIP TENNIS',
+  'LAP POOL 25M',
+  'TENNIS COURTS',
   'MOVEMENT STUDIO',
+  'FREE WEIGHTS',
   'HYDRO-RECOVERY',
-  'ATHLETIC CONDITIONING',
   'BARBELL CLUB',
   'MULTI-SPORT PASS',
 ];
 
-const manifestoWords = 'Không chỉ là một phòng tập cố định. SÖL là tổ hợp thể chất đa bộ môn — nơi sức mạnh tạ rời, làn nước ấm 25m, mặt sân Tennis chuẩn giải đấu và nhịp thở Pilates giao thoa để bạn bứt phá mỗi ngày.'.split(' ');
+const manifestoWords = 'Không chỉ là một phòng tập cố định. SÖL kết hợp Gym, Giãn cơ, Hồ bơi 25m và Sân Tennis trong cùng một không gian để bạn linh hoạt đổi nhịp vận động mỗi ngày.'.split(' ');
 
 const services = [
-  { title: 'WeightLifting', description: 'Xây nền sức mạnh, phát triển khối cơ và lực phát bùng nổ bổ trợ trực tiếp cho Bơi lội, Tennis và vận động hàng ngày.', icon: 'weights' },
-  { title: 'Private Training', description: 'Huấn luyện 1:1 đa bộ môn — từ chỉnh kỹ thuật Squat, sải tay bơi chuẩn thủy động lực học đến bộ chân Split-Step trên sân Tennis.', icon: 'training' },
-  { title: 'Build Muscle', description: 'Phối hợp tập tạ chuyên sâu, bơi kháng lực nước và vận động linh hoạt giúp cơ thể săn chắc, dẻo dai mà không quá tải khớp.', icon: 'muscle' },
+  { title: 'WeightLifting', description: 'Xây dựng sức mạnh nền tảng và phát triển cơ bắp bổ trợ trực tiếp cho Bơi lội, Tennis.', icon: 'weights' },
+  { title: 'Private Training', description: 'Huấn luyện 1:1 chỉnh kỹ thuật tạ rời, nhịp thở dưới nước và bộ chân trên sân.', icon: 'training' },
+  { title: 'Build Muscle', description: 'Phối hợp tập tạ, bơi kháng lực nước và giãn cơ giúp cơ thể săn chắc, linh hoạt.', icon: 'muscle' },
 ];
 const serviceShapes = [
   'M37 30L259 0Q290-2 295 32L319 231Q323 280 279 280H72Q33 280 27 241L1 80Q-5 40 37 30Z',
@@ -28,10 +28,10 @@ const serviceShapes = [
   'M61 0L283 30Q325 40 319 80L293 241Q287 280 248 280H41Q-3 280 1 231L25 32Q30-2 61 0Z',
 ];
 const clubMetrics = [
-  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, label: 'MỞ CỬA MỖI NGÀY', detail: 'Linh hoạt lịch tập Gym, bơi sáng sớm, đánh Tennis chiều muộn hoặc phục hồi sau giờ làm.' },
-  { value: '05 Zones', countTo: 5, format: (n: number) => `${String(n).padStart(2, '0')} Zones`, label: 'TỔ HỢP ĐA BỘ MÔN', detail: 'Strength Floor, Free Weights, Movement Studio, Hồ bơi 4 mùa 25m & Sân Tennis chuẩn ITF.' },
-  { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN', detail: 'Đặt lịch lớp nhóm, giữ làn bơi phân luồng hoặc đặt khung giờ sân Tennis trực tiếp trong tài khoản.' },
-  { value: 'QR Pass', label: 'THẺ ĐA MÔN ĐIỆN TỬ', detail: 'Một thẻ QR duy nhất để check-in toàn bộ phân khu Gym, Hồ bơi và Sân Tennis khi gói tập còn hiệu lực.' },
+  { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, label: 'MỞ CỬA MỖI NGÀY', detail: 'Tập sáng sớm, giờ nghỉ trưa hoặc sau giờ làm.' },
+  { value: '05 Zones', countTo: 5, format: (n: number) => `${String(n).padStart(2, '0')} Zones`, label: 'TỔ HỢP ĐA BỘ MÔN', detail: 'Strength, Free Weights, Studio, Hồ bơi 25m & Sân Tennis.' },
+  { value: 'Lịch lớp', label: 'ĐẶT CHỖ TRỰC TUYẾN', detail: 'Đặt lớp nhóm, làn bơi và sân Tennis ngay trong tài khoản.' },
+  { value: 'QR Pass', label: '01 THẺ ĐA PHÂN KHU', detail: 'Quét QR check-in toàn bộ phòng tập, hồ bơi và sân đấu.' },
 ];
 const muscleGroups = [
   {
@@ -39,10 +39,10 @@ const muscleGroups = [
     name: 'Cơ Ngực (Pectorals)',
     zone: 'UPPER & MID CHEST',
     goal: 'Tăng độ dày & đường nét khung ngực',
-    tip: 'Kiểm soát nhịp hạ tạ 2–3 giây và ép xương bả vai về sau để cô lập cơ ngực, tránh dồn áp lực lên khớp vai trước.',
+    tip: 'Hạ tạ có kiểm soát 2–3 giây và khép bả vai để giảm tải khớp vai trước.',
     exercises: [
       'Incline Dumbbell Press · 4 hiệp × 8–10 lần',
-      'Cable Chest Fly (giữ đỉnh 1s) · 3 hiệp × 12 lần',
+      'Cable Chest Fly · 3 hiệp × 12 lần',
     ],
     side: 'right' as const,
     origin: { x: 655, y: 485 },
@@ -57,11 +57,11 @@ const muscleGroups = [
     id: 'shoulders',
     name: 'Cơ Vai & Cầu Vai (Deltoids & Traps)',
     zone: 'DELTOIDS & TRAPS',
-    goal: 'Mở rộng khung vai chữ V & ổn định khớp bả vai',
-    tip: 'Đẩy và nâng tạ ngang trong mặt phẳng xương bả vai (góc 30° phía trước) để tối ưu cơ vai giữa và bảo vệ khớp.',
+    goal: 'Mở rộng khung vai & ổn định khớp bả vai',
+    tip: 'Đẩy tạ trong mặt phẳng xương bả vai (góc 30°) để bảo vệ khớp xoay vai.',
     exercises: [
       'Seated Dumbbell Overhead Press · 4 hiệp × 8–10 lần',
-      'Controlled Lateral Raise & Face Pull · 4 hiệp × 12–15 lần',
+      'Lateral Raise & Face Pull · 4 hiệp × 12–15 lần',
     ],
     side: 'left' as const,
     origin: { x: 355, y: 415 },
@@ -77,10 +77,10 @@ const muscleGroups = [
     id: 'arms',
     name: 'Bắp Tay Trước & Tay Sau (Biceps & Triceps)',
     zone: 'BICEPS & TRICEPS',
-    goal: 'Phát triển chu vi cánh tay & lực kéo–đẩy đối xứng',
-    tip: 'Cố định khuỷu tay sát thân người khi cuộn tạ hoặc duỗi cáp; xoay ngửa cổ tay ở cuối biên độ để kích hoạt đỉnh bắp tay.',
+    goal: 'Phát triển lực kéo – đẩy đối xứng',
+    tip: 'Cố định khuỷu tay sát thân người khi cuộn tạ hoặc kéo cáp.',
     exercises: [
-      'Seated Concentration / Incline Curl · 3 hiệp × 10–12 lần',
+      'Incline Dumbbell Curl · 3 hiệp × 10–12 lần',
       'Rope Triceps Pushdown · 4 hiệp × 12 lần',
     ],
     side: 'left' as const,
@@ -97,11 +97,11 @@ const muscleGroups = [
     id: 'core',
     name: 'Cơ Bụng & Liên Sườn (Core & Obliques)',
     zone: 'ABS & OBLIQUES',
-    goal: 'Siết cơ trọng tâm & bảo vệ cột sống thắt lưng',
-    tip: 'Kết hợp thở ra nén chặt thành bụng (bracing) và cuộn xương sườn về phía khung chậu thay vì dùng quán tính gập hông.',
+    goal: 'Siết cơ trọng tâm & truyền lực xoay',
+    tip: 'Thở ra nén chặt thành bụng, tránh võng thắt lưng.',
     exercises: [
-      'Hanging Knee / Leg Raise có kiểm soát · 3 hiệp × 12 lần',
-      'Cable Pallof Press & Plank giữ nhịp thở · 3 hiệp × 45 giây',
+      'Hanging Knee Raise · 3 hiệp × 12 lần',
+      'Cable Pallof Press & Plank · 3 hiệp × 45 giây',
     ],
     side: 'right' as const,
     origin: { x: 615, y: 665 },
@@ -116,11 +116,11 @@ const muscleGroups = [
     id: 'forearms',
     name: 'Cẳng Tay & Lực Nắm (Forearms & Grip)',
     zone: 'FOREARMS & GRIP',
-    goal: 'Tăng sức mạnh cầm nắm & kiểm soát mức tạ nặng',
-    tip: 'Giữ cổ tay thẳng hàng với trục cẳng tay khi cầm tạ đơn; rèn lực nắm tĩnh giúp bảo vệ khớp cổ tay ở mọi bài kéo nặng.',
+    goal: 'Tăng lực cầm tạ & ổn định cổ tay khi cầm vợt',
+    tip: 'Giữ cổ tay thẳng trục với cẳng tay trong mọi bài kéo và đánh bóng.',
     exercises: [
-      'Farmer’s Walk (Xách tạ đơn đi bộ) · 3 hiệp × 40m',
-      'Reverse Dumbbell Curl & Dead Hang · 3 hiệp × 40 giây',
+      'Farmer’s Walk · 3 hiệp × 40m',
+      'Reverse Curl & Dead Hang · 3 hiệp × 40 giây',
     ],
     side: 'left' as const,
     origin: { x: 355, y: 835 },
@@ -136,8 +136,8 @@ const muscleGroups = [
     id: 'legs',
     name: 'Cơ Đùi & Bắp Chân (Quads & Calves)',
     zone: 'QUADS & CALVES',
-    goal: 'Xây nền tảng sức mạnh thân dưới & độ bùng nổ',
-    tip: 'Phân bổ lực đều lên kiềng 3 điểm bàn chân, mở hướng đầu gối theo mũi chân và kiểm soát biên độ gập khớp gối – hông.',
+    goal: 'Sức mạnh thân dưới & tốc độ bứt tốc trên sân',
+    tip: 'Mở hướng đầu gối theo mũi chân và kiểm soát nhịp gập hông – gối.',
     exercises: [
       'Barbell / Goblet Squat · 4 hiệp × 8–10 lần',
       'Bulgarian Split Squat & Calf Raise · 3 hiệp × 12 lần',
@@ -153,248 +153,217 @@ const muscleGroups = [
     ],
   },
 ] as const;
-const stories = [
-  { name: 'Derek', image: 'coach-strength.png', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH', meta: '12 tuần kỷ luật · Strength Floor' },
-  { name: 'Anthony', image: 'trainer-strength.jpg', quote: 'Tôi tìm được nhịp tập phù hợp và học cách kiên trì với chính mình.', focus: 'CONSISTENCY', meta: '4 buổi/tuần · Personal Training' },
-  { name: 'Jhon', image: 'strength-session.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi thấy khỏe và tự tin hơn.', focus: 'BALANCE', meta: '16 tuần · Movement & Core' },
-  { name: 'Ezekiel', image: 'hero-athlete.png', quote: 'Có người đồng hành giúp tôi đi đúng hướng trong từng buổi tập.', focus: 'PROGRESS', meta: 'Câu chuyện minh họa · Barbell Club' },
-];
+
 const trainers = trainerProfiles;
-const clubIntroPillars = [
-  {
-    code: '01 · DỄ BẮT ĐẦU',
-    title: 'Thân thiện với người mới từ buổi đầu tiên',
-    detail: 'Không áp lực hình thể hay kinh nghiệm. Luôn có hướng dẫn cơ bản từ cách chỉnh máy tập tạ, cách thở nổi dưới nước đến cách cầm vợt Tennis.',
-    badge: 'Có lớp Nhập môn mỗi tuần',
-  },
-  {
-    code: '02 · ĐA MÔN LINH HOẠT',
-    title: 'Đổi gió mỗi ngày trong cùng một khu tập',
-    detail: 'Hôm nay tập Gym săn chắc, ngày mai xuống hồ bơi 25m thư giãn khớp, cuối tuần ra sân Tennis giao lưu cùng bạn bè mà không cần mua nhiều thẻ lẻ.',
-    badge: '05 phân khu trong 1 thẻ QR',
-  },
-  {
-    code: '03 · KHÔNG GIAN THỰC TẾ',
-    title: 'Sạch sẽ, thoáng sáng & phân luồng rõ ràng',
-    detail: 'Thiết bị được bố trí hợp lý, dễ sử dụng; hồ bơi chia làn theo tốc độ và sân Tennis đặt lịch minh bạch giúp ai vào tập cũng thoải mái.',
-    badge: 'Mở cửa 06:00 — 22:00',
-  },
-  {
-    code: '04 · CHI PHÍ HỢP LÝ',
-    title: 'Mức giá dễ tiếp cận cho cá nhân & gia đình',
-    detail: 'Gói tập theo tháng, quý hoặc năm minh bạch, phù hợp cho cả sinh viên, nhân viên văn phòng lẫn người lớn tuổi muốn duy trì sức khỏe.',
-    badge: 'Hỗ trợ bảo lưu (Freeze)',
-  },
-] as const;
+const stories = [
+  { slug: 'strength-coach', name: 'Derek', image: 'coach-strength.png', quote: 'Kỷ luật bắt đầu từ việc có mặt. Mỗi ngày, thêm một chút tiến bộ.', focus: 'STRENGTH COACH', meta: '6 năm kinh nghiệm · Strength Floor' },
+  { slug: 'aquatics-coach', name: 'Anthony', image: 'trainer-strength.jpg', quote: 'Tôi tìm được nhịp tập phù hợp dưới nước và giúp học viên lướt nhẹ mà không tốn sức.', focus: 'AQUATICS COACH', meta: '8 năm kinh nghiệm · Hồ bơi 25m' },
+  { slug: 'personal-coach', name: 'Jhon', image: 'strength-session.jpg', quote: 'Không chỉ là thay đổi vóc dáng. Tôi muốn bạn thấy khỏe và tự tin hơn mỗi tuần.', focus: 'PERSONAL COACH', meta: '7 năm kinh nghiệm · Kèm 1:1 Đa môn' },
+  { slug: 'tennis-coach', name: 'Ezekiel', image: 'hero-athlete.png', quote: 'Có người đồng hành chỉnh từng bước chân giúp bạn tự tin trong mọi đường bóng.', focus: 'TENNIS COACH', meta: '7 năm kinh nghiệm · Sân Tennis' },
+];
+
 const dailyRhythmItems = [
   {
     id: 'morning' as const,
-    label: 'Sáng sớm · 06:00 — 09:00',
-    title: 'Khởi động ngày mới nhẹ nhàng & tỉnh táo',
-    summary: 'Khung giờ yêu thích của người đi làm sớm và người lớn tuổi: không khí thoáng đãng, làn bơi 25m êm ả và các lớp giãn cơ đánh thức cơ thể.',
+    label: 'Sáng · 06:00–09:00',
+    title: 'Bơi sải nước ấm & Khởi động thể lực sáng sớm',
     crowdLoad: '45%',
-    crowdText: 'Thông thoáng · Dễ chọn máy tập & làn bơi riêng',
-    highlights: ['Bơi sải sáng sớm trong làn nước ấm 28°C', 'Lớp Morning Strength & Giãn cơ mở khớp vai – lưng', 'Đánh Tennis buổi sáng mát mẻ, ánh sáng tự nhiên'],
+    crowdText: 'Thông thoáng',
+    highlights: ['Bơi 25m nước ấm 28°C', 'Morning Strength', 'Tennis sáng mát'],
   },
   {
     id: 'midday' as const,
-    label: 'Giữa trưa · 11:30 — 14:00',
-    title: 'Nạp lại năng lượng 45 phút cho dân văn phòng',
-    summary: 'Tận dụng giờ nghỉ trưa để giải tỏa căng thẳng sau buổi sáng ngồi máy tính với các bài tập gọn gàng hoặc 15 vòng bơi thả lỏng cột sống.',
+    label: 'Trưa · 11:30–14:00',
+    title: 'Tập gọn 45 phút & Giãn cơ lưng vai giờ nghỉ trưa',
     crowdLoad: '38%',
-    crowdText: 'Rất thoáng · Phù hợp tập nhanh 45 phút hoặc kèm 1:1',
-    highlights: ['Kèm 1:1 45 phút tập trung Core & Cải thiện tư thế', 'Bơi thư giãn giải phóng áp lực cổ vai gáy', 'Khu tắm ấm & tủ đồ tiện lợi để quay lại văn phòng ngay'],
+    crowdText: 'Rất thoáng',
+    highlights: ['Kèm 1:1 45 phút', 'Core & Posture', 'Bơi thả lỏng cột sống'],
   },
   {
     id: 'evening' as const,
-    label: 'Chiều tan tầm · 17:00 — 19:30',
-    title: 'Không khí sôi động ở cả khu Gym, Hồ bơi & Sân Tennis',
-    summary: 'Thời điểm nhộn nhịp nhất trong ngày khi mọi người cùng nhau rèn thể lực, tham gia lớp kỹ thuật Bơi lội hoặc ghép cặp giao lưu trên sân Tennis.',
+    label: 'Chiều · 17:00–19:30',
+    title: 'Khung giờ sôi động nhất ở cả Gym, Hồ bơi & Sân Tennis',
     crowdLoad: '74%',
-    crowdText: 'Sôi động · Khuyến khích đặt trước lớp và sân trên Portal',
-    highlights: ['Lớp Barbell Club & Tập tạ nhóm nhỏ đầy năng lượng', 'Lớp học bơi cơ bản & chỉnh kỹ thuật thở hai bên', 'Giao lưu Tennis đánh đôi dưới hệ đèn LED chống chói'],
+    crowdText: 'Nên đặt trước trên Portal',
+    highlights: ['Barbell Club', 'Lớp Bơi kỹ thuật', 'Đánh đôi Tennis'],
   },
   {
     id: 'night' as const,
-    label: 'Tối thư giãn · 19:30 — 22:00',
-    title: 'Rũ bỏ mệt mỏi để về nhà với một giấc ngủ sâu',
-    summary: 'Nhịp tập dịu lại vào buổi tối — lý tưởng cho những ai tan làm muộn muốn tập tạ vừa sức, tập bóng với máy hoặc bơi nhẹ trước khi nghỉ ngơi.',
+    label: 'Tối · 19:30–22:00',
+    title: 'Tập vừa sức, đánh bóng máy & Bơi ấm trước khi nghỉ',
     crowdLoad: '52%',
-    crowdText: 'Dịu nhẹ · Đầy đủ thiết bị, làn bơi & sân tập tối',
-    highlights: ['Tập kỹ thuật Tennis cùng máy bắn bóng tự động', 'Bơi thả lỏng nước ấm giúp dễ ngủ và giảm mỏi cơ', 'Giãn cơ cuối ngày tại Movement Studio'],
+    crowdText: 'Dịu nhẹ, đủ sân & làn bơi',
+    highlights: ['Máy bắn bóng Tennis', 'Bơi thư giãn 28°C', 'Giãn cơ cuối ngày'],
   },
 ] as const;
+
 const spaces = [
-  { title: 'Không gian tập tạ rộng rãi, dễ làm quen.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: 'Đầy đủ máy tập có hướng dẫn · Thoáng sáng tự nhiên', load: '68%', status: 'Đang thoáng · Sẵn sàng tập ngay' },
-  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Tạ đơn từ nhẹ đến nặng · Khung Rack an toàn', load: '54%', status: 'Mật độ lý tưởng · Đủ tạ & ghế tập' },
-  { title: 'Khu vận động linh hoạt, giãn cơ & thảm cỏ.', image: '/images/about-movement-studio.jpg', label: 'Movement studio', meta: 'Thảm tập, đường cỏ chạy bước nhỏ & khu giãn cơ', load: '42%', status: 'Thoáng đãng · Phù hợp mọi lứa tuổi' },
-  { title: 'Hồ bơi 25 mét sạch sẽ, ấm áp quanh năm.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: '6 làn bơi 25m · Nước ấm 28°C không mùi Clo nồng', load: '48%', status: 'Nước ấm 28°C · Có làn riêng cho người mới' },
-  { title: 'Sân Tennis tiêu chuẩn, gần gũi cho mọi người.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Mặt sân êm chân giảm chấn · Có lớp nhập môn & máy tập', load: '62%', status: 'Mặt sân khô ráo · Sẵn sàng giao lưu' },
+  { title: 'Không gian cho những mục tiêu lớn.', image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', meta: '18 thiết bị chuẩn · Thoáng sáng tự nhiên', load: '68%', status: 'Đang thoáng · Sẵn sàng tập ngay' },
+  { title: 'Tập trung vào từng chuyển động.', image: '/images/fitness/strength-session.jpg', label: 'Free weights', meta: 'Tạ đơn 2–50kg · 6 khung Power Rack', load: '54%', status: 'Mật độ lý tưởng · Đủ tạ & rack' },
+  { title: 'Tìm lại nhịp điệu của chính mình.', image: '/images/about-movement-studio.jpg', label: 'Movement studio', meta: 'Thảm cỏ vận động, Core & Khu giãn cơ', load: '42%', status: 'Thoáng đãng · Mọi cấp độ' },
+  { title: 'Làn nước ấm 25 mét bốn mùa.', image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', meta: '6 làn 25m · Điện phân muối khoáng 28°C', load: '48%', status: 'Nước ấm 28°C · Có làn riêng người mới' },
+  { title: 'Sân Tennis tiêu chuẩn giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Đệm giảm chấn 7 lớp · Đèn LED 750 Lux', load: '62%', status: 'Mặt sân khô ráo · Sẵn sàng giao bóng' },
 ];
+
 const multiSportShowcase = [
   {
     id: 'swimming' as const,
-    kicker: 'AQUATICS & HYDRO-RECOVERY · 25M LAP POOL',
-    title: 'Bơi Lội Chuẩn Thủy Động Lực Học',
-    subtitle: 'Hồ bơi bốn mùa 6 làn phân luồng · Xử lý nước điện phân muối khoáng & tia UV không mùi Clo',
+    kicker: 'AQUATICS · 25M LAP POOL',
+    title: 'Bơi Lội 4 Mùa & Thủy Trị Liệu',
+    subtitle: '6 làn phân luồng theo tốc độ · Lọc muối khoáng & tia UV không mùi Clo',
     image: '/images/fitness/aquatics-pool.jpg',
-    tags: ['6 làn 25m × 16m', 'Nhiệt độ 27.5°C — 28.5°C', 'Muối khoáng sinh học'],
-    hoverMeta: 'Dây phao chắn sóng Anti-Turbulence · Độ sâu 1.35m — 1.80m · Phân luồng tốc độ',
-    cta: 'Khám phá chuyên sâu Bơi lội',
+    tags: ['6 làn 25m', 'Nước ấm 28°C', 'Muối khoáng'],
+    hoverMeta: 'Độ sâu 1.35m – 1.80m · Có làn riêng dạy bơi người mới',
+    cta: 'Xem chi tiết Bơi lội',
   },
   {
     id: 'tennis' as const,
-    kicker: 'CHAMPIONSHIP COURT · ITF PACE CATEGORY 3',
-    title: 'Tennis Kỹ Thuật & Phản Xạ Thi Đấu',
-    subtitle: 'Cụm sân Cushion Acrylic 7 lớp giảm chấn · Chiếu sáng LED Asymmetric 750 Lux chống chói',
+    kicker: 'TENNIS · CUSHION COURT',
+    title: 'Tennis Kỹ Thuật & Đánh Đôi',
+    subtitle: 'Mặt sân Cushion Acrylic êm khớp · Có máy bắn bóng & lớp nhập môn',
     image: '/images/fitness/tennis-court.jpg',
-    tags: ['ITF Cat 3 Medium-Fast', 'Giảm 28% xung lực khớp', 'Smart Ball Machine'],
-    hoverMeta: 'Phân tích chuỗi động học Forehand / Serve · Tập luyện bộ chân Split-Step & Match Play',
-    cta: 'Khám phá chuyên sâu Tennis',
+    tags: ['Đệm 7 lớp', 'Giảm 28% xung lực', 'Đèn 750 Lux'],
+    hoverMeta: 'Hỗ trợ vợt tập nhẹ cho người mới · Ghép cặp đánh đôi mỗi tuần',
+    cta: 'Xem chi tiết Tennis',
   },
 ] as const;
+
 const multiSportDeepDive = {
   swimming: {
-    kicker: 'AQUATICS BIOMECHANICS & ENDURANCE',
-    title: 'Bơi Lội Kỹ Thuật Cao & Thủy Trị Liệu Phục Hồi',
-    overview: 'Tại SÖL Aquatics, bơi lội không dừng lại ở vận động giải trí. Từng buổi tập được thiết kế dựa trên nguyên lý thủy động lực học nhằm giảm lực cản dòng nước, tối ưu hiệu suất trao đổi oxy (VO₂ Max) và giải phóng hoàn toàn áp lực đè nén lên cột sống sau các buổi tập tạ nặng.',
+    kicker: 'AQUATICS CURRICULUM',
+    title: 'Lộ Trình Bơi Lội & Phục Hồi Dưới Nước',
     pillars: [
       {
-        code: '01 · HYDRODYNAMICS & STROKE EFFICIENCY',
-        heading: 'Chuẩn hóa 4 kiểu bơi & Tư thế lướt nước (Streamline)',
-        detail: 'Chỉnh sửa vị trí đầu – cột sống – hông nằm ngang trên mặt nước, kỹ thuật tì nước khuỷu tay cao (High-Elbow Catch), xoay trục thân người (Body Roll) và nhịp thở hai bên cân bằng cho Bơi sải, Bơi ếch, Bơi ngửa và Bơi bướm.',
-        metric: 'Giảm 18–25% số nhịp quạt tay trên mỗi 25m (chỉ số SWOLF)',
+        code: '01 · CƠ BẢN & XÓA SỢ NƯỚC',
+        heading: 'Làm quen nhịp thở & Tư thế nổi ngang (Streamline)',
+        detail: 'Tập thở đều dưới nước, giữ trục cơ thể thẳng và quạt tay khuỷu cao giúp bơi 25m nhẹ nhàng, không mất sức.',
+        metric: 'Giảm 20% nhịp quạt tay / 25m',
       },
       {
-        code: '02 · CRITICAL SWIM SPEED & VO₂ MAX',
-        heading: 'Bơi sức bền ngưỡng Lactate & Phân phối nhịp độ',
-        detail: 'Xác định tốc độ bơi ngưỡng cá nhân (CSS Pace), áp dụng giáo án biến tốc Interval 50m / 100m / 400m kết hợp kỹ thuật xuất phát và quay vòng Flip Turn giúp bứt phá dung tích phổi và sức bền tim mạch.',
-        metric: 'Tiêu hao 550–750 kcal/giờ · Không gây chấn động lên sụn khớp',
+        code: '02 · SỨC BỀN TIM MẠCH',
+        heading: 'Bơi sải & Bơi ếch đường dài theo nhịp độ cá nhân',
+        detail: 'Phân phối sức ở các cự ly 100m – 500m kết hợp kỹ thuật quay vòng giúp tăng dung tích phổi (VO₂ Max).',
+        metric: 'Đốt 550–700 kcal/giờ · Không áp lực khớp',
       },
       {
-        code: '03 · ARCHIMEDES HYDRO-RECOVERY',
-        heading: 'Thủy trị liệu & Giải phóng cơ sâu trong nước ấm 28°C',
-        detail: 'Tận dụng lực đẩy Archimedes và áp suất thủy tĩnh tự nhiên của nước ấm để giãn cơ chủ động, tăng tuần hoàn máu ngoại vi, đào thải axit lactic và giảm đau mỏi cơ khởi phát muộn (DOMS) sau các buổi Squat hoặc chạy bộ.',
-        metric: 'Rút ngắn 40% thời gian phục hồi hệ cơ – thần kinh giữa tuần',
+        code: '03 · THỦY TRỊ LIỆU 28°C',
+        heading: 'Giãn cơ dưới nước ấm sau các buổi tập tạ hoặc chạy bộ',
+        detail: 'Lực nâng của nước giúp giải phóng đè nén cột sống thắt lưng và giảm nhanh cảm giác căng mỏi cơ.',
+        metric: 'Rút ngắn 40% thời gian mỏi cơ',
       },
     ],
-    specsTitle: 'Chuẩn Kỹ Thuật Hồ Bơi Bốn Mùa SÖL',
+    specsTitle: 'Thông Số Hồ Bơi SÖL',
     load: '48%',
-    status: 'Nước ấm 28.0°C · Độ pH 7.3 chuẩn sinh học · Làn bơi thông thoáng',
+    status: 'Nước ấm 28°C · Làn bơi thông thoáng',
     specs: [
-      { label: 'Quy chuẩn hình học', value: '25m × 16m · 6 làn tiêu chuẩn', sub: 'Độ sâu chuyển tiếp 1.35m – 1.80m · Dây phao triệt tiêu sóng ngang' },
-      { label: 'Công nghệ lọc nước', value: 'Điện phân muối khoáng & UV', sub: 'Không mùi Clo nồng · Không gây cay mắt, khô da hay xơ tóc' },
-      { label: 'Nhiệt độ bốn mùa', value: '27.5°C — 28.5°C ổn định', sub: 'Hệ thống gia nhiệt Heat-Pump tự động duy trì nhiệt độ quanh năm' },
-      { label: 'Phân luồng làn bơi', value: 'Fast · Medium · Coaching · Rehab', sub: 'Tách biệt làn bơi tốc độ liên tục, làn học kỹ thuật 1:1 và làn phục hồi' },
+      { label: 'Quy mô hồ', value: '25m × 16m · 6 làn tiêu chuẩn', sub: 'Độ sâu 1.35m – 1.80m · Phao chắn sóng' },
+      { label: 'Xử lý nước', value: 'Điện phân muối khoáng & UV', sub: 'Độ pH 7.3 · Không cay mắt, không khô da' },
+      { label: 'Nhiệt độ nước', value: '27.5°C — 28.5°C quanh năm', sub: 'Gia nhiệt tự động 4 mùa' },
+      { label: 'Phân làn', value: 'Bơi nhanh · Bơi bền · Học bơi', sub: 'Tách biệt làn tập luyện và làn người mới' },
     ],
   },
   tennis: {
-    kicker: 'COURT BIOMECHANICS, FOOTWORK & TACTICS',
-    title: 'Huấn Luyện Tennis Hiện Đại & Phản Xạ Đa Hướng',
-    overview: 'Cụm sân SÖL Tennis được xây dựng theo tiêu chuẩn giải đấu ITF với bề mặt đệm giảm chấn đa lớp và mái vòm thông khí. Giáo án tập trung vào chuỗi truyền lực sinh học (Kinetic Chain), tốc độ bước chân và tư duy chiến thuật thực chiến.',
+    kicker: 'TENNIS CURRICULUM',
+    title: 'Lộ Trình Tennis Từ Nhập Môn Đến Đánh Đôi',
     pillars: [
       {
-        code: '01 · KINETIC CHAIN & MODERN GROUNDSTROKES',
-        heading: 'Chuỗi động học & Kỹ thuật Forehand / Backhand Topspin',
-        detail: 'Tối ưu hóa lực đạp từ mặt sân qua khớp cổ chân, xoay hông – vai (Unit Turn) đến điểm tiếp xúc bóng phía trước thân người; làm chủ độ xoáy Topspin sâu cuối sân và cú cắt bóng Slice phòng thủ chuyển trạng thái.',
-        metric: 'Tăng tốc độ đầu vợt & độ ổn định đường bóng sâu qua lưới',
+        code: '01 · NHẬP MÔN & CẢM GIÁC BÓNG',
+        heading: 'Kỹ thuật Forehand / Backhand không mỏi cổ tay',
+        detail: 'Hướng dẫn cách cầm vợt, xoay hông – vai phát lực tự nhiên và điểm chạm bóng ổn định cùng máy thả bóng chậm.',
+        metric: 'Đánh qua lưới ngay buổi đầu',
       },
       {
-        code: '02 · SERVE MECHANICS & NET DOMINANCE',
-        heading: 'Cơ học Giao bóng, Trả giao & Kiểm soát trên lưới',
-        detail: 'Chuẩn hóa chuỗi Trophy Pose → Leg Drive → Pronation giúp tăng uy lực giao bóng 1 (Flat / Slice Serve) và độ nảy cao ở giao bóng 2 (Kick Serve) mà vẫn bảo vệ tuyệt đối nhóm cơ xoay vai (Rotator Cuff).',
-        metric: 'Phân tích góc tung bóng (Toss) & phản xạ trả giao bóng chuẩn nhịp',
+        code: '02 · GIAO BÓNG & LÊN LƯỚI',
+        heading: 'Chuẩn hóa động tác Serve & Bắt Volley trên lưới',
+        detail: 'Phối hợp nhịp tung bóng và đạp chân giúp giao bóng qua lưới ổn định mà vẫn bảo vệ khớp vai.',
+        metric: 'Bảo vệ khớp vai & khuỷu tay',
       },
       {
-        code: '03 · SPLIT-STEP FOOTWORK & MATCH TACTICS',
-        heading: 'Bộ chân đa hướng & Chiến thuật thi đấu Đơn / Đôi',
-        detail: 'Rèn nhịp bật nhảy Split-Step đúng khoảnh khắc đối thủ chạm bóng, kỹ thuật vào bộ Open / Semi-Open Stance, bước thu hồi vị trí (Recovery Step) và chiến thuật điều bóng mở góc sân giành quyền chủ động.',
-        metric: 'Cải thiện tốc độ bứt tốc 5m đầu tiên & sức bền trong loạt Rally dài',
+        code: '03 · BỘ CHÂN & ĐÁNH ĐÔI',
+        heading: 'Phản xạ bước nhảy Split-Step & Giao lưu cuối tuần',
+        detail: 'Rèn bước di chuyển đổi hướng nhanh và chiến thuật đứng vị trí khi ghép cặp đánh đôi.',
+        metric: 'CLB giao lưu cùng trình độ mỗi tuần',
       },
     ],
-    specsTitle: 'Chuẩn Kỹ Thuật Cụm Sân Tennis SÖL',
+    specsTitle: 'Thông Số Sân Tennis SÖL',
     load: '62%',
-    status: 'Độ nảy bóng chuẩn ITF Cat 3 · Ánh sáng chống chói sẵn sàng',
+    status: 'Mặt sân khô ráo · Sẵn sàng giao lưu',
     specs: [
-      { label: 'Bề mặt thi đấu', value: 'Cushion Acrylic 7 lớp đàn hồi', sub: 'ITF Court Pace Category 3 (Medium-Fast) — Độ nảy bóng đồng nhất' },
-      { label: 'Giảm chấn sinh học', value: 'Hấp thụ 28% xung lực mặt sân', sub: 'Bảo vệ sụn chêm khớp gối, cổ chân và gân gót Achilles khi phanh gấp' },
-      { label: 'Chiếu sáng chuyên dụng', value: 'LED Asymmetric 750 Lux', sub: 'Góc chiếu bất đối xứng chống lóa mắt khi tung bóng giao và bắt bóng bổng' },
-      { label: 'Trợ lý công nghệ', value: 'Smart Ball Machine & Video', sub: 'Máy bắn bóng lập trình điểm rơi, tốc độ 30–130 km/h và độ xoáy Topspin/Underspin' },
+      { label: 'Mặt sân', value: 'Cushion Acrylic 7 lớp êm chân', sub: 'Độ nảy chuẩn ITF Category 3' },
+      { label: 'Giảm chấn', value: 'Hấp thụ 28% xung lực mặt sân', sub: 'Giảm tải khớp gối & cổ chân khi dừng gấp' },
+      { label: 'Ánh sáng', value: 'Đèn LED 750 Lux chống chói', sub: 'Không lóa mắt khi tung bóng giao' },
+      { label: 'Thiết bị', value: 'Máy bắn bóng & Vợt tập nhẹ', sub: 'Hỗ trợ tập cá nhân mọi trình độ' },
     ],
   },
   crosstrain: {
-    kicker: 'MULTI-SPORT ATHLETIC ECOSYSTEM',
-    title: 'Hệ Sinh Thái Đa Bộ Môn: Sức Mạnh · Tốc Độ · Phục Hồi',
-    overview: 'Thay vì bó buộc cơ thể trong một hình thức tập luyện cố định dễ gây nhàm chán và quá tải cục bộ, mô hình Tổ hợp Đa bộ môn tại SÖL cho phép bạn luân chuyển khoa học giữa Gym, Pilates, Bơi lội và Tennis trong cùng một thẻ hội viên.',
+    kicker: 'MULTI-SPORT SYNERGY',
+    title: 'Phối Hợp Đa Môn Trong Cùng Một Thẻ Tập',
     pillars: [
       {
-        code: '01 · ROTATIONAL POWER & JOINT ARMOR',
-        heading: 'Gym Strength bổ trợ lực đánh Tennis & lực quạt nước',
-        detail: 'Các bài Medicine Ball Rotational Throw, Landmine Press, Lat Pulldown và Bulgarian Split Squat tại khu Free Weights giúp gia tăng trực tiếp sức mạnh chuỗi xoay thân trên và gia cố dây chằng cổ chân, khớp gối.',
-        metric: 'Chuyển hóa sức mạnh phòng tạ thành tốc độ thực tế trên sân & dưới nước',
+        code: '01 · GYM + TENNIS / BƠI',
+        heading: 'Tập tạ bổ trợ lực đánh bóng & lực quạt nước',
+        detail: 'Các bài tập chân, lưng xô và cơ lõi (Core) tại khu Gym giúp đánh bóng chắc tay hơn và bơi bền sức hơn.',
+        metric: 'Tăng sức mạnh thực tế khi vận động',
       },
       {
-        code: '02 · MOBILITY & INJURY PREVENTION',
-        heading: 'Reformer Pilates cân bằng cơ xoay vai & trục cột sống',
-        detail: 'Mở rộng biên độ xoay cột sống ngực (Thoracic Mobility) và kích hoạt nhóm cơ ổn định bả vai trên máy Reformer — chìa khóa phòng ngừa hội chứng Tennis Elbow và đau vai người bơi (Swimmer’s Shoulder).',
-        metric: 'Cân bằng đối xứng hai bên cơ thể sau các môn thể thao cầm vợt',
+        code: '02 · GIÃN CƠ + PHÒNG CHẤN THƯƠNG',
+        heading: 'Mở khớp vai – hông, ngừa đau vai và khuỷu tay',
+        detail: 'Lớp Mobility giúp cân bằng lại hai bên cơ thể sau các buổi cầm vợt hoặc bơi dài.',
+        metric: 'Ngừa Tennis Elbow & mỏi vai',
       },
       {
-        code: '03 · WEEKLY PERIODIZATION FLOW',
-        heading: 'Chu trình Tuần Đa Môn: Không chững cân, Không quá tải',
-        detail: 'Ví dụ lịch chuẩn tại SÖL: Thứ 2 & 5 Tập tạ phát triển cơ bắp → Thứ 4 Đánh Tennis rèn phản xạ & đốt mỡ biến tốc → Thứ 7 Bơi 25m & Thủy trị liệu giải phóng áp lực khớp, làm mới hoàn toàn hệ thần kinh.',
-        metric: 'Tối ưu đồng thời 5 tố chất: Sức mạnh · Sức bền · Tốc độ · Linh hoạt · Phục hồi',
+        code: '03 · LỊCH TUẦN KHÔNG NHÀM CHÁN',
+        heading: 'Luân phiên bộ môn theo thể trạng từng ngày',
+        detail: 'Ví dụ: Thứ 2 & 5 Tập tạ → Thứ 4 Đánh Tennis → Thứ 7 Bơi nước ấm 28°C thả lỏng cơ thể.',
+        metric: 'Duy trì hứng khởi đi tập lâu dài',
       },
     ],
-    specsTitle: 'Chuẩn Vận Hành Tổ Hợp Đa Môn SÖL',
+    specsTitle: 'Quyền Lợi Tổ Hợp Đa Môn',
     load: '56%',
-    status: '05 Phân khu đang hoạt động · Đặt lịch liên thông trên 1 ứng dụng',
+    status: '05 phân khu mở cửa 06:00 — 22:00',
     specs: [
-      { label: 'Quy mô tổ hợp', value: '05 Phân khu thể chất chuyên biệt', sub: 'Strength Floor · Free Weights · Movement Studio · Pool 25m · Tennis Courts' },
-      { label: 'Trải nghiệm liền mạch', value: '01 Thẻ QR Pass duy nhất', sub: 'Quét 1 chạm qua cổng Gym, khu vực Hồ bơi bốn mùa và cụm sân Tennis' },
-      { label: 'Linh hoạt chuyển đổi', value: 'Đổi bộ môn theo thể trạng ngày', sub: 'Ngày sung sức tập tạ & đánh Tennis; ngày mỏi cơ chuyển sang Bơi ấm & Mobility' },
-      { label: 'Tiện ích tiêu chuẩn', value: 'Khu Locker, Sauna & Lounge', sub: 'Khăn tắm cao cấp, tủ đồ khóa từ, phòng tắm nước ấm & quầy bù điện giải' },
+      { label: 'Phân khu', value: '05 Khu tập liên thông', sub: 'Strength · Free Weights · Studio · Pool · Tennis' },
+      { label: 'Check-in', value: '01 Thẻ QR duy nhất', sub: 'Dùng chung cho toàn bộ các khu vực' },
+      { label: 'Linh hoạt', value: 'Đổi môn tự do mỗi ngày', sub: 'Không giới hạn cố định 1 bộ môn' },
+      { label: 'Tiện ích', value: 'Tủ đồ từ, Tắm ấm & Khăn tập', sub: 'Sẵn sàng tại câu lạc bộ' },
     ],
   },
 } as const;
+
 const scheduleItems = [
-  { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Strength coach', level: 'Mọi cấp độ' },
-  { time: '07:30 — 08:25', title: 'Aquatics Stroke & Endurance Clinic', category: 'conditioning', studio: 'Aquatics pool 25m', coach: 'Aquatics coach', level: 'Cơ bản — Nâng cao' },
-  { time: '09:00 — 09:50', title: 'Reformer Core & Shoulder Mobility', category: 'movement', studio: 'Movement studio', coach: 'Movement coach', level: 'Mọi cấp độ' },
-  { time: '17:30 — 18:25', title: 'Hypertrophy & Barbell Club', category: 'strength', studio: 'Free weights', coach: 'Strength coach', level: 'Trung bình — Nâng cao' },
-  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Hydro-Recovery', category: 'movement', studio: 'Movement & Pool', coach: 'Movement coach', level: 'Mọi cấp độ' },
-  { time: '19:30 — 20:30', title: 'Tennis Footwork, Spin & Match Play', category: 'conditioning', studio: 'Championship Court', coach: 'Tennis coach', level: 'Trung bình — Thi đấu' },
+  { time: '06:30 — 07:20', title: 'Morning Strength Foundation', category: 'strength', studio: 'Strength floor', coach: 'Derek', level: 'Mọi cấp độ' },
+  { time: '07:30 — 08:25', title: 'Aquatics Stroke & Endurance Clinic', category: 'conditioning', studio: 'Aquatics pool 25m', coach: 'Anthony', level: 'Cơ bản — Nâng cao' },
+  { time: '09:00 — 09:50', title: 'Reformer Core & Shoulder Mobility', category: 'movement', studio: 'Movement studio', coach: 'Elena', level: 'Mọi cấp độ' },
+  { time: '17:30 — 18:25', title: 'Hypertrophy & Barbell Club', category: 'strength', studio: 'Free weights', coach: 'Derek', level: 'Trung bình — Nâng cao' },
+  { time: '18:30 — 19:20', title: 'Dynamic Mobility & Hydro-Recovery', category: 'movement', studio: 'Movement & Pool', coach: 'Elena', level: 'Mọi cấp độ' },
+  { time: '19:30 — 20:30', title: 'Tennis Footwork, Spin & Match Play', category: 'conditioning', studio: 'Tennis courts', coach: 'Ezekiel', level: 'Mọi cấp độ' },
 ];
 const journeySteps = [
-  { step: '01', title: 'Tạo tài khoản và chọn gói tập đa môn', description: 'Đăng ký, xác thực email và chọn gói tập linh hoạt mở quyền truy cập Gym, Hồ bơi 25m và Sân Tennis.' },
-  { step: '02', title: 'Thiết lập lộ trình phối hợp bộ môn', description: 'Cập nhật chỉ số cơ thể và mục tiêu để kết hợp giữa tập tạ tăng lực, bơi sải sức bền và Tennis phản xạ.' },
-  { step: '03', title: 'Đặt lớp, giữ làn bơi & mở thẻ QR', description: 'Khi gói tập có hiệu lực, chọn lớp nhóm, làn bơi hoặc khung giờ sân Tennis và dùng 1 thẻ QR duy nhất để check-in.' },
+  { step: '01', title: 'Tạo tài khoản & chọn gói tập', description: 'Đăng ký trực tuyến và chọn gói tập phù hợp nhu cầu.' },
+  { step: '02', title: 'Cập nhật chỉ số & mục tiêu', description: 'Lưu chiều cao, cân nặng để nhận gợi ý lịch phối hợp Gym, Bơi và Tennis.' },
+  { step: '03', title: 'Đặt lịch & quét QR check-in', description: 'Giữ chỗ lớp học, làn bơi hoặc sân Tennis và dùng thẻ QR khi đến CLB.' },
 ];
 const plans = [
-  { period: 'Tháng', name: 'Gói Cơ Bản · 1 Tháng', price: '1.200.000', duration: '30 ngày', description: 'Bắt đầu thói quen vận động nhẹ nhàng, dễ tiếp cận cho người mới.', perks: ['Tập Gym, Free Weights & Hồ bơi 25m mỗi ngày', 'Tham gia các lớp giãn cơ & lớp bơi cơ bản', 'Thẻ hội viên QR điện tử tiện lợi trên điện thoại'] },
-  { period: 'Quý', name: 'Gói Đa Môn · 3 Tháng', price: '3.100.000', duration: '90 ngày', description: 'Lựa chọn phổ biến nhất để kết hợp Gym, Bơi lội và Tennis mỗi tuần.', perks: ['Mở toàn bộ 05 phân khu: Gym, Studio, Hồ bơi & Sân Tennis', 'Tham gia lớp kỹ thuật Bơi lội, Tennis nhập môn & Core', 'Đặt lịch lớp, giữ làn bơi và đặt sân trực tiếp trên Portal'] },
-  { period: 'Năm', name: 'Gói Đồng Hành · 12 Tháng', price: '10.800.000', duration: '365 ngày', description: 'Tiết kiệm chi phí cả năm, duy trì sức khỏe bền vững cho bạn và gia đình.', perks: ['Trọn quyền sử dụng 05 phân khu & khung giờ sân Tennis', 'Buổi định hướng kỹ thuật đa môn cùng Huấn luyện viên', 'Hỗ trợ bảo lưu (Freeze) linh hoạt khi bận công tác'] },
+  { period: 'Tháng', name: 'Gói Cơ Bản · 1 Tháng', price: '1.200.000', duration: '30 ngày', description: 'Làm quen nhịp vận động linh hoạt mỗi tuần.', perks: ['Khu Gym, Free Weights & Hồ bơi 25m', 'Lớp giãn cơ & bơi cơ bản', 'Thẻ QR check-in điện tử'] },
+  { period: 'Quý', name: 'Gói Đa Môn · 3 Tháng', price: '3.100.000', duration: '90 ngày', description: 'Kết hợp trọn vẹn Gym, Bơi lội và Tennis.', perks: ['Toàn bộ 05 phân khu: Gym, Studio, Hồ bơi & Tennis', 'Lớp kỹ thuật Bơi lội, Tennis & Core', 'Đặt lớp, làn bơi & sân trên Portal'] },
+  { period: 'Năm', name: 'Gói Đồng Hành · 12 Tháng', price: '10.800.000', duration: '365 ngày', description: 'Tiết kiệm chi phí cả năm, kèm quyền bảo lưu linh hoạt.', perks: ['Không giới hạn 05 phân khu & sân Tennis', 'Định hướng lộ trình cùng Huấn luyện viên', 'Hỗ trợ bảo lưu (Freeze) trực tuyến'] },
 ];
 const faqs = [
   {
-    question: 'Người mới bắt đầu chưa từng tập gym, bơi kỹ thuật hay đánh Tennis có theo kịp lộ trình tại SÖL không?',
-    answer: 'Hoàn toàn phù hợp. SÖL thiết kế các lớp nhập môn riêng biệt cho từng bộ môn: làm quen chuyển động tạ cơ bản, chuẩn hóa nhịp thở và tư thế nổi ngang trong bơi lội, cũng như kỹ thuật cầm vợt và bộ chân nền tảng trong Tennis.',
+    question: 'Người mới chưa từng tập Gym, Bơi hay Tennis có theo kịp không?',
+    answer: 'Hoàn toàn theo kịp. Mỗi bộ môn đều có lớp nhập môn riêng hướng dẫn từ bước cơ bản nhất.',
   },
   {
-    question: 'Gói hội viên đã bao gồm quyền sử dụng Hồ bơi 4 mùa 25m và Sân Tennis chưa?',
-    answer: 'Tất cả gói hội viên tại SÖL đều mở quyền tiếp cận tổ hợp đa môn theo hạng gói: từ khu Gym & Hồ bơi nước ấm 28°C ở Gói Cơ Bản 1 Tháng cho đến toàn bộ 05 phân khu (bao gồm Sân Tennis và các lớp hướng dẫn kỹ thuật) ở Gói Đa Môn 3 Tháng và Gói Đồng Hành 12 Tháng.',
+    question: 'Gói hội viên đã bao gồm Hồ bơi 25m và Sân Tennis chưa?',
+    answer: 'Đã bao gồm theo hạng gói: Gói 1 Tháng mở khu Gym & Hồ bơi 25m; Gói 3 Tháng và 12 Tháng mở toàn bộ 05 phân khu gồm cả Sân Tennis.',
   },
   {
-    question: 'Tôi có thể tạm dừng (bảo lưu) gói tập khi đi công tác hoặc bận lịch cá nhân không?',
-    answer: 'Có. Hội viên có thể gửi yêu cầu bảo lưu (Freeze) trực tiếp trên không gian hội viên trực tuyến. Số ngày còn lại của gói tập sẽ được giữ nguyên và mở lại dễ dàng khi bạn quay lại tập luyện.',
+    question: 'Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?',
+    answer: 'Có. Bạn có thể gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên để giữ nguyên số ngày còn lại.',
   },
   {
-    question: 'Làm thế nào để đặt chỗ lớp học, giữ làn bơi hoặc đặt sân Tennis?',
-    answer: 'Sau khi đăng nhập vào Portal hội viên, bạn có thể xem lịch thực tế của cả 05 phân khu, kiểm tra mật độ làn bơi, khung giờ trống của sân Tennis và đặt chỗ trước chỉ với một chạm hoặc tham gia danh sách chờ (Waitlist) tự động.',
-  },
-  {
-    question: 'Tại sao mô hình tập luyện đa môn (Gym + Bơi lội + Tennis) lại hiệu quả hơn tập cố định 1 môn?',
-    answer: 'Phối hợp đa bộ môn (Cross-Training) giúp cơ thể phát triển toàn diện: tập tạ xây dựng sức mạnh cơ lõi và bảo vệ dây chằng; Tennis rèn phản xạ thần kinh – cơ và tốc độ đổi hướng; còn Bơi lội giúp tăng dung tích phổi (VO₂ Max) và giải phóng áp lực lên cột sống, khớp gối.',
+    question: 'Làm sao để đặt lớp học, giữ làn bơi hoặc đặt sân Tennis?',
+    answer: 'Đăng nhập vào Portal để xem chỗ trống theo thời gian thực và đặt lịch trước hoặc vào danh sách chờ (Waitlist).',
   },
 ];
 
@@ -548,10 +517,10 @@ export function FitnessLanding() {
           ? 'Thừa cân nhẹ — tối ưu đốt mỡ'
           : 'Ưu tiên giảm mỡ & bảo vệ khớp';
   const recommendedPlan = goalType === 'lean'
-    ? 'Gói Đa Môn · 3 Tháng (90 ngày) · 2 buổi Gym + 2 buổi Bơi sải đốt mỡ + 1 buổi Tennis/tuần'
+    ? 'Gói Đa Môn · 3 Tháng · 2 buổi Gym + 2 buổi Bơi 25m + 1 buổi Tennis/tuần'
     : goalType === 'muscle'
-      ? 'Gói Đa Môn · 3 Tháng (90 ngày) · 3 buổi Tập tạ + 1 buổi Tennis phản xạ + 1 buổi Bơi thả lỏng/tuần'
-      : 'Gói Cơ Bản · 1 Tháng (30 ngày) · 2 buổi Giãn cơ Mobility + 2 buổi Bơi nước ấm 28°C/tuần';
+      ? 'Gói Đa Môn · 3 Tháng · 3 buổi Tập tạ + 1 buổi Tennis + 1 buổi Bơi thả lỏng/tuần'
+      : 'Gói Cơ Bản · 1 Tháng · 2 buổi Mobility + 2 buổi Bơi nước ấm 28°C/tuần';
 
   const visibleSchedule = scheduleItems.filter((item) => scheduleFilter === 'all' || item.category === scheduleFilter);
 
@@ -559,8 +528,8 @@ export function FitnessLanding() {
     <section className="fit-hero" id="hero" aria-labelledby="hero-title">
       <div className="fit-hero-lines" aria-hidden="true" />
       <h1 id="hero-title" className="fit-hero-title"><span>BUILD YOUR</span><span>BODY SHAPES<span className="fit-title-dot">.</span></span></h1>
-      <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p><p>Mỗi người một điểm bắt đầu. Tìm cách tập luyện của bạn, cùng SÖL xây dựng một cơ thể khỏe và một tinh thần cân bằng.</p>
-        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <img key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow">↗</span></span><span className="fit-review-label">Mỗi hành trình đều đáng giá</span></a>
+      <div className="fit-hero-copy"><p>Mạnh mẽ từ thể chất.<br />Tự tin từ bên trong.</p><p>Tổ hợp Gym, Giãn cơ, Hồ bơi 25m và Sân Tennis dành cho mọi cấp độ.</p>
+        <a href="#stories" className="fit-reviews"><span>Cùng nhau tiến bộ</span><span className="fit-avatar-row">{stories.slice(0, 3).map((story) => <img key={story.name} src={`/images/fitness/${story.image}`} alt="" />)}<span className="fit-review-arrow">↗</span></span><span className="fit-review-label">Đội ngũ đồng hành</span></a>
       </div>
       <img className="fit-hero-athlete" src="/images/fitness/hero-athlete.png" alt="Vận động viên ngồi tập tạ đơn, hướng ánh nhìn xuống, trên nền tối" fetchPriority="high" />
       <div className="fit-hero-anatomy-stage" onPointerLeave={scheduleClearMuscle}>
@@ -677,18 +646,17 @@ export function FitnessLanding() {
       </div>
     </section>
     <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /><p>Những câu chuyện minh họa về mục tiêu và thói quen tập luyện.</p></div>
-      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={`Ảnh minh họa hành trình ${story.focus.toLowerCase()}`} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></article>)}</div>
-      <p className="fit-disclosure">Câu chuyện và hình ảnh minh họa cho bản thiết kế.</p>
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /><p>Triết lý đồng hành từ các huấn luyện viên phụ trách từng phân khu tại SÖL.</p></div>
+      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to={`/trainers/${story.slug}`} className="fit-story-link"><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
       <div className="fit-section-heading" data-reveal="soft">
         <span className="fit-kicker">BETTER WITH A COACH</span>
         <SplitHeading id="trainers-title" lines={['Our Trainers']} />
-        <p>Đúng kỹ thuật. Đúng nhịp độ. Gần gũi với mọi người. Ấn vào từng huấn luyện viên để đọc câu chuyện riêng, cách hướng dẫn người mới và lịch đứng lớp của mỗi người.</p>
+        <p>Ấn vào từng huấn luyện viên để xem trang giới thiệu và lịch đứng lớp riêng.</p>
         <div className="fit-trainer-quick-links" aria-label="Xem nhanh trang giới thiệu huấn luyện viên">
           {trainers.map((item) => <Link key={item.slug} to={`/trainers/${item.slug}`} className="fit-trainer-chip">
-            <strong>{item.vietnameseName}</strong>
+            <strong>{item.personName}</strong>
             <span>{item.name} ↗</span>
           </Link>)}
         </div>
@@ -699,14 +667,14 @@ export function FitnessLanding() {
       </div>
       <div className="fit-trainer-grid" key={trainerPage}>
         {visibleTrainers.map((trainer) => <article className="fit-trainer-card" data-reveal="lift" key={trainer.slug} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
-          <Link to={`/trainers/${trainer.slug}`} className="fit-trainer-card-link" aria-label={`Xem câu chuyện của ${trainer.vietnameseName} (${trainer.name})`}>
-            <img src={`/images/fitness/${trainer.image}`} alt={`Ảnh minh họa ${trainer.name}`} loading="lazy" />
+          <Link to={`/trainers/${trainer.slug}`} className="fit-trainer-card-link" aria-label={`Xem câu chuyện của ${trainer.personName} (${trainer.name})`}>
+            <img src={`/images/fitness/${trainer.image}`} alt={trainer.personName} loading="lazy" />
             <div className="fit-trainer-card-info">
-              <span className="fit-trainer-vn-name">{trainer.vietnameseName}</span>
+              <span className="fit-trainer-vn-name">{trainer.personName}</span>
               <h3>{trainer.name}</h3>
               <p>{trainer.specialty}</p>
               <span className="fit-card-meta-reveal">{trainer.meta}</span>
-              <span className="fit-trainer-story-cta">Xem câu chuyện &amp; giới thiệu riêng →</span>
+              <span className="fit-trainer-story-cta">Xem trang giới thiệu →</span>
             </div>
             <RoundArrow diagonal />
           </Link>
@@ -714,27 +682,16 @@ export function FitnessLanding() {
       </div>
     </section>
     <section className="fit-section fit-space" id="about" aria-labelledby="space-title"><span id="intelligence" />
-      <div className="fit-intro-header" data-reveal="soft">
-        <span className="fit-kicker">GIỚI THIỆU VỀ TỔ HỢP SÖL FITNESS</span>
-        <p className="fit-manifesto" data-scroll-scrub="manifesto">
-          {manifestoWords.map((word, idx) => <span key={idx} className="fit-manifesto-word"><span>{word}</span> </span>)}
-        </p>
-      </div>
-      <div className="fit-intro-pillars">
-        {clubIntroPillars.map((pillar) => <article key={pillar.code} className="fit-intro-pillar-card" data-reveal="lift">
-          <span className="fit-kicker">{pillar.code}</span>
-          <h3>{pillar.title}</h3>
-          <p>{pillar.detail}</p>
-          <span className="fit-intro-pillar-badge">{pillar.badge}</span>
-        </article>)}
-      </div>
+      <p className="fit-manifesto" data-scroll-scrub="manifesto" data-reveal="soft">
+        {manifestoWords.map((word, idx) => <span key={idx} className="fit-manifesto-word"><span>{word}</span> </span>)}
+      </p>
       <div className="fit-space-image" data-reveal="image" onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
         <img key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
         <div className="fit-space-shade" />
         <div key={space} className="fit-space-content fit-blur-morph">
-          <span className="fit-kicker">A PLACE TO SHOW UP</span>
+          <span className="fit-kicker">05 PHÂN KHU TẬP LUYỆN</span>
           <h2 id="space-title">{spaces[space].title}</h2>
-          <p>Không gian tập luyện thân thiện, dễ tiếp cận cho cả người mới bắt đầu lẫn người tập lâu năm.</p>
+          <p>Chuyển đổi linh hoạt giữa các phân khu trong cùng một thẻ hội viên.</p>
           <div className="fit-space-live" style={{ '--space-load': spaces[space].load } as CSSProperties}>
             <div className="fit-space-live-head">
               <span>{spaces[space].meta}</span>
@@ -751,8 +708,8 @@ export function FitnessLanding() {
       <div className="fit-rhythm-explorer" data-reveal="lift" aria-label="Nhịp sinh hoạt trong ngày tại câu lạc bộ">
         <div className="fit-rhythm-head">
           <div>
-            <span className="fit-kicker">NHỊP TẬP TRONG NGÀY TẠI SÖL</span>
-            <h3>Chọn khung giờ phù hợp với lịch sinh hoạt của bạn</h3>
+            <span className="fit-kicker">NHỊP TẬP TRONG NGÀY</span>
+            <h3>Khung giờ hoạt động thực tế</h3>
           </div>
           <div className="fit-rhythm-tabs" role="tablist" aria-label="Chọn khung giờ trong ngày">
             {dailyRhythmItems.map((item, idx) => <button
@@ -770,14 +727,13 @@ export function FitnessLanding() {
         <div key={activeRhythm.id} className="fit-rhythm-body fit-blur-morph">
           <div className="fit-rhythm-copy">
             <h4>{activeRhythm.title}</h4>
-            <p>{activeRhythm.summary}</p>
             <ul>
               {activeRhythm.highlights.map((pt) => <li key={pt}><span aria-hidden="true">✓</span>{pt}</li>)}
             </ul>
           </div>
           <div className="fit-space-live fit-rhythm-meter" style={{ '--space-load': activeRhythm.crowdLoad } as CSSProperties}>
             <div className="fit-space-live-head">
-              <span>Mật độ trung bình khung giờ này</span>
+              <span>Mật độ trung bình</span>
               <strong>{activeRhythm.crowdLoad}</strong>
             </div>
             <div className="fit-space-meter"><i /></div>
@@ -788,9 +744,9 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">MULTI-SPORT ATHLETIC SANCTUARY</span>
-        <SplitHeading id="multisport-title" lines={['Bơi Lội 4 Mùa &', 'Sân Tennis Chuẩn Giải Đấu']} />
-        <p>Phá vỡ giới hạn của một phòng tập cố định. SÖL kết hợp nền tảng sức mạnh Gym &amp; Pilates với Hồ bơi 25m điện phân muối khoáng và cụm sân Tennis Cushion Acrylic 7 lớp — tạo nên chu trình huấn luyện đa bộ môn hoàn chỉnh.</p>
+        <span className="fit-kicker">AQUATICS &amp; TENNIS CLUB</span>
+        <SplitHeading id="multisport-title" lines={['Bơi Lội 4 Mùa &', 'Sân Tennis Tiêu Chuẩn']} />
+        <p>Hai bộ môn chủ lực giúp cân bằng sức bền tim mạch, phản xạ và phục hồi khớp.</p>
       </div>
       <div className="fit-sport-bento-grid">
         {multiSportShowcase.map((sport) => <article
@@ -822,15 +778,14 @@ export function FitnessLanding() {
         </article>)}
       </div>
       <div className="fit-pricing-switch fit-sport-switch" data-reveal="soft" aria-label="Chọn chuyên đề bộ môn chuyên sâu">
-        <button type="button" onClick={() => setActiveSportTab('swimming')} aria-pressed={activeSportTab === 'swimming'}>Bơi lội · Aquatics 25m</button>
-        <button type="button" onClick={() => setActiveSportTab('tennis')} aria-pressed={activeSportTab === 'tennis'}>Tennis · ITF Court</button>
-        <button type="button" onClick={() => setActiveSportTab('crosstrain')} aria-pressed={activeSportTab === 'crosstrain'}>Phối hợp Đa môn · Cross-Training</button>
+        <button type="button" onClick={() => setActiveSportTab('swimming')} aria-pressed={activeSportTab === 'swimming'}>Bơi lội · 25m Pool</button>
+        <button type="button" onClick={() => setActiveSportTab('tennis')} aria-pressed={activeSportTab === 'tennis'}>Tennis · Court</button>
+        <button type="button" onClick={() => setActiveSportTab('crosstrain')} aria-pressed={activeSportTab === 'crosstrain'}>Phối hợp Đa môn</button>
       </div>
       <div key={activeSportTab} className="fit-sport-deepdive fit-blur-morph">
         <div className="fit-sport-curriculum">
           <span className="fit-kicker">{activeSportData.kicker}</span>
           <h3>{activeSportData.title}</h3>
-          <p className="fit-sport-overview">{activeSportData.overview}</p>
           <div className="fit-sport-pillars">
             {activeSportData.pillars.map((pillar) => <article key={pillar.code} className="fit-sport-pillar">
               <span className="fit-sport-pillar-code">{pillar.code}</span>
@@ -841,7 +796,7 @@ export function FitnessLanding() {
           </div>
         </div>
         <aside className="fit-sport-specs" aria-label={activeSportData.specsTitle}>
-          <span className="fit-kicker">TECHNICAL SPECIFICATIONS</span>
+          <span className="fit-kicker">SPECIFICATIONS</span>
           <h4>{activeSportData.specsTitle}</h4>
           <dl className="fit-sport-spec-list">
             {activeSportData.specs.map((spec) => <div key={spec.label} className="fit-sport-spec-item">
@@ -852,54 +807,42 @@ export function FitnessLanding() {
               </dd>
             </div>)}
           </dl>
-          <div className="fit-space-live fit-sport-live" style={{ '--space-load': activeSportData.load } as CSSProperties}>
-            <div className="fit-space-live-head">
-              <span>Trạng thái vận hành thời gian thực</span>
-              <strong>{activeSportData.load} công suất</strong>
-            </div>
-            <div className="fit-space-meter"><i /></div>
-            <span className="fit-space-status"><b />{activeSportData.status}</span>
-          </div>
-          <Link to={joinPath} className="fit-pill">Đăng ký trải nghiệm Đa bộ môn<RoundArrow diagonal /></Link>
+          <Link to={joinPath} className="fit-pill">Đăng ký tập thử<RoundArrow diagonal /></Link>
         </aside>
       </div>
     </section>
     <section className="fit-section fit-schedule" id="schedule" aria-labelledby="schedule-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
         <SplitHeading id="schedule-title" lines={['Weekly Class', 'Schedule']} />
-        <p>Lịch minh họa các bộ môn và khung giờ.<br />Đăng nhập để xem lịch thực tế và số chỗ còn trống.</p>
+        <p>Lịch lớp tiêu biểu trong ngày tại 05 phân khu.</p>
       </div>
       <div className="fit-pricing-switch fit-schedule-switch" data-reveal="soft" aria-label="Lọc bộ môn trong lịch lớp">
         <button type="button" onClick={() => setScheduleFilter('all')} aria-pressed={scheduleFilter === 'all'}>Tất cả khung giờ</button>
         <button type="button" onClick={() => setScheduleFilter('strength')} aria-pressed={scheduleFilter === 'strength'}>Strength &amp; Barbell</button>
         <button type="button" onClick={() => setScheduleFilter('movement')} aria-pressed={scheduleFilter === 'movement'}>Movement &amp; Core</button>
-        <button type="button" onClick={() => setScheduleFilter('conditioning')} aria-pressed={scheduleFilter === 'conditioning'}>Conditioning</button>
+        <button type="button" onClick={() => setScheduleFilter('conditioning')} aria-pressed={scheduleFilter === 'conditioning'}>Aquatics &amp; Tennis</button>
       </div>
       <div key={scheduleFilter} className="fit-schedule-grid">
         {visibleSchedule.map((item) => <article key={`${item.time}-${item.title}`} className="fit-schedule-card" data-reveal="lift">
           <div className="fit-schedule-top">
             <span className="fit-schedule-time">{item.time}</span>
-            <span className="fit-schedule-spots">Lịch minh họa</span>
+            <span className="fit-schedule-spots">{item.studio}</span>
           </div>
           <h3>{item.title}</h3>
           <div className="fit-schedule-meta">
-            <span>{item.studio}</span>
-            <span>•</span>
-            <span>{item.coach}</span>
+            <span>HLV: {item.coach}</span>
             <span>•</span>
             <span>{item.level}</span>
           </div>
-          <Link to={joinPath} className="fit-text-link">Xem lịch &amp; đặt lớp <RoundArrow diagonal /></Link>
+          <Link to={joinPath} className="fit-text-link">Đặt lớp <RoundArrow diagonal /></Link>
         </article>)}
       </div>
-      <p className="fit-disclosure">Lịch lớp tiêu biểu minh họa theo khung giờ trong ngày. Hội viên xem lịch thực tế và đặt chỗ trực tiếp trong Portal.</p>
     </section>
     <section className="fit-section fit-journey" id="journey" aria-labelledby="journey-title">
       <div className="fit-journey-steps" data-reveal="soft">
         <div className="fit-section-heading">
           <span className="fit-kicker">HOW YOUR ROUTINE BEGINS</span>
           <SplitHeading id="journey-title" lines={['Your First Week', 'At SÖL']} />
-          <p>Mọi thứ được thiết kế rõ ràng để bạn không bỡ ngỡ trong buổi tập đầu tiên — từ lúc nhận thẻ QR đến khi hoàn thành tuần tập luyện đầu tiên.</p>
         </div>
         <ol className="fit-step-list" style={{ '--active-step': activeStep } as CSSProperties}>
           {journeySteps.map((item, index) => <li
@@ -920,7 +863,7 @@ export function FitnessLanding() {
           {activeStep === 0 ? <div className="fit-preview-widget fit-preview-qr">
             <div className="fit-preview-head">
               <span className="fit-kicker">01 · DIGITAL PASS &amp; SLOT CHECK</span>
-              <span className="fit-preview-live"><i />QR Active · Quét 1 chạm</span>
+              <span className="fit-preview-live"><i />QR Active</span>
             </div>
             <div className="fit-preview-slots" aria-hidden="true">
               {['06:30', '08:00', '09:30', '12:00', '16:00', '17:30', '18:30', '19:30'].map((slot, idx) => <span
@@ -931,28 +874,26 @@ export function FitnessLanding() {
                 {slot}
               </span>)}
             </div>
-            <p className="fit-preview-caption">Khung giờ minh họa. Đăng nhập để xem lịch thực tế và mở thẻ QR hội viên.</p>
           </div> : activeStep === 1 ? <div className="fit-preview-widget fit-preview-ai">
             <div className="fit-preview-head">
-              <span className="fit-kicker">02 · LỊCH TẬP MINH HỌA</span>
-              <span className="fit-preview-live"><i />Ví dụ tham khảo</span>
+              <span className="fit-kicker">02 · WEEKLY MULTI-SPORT PLAN</span>
+              <span className="fit-preview-live"><i />Gợi ý mẫu</span>
             </div>
             <div className="fit-preview-chat" aria-hidden="true">
-              <div className="fit-chat-user">Mục tiêu tăng cơ săn chắc · 4 buổi/tuần sau 17:30</div>
+              <div className="fit-chat-user">Mục tiêu săn chắc · 4 buổi/tuần sau 17:30</div>
               <div className="fit-chat-bot">
-                <strong>Ví dụ lịch tập:</strong> Upper / Lower kết hợp 1 buổi Mobility phục hồi:
                 <div className="fit-chat-tags">
-                  <span>T2 · Upper Strength</span>
-                  <span>T4 · Lower &amp; Core</span>
-                  <span>T6 · Hypertrophy</span>
-                  <span>CN · Mobility Flow</span>
+                  <span>T2 · Strength</span>
+                  <span>T4 · Bơi 25m</span>
+                  <span>T6 · Tennis</span>
+                  <span>CN · Mobility</span>
                 </div>
               </div>
             </div>
           </div> : <div className="fit-preview-widget fit-preview-chart">
             <div className="fit-preview-head">
-              <span className="fit-kicker">03 · STRENGTH &amp; CONSISTENCY CURVE</span>
-              <span className="fit-preview-live"><i />Dữ liệu minh họa</span>
+              <span className="fit-kicker">03 · CONSISTENCY CURVE</span>
+              <span className="fit-preview-live"><i />85% hoàn thành</span>
             </div>
             <svg className="fit-progress-svg" viewBox="0 0 320 92" fill="none" aria-hidden="true">
               <defs>
@@ -972,18 +913,12 @@ export function FitnessLanding() {
                 <circle cx={pt.cx} cy={pt.cy} r="4.5" />
               </g>)}
             </svg>
-            <div className="fit-preview-bar-row">
-              <span>Tỷ lệ hoàn thành lịch tập tuần này</span>
-              <strong>85%</strong>
-            </div>
-            <div className="fit-space-meter"><i style={{ '--space-load': '85%' } as CSSProperties} /></div>
           </div>}
         </div>
       </div>
       <div className="fit-bmi-card" data-reveal="tilt" aria-labelledby="bmi-title">
         <span className="fit-kicker">BODY METRIC &amp; GOAL CHECK</span>
-        <h3 id="bmi-title">Tính Nhanh BMI &amp; Lộ Trình Gợi Ý<span className="fit-title-dot">.</span></h3>
-        <p>Nhập chỉ số cơ bản để tham khảo mức BMI hiện tại và gợi ý tần suất tập luyện phù hợp tại SÖL.</p>
+        <h3 id="bmi-title">Tính Nhanh BMI &amp; Lộ Trình<span className="fit-title-dot">.</span></h3>
         <div className="fit-bmi-inputs">
           <label htmlFor="fit-bmi-height">
             <span>Chiều cao (cm)</span>
@@ -1005,19 +940,18 @@ export function FitnessLanding() {
             <strong>{bmiValue !== null ? bmiValue : '—'}</strong>
             <span>{bmiStatus}</span>
           </div>
-          <p><strong>Gợi ý lộ trình:</strong> {recommendedPlan}</p>
+          <p><strong>Gợi ý:</strong> {recommendedPlan}</p>
         </div>
-        <Link to={joinPath} className="fit-pill">Nhận lộ trình cá nhân hóa<RoundArrow diagonal /></Link>
+        <Link to={joinPath} className="fit-pill">Nhận lộ trình<RoundArrow diagonal /></Link>
       </div>
     </section>
-    <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title"><div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /><p>Chọn khoảng thời gian phù hợp.<br />Bắt đầu một cam kết với chính mình.</p></div><div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập"><button type="button" onClick={() => setPlanMode('all')} aria-pressed={planMode === 'all'}>Tất cả gói tập</button><button type="button" onClick={() => setPlanMode('long')} aria-pressed={planMode === 'long'}>Đồng hành dài hạn</button></div>
-      <div key={planMode} className={`fit-pricing-grid ${planMode === 'long' ? 'fit-pricing-grid-two' : ''}`}>{plans.filter((_, index) => planMode === 'all' || index > 0).map((plan) => <article key={plan.name} data-reveal="lift" className={`fit-plan ${plan.period === 'Quý' ? 'fit-plan-featured' : ''}`}><span className="fit-plan-period">{plan.period}</span><h3>{plan.name}</h3><p>{plan.description}</p><div className="fit-plan-price">{plan.price}<span>VNĐ / {plan.duration}</span></div><ul>{plan.perks.map((perk) => <li key={perk}><span aria-hidden="true">✓</span>{perk}</li>)}</ul><Link className="fit-pill" to={joinPath}>Tham gia ngay<RoundArrow diagonal /></Link></article>)}</div><p className="fit-disclosure">Giá và quyền lợi tham khảo từ nội dung giới thiệu hiện có. Xem gói đang mở bán trong portal hoặc liên hệ lễ tân để xác nhận.</p>
+    <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title"><div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div><div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập"><button type="button" onClick={() => setPlanMode('all')} aria-pressed={planMode === 'all'}>Tất cả gói tập</button><button type="button" onClick={() => setPlanMode('long')} aria-pressed={planMode === 'long'}>Đồng hành dài hạn</button></div>
+      <div key={planMode} className={`fit-pricing-grid ${planMode === 'long' ? 'fit-pricing-grid-two' : ''}`}>{plans.filter((_, index) => planMode === 'all' || index > 0).map((plan) => <article key={plan.name} data-reveal="lift" className={`fit-plan ${plan.period === 'Quý' ? 'fit-plan-featured' : ''}`}><span className="fit-plan-period">{plan.period}</span><h3>{plan.name}</h3><p>{plan.description}</p><div className="fit-plan-price">{plan.price}<span>VNĐ / {plan.duration}</span></div><ul>{plan.perks.map((perk) => <li key={perk}><span aria-hidden="true">✓</span>{perk}</li>)}</ul><Link className="fit-pill" to={joinPath}>Tham gia ngay<RoundArrow diagonal /></Link></article>)}</div>
     </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">EVERYTHING YOU NEED TO KNOW</span>
+        <span className="fit-kicker">FAQ</span>
         <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />
-        <p>Giải đáp nhanh những câu hỏi phổ biến trước khi bạn bắt đầu buổi tập đầu tiên tại SÖL.</p>
       </div>
       <div className="fit-faq-list">
         {faqs.map((item, index) => {

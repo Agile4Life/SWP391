@@ -193,6 +193,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-story-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 40px; position: relative; }
 .fit-story { background: #292929; border: 1px solid #ffffff14; border-radius: 18px; overflow: hidden; min-width: 0; transition: transform 240ms var(--fit-ease-out), border-color 240ms; }
 .fit-story:hover { transform: translateY(-4px); border-color: #ce918066; }
+.fit-story-link { display: block; color: inherit; height: 100%; }
 .fit-story-photo { position: relative; height: 235px; overflow: hidden; }
 .fit-story-photo > img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; filter: none; transition: transform 420ms var(--fit-ease-out); }
 .fit-story:hover .fit-story-photo > img { transform: scale(1.05) translate3d(var(--fit-px, 0px), var(--fit-py, 0px), 0); }
@@ -206,7 +207,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-story:hover .fit-card-meta-reveal, .fit-story:focus-within .fit-card-meta-reveal,
 .fit-trainer-card:hover .fit-card-meta-reveal, .fit-trainer-card:focus-within .fit-card-meta-reveal,
 .fit-sport-card:hover .fit-card-meta-reveal, .fit-sport-card:focus-within .fit-card-meta-reveal { max-height: 36px; opacity: 1; margin-top: 6px; }
-.fit-story > p { font-size: 9.5px; color: #d2cdc8; padding: 12px 17px 18px; line-height: 1.8; }
+.fit-story p { font-size: 9.5px; color: #d2cdc8; padding: 12px 17px 18px; line-height: 1.8; }
 .fit-disclosure { font-size: 9px; line-height: 1.7; color: #a9a39e; margin: 19px auto 0 !important; text-align: center; max-width: 650px; }
 .fit-trainers { display: grid; grid-template-columns: .95fr 1.25fr; gap: 48px; align-items: center; padding-top: 115px; }
 .fit-trainers .fit-section-heading > p { max-width: 390px; }
