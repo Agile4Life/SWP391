@@ -3,6 +3,8 @@ package com.swp391.scms.finance.repository;
 import com.swp391.scms.finance.entity.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,20 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findBySubscriptionId(Long subscriptionId);
 
     List<Payment> findAllBySubscriptionId(Long subscriptionId);
+
+    boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
+
+    @Query("""
+            select (count(p) > 0) from Payment p join p.classEnrollment e
+            where p.member.userId = :memberId and e.status = 'booked'
+              and p.status in ('pending', 'success')
+              and (not exists (select s.id from ClassSession s where s.gymClass = e.gymClass)
+                or exists (select s.id from ClassSession s where s.gymClass = e.gymClass
+                  and s.status = 'scheduled'
+                  and (s.sessionDate > :today or (s.sessionDate = :today and s.endTime >= :nowTime))))
+            """)
+    boolean hasUnsettledUpcomingEnrollmentPayment(@Param("memberId") Long memberId,
+            @Param("today") java.time.LocalDate today, @Param("nowTime") java.time.LocalTime nowTime);
 
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 

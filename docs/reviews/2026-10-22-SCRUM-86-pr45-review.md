@@ -18,4 +18,4 @@ Original author: Lê Hoàng Thịnh. Screen owner: Thịnh; membership: An; fina
 
 ## History and integration
 
-The fix is a separate commit on top of the original PR commit. No squash, rebase, author change, force push or merge into main was performed. PR #46 is independently based on main and overlaps the payment/subscription/UI code; merging both needs conflict resolution and verification of the combined result.
+The independent fix is a separate commit on top of the original PR commit. Integration subsequently combines PR #45 and #46 using merge commits, retaining both authors and original commits. See `2026-10-22-SCRUM-86-pr45-pr46-integration.md` for the combined verification and settlement path.

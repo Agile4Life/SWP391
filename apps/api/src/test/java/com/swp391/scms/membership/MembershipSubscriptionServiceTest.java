@@ -12,6 +12,8 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.membership.service.DynamicQrService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
+import com.swp391.scms.finance.entity.Payment;
+import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
@@ -51,6 +53,9 @@ class MembershipSubscriptionServiceTest {
 
     @Mock
     private EnrollmentService enrollmentService;
+
+    @Mock
+    private PaymentRepository paymentRepository;
 
     private Clock clock;
     private MembershipSubscriptionService service;
@@ -441,6 +446,7 @@ class MembershipSubscriptionServiceTest {
 
         when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
         when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByIdForUpdate(150L)).thenReturn(Optional.of(sub));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SubscriptionDto cancelled = service.cancelPending(principal, 150L);
@@ -460,9 +466,26 @@ class MembershipSubscriptionServiceTest {
         sub.setStatus("active");
 
         when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByIdForUpdate(150L)).thenReturn(Optional.of(sub));
 
         assertThatThrownBy(() -> service.cancelPending(principal, 150L))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
+    }
+
+    @Test
+    void cancelPending_rejectsUnsettledPaymentAndPreservesRequest() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(150L);
+        sub.setMember(member); sub.setStatus("pending_payment");
+        Payment payment = new Payment(); payment.setStatus("pending");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        when(subscriptions.findById(150L)).thenReturn(Optional.of(sub));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByIdForUpdate(150L)).thenReturn(Optional.of(sub));
+        when(paymentRepository.findAllBySubscriptionId(150L)).thenReturn(List.of(payment));
+        assertThatThrownBy(() -> service.cancelPending(principal, 150L)).isInstanceOf(ConflictException.class);
+        assertThat(sub.getStatus()).isEqualTo("pending_payment");
     }
 
     @Test

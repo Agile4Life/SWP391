@@ -28,6 +28,10 @@ class CodeFirstSchemaTest {
     private static final Path SCHEMA = Path.of("..", "..", "db", "databaseschema.sql");
 
     private static String generateDdl() throws Exception {
+        return generateDdl(factory -> {});
+    }
+
+    private static String generateDdl(java.util.function.Consumer<org.hibernate.SessionFactory> verify) throws Exception {
         Path out = Files.createTempFile("ddl", ".sql");
         StandardServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
@@ -47,7 +51,9 @@ class CodeFirstSchemaTest {
                     throw new IllegalStateException(e);
                 }
             });
-            sources.buildMetadata().buildSessionFactory().close();
+            try (var factory = sources.buildMetadata().buildSessionFactory()) {
+                verify.accept(factory);
+            }
             return Files.readString(out, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
         } finally {
             StandardServiceRegistryBuilder.destroy(registry);
@@ -74,6 +80,21 @@ class CodeFirstSchemaTest {
             assertTrue(ddl.matches("(?s).*create table \"?" + table + "\\b.*"),
                     "No entity generates PostgreSQL table " + table);
         }
+    }
+
+    @Test
+    void cancellationPaymentQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var method = com.swp391.scms.finance.repository.PaymentRepository.class.getMethod(
+                "hasUnsettledUpcomingEnrollmentPayment", Long.class, java.time.LocalDate.class, java.time.LocalTime.class);
+        String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                session.createQuery(jpql, Boolean.class)
+                        .setParameter("memberId", 10L)
+                        .setParameter("today", java.time.LocalDate.of(2026, 10, 22))
+                        .setParameter("nowTime", java.time.LocalTime.of(8, 0));
+            }
+        });
     }
 
     @Test

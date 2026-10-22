@@ -7,12 +7,15 @@ import type { MemberSubscription } from './membershipApi';
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
   create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), cancelPending: vi.fn(), createPayment: vi.fn(),
+  cancellations: vi.fn(), requestCancellation: vi.fn(),
 }));
 vi.mock('./membershipApi', () => ({
   getMembershipPackages: api.packages,
   getCurrentMembership: api.current,
   getMembershipHistory: api.history,
   getMyPayments: api.payments,
+  getMyMembershipCancellations: api.cancellations,
+  requestMembershipCancellation: api.requestCancellation,
   createMembershipSubscription: api.create,
   renewMembershipSubscription: api.renew,
   upgradeMembershipSubscription: api.upgrade,
@@ -59,6 +62,7 @@ describe('SCRUM-86 packages', () => {
     api.current.mockResolvedValue(null);
     api.history.mockResolvedValue([]);
     api.payments.mockResolvedValue([]);
+    api.cancellations.mockResolvedValue([]);
     api.create.mockResolvedValue(pending);
     api.createPayment.mockResolvedValue(payment);
   });
@@ -180,6 +184,39 @@ describe('SCRUM-86 packages', () => {
     expect(api.requestHold).toHaveBeenCalledExactlyOnceWith(1, 'Đi công tác dài ngày tại Nhật Bản');
     expect(host.textContent).toContain('Đang chờ Lễ tân xử lý yêu cầu bảo lưu');
     expect(button('Đang chờ duyệt bảo lưu')?.disabled).toBe(true);
+  });
+
+  it('requires a reason and manager approval for active membership cancellation', async () => {
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active]);
+    const requested = { id: 77, memberId: 34, memberName: 'Member', subscriptionId: 1,
+      packageName: 'Essential', reason: 'Chuyển nơi ở', status: 'PENDING',
+      requestedAt: '2026-10-22T10:00:00', resolvedById: null, resolvedAt: null, resolutionNote: null };
+    api.requestCancellation.mockResolvedValue(requested);
+    await render();
+    await act(async () => button('Yêu cầu hủy gói')?.click());
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('không được hoàn tiền');
+    expect(button('Xác nhận gửi yêu cầu')?.disabled).toBe(true);
+    expect(api.requestCancellation).not.toHaveBeenCalled();
+    const textarea = host.querySelector('#membership-cancellation-reason') as HTMLTextAreaElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set?.call(textarea, 'Chuyển nơi ở');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    api.cancellations.mockResolvedValue([requested]);
+    await act(async () => button('Xác nhận gửi yêu cầu')?.click());
+    expect(api.requestCancellation).toHaveBeenCalledExactlyOnceWith(1, 'Chuyển nơi ở');
+    expect(button('Đang chờ duyệt hủy')?.disabled).toBe(true);
+    expect(host.textContent).toContain('Gói vẫn có hiệu lực');
+  });
+
+  it('shows approved cancellation after the active membership disappears', async () => {
+    api.cancellations.mockResolvedValue([{ id: 77, memberId: 34, memberName: 'Member',
+      subscriptionId: 1, packageName: 'Essential', reason: 'Moving', status: 'APPROVED',
+      requestedAt: '2026-10-22T10:00:00', resolvedById: 20, resolvedAt: '2026-10-23T10:00:00', resolutionNote: null }]);
+    await render();
+    expect(host.textContent).toContain('Đã duyệt hủy');
   });
 
   it('allows another renewal after a paid successor', async () => {
@@ -308,7 +345,7 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Yêu cầu #12');
     expect(host.textContent).toContain('Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
-    expect(button('Hủy yêu cầu')).toBeDefined();
+    expect(button('Hủy yêu cầu đăng ký')).toBeDefined();
     expect(host.querySelector('img')).toBeNull();
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -320,11 +357,16 @@ describe('SCRUM-86 packages', () => {
 
     await render();
     expect(host.textContent).toContain('Yêu cầu #12');
-    expect(button('Hủy yêu cầu')?.disabled).toBe(false);
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(false);
 
     await act(async () => {
-      button('Hủy yêu cầu')?.click();
+      button('Hủy yêu cầu đăng ký')?.click();
     });
+
+    expect(api.cancelPending).not.toHaveBeenCalled();
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Essential');
+    api.history.mockResolvedValue([cancelledSub]);
+    await act(async () => { button('Xác nhận hủy')?.click(); });
 
     expect(api.cancelPending).toHaveBeenCalledExactlyOnceWith(12);
     expect(host.textContent).toContain('Đã hủy yêu cầu gói tập #12');
@@ -339,6 +381,7 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).not.toContain('Thanh toán thành công');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(true);
   });
 
   it('does not confuse a different subscription payment with this one', async () => {

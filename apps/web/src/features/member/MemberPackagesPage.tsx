@@ -7,12 +7,15 @@ import {
   getCurrentMembership,
   getMembershipHistory,
   getMembershipPackages,
+  getMyMembershipCancellations,
   getMyPayments,
   renewMembershipSubscription,
   requestMembershipHold,
+  requestMembershipCancellation,
   upgradeMembershipSubscription,
   type MemberSubscription,
   type MembershipPackage,
+  type MembershipCancellationRequest,
   type Payment,
 } from './membershipApi';
 
@@ -122,6 +125,7 @@ export function MemberPackagesPage() {
   const [currentState, setCurrentState] = useState<LoadState<MemberSubscription | null>>({ status: 'loading' });
   const [historyState, setHistoryState] = useState<LoadState<MemberSubscription[]>>({ status: 'loading' });
   const [paymentsState, setPaymentsState] = useState<LoadState<Payment[]>>({ status: 'loading' });
+  const [cancellationsState, setCancellationsState] = useState<LoadState<MembershipCancellationRequest[]>>({ status: 'loading' });
 
   const [submittingPackageId, setSubmittingPackageId] =
     useState<number | null>(null);
@@ -140,6 +144,11 @@ export function MemberPackagesPage() {
   const [holdError, setHoldError] = useState<string | null>(null);
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
+  const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
+  const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancellationError, setCancellationError] = useState<string | null>(null);
+  const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
 
   const loadPackages = useCallback(async () => {
     setPackagesState({ status: 'loading' });
@@ -177,12 +186,19 @@ export function MemberPackagesPage() {
     }
   }, []);
 
+  const loadCancellations = useCallback(async () => {
+    setCancellationsState({ status: 'loading' });
+    try { setCancellationsState({ status: 'success', data: await getMyMembershipCancellations() }); }
+    catch { setCancellationsState({ status: 'error' }); }
+  }, []);
+
   useEffect(() => {
     void loadPackages();
     void loadCurrent();
     void loadHistory();
     void loadPayments();
-  }, [loadPackages, loadCurrent, loadHistory, loadPayments]);
+    void loadCancellations();
+  }, [loadPackages, loadCurrent, loadHistory, loadPayments, loadCancellations]);
 
   const packages = packagesState.status === 'success' ? packagesState.data : [];
   const current =
@@ -192,6 +208,9 @@ export function MemberPackagesPage() {
       : null;
   const currentPackage = current
     ? packages.find((item) => item.id === current.packageId) ?? null
+    : null;
+  const latestCancellation = current && cancellationsState.status === 'success'
+    ? cancellationsState.data.find((item) => item.subscriptionId === current.id) ?? null
     : null;
   const frozenSubscription =
     !current && historyState.status === 'success'
@@ -373,6 +392,7 @@ export function MemberPackagesPage() {
           : previous,
       );
       setRequestResult(null);
+      setPendingToCancel(null);
       setHoldSuccessMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`);
     } catch (error) {
       setActionError(
@@ -381,7 +401,33 @@ export function MemberPackagesPage() {
           : 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.',
       );
     } finally {
+      await Promise.all([loadCurrent(), loadHistory(), loadPayments()]);
       setIsCancellingPending(false);
+      requestBusy.current = false;
+    }
+  }
+
+  async function handleSubmitCancellation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!current || isSubmittingCancellation || requestBusy.current) return;
+    const reason = cancellationReason.trim();
+    if (!reason) {
+      setCancellationError('Vui lòng nhập lý do hủy gói tập.');
+      return;
+    }
+    requestBusy.current = true;
+    setIsSubmittingCancellation(true);
+    setCancellationError(null);
+    try {
+      await requestMembershipCancellation(current.id, reason);
+      await loadCancellations();
+      setIsCancellationModalOpen(false);
+      setCancellationReason('');
+      setHoldSuccessMessage('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.');
+    } catch (error) {
+      setCancellationError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.');
+    } finally {
+      setIsSubmittingCancellation(false);
       requestBusy.current = false;
     }
   }
@@ -422,6 +468,12 @@ export function MemberPackagesPage() {
         <div className="portal-alert" role="alert">
           <span>Không thể kiểm tra thanh toán.</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadPayments()}>Thử lại</button>
+        </div>
+      )}
+      {cancellationsState.status === 'error' && (
+        <div className="portal-alert" role="alert">
+          <span>Không thể kiểm tra trạng thái yêu cầu hủy gói.</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCancellations()}>Thử lại</button>
         </div>
       )}
 
@@ -466,6 +518,16 @@ export function MemberPackagesPage() {
                   Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.
                 </p>
               )}
+              {latestCancellation?.status === 'PENDING' && (
+                <p role="status" className="row-card__meta" style={{ marginTop: 8 }}>
+                  Đang chờ quản lý duyệt yêu cầu hủy. Gói vẫn có hiệu lực.
+                </p>
+              )}
+              {latestCancellation?.status === 'REJECTED' && (
+                <p role="status" className="row-card__meta" style={{ marginTop: 8 }}>
+                  Yêu cầu hủy trước đó đã bị từ chối. {latestCancellation.resolutionNote ?? ''}
+                </p>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a href="/member/card" className="btn-primary btn-sm">
@@ -486,8 +548,28 @@ export function MemberPackagesPage() {
               >
                 {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
               </button>
+              <button type="button" className="btn-secondary btn-sm"
+                disabled={cancellationsState.status !== 'success' || latestCancellation?.status === 'PENDING'}
+                onClick={() => { setCancellationError(null); setIsCancellationModalOpen(true); }}>
+                {latestCancellation?.status === 'PENDING' ? 'Đang chờ duyệt hủy' : 'Yêu cầu hủy gói'}
+              </button>
             </div>
           </div>
+        </section>
+      )}
+
+      {!current && cancellationsState.status === 'success' && cancellationsState.data.length > 0 && (
+        <section className="portal-card" style={{ marginBottom: 24 }} aria-label="Kết quả yêu cầu hủy gói">
+          <div className="meta-label">Yêu cầu hủy gói gần nhất</div>
+          <h2 className="portal-card-title" style={{ marginTop: 8 }}>
+            {cancellationsState.data[0].packageName}
+          </h2>
+          <p className="row-card__meta" role="status">
+            {cancellationsState.data[0].status === 'APPROVED' ? 'Đã duyệt hủy' :
+              cancellationsState.data[0].status === 'REJECTED' ? 'Yêu cầu bị từ chối' : 'Đang chờ quản lý duyệt'}
+          </p>
+          {cancellationsState.data[0].resolutionNote &&
+            <p className="row-card__meta">Ghi chú: {cancellationsState.data[0].resolutionNote}</p>}
         </section>
       )}
 
@@ -584,10 +666,10 @@ export function MemberPackagesPage() {
                   type="button"
                   className="btn-secondary"
                   style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                  disabled={isCancellingPending || relatedPayments.some((payment) => payment.status === 'pending' || payment.status === 'success')}
-                  onClick={() => void handleCancelPending(pending.id)}
+                  disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
+                  onClick={() => setPendingToCancel(pending)}
                 >
-                  {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                  {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
                 </button>
               </div>
             </>
@@ -620,10 +702,10 @@ export function MemberPackagesPage() {
                 type="button"
                 className="btn-secondary"
                 style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending || relatedPayments.some((payment) => payment.status === 'pending' || payment.status === 'success')}
-                onClick={() => void handleCancelPending(pending.id)}
+                disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
+                onClick={() => setPendingToCancel(pending)}
               >
-                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
               </button>
             </div>
           )}
@@ -944,10 +1026,11 @@ export function MemberPackagesPage() {
                 type="button"
                 className="btn-secondary"
                 style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending || relatedPayments.some((payment) => payment.status === 'pending' || payment.status === 'success')}
-                onClick={() => void handleCancelPending(requestResult.subscription.id)}
+                onClick={() => setPendingToCancel(requestResult.subscription)}
+                disabled={isCancellingPending || paymentsState.status !== 'success' ||
+                  paymentsState.data.some((payment) => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}
               >
-                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
               </button>
               <button
                 type="button"
@@ -957,6 +1040,58 @@ export function MemberPackagesPage() {
                 Đóng
               </button>
             </div>
+          </section>
+        </div>,
+      )}
+
+      {pendingToCancel && renderModalOverlay(
+        <div role="presentation" onClick={(e) => e.target === e.currentTarget && !isCancellingPending && setPendingToCancel(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
+          <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-pending-title"
+            onKeyDown={(e) => { if (e.key === 'Escape' && !isCancellingPending) setPendingToCancel(null); }}
+            style={{ width: 'min(500px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+            <div className="meta-label">Xác nhận yêu cầu</div>
+            <h2 id="cancel-pending-title" className="portal-card-title" style={{ marginTop: 10 }}>Hủy yêu cầu đăng ký?</h2>
+            <p className="row-card__meta" style={{ marginTop: 12 }}>
+              Yêu cầu {pendingToCancel.packageName} sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+              <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
+                onClick={() => setPendingToCancel(null)}>Giữ yêu cầu</button>
+              <button type="button" className="btn-primary" disabled={isCancellingPending}
+                onClick={() => void handleCancelPending(pendingToCancel.id)}>
+                {isCancellingPending ? 'Đang hủy…' : 'Xác nhận hủy'}
+              </button>
+            </div>
+          </section>
+        </div>,
+      )}
+
+      {isCancellationModalOpen && current && renderModalOverlay(
+        <div role="presentation" onClick={(e) => e.target === e.currentTarget && !isSubmittingCancellation && setIsCancellationModalOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
+          <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-active-title"
+            onKeyDown={(e) => { if (e.key === 'Escape' && !isSubmittingCancellation) setIsCancellationModalOpen(false); }}
+            style={{ width: 'min(540px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+            <div className="meta-label">Yêu cầu quản lý xét duyệt</div>
+            <h2 id="cancel-active-title" className="portal-card-title" style={{ marginTop: 10 }}>Yêu cầu hủy {current.packageName}</h2>
+            <p className="row-card__meta" style={{ marginTop: 12 }}>
+              Gói tập sau khi được duyệt hủy sẽ không được hoàn tiền. Các lịch học tương lai có thể bị chấm dứt.
+            </p>
+            <form onSubmit={(e) => void handleSubmitCancellation(e)} style={{ marginTop: 20 }}>
+              <label className="portal-label" htmlFor="membership-cancellation-reason">Lý do hủy *</label>
+              <textarea id="membership-cancellation-reason" className="portal-input" required maxLength={500} rows={4}
+                value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)}
+                disabled={isSubmittingCancellation} style={{ width: '100%', resize: 'vertical' }} />
+              {cancellationError && <p role="alert" style={{ color: '#B91C1C' }}>{cancellationError}</p>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button type="button" className="btn-secondary" disabled={isSubmittingCancellation}
+                  onClick={() => setIsCancellationModalOpen(false)}>Quay lại</button>
+                <button type="submit" className="btn-primary" disabled={isSubmittingCancellation || !cancellationReason.trim()}>
+                  {isSubmittingCancellation ? 'Đang gửi…' : 'Xác nhận gửi yêu cầu'}
+                </button>
+              </div>
+            </form>
           </section>
         </div>,
       )}

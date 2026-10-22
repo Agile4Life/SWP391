@@ -8,6 +8,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
+import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
 import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
@@ -22,6 +23,7 @@ import com.swp391.scms.users.entity.Member;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -55,8 +57,12 @@ public class MembershipSubscriptionService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
-    @Autowired(required = false) private jakarta.persistence.EntityManager entityManager;
-    @Autowired(required = false) private PaymentRepository payments;
+
+    @Autowired(required = false)
+    private PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    private EntityManager entityManager;
 
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
@@ -330,7 +336,7 @@ public class MembershipSubscriptionService {
      */
     @Transactional
     public SubscriptionDto cancelPending(AuthenticatedPrincipal principal, Long subscriptionId) {
-        MembershipSubscription subscription = subscriptions.findById(subscriptionId)
+        MembershipSubscription lookup = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
 
         boolean isStaff = principal != null && ("CENTER_MANAGER".equalsIgnoreCase(principal.role())
@@ -338,8 +344,8 @@ public class MembershipSubscriptionService {
                 || "MANAGER".equalsIgnoreCase(principal.role())
                 || "STAFF".equalsIgnoreCase(principal.role()));
         boolean isOwner = principal != null
-                && subscription.getMember() != null
-                && subscription.getMember().getUserId().equals(principal.id());
+                && lookup.getMember() != null
+                && lookup.getMember().getUserId().equals(principal.id());
 
         if (!isStaff && !isOwner) {
             throw new ForbiddenException(
@@ -349,27 +355,31 @@ public class MembershipSubscriptionService {
                     "Subscription does not belong to the authenticated member");
         }
 
+        Long memberId = lookup.getMember().getUserId();
+        members.findByUserIdForUpdate(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        if (entityManager != null) entityManager.refresh(subscription);
+
+        if ("cancelled".equalsIgnoreCase(subscription.getStatus())) {
+            return toDto(subscription);
+        }
+
         if (!STATUS_PENDING_PAYMENT.equalsIgnoreCase(subscription.getStatus())) {
-            throw new BadRequestException(
+            throw new ConflictException(
                     "MEMBERSHIP_CANCEL_NOT_PENDING",
                     "error.membership.cancel_not_pending",
                     null,
                     "Only a pending payment subscription can be cancelled");
         }
 
-        members.findByUserIdForUpdate(subscription.getMember().getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.member", subscription.getMember().getUserId()));
-        if (entityManager != null) entityManager.refresh(subscription);
-        if (!STATUS_PENDING_PAYMENT.equalsIgnoreCase(subscription.getStatus())) {
-            throw new BadRequestException("MEMBERSHIP_CANCEL_NOT_PENDING", "error.membership.cancel_not_pending",
-                    null, "Only a pending payment subscription can be cancelled");
+        if (paymentRepository != null && paymentRepository.findAllBySubscriptionId(subscriptionId).stream()
+                .anyMatch(payment -> !"failed".equalsIgnoreCase(payment.getStatus()))) {
+            throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
+                    "error.membership.cancel_payment_unsettled", null, null);
         }
-        if (payments != null && payments.findAllBySubscriptionId(subscriptionId).stream()
-                .anyMatch(payment -> "pending".equalsIgnoreCase(payment.getStatus())
-                        || "success".equalsIgnoreCase(payment.getStatus()))) {
-            throw new ConflictException("RENEWAL_PAYMENT_IN_PROGRESS", "error.membership.payment_in_progress",
-                    null, "Payment must be resolved before cancellation");
-        }
+
         subscription.setStatus("cancelled");
         subscription.setUpdatedAt(LocalDateTime.now(clock));
 

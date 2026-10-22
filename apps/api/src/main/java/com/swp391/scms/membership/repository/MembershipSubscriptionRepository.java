@@ -15,6 +15,10 @@ import java.util.Optional;
 @Repository
 public interface MembershipSubscriptionRepository extends JpaRepository<MembershipSubscription, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from MembershipSubscription s where s.id = :id")
+    Optional<MembershipSubscription> findByIdForUpdate(@Param("id") Long id);
+
     List<MembershipSubscription> findByMemberUserId(Long memberId);
 
     @Lock(LockModeType.PESSIMISTIC_READ)

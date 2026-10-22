@@ -871,10 +871,97 @@ paths:
       responses:
         '200':
           description: Hủy yêu cầu gói tập thành công
-        '400':
-          description: Gói tập không ở trạng thái chờ thanh toán
         '403':
           description: Không có quyền hủy yêu cầu này
+        '404':
+          description: Không tìm thấy subscription
+        '409':
+          description: Đã kích hoạt hoặc có payment đã hoàn tất/chưa đối soát
+
+  /memberships/cancellations/subscriptions/{subscriptionId}:
+    post:
+      summary: Member gửi yêu cầu hủy gói đang hoạt động; quyền lợi giữ nguyên khi chờ duyệt
+      tags: [Memberships]
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 1, maxLength: 500}
+      responses:
+        '201': {description: Đã gửi yêu cầu chờ quản lý duyệt}
+        '400': {description: Thiếu lý do}
+        '403': {description: Không phải chủ gói}
+        '404': {description: Không tìm thấy gói}
+        '409': {description: Gói không active hoặc đã có yêu cầu pending}
+
+  /memberships/cancellations/my:
+    get:
+      summary: Lịch sử yêu cầu hủy của member đang đăng nhập
+      tags: [Memberships]
+      responses:
+        '200': {description: Thành công}
+
+  /memberships/cancellations:
+    get:
+      summary: Manager xem các yêu cầu hủy gói tập
+      tags: [Memberships]
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Chỉ Center Manager có quyền xem}
+
+  /memberships/cancellations/{id}/approve:
+    post:
+      summary: Manager duyệt hủy gói active; không hoàn tiền
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Đã duyệt; gói ngừng cấp quyền và booking tương lai bị chấm dứt}
+        '403': {description: Chỉ Center Manager có quyền duyệt}
+        '404': {description: Không tìm thấy yêu cầu}
+        '409': {description: Gói không còn active, còn lớp học sắp tới có payment pending/success hoặc có quyền lợi khác không thể phân định}
+
+  /memberships/cancellations/{id}/reject:
+    post:
+      summary: Manager từ chối yêu cầu; gói giữ nguyên quyền lợi
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Đã từ chối yêu cầu}
+        '403': {description: Chỉ Center Manager có quyền từ chối}
+        '409': {description: Yêu cầu đã được xử lý}
 
         '409':
           description: Payment đang chờ hoặc đã thành công; chưa thể hủy yêu cầu
@@ -1420,11 +1507,13 @@ paths:
   /payments/process:
     post:
       summary: Xử lý thanh toán và tự động kích hoạt gói tập/ghi danh (CENTER_MANAGER, RECEPTIONIST)
+      description: Khi tái sử dụng payment subscription đang pending, không gửi thêm classEnrollmentId; thanh toán các mục tiêu riêng biệt.
       tags: [Payments]
       responses:
         '201': {description: Xử lý thanh toán thành công}
         '400': {description: Dữ liệu thanh toán không hợp lệ}
         '403': {description: Quyền truy cập bị từ chối}
+        '409': {description: Subscription đã hủy/không còn chờ thanh toán, giao dịch đã tồn tại hoặc quyền lợi gia hạn/bảo lưu cần xử lý trước}
 
   /payments/{id}:
     get:
@@ -1464,6 +1553,7 @@ paths:
       responses:
         '200': {description: Cập nhật thành công}
         '400': {description: Trạng thái chuyển đổi không hợp lệ}
+        '409': {description: Subscription đã hủy/không còn chờ thanh toán hoặc có quyền lợi gia hạn/bảo lưu cần xử lý trước}
 
   /payments/{id}/refund:
     post:
