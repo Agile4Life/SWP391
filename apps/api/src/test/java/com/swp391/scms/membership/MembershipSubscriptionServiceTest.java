@@ -74,6 +74,99 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void create_rejectsPurchaseWhileSubscriptionIsFrozen() {
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setStatus("active");
+        pack.setDurationDays(30);
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        when(subscriptions.existsByMemberUserIdAndStatus(10L, "frozen")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(1L)))
+                .isInstanceOf(ConflictException.class);
+        verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resume_preservesPaidSubscriptionAndExtendsExpiryByFrozenDays() {
+        MembershipSubscription frozen = frozenSubscription();
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(frozen));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto result = service.resume(principal, 7L);
+
+        assertThat(result.id()).isEqualTo(7L);
+        assertThat(result.status()).isEqualTo("active");
+        assertThat(result.startDate()).isEqualTo(LocalDate.of(2026, 9, 1));
+        assertThat(result.endDate()).isEqualTo(LocalDate.of(2026, 10, 20));
+        assertThat(result.qrCode()).isEqualTo("paid-qr");
+        assertThat(frozen.getHoldStatus()).isNull();
+        org.mockito.Mockito.verifyNoInteractions(paymentRepository, packages, enrollmentService);
+    }
+
+    @Test
+    void resume_rejectsAnotherMembersSubscription() {
+        MembershipSubscription frozen = frozenSubscription();
+        frozen.getMember().setUserId(99L);
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(frozen));
+        assertThatThrownBy(() -> service.resume(principal, 7L)).isInstanceOf(ForbiddenException.class);
+        verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resume_rejectsRepeatedRequestWithoutExtendingAgain() {
+        MembershipSubscription frozen = frozenSubscription();
+        frozen.setStatus("active");
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(frozen));
+        assertThatThrownBy(() -> service.resume(principal, 7L)).isInstanceOf(BadRequestException.class);
+        verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resume_requiresReliableHoldDateAndRemainingDays() {
+        MembershipSubscription frozen = frozenSubscription();
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(frozen));
+        frozen.setHoldResolvedAt(null);
+        assertThatThrownBy(() -> service.resume(principal, 7L)).isInstanceOf(BadRequestException.class);
+        frozen.setHoldResolvedAt(LocalDate.of(2026, 10, 1).atStartOfDay());
+        assertThatThrownBy(() -> service.resume(principal, 7L)).isInstanceOf(BadRequestException.class);
+        verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    @Test
+    void resume_blocksPendingPurchaseOrAnotherActivePeriod() {
+        MembershipSubscription frozen = frozenSubscription();
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(frozen));
+        when(subscriptions.existsByMemberUserIdAndStatus(10L, "pending_payment")).thenReturn(true);
+        assertThatThrownBy(() -> service.resume(principal, 7L)).isInstanceOf(ConflictException.class);
+        when(subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(10L, "active", LocalDate.now(clock)))
+                .thenReturn(true);
+        assertThatThrownBy(() -> service.resume(principal, 7L)).isInstanceOf(ConflictException.class);
+        verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    private MembershipSubscription frozenSubscription() {
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        MembershipSubscription frozen = new MembershipSubscription();
+        frozen.setId(7L);
+        frozen.setMember(member);
+        frozen.setMembershipPackage(pack);
+        frozen.setStatus("frozen");
+        frozen.setHoldStatus("APPROVED");
+        frozen.setHoldResolvedAt(LocalDate.of(2026, 9, 21).atStartOfDay());
+        frozen.setStartDate(LocalDate.of(2026, 9, 1));
+        frozen.setEndDate(LocalDate.of(2026, 9, 30));
+        frozen.setQrCode("paid-qr");
+        return frozen;
+    }
+
+    @Test
     void create_success() {
         Member member = new Member();
         member.setUserId(10L);
@@ -363,6 +456,17 @@ class MembershipSubscriptionServiceTest {
         assertThat(prev.getStatus()).isEqualTo("expired");
         assertThat(prev.getEndDate()).isEqualTo(LocalDate.now(clock));
         verify(subscriptions).save(prev);
+    }
+
+    @Test
+    void approveHold_rejectsPeriodThatExpiredWhileAwaitingApproval() {
+        MembershipSubscription subscription = frozenSubscription();
+        subscription.setStatus("active");
+        subscription.setHoldStatus("PENDING");
+        when(subscriptions.findById(7L)).thenReturn(Optional.of(subscription));
+        assertThatThrownBy(() -> service.approveHold(staffPrincipal, 7L))
+                .isInstanceOf(BadRequestException.class);
+        verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
     @Test

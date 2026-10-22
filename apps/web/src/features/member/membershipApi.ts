@@ -126,6 +126,9 @@ export const requestMembershipHold = (
     },
   );
 
+export const resumeMembershipSubscription = (subscriptionId: number) =>
+  apiFetch<MemberSubscription>(`/memberships/subscriptions/${subscriptionId}/resume`, { method: 'POST' });
+
 export const cancelPendingMembershipSubscription = (
   subscriptionId: number,
 ) =>

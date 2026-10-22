@@ -7,7 +7,7 @@ import type { MemberSubscription } from './membershipApi';
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
   create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), cancelPending: vi.fn(), createPayment: vi.fn(),
-  cancellations: vi.fn(), requestCancellation: vi.fn(),
+  cancellations: vi.fn(), requestCancellation: vi.fn(), resume: vi.fn(),
 }));
 vi.mock('./membershipApi', () => ({
   getMembershipPackages: api.packages,
@@ -20,6 +20,7 @@ vi.mock('./membershipApi', () => ({
   renewMembershipSubscription: api.renew,
   upgradeMembershipSubscription: api.upgrade,
   requestMembershipHold: api.requestHold,
+  resumeMembershipSubscription: api.resume,
   cancelPendingMembershipSubscription: api.cancelPending,
   createPaymentRequest: api.createPayment,
 }));
@@ -82,6 +83,32 @@ describe('SCRUM-86 packages', () => {
   }
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
+  it('resumes a frozen subscription without creating a purchase or payment', async () => {
+    const frozen = { ...active, status: 'frozen', holdStatus: 'APPROVED' };
+    api.history.mockResolvedValue([frozen]);
+    api.resume.mockResolvedValue(active);
+    await render();
+    expect(button('Mở lại gói tập miễn phí')).toBeDefined();
+    expect(button('Đang có gói bảo lưu')?.disabled).toBe(true);
+    await act(async () => button('Mở lại gói tập miễn phí')?.click());
+    expect(api.resume).toHaveBeenCalledExactlyOnceWith(1);
+    expect(api.create).not.toHaveBeenCalled();
+    expect(api.createPayment).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Đã mở lại gói tập');
+  });
+  it('keeps the frozen package and shows errors when resume fails', async () => {
+    api.history.mockResolvedValue([{ ...active, status: 'frozen', holdStatus: 'APPROVED' }]);
+    api.resume.mockRejectedValue(new Error('Vui lòng liên hệ lễ tân'));
+    await render();
+    await act(async () => {
+      button('Mở lại gói tập miễn phí')?.click();
+      button('Mở lại gói tập miễn phí')?.click();
+    });
+    expect(api.resume).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('Vui lòng liên hệ lễ tân');
+    expect(button('Mở lại gói tập miễn phí')?.disabled).toBe(false);
+    expect(api.create).not.toHaveBeenCalled();
+  });
   const renewal = { ...pending, id: 5, previousSubscriptionId: 1, status: 'active',
     startDate: '2099-11-18', endDate: '2099-12-18' };
 

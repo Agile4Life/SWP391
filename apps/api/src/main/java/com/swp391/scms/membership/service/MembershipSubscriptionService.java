@@ -114,6 +114,11 @@ public class MembershipSubscriptionService {
     public SubscriptionDto create(AuthenticatedPrincipal principal, SubscriptionRequests.Create request) {
         Member member = findMember(principal.id());
         MembershipPackage membershipPackage = findActivePackage(request.packageId());
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        if (subscriptions.existsByMemberUserIdAndStatus(member.getUserId(), STATUS_FROZEN)) {
+            throw new ConflictException("MEMBERSHIP_FROZEN_EXISTS", "error.membership.frozen_exists", null, null);
+        }
 
         LocalDate today = LocalDate.now(clock);
         if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(member.getUserId(), STATUS_ACTIVE,
@@ -459,6 +464,36 @@ public class MembershipSubscriptionService {
         return toDto(subscriptions.saveAndFlush(subscription));
     }
 
+    @Transactional
+    public SubscriptionDto resume(AuthenticatedPrincipal principal, Long subscriptionId) {
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        if (subscription.getMember() == null || !principal.id().equals(subscription.getMember().getUserId())) {
+            throw new ForbiddenException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
+        }
+        LocalDate today = LocalDate.now(clock);
+        LocalDate heldOn = subscription.getHoldResolvedAt() == null ? null
+                : subscription.getHoldResolvedAt().toLocalDate();
+        if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
+                || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
+                || heldOn == null || heldOn.isAfter(today) || !validPeriod(subscription)
+                || heldOn.isBefore(subscription.getStartDate()) || heldOn.isAfter(subscription.getEndDate())) {
+            throw new BadRequestException("MEMBERSHIP_RESUME_INVALID", "error.membership.resume_invalid", null, null);
+        }
+        if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(principal.id(), STATUS_ACTIVE, today)
+                || subscriptions.existsByMemberUserIdAndStatus(principal.id(), STATUS_PENDING_PAYMENT)) {
+            throw new ConflictException("MEMBERSHIP_RESUME_CONFLICT", "error.membership.resume_conflict", null, null);
+        }
+        // Preserve the original paid period and class-credit usage; only extend its expiry.
+        subscription.setEndDate(subscription.getEndDate().plusDays(java.time.temporal.ChronoUnit.DAYS.between(heldOn, today)));
+        subscription.setStatus(STATUS_ACTIVE);
+        subscription.setHoldStatus(null);
+        subscription.setUpdatedAt(LocalDateTime.now(clock));
+        return toDto(subscriptions.saveAndFlush(subscription));
+    }
+
     /**
      * Danh sách yêu cầu bảo lưu đang chờ lễ tân xử lý.
      */
@@ -492,7 +527,13 @@ public class MembershipSubscriptionService {
                     "Subscription does not have a pending hold request");
         }
 
-        if (hasPaidFutureRenewal(subscription.getMember().getUserId(), LocalDate.now(clock)))
+        LocalDate today = LocalDate.now(clock);
+        if (!validPeriod(subscription) || subscription.getStartDate().isAfter(today)
+                || subscription.getEndDate().isBefore(today)) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_REQUIRES_ACTIVE",
+                    "error.membership.hold_requires_active", null, null);
+        }
+        if (hasPaidFutureRenewal(subscription.getMember().getUserId(), today))
             throw futurePaidConflict();
 
         LocalDateTime now = LocalDateTime.now(clock);
