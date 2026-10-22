@@ -529,8 +529,8 @@ export function FitnessLanding() {
         </div>)}
       </div>
     </div>
-    <section className="fit-section fit-metrics" aria-label="Tiêu chuẩn câu lạc bộ">
-      <div className="fit-metrics-grid">
+    <section className="fit-section fit-space" id="about" aria-labelledby="space-title"><span id="intelligence" />
+      <div className="fit-metrics-grid" aria-label="Tiêu chuẩn câu lạc bộ">
         {clubMetrics.map((item) => <article key={item.label} className="fit-metric-card" data-reveal="lift">
           <span className="fit-kicker">{item.label}</span>
           {'countTo' in item && item.countTo !== undefined
@@ -538,43 +538,6 @@ export function FitnessLanding() {
             : <strong>{item.value}</strong>}
         </article>)}
       </div>
-    </section>
-    <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /></div>
-      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to={`/trainers/${story.slug}`} className="fit-story-link"><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
-    </section>
-    <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
-      <div className="fit-section-heading" data-reveal="soft">
-        <span className="fit-kicker">BETTER WITH A COACH</span>
-        <SplitHeading id="trainers-title" lines={['Our Trainers']} />
-        <div className="fit-trainer-quick-links" aria-label="Xem nhanh trang giới thiệu huấn luyện viên">
-          {trainers.map((item) => <Link key={item.slug} to={`/trainers/${item.slug}`} className="fit-trainer-chip">
-            <strong>{item.personName}</strong>
-            <span>{item.name} ↗</span>
-          </Link>)}
-        </div>
-        <a href="#contact" className="fit-text-link">Trao đổi về mục tiêu của bạn <RoundArrow diagonal /></a>
-        <div className="fit-slider-controls" aria-label="Chọn nhóm huấn luyện">
-          {[0, 1, 2].map((index) => <button key={index} type="button" className={trainerPage === index ? 'is-active' : ''} onClick={() => setTrainerPage(index)} aria-label={`Nhóm huấn luyện ${index + 1}`} aria-pressed={trainerPage === index} />)}
-        </div>
-      </div>
-      <div className="fit-trainer-grid" key={trainerPage}>
-        {visibleTrainers.map((trainer) => <article className="fit-trainer-card" data-reveal="lift" key={trainer.slug} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
-          <Link to={`/trainers/${trainer.slug}`} className="fit-trainer-card-link" aria-label={`Xem câu chuyện của ${trainer.personName} (${trainer.name})`}>
-            <img src={`/images/fitness/${trainer.image}`} alt={trainer.personName} loading="lazy" />
-            <div className="fit-trainer-card-info">
-              <span className="fit-trainer-vn-name">{trainer.personName}</span>
-              <h3>{trainer.name}</h3>
-              <p>{trainer.specialty}</p>
-              <span className="fit-card-meta-reveal">{trainer.meta}</span>
-              <span className="fit-trainer-story-cta">Xem trang giới thiệu →</span>
-            </div>
-            <RoundArrow diagonal />
-          </Link>
-        </article>)}
-      </div>
-    </section>
-    <section className="fit-section fit-space" id="about" aria-labelledby="space-title"><span id="intelligence" />
       <p className="fit-manifesto" data-scroll-scrub="manifesto" data-reveal="soft">
         {manifestoWords.map((word, idx) => <span key={idx} className="fit-manifesto-word"><span>{word}</span> </span>)}
       </p>
@@ -660,6 +623,37 @@ export function FitnessLanding() {
               {sport.cta} <RoundArrow diagonal />
             </Link>
           </div>
+        </article>)}
+      </div>
+    </section>
+    <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
+      <div className="fit-section-heading" data-reveal="soft">
+        <span className="fit-kicker">BETTER WITH A COACH</span>
+        <SplitHeading id="trainers-title" lines={['Our Trainers']} />
+        <div className="fit-trainer-quick-links" aria-label="Xem nhanh trang giới thiệu huấn luyện viên">
+          {trainers.map((item) => <Link key={item.slug} to={`/trainers/${item.slug}`} className="fit-trainer-chip">
+            <strong>{item.personName}</strong>
+            <span>{item.name} ↗</span>
+          </Link>)}
+        </div>
+        <a href="#contact" className="fit-text-link">Trao đổi về mục tiêu của bạn <RoundArrow diagonal /></a>
+        <div className="fit-slider-controls" aria-label="Chọn nhóm huấn luyện">
+          {[0, 1, 2].map((index) => <button key={index} type="button" className={trainerPage === index ? 'is-active' : ''} onClick={() => setTrainerPage(index)} aria-label={`Nhóm huấn luyện ${index + 1}`} aria-pressed={trainerPage === index} />)}
+        </div>
+      </div>
+      <div className="fit-trainer-grid" key={trainerPage}>
+        {visibleTrainers.map((trainer) => <article className="fit-trainer-card" data-reveal="lift" key={trainer.slug} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}>
+          <Link to={`/trainers/${trainer.slug}`} className="fit-trainer-card-link" aria-label={`Xem câu chuyện của ${trainer.personName} (${trainer.name})`}>
+            <img src={`/images/fitness/${trainer.image}`} alt={trainer.personName} loading="lazy" />
+            <div className="fit-trainer-card-info">
+              <span className="fit-trainer-vn-name">{trainer.personName}</span>
+              <h3>{trainer.name}</h3>
+              <p>{trainer.specialty}</p>
+              <span className="fit-card-meta-reveal">{trainer.meta}</span>
+              <span className="fit-trainer-story-cta">Xem trang giới thiệu →</span>
+            </div>
+            <RoundArrow diagonal />
+          </Link>
         </article>)}
       </div>
     </section>
@@ -798,6 +792,10 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title"><div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">MAKE TIME FOR YOURSELF</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div><div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập"><button type="button" onClick={() => setPlanMode('all')} aria-pressed={planMode === 'all'}>Tất cả gói tập</button><button type="button" onClick={() => setPlanMode('long')} aria-pressed={planMode === 'long'}>Đồng hành dài hạn</button></div>
       <div key={planMode} className={`fit-pricing-grid ${planMode === 'long' ? 'fit-pricing-grid-two' : ''}`}>{plans.filter((_, index) => planMode === 'all' || index > 0).map((plan) => <article key={plan.name} data-reveal="lift" className={`fit-plan ${plan.period === 'Quý' ? 'fit-plan-featured' : ''}`}><span className="fit-plan-period">{plan.period}</span><h3>{plan.name}</h3><div className="fit-plan-price">{plan.price}<span>VNĐ / {plan.duration}</span></div><ul>{plan.perks.map((perk) => <li key={perk}><span aria-hidden="true">✓</span>{perk}</li>)}</ul><Link className="fit-pill" to={joinPath}>Tham gia ngay<RoundArrow diagonal /></Link></article>)}</div>
+    </section>
+    <section className="fit-section fit-stories" id="stories" aria-labelledby="stories-title">
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="stories-title" lines={['Mỗi người,', 'một nhịp tập']} /></div>
+      <div className="fit-story-grid">{stories.map((story) => <article className="fit-story" data-reveal="lift" key={story.name} onPointerMove={handleCardPointerMove} onPointerLeave={handleCardPointerLeave}><Link to={`/trainers/${story.slug}`} className="fit-story-link"><div className="fit-story-photo"><img src={`/images/fitness/${story.image}`} alt={story.name} loading="lazy" /><div><span className="fit-story-focus">{story.focus}</span><h3>{story.name}</h3><span className="fit-card-meta-reveal">{story.meta}</span></div></div><p>“{story.quote}”</p></Link></article>)}</div>
     </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">

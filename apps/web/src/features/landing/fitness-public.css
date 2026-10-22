@@ -43,7 +43,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-site button { font: inherit; cursor: pointer; }
 .fit-site button:disabled { cursor: not-allowed; opacity: .55; }
 .fit-site :focus-visible { outline: 2px solid var(--fit-salmon); outline-offset: 5px; }
-.fit-site section, .fit-footer { scroll-margin-top: 24px; }
+.fit-site section, .fit-footer { scroll-margin-top: 68px; }
 .fit-scroll-progress {
   position: fixed;
   top: 0;
@@ -241,7 +241,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-trainer-story-cta { font-size: 9px; font-weight: 600; color: #f6d5c9; display: block; margin-top: 8px; }
 .fit-trainer-card .fit-card-meta-reveal { color: #fffaf5; font-size: 8.5px; }
 .fit-trainer-card-link > .fit-round-arrow { position: absolute; bottom: 20px; right: 20px; z-index: 2; background: var(--fit-salmon); color: #261915; width: 30px; height: 30px; }
-.fit-space { padding-top: 110px; }
+.fit-space { padding-top: 64px; }
 .fit-intro-header { display: grid; gap: 10px; }
 .fit-intro-pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 0 0 28px; }
 .fit-intro-pillar-card { padding: 20px 18px; border-radius: 18px; background: #292929; border: 1px solid #ffffff14; display: flex; flex-direction: column; gap: 8px; min-width: 0; transition: transform 220ms var(--fit-ease-out), border-color 220ms; }
@@ -335,7 +335,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-sport-live { max-width: 100%; margin-bottom: 4px; }
 .fit-sport-specs > .fit-pill { width: 100%; justify-content: space-between; }
 .fit-metrics { padding-top: 40px; }
-.fit-metrics-grid { position: relative; padding-top: 26px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.fit-metrics-grid { position: relative; padding-top: 26px; margin-bottom: 36px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .fit-metrics-grid::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, var(--fit-salmon), #ffffff26 65%, transparent); transform-origin: 0 50%; }
 .fit-metric-card { padding: 24px 22px; border-radius: 26px; background: #292929; border: 1px solid #ffffff12; display: flex; flex-direction: column; gap: 10px; min-width: 0; transition: transform 240ms var(--fit-ease-out), border-color 240ms; }
 .fit-metric-card:hover { transform: translateY(-4px); border-color: #ce918066; }

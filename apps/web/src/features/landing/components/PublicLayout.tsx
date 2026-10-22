@@ -14,6 +14,13 @@ const links = [
   { to: '/#stories', hash: 'stories', label: 'Câu chuyện' },
 ];
 
+const scrollToSection = (targetId: string) => {
+  const element = document.getElementById(targetId);
+  if (!element) return false;
+  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return true;
+};
+
 export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
   return <span className="fit-round-arrow" aria-hidden="true">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -29,11 +36,41 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   useComponentReveal(root, pathname);
 
+  const isNavActive = (to: string, target?: string) => {
+    if (to === '/swimming') return pathname === '/swimming' || pathname === '/sports/swimming';
+    if (to === '/tennis') return pathname === '/tennis' || pathname === '/sports/tennis';
+    if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
+    if (target) return pathname === '/' && hash === `#${target}`;
+    return pathname === to;
+  };
+
   useEffect(() => {
-    document.title = `${pathname === '/login' ? 'Đăng nhập' : pathname === '/register' ? 'Đăng ký hội viên' : 'Build your body. Find your balance.'} · SÖL Fitness`;
+    const pageTitle = pathname === '/login'
+      ? 'Đăng nhập'
+      : pathname === '/register'
+        ? 'Đăng ký hội viên'
+        : pathname === '/swimming' || pathname === '/sports/swimming'
+          ? 'Hồ Bơi Bốn Mùa'
+          : pathname === '/tennis' || pathname === '/sports/tennis'
+            ? 'Sân Tennis Câu Lạc Bộ'
+            : pathname.startsWith('/trainers')
+              ? 'Huấn luyện viên'
+              : 'Build your body. Find your balance.';
+    document.title = `${pageTitle} · SÖL Fitness`;
     if (hash) {
-      const frame = requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView());
-      return () => cancelAnimationFrame(frame);
+      const targetId = hash.slice(1);
+      let attempts = 0;
+      let timerId = 0;
+      const tryScroll = () => {
+        if (scrollToSection(targetId) || attempts >= 10) return;
+        attempts += 1;
+        timerId = window.setTimeout(tryScroll, 50);
+      };
+      const frame = requestAnimationFrame(tryScroll);
+      return () => {
+        cancelAnimationFrame(frame);
+        window.clearTimeout(timerId);
+      };
     }
     window.scrollTo(0, 0);
   }, [pathname, hash]);
@@ -43,9 +80,25 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     <a className="fit-skip" href="#public-main">Đến nội dung chính</a>
     <div className="fit-canvas">
       <header className="fit-header">
-        <Link className="fit-brand" to="/" aria-label="SÖL Fitness · Trang chủ"><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
+        <Link className="fit-brand" to="/" aria-label="SÖL Fitness · Trang chủ" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
         <nav className={`fit-nav ${menuOpen ? 'is-open' : ''}`} id="public-navigation" aria-label="Điều hướng chính">
-          {links.map(({ to, hash: target, label }) => <Link key={label} to={to} data-nav-target={target} className={pathname === to ? 'is-active' : undefined} onClick={() => setMenuOpen(false)}>{label}</Link>)}
+          {links.map(({ to, hash: target, label }) => <Link
+            key={label}
+            to={to}
+            data-nav-target={target}
+            className={isNavActive(to, target) ? 'is-active' : undefined}
+            onClick={(event) => {
+              setMenuOpen(false);
+              if (target && pathname === '/') {
+                if (hash === `#${target}`) {
+                  event.preventDefault();
+                }
+                scrollToSection(target);
+              } else if (!target && pathname === to) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+          >{label}</Link>)}
         </nav>
         <div className="fit-header-actions">
           <Link to={user ? homePath(user.role) : pathname === '/login' ? '/register' : '/login'} className="fit-pill fit-header-cta">
@@ -61,8 +114,21 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       {children}
       <footer className="fit-footer" id="contact">
         <div className="fit-footer-main">
-          <div><Link to="/" className="fit-brand"><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link><p>Mạnh mẽ hơn mỗi ngày.<br />Cân bằng theo cách của bạn.</p></div>
-          <nav aria-label="Điều hướng chân trang">{links.map(({ to, label }) => <Link key={label} to={to}>{label}</Link>)}</nav>
+          <div><Link to="/" className="fit-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>SÖL</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link><p>Mạnh mẽ hơn mỗi ngày.<br />Cân bằng theo cách của bạn.</p></div>
+          <nav aria-label="Điều hướng chân trang">{links.map(({ to, hash: target, label }) => <Link
+            key={label}
+            to={to}
+            onClick={(event) => {
+              if (target && pathname === '/') {
+                if (hash === `#${target}`) {
+                  event.preventDefault();
+                }
+                scrollToSection(target);
+              } else if (!target && pathname === to) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+          >{label}</Link>)}</nav>
           <address><span>120 Hai Bà Trưng, Quận 1, TP.HCM</span><a href="tel:19006868">1900 6868 ↗</a><a href="mailto:concierge@sol-wellness.vn">concierge@sol-wellness.vn</a></address>
         </div>
         <div className="fit-footer-bottom"><span>© 2026 SÖL Fitness</span><span>06:00 — 22:00 mỗi ngày</span><Link to={user ? homePath(user.role) : '/login'}>{user ? 'Không gian hội viên' : 'Đăng nhập hội viên'} ↗</Link></div>

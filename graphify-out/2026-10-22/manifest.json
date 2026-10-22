@@ -476,8 +476,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/router.tsx": {
-    "mtime": 1792666471.8365004,
-    "ast_hash": "cf9c1572358471fd8eb6b5ddaeb32e3e",
+    "mtime": 1792672753.6965332,
+    "ast_hash": "f219e6cecace5ce51c0ac9f8503573c6",
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LoginPage.tsx": {
@@ -841,7 +841,7 @@
     "semantic_hash": "f069c3519399e4166c55b8786fdf5aee"
   },
   "apps/web/src/shared/liquid-glass/LiquidGlassChatbot.tsx": {
-    "mtime": 1792664925.8510473,
+    "mtime": 1792672450.602809,
     "ast_hash": "8b9e3d84adbde23a5d539118b5b985b6",
     "semantic_hash": "8b9e3d84adbde23a5d539118b5b985b6"
   },
@@ -3096,8 +3096,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/Modal.tsx": {
-    "mtime": 1792664480.6570797,
-    "ast_hash": "51e183ca6c198e07166db6ceb84ee4b2",
+    "mtime": 1792672610.7473156,
+    "ast_hash": "d7fcf430a92ff297c6bb5bfe1512e080",
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/toast.ts": {
@@ -4131,8 +4131,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/PortalIcon.tsx": {
-    "mtime": 1792341167.0595868,
-    "ast_hash": "f4cea409a5376a17c80798fc7abd5553",
+    "mtime": 1792672610.5863268,
+    "ast_hash": "6763982a8d1cf6df7d5e7daee3f9534c",
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/PortalShell.tsx": {
@@ -4422,7 +4422,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/DatePicker.tsx": {
-    "mtime": 1792602113.7836578,
+    "mtime": 1792672450.5998044,
     "ast_hash": "811779e5504efc10eaef724a55590edb",
     "semantic_hash": ""
   },
@@ -4692,13 +4692,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/FitnessLanding.tsx": {
-    "mtime": 1792667756.2299926,
-    "ast_hash": "0c87fb7bdfa948f562ec4912b7418a72",
+    "mtime": 1792673263.87902,
+    "ast_hash": "deaa708b67c2feb01edc9d313cb28b10",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/PublicLayout.tsx": {
-    "mtime": 1792665462.0044386,
-    "ast_hash": "ab687bf9b956bd0eb689bdfe4b6b2fd4",
+    "mtime": 1792672759.6569219,
+    "ast_hash": "a83df2d740e94da30d8b271e30c85704",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/hooks/useComponentReveal.ts": {
@@ -5032,13 +5032,18 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/TrainerStoryPage.tsx": {
-    "mtime": 1792667553.275493,
-    "ast_hash": "2cde5ad4f340b01d679a330f3839e4dc",
+    "mtime": 1792673195.573215,
+    "ast_hash": "f114c927c09d2be2bf6eb911962a47e8",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/data/trainersData.ts": {
-    "mtime": 1792667513.4790254,
-    "ast_hash": "bfe2db00bf7c0beb44cb15d147e62967",
+    "mtime": 1792673174.1314857,
+    "ast_hash": "def1b44bdd89e3f11eebfbc0b3d851d0",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/SportPage.tsx": {
+    "mtime": 1792673307.206718,
+    "ast_hash": "e5362990b03e51650990fa5089ec9e3d",
     "semantic_hash": ""
   }
 }

@@ -122,19 +122,29 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       }, { threshold: [0, .12] });
       root.querySelectorAll<HTMLElement>(selector).forEach(register);
 
-      const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
-      if (trackedSections.length > 0) {
-        sectionObserver = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            const id = entry.target.getAttribute('id');
-            if (!id) return;
-            root.querySelectorAll<HTMLElement>('.fit-nav a[data-nav-target]').forEach((link) => {
-              link.classList.toggle('is-active', link.dataset.navTarget === id);
+      if (route === '/') {
+        const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
+        if (trackedSections.length > 0) {
+          const mapSectionToNav = (id: string): string => {
+            if (id === 'about' || id === 'multisport') return 'about';
+            if (id === 'trainers' || id === 'schedule' || id === 'journey') return 'trainers';
+            if (id === 'packages') return 'packages';
+            if (id === 'stories' || id === 'faq') return 'stories';
+            return '';
+          };
+          sectionObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              const id = entry.target.getAttribute('id');
+              if (!id) return;
+              const activeTarget = mapSectionToNav(id);
+              root.querySelectorAll<HTMLElement>('.fit-nav a[data-nav-target]').forEach((link) => {
+                link.classList.toggle('is-active', Boolean(activeTarget) && link.dataset.navTarget === activeTarget);
+              });
             });
-          });
-        }, { rootMargin: '-40% 0px -50% 0px' });
-        trackedSections.forEach((section) => sectionObserver?.observe(section));
+          }, { rootMargin: '-35% 0px -50% 0px' });
+          trackedSections.forEach((section) => sectionObserver?.observe(section));
+        }
       }
 
       syncScrollEffects();
