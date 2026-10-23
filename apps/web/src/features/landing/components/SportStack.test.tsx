@@ -73,7 +73,7 @@ it('pins below the header on short screens and releases within one small scroll 
   vi.stubGlobal('innerHeight', 650);
   await act(async () => resize());
   expect(parseFloat(deck.style.getPropertyValue('--stack-top'))).toBe(108);
-  expect(Number(track.style.getPropertyValue('--stack-card-height').replace('px', ''))).toBe(476);
+  expect(Number(track.style.getPropertyValue('--stack-scale'))).toBeCloseTo(.518);
   const step = Number(track.style.getPropertyValue('--stack-step'));
   expect(parseFloat(track.style.getPropertyValue('--stack-travel')) - step * 3).toBe(48);
 });
@@ -90,6 +90,21 @@ it('does not recalculate geometry or rewrite accessibility during an unchanged s
   expect(attributes).not.toHaveBeenCalled();
 });
 
+it('reserves viewport space for the section heading and hint above the cards', async () => {
+  await render();
+  const track = host.querySelector<HTMLElement>('.fit-sport-stack-track')!;
+  const viewport = host.querySelector<HTMLElement>('.fit-sport-stack-stage')!;
+  const frame = host.querySelector<HTMLElement>('.fit-sport-stack-deck-frame')!;
+  const deck = host.querySelector<HTMLElement>('.fit-sport-stack-deck')!;
+  Object.defineProperty(viewport, 'offsetHeight', { configurable: true, value: 620 });
+  Object.defineProperty(deck, 'offsetHeight', { configurable: true, value: 500 });
+  Object.defineProperty(frame, 'offsetHeight', { configurable: true, value: 500 });
+  vi.stubGlobal('innerHeight', 650);
+  await act(async () => resize());
+  expect(Number(track.style.getPropertyValue('--stack-scale'))).toBeCloseTo(.796);
+  expect(parseFloat(track.style.getPropertyValue('--stack-height'))).toBe(620);
+});
+
 it('reacts to the first small scroll at every card boundary without a reading dead zone', async () => {
   await render();
   const track = host.querySelector<HTMLElement>('.fit-sport-stack-track')!;
@@ -99,7 +114,8 @@ it('reacts to the first small scroll at every card boundary without a reading de
   vi.stubGlobal('innerHeight', 900);
   await act(async () => resize());
   const step = Number(track.style.getPropertyValue('--stack-step'));
-  expect(step).toBeLessThanOrEqual(480);
+  expect(step).toBeGreaterThanOrEqual(540);
+  expect(step).toBeLessThanOrEqual(630);
   for (let index = 0; index < 3; index++) {
     vi.stubGlobal('scrollY', 892 + step * index);
     await act(async () => window.dispatchEvent(new Event('scroll')));

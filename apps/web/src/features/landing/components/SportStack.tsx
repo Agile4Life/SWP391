@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
 import './sport-stack.css';
@@ -50,13 +50,18 @@ const sports = [
   },
 ];
 
-export function SportStack({ classPath }: { classPath: string }) {
+export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
   const deck = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const deckFrame = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stage = deck.current!;
     const runway = track.current!;
+    const panel = viewport.current!;
+    const fittedDeck = deckFrame.current!;
+    const header = runway.closest('.fit-site')?.querySelector<HTMLElement>('.fit-header');
     const cards = [...stage.querySelectorAll<HTMLElement>('.fit-sport-stack-card')];
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let step = 1;
@@ -113,13 +118,22 @@ export function SportStack({ classPath }: { classPath: string }) {
       previousAccessible = accessible;
     };
     const measure = () => {
-      // Keep the whole deck below the header; long copy scrolls inside its card.
-      stickyTop = 108;
+      // Fit the complete natural card uniformly; never create an inner scrolling surface.
+      stickyTop = header ? Math.ceil(header.getBoundingClientRect().height) + 12 : 108;
       mobile = window.innerWidth <= 760;
-      runway.style.setProperty('--stack-card-height', `${Math.max(200, window.innerHeight - stickyTop - 24 - 42)}px`);
-      step = Math.max(280, Math.min(480, window.innerHeight * .45));
+      const designWidth = mobile ? 380 : 1240;
+      runway.style.setProperty('--stack-design-width', `${designWidth}px`);
+      const headingHeight = Math.max(0, panel.offsetHeight - fittedDeck.offsetHeight);
+      const availableHeight = Math.max(100, window.innerHeight - stickyTop - headingHeight - 24);
+      const naturalHeight = stage.offsetHeight;
+      const scale = naturalHeight > 0
+        ? Math.min(1, (fittedDeck.clientWidth || designWidth) / designWidth, availableHeight / naturalHeight) : 1;
+      runway.style.setProperty('--stack-scale', scale.toFixed(6));
+      runway.style.setProperty('--stack-deck-height', `${Math.ceil(naturalHeight * scale)}px`);
+      step = Math.max(420, Math.min(680, window.innerHeight * .65));
+      runway.style.setProperty('--stack-top', `${stickyTop}px`);
       stage.style.setProperty('--stack-top', `${stickyTop}px`);
-      runway.style.setProperty('--stack-height', `${stage.offsetHeight}px`);
+      runway.style.setProperty('--stack-height', `${panel.offsetHeight}px`);
       runway.style.setProperty('--stack-step', String(step));
       runway.style.setProperty('--stack-travel', `${step * (sports.length - 1) + 48}px`);
       origin = runway.getBoundingClientRect().top + window.scrollY - stickyTop;
@@ -131,7 +145,9 @@ export function SportStack({ classPath }: { classPath: string }) {
       frame = window.requestAnimationFrame(() => { frame = 0; update(); });
     };
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(panel);
     observer?.observe(stage);
+    if (header) observer?.observe(header);
     const canvas = runway.closest('.fit-canvas');
     if (canvas) observer?.observe(canvas);
     const visibility = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries => {
@@ -159,8 +175,11 @@ export function SportStack({ classPath }: { classPath: string }) {
   }, []);
 
   return <div className="fit-sport-stack" role="region" aria-label="Khám phá bốn bộ môn" aria-roledescription="chồng thẻ bộ môn">
-    <p className="fit-sport-stack-hint" data-reveal="soft">Cuộn để khám phá bốn bộ môn <span aria-hidden="true">↓</span></p>
     <div className="fit-sport-stack-track" ref={track}>
+    <div className="fit-sport-stack-stage" ref={viewport}>
+    {heading}
+    <p className="fit-sport-stack-hint">Cuộn để khám phá bốn bộ môn <span aria-hidden="true">↓</span></p>
+    <div className="fit-sport-stack-deck-frame" ref={deckFrame}>
     <div className="fit-sport-stack-deck" ref={deck}>
       {sports.map((sport, index) => {
         return <article key={sport.id} className="fit-sport-stack-card"
@@ -185,6 +204,8 @@ export function SportStack({ classPath }: { classPath: string }) {
           </div>
         </article>;
       })}
+    </div>
+    </div>
     </div>
     </div>
   </div>;
