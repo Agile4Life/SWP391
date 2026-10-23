@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
 import './sport-stack.css';
@@ -51,41 +51,121 @@ const sports = [
 ];
 
 export function SportStack({ classPath }: { classPath: string }) {
-  const [active, setActive] = useState(0);
-  const [cycling, setCycling] = useState(false);
-  const busy = useRef(false);
-  const finishCycle = useCallback(() => {
-    if (!busy.current) return;
-    busy.current = false;
-    setActive(current => (current + 1) % sports.length);
-    setCycling(false);
-  }, []);
+  const deck = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!cycling) return;
+    const stage = deck.current!;
+    const runway = track.current!;
+    const cards = [...stage.querySelectorAll<HTMLElement>('.fit-sport-stack-card')];
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onPreferenceChange = () => { if (preference.matches) finishCycle(); };
-    preference.addEventListener('change', onPreferenceChange);
-    // Also complete if an animation is interrupted or its end event is lost.
-    const timer = window.setTimeout(finishCycle, 900);
-    return () => { window.clearTimeout(timer); preference.removeEventListener('change', onPreferenceChange); };
-  }, [cycling, finishCycle]);
-
-  const next = () => {
-    if (busy.current) return;
-    busy.current = true;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finishCycle();
-    else setCycling(true);
-  };
-
-  return <div className="fit-sport-stack" data-reveal="soft" role="region" aria-label="Khám phá bốn bộ môn" aria-roledescription="chồng thẻ bộ môn">
-    <div className="fit-sport-stack-deck">
-      {sports.map((sport, index) => {
+    let step = 1;
+    let stickyTop = 108;
+    let frame = 0;
+    let origin = 0;
+    let mobile = false;
+    let previousProgress = -1;
+    let previousActive = -1;
+    let previousAccessible = -1;
+    const transforms: string[] = [];
+    const update = () => {
+      const progress = preference.matches ? 0 : Math.max(0, Math.min(sports.length - 1, (window.scrollY - origin) / step));
+      if (progress === previousProgress) return;
+      previousProgress = progress;
+      const active = Math.floor(progress);
+      // Respond immediately in both scroll directions, including at each card boundary.
+      const fraction = progress - active;
+      const accessible = fraction >= .55 ? active + 1 : active;
+      cards.forEach((card, index) => {
         const depth = (index - active + sports.length) % sports.length;
-        return <article key={sport.id} className={`fit-sport-stack-card ${cycling && depth === 0 ? 'is-leaving' : ''}`}
-          data-sport={sport.id} data-depth={depth} aria-hidden={depth !== 0} inert={depth !== 0}
-          aria-labelledby={`sport-stack-${sport.id}`} style={{ '--stack-depth': depth } as CSSProperties}
-          onAnimationEnd={event => { if (event.target === event.currentTarget && event.animationName === 'fit-sport-send-back') finishCycle(); }}>
+        const leaving = !preference.matches && depth === 0 && fraction > 0;
+        if (active !== previousActive) card.dataset.depth = String(depth);
+        // Only transform changes within a phase: no inherited custom properties or animation seeking.
+        const points = mobile
+          ? [[0, 0, 0, 1], [5, -35, 3, 1], [5, -32, 3, .97], [0, 39, 0, .925]]
+          : [[0, 0, 0, 1], [18, -60, 7, 1.02], [20, -54, 7, .97], [0, 39, 0, .925]];
+        let transform: string;
+        if (leaving) {
+          const segment = fraction < .45 ? 0 : fraction < .55 ? 1 : 2;
+          const starts = [0, .45, .55];
+          const ends = [.45, .55, 1];
+          const t = (fraction - starts[segment]) / (ends[segment] - starts[segment]);
+          const [x, y, angle, scale] = points[segment].map((value, i) => value + (points[segment + 1][i] - value) * t);
+          transform = `translate3d(${x.toFixed(3)}%, ${y.toFixed(3)}px, 0) rotate(${angle.toFixed(3)}deg) scale(${scale.toFixed(4)})`;
+        } else {
+          const visualDepth = depth === 0 ? 0 : depth - fraction;
+          transform = `translate3d(0, ${(visualDepth * 13).toFixed(3)}px, 0) scale(${(1 - visualDepth * .025).toFixed(4)})`;
+        }
+        if (transforms[index] !== transform) {
+          card.style.transform = transform;
+          transforms[index] = transform;
+        }
+        const zIndex = String(leaving ? fraction < .55 ? 5 : 0 : 4 - depth);
+        if (card.style.zIndex !== zIndex) card.style.zIndex = zIndex;
+        card.classList.toggle('is-leaving', leaving);
+        card.classList.toggle('is-incoming', !preference.matches && depth === 1 && fraction > 0);
+        if (accessible !== previousAccessible) {
+          card.toggleAttribute('inert', !preference.matches && index !== accessible);
+          card.setAttribute('aria-hidden', String(!preference.matches && index !== accessible));
+        }
+      });
+      previousActive = active;
+      previousAccessible = accessible;
+    };
+    const measure = () => {
+      // Keep the whole deck below the header; long copy scrolls inside its card.
+      stickyTop = 108;
+      mobile = window.innerWidth <= 760;
+      runway.style.setProperty('--stack-card-height', `${Math.max(200, window.innerHeight - stickyTop - 24 - 42)}px`);
+      step = Math.max(280, Math.min(480, window.innerHeight * .45));
+      stage.style.setProperty('--stack-top', `${stickyTop}px`);
+      runway.style.setProperty('--stack-height', `${stage.offsetHeight}px`);
+      runway.style.setProperty('--stack-step', String(step));
+      runway.style.setProperty('--stack-travel', `${step * (sports.length - 1) + 48}px`);
+      origin = runway.getBoundingClientRect().top + window.scrollY - stickyTop;
+      previousProgress = previousActive = previousAccessible = -1;
+      update();
+    };
+    const scroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => { frame = 0; update(); });
+    };
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(stage);
+    const canvas = runway.closest('.fit-canvas');
+    if (canvas) observer?.observe(canvas);
+    const visibility = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries => {
+      const nearby = entries.some(entry => entry.isIntersecting);
+      runway.classList.toggle('is-nearby', nearby);
+      if (nearby) stage.querySelectorAll('img').forEach(image => {
+        image.loading = 'eager';
+        void image.decode().catch(() => { /* Keep the normal image fallback on load failure. */ });
+      });
+    }, { rootMargin: '800px 0px' });
+    visibility?.observe(runway);
+    runway.classList.add('is-enhanced');
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', scroll, { passive: true });
+    preference.addEventListener('change', measure);
+    return () => {
+      observer?.disconnect();
+      visibility?.disconnect();
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', scroll);
+      preference.removeEventListener('change', measure);
+    };
+  }, []);
+
+  return <div className="fit-sport-stack" role="region" aria-label="Khám phá bốn bộ môn" aria-roledescription="chồng thẻ bộ môn">
+    <p className="fit-sport-stack-hint" data-reveal="soft">Cuộn để khám phá bốn bộ môn <span aria-hidden="true">↓</span></p>
+    <div className="fit-sport-stack-track" ref={track}>
+    <div className="fit-sport-stack-deck" ref={deck}>
+      {sports.map((sport, index) => {
+        return <article key={sport.id} className="fit-sport-stack-card"
+          data-sport={sport.id}
+          aria-labelledby={`sport-stack-${sport.id}`} style={{ '--stack-index': index } as CSSProperties}>
           <div className="fit-sport-stack-photo">
             <img src={sport.image} alt={`Ảnh minh họa không gian ${sport.name.toLowerCase()}`} loading="lazy" />
             <span className="fit-sport-stack-caption">Ảnh minh họa</span>
@@ -106,11 +186,6 @@ export function SportStack({ classPath }: { classPath: string }) {
         </article>;
       })}
     </div>
-    <div className="fit-sport-stack-controls">
-      <p role="status" aria-live="polite" aria-atomic="true"><span>0{active + 1} / 0{sports.length}</span>{sports[active].name}</p>
-      <button type="button" className="fit-sport-stack-next" aria-label="Bộ môn tiếp theo" aria-disabled={cycling} onClick={next}>
-        <span>Tiếp theo: {sports[(active + 1) % sports.length].name}</span><RoundArrow />
-      </button>
     </div>
   </div>;
 }
