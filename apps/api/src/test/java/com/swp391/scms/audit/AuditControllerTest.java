@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.swp391.scms.audit.dto.AuditLogDto;
 import com.swp391.scms.common.GlobalExceptionHandler;
+import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.i18n.MessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -113,5 +117,32 @@ class AuditControllerTest {
 
         verify(auditService).getAuditLogs(eq(10L), eq("payments"), eq("CREATE"), eq("2026-10-01"), eq("2026-10-31"), any(Pageable.class));
     }
-}
 
+    @Test
+    @DisplayName("GET /api/v1/admin/audit-logs with invalid date returns 400 Bad Request with i18n error")
+    void getAuditLogs_InvalidDateFormat_Returns400() throws Exception {
+        when(auditService.getAuditLogs(isNull(), isNull(), isNull(), eq("invalid-date"), isNull(), any(Pageable.class)))
+                .thenThrow(new BadRequestException("INVALID_DATE_FORMAT", "audit.invalid_date_format", new Object[]{"invalid-date"}, "Định dạng ngày không hợp lệ: invalid-date"));
+
+        mockMvc.perform(get("/api/v1/admin/audit-logs")
+                        .param("from", "invalid-date")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("INVALID_DATE_FORMAT"))
+                .andExpect(jsonPath("$.message").value(containsString("invalid-date")));
+    }
+
+    @Test
+    @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
+    void springContextResolvesAutowiredConstructor() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.getDefaultListableBeanFactory().registerSingleton("auditService", auditService);
+        context.register(AuditController.class);
+        context.refresh();
+
+        AuditController bean = context.getBean(AuditController.class);
+        assertThat(bean).isNotNull();
+        context.close();
+    }
+}

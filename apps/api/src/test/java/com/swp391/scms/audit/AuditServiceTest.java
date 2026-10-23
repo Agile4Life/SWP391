@@ -3,6 +3,7 @@ package com.swp391.scms.audit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swp391.scms.audit.dto.AuditLogDto;
+import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.users.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -91,6 +93,44 @@ class AuditServiceTest {
     }
 
     @Test
+    @DisplayName("getAuditLogs with ISO dateTime strings parses successfully")
+    void getAuditLogs_WithISODateTime_Success() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(auditLogRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        Page<AuditLogDto> result = auditService.getAuditLogs(
+                null,
+                null,
+                null,
+                "2026-10-01T08:30:00",
+                "2026-10-31T23:59:59Z",
+                pageable
+        );
+
+        assertThat(result.getContent()).isEmpty();
+        verify(auditLogRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("getAuditLogs with invalid from date throws BadRequestException HTTP 400")
+    void getAuditLogs_InvalidFromDate_ThrowsBadRequestException() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        assertThatThrownBy(() -> auditService.getAuditLogs(null, null, null, "invalid-date", null, pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("invalid-date");
+    }
+
+    @Test
+    @DisplayName("getAuditLogs with invalid to date throws BadRequestException HTTP 400")
+    void getAuditLogs_InvalidToDate_ThrowsBadRequestException() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        assertThatThrownBy(() -> auditService.getAuditLogs(null, null, null, null, "2026-99-99", pageable))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("2026-99-99");
+    }
+
+    @Test
     @DisplayName("toDto handles plain text or invalid JSON gracefully without error")
     void toDto_PlainTextFallback() {
         AuditLog log1 = new AuditLog();
@@ -108,4 +148,3 @@ class AuditServiceTest {
         assertThat(dto.newValue()).isNull();
     }
 }
-

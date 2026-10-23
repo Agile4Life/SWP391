@@ -2,6 +2,7 @@ package com.swp391.scms.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swp391.scms.audit.dto.AuditLogDto;
+import com.swp391.scms.common.exception.BadRequestException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 
 /**
  * Service for querying and formatting Audit Logs for management inspection (SCRUM-109).
@@ -89,14 +91,21 @@ public class AuditService {
         }
         try {
             if (text.contains("T")) {
+                if (text.endsWith("Z") || text.matches(".*[+-]\\d{2}:?\\d{2}$")) {
+                    return OffsetDateTime.parse(text).toLocalDateTime();
+                }
                 return LocalDateTime.parse(text);
             } else {
                 LocalDate date = LocalDate.parse(text);
                 return endOfDay ? date.atTime(LocalTime.MAX) : date.atStartOfDay();
             }
         } catch (Exception e) {
-            return null;
+            throw new BadRequestException(
+                    "INVALID_DATE_FORMAT",
+                    "audit.invalid_date_format",
+                    new Object[]{text},
+                    "Định dạng ngày không hợp lệ: " + text
+            );
         }
     }
 }
-

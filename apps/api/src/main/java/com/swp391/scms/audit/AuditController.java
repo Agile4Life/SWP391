@@ -6,6 +6,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +30,8 @@ public class AuditController {
     private final AuditService auditService;
     private final MessageService messageService;
 
-    public AuditController(AuditService auditService, MessageService messageService) {
+    @Autowired
+    public AuditController(AuditService auditService, @Autowired(required = false) MessageService messageService) {
         this.auditService = auditService;
         this.messageService = messageService;
     }
