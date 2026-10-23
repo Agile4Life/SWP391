@@ -6,6 +6,7 @@ import com.swp391.scms.notifications.entity.Notification;
 import com.swp391.scms.notifications.port.NotificationDispatcher;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,10 +26,11 @@ public class NotificationService {
         this(notificationRepository, userRepository, notificationMapper, null);
     }
 
+    @Autowired
     public NotificationService(NotificationRepository notificationRepository, 
                                UserRepository userRepository,
                                NotificationMapper notificationMapper,
-                               NotificationDispatcher notificationDispatcher) {
+                               @Autowired(required = false) NotificationDispatcher notificationDispatcher) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.notificationMapper = notificationMapper;
