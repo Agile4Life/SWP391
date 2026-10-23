@@ -238,6 +238,16 @@ public class SupportRequestService {
                 // If member sends message, notify the assigned staff (if assigned)
                 if (request.getAssignedTo() != null && request.getAssignedTo().getId() != null) {
                     notificationService.send(request.getAssignedTo().getId(), title, body, "support_reply", "support_request", targetRequestId);
+                } else {
+                    // P2 #49: Ticket is unassigned: broadcast notification to active staff (Receptionists & Center Managers)
+                    List<User> activeStaff = userRepository.findActiveStaffUsers();
+                    if (activeStaff != null) {
+                        for (User staffUser : activeStaff) {
+                            if (staffUser.getId() != null) {
+                                notificationService.send(staffUser.getId(), title, body, "support_reply", "support_request", targetRequestId);
+                            }
+                        }
+                    }
                 }
             }
         }

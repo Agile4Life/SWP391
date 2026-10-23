@@ -396,4 +396,36 @@ class SupportRequestServiceTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @DisplayName("Gửi tin nhắn bởi Member vào ticket chưa có assignedTo sẽ phát thông báo cho tất cả Staff trực")
+    void sendMessage_asMember_whenTicketUnassigned_notifiesAllActiveStaff() {
+        sampleRequest.setAssignedTo(null);
+
+        User manager = new User();
+        manager.setId(50L);
+        manager.setFullName("Quản lý Minh");
+
+        User receptionist = new User();
+        receptionist.setId(51L);
+        receptionist.setFullName("Lễ tân Hoa");
+
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tôi cần hỗ trợ gấp");
+        SupportRequestMessageDto expectedDto = new SupportRequestMessageDto(
+                102L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tôi cần hỗ trợ gấp", LocalDateTime.now()
+        );
+
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findActiveStaffUsers()).thenReturn(List.of(manager, receptionist));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toMessageDto(any(SupportRequestMessage.class))).thenReturn(expectedDto);
+
+        SupportRequestMessageDto result = supportRequestService.sendMessage(1L, 10L, "MEMBER", messageDto);
+
+        assertThat(result).isNotNull();
+        verify(notificationService).send(eq(50L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+        verify(notificationService).send(eq(51L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+    }
 }
