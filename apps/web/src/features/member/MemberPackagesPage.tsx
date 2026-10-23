@@ -2,6 +2,7 @@ import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPrese
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { PortalIcon } from '../portal/PortalIcon';
 import {
   cancelPendingMembershipSubscription,
   createMembershipSubscription,
@@ -86,6 +87,7 @@ export function MemberPackagesPage() {
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancellationError, setCancellationError] = useState<string | null>(null);
   const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
+  const [isPeriodsOpen, setIsPeriodsOpen] = useState(false);
 
   const loadPackages = useCallback(async () => {
     setPackagesState({ status: 'loading' });
@@ -471,7 +473,7 @@ export function MemberPackagesPage() {
                 </p>
               )}
               {current.holdStatus === 'REJECTED' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#fca5a5', fontSize: '0.84rem' }}>
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem' }}>
                   Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.
                 </p>
               )}
@@ -533,7 +535,7 @@ export function MemberPackagesPage() {
       {frozenSubscription && (
         <section
           className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: '#263444' }}
+          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: 'var(--portal-info-surface, #263444)' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
@@ -564,13 +566,49 @@ export function MemberPackagesPage() {
       )}
 
       {futurePeriods.length > 0 && (
-        <section className="portal-card" aria-label="Các kỳ đã thanh toán tiếp theo" style={{ marginBottom: 24 }}>
-          <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
-          {futurePeriods.map((period) => (
-            <p className="row-card__meta" key={period.id}>
-              {period.packageName}: {formatDate(period.startDate)} – {formatDate(period.endDate)}
-            </p>
-          ))}
+        <section className={`portal-card membership-periods ${isPeriodsOpen ? 'is-open' : ''}`.trim()} aria-label="Các kỳ đã thanh toán tiếp theo">
+          <button
+            type="button"
+            className="membership-periods__toggle"
+            aria-expanded={isPeriodsOpen}
+            aria-controls="membership-future-periods-list"
+            onClick={() => setIsPeriodsOpen((prev) => !prev)}
+          >
+            <div className="membership-periods__heading">
+              <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
+              <div>
+                <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
+                <span className="membership-periods__summary">
+                  Kỳ kế tiếp từ {formatDate(futurePeriods[0].startDate)} đến {formatDate(futurePeriods[0].endDate)}
+                </span>
+              </div>
+            </div>
+            <div className="membership-periods__meta">
+              <span className="membership-periods__count">{futurePeriods.length} kỳ</span>
+              <span className="membership-periods__action">
+                <span>{isPeriodsOpen ? 'Thu gọn' : 'Xem chi tiết'}</span>
+                <svg className="membership-periods__chevron" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2.25 4.5 6 8.25 9.75 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
+          </button>
+          {isPeriodsOpen && (
+            <ul id="membership-future-periods-list" className="membership-periods__list">
+              {futurePeriods.map((period) => (
+                <li className="membership-periods__row" key={period.id}>
+                  <div className="membership-periods__package">
+                    <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
+                    <strong>{period.packageName}</strong>
+                  </div>
+                  <dl className="membership-periods__dates">
+                    <div><dt>Từ ngày</dt><dd><time dateTime={period.startDate}>{formatDate(period.startDate)}</time></dd></div>
+                    <div><dt>Đến ngày</dt><dd><time dateTime={period.endDate}>{formatDate(period.endDate)}</time></dd></div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -627,7 +665,7 @@ export function MemberPackagesPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  style={{ color: '#fca5a5', borderColor: '#FCA5A5' }}
+                  style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                   disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
                   onClick={() => setPendingToCancel(pending)}
                 >
@@ -663,7 +701,7 @@ export function MemberPackagesPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ color: '#fca5a5', borderColor: '#FCA5A5' }}
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                 disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
                 onClick={() => setPendingToCancel(pending)}
               >
@@ -990,7 +1028,7 @@ export function MemberPackagesPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ color: '#fca5a5', borderColor: '#FCA5A5' }}
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                 onClick={() => setPendingToCancel(requestResult.subscription)}
                 disabled={isCancellingPending || paymentsState.status !== 'success' ||
                   paymentsState.data.some((payment) => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}
@@ -1048,7 +1086,7 @@ export function MemberPackagesPage() {
               <textarea id="membership-cancellation-reason" className="portal-input" required maxLength={500} rows={4}
                 value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)}
                 disabled={isSubmittingCancellation} style={{ width: '100%', resize: 'vertical' }} />
-              {cancellationError && <p role="alert" style={{ color: '#fca5a5' }}>{cancellationError}</p>}
+              {cancellationError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{cancellationError}</p>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                 <button type="button" className="btn-secondary" disabled={isSubmittingCancellation}
                   onClick={() => setIsCancellationModalOpen(false)}>Quay lại</button>
@@ -1124,7 +1162,7 @@ export function MemberPackagesPage() {
               </div>
 
               {holdError && (
-                <p role="alert" style={{ color: '#fca5a5', fontSize: '0.86rem', marginTop: 8 }}>
+                <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.86rem', marginTop: 8 }}>
                   {holdError}
                 </p>
               )}

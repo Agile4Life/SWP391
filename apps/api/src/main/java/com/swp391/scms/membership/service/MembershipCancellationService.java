@@ -63,6 +63,9 @@ public class MembershipCancellationService {
         if (!isActiveNow(subscription)) {
             throw new ConflictException("CANCELLATION_NOT_ACTIVE", "error.membership.cancellation_not_active", null, null);
         }
+        if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
+        }
         String reason = body == null || body.reason() == null ? "" : body.reason().trim();
         if (reason.isEmpty()) {
             throw new BadRequestException("CANCELLATION_REASON_REQUIRED", "validation.membership.cancellation_reason.not_blank", null, null);
@@ -112,6 +115,9 @@ public class MembershipCancellationService {
             MembershipSubscription subscription = lockSubscription(request.getSubscription().getId());
             if (!isActiveNow(subscription)) {
                 throw new ConflictException("CANCELLATION_NOT_ACTIVE", "error.membership.cancellation_not_active", null, null);
+            }
+            if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
+                throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
             }
             // Enrollments reference member and class, not subscription. The member-wide
             // cancellation below is safe only when this is the sole remaining entitlement.

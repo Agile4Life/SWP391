@@ -4,11 +4,14 @@ import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { usePublicCatalog } from '../publicCatalog';
 import { CatalogPackages, CatalogSchedule, CatalogStatus, CatalogTrainers } from './CatalogSections';
 import { RoundArrow } from './PublicLayout';
+import { SportStack } from './SportStack';
 
 const tickerItems = [
   'STRENGTH FLOOR',
   'LAP POOL 25M',
   'TENNIS COURTS',
+  'BADMINTON',
+  'BASKETBALL',
   'MOVEMENT STUDIO',
   'FREE WEIGHTS',
   'HYDRO-RECOVERY',
@@ -205,29 +208,6 @@ const spaces = [
   { title: 'Sân đấu giàu năng lượng.', image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', meta: 'Sân Tennis CLB', load: '62%', status: 'Sẵn sàng' },
 ];
 
-const multiSportShowcase = [
-  {
-    id: 'swimming' as const,
-    path: '/swimming',
-    kicker: 'AQUATICS CLUB',
-    title: 'Hồ Bơi Bốn Mùa',
-    image: '/images/fitness/aquatics-pool.jpg',
-    tags: ['06 Làn bơi', 'Nước ấm', 'Mọi cấp độ'],
-    hoverMeta: 'Lớp nhập môn · Bơi sức bền · Thả lỏng',
-    cta: 'Trang Hồ Bơi',
-  },
-  {
-    id: 'tennis' as const,
-    path: '/tennis',
-    kicker: 'TENNIS CLUB',
-    title: 'Sân Tennis Câu Lạc Bộ',
-    image: '/images/fitness/tennis-court.jpg',
-    tags: ['02 Sân tiêu chuẩn', 'Máy bắn bóng', 'Đánh đôi'],
-    hoverMeta: 'Lớp cầm vợt cơ bản · Giao lưu cuối tuần',
-    cta: 'Trang Sân Tennis',
-  },
-] as const;
-
 const journeySteps = [
   { step: '01', title: 'Tạo tài khoản & chọn gói tập', description: 'Đăng ký trực tuyến nhanh gọn.' },
   { step: '02', title: 'Cập nhật chỉ số & mục tiêu', description: 'Nhận gợi ý lộ trình theo BMI.' },
@@ -289,7 +269,7 @@ const faqs = [
     answer: 'Có. Mỗi bộ môn đều có lớp nhập môn hướng dẫn từ cơ bản.',
   },
   {
-    question: 'Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?',
+    question: 'Gói hội viên đã bao gồm những bộ môn nào?',
     answer: 'Quyền lợi, thời hạn và số lượt đặt lớp được hiển thị theo từng gói tại bảng giá và Portal. Hãy xem mô tả gói hoặc liên hệ lễ tân để xác nhận phạm vi sử dụng.',
   },
   {
@@ -624,32 +604,10 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">AQUATICS &amp; TENNIS CLUB</span>
-        <SplitHeading id="multisport-title" lines={['Hồ Bơi Bốn Mùa &', 'Sân Tennis Tiêu Chuẩn']} />
+        <span className="fit-kicker">SÖL SPORTS CLUB</span>
+        <SplitHeading id="multisport-title" lines={['Bốn bộ môn.', 'Một nhịp sống năng động.']} />
       </div>
-      <div className="fit-sport-bento-grid">
-        {multiSportShowcase.map((sport) => <article
-          key={sport.id}
-          className="fit-sport-card"
-          data-reveal="lift"
-          onPointerMove={handleCardPointerMove}
-          onPointerLeave={handleCardPointerLeave}
-        >
-          <img src={sport.image} alt={sport.title} loading="lazy" />
-          <div className="fit-sport-card-shade" />
-          <div className="fit-sport-card-body">
-            <span className="fit-kicker">{sport.kicker}</span>
-            <h3>{sport.title}</h3>
-            <div className="fit-sport-tag-row">
-              {sport.tags.map((tag) => <span key={tag} className="fit-sport-tag">{tag}</span>)}
-            </div>
-            <span className="fit-card-meta-reveal">{sport.hoverMeta}</span>
-            <Link to={sport.path} className="fit-sport-trigger">
-              {sport.cta} <RoundArrow diagonal />
-            </Link>
-          </div>
-        </article>)}
-      </div>
+      <SportStack classPath={classPath} />
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
       <div className="fit-section-heading" data-reveal="soft">

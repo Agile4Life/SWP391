@@ -17,6 +17,10 @@ Nội dung portal được rút gọn theo tác vụ; không dùng khẩu hiệu
 
 ## Nhận diện và màu
 
+### Chế độ sáng tùy chọn — 23/10/2026
+
+Trang công khai, auth và portal có nút chuyển sáng/tối trên header, dùng chung lựa chọn lưu tại `localStorage.scms_theme` và `html[data-theme]`. Mặc định là sáng (cập nhật 23/10/2026); chỉ dùng tối khi người dùng đã lưu lựa chọn `dark`. Khi không đọc được localStorage, vẫn dùng sáng. Tải lại hoặc chuyển trang giữ lựa chọn. Chế độ sáng dùng nền `#F5F5F3`, card trắng `#FFFFFF`, bề mặt phụ `#EEEFEC`, chữ `#202020`, chữ phụ `#68645F`, viền `#E4E2DE`. Nút chính vẫn salmon `#CE9180` với chữ charcoal; điểm nhấn dạng chữ dùng salmon đậm `#A35B49` để đọc rõ trên nền sáng. Ảnh có overlay tối giữ caption sáng. Không đổi font, bố cục, animation hoặc biến theme sáng thành phong cách serif/Quiet Luxury. CSS bổ sung nằm tại `shared/ui/theme.css`.
+
 Giữ thương hiệu **SÖL**; wordmark công khai là **SÖL Fitness**. Ảnh tham chiếu ban đầu dùng nhãn khác, nhưng không đổi tên sản phẩm để khớp ảnh.
 
 | Token / vai trò | Giá trị | Cách dùng |
@@ -42,6 +46,9 @@ Dùng cùng bảng màu trong `fitness-public.css` và token `--portal-*` của 
 
 ## Chữ và component
 
+- Giới thiệu bộ môn ở landing (23/10/2026): section `#multisport` dùng một chồng bốn card lớn (bơi, tennis, cầu lông, bóng rổ), thay lưới card dẫn sang trang khác. Mỗi card chứa ảnh minh họa, giới thiệu, trọng tâm, ba nội dung luyện tập, đối tượng phù hợp và link lịch học. Nút “Bộ môn tiếp theo” đưa card trước ra sau chồng, lặp theo thứ tự; card sau có `inert`/`aria-hidden` để không nhận focus. Không tự chạy, không chiếm cuộn; mobile đặt điều khiển trên card, nội dung tăng chiều cao tự nhiên. Reduced motion chuyển ngay và hỗ trợ đổi tùy chọn khi đang animation. Header/footer dẫn tới “Bộ môn” tại section này; các route hồ bơi/tennis cũ vẫn hoạt động. Không tự suy đoán lịch, giá, số sân hoặc quyền lợi của hai bộ môn mới từ nội dung giới thiệu.
+- Thẻ “Kỳ đã thanh toán tiếp theo” trong portal (23/10/2026): hiển thị danh sách hàng phẳng, ngăn cách bằng đường kẻ mảnh; tên gói đi cùng icon lịch salmon, ngày bắt đầu/kết thúc có nhãn riêng và chữ sáng trên nền than. Header có số kỳ; mobile đưa hai mốc ngày xuống dưới tên gói. Dùng `.membership-periods`, không xếp các kỳ thành đoạn `.row-card__meta` rời rạc hoặc thêm thẻ lồng nhau.
+- Card portal (23/10/2026): giữ bề mặt charcoal, bo góc và cỡ chữ hiện hành. Card trong `.stack` dùng `gap` của danh sách, không cộng thêm margin dưới mỗi card. Meta có nhiều trường dùng `.row-card__meta--inline`, từng trường trong `span` riêng để wrap theo cụm; ngày/phòng/HLV có thể dùng `PortalIcon` salmon, giờ học nhấn bằng `strong`. Giữ meta mô tả dài ở dạng văn bản thường; không áp dụng flex cho mọi `.row-card__meta`.
 - Topbar công khai (23/10/2026): menu `15px`, đậm `600`; CTA `14px`; wordmark header `26px` (mobile `24px`). Dùng menu thu gọn từ `1100px` trở xuống để chữ lớn không chen chúc; giữ font Plus Jakarta Sans và màu charcoal–salmon.
 - Font công khai: **Plus Jakarta Sans**, sans-serif. Tiêu đề đậm, hình học; hero dùng chữ in hoa tách hai vế trên desktop, xuống dòng trên mobile.
 - Không phục hồi Cormorant/Playfair, chữ serif nghiêng hoặc nền kem như phong cách chính của phần công khai. Các font và token cũ có thể còn tồn tại để phục vụ mã lịch sử hoặc phạm vi khác.

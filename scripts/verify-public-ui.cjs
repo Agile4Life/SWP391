@@ -12,6 +12,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  await page.addInitScript(() => localStorage.setItem('scms_theme', 'dark'));
   await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));

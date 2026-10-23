@@ -3,12 +3,12 @@ import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { LiquidGlassChatbot } from '../../../shared/liquid-glass/LiquidGlassChatbot';
 import { useComponentReveal } from '../hooks/useComponentReveal';
+import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import '../fitness-public.css';
 
 const links = [
   { to: '/#about', hash: 'about', label: 'Về SÖL' },
-  { to: '/swimming', label: 'Hồ bơi' },
-  { to: '/tennis', label: 'Tennis' },
+  { to: '/#multisport', hash: 'multisport', label: 'Bộ môn' },
   { to: '/#trainers', hash: 'trainers', label: 'Huấn luyện viên' },
   { to: '/#packages', hash: 'packages', label: 'Gói tập' },
   { to: '/#stories', hash: 'stories', label: 'Câu chuyện' },
@@ -101,8 +101,9 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           >{label}</Link>)}
         </nav>
         <div className="fit-header-actions">
+          <ThemeToggle />
           <Link to={user ? homePath(user.role) : pathname === '/login' ? '/register' : '/login'} className="fit-pill fit-header-cta">
-            {user ? 'Vào portal' : pathname === '/login' ? 'Tham gia ngay' : 'Đăng nhập'}<RoundArrow />
+            <span className="fit-header-cta-label">{user ? 'Vào portal' : pathname === '/login' ? 'Tham gia ngay' : 'Đăng nhập'}</span><RoundArrow />
           </Link>
           <button type="button" className="fit-menu" aria-controls="public-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setMenuOpen(!menuOpen)}>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">

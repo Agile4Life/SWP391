@@ -1,0 +1,61 @@
+.fit-sport-stack { padding: 12px 0 0; }
+.fit-sport-stack-deck { display: grid; padding-bottom: 42px; isolation: isolate; perspective: 1400px; }
+.fit-sport-stack-card { grid-area: 1 / 1; display: grid; grid-template-columns: .9fr 1.1fr; min-width: 0; min-height: 650px; border: 1px solid var(--color-border-medium); border-radius: 30px; background: var(--color-bg-card); color: var(--fit-paper); overflow: hidden; z-index: calc(4 - var(--stack-depth)); transform-origin: 50% 100%; transform: translateY(calc(var(--stack-depth) * 13px)) scale(calc(1 - var(--stack-depth) * .025)); box-shadow: 0 16px 36px -28px #0005; transition: transform 580ms cubic-bezier(.22,1,.36,1); }
+.fit-sport-stack-card:not([data-depth='0']) { pointer-events: none; }
+.fit-sport-stack-card:not([data-depth='0']) > * { visibility: hidden; }
+.fit-sport-stack-deck:has(.is-leaving) .fit-sport-stack-card[data-depth='1'] > * { visibility: visible; }
+.fit-sport-stack-card.is-leaving { animation: fit-sport-send-back 680ms cubic-bezier(.4,0,.2,1) both; pointer-events: none; }
+.fit-sport-stack-photo { position: relative; min-width: 0; min-height: 100%; overflow: hidden; background: #292929; }
+.fit-sport-stack-photo img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; }
+.fit-sport-stack-photo::after { content: ''; position: absolute; inset: 50% 0 0; background: linear-gradient(transparent, #20202099); pointer-events: none; }
+.fit-sport-stack-caption { position: absolute; z-index: 1; top: 22px; left: 22px; padding: 6px 10px; background: #202020c9; color: #faf9f6; border-radius: 20px; font-size: 11px; }
+.fit-sport-stack-photo-index { position: absolute; z-index: 1; bottom: 22px; left: 28px; color: #faf9f6; font-size: clamp(60px, 7vw, 100px); font-weight: 750; letter-spacing: -.06em; line-height: 1; }
+.fit-sport-stack-content { display: flex; flex-direction: column; min-width: 0; padding: clamp(26px, 3vw, 44px); }
+.fit-sport-stack-kicker { font-size: 11px; font-weight: 650; letter-spacing: .1em; color: var(--fit-muted); }
+.fit-sport-stack-content h3 { font-size: clamp(30px, 3.2vw, 44px); line-height: 1.16; letter-spacing: -.04em; font-weight: 750; margin: 12px 0 14px; }
+.fit-sport-stack-summary { font-size: 15px; line-height: 1.75; color: var(--fit-muted); }
+.fit-sport-stack-focus { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 24px; }
+.fit-sport-stack-focus span { padding: 6px 10px; border: 1px solid var(--color-border-medium); border-radius: 20px; font-size: 12px; }
+.fit-sport-stack-content h4 { font-size: 16px; font-weight: 650; margin: 0 0 6px; }
+.fit-sport-stack-programs { list-style: none; margin: 0; padding: 0; }
+.fit-sport-stack-programs > li { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--color-border-subtle); }
+.fit-sport-stack-programs > li > span { color: var(--fit-muted); font-size: 11px; padding-top: 3px; font-variant-numeric: tabular-nums; }
+.fit-sport-stack-programs h5 { margin: 0; font-size: 16px; font-weight: 650; line-height: 1.5; }
+.fit-site .fit-sport-stack-programs p { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: var(--fit-muted); }
+.fit-site .fit-sport-stack-audience { margin: 20px 0 24px; font-size: 13px; line-height: 1.75; color: var(--fit-muted); }
+.fit-sport-stack-audience strong { display: block; color: var(--fit-paper); font-size: 14px; margin-bottom: 5px; }
+.fit-sport-stack-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-top: auto; }
+.fit-sport-stack-footer .fit-pill { font-size: 13px; }
+.fit-sport-stack-footer > span { flex: 1 1 130px; font-size: 11px; line-height: 1.7; color: var(--fit-muted); }
+.fit-sport-stack-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; padding-top: 20px; }
+.fit-sport-stack-controls p { display: flex; align-items: center; gap: 16px; font-size: 15px; font-weight: 600; }
+.fit-sport-stack-controls p > span { font-size: 12px; font-weight: 400; color: var(--fit-muted); font-variant-numeric: tabular-nums; }
+.fit-site .fit-sport-stack-next { display: inline-flex; align-items: center; justify-content: space-between; gap: 22px; padding: 6px 7px 6px 22px; min-height: 48px; border: 1px solid var(--color-border-medium); border-radius: 30px; color: var(--fit-paper); background: var(--color-bg-card); font-size: 14px; font-weight: 600; }
+.fit-sport-stack-next:hover { border-color: var(--fit-salmon); }
+.fit-sport-stack-next[aria-disabled='true'] { cursor: progress; }
+@keyframes fit-sport-send-back {
+  0% { transform: translate(0, 0) rotate(0); z-index: 5; }
+  45% { transform: translate(18%, -60px) rotate(7deg) scale(1.02); z-index: 5; }
+  55% { transform: translate(20%, -54px) rotate(7deg) scale(.97); z-index: 0; }
+  100% { transform: translate(0, 39px) scale(.925); z-index: 0; }
+}
+@media (max-width: 760px) {
+  .fit-sport-stack { display: flex; flex-direction: column; }
+  .fit-sport-stack-controls { order: -1; padding-top: 0; margin-bottom: 24px; }
+  .fit-sport-stack-card { grid-template-columns: 1fr; min-height: 0; border-radius: 24px; }
+  .fit-sport-stack-photo { min-height: 240px; }
+  .fit-sport-stack-content { padding: 26px 22px; }
+  .fit-sport-stack-photo-index { font-size: 64px; }
+  .fit-sport-stack-controls { align-items: stretch; }
+  .fit-site .fit-sport-stack-next { width: 100%; }
+  @keyframes fit-sport-send-back {
+    0% { transform: translate(0, 0); z-index: 5; }
+    45% { transform: translate(5%, -35px) rotate(3deg); z-index: 5; }
+    55% { transform: translate(5%, -32px) rotate(3deg) scale(.97); z-index: 0; }
+    100% { transform: translate(0, 39px) scale(.925); z-index: 0; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fit-sport-stack-card { transition: none; }
+  .fit-sport-stack-card.is-leaving { animation: none; }
+}

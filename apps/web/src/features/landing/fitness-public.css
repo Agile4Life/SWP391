@@ -387,8 +387,9 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-bmi-card > p { font-size: 10px; line-height: 1.8; color: var(--fit-muted); }
 .fit-bmi-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .fit-bmi-inputs label { display: flex; flex-direction: column; gap: 7px; font-size: 10px; color: #e6e0db; font-weight: 500; min-width: 0; }
-.fit-bmi-inputs input { width: 100%; min-height: 44px; background: #202020; color: var(--fit-paper); border: 1px solid #ffffff24; border-radius: 12px; padding: 10px 14px; font: 600 13px var(--fit-font); font-variant-numeric: tabular-nums; }
-.fit-bmi-inputs input:focus { border-color: var(--fit-salmon); outline: 1px solid var(--fit-salmon); }
+.fit-bmi-inputs input { width: 100%; min-height: 44px; background: #202020; color: var(--fit-paper); border: 1px solid #ffffff24; border-radius: 12px; padding: 10px 14px; font: 600 13px var(--fit-font); font-variant-numeric: tabular-nums; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.fit-bmi-inputs input:hover:not(:disabled) { border-color: #ce918080; }
+.fit-bmi-inputs input:is(:focus, :focus-visible) { outline: none; outline-offset: 0; border-color: var(--fit-salmon); box-shadow: 0 0 0 3px #ce91802e; }
 .fit-bmi-goals { display: flex; flex-wrap: wrap; gap: 8px; }
 .fit-bmi-goals button { flex: 1 1 120px; border: 1px solid #ffffff22; background: #202020; color: #dcd6d0; border-radius: 22px; padding: 10px 12px; font-size: 9px; font-weight: 600; }
 .fit-bmi-goals button[aria-pressed='true'] { background: var(--fit-salmon); color: #2b1d18; border-color: var(--fit-salmon); }
@@ -472,9 +473,10 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-auth-card > header p { color: var(--fit-muted); font-size: 14px; line-height: 1.8; margin-top: 10px; }
 .fit-auth .portal-form-group { margin-bottom: 19px; }
 .fit-auth .portal-label { display: block; font-family: var(--fit-font); font-weight: 500; font-size: 14px; margin-bottom: 9px; color: #e6e0db; }
-.fit-auth .portal-input { width: 100%; min-height: 47px; background: #222; color: #fff7ef; border: 1px solid #ffffff23; border-radius: 10px; padding: 13px 15px; font-family: var(--fit-font); font-size: 16px; box-shadow: none; }
+.fit-auth .portal-input { width: 100%; min-height: 47px; background: #222; color: #fff7ef; border: 1px solid #ffffff23; border-radius: 10px; padding: 13px 15px; font-family: var(--fit-font); font-size: 16px; box-shadow: none; transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
 .fit-auth .portal-input::placeholder { color: #aaa19a; }
-.fit-auth .portal-input:focus { border-color: var(--fit-salmon); outline: 1px solid var(--fit-salmon); outline-offset: 2px; }
+.fit-auth .portal-input:hover:not(:disabled) { border-color: #ce918080; }
+.fit-auth .portal-input:is(:focus, :focus-visible), .fit-site :is(input, select, textarea):is(:focus, :focus-visible) { outline: none; outline-offset: 0; border-color: var(--fit-salmon); box-shadow: 0 0 0 3px #ce91802e; }
 .fit-auth .portal-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .fit-auth .portal-label small { font-size: 12px; color: var(--fit-muted); font-weight: 400; }
 .fit-auth .luxury-login-submit-btn { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 30px; border: none; color: #2b201b; background: var(--fit-salmon); padding: 12px 20px; font-size: 13px; font-weight: 700; letter-spacing: .035em; margin-top: 24px; }
