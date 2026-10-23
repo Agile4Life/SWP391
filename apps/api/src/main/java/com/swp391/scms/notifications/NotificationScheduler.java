@@ -9,6 +9,7 @@ import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,13 +38,14 @@ public class NotificationScheduler {
     private final NotificationService notificationService;
     private final MessageService messageService;
 
+    @Autowired
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
             ClassSessionRepository sessionRepository,
             ClassEnrollmentRepository enrollmentRepository,
             NotificationRepository notificationRepository,
             NotificationService notificationService,
-            MessageService messageService
+            @Autowired(required = false) MessageService messageService
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.sessionRepository = sessionRepository;
@@ -242,4 +244,3 @@ public class NotificationScheduler {
         }
     }
 }
-

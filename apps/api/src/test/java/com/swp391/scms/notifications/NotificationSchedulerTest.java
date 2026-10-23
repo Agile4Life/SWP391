@@ -329,4 +329,23 @@ class NotificationSchedulerTest {
 
         verify(sessionRepository).findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class));
     }
+
+    @Test
+    @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
+    void springContextResolvesAutowiredConstructor() {
+        org.springframework.context.annotation.AnnotationConfigApplicationContext context =
+                new org.springframework.context.annotation.AnnotationConfigApplicationContext();
+        context.getDefaultListableBeanFactory().registerSingleton("subscriptionRepository", subscriptionRepository);
+        context.getDefaultListableBeanFactory().registerSingleton("sessionRepository", sessionRepository);
+        context.getDefaultListableBeanFactory().registerSingleton("enrollmentRepository", enrollmentRepository);
+        context.getDefaultListableBeanFactory().registerSingleton("notificationRepository", notificationRepository);
+        context.getDefaultListableBeanFactory().registerSingleton("notificationService", notificationService);
+        context.getDefaultListableBeanFactory().registerSingleton("messageService", messageService);
+        context.register(NotificationScheduler.class);
+        context.refresh();
+
+        NotificationScheduler bean = context.getBean(NotificationScheduler.class);
+        assertThat(bean).isNotNull();
+        context.close();
+    }
 }
