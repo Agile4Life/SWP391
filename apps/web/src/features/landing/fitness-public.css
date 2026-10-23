@@ -868,3 +868,23 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   .fit-site .fit-reveal-ready { opacity: 1; translate: none; scale: none; rotate: none; clip-path: none; }
   .fit-site .fit-word > span { translate: none; }
 }
+
+/* Landing typography follows the membership-benefits reference. */
+.fit-site--landing {
+  --font-sans: var(--fit-font);
+  --font-serif: var(--fit-font);
+}
+.fit-site.fit-site--landing :is(h1, h2) {
+  font-family: var(--fit-font);
+  font-weight: 900;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+}
+.fit-site.fit-site--landing :is(h3, h4, h5, h6) {
+  font-family: var(--fit-font);
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+.fit-site--landing :is(button, input, select, textarea) { font-family: var(--fit-font); }
+.fit-site--landing :is(.fit-nav a, .fit-pill, .fit-text-link) { font-weight: 700; letter-spacing: -.015em; }
+.fit-site--landing :is(.fit-kicker, .fit-benefits-eyebrow) { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }

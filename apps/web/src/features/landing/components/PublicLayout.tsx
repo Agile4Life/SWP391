@@ -75,7 +75,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     window.scrollTo(0, 0);
   }, [pathname, hash]);
 
-  return <div className="fit-site" ref={root}>
+  return <div className={`fit-site${pathname === '/' ? ' fit-site--landing' : ''}`} ref={root}>
     <div className="fit-scroll-progress" aria-hidden="true" />
     <a className="fit-skip" href="#public-main">Đến nội dung chính</a>
     <div className="fit-canvas">

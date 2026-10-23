@@ -44,6 +44,11 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
   try {
     await page.goto(base);
     await page.evaluate(() => document.fonts.ready);
+    assert.equal(await page.locator('.fit-site--landing').count(),1);
+    assert.equal(await page.locator('h1,h2').evaluateAll(elements=>elements.every(element=>{
+      const style=getComputedStyle(element);
+      return style.fontFamily.includes('Plus Jakarta Sans') && style.fontWeight==='900' && style.textTransform==='uppercase';
+    })),true,'landing display typography matches the membership-benefits reference');
     await page.locator('.fit-hero-athlete').evaluate((image) => image.decode());
     assert.equal(await page.locator('h1').count(), 1);
     assert.equal(await page.locator('.fit-service').count(), 3);
