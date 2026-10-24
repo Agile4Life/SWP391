@@ -8,6 +8,8 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
+import com.swp391.scms.support.dto.CreateSupportMessageDto;
+import com.swp391.scms.support.dto.SupportRequestMessageDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -184,5 +186,57 @@ class SupportRequestControllerTest {
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/support/requests/{id}/messages gửi tin nhắn thành công")
+    void sendMessage_Success() throws Exception {
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tôi muốn kiểm tra lại");
+        SupportRequestMessageDto responseDto = new SupportRequestMessageDto(
+                1L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tôi muốn kiểm tra lại", LocalDateTime.now()
+        );
+
+        when(supportRequestService.sendMessage(eq(1L), eq(10L), eq("MEMBER"), any(CreateSupportMessageDto.class)))
+                .thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/support/requests/1/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(messageDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.message").value("Tôi muốn kiểm tra lại"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/support/requests/{id}/messages lỗi 400 khi tin nhắn trống")
+    void sendMessage_BlankMessage_Returns400() throws Exception {
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("");
+
+        mockMvc.perform(post("/api/v1/support/requests/1/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(messageDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/support/requests/{id}/messages lấy lịch sử trao đổi thành công")
+    void getMessages_Success() throws Exception {
+        SupportRequestMessageDto msg1 = new SupportRequestMessageDto(
+                1L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tin nhắn 1", LocalDateTime.now()
+        );
+        SupportRequestMessageDto msg2 = new SupportRequestMessageDto(
+                2L, 1L, 20L, "Lễ tân Lan", "RECEPTIONIST", "Tin nhắn 2", LocalDateTime.now()
+        );
+
+        when(supportRequestService.getMessages(eq(1L), eq(10L), eq("MEMBER")))
+                .thenReturn(List.of(msg1, msg2));
+
+        mockMvc.perform(get("/api/v1/support/requests/1/messages"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].message").value("Tin nhắn 1"))
+                .andExpect(jsonPath("$.data[1].message").value("Tin nhắn 2"));
     }
 }

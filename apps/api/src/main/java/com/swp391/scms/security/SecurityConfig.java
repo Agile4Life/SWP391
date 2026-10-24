@@ -61,6 +61,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/support/requests/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/support/requests").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/support/requests/*/status").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/support/requests/*/messages").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/support/requests/*/messages").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
 
                     // Attendance & Check-in (SCRUM-75)
                     .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")

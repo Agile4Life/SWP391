@@ -1,13 +1,17 @@
 package com.swp391.scms.support;
 
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.NotificationService;
+import com.swp391.scms.support.dto.CreateSupportMessageDto;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
+import com.swp391.scms.support.dto.SupportRequestMessageDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
 import com.swp391.scms.support.entity.SupportRequest;
+import com.swp391.scms.support.entity.SupportRequestMessage;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
@@ -19,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -32,6 +38,7 @@ public class SupportRequestService {
     private final SupportRequestMapper supportRequestMapper;
     private final MemberRepository memberRepository;
     private final UserRepository userRepository;
+    private final SupportRequestMessageRepository supportRequestMessageRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
 
@@ -39,7 +46,24 @@ public class SupportRequestService {
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
                                  UserRepository userRepository) {
-        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, null);
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, null, null);
+    }
+
+    public SupportRequestService(SupportRequestRepository supportRequestRepository,
+                                 SupportRequestMapper supportRequestMapper,
+                                 MemberRepository memberRepository,
+                                 UserRepository userRepository,
+                                 SupportRequestMessageRepository supportRequestMessageRepository) {
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, supportRequestMessageRepository, null, null);
+    }
+
+    public SupportRequestService(SupportRequestRepository supportRequestRepository,
+                                 SupportRequestMapper supportRequestMapper,
+                                 MemberRepository memberRepository,
+                                 UserRepository userRepository,
+                                 NotificationService notificationService,
+                                 MessageService messageService) {
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, notificationService, messageService);
     }
 
     @Autowired
@@ -47,12 +71,14 @@ public class SupportRequestService {
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
                                  UserRepository userRepository,
+                                 SupportRequestMessageRepository supportRequestMessageRepository,
                                  NotificationService notificationService,
                                  MessageService messageService) {
         this.supportRequestRepository = supportRequestRepository;
         this.supportRequestMapper = supportRequestMapper;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
+        this.supportRequestMessageRepository = supportRequestMessageRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
     }
@@ -153,6 +179,114 @@ public class SupportRequestService {
             }
         }
         return supportRequestMapper.toDto(saved != null ? saved : request);
+    }
+
+    @Transactional
+    public SupportRequestMessageDto sendMessage(Long requestId, Long senderUserId, String senderRole, CreateSupportMessageDto dto) {
+        SupportRequest request = supportRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", requestId));
+
+        if ("closed".equalsIgnoreCase(request.getStatus())) {
+            throw new BadRequestException(
+                    "TICKET_CLOSED",
+                    "support.message.ticket_closed",
+                    new Object[]{requestId},
+                    "Cannot send message to a closed support request"
+            );
+        }
+
+        boolean staff = isStaffRole(senderRole);
+        Long memberUserId = request.getMember() != null ? request.getMember().getUserId() : null;
+        if (!staff) {
+            if (memberUserId == null || !Objects.equals(memberUserId, senderUserId)) {
+                throw new ForbiddenException(
+                        "FORBIDDEN",
+                        "support.message.forbidden",
+                        null,
+                        "You are not allowed to send messages in this support request"
+                );
+            }
+        }
+
+        User sender = userRepository.findByIdAndDeletedAtIsNull(senderUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.user", senderUserId));
+
+        SupportRequestMessage message = new SupportRequestMessage(request, sender, dto.message().trim());
+        SupportRequestMessage saved = supportRequestMessageRepository != null
+                ? supportRequestMessageRepository.save(message)
+                : message;
+
+        // Auto send in-app notification to the counterpart
+        if (notificationService != null) {
+            String senderName = sender.getFullName() != null && !sender.getFullName().isBlank()
+                    ? sender.getFullName()
+                    : sender.getUsername();
+            String title = messageService != null
+                    ? messageService.getMessage("notifications.support.new_message.title")
+                    : "notifications.support.new_message.title";
+            String body = messageService != null
+                    ? messageService.getMessage("notifications.support.new_message.body", senderName, request.getSubject())
+                    : "notifications.support.new_message.body";
+
+            Long targetRequestId = request.getId() != null ? request.getId() : requestId;
+            if (staff) {
+                // If staff replies, notify the member
+                if (memberUserId != null) {
+                    notificationService.send(memberUserId, title, body, "support_reply", "support_request", targetRequestId);
+                }
+            } else {
+                // If member sends message, notify the assigned staff (if assigned)
+                if (request.getAssignedTo() != null && request.getAssignedTo().getId() != null) {
+                    notificationService.send(request.getAssignedTo().getId(), title, body, "support_reply", "support_request", targetRequestId);
+                } else {
+                    // P2 #49: Ticket is unassigned: broadcast notification to active staff (Receptionists & Center Managers)
+                    List<User> activeStaff = userRepository.findActiveStaffUsers();
+                    if (activeStaff != null) {
+                        for (User staffUser : activeStaff) {
+                            if (staffUser.getId() != null) {
+                                notificationService.send(staffUser.getId(), title, body, "support_reply", "support_request", targetRequestId);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return supportRequestMapper.toMessageDto(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupportRequestMessageDto> getMessages(Long requestId, Long currentUserId, String currentRole) {
+        SupportRequest request = supportRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", requestId));
+
+        boolean staff = isStaffRole(currentRole);
+        Long memberUserId = request.getMember() != null ? request.getMember().getUserId() : null;
+        if (!staff) {
+            if (memberUserId == null || !Objects.equals(memberUserId, currentUserId)) {
+                throw new ForbiddenException(
+                        "FORBIDDEN",
+                        "support.message.forbidden",
+                        null,
+                        "You are not allowed to view messages in this support request"
+                );
+            }
+        }
+
+        if (supportRequestMessageRepository == null) {
+            return List.of();
+        }
+
+        List<SupportRequestMessage> messages = supportRequestMessageRepository.findBySupportRequestIdOrderByCreatedAtAsc(requestId);
+        return messages.stream().map(supportRequestMapper::toMessageDto).toList();
+    }
+
+    private boolean isStaffRole(String role) {
+        if (role == null) return false;
+        String normalized = role.startsWith("ROLE_") ? role.substring(5) : role;
+        return STAFF_ROLES.contains(normalized.toUpperCase(Locale.ROOT))
+                || "MANAGER".equalsIgnoreCase(normalized)
+                || "STAFF".equalsIgnoreCase(normalized);
     }
 
     private void validateStatusTransition(String currentStatus, String targetStatus) {

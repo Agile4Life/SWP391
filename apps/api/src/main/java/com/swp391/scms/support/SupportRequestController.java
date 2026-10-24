@@ -3,8 +3,10 @@ package com.swp391.scms.support;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
+import com.swp391.scms.support.dto.CreateSupportMessageDto;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
+import com.swp391.scms.support.dto.SupportRequestMessageDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +17,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Support", description = "Quản lý các yêu cầu khiếu nại, hỗ trợ (Tickets)")
 @RestController
@@ -77,5 +81,25 @@ public class SupportRequestController {
         SupportRequestDto result = supportRequestService.updateStatus(id, request);
         return ApiResponse.ok(msg("support.update_status.success"), result);
     }
-}
 
+    @Operation(summary = "Gửi tin nhắn mới vào yêu cầu hỗ trợ (SCRUM-106)")
+    @PostMapping("/{id}/messages")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
+    public ApiResponse<SupportRequestMessageDto> sendMessage(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody CreateSupportMessageDto request) {
+        SupportRequestMessageDto result = supportRequestService.sendMessage(id, principal.id(), principal.role(), request);
+        return ApiResponse.ok(msg("support.message.send.success"), result);
+    }
+
+    @Operation(summary = "Lấy lịch sử hội thoại trong yêu cầu hỗ trợ theo thời gian (SCRUM-106)")
+    @GetMapping("/{id}/messages")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'CENTER_MANAGER')")
+    public ApiResponse<List<SupportRequestMessageDto>> getMessages(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        List<SupportRequestMessageDto> result = supportRequestService.getMessages(id, principal.id(), principal.role());
+        return ApiResponse.ok(msg("support.messages.list.success"), result);
+    }
+}
