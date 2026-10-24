@@ -53,4 +53,14 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
               and s.startDate <= :date and s.endDate >= :date
             """)
     boolean hasActiveMembership(@Param("memberId") Long memberId, @Param("date") LocalDate date);
+
+    @Query("""
+            select s from MembershipSubscription s
+            join fetch s.member m
+            join fetch m.user u
+            join fetch s.membershipPackage p
+            where s.status = 'active'
+              and s.endDate = :endDate
+            """)
+    List<MembershipSubscription> findActiveSubscriptionsExpiringOn(@Param("endDate") LocalDate endDate);
 }
