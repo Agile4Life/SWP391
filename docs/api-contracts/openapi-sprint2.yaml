@@ -545,6 +545,36 @@ components:
           maxLength: 50
           nullable: true
           example: "Cổng chính A"
+
+    AuditLogDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        userFullName:
+          type: string
+        userEmail:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+          format: int64
+        oldValue:
+          description: Dữ liệu cũ dạng JSON
+        newValue:
+          description: Dữ liệu mới dạng JSON
+        ipAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
 security:
   - bearerAuth: []
 
@@ -1846,4 +1876,74 @@ paths:
       responses:
         '200': {description: Thành công}
         '404': {description: Không tìm thấy snapshot}
+
+  /admin/audit-logs:
+    get:
+      summary: Tra cứu nhật ký kiểm toán hệ thống (Audit Logs)
+      description: Chỉ Quản lý Trung tâm (CENTER_MANAGER) có quyền truy cập. Hỗ trợ lọc theo user_id, entity_type, action, khoảng thời gian from - to, kèm phân trang.
+      tags: [Audit]
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: ID của người dùng thực hiện thao tác
+        - name: entity_type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Loại thực thể (PAYMENT, SUBSCRIPTION, USER,...)
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Hành động kiểm toán (CREATE, UPDATE, DELETE,...)
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Thời gian bắt đầu (ISO-8601 hoặc YYYY-MM-DD)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Thời gian kết thúc (ISO-8601 hoặc YYYY-MM-DD)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Danh sách nhật ký kiểm toán thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AuditLogDto'
+        '401':
+          description: Chưa xác thực (UNAUTHORIZED)
+        '403':
+          description: Không có quyền truy cập (FORBIDDEN - Yêu cầu CENTER_MANAGER)
 
