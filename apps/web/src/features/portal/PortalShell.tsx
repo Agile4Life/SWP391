@@ -5,6 +5,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { PortalIcon } from './PortalIcon';
 import { PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
+import { getUnreadCount } from '../member/notificationsApi';
 
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -16,6 +17,8 @@ export function PortalShell() {
   const navigate = useNavigate();
   const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | null>(null);
   const [query, setQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+  const [notificationError, setNotificationError] = useState(false);
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
   const isMember = user?.role === 'MEMBER';
@@ -23,6 +26,26 @@ export function PortalShell() {
   const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => item.to === '/member/profile' ? { ...item, label: profileLabel } : item);
   const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? 'Không gian của bạn';
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
+
+  useEffect(() => {
+    if (!isMember) return;
+    let active = true;
+    const refresh = () => {
+      void getUnreadCount().then((count) => {
+        if (active) { setUnreadCount(count); setNotificationError(false); }
+      }).catch(() => {
+        if (active) { setUnreadCount(null); setNotificationError(true); }
+      });
+    };
+    refresh();
+    window.addEventListener('member-notifications-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      active = false;
+      window.removeEventListener('member-notifications-changed', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [isMember]);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -77,6 +100,10 @@ export function PortalShell() {
           </div>
           <div className="portal-topbar-actions">
             <ThemeToggle />
+            {isMember && <Link to="/member/notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
+              <PortalIcon name="bell" size={19} />
+              {unreadCount !== null && unreadCount > 0 && <span className="member-notification-badge" aria-hidden="true">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+            </Link>}
             <button type="button" className="portal-search-trigger" aria-label="Tìm màn hình" onClick={() => openNavigation('search')}>
               <PortalIcon name="search" size={17} /><span>Tìm màn hình…</span>
             </button>

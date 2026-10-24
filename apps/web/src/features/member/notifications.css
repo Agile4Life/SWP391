@@ -1,0 +1,31 @@
+.notification-list { border: 1px solid var(--color-border-subtle); background: #fff; }
+.notification-item { display: flex; align-items: flex-start; gap: 20px; width: 100%; padding: 22px 26px; border: 0; border-bottom: 1px solid var(--color-border-subtle); background: #fff; color: var(--color-text-main); text-align: left; cursor: pointer; font: inherit; }
+.notification-item:last-child { border-bottom: 0; }
+.notification-item:hover, .notification-item:focus-visible { background: var(--color-bg-warm); }
+.notification-item--unread { background: #faf7f2; }
+.notification-icon { display: grid; place-items: center; flex: 0 0 42px; height: 42px; border: 1px solid var(--color-accent-gold); border-radius: 50%; color: var(--color-accent-gold); font-size: 1.3rem; }
+.notification-copy { display: grid; gap: 6px; min-width: 0; }
+.notification-copy strong { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 500; }
+.notification-copy span { font-size: .88rem; line-height: 1.5; color: var(--color-text-muted); }
+.notification-copy small { color: var(--color-text-muted); }
+.notification-dot { flex: 0 0 8px; height: 8px; margin-left: auto; border-radius: 50%; background: #b93636; }
+.notification-action, .notification-pages button, .notification-error button { padding: 10px 16px; border: 1px solid var(--color-accent-gold); background: transparent; color: var(--color-text-main); cursor: pointer; font: inherit; }
+.notification-action:disabled, .notification-pages button:disabled { opacity: .45; cursor: default; }
+.notification-pages { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 24px; }
+.notification-error { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.member-notification-bell { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--color-border-subtle); border-radius: 50%; color: var(--color-text-main); }
+.member-notification-bell:hover, .member-notification-bell:focus-visible { border-color: var(--color-accent-gold); }
+.member-notification-badge { position: absolute; top: -7px; right: -8px; min-width: 19px; height: 19px; padding: 0 3px; border-radius: 20px; background: #b93636; color: white; text-align: center; line-height: 19px; font-size: .64rem; }
+.member-notification-error { color: #b93636; font-size: .72rem; }
+@media (max-width: 600px) { .notification-item { padding: 16px; gap: 12px; } .notification-error { flex-wrap: wrap; } }
+
+/* SCRUM-127: match the active charcoal–salmon portal tokens. */
+.portal-v2 .notification-list { overflow: hidden; border-color: var(--portal-border); border-radius: 14px; background: var(--portal-surface); }
+.portal-v2 .notification-item { border-color: var(--portal-border); background: var(--portal-surface); color: var(--portal-paper); }
+.portal-v2 .notification-item:hover, .portal-v2 .notification-item:focus-visible { background: var(--portal-raised); }
+.portal-v2 .notification-item--unread { background: var(--portal-tint); }
+.portal-v2 .notification-copy strong { font: 650 14px/1.4 var(--font-sans); }
+.portal-v2 .notification-copy .notification-category { color: var(--portal-salmon); font-weight: 700; }
+.portal-v2 .notification-action, .portal-v2 .notification-pages button, .portal-v2 .notification-error button { border-radius: 10px; }
+.portal-v2 .member-notification-bell { flex: 0 0 44px; width: 44px; height: 44px; border-color: var(--portal-border); border-radius: 14px; background: var(--portal-surface); color: var(--portal-muted); }
+.portal-v2 .member-notification-bell:hover, .portal-v2 .member-notification-bell:focus-visible { border-color: var(--portal-salmon); color: var(--portal-salmon); }
