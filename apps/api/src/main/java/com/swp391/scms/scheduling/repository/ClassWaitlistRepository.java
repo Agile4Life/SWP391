@@ -24,4 +24,12 @@ public interface ClassWaitlistRepository extends JpaRepository<ClassWaitlist, Lo
     List<ClassWaitlist> findByGymClassIdAndStatusAndReservationExpiresAtLessThan(Long classId, String status, java.time.LocalDateTime now);
 
     List<ClassWaitlist> findByStatusAndReservationExpiresAtLessThan(String status, java.time.LocalDateTime now);
+
+    org.springframework.data.domain.Page<ClassWaitlist> findByStatusAndReservationExpiresAtLessThan(
+            String status, java.time.LocalDateTime now, org.springframework.data.domain.Pageable pageable);
+
+    org.springframework.data.domain.Page<ClassWaitlist> findByStatusAndNotifiedAtBefore(
+            String status, java.time.LocalDateTime cutoff, org.springframework.data.domain.Pageable pageable);
+
+    java.util.Optional<ClassWaitlist> findFirstByGymClassIdAndStatusOrderByRequestedAtAsc(Long classId, String status);
 }

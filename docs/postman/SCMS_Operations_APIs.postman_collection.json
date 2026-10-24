@@ -1,0 +1,519 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c",
+    "name": "SCMS Operations APIs (Catalogs, Subscriptions, Classes, Enrollments, Check-in & Attendance)",
+    "description": "Comprehensive Postman Collection v2.1 for the Sports Center Management System (SCMS) Operations Subsystem, covering SCRUM-111 through SCRUM-115.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearer_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.request.headers.has('Accept-Language')) {",
+          "    pm.request.headers.add({ key: 'Accept-Language', value: 'vi' });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Status code is 2xx', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "});",
+          "pm.test('Response conforms to ApiResponse wrapper', function () {",
+          "    var jsonData = pm.response.json();",
+          "    pm.expect(jsonData).to.have.property('success');",
+          "    pm.expect(jsonData).to.have.property('message');",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Catalogs",
+      "description": "Master facility and service catalogs: Disciplines, Rooms, and Membership Packages.",
+      "item": [
+        {
+          "name": "List Disciplines",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/disciplines",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "disciplines"]
+            }
+          }
+        },
+        {
+          "name": "Create Discipline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pilates Reformer\",\n  \"description\": \"Core strengthening and flexibility training on reformer machines\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/disciplines",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "disciplines"]
+            }
+          }
+        },
+        {
+          "name": "List Rooms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "rooms"]
+            }
+          }
+        },
+        {
+          "name": "Create Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Studio A2\",\n  \"location\": \"Floor 2, Zone B\",\n  \"capacity\": 25,\n  \"status\": \"available\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "rooms"]
+            }
+          }
+        },
+        {
+          "name": "List Membership Packages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/packages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "packages"]
+            }
+          }
+        },
+        {
+          "name": "Create Membership Package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SÖL Black Diamond 30D\",\n  \"description\": \"Unlimited access to gym floor and group fitness classes\",\n  \"price\": 1200000,\n  \"durationDays\": 30,\n  \"classCreditLimit\": 20,\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/packages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "packages"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Subscriptions",
+      "description": "Membership lifecycle management: subscriptions, renewals, holds, and cancellations.",
+      "item": [
+        {
+          "name": "Subscribe to Membership Package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageId\": 1,\n  \"startDate\": \"2026-11-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "memberships", "subscriptions"]
+            }
+          }
+        },
+        {
+          "name": "Get My Active Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "memberships", "subscriptions", "my"]
+            }
+          }
+        },
+        {
+          "name": "Renew Subscription",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions/{{subscriptionId}}/renew",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "memberships", "subscriptions", "{{subscriptionId}}", "renew"]
+            }
+          }
+        },
+        {
+          "name": "Request Membership Hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Medical recovery following knee surgery\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions/{{subscriptionId}}/hold",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "memberships", "subscriptions", "{{subscriptionId}}", "hold"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Pending Subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions/{{subscriptionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "memberships", "subscriptions", "{{subscriptionId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Classes & Sessions",
+      "description": "Gym class creation, session scheduling, schedule queries, and coach/manager cancellation (SCRUM-113).",
+      "item": [
+        {
+          "name": "List Classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes"]
+            }
+          }
+        },
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Power Yoga Vinyasa\",\n  \"disciplineId\": 1,\n  \"coachId\": 2,\n  \"roomId\": 1,\n  \"capacity\": 20,\n  \"level\": \"intermediate\",\n  \"description\": \"Dynamic flow connecting breath with vigorous posture sequences\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes"]
+            }
+          }
+        },
+        {
+          "name": "Schedule Class Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionDate\": \"2026-11-05\",\n  \"startTime\": \"08:00:00\",\n  \"endTime\": \"09:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/{{classId}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "{{classId}}", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Search Class Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/sessions?fromDate=2026-11-01&toDate=2026-11-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "sessions"],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "2026-11-01"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2026-11-30"
+                },
+                {
+                  "key": "disciplineId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "coachId",
+                  "value": "2",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Class Session (SCRUM-113)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Coach is attending professional certification symposium; credit refunded to all students\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/sessions/{{sessionId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "sessions", "{{sessionId}}", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Enrollments & Waitlist",
+      "description": "Student booking, cancellation, smart waitlist queuing and withdrawal.",
+      "item": [
+        {
+          "name": "Enroll in Session",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/sessions/{{sessionId}}/enroll",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "sessions", "{{sessionId}}", "enroll"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/enrollments/{{enrollmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "enrollments", "{{enrollmentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get My Enrollments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/enrollments/my?status=booked",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "enrollments", "my"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "booked"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Join Waitlist",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/sessions/{{sessionId}}/waitlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "sessions", "{{sessionId}}", "waitlist"]
+            }
+          }
+        },
+        {
+          "name": "Withdraw from Waitlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/waitlists/{{waitlistId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "waitlists", "{{waitlistId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get My Waitlists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/classes/waitlists/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "classes", "waitlists", "my"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Check-in & Attendance",
+      "description": "Center QR barrier scanning, member checkout, daily history, and session attendance tracking (SCRUM-111).",
+      "item": [
+        {
+          "name": "Center QR Scan Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrCode\": \"SÖL-MEM-2026-QR-98214\",\n  \"gate\": \"Front Turnstile A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-in/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-in", "scan"]
+            }
+          }
+        },
+        {
+          "name": "Center Checkout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-in/{{checkinId}}/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-in", "{{checkinId}}", "checkout"]
+            }
+          }
+        },
+        {
+          "name": "Check-in Daily History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/check-in/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "check-in", "history"]
+            }
+          }
+        },
+        {
+          "name": "Get Session Attendance Roster (SCRUM-111)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/attendance/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "attendance", "sessions", "{{sessionId}}"]
+            }
+          }
+        },
+        {
+          "name": "Batch Record Session Attendance (SCRUM-111)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"memberId\": 1,\n      \"status\": \"present\",\n      \"notes\": \"Present on time, completed full workout\"\n    },\n    {\n      \"memberId\": 2,\n      \"status\": \"late\",\n      \"notes\": \"Arrived 10 minutes late due to traffic\"\n    },\n    {\n      \"memberId\": 3,\n      \"status\": \"absent\",\n      \"notes\": \"No show\"\n    },\n    {\n      \"memberId\": 4,\n      \"status\": \"excused\",\n      \"notes\": \"Notified coach in advance about illness\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/attendance/sessions/{{sessionId}}/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "attendance", "sessions", "{{sessionId}}", "batch"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
