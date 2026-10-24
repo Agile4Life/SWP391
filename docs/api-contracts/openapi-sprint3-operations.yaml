@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: SCMS API - Sprint 3 Operations Contract (Attendance & Session Lifecycle)
+  version: 1.0.0
+  description: >
+    API contracts for Sprint 3 Operations subsystem:
+    - SCRUM-111: Session Attendance Roster and Batch Attendance API
+    - SCRUM-112: Smart Waitlist Automatic 24h Expiry & Promotion Background Scheduler
+    - SCRUM-113: Class Session Cancellation with Reason, Auto-refund & In-App Notification
+    All endpoints require Bearer JWT authentication and enforce strict RBAC via @PreAuthorize.
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        status:
+          type: integer
+        message:
+          type: string
+        code:
+          type: string
+        data:
+          description: Payload
+        timestamp:
+          type: string
+          format: date-time
+
+    BatchAttendanceRequest:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceItem'
+
+    AttendanceItem:
+      type: object
+      required: [memberId, status]
+      properties:
+        memberId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [present, absent, late, excused]
+        notes:
+          type: string
+          maxLength: 255
+
+    SessionAttendanceResponse:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          format: int64
+        classId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+        coachId:
+          type: integer
+          format: int64
+        coachName:
+          type: string
+        roomName:
+          type: string
+        totalBooked:
+          type: integer
+        totalPresent:
+          type: integer
+        totalAbsent:
+          type: integer
+        totalLate:
+          type: integer
+        totalExcused:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberAttendanceItem'
+
+    MemberAttendanceItem:
+      type: object
+      properties:
+        memberId:
+          type: integer
+          format: int64
+        membershipCode:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+        enrollmentStatus:
+          type: string
+        attendanceStatus:
+          type: string
+          enum: [present, absent, late, excused]
+          nullable: true
+        checkedInAt:
+          type: string
+          format: date-time
+          nullable: true
+        recordedByCoachId:
+          type: integer
+          format: int64
+          nullable: true
+        recordedByCoachName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    CancelSessionRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          maxLength: 255
+          example: "Coach attending medical emergency; class credit auto-refunded"
+
+    ClassSessionDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        classId:
+          type: integer
+          format: int64
+        className:
+          type: string
+        disciplineId:
+          type: integer
+          format: int64
+        disciplineName:
+          type: string
+        coachId:
+          type: integer
+          format: int64
+        coachName:
+          type: string
+        roomId:
+          type: integer
+          format: int64
+        roomName:
+          type: string
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        cancelReason:
+          type: string
+          nullable: true
+        capacity:
+          type: integer
+        bookedCount:
+          type: integer
+
+security:
+  - bearerAuth: []
+
+paths:
+  /attendance/sessions/{id}:
+    get:
+      summary: Get enrolled roster and attendance status for a class session (SCRUM-111)
+      tags: [Attendance]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Session roster and attendance status retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SessionAttendanceResponse'
+
+  /attendance/sessions/{id}/batch:
+    post:
+      summary: Batch record attendance for session members (SCRUM-111)
+      tags: [Attendance]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAttendanceRequest'
+      responses:
+        '200':
+          description: Batch attendance successfully recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MemberAttendanceItem'
+        '409':
+          description: Duplicate attendance record constraint violation
+
+  /classes/sessions/{id}/cancel:
+    post:
+      summary: Cancel class session with reason, auto-refund bookings & notify members (SCRUM-113)
+      tags: [Classes & Sessions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSessionRequest'
+      responses:
+        '200':
+          description: Class session cancelled and affected bookings refunded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSessionDto'
+        '409':
+          description: Session is already cancelled
