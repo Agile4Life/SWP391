@@ -22,5 +22,18 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.id = :userId AND n.isRead = false")
     int markAllAsReadByUserId(Long userId);
+
+    @Query("""
+            select (count(n) > 0) from Notification n
+            where n.user.id = :userId
+              and n.type = :type
+              and n.relatedEntityType = :relatedEntityType
+              and n.relatedEntityId = :relatedEntityId
+            """)
+    boolean existsNotification(
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("type") String type,
+            @org.springframework.data.repository.query.Param("relatedEntityType") String relatedEntityType,
+            @org.springframework.data.repository.query.Param("relatedEntityId") Long relatedEntityId);
 }
 

@@ -49,6 +49,7 @@ public class ClassSession {
     }
 
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public GymClass getGymClass() { return gymClass; }
     public void setGymClass(GymClass gymClass) { this.gymClass = gymClass; }
     public LocalDate getSessionDate() { return sessionDate; }
