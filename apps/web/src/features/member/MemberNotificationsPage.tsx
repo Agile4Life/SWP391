@@ -62,9 +62,11 @@ export function MemberNotificationsPage() {
     finally { setBusy(false); }
   }
 
+  const hasUnread = count > 0 || Boolean(data?.content.some((item) => !item.isRead));
+
   return <div className="portal-container">
     <PageHeader eyebrow="Hội viên" title="Thông báo" subtitle="Cập nhật về lịch học, gói tập và dịch vụ của bạn."
-      actions={<button className="notification-action" type="button" disabled={busy || count === 0} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button>} />
+      actions={<button className="notification-action" type="button" disabled={busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button>} />
     {error && <div className="portal-alert notification-error" role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></div>}
     {loading ? <div className="portal-state" role="status">Đang tải thông báo…</div> : !data?.content.length && !error ?
       <div className="portal-empty"><h3>Chưa có thông báo</h3><p>Thông báo mới sẽ xuất hiện tại đây.</p></div> :

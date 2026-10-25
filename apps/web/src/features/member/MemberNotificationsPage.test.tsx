@@ -29,6 +29,48 @@ describe('SCRUM-127 member notifications', () => {
   it('shows empty state from the API', async () => {
     await render();
     expect(host.textContent).toContain('Chưa có thông báo');
+    expect(button('Đánh dấu tất cả đã đọc')?.disabled).toBe(true);
+  });
+
+  it.each([[0, false, false], [2, true, false], [0, true, true]])('uses count %i and read state %s to disable mark-all: %s', async (count, isRead, disabled) => {
+    api.count.mockResolvedValue(count);
+    api.list.mockResolvedValue({ content: [{ id: 3, title: 'Thông báo', message: 'Nội dung', type: 'system', relatedEntityType: null, relatedEntityId: null, isRead, createdAt: '2026-10-24T08:00:00' }], number: 0, totalPages: 1 });
+    await render();
+    expect(button('Đánh dấu tất cả đã đọc')?.disabled).toBe(disabled);
+  });
+
+  it('disables mark-all while saving, prevents duplicate requests and notifies the badge on success', async () => {
+    api.count.mockResolvedValue(1);
+    let finish!: () => void;
+    api.all.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+    const changed = vi.fn();
+    window.addEventListener('member-notifications-changed', changed);
+    try {
+      await render();
+      await act(async () => button('Đánh dấu tất cả đã đọc')?.click());
+      expect(button('Đánh dấu tất cả đã đọc')?.disabled).toBe(true);
+      await act(async () => button('Đánh dấu tất cả đã đọc')?.click());
+      expect(api.all).toHaveBeenCalledTimes(1);
+      await act(async () => finish());
+      expect(changed).toHaveBeenCalledTimes(1);
+      expect(button('Đánh dấu tất cả đã đọc')?.disabled).toBe(true);
+    } finally {
+      window.removeEventListener('member-notifications-changed', changed);
+    }
+  });
+
+  it('keeps unread items and allows retry after mark-all fails', async () => {
+    api.list.mockResolvedValue({ content: [{ id: 3, title: 'Thông báo', message: 'Nội dung', type: 'system', relatedEntityType: null, relatedEntityId: null, isRead: false, createdAt: '2026-10-24T08:00:00' }], number: 0, totalPages: 1 });
+    api.all.mockRejectedValueOnce(new Error('Không thể đánh dấu'));
+    await render();
+    await act(async () => button('Đánh dấu tất cả đã đọc')?.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể đánh dấu');
+    expect(host.querySelector('[aria-label="Chưa đọc"]')).not.toBeNull();
+    expect(button('Đánh dấu tất cả đã đọc')?.disabled).toBe(false);
+    await act(async () => button('Đánh dấu tất cả đã đọc')?.click());
+    expect(api.all).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('[aria-label="Chưa đọc"]')).toBeNull();
+    expect(button('Đánh dấu tất cả đã đọc')?.disabled).toBe(true);
   });
 
   it('retries a failed list request', async () => {
