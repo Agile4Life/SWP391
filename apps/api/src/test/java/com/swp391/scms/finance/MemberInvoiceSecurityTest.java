@@ -3,6 +3,7 @@ package com.swp391.scms.finance;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.finance.service.InvoiceService;
 import com.swp391.scms.finance.service.MemberInvoicePdfService;
+import com.swp391.scms.finance.dto.InvoiceDto;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,40 @@ class MemberInvoiceSecurityTest {
             assertEquals(org.springframework.http.MediaType.APPLICATION_PDF, response.getHeaders().getContentType());
             assertTrue(response.getHeaders().getFirst(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION).contains("attachment"));
             verify(pdf).download(12L, 7L);
+        }
+    }
+
+    @Test
+    void standaloneConstructorsAreNullSafe() {
+        InvoiceService invoices = mock(InvoiceService.class);
+        MemberInvoicePdfService pdf = mock(MemberInvoicePdfService.class);
+        InvoiceDto invoice = new InvoiceDto();
+        when(invoices.getMemberInvoiceByPaymentId(12L, 7L)).thenReturn(invoice);
+        var principal = new AuthenticatedPrincipal(7L, "member", "MEMBER");
+        for (MemberInvoiceController controller : List.of(
+                new MemberInvoiceController(invoices, pdf),
+                new MemberInvoiceController(invoices, null, pdf))) {
+            var response = controller.getMine(12L, principal);
+            assertEquals("finance.invoice.detail", response.getMessage());
+            assertSame(invoice, response.getData());
+        }
+    }
+
+    @Test
+    void springInjectsMessageServiceThroughAnnotatedConstructor() {
+        InvoiceService invoices = mock(InvoiceService.class);
+        MessageService messages = mock(MessageService.class);
+        when(messages.getMessage("finance.invoice.detail")).thenReturn("Chi tiết hóa đơn");
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.registerBean(InvoiceService.class, () -> invoices);
+            context.registerBean(MessageService.class, () -> messages);
+            context.registerBean(MemberInvoicePdfService.class, () -> mock(MemberInvoicePdfService.class));
+            context.register(MemberInvoiceController.class);
+            context.refresh();
+            var response = context.getBean(MemberInvoiceController.class).getMine(12L,
+                    new AuthenticatedPrincipal(7L, "member", "MEMBER"));
+            assertEquals("Chi tiết hóa đơn", response.getMessage());
+            verify(invoices).getMemberInvoiceByPaymentId(12L, 7L);
         }
     }
 

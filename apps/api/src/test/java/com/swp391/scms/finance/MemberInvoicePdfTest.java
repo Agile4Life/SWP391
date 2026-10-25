@@ -49,6 +49,13 @@ class MemberInvoicePdfTest {
         invoice.setInvoiceNumber("INV-12");
         invoice.setIssuedAt(LocalDateTime.now());
         when(invoiceService.getMemberInvoiceByPaymentId(12L, 7L)).thenReturn(invoice);
-        assertThrows(ServiceUnavailableException.class, () -> new MemberInvoicePdfService(invoiceService).download(12L, 7L));
+        var exception = assertThrows(ServiceUnavailableException.class,
+                () -> new MemberInvoicePdfService(invoiceService).download(12L, 7L));
+        assertEquals("INVOICE_PDF_UNAVAILABLE", exception.getErrorCode());
+        assertEquals("finance.invoice.pdf_unavailable", exception.getMessageKey());
+        assertEquals("This invoice PDF is not available yet", exception.getMessage());
+        var response = new com.swp391.scms.common.GlobalExceptionHandler().handleAppException(exception);
+        assertNotNull(response.getBody());
+        assertEquals(exception.getMessage(), response.getBody().getMessage());
     }
 }

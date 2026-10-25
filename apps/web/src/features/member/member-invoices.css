@@ -2,19 +2,17 @@
 .member-invoices__scroll { overflow-x: auto; }
 .member-invoices__table { width: 100%; border-collapse: collapse; min-width: 520px; text-align: left; }
 .member-invoices__table th { color: var(--portal-muted, #a9a4a1); font-size: .76rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 12px 14px; }
-.member-invoices__table td { padding: 18px 14px; border-top: 1px solid rgba(255,255,255,.1); }
+.member-invoices__table td { padding: 18px 14px; border-top: 1px solid var(--portal-border); }
 .member-invoices__table td:first-child { font-weight: 700; }
 .member-invoices__table td:nth-child(3) { white-space: nowrap; }
-.member-invoices__detail { border: 0; background: transparent; color: #efaa98; cursor: pointer; font: inherit; white-space: nowrap; }
+.member-invoices__detail { border: 0; background: transparent; color: var(--portal-salmon); cursor: pointer; font: inherit; white-space: nowrap; }
 .member-invoices__detail:hover, .member-invoices__detail:focus-visible { text-decoration: underline; }
 .member-invoices__invoice { min-width: min(420px, 100%); }
 .member-invoices__number { font-size: 1.3rem; font-weight: 700; margin: 8px 0; }
-.member-invoices__issued, .member-invoices__note { opacity: .72; font-size: .85rem; }
+.member-invoices__issued, .member-invoices__note { color: var(--portal-muted); font-size: .85rem; }
 .member-invoices__invoice dl { margin: 24px 0; }
-.member-invoices__invoice dl div { display: flex; justify-content: space-between; gap: 20px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.12); }
+.member-invoices__invoice dl div { display: flex; justify-content: space-between; gap: 20px; padding: 12px 0; border-top: 1px solid var(--portal-border); }
 .member-invoices__invoice dd { margin: 0; text-align: right; font-weight: 600; }
 .member-invoices__total { font-size: 1.1rem; font-weight: 700; }
-.member-invoices__download { border: 0; border-radius: 8px; background: #cf8e7c; color: #211d1b; padding: 12px 18px; font: inherit; font-weight: 700; cursor: pointer; }
-.member-invoices__download:hover, .member-invoices__download:focus-visible { background: #e6aa98; }
-.member-invoices__download:disabled { opacity: .55; cursor: not-allowed; }
+.member-invoices [role='alert'] { color: var(--portal-danger, #e99090); }
 @media (max-width: 640px) { .member-invoices__card { padding: 12px; } .member-invoices__table th, .member-invoices__table td { padding: 14px 10px; } }

@@ -29,6 +29,11 @@ public class MemberInvoiceController {
     private final MessageService messageService;
     private final MemberInvoicePdfService pdfService;
 
+    public MemberInvoiceController(InvoiceService invoiceService, MemberInvoicePdfService pdfService) {
+        this(invoiceService, null, pdfService);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
     public MemberInvoiceController(InvoiceService invoiceService, MessageService messageService,
             MemberInvoicePdfService pdfService) {
         this.invoiceService = invoiceService;
@@ -36,11 +41,15 @@ public class MemberInvoiceController {
         this.pdfService = pdfService;
     }
 
+    private String msg(String key) {
+        return messageService != null ? messageService.getMessage(key) : key;
+    }
+
     @GetMapping("/by-payment/{paymentId}")
     @Operation(summary = "Xem hóa đơn của giao dịch thuộc hội viên đang đăng nhập")
     public ApiResponse<InvoiceDto> getMine(@PathVariable Long paymentId,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return ApiResponse.ok(messageService.getMessage("finance.invoice.detail"),
+        return ApiResponse.ok(msg("finance.invoice.detail"),
                 invoiceService.getMemberInvoiceByPaymentId(paymentId, principal.id()));
     }
 

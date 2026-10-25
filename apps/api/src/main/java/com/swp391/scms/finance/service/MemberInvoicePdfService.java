@@ -71,6 +71,7 @@ public class MemberInvoicePdfService {
     }
 
     private ServiceUnavailableException unavailable() {
-        return new ServiceUnavailableException("INVOICE_PDF_UNAVAILABLE", "finance.invoice.pdf_unavailable", null, null);
+        return new ServiceUnavailableException("INVOICE_PDF_UNAVAILABLE", "finance.invoice.pdf_unavailable", null,
+                "This invoice PDF is not available yet");
     }
 }

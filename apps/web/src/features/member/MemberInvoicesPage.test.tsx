@@ -3,6 +3,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberInvoicesPage } from './MemberInvoicesPage';
 import { ApiError } from '../../shared/api/client';
+import { PortalIcon } from '../portal/PortalIcon';
+import { PORTAL_NAV } from '../portal/portalNavigation';
 
 const mocks = vi.hoisted(() => ({ payments: vi.fn(), invoice: vi.fn(), pdf: vi.fn() }));
 vi.mock('./membershipApi', async (original) => ({ ...await original<typeof import('./membershipApi')>(), getMyPayments: mocks.payments }));
@@ -27,6 +29,7 @@ describe('MemberInvoicesPage', () => {
     mocks.payments.mockReturnValue(new Promise((done) => { resolve = done; }));
     await render();
     expect(host.textContent).toContain('Đang tải giao dịch');
+    expect(host.querySelector('.portal-container.member-invoices')).not.toBeNull();
     await act(async () => resolve([paid, { ...paid, id: 13, status: 'pending' }]));
     expect(host.textContent).toContain('#12');
     expect(host.textContent).not.toContain('#13');
@@ -40,6 +43,7 @@ describe('MemberInvoicesPage', () => {
     expect(mocks.invoice).toHaveBeenCalledWith(12);
     expect(host.textContent).toContain('INV-12');
     expect(host.textContent).toContain('219.000');
+    expect(host.querySelector('.member-invoices__download')?.classList.contains('btn-primary')).toBe(true);
     const blob = new Blob(['%PDF'], { type: 'application/pdf' });
     mocks.pdf.mockResolvedValue(blob);
     const createUrl = vi.fn().mockReturnValue('blob:test');
@@ -91,5 +95,15 @@ describe('MemberInvoicesPage', () => {
     await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent === 'Thử lại')?.click());
     await act(async () => host.querySelector('button[aria-label="Xem hóa đơn giao dịch #12"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     expect(host.textContent).toContain('chưa có hóa đơn điện tử');
+  });
+
+  it('uses a receipt icon for invoices while preserving the membership card icon', async () => {
+    expect(PORTAL_NAV.find((item) => item.to === '/member/invoices')?.icon).toBe('receipt');
+    expect(PORTAL_NAV.find((item) => item.to === '/member/card')?.icon).toBe('card');
+    await act(async () => root.render(<><PortalIcon name="receipt" /><PortalIcon name="card" /></>));
+    const icons = host.querySelectorAll('svg');
+    expect(icons[0].getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(icons[0].getAttribute('stroke-width')).toBe(icons[1].getAttribute('stroke-width'));
+    expect(icons[0].querySelector('path')?.getAttribute('d')).not.toBe(icons[1].querySelector('path')?.getAttribute('d'));
   });
 });

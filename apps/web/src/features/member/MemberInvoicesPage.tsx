@@ -73,7 +73,7 @@ export function MemberInvoicesPage() {
   }
 
   return (
-    <div className="member-invoices">
+    <div className="portal-container member-invoices">
       <PageHeader eyebrow="TÀI CHÍNH CÁ NHÂN" title="Giao dịch & hóa đơn" subtitle="Các khoản thanh toán đã hoàn tất của bạn." />
       <section className="portal-card member-invoices__card" aria-label="Lịch sử giao dịch">
         {loading ? <p role="status">Đang tải giao dịch…</p> : error ? (
@@ -101,7 +101,7 @@ export function MemberInvoicesPage() {
               <div><dt>VAT</dt><dd>{formatPrice(invoice.taxAmount)}</dd></div>
               <div className="member-invoices__total"><dt>Tổng tiền</dt><dd>{invoice.totalAmount == null ? 'Chưa có dữ liệu' : formatPrice(invoice.totalAmount)}</dd></div>
             </dl>
-            <button type="button" className="member-invoices__download" disabled={downloading || invoice.totalAmount == null}
+            <button type="button" className="btn-primary member-invoices__download" disabled={downloading || invoice.totalAmount == null}
               onClick={() => void downloadInvoice(invoice.paymentId)}>
               {downloading ? 'Đang tải file…' : 'Tải hóa đơn PDF'}
             </button>
