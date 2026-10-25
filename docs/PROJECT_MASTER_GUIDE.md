@@ -6,6 +6,8 @@
 > **Hệ quản trị CSDL chuẩn:** Supabase PostgreSQL (Hibernate Code-First)
 > **Phiên bản tài liệu:** 1.0.0 (Master Release)
 
+> **Quy chuẩn UI hiện hành (22/10/2026):** đọc [DESIGN.md](../DESIGN.md) trước khi làm frontend. Phần công khai dùng charcoal–salmon, full width và animation xuất hiện từng component; cuộn dọc native, không dùng slide trang ngang–dọc. Portal giữ thiết kế hiện tại. Các mô tả phong cách hoặc gợi ý thư viện trước đây trong cẩm nang không thay thế quy chuẩn này.
+
 ---
 
 ## MỤC LỤC TỔNG QUAN

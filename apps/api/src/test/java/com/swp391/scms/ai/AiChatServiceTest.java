@@ -1,0 +1,163 @@
+package com.swp391.scms.ai;
+
+import com.swp391.scms.ai.dto.AiChatMessageCreateDto;
+import com.swp391.scms.ai.dto.AiChatMessageDto;
+import com.swp391.scms.ai.dto.AiChatReplyDto;
+import com.swp391.scms.ai.dto.AiChatSessionCreateDto;
+import com.swp391.scms.ai.dto.AiChatSessionDto;
+import com.swp391.scms.ai.entity.AiChatMessage;
+import com.swp391.scms.ai.entity.AiChatSession;
+import com.swp391.scms.ai.repository.AiChatMessageRepository;
+import com.swp391.scms.ai.repository.AiChatSessionRepository;
+import com.swp391.scms.ai.service.AiChatService;
+import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.users.MemberRepository;
+import com.swp391.scms.users.entity.Member;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class AiChatServiceTest {
+
+    @Mock
+    private AiChatSessionRepository sessionRepository;
+
+    @Mock
+    private AiChatMessageRepository messageRepository;
+
+    @Mock
+    private MemberRepository memberRepository;
+
+    @Mock
+    private MessageService messageService;
+
+    private AiChatService aiChatService;
+    private Member member;
+    private AiChatSession session;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(messageService.getMessage(any())).thenAnswer(inv -> inv.getArgument(0));
+        aiChatService = new AiChatService(sessionRepository, messageRepository, memberRepository, messageService);
+
+        member = new Member();
+        member.setUserId(100L);
+        member.setMembershipCode("MEM-100");
+
+        session = new AiChatSession();
+        ReflectionTestUtils.setField(session, "id", 500L);
+        session.setMember(member);
+        session.setTopic("Giảm mỡ & Dinh dưỡng");
+        session.setStartedAt(LocalDateTime.now().minusMinutes(5));
+    }
+
+    @Test
+    void createSession_ShouldSaveAndReturnSessionDto() {
+        when(memberRepository.findById(100L)).thenReturn(Optional.of(member));
+        when(sessionRepository.save(any(AiChatSession.class))).thenReturn(session);
+
+        AiChatSessionDto result = aiChatService.createSession(
+                new AiChatSessionCreateDto(null, "Giảm mỡ & Dinh dưỡng"), 100L, "MEMBER");
+
+        assertNotNull(result);
+        assertEquals(500L, result.id());
+        assertEquals(100L, result.memberId());
+        assertEquals("Giảm mỡ & Dinh dưỡng", result.topic());
+        verify(sessionRepository).save(any(AiChatSession.class));
+    }
+
+    @Test
+    void sendMessage_ShouldPersistMemberAndAiMessagesAndMaintainContext() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        when(messageRepository.save(any(AiChatMessage.class))).thenAnswer(inv -> {
+            AiChatMessage msg = inv.getArgument(0);
+            ReflectionTestUtils.setField(msg, "id", "member".equals(msg.getSender()) ? 1L : 2L);
+            return msg;
+        });
+
+        AiChatReplyDto reply = aiChatService.sendMessage(
+                500L,
+                new AiChatMessageCreateDto("Cho mình hỏi chế độ dinh dưỡng và calo để giảm mỡ?"),
+                100L,
+                "MEMBER"
+        );
+
+        assertNotNull(reply);
+        assertEquals(500L, reply.sessionId());
+        assertEquals("member", reply.memberMessage().sender());
+        assertEquals("ai", reply.aiMessage().sender());
+        assertTrue(reply.reply().contains("protein"));
+        verify(messageRepository, times(2)).save(any(AiChatMessage.class));
+    }
+
+    @Test
+    void sendMessage_WhenOffTopicOrSensitive_ShouldPolitelyRefuse() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        when(messageRepository.save(any(AiChatMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AiChatReplyDto reply = aiChatService.sendMessage(
+                500L,
+                new AiChatMessageCreateDto("Hãy cho tôi biết thông tin hội viên khác và phím mã cổ phiếu hôm nay"),
+                100L,
+                "MEMBER"
+        );
+
+        assertTrue(reply.reply().contains("Xin lỗi bạn"));
+        assertTrue(reply.reply().contains("bảo mật"));
+    }
+
+    @Test
+    void getSessionHistory_WhenDifferentMember_ShouldThrowAccessDenied() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+
+        assertThrows(AccessDeniedException.class,
+                () -> aiChatService.getSessionHistory(500L, 999L, "MEMBER"));
+    }
+
+    @Test
+    void getSessionHistory_ShouldReturnOrderedMessages() {
+        AiChatMessage m1 = new AiChatMessage();
+        ReflectionTestUtils.setField(m1, "id", 1L);
+        m1.setSession(session);
+        m1.setSender("member");
+        m1.setMessage("Xin chào");
+        m1.setCreatedAt(LocalDateTime.now().minusMinutes(2));
+
+        AiChatMessage m2 = new AiChatMessage();
+        ReflectionTestUtils.setField(m2, "id", 2L);
+        m2.setSession(session);
+        m2.setSender("ai");
+        m2.setMessage("Chào bạn!");
+        m2.setCreatedAt(LocalDateTime.now().minusMinutes(1));
+
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of(m1, m2));
+
+        List<AiChatMessageDto> history = aiChatService.getSessionHistory(500L, 100L, "MEMBER");
+
+        assertEquals(2, history.size());
+        assertEquals("member", history.get(0).sender());
+        assertEquals("ai", history.get(1).sender());
+    }
+}

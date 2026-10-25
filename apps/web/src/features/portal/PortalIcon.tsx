@@ -11,18 +11,18 @@ const paths: Record<PortalIconName, string> = {
   check: 'M9 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4 M9 2h6v4H9z M8 14l3 3 5-6',
   scan: 'M8 3H3v5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5 M3 12h18 M8 8h1 M15 8h1 M8 16h1 M15 16h1',
   catalog: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 17h7 M17.5 14v7',
-  chart: 'M4 3v18h17 M9 16v-5 M14 16V7 M19 16v-9',
-  profile: 'M20 21v-2a7 7 0 0 0-14 0v2 M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
+  chart: 'M3 3v18h18 M8.5 16v-5 M13.5 16V7 M18.5 16v-9',
+  profile: 'M19 21v-2a7 7 0 0 0-14 0v2 M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
   home: 'm3 10 9-7 9 7 M5 9v12h14V9 M9 21v-8h6v8',
   logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
-  search: 'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
+  search: 'M21 21l-4.35-4.35 M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   arrow: 'M5 12h14 M13 6l6 6-6 6',
   building: 'M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1',
 };
 
 export function PortalIcon({ name, size = 20, style }: { name: PortalIconName; size?: number; style?: CSSProperties }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" style={style}>
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" style={{ display: 'block', flexShrink: 0, ...style }}>
     <path d={paths[name]} />
   </svg>;
 }

@@ -6,4 +6,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CoachRepository extends JpaRepository<Coach, Long> {
+    @org.springframework.data.jpa.repository.Query("""
+            select c from Coach c join fetch c.user u
+            where c.employmentStatus = 'active' and u.status = 'active' and u.deletedAt is null
+            order by u.fullName, c.userId
+            """)
+    java.util.List<Coach> findPublicCoaches();
 }

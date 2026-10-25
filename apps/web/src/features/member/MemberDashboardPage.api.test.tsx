@@ -24,7 +24,7 @@ it('renders a member without a subscription using the real API client and an omi
   const root = createRoot(host);
   try {
     await act(async () => root.render(<MemoryRouter><MemberDashboardPage /></MemoryRouter>));
-    expect(host.textContent).toContain('Hành trình của bạn bắt đầu tại đây');
+    expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
     expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
     expect(host.querySelector('a[href="/member/packages"]')).not.toBeNull();
     // The same transport fix must cover packages and member cards as well.

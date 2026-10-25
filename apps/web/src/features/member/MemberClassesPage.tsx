@@ -291,13 +291,13 @@ export function MemberClassesPage() {
 
       {notice && (
         <div className="portal-card" role="status" style={{ marginBottom: 16, borderColor: 'rgba(46, 107, 79, 0.35)', background: 'rgba(46, 107, 79, 0.06)' }}>
-          <strong style={{ color: '#2e6b4f' }}>{notice}</strong>
+          <strong style={{ color: '#86efac' }}>{notice}</strong>
         </div>
       )}
 
       {actionError && (
         <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>
-          <strong style={{ color: '#9e2a2b' }}>{actionError}</strong>
+          <strong style={{ color: '#fca5a5' }}>{actionError}</strong>
           <div style={{ marginTop: 8 }}>
             <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
               Kiểm tra gói tập của tôi

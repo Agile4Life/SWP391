@@ -53,6 +53,13 @@ describe('SCRUM-86 packages', () => {
   let host: HTMLDivElement;
   let root: Root;
 
+  it('shows package data without inventing VIP facilities or PT benefits', async () => {
+    api.packages.mockResolvedValue([{ ...higherPackage, description: 'Lớp nhóm và phòng tập.' }]);
+    await render();
+    expect(host.textContent).toContain('Lớp nhóm và phòng tập.');
+    expect(host.textContent).not.toMatch(/Hồ bơi|Sauna|khăn tập|1-kèm-1|Gói Đặc Quyền VIP/);
+  });
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');

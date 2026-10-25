@@ -130,7 +130,7 @@ describe('SCRUM-85 dashboard', () => {
     await renderDashboard();
     expect(host.textContent).toContain('Không thể tải thông tin gói tập');
     expect(host.textContent).toContain('Yoga');
-    expect(host.textContent).toContain('Chưa thể hiển thị lịch 7 ngày chính xác');
+    expect(host.textContent).toContain('Xem lịch lớp để kiểm tra buổi học.');
     expect(host.textContent).not.toContain('2026-10-17');
   });
 
@@ -147,7 +147,7 @@ describe('SCRUM-85 dashboard', () => {
       cancelledAt: '2026-10-16T11:00:00', cancelReason: 'Cancelled by MEMBER',
     }]);
     await renderDashboard();
-    expect(host.textContent).toContain('Hành trình của bạn bắt đầu tại đây');
+    expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
     expect(host.textContent).not.toContain('Pilates Cancelled');
     expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
   });

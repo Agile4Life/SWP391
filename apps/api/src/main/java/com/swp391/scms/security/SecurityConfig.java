@@ -48,6 +48,7 @@ public class SecurityConfig {
                     .authenticationEntryPoint(authenticationEntryPoint)
                     .accessDeniedHandler(accessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
                     .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                     // Profile extensions (SCRUM-66)
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
@@ -77,6 +78,16 @@ public class SecurityConfig {
 
                     // Reports (SCRUM-79)
                     .requestMatchers("/api/v1/reports/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/my", "/api/v1/training-plans/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/*", "/api/v1/training-plans/*").hasAnyRole("COACH", "CENTER_MANAGER", "MEMBER")
+                    .requestMatchers("/api/v1/coaching/training-plans/**", "/api/v1/coaching/training-plans",
+                            "/api/v1/training-plans/**", "/api/v1/training-plans").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/ai/generate-workout-plan", "/api/v1/ai/recommend",
+                            "/api/v1/ai/recommendations/**").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coaching/evaluations").hasAnyRole("COACH", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,

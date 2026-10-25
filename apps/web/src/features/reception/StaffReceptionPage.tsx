@@ -178,7 +178,7 @@ export function StaffReceptionPage() {
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
             </h2>
-            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền truy cập quầy lễ tân &amp; thu ngân.
             </p>
             <a href="/portal" className="btn-secondary">
@@ -278,7 +278,7 @@ export function StaffReceptionPage() {
     <div className="portal-container">
       <PageHeader
         eyebrow="Lễ tân &amp; Thu ngân"
-        title="Quầy lễ tân &amp; Thu ngân trực tiếp"
+        title="Quầy lễ tân"
       />
 
       {/* Thanh tra cứu hội viên (BR-01, BR-05) */}
@@ -302,15 +302,15 @@ export function StaffReceptionPage() {
                 <span>Đang tìm...</span>
               </>
             ) : (
-              'Tra Cứu Hội Viên'
+              'Tra cứu hội viên'
             )}
           </button>
         </form>
 
         {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
         {searchResults.length > 1 && (
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ECE7E1' }}>
-            <div style={{ fontSize: '0.86rem', color: '#7E7771', marginBottom: '8px' }}>
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)' }}>
+            <div style={{ fontSize: '0.86rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
               Tìm thấy {searchResults.length} hội viên. Chọn hội viên để kiểm tra yêu cầu:
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -336,9 +336,9 @@ export function StaffReceptionPage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="portal-card-title">Yêu Cầu Gói Tập Đang Chờ Thanh Toán ({pendingList.length})</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#7E7771' }}>
-              Danh sách các gói tập do Hội viên đã tự chọn đăng ký/gia hạn/nâng cấp và đang chờ Lễ tân xác nhận thu tiền.
+            <h2 className="portal-card-title">Gói tập chờ thanh toán ({pendingList.length})</h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
+              Xác nhận thu tiền cho gói tập hội viên đã chọn.
             </p>
           </div>
           <button
@@ -364,8 +364,8 @@ export function StaffReceptionPage() {
                   alignItems: 'center',
                   padding: '14px 18px',
                   borderRadius: '10px',
-                  border: '1px solid #E5DFD7',
-                  backgroundColor: '#FFFFFF',
+                  border: '1px solid var(--color-border-medium)',
+                  backgroundColor: 'var(--color-bg-card)',
                 }}
               >
                 <div style={{ flex: 1 }}>
@@ -379,7 +379,7 @@ export function StaffReceptionPage() {
             ))}
           </div>
         ) : pendingList.length === 0 ? (
-          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#7E7771', fontSize: '0.9rem' }}>
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
             Hiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.
           </div>
         ) : (
@@ -406,8 +406,8 @@ export function StaffReceptionPage() {
                     gap: '12px',
                     padding: '14px 18px',
                     borderRadius: '10px',
-                    border: isSelected ? '2px solid #996515' : '1px solid #E5DFD7',
-                    backgroundColor: isSelected ? '#FAF6F0' : '#FFFFFF',
+                    border: isSelected ? '2px solid var(--color-accent-gold)' : '1px solid var(--color-border-medium)',
+                    backgroundColor: isSelected ? 'var(--color-bg-warm)' : 'var(--color-bg-card)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
@@ -418,25 +418,25 @@ export function StaffReceptionPage() {
                         style={{
                           fontFamily: 'monospace',
                           fontWeight: 700,
-                          color: '#996515',
+                          color: 'var(--color-accent-gold)',
                           fontSize: '0.92rem',
                         }}
                       >
                         Yêu cầu #{item.id}
                       </span>
                       <strong>{item.memberName}</strong>
-                      <span style={{ color: '#7E7771', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
                         ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.88rem', color: '#4A4541', marginTop: '4px' }}>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '4px' }}>
                       Gói hội viên đã chọn: <strong>{item.packageName}</strong> ({item.durationDays} ngày • {item.startDate} → {item.endDate})
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1A1614' }}>
+                      <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
                         {vnd(item.packagePrice)}
                       </div>
                       <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
@@ -456,7 +456,7 @@ export function StaffReceptionPage() {
                     <button
                       type="button"
                       className="btn-secondary btn-sm"
-                      style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                      style={{ color: '#fca5a5', borderColor: '#FCA5A5' }}
                       disabled={cancellingPendingId !== null || isSubmittingPayment}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -473,13 +473,13 @@ export function StaffReceptionPage() {
         )}
       </div>
 
-      {/* Mục Yêu Cầu Bảo Lưu Gói Tập Đang Chờ Xử Lý */}
+      {/* Mục Yêu cầu bảo lưu */}
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="portal-card-title">Yêu Cầu Bảo Lưu Gói Tập Đang Chờ Xử Lý ({holdList.length})</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#7E7771' }}>
-              Hội viên chủ động gửi yêu cầu bảo lưu kèm lý do. Khi Lễ tân xác nhận, các lịch học tương lai của hội viên sẽ được hủy tự động.
+            <h2 className="portal-card-title">Yêu cầu bảo lưu ({holdList.length})</h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)' }}>
+              Duyệt bảo lưu sẽ hủy các lịch học tương lai của hội viên.
             </p>
           </div>
           <button
@@ -500,8 +500,8 @@ export function StaffReceptionPage() {
               style={{
                 padding: '14px 18px',
                 borderRadius: '10px',
-                border: '1px solid #E5DFD7',
-                backgroundColor: '#FFFFFF',
+                border: '1px solid var(--color-border-medium)',
+                backgroundColor: 'var(--color-bg-card)',
               }}
             >
               <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
@@ -509,7 +509,7 @@ export function StaffReceptionPage() {
             </div>
           </div>
         ) : holdList.length === 0 ? (
-          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#7E7771', fontSize: '0.9rem' }}>
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
             Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.
           </div>
         ) : (
@@ -527,8 +527,8 @@ export function StaffReceptionPage() {
                     gap: '14px',
                     padding: '16px 18px',
                     borderRadius: '10px',
-                    border: '1px solid #E5DFD7',
-                    backgroundColor: '#FAF8F5',
+                    border: '1px solid var(--color-border-medium)',
+                    backgroundColor: 'var(--color-bg-warm)',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 260 }}>
@@ -537,19 +537,19 @@ export function StaffReceptionPage() {
                         style={{
                           fontFamily: 'monospace',
                           fontWeight: 700,
-                          color: '#996515',
+                          color: 'var(--color-accent-gold)',
                           fontSize: '0.92rem',
                         }}
                       >
                         Bảo lưu #{item.id}
                       </span>
                       <strong>{item.memberName}</strong>
-                      <span style={{ color: '#7E7771', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
                         ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
                       </span>
                       <span className="badge badge-warning">CHỜ DUYỆT BẢO LƯU</span>
                     </div>
-                    <div style={{ fontSize: '0.88rem', color: '#4A4541', marginTop: '6px' }}>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
                       Gói tập đang hoạt động: <strong>{item.packageName}</strong> ({item.startDate} → {item.endDate})
                     </div>
                     <div
@@ -557,10 +557,10 @@ export function StaffReceptionPage() {
                         marginTop: '8px',
                         padding: '8px 12px',
                         borderRadius: '8px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #ECE7E1',
+                        backgroundColor: 'var(--color-bg-card)',
+                        border: '1px solid var(--color-border-subtle)',
                         fontSize: '0.88rem',
-                        color: '#1A1614',
+                        color: 'var(--color-text-main)',
                       }}
                     >
                       <strong>Lý do hội viên nhập:</strong> {item.holdReason}
@@ -596,7 +596,7 @@ export function StaffReceptionPage() {
         {/* Thông tin hội viên tìm thấy (BR-01 Empty state & BR-05 Masked CCCD) */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Thông Tin Hội Viên</h2>
+            <h2 className="portal-card-title">Thông tin hội viên</h2>
             {selectedMember && (
               <span className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
                 {selectedPending ? 'CHỜ THANH TOÁN' : selectedMember.status?.toUpperCase()}
@@ -632,7 +632,7 @@ export function StaffReceptionPage() {
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
                   <span>Số CCCD (Bảo mật)</span>
-                  <span style={{ fontFamily: 'monospace', color: '#4A4541' }}>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--color-text-main)' }}>
                     {maskCitizenId(selectedMember.citizenId)}
                   </span>
                 </div>
@@ -648,7 +648,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>Thời hạn gói</span>
-                  <span style={{ color: '#996515', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
                     {selectedPending
                       ? `${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} ngày)`
                       : selectedMember.endDate || 'Chưa kích hoạt'}
@@ -660,10 +660,10 @@ export function StaffReceptionPage() {
             /* BR-01: Trạng thái trống rõ ràng */
             <div className="portal-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: '#1A1614' }}>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: 'var(--color-text-main)' }}>
                 {hasSearched ? 'Không tìm thấy hội viên' : 'Chưa chọn hội viên'}
               </h3>
-              <p style={{ color: '#7E7771', fontSize: '0.88rem', margin: 0 }}>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
                   ? `Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`
                   : 'Hãy ấn vào một Yêu cầu đang chờ ở danh sách trên hoặc tra cứu SĐT hội viên.'}
@@ -675,14 +675,14 @@ export function StaffReceptionPage() {
         {/* Panel thu ngân & Xác nhận gói tập do Hội viên đã chọn */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Xác Nhận Thanh Toán Gói Tập (POS)</h2>
+            <h2 className="portal-card-title">Xác nhận thanh toán</h2>
           </div>
 
           <form onSubmit={handlePayment}>
             {/* Gói tập cố định theo lựa chọn của Hội viên — Staff không được tự chọn/đổi gói */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="pos-package">
-                Gói Tập Hội Viên Đã Chọn (Cố định theo yêu cầu của Hội viên)
+                Gói Tập Hội viên Đã Chọn (Cố định theo yêu cầu của Hội viên)
               </label>
               <input
                 id="pos-package"
@@ -697,8 +697,8 @@ export function StaffReceptionPage() {
                 readOnly
                 style={{
                   fontWeight: 600,
-                  color: selectedPending ? '#1A1614' : '#7E7771',
-                  backgroundColor: '#FAF8F5',
+                  color: selectedPending ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                  backgroundColor: 'var(--color-bg-warm)',
                   cursor: 'not-allowed',
                 }}
               />
@@ -708,7 +708,7 @@ export function StaffReceptionPage() {
               {/* BR-02: Số tiền hiển thị theo giá gói và KHÔNG cho sửa tay */}
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="pos-amount">
-                  Số Tiền Thu (Không sửa tay)
+                  Số tiền Thu (Không sửa tay)
                 </label>
                 <input
                   id="pos-amount"
@@ -720,8 +720,8 @@ export function StaffReceptionPage() {
                   style={{
                     fontWeight: 700,
                     fontSize: '1rem',
-                    color: '#996515',
-                    backgroundColor: '#FAF8F5',
+                    color: 'var(--color-accent-gold)',
+                    backgroundColor: 'var(--color-bg-warm)',
                     cursor: 'not-allowed',
                   }}
                 />
@@ -730,7 +730,7 @@ export function StaffReceptionPage() {
               {/* BR-03: Bắt buộc chọn hình thức thanh toán */}
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="pos-method">
-                  Hình Thức Thanh Toán *
+                  Hình thức Thanh Toán *
                 </label>
                 <Select
                   id="pos-method"
