@@ -235,6 +235,7 @@ export function Select({
           className="ui-select__native"
           tabIndex={-1}
           aria-hidden="true"
+          aria-label={aria['aria-label']}
           required={required}
           disabled={disabled}
           value={value}

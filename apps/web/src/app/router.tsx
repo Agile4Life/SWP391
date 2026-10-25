@@ -27,6 +27,7 @@ import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
 import { UserManagerPage } from '../features/manager/UserManagerPage';
 import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
 import { ManagerCancellationPage } from '../features/manager/ManagerCancellationPage';
+import { ManagerAuditLogsPage } from '../features/manager/ManagerAuditLogsPage';
 
 export const router = createBrowserRouter([
   // Public Routes
@@ -160,6 +161,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/cancellations',
             element: <ManagerCancellationPage />,
+          },
+          {
+            path: '/manager/audit-logs',
+            element: <ManagerAuditLogsPage />,
           },
         ],
       },
