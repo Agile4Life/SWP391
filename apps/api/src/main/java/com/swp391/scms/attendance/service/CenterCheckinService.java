@@ -205,7 +205,6 @@ public class CenterCheckinService {
         );
     }
 
-<<<<<<< Updated upstream
     /**
      * Tự động checkout các lượt check-in GRANTED của member bị treo quá 12 tiếng.
      */
@@ -244,11 +243,8 @@ public class CenterCheckinService {
         return staleVisits.size();
     }
 
-    private CheckinDto saveDeniedRecord(Member member, LocalDateTime now, String gate, User recorder, String reasonKey) {
-=======
     private CheckinDto saveDeniedRecord(Member member, LocalDateTime now, String gate, User recorder, String reasonKey,
                                         String packageName, String avatarUrl, Long remainingDays) {
->>>>>>> Stashed changes
         CenterCheckin checkin = new CenterCheckin();
         checkin.setMember(member);
         checkin.setCheckInTime(now);

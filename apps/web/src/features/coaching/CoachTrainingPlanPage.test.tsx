@@ -48,12 +48,30 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     document.body.append(host);
     root = createRoot(host);
 
-    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
-      this.open = true;
-    });
-    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-      this.open = false;
-    });
+    if (typeof HTMLDialogElement !== 'undefined') {
+      if (!HTMLDialogElement.prototype.showModal) {
+        Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+          value: function (this: HTMLDialogElement) { this.setAttribute('open', ''); },
+          writable: true,
+          configurable: true,
+        });
+      } else {
+        vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) {
+          this.setAttribute('open', '');
+        });
+      }
+      if (!HTMLDialogElement.prototype.close) {
+        Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+          value: function (this: HTMLDialogElement) { this.removeAttribute('open'); },
+          writable: true,
+          configurable: true,
+        });
+      } else {
+        vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) {
+          this.removeAttribute('open');
+        });
+      }
+    }
 
     localStorage.setItem(
       AUTH_STORAGE_KEY,

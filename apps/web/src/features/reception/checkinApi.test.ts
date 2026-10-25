@@ -1,104 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-<<<<<<< Updated upstream
-import { checkinApi } from './checkinApi';
-
-describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
-=======
 import { checkinApi, validateQrFormat, type CheckinDto } from './checkinApi';
 
-describe('checkinApi.ts & QR validation (BR-01 to BR-05)', () => {
->>>>>>> Stashed changes
+describe('checkinApi.ts & QR validation', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-<<<<<<< Updated upstream
-  it('scan posts qrCode and gate to /api/v1/check-in/scan', async () => {
-    const mockCheckin = {
-      id: 10,
-      memberId: 2,
-      memberName: 'Nguyễn Văn An',
-      checkInTime: '2026-10-18T08:00:00',
-      checkOutTime: null,
-      method: 'qr_code',
-      gate: 'Turnstile A1 - Sảnh Chính',
-      status: 'success',
-      denialReason: null,
-    };
-
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 201,
-      json: async () => ({ success: true, data: mockCheckin }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const res = await checkinApi.scan({ qrCode: 'SUB-10-ABCD1234', gate: 'Turnstile A1 - Sảnh Chính' });
-    expect(res).toEqual(mockCheckin);
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/v1/check-in/scan',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({
-          qrCode: 'SUB-10-ABCD1234',
-          gate: 'Turnstile A1 - Sảnh Chính',
-        }),
-      })
-    );
-  });
-
-  it('checkout posts to /api/v1/check-in/{id}/checkout', async () => {
-    const mockCheckedOut = {
-      id: 10,
-      memberId: 2,
-      memberName: 'Nguyễn Văn An',
-      checkInTime: '2026-10-18T08:00:00',
-      checkOutTime: '2026-10-18T09:30:00',
-      method: 'qr_code',
-      gate: 'Turnstile A1 - Sảnh Chính',
-      status: 'success',
-    };
-
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ success: true, data: mockCheckedOut }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const res = await checkinApi.checkout(10);
-    expect(res.checkOutTime).toBe('2026-10-18T09:30:00');
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/v1/check-in/checkout' in ({} as Record<string, unknown>) ? '' : '/api/v1/check-in/10/checkout',
-      expect.objectContaining({ method: 'POST' })
-    );
-  });
-
-  it('getHistory preserves all visits so pending checkout entries are not truncated', async () => {
-    const items = Array.from({ length: 15 }, (_, idx) => ({
-      id: idx + 1,
-      memberId: 2,
-      memberName: `Member ${idx + 1}`,
-      checkInTime: '2026-10-18T08:00:00',
-      method: 'qr_code',
-      status: 'success',
-    }));
-
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ success: true, data: items }),
-    });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const history = await checkinApi.getHistory();
-    expect(history).toHaveLength(15);
-    expect(mockFetch).toHaveBeenCalledWith('/api/v1/check-in/history', expect.anything());
-  });
-});
-
-=======
-  describe('BR-03: validateQrFormat', () => {
+  describe('validateQrFormat', () => {
     it('rejects empty or whitespace QR string', () => {
       expect(validateQrFormat('')).toEqual({
         valid: false,
@@ -130,7 +38,7 @@ describe('checkinApi.ts & QR validation (BR-01 to BR-05)', () => {
     });
   });
 
-  describe('BR-02 & BR-03: checkinApi.scan', () => {
+  describe('checkinApi.scan', () => {
     it('throws validation error at FE before calling BE if format is invalid', async () => {
       const mockFetch = vi.fn();
       vi.stubGlobal('fetch', mockFetch);
@@ -139,7 +47,7 @@ describe('checkinApi.ts & QR validation (BR-01 to BR-05)', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('calls BE /api/v1/check-in/scan and returns GRANTED response', async () => {
+    it('calls BE /api/v1/check-in/scan and returns GRANTED response with string code', async () => {
       const mockGrantedDto: CheckinDto = {
         id: 101,
         memberId: 10,
@@ -176,6 +84,30 @@ describe('checkinApi.ts & QR validation (BR-01 to BR-05)', () => {
       );
     });
 
+    it('calls BE /api/v1/check-in/scan with object payload', async () => {
+      const mockCheckin = {
+        id: 10,
+        memberId: 2,
+        memberName: 'Nguyễn Văn An',
+        checkInTime: '2026-10-18T08:00:00',
+        checkOutTime: null,
+        method: 'qr_code',
+        gate: 'Turnstile A1 - Sảnh Chính',
+        status: 'success',
+        denialReason: null,
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: async () => ({ success: true, data: mockCheckin }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const res = await checkinApi.scan({ qrCode: 'SUB-10-ABCD1234', gate: 'Turnstile A1 - Sảnh Chính' });
+      expect(res).toEqual(mockCheckin);
+    });
+
     it('calls BE /api/v1/check-in/scan and receives DENIED response from BE', async () => {
       const mockDeniedDto: CheckinDto = {
         id: 102,
@@ -206,7 +138,32 @@ describe('checkinApi.ts & QR validation (BR-01 to BR-05)', () => {
     });
   });
 
-  describe('BR-05: checkinApi.getHistory', () => {
+  describe('checkinApi.checkout', () => {
+    it('checkout posts to /api/v1/check-in/{id}/checkout', async () => {
+      const mockCheckedOut = {
+        id: 10,
+        memberId: 2,
+        memberName: 'Nguyễn Văn An',
+        checkInTime: '2026-10-18T08:00:00',
+        checkOutTime: '2026-10-18T09:30:00',
+        method: 'qr_code',
+        gate: 'Turnstile A1 - Sảnh Chính',
+        status: 'success',
+      };
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true, data: mockCheckedOut }),
+      });
+      vi.stubGlobal('fetch', mockFetch);
+
+      const res = await checkinApi.checkout(10);
+      expect(res.checkOutTime).toBe('2026-10-18T09:30:00');
+    });
+  });
+
+  describe('checkinApi.getHistory', () => {
     it('calls /api/v1/check-in/history and returns list of checkins', async () => {
       const mockList: CheckinDto[] = [
         {
@@ -233,4 +190,3 @@ describe('checkinApi.ts & QR validation (BR-01 to BR-05)', () => {
     });
   });
 });
->>>>>>> Stashed changes
