@@ -558,3 +558,43 @@
   cursor: not-allowed !important;
 }
 
+/* SCRUM-126: inherit the Member Portal palette; preserve the existing glass shader. */
+.member-ai-chat { --color-accent-gold: var(--portal-salmon); color: var(--portal-paper); }
+.member-ai-chat .liquid-glass-chat-trigger { right: 20px; bottom: 20px; z-index: 90; }
+.member-ai-chat .liquid-glass-chat-window { right: 20px; bottom: 86px; z-index: 90; max-height: calc(100dvh - 110px); filter: drop-shadow(0 12px 32px #00000026); }
+/* Important declarations below override the legacy chat-only important rules above. */
+.member-ai-chat .liquid-glass-chat-container { background: color-mix(in srgb, var(--portal-surface) 94%, transparent) !important; border-color: var(--portal-border) !important; box-shadow: 0 16px 48px #00000026 !important; }
+.member-ai-chat .liquid-glass-chat-trigger .glass-button { background: color-mix(in srgb, var(--portal-surface) 94%, transparent) !important; border-color: var(--portal-salmon) !important; box-shadow: 0 6px 22px #00000026 !important; }
+.member-ai-chat .liquid-glass-chat-trigger .glass-button-content { color: var(--portal-salmon) !important; text-shadow: none !important; }
+.member-ai-chat .liquid-glass-chat-trigger canvas { opacity: .12; }
+.member-ai-chat .liquid-glass-chat-header, .member-ai-chat .liquid-glass-chat-input-bar { background: var(--portal-surface) !important; border-color: var(--portal-border) !important; }
+.member-ai-chat .liquid-glass-chat-body { min-height: 0; background: color-mix(in srgb, var(--portal-ink) 94%, transparent) !important; }
+.member-ai-chat .liquid-glass-bot-name { font-family: var(--font-sans); font-size: 15px; color: var(--portal-paper) !important; text-shadow: none; }
+.member-ai-chat .liquid-glass-bot-status, .member-ai-chat .liquid-glass-close-btn { color: var(--portal-muted) !important; }
+.member-ai-chat .liquid-glass-close-btn:hover { background: var(--portal-tint); color: var(--portal-paper) !important; }
+.member-ai-chat .user-bubble { background: var(--portal-tint) !important; border-color: var(--portal-border) !important; color: var(--portal-paper) !important; box-shadow: none !important; }
+.member-ai-chat .chat-bubble .chat-bubble-text { color: var(--portal-paper) !important; }
+.member-ai-chat .chat-bubble .chat-bubble-meta { color: var(--portal-muted) !important; }
+.member-ai-chat .bot-bubble, .member-ai-chat .liquid-glass-input { background: var(--portal-raised) !important; border-color: var(--portal-border) !important; color: var(--portal-paper) !important; box-shadow: none !important; }
+.member-ai-chat .liquid-glass-input { resize: none; min-width: 0; line-height: 1.5; max-height: 110px; }
+.member-ai-chat .liquid-glass-input::placeholder { color: var(--portal-muted) !important; }
+.member-ai-chat .liquid-glass-input:focus { border-color: var(--portal-salmon) !important; }
+.member-ai-chat .suggestion-chip { background: var(--portal-raised) !important; border-color: var(--portal-border) !important; color: var(--portal-paper) !important; }
+.member-ai-chat .suggestion-chip:hover { background: var(--portal-tint) !important; border-color: var(--portal-salmon) !important; }
+.member-ai-chat .liquid-glass-send-btn { background: var(--portal-salmon) !important; color: var(--portal-ink) !important; }
+.member-ai-chat .liquid-glass-send-btn:hover:not(:disabled) { background: var(--portal-salmon) !important; }
+.member-ai-chat button:disabled { cursor: not-allowed !important; opacity: .5; }
+.member-ai-chat :is(button, select, textarea):focus-visible { outline: 2px solid var(--portal-salmon) !important; outline-offset: 2px; }
+.ai-chat-session-label { display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: var(--portal-muted); background: var(--portal-surface); font-size: 11px; }
+.ai-chat-session-label select { min-width: 0; flex: 1; background: var(--portal-raised); color: var(--portal-paper); border: 1px solid var(--portal-border); border-radius: 8px; padding: 6px; }
+.ai-chat-empty { color: var(--portal-muted); font-size: 12px; }
+.ai-chat-error { padding: 10px 18px; font-size: 12px; color: var(--portal-danger, #e99090); background: var(--portal-surface); }
+.ai-chat-error button { display: block; border: 0; padding: 8px 0; background: none; color: var(--portal-salmon); text-decoration: underline; cursor: pointer; }
+@media (max-width: 600px) {
+  .member-ai-chat .liquid-glass-chat-trigger { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .member-ai-chat .liquid-glass-chat-window { right: 12px; width: calc(100vw - 24px); max-width: none; bottom: 82px; max-height: calc(100dvh - 100px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .member-ai-chat *, .member-ai-chat *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+

@@ -1,0 +1,56 @@
+package com.swp391.scms.ai;
+
+import com.swp391.scms.ai.client.AiChatProvider;
+import com.swp391.scms.common.exception.ServiceUnavailableException;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+
+class AiChatProviderTest {
+    @Test void openAiUsesRealRequestContractAndExtractsText() {
+        RestClient.Builder builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://api.openai.com/v1/chat/completions"))
+                .andExpect(header("Authorization", "Bearer unit-test-key"))
+                .andExpect(jsonPath("$.messages[1].content").value("Câu hỏi"))
+                .andRespond(withSuccess("{\"choices\":[{\"message\":{\"content\":\"Provider answer\"}}]}", MediaType.APPLICATION_JSON));
+        var provider = new AiChatProvider("openai", "unit-test-key", "test-model", builder);
+        assertEquals("Provider answer", provider.generate("System", List.of(new AiChatProvider.Turn("user", "Câu hỏi"))));
+        server.verify();
+    }
+
+    @Test void geminiUsesRealRequestContractAndExtractsText() {
+        RestClient.Builder builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent"))
+                .andExpect(header("x-goog-api-key", "unit-test-key"))
+                .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Gemini answer\"}]}}]}", MediaType.APPLICATION_JSON));
+        assertEquals("Gemini answer", new AiChatProvider("gemini", "unit-test-key", "test-model", builder)
+                .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));
+        server.verify();
+    }
+
+    @Test void disabledProviderNeverReturnsMockContent() {
+        var exception = assertThrows(ServiceUnavailableException.class, () -> new AiChatProvider("mock", "", "", RestClient.builder())
+                .generate("System", List.of()));
+        assertEquals("The AI assistant is not configured.", exception.getMessage());
+        assertEquals("AI_CHAT_NOT_CONFIGURED", exception.getErrorCode());
+        assertEquals("ai.chat.provider.not_configured", exception.getMessageKey());
+    }
+
+    @Test void upstreamErrorsAreSanitized() {
+        RestClient.Builder builder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(anything()).andRespond(withServerError());
+        var exception = assertThrows(ServiceUnavailableException.class, () -> new AiChatProvider("openai", "unit-test-key", "test-model", builder)
+                .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));
+        assertFalse(exception.toString().contains("unit-test-key"));
+        assertEquals("The AI assistant is temporarily unavailable.", exception.getMessage());
+        assertEquals("AI_CHAT_UNAVAILABLE", exception.getErrorCode());
+    }
+}

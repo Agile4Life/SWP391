@@ -1,3 +1,10 @@
+scms:
+  ai:
+    chat:
+      provider: ${SCMS_AI_CHAT_PROVIDER:${SCMS_AI_PROVIDER:disabled}}
+      api-key: ${SCMS_AI_CHAT_API_KEY:${SCMS_AI_API_KEY:}}
+      model: ${SCMS_AI_CHAT_MODEL:${SCMS_AI_MODEL:}}
+
 server:
   port: 8080
   servlet:

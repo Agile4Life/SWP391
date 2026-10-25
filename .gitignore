@@ -34,3 +34,7 @@ target/
 !.env.example
 .vercel
 .env*
+
+# SCRUM-126 local screenshots are attached to PR #59, not shipped in source.
+/docs/qa/scrum126-desktop.png
+/docs/qa/scrum126-mobile.png
