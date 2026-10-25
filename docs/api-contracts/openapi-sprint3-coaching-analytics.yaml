@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: SCMS Sprint 3 - Coaching, AI Recommendation & Utilization Analytics APIs
+  version: 1.0.0
+  description: >
+    OpenAPI contract for Training Plans (SCRUM-116), AI Workout Recommendations (SCRUM-117),
+    Session Evaluations (SCRUM-119), and Class Utilization Reports (SCRUM-120).
+paths:
+  /api/v1/coaching/training-plans:
+    get:
+      summary: List training plans filtered by memberId or coachId
+      tags: [Coaching]
+      parameters:
+        - in: query
+          name: memberId
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: coachId
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Training plans retrieved successfully
+    post:
+      summary: Create a new draft training plan (SCRUM-116)
+      tags: [Coaching]
+      responses:
+        '201':
+          description: Training plan created successfully
+  /api/v1/coaching/training-plans/my:
+    get:
+      summary: Retrieve active training plans for current member (SCRUM-116, SCRUM-129)
+      tags: [Coaching]
+      responses:
+        '200':
+          description: Active training plans retrieved successfully
+  /api/v1/coaching/training-plans/{id}/items:
+    post:
+      summary: Add an exercise item to a draft training plan (SCRUM-116)
+      tags: [Coaching]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: Exercise item added successfully
+  /api/v1/coaching/training-plans/{id}/activate:
+    patch:
+      summary: Activate a draft training plan and archive older active plans (SCRUM-116)
+      tags: [Coaching]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Training plan activated successfully
+  /api/v1/ai/generate-workout-plan:
+    post:
+      summary: Generate AI workout recommendation from member health metrics (SCRUM-117)
+      tags: [AI Coaching]
+      responses:
+        '201':
+          description: AI workout recommendation generated successfully
+  /api/v1/ai/recommendations/{id}/apply:
+    post:
+      summary: Apply AI workout recommendation into a draft training plan (SCRUM-117)
+      tags: [AI Coaching]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '201':
+          description: AI recommendation applied to training plan successfully
+  /api/v1/coaching/evaluations:
+    post:
+      summary: Submit coach session evaluation and progress score (SCRUM-119)
+      tags: [Coaching]
+      responses:
+        '201':
+          description: Session evaluation created successfully
+  /api/v1/coaching/evaluations/member/{memberId}:
+    get:
+      summary: Retrieve session evaluations for a member (SCRUM-119, SCRUM-129)
+      tags: [Coaching]
+      parameters:
+        - in: path
+          name: memberId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Session evaluations retrieved successfully
+  /api/v1/reports/class-utilization:
+    get:
+      summary: Retrieve class occupancy and attendance utilization report (SCRUM-120, SCRUM-124)
+      tags: [Analytics]
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: disciplineId
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Class utilization report retrieved successfully
