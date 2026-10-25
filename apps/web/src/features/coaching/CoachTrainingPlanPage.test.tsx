@@ -145,8 +145,10 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(nameInput).toBeDefined();
 
     await act(async () => {
-      nameInput.value = 'Dumbbell Hammer Curl';
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      nativeSetter?.call(nameInput, 'Dumbbell Hammer Curl');
       nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nameInput.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
     const submitBtn = host.querySelector('form.exercise-form-card button[type="submit"]') as HTMLButtonElement;

@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
-import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import {
   coachingApi,
@@ -61,7 +60,7 @@ export function CoachClassesPage() {
 
   const selectedDateStr = daysOfWeek[selectedDayOffset]?.dateStr;
 
-  const loadWeeklySessions = async () => {
+  const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -73,11 +72,11 @@ export function CoachClassesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentMonday, currentUser?.id]);
 
   useEffect(() => {
-    loadWeeklySessions();
-  }, [currentMonday, currentUser?.id]);
+    void loadWeeklySessions();
+  }, [loadWeeklySessions]);
 
   const handlePrevWeek = () => {
     setCurrentMonday((prev) => {
@@ -148,8 +147,9 @@ export function CoachClassesPage() {
   return (
     <div className="coach-page">
       <PageHeader
+        eyebrow="Huấn luyện viên"
         title="Thời Khóa Biểu & Học Viên Phụ Trách"
-        subtitle={`HLV: ${currentUser?.fullName || currentUser?.name || 'Huấn luyện viên'} | Theo dõi lịch đứng lớp và quản lý sức khỏe, mục tiêu học viên.`}
+        subtitle={`HLV: ${currentUser?.name || 'Huấn luyện viên'} | Theo dõi lịch đứng lớp và quản lý sức khỏe, mục tiêu học viên.`}
       />
 
       <div className="coach-week-bar">

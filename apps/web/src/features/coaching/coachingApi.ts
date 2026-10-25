@@ -308,6 +308,13 @@ export const coachingApi = {
     ];
   },
 
+  getCoachWeeklySchedule: async (
+    coachId?: string | number,
+    mondayStr?: string
+  ): Promise<CoachSession[]> => {
+    return coachingApi.getCoachSchedule(coachId, mondayStr);
+  },
+
   getSessionStudents: async (sessionId: number, classId?: number): Promise<EnrolledStudent[]> => {
     try {
       const res = await apiFetch<EnrolledStudent[]>(

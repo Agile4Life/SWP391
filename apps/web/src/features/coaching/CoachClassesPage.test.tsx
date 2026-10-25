@@ -191,7 +191,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       expect(host.textContent).toContain('Mục tiêu thể lực (fitness_goal)');
       expect(host.textContent).toContain('Lưu ý sức khỏe & Chấn thương (health_notes)');
       expect(host.textContent).toContain('Lê Hoàng Long');
-      expect(host.textContent).toContain('Thoát vị đĩa đệm');
+      expect(host.textContent).toContain('thoát vị đĩa đệm');
     }
   });
 });

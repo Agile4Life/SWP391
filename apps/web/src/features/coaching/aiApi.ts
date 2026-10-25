@@ -232,7 +232,7 @@ export const aiApi = {
    */
   saveTrainingPlan: async (payload: TrainingPlanPayload, activate = true) => {
     try {
-      const plan = await apiFetch<any>('/coaching/training-plans', {
+      const plan = await apiFetch<{ id?: number; status?: string }>('/coaching/training-plans', {
         method: 'POST',
         body: JSON.stringify({
           member_id: payload.memberId,
