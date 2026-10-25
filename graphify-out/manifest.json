@@ -391,13 +391,13 @@
     "semantic_hash": ""
   },
   "apps/api/pom.xml": {
-    "mtime": 1792404048.0211453,
-    "ast_hash": "6e8e15ff51b0248be83a958d13196711",
+    "mtime": 1792943761.1579833,
+    "ast_hash": "723cdedba0128c1c94196395eb0d9877",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ScmsApplication.java": {
-    "mtime": 1792589686.3368237,
-    "ast_hash": "a5dbd3848c1a1bda94476a94944f4044",
+    "mtime": 1792943687.6228616,
+    "ast_hash": "b9c47b69332928567dc6122a6064dd94",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/AuthController.java": {
@@ -461,8 +461,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/security/SecurityConfig.java": {
-    "mtime": 1792690605.4356859,
-    "ast_hash": "b24e85bc5feb498d96a408af9fe0aaad",
+    "mtime": 1792943911.4540458,
+    "ast_hash": "20f23647e485742fee16ce0e70e96b66",
     "semantic_hash": ""
   },
   "apps/web/eslint.config.js": {
@@ -476,23 +476,23 @@
     "semantic_hash": ""
   },
   "apps/web/src/app/router.tsx": {
-    "mtime": 1792672753.6965332,
-    "ast_hash": "f219e6cecace5ce51c0ac9f8503573c6",
+    "mtime": 1792943950.0783548,
+    "ast_hash": "c5b5ce7ac3c4d44ea5195f511fdee4af",
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LoginPage.tsx": {
-    "mtime": 1792660524.589049,
+    "mtime": 1792943160.7577665,
     "ast_hash": "1d063524f4a2db3de149b025c4d533b5",
     "semantic_hash": ""
   },
   "apps/web/src/main.tsx": {
-    "mtime": 1792664480.6535683,
-    "ast_hash": "69f3eceef4741eada5b3a1ac103145b7",
+    "mtime": 1792943160.795998,
+    "ast_hash": "b359bd8bc2dd4b2a00be472cdbbaa510",
     "semantic_hash": ""
   },
   "apps/web/src/shared/api/client.ts": {
-    "mtime": 1792341167.0681026,
-    "ast_hash": "b975a1c8cc173e10abb0a7620f19bcf5",
+    "mtime": 1792943761.1802602,
+    "ast_hash": "e6079a5d7f44ff8b5f3ba2186903914c",
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/AppLayout.tsx": {
@@ -536,17 +536,17 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/health/HealthMetricController.java": {
-    "mtime": 1792660524.4985476,
-    "ast_hash": "4ed9329d6851bb51025fb1a38450b373",
+    "mtime": 1792943687.6333787,
+    "ast_hash": "fa8a90422639ce1341d9a75066b00dc2",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/health/HealthMetricService.java": {
-    "mtime": 1792660524.4995494,
-    "ast_hash": "0cbc06236b878901ee992dae10f809b4",
+    "mtime": 1792943687.6333787,
+    "ast_hash": "c156c3cf68240b067ff6c055f4d65592",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/health/MemberProgressLogRepository.java": {
-    "mtime": 1792660524.5005467,
+    "mtime": 1792943160.5609083,
     "ast_hash": "17231fefa746a7289641471b6a14369b",
     "semantic_hash": ""
   },
@@ -601,8 +601,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/users/UserRepository.java": {
-    "mtime": 1792404048.0401723,
-    "ast_hash": "ecf6b3a87225c1df441c106a42032ab8",
+    "mtime": 1792943160.5984905,
+    "ast_hash": "1e284362f50676c66d274d239ef21605",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/users/UserService.java": {
@@ -661,22 +661,22 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/LuxuryLoginForm.tsx": {
-    "mtime": 1792664925.8185802,
+    "mtime": 1792943160.7587662,
     "ast_hash": "e8e65f4fd1d2fb2a65903eae15eb790a",
     "semantic_hash": ""
   },
   "apps/web/src/features/classes/StaffClassesPage.tsx": {
-    "mtime": 1792668418.2143464,
+    "mtime": 1792943160.7607653,
     "ast_hash": "f90e5b2c542390cd4f2d4c28dcc56261",
     "semantic_hash": ""
   },
   "apps/web/src/features/coaching/CoachAttendancePage.tsx": {
-    "mtime": 1792668418.2123497,
-    "ast_hash": "776f197cc6f1eaa51382692aaa51147e",
+    "mtime": 1792943688.8561738,
+    "ast_hash": "6e8436b65e44ddb5755e0e1e2a289ba5",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/LandingPage.tsx": {
-    "mtime": 1792660524.5927732,
+    "mtime": 1792943160.7627664,
     "ast_hash": "fdce8d4f4c0e1a789a0467e484392478",
     "semantic_hash": ""
   },
@@ -796,42 +796,42 @@
     "semantic_hash": "e547d5e445f42efdca2e3572d6c59ef9"
   },
   "apps/web/src/features/manager/ManagerCatalogsPage.tsx": {
-    "mtime": 1792668418.2243662,
+    "mtime": 1792943160.7772956,
     "ast_hash": "92fd9334f2c56736e715154a89225b99",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/ManagerReportsPage.tsx": {
-    "mtime": 1792668418.2263522,
+    "mtime": 1792943160.7792914,
     "ast_hash": "d29b5aea61e81188e9bc53cc10dcddeb",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberCardPage.tsx": {
-    "mtime": 1792668418.2103467,
+    "mtime": 1792943160.7802887,
     "ast_hash": "d1325a5fbde99845caa96b7e4d680ce9",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberClassesPage.tsx": {
-    "mtime": 1792668418.1943474,
-    "ast_hash": "5f9e522b715fe4b27628a4b85205fdd0",
+    "mtime": 1792943160.7822948,
+    "ast_hash": "d960a5ba158cfad71e6008ce78f10e62",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberDashboardPage.tsx": {
-    "mtime": 1792668418.2303514,
+    "mtime": 1792943160.7848377,
     "ast_hash": "3680ccba2cf327cbe7d980ea5fab81f5",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberProfilePage.tsx": {
-    "mtime": 1792668418.1983593,
-    "ast_hash": "06ae7c0b1a976d61da7f843f38b0aa91",
+    "mtime": 1792943687.6569364,
+    "ast_hash": "e065d7af8ac200bc97cdb83fc6dec812",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/StaffCheckInPage.tsx": {
-    "mtime": 1792668418.2183528,
+    "mtime": 1792943687.8927624,
     "ast_hash": "5c9fcacb4d9612b07e380bf00a9f0b6e",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/StaffReceptionPage.tsx": {
-    "mtime": 1792668418.2203515,
+    "mtime": 1792943160.7949684,
     "ast_hash": "433f88b2c6c96fe6e1f9cf448bdf7d61",
     "semantic_hash": ""
   },
@@ -841,9 +841,9 @@
     "semantic_hash": "f069c3519399e4166c55b8786fdf5aee"
   },
   "apps/web/src/shared/liquid-glass/LiquidGlassChatbot.tsx": {
-    "mtime": 1792672450.602809,
-    "ast_hash": "8b9e3d84adbde23a5d539118b5b985b6",
-    "semantic_hash": "8b9e3d84adbde23a5d539118b5b985b6"
+    "mtime": 1792943980.385131,
+    "ast_hash": "b4c83cb724e42ae417c608c93c93e0f8",
+    "semantic_hash": ""
   },
   "apps/web/src/shared/liquid-glass/LiquidGlassContainer.tsx": {
     "mtime": 1790695503.1677015,
@@ -1196,7 +1196,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/auth/SmtpOtpDeliveryAdapter.java": {
-    "mtime": 1791012715.7319782,
+    "mtime": 1792943687.885697,
     "ast_hash": "2f9bb679ffe8bf1d8d7448fb621d1842",
     "semantic_hash": ""
   },
@@ -1336,8 +1336,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/facilities/repository/MembershipPackageRepository.java": {
-    "mtime": 1792690600.0309994,
-    "ast_hash": "4382d65c21903cbc942136daee15197c",
+    "mtime": 1792943160.55891,
+    "ast_hash": "96855ff6b83cd5e88e396515d599cd65",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/facilities/repository/RoomRepository.java": {
@@ -1391,8 +1391,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/finance/entity/Invoice.java": {
-    "mtime": 1792334432.2461877,
-    "ast_hash": "158a60528192817c2718e32af09313c0",
+    "mtime": 1792943761.1599777,
+    "ast_hash": "72bc3b6a8cd7fa699dadacd3775409b4",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/finance/entity/InvoiceItem.java": {
@@ -1421,22 +1421,22 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/finance/repository/InvoiceRepository.java": {
-    "mtime": 1790695503.1285293,
-    "ast_hash": "1b7eb65eb2e04e4a6e63b76b553f6cfe",
+    "mtime": 1792943761.161482,
+    "ast_hash": "b22ee52432a1bf46a50fab5530e73a3c",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/finance/repository/PaymentRepository.java": {
-    "mtime": 1792660524.4955668,
+    "mtime": 1792942948.4544744,
     "ast_hash": "1526014cfce45a3b6536737919107cb3",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/finance/service/InvoiceService.java": {
-    "mtime": 1792335722.4980357,
-    "ast_hash": "41a41fdbca7d36fe990ae8f97d96c8dc",
+    "mtime": 1792943761.1624877,
+    "ast_hash": "768f65ebe7a252022d2b9beb1dc1dd62",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java": {
-    "mtime": 1792660524.497547,
+    "mtime": 1792942948.4555256,
     "ast_hash": "96e11f00d97f09c6ff5b42d4aeb94546",
     "semantic_hash": ""
   },
@@ -1486,8 +1486,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/finance/InvoiceServiceTest.java": {
-    "mtime": 1791287068.6010437,
-    "ast_hash": "cb559f3b4e189d8060e055655c09d6de",
+    "mtime": 1792943761.1694865,
+    "ast_hash": "6ed8acf6d11c64838436981573865c37",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/finance/PaymentControllerTest.java": {
@@ -1496,13 +1496,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/finance/PaymentServiceTest.java": {
-    "mtime": 1792660524.5279965,
+    "mtime": 1792942948.5090034,
     "ast_hash": "1b1185f411f3a1eff49cd8d0fb4d4d1f",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/UserManagerPage.tsx": {
-    "mtime": 1792668418.228351,
-    "ast_hash": "1511d340e298c7ffe3071a3802ad7cca",
+    "mtime": 1792943160.7802887,
+    "ast_hash": "fa48d1c5dcdfe35b6cd3115f2d5b9e93",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/catalogApi.ts": {
@@ -2681,12 +2681,12 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1792665083.8231945,
+    "mtime": 1792943160.5238478,
     "ast_hash": "6178c9841bc78b19187f7c5817eb1db4",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792660524.471224,
+    "mtime": 1792943160.5258617,
     "ast_hash": "c024e4517708c8bda04354641ee6ddaf",
     "semantic_hash": ""
   },
@@ -2696,13 +2696,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/resources/application.yml": {
-    "mtime": 1792598794.0936403,
-    "ast_hash": "664697d52eea6ea58cd7c576f6aab745",
+    "mtime": 1792943980.369244,
+    "ast_hash": "2f687da4191aa473c3e578422fb3048a",
     "semantic_hash": ""
   },
   "apps/web/index.html": {
-    "mtime": 1792589686.3664143,
-    "ast_hash": "d8bb4a294421b3afa8455332c8393135",
+    "mtime": 1792943160.6275535,
+    "ast_hash": "0804742414c92dba1db187d6531bbf45",
     "semantic_hash": ""
   },
   "compose.yaml": {
@@ -2721,8 +2721,8 @@
     "semantic_hash": ""
   },
   "docs/api-contracts/README.md": {
-    "mtime": 1792691170.0940068,
-    "ast_hash": "f4d62ba858751dba4e0d9ab7b2a985f3",
+    "mtime": 1792944110.1682842,
+    "ast_hash": "d14d6085fc21b972d9a358298de87ad7",
     "semantic_hash": ""
   },
   ".agents/plugins/ponytail/assets/benchmark-3model.svg": {
@@ -2806,13 +2806,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/audit/AuditLog.java": {
-    "mtime": 1791464490.1845455,
-    "ast_hash": "966090d11cb4abec748e0c2f950da277",
+    "mtime": 1792943160.5398781,
+    "ast_hash": "2150c889642148381c4e199c38dfb5e9",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/audit/AuditLogRepository.java": {
-    "mtime": 1791008738.969892,
-    "ast_hash": "fb9e1f815acc7b9dde44f427cc1a3446",
+    "mtime": 1792943160.541878,
+    "ast_hash": "c2c71069abb93ac26c52d66e53ed1832",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/audit/Audited.java": {
@@ -2866,7 +2866,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/auth/RegisterPage.tsx": {
-    "mtime": 1792664925.8195808,
+    "mtime": 1792943160.7597628,
     "ast_hash": "0f2665f51b975bf57852dbe12e645227",
     "semantic_hash": ""
   },
@@ -2936,8 +2936,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/profileApi.ts": {
-    "mtime": 1791010147.2202487,
-    "ast_hash": "b638a810faa96567a86501cf863ea885",
+    "mtime": 1792943687.658937,
+    "ast_hash": "455835adb78ca57256e4ed3fa01bafcd",
     "semantic_hash": ""
   },
   "docs/api-contracts/openapi-sprint1.yaml": {
@@ -3001,13 +3001,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassEnrollment.java": {
-    "mtime": 1792211539.3060186,
-    "ast_hash": "fb179c659fba18f6777b204de1a9e414",
+    "mtime": 1792943160.5814507,
+    "ast_hash": "71f977b1c3cbf20ea14560e9571f87ca",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassSession.java": {
-    "mtime": 1792211539.3074348,
-    "ast_hash": "c4fe22bd698cbd9980d16de17a3555e8",
+    "mtime": 1792943160.58246,
+    "ast_hash": "b12d85b408d1cffee45dba252a796248",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassWaitlist.java": {
@@ -3016,18 +3016,18 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/entity/GymClass.java": {
-    "mtime": 1792211539.3094342,
-    "ast_hash": "501135dd19e03088deac5bebb2072acb",
+    "mtime": 1792943160.5839624,
+    "ast_hash": "e36062b2fc1deb4bb07372c80bd666e8",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequest.java": {
-    "mtime": 1791737024.2687442,
-    "ast_hash": "4b4539ecd4ad955fbac801fa5a998928",
+    "mtime": 1792943160.5954854,
+    "ast_hash": "da0322c528a264900d5dd0753b2fc0b5",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequestMessage.java": {
-    "mtime": 1791010766.7707288,
-    "ast_hash": "f13ac4f44881aee67d8605bd24476152",
+    "mtime": 1792943160.596492,
+    "ast_hash": "860eb02d77d588bd27b656c859eec745",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/users/entity/CenterManager.java": {
@@ -3046,7 +3046,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/config/CodeFirstSchemaTest.java": {
-    "mtime": 1792660524.5259917,
+    "mtime": 1792942948.5070033,
     "ast_hash": "cba7a790b3d5a206a20495edc6c4aeed",
     "semantic_hash": ""
   },
@@ -3086,8 +3086,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/clickRipple.ts": {
-    "mtime": 1792065135.5161896,
-    "ast_hash": "0fa7aae7d284078a31189f76f59385b5",
+    "mtime": 1792943160.8045137,
+    "ast_hash": "95eb55e30ef548b4446fd2c2f79dc3c3",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/SiteFooter.tsx": {
@@ -3096,13 +3096,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/Modal.tsx": {
-    "mtime": 1792672610.7473156,
-    "ast_hash": "d7fcf430a92ff297c6bb5bfe1512e080",
+    "mtime": 1792943160.8009982,
+    "ast_hash": "db29f1f10465804a1e8456faf0000699",
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/toast.ts": {
-    "mtime": 1791387856.9007263,
-    "ast_hash": "2978b5ce519142b5aecb33cde6919da5",
+    "mtime": 1792943688.858152,
+    "ast_hash": "cd402a9086d8952027680ef64eeef0f7",
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/PageHeader.tsx": {
@@ -3116,8 +3116,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/health/HealthMetricControllerTest.java": {
-    "mtime": 1792660524.528999,
-    "ast_hash": "4b74f1d4635e3874aa6cc6813148ef9a",
+    "mtime": 1792943687.6504142,
+    "ast_hash": "7a2fbb3fbd5fe29fdf0f70fa8b4a3ebe",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/users/ProfileControllerTest.java": {
@@ -3151,8 +3151,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/profileApi.test.ts": {
-    "mtime": 1791088110.6087513,
-    "ast_hash": "437726c69472d29366ced2e71ad902b9",
+    "mtime": 1792943687.6579368,
+    "ast_hash": "e9e580e11c3a86d9de3e4ad55a5ee5a5",
     "semantic_hash": ""
   },
   "apps/web/src/shared/api/client.test.ts": {
@@ -3296,7 +3296,7 @@
     "semantic_hash": ""
   },
   "docs/PROJECT_MASTER_GUIDE.md": {
-    "mtime": 1792660524.6141105,
+    "mtime": 1792943160.8124838,
     "ast_hash": "412bb5d43c04b5ce97cf7591323257c7",
     "semantic_hash": ""
   },
@@ -3376,8 +3376,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/Select.tsx": {
-    "mtime": 1792341167.072113,
-    "ast_hash": "694785ce66a49bb553614f41f677244b",
+    "mtime": 1792943689.430734,
+    "ast_hash": "7308defc65eca9d4f2a260a9b1fe09af",
     "semantic_hash": ""
   },
   ".agents/plugins/ponytail/.agents/plugins/marketplace.json": {
@@ -3501,7 +3501,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/service/AiRecommendationService.java": {
-    "mtime": 1792660524.484852,
+    "mtime": 1792943160.5388784,
     "ast_hash": "277b0f96ccf0ba9e31ea4f49bcb3697b",
     "semantic_hash": ""
   },
@@ -3526,12 +3526,12 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/repository/MembershipSubscriptionRepository.java": {
-    "mtime": 1792660524.5077882,
-    "ast_hash": "79757fc2283307344172d2183a26c066",
+    "mtime": 1792943160.5639093,
+    "ast_hash": "4b08f0ff5eee962ea722a218a19c2f65",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/reports/ReportController.java": {
-    "mtime": 1792660524.5113149,
+    "mtime": 1792943160.5779483,
     "ast_hash": "b7fa913ebf62887d707999f6e134fee3",
     "semantic_hash": ""
   },
@@ -3561,17 +3561,17 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java": {
-    "mtime": 1792660524.5143142,
+    "mtime": 1792943160.5799446,
     "ast_hash": "5b647724f9b332e939688149b404f677",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/repository/ClassEnrollmentRepository.java": {
-    "mtime": 1792211539.3114345,
-    "ast_hash": "229f290c3b214f6dfc80cfd29b0c8942",
+    "mtime": 1792943160.584968,
+    "ast_hash": "7dc286f1c89973ce62b455a952ea8dac",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/users/CoachRepository.java": {
-    "mtime": 1792690600.8065584,
+    "mtime": 1792943160.5974934,
     "ast_hash": "fc946780033fde461d35ca65f9ef429d",
     "semantic_hash": ""
   },
@@ -3622,12 +3622,12 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/reports/ReportControllerTest.java": {
-    "mtime": 1792660524.5348752,
+    "mtime": 1792943160.6235435,
     "ast_hash": "3592960664a6e16c7315c6084c44a174",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/reports/RevenueReportServiceTest.java": {
-    "mtime": 1792660524.5348752,
+    "mtime": 1792943160.6245506,
     "ast_hash": "81b48e79b0e263b3768864d65185deae",
     "semantic_hash": ""
   },
@@ -3731,7 +3731,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/attendance/dto/CheckinResponses.java": {
-    "mtime": 1792065117.2268178,
+    "mtime": 1792943687.8836954,
     "ast_hash": "54a020d1b446469068714d302f69c165",
     "semantic_hash": ""
   },
@@ -3741,7 +3741,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java": {
-    "mtime": 1792589686.3398225,
+    "mtime": 1792943687.8846943,
     "ast_hash": "3d8059e046a620fc1c569879d00fe34b",
     "semantic_hash": ""
   },
@@ -3761,7 +3761,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/MembershipSubscriptionController.java": {
-    "mtime": 1792660524.5027895,
+    "mtime": 1792942948.4605122,
     "ast_hash": "f5329956864a41eba115cf4956e2191b",
     "semantic_hash": ""
   },
@@ -3771,7 +3771,7 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/dto/SubscriptionResponses.java": {
-    "mtime": 1792660524.5050948,
+    "mtime": 1792942948.4625144,
     "ast_hash": "da5907b7274da73e379273dbd1d8d400",
     "semantic_hash": ""
   },
@@ -3781,8 +3781,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java": {
-    "mtime": 1792660524.510306,
-    "ast_hash": "537a8dd00f43fcc25615a2142523ece3",
+    "mtime": 1792943160.5654202,
+    "ast_hash": "03f78aa35847373308c7297ba7a4ef8c",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/notifications/NotificationController.java": {
@@ -3796,13 +3796,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/notifications/NotificationRepository.java": {
-    "mtime": 1791464490.1968586,
-    "ast_hash": "63c70ea4276553f218b63c51a0e66f16",
+    "mtime": 1792943160.5674293,
+    "ast_hash": "f43d7b6d7d6a447dfea4e05603cf5449",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/notifications/NotificationService.java": {
-    "mtime": 1792335723.9552052,
-    "ast_hash": "64bdd7fff559e5beee79f8f9a148669e",
+    "mtime": 1792943160.5694253,
+    "ast_hash": "31194ef4fb3c9bb96970bd9a53ba3f3e",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/notifications/dto/NotificationDto.java": {
@@ -3861,13 +3861,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/repository/ClassSessionRepository.java": {
-    "mtime": 1792690601.567282,
-    "ast_hash": "0be4cf1d6e25203af37e4c24b9d83a6d",
+    "mtime": 1792943160.585974,
+    "ast_hash": "7c073f48f1c77aad0da0cf3a5a25ccfd",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/repository/ClassWaitlistRepository.java": {
-    "mtime": 1792589686.3493943,
-    "ast_hash": "f520547f6774f80218f189106f0a898b",
+    "mtime": 1792943687.6383853,
+    "ast_hash": "77201de7efd9e2db3d70c3631b138301",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/repository/GymClassRepository.java": {
@@ -3881,8 +3881,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/service/EnrollmentService.java": {
-    "mtime": 1792604233.1323056,
-    "ast_hash": "a3ec43f58e0beb4f7f306573bda9f8be",
+    "mtime": 1792943160.5869749,
+    "ast_hash": "754eb9910385c527ee733fd4ca75e8c2",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionEligibility.java": {
@@ -3896,13 +3896,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/SupportRequestController.java": {
-    "mtime": 1792335726.0715597,
-    "ast_hash": "719b8a5cb1e7e0a381cef87df66f6773",
+    "mtime": 1792943160.5889733,
+    "ast_hash": "de31bc0ad01105e46a14139776f3a176",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/SupportRequestMapper.java": {
-    "mtime": 1791737024.2642338,
-    "ast_hash": "fc101dd88070dc1c565642602184b82b",
+    "mtime": 1792943160.5899732,
+    "ast_hash": "c99b36580a7e78dd7265ef678a2474f4",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/SupportRequestRepository.java": {
@@ -3911,8 +3911,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java": {
-    "mtime": 1792335726.2467916,
-    "ast_hash": "5cb7140c1cc425c700fe97e1a6110df6",
+    "mtime": 1792943832.4541678,
+    "ast_hash": "41957100fb0d00965dc0a732d3435b68",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/support/dto/CreateSupportRequestDto.java": {
@@ -3966,18 +3966,18 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/finance/PaymentMemberAccessTest.java": {
-    "mtime": 1792660524.5269985,
+    "mtime": 1792942948.5080032,
     "ast_hash": "4add7106e7c0f33623972b8b7e813b37",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/membership/MembershipSubscriptionControllerTest.java": {
-    "mtime": 1792660524.5318692,
+    "mtime": 1792942948.5120037,
     "ast_hash": "d73f67d42f7f3c94bb5d2e075a092de2",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/membership/MembershipSubscriptionServiceTest.java": {
-    "mtime": 1792660524.532876,
-    "ast_hash": "951e21aa07c37669e7fd617cc58101e6",
+    "mtime": 1792943160.6190386,
+    "ast_hash": "7469ec9fce7cfbcb563a52cdf0f88f85",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/notifications/NotificationControllerTest.java": {
@@ -3986,8 +3986,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/notifications/NotificationServiceTest.java": {
-    "mtime": 1792334997.2752533,
-    "ast_hash": "3d41b3fefb8be3a4ee50e51dc9967b89",
+    "mtime": 1792943160.6210372,
+    "ast_hash": "baebeb9721a9796d529e6888bbad3429",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/scheduling/ClassControllerTest.java": {
@@ -4026,13 +4026,13 @@
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/support/SupportRequestControllerTest.java": {
-    "mtime": 1791737024.2801049,
-    "ast_hash": "154d70a2fb2a9dcd044e334e310a494c",
+    "mtime": 1792943160.625551,
+    "ast_hash": "7723eb4906b6d5c1f7b8c2ee55777a06",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/support/SupportRequestServiceTest.java": {
-    "mtime": 1792335727.342695,
-    "ast_hash": "26abf6b3c300446d9ffdd12ed2aa898c",
+    "mtime": 1792943832.4561696,
+    "ast_hash": "7dae0257ba70fc6f1365af474ff6680f",
     "semantic_hash": ""
   },
   "apps/web/src/app/router.memberCard.test.tsx": {
@@ -4056,7 +4056,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberCardPage.ui.test.tsx": {
-    "mtime": 1792660524.6005852,
+    "mtime": 1792942948.671518,
     "ast_hash": "44c2f07f4b9cdc2a9dbc7c68651bd60f",
     "semantic_hash": ""
   },
@@ -4066,23 +4066,23 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberDashboardPage.api.test.tsx": {
-    "mtime": 1792668418.2323542,
+    "mtime": 1792943160.7822948,
     "ast_hash": "791453c2daf1d59c9e1b234deeb30550",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberDashboardPage.test.tsx": {
-    "mtime": 1792668418.231353,
+    "mtime": 1792943160.7838328,
     "ast_hash": "e61619d415d8c488dfe8a96ae9b4a772",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberPackagesPage.test.tsx": {
-    "mtime": 1792668418.2343528,
-    "ast_hash": "634cd1aa7e0001d6810e31106a2d1e70",
+    "mtime": 1792943160.7858732,
+    "ast_hash": "ce04aa35b209139b02d454b6b8c71838",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberPackagesPage.tsx": {
-    "mtime": 1792690776.873102,
-    "ast_hash": "d3d88750823eac69cc1c9a3b1ecad3f2",
+    "mtime": 1792943160.7878442,
+    "ast_hash": "06ba4114f49ce5474d41249fab9794cd",
     "semantic_hash": ""
   },
   "apps/web/src/features/member/cardStatus.ts": {
@@ -4096,7 +4096,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/memberCardApi.ts": {
-    "mtime": 1792660524.6056273,
+    "mtime": 1792942948.6810389,
     "ast_hash": "e778e8ec101860d73e78e163509aca9f",
     "semantic_hash": ""
   },
@@ -4116,7 +4116,7 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/memberDashboardApi.ts": {
-    "mtime": 1792660524.6065907,
+    "mtime": 1792942948.6810389,
     "ast_hash": "74cd4507ddb64c6d5bbcf656096ecde1",
     "semantic_hash": ""
   },
@@ -4126,32 +4126,32 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/membershipApi.ts": {
-    "mtime": 1792660524.60762,
+    "mtime": 1792942948.6820383,
     "ast_hash": "2afa917ed3d686222b7eb7e9730079a8",
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/PortalIcon.tsx": {
-    "mtime": 1792672610.5863268,
-    "ast_hash": "6763982a8d1cf6df7d5e7daee3f9534c",
+    "mtime": 1792943874.6330843,
+    "ast_hash": "bd0d363fbb71768b5bcfa0e50d6a730f",
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/PortalShell.tsx": {
-    "mtime": 1792664925.8445234,
-    "ast_hash": "8095d56ea8e33eed53bde2028ec0dded",
+    "mtime": 1792943999.9789224,
+    "ast_hash": "369c43f283b01a16cb7506527becdf7c",
     "semantic_hash": ""
   },
   "apps/web/src/features/portal/portalNavigation.ts": {
-    "mtime": 1792664480.6490564,
-    "ast_hash": "379cfe6d216f44af0ae4214479a83cac",
+    "mtime": 1792943951.0675354,
+    "ast_hash": "8648783a45b3a61af3f9ab698dd573d3",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/checkinApi.test.ts": {
-    "mtime": 1792595011.2102244,
+    "mtime": 1792943687.893769,
     "ast_hash": "fc6f84044e0502e9901e3136a5edf7e6",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/checkinApi.ts": {
-    "mtime": 1792595011.2112236,
+    "mtime": 1792943687.8947673,
     "ast_hash": "bb14387a3baff54e732b3377ff10a461",
     "semantic_hash": ""
   },
@@ -4172,8 +4172,8 @@
     "semantic_hash": ""
   },
   "docs/api-contracts/openapi-sprint2.yaml": {
-    "mtime": 1792660524.6151426,
-    "ast_hash": "5303217148d4e2ecb03ae483e80d91d2",
+    "mtime": 1792943761.1817813,
+    "ast_hash": "2d93841d638104bca0d00a254d811f46",
     "semantic_hash": ""
   },
   "docs/plans/2026-10-15-phong-review-fixes.md": {
@@ -4187,7 +4187,7 @@
     "semantic_hash": ""
   },
   "docs/qa/portal-redesign-2026-10-18.md": {
-    "mtime": 1792660524.616139,
+    "mtime": 1792943160.8160288,
     "ast_hash": "b0854acd441024daf68b0783c6b4fd5a",
     "semantic_hash": ""
   },
@@ -4267,8 +4267,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/member/MemberProfilePage.test.tsx": {
-    "mtime": 1792589686.3754978,
-    "ast_hash": "59a6527d4940eaba434c6cf39662a902",
+    "mtime": 1792943687.6559374,
+    "ast_hash": "e0b38ebc382ff8044f000c129a2d5bad",
     "semantic_hash": ""
   },
   "apps/web/vercel.json": {
@@ -4417,13 +4417,13 @@
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/ManagerReportsPage.test.tsx": {
-    "mtime": 1792668418.229351,
+    "mtime": 1792943160.7782898,
     "ast_hash": "4b2cb6ae22252e3c550c77531e31213b",
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/DatePicker.tsx": {
-    "mtime": 1792672450.5998044,
-    "ast_hash": "811779e5504efc10eaef724a55590edb",
+    "mtime": 1792943160.8000083,
+    "ast_hash": "18713c4864d0575e2ea129c9a396a9db",
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/DateTimePickers.test.tsx": {
@@ -4432,8 +4432,8 @@
     "semantic_hash": ""
   },
   "apps/web/src/shared/ui/TimePicker.tsx": {
-    "mtime": 1792602113.7881682,
-    "ast_hash": "ed9de6fc2644f00fa6ec9fe18bee4fd1",
+    "mtime": 1792943160.8045137,
+    "ast_hash": "4e1d3cc3c3a10c0527732e7a4165c74b",
     "semantic_hash": ""
   },
   "docs/examples/cd.example.yml": {
@@ -4447,713 +4447,1583 @@
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/MembershipCancellationController.java": {
-    "mtime": 1792660524.501791,
+    "mtime": 1792942948.4594817,
     "ast_hash": "b0500828540b06f56e5ba90d56456d3c",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/dto/CancellationDtos.java": {
-    "mtime": 1792660524.503792,
+    "mtime": 1792942948.4615119,
     "ast_hash": "48563b73f059604e31939ee5cb596c9d",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipCancellationRequest.java": {
-    "mtime": 1792660524.5061,
+    "mtime": 1792942948.4625144,
     "ast_hash": "6137aefef627128e7d90cd6ff960fe2a",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/repository/MembershipCancellationRequestRepository.java": {
-    "mtime": 1792660524.5068343,
+    "mtime": 1792942948.4635115,
     "ast_hash": "194cfec59d7d5dac5569115d973c0b33",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java": {
-    "mtime": 1792660524.5087996,
-    "ast_hash": "c578c287e401edba2535e83a64905222",
+    "mtime": 1792943160.5644138,
+    "ast_hash": "deded5af6052d6a5453aaf9c80a27695",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/membership/MembershipCancellationServiceTest.java": {
-    "mtime": 1792660524.5305052,
-    "ast_hash": "b7ccb7dfa2eb59f9922048cd5a79b66b",
+    "mtime": 1792943160.618082,
+    "ast_hash": "f445c33ea56d0292d2bb1a0a3dbba27d",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/ManagerCancellationPage.test.tsx": {
-    "mtime": 1792660524.597293,
+    "mtime": 1792942948.6629975,
     "ast_hash": "52ff6a4a43121e471aebe888d1a5f09e",
     "semantic_hash": ""
   },
   "apps/web/src/features/manager/ManagerCancellationPage.tsx": {
-    "mtime": 1792668418.2223535,
+    "mtime": 1792942948.6629975,
     "ast_hash": "2e97297af7ae6cee61c1040e54057fb3",
     "semantic_hash": ""
   },
   "docs/reviews/2026-10-22-SCRUM-86-pr45-review.md": {
-    "mtime": 1792660524.6171408,
+    "mtime": 1792942948.719396,
     "ast_hash": "32beed9f0bdb18893cce6941cbece8aa",
     "semantic_hash": ""
   },
   "docs/reviews/2026-10-22-SCRUM-86-pr46-review.md": {
-    "mtime": 1792660524.6181078,
+    "mtime": 1792942948.7203937,
     "ast_hash": "8779f28bcf620fa5bd2faef6d0f02ee0",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/PaymentInvoice.test.tsx": {
-    "mtime": 1792660524.6095927,
+    "mtime": 1792942948.6905725,
     "ast_hash": "fecb3c1c2387c945f82b21255a7d3c42",
     "semantic_hash": ""
   },
   "apps/web/src/features/reception/PaymentInvoice.tsx": {
-    "mtime": 1792668418.2163522,
+    "mtime": 1792942948.6916008,
     "ast_hash": "076197e1b2d6dfb4ceb10f9a88a9f589",
     "semantic_hash": ""
   },
   "docs/reviews/2026-10-22-SCRUM-86-pr45-pr46-integration.md": {
-    "mtime": 1792660524.616139,
+    "mtime": 1792942948.7183914,
     "ast_hash": "bdef06b6c8f206653307c5a5451bcbdb",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/AiChatController.java": {
-    "mtime": 1792660524.4753354,
+    "mtime": 1792943160.526864,
     "ast_hash": "338dc87b5eab7b87b58a8c7ee617e650",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/AiRecommendationController.java": {
-    "mtime": 1792660524.4753354,
+    "mtime": 1792943160.5288644,
     "ast_hash": "0cb019102b26eeafb9cbe72fb1ef9049",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiApplyRecommendationRequest.java": {
-    "mtime": 1792660524.4763374,
+    "mtime": 1792943160.5298629,
     "ast_hash": "cd2c1a9f9a844f338373ce26b720d7f5",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiChatMessageCreateDto.java": {
-    "mtime": 1792660524.4773035,
+    "mtime": 1792943160.5298629,
     "ast_hash": "4e36a3a6498ba1d904bec9696cc62566",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiChatMessageDto.java": {
-    "mtime": 1792660524.4773035,
+    "mtime": 1792943160.5308616,
     "ast_hash": "ae7ffaf8754d90d5d0532cc83cce39b3",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiChatReplyDto.java": {
-    "mtime": 1792660524.478307,
+    "mtime": 1792943160.5318637,
     "ast_hash": "5ea9a444b79a6a7ee9468d1e2d54e101",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiChatSessionCreateDto.java": {
-    "mtime": 1792660524.4793088,
+    "mtime": 1792943160.5328643,
     "ast_hash": "3c7576a87ee9ca7127753580ed070549",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiChatSessionDto.java": {
-    "mtime": 1792660524.4803076,
+    "mtime": 1792943160.5338626,
     "ast_hash": "db33c1a761c3043c0bebdb16ce9104c8",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiWorkoutPlanRequest.java": {
-    "mtime": 1792660524.4808195,
+    "mtime": 1792943160.5338626,
     "ast_hash": "a72a51ba9c6395a2831e5625e682666e",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/dto/AiWorkoutPlanResponse.java": {
-    "mtime": 1792660524.4808195,
+    "mtime": 1792943160.5348766,
     "ast_hash": "e29978526b4ae9c063931dbd87f66f3d",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/repository/AiChatMessageRepository.java": {
-    "mtime": 1792660524.4818518,
+    "mtime": 1792943160.5358777,
     "ast_hash": "244a965b7067fc1b1b9e9abf2543075d",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/repository/AiChatSessionRepository.java": {
-    "mtime": 1792660524.4818518,
+    "mtime": 1792943160.536879,
     "ast_hash": "67fc2958a706d8e55d6f74bcc4f6e1d2",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/ai/service/AiChatService.java": {
-    "mtime": 1792660524.4828515,
-    "ast_hash": "0097598fc08c60722291e35fce1277a2",
+    "mtime": 1792943980.3682108,
+    "ast_hash": "178aaf6a14f77afad02cd81f6f21551a",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/SessionEvaluationController.java": {
-    "mtime": 1792660524.4860187,
+    "mtime": 1792943160.5463889,
     "ast_hash": "1b1c8b5e1f1c8ba27bdbaf8fb73eb1d5",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/TrainingPlanController.java": {
-    "mtime": 1792660524.4860187,
+    "mtime": 1792943160.547392,
     "ast_hash": "d9631de040124568402422abbddce04e",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/dto/SessionEvaluationCreateDto.java": {
-    "mtime": 1792660524.4870238,
+    "mtime": 1792943160.5483944,
     "ast_hash": "9d359616b73b4e1a44054dc6de30a1b4",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/dto/SessionEvaluationDto.java": {
-    "mtime": 1792660524.488023,
+    "mtime": 1792943160.5493896,
     "ast_hash": "f1e2a4507eee7b6cff28e6d41cb72a24",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/dto/TrainingPlanCreateDto.java": {
-    "mtime": 1792660524.488023,
+    "mtime": 1792943160.5493896,
     "ast_hash": "5f9beced01d66f5318183789dacc4bef",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/dto/TrainingPlanDto.java": {
-    "mtime": 1792660524.4890275,
+    "mtime": 1792943160.5503898,
     "ast_hash": "a9dd3ccd83175ce4f541c39c666099f1",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/dto/TrainingPlanItemCreateDto.java": {
-    "mtime": 1792660524.4890275,
+    "mtime": 1792943160.5503898,
     "ast_hash": "6ebeabc06c480cc029861710b8b2d70e",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/dto/TrainingPlanItemDto.java": {
-    "mtime": 1792660524.4905365,
+    "mtime": 1792943160.552394,
     "ast_hash": "fc7ed4cf49cf89216b87418ef8a296e1",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/repository/SessionEvaluationRepository.java": {
-    "mtime": 1792660524.4905365,
+    "mtime": 1792943160.5539024,
     "ast_hash": "49bfb472b7092fc1b572a2cdc58e821a",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/repository/TrainingPlanItemRepository.java": {
-    "mtime": 1792660524.491542,
-    "ast_hash": "ebf4a785a0d088c0972b0d75f767ed86",
+    "mtime": 1792943911.4530475,
+    "ast_hash": "1eee8fee992d79033875a567bb40888e",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/repository/TrainingPlanRepository.java": {
-    "mtime": 1792660524.4925463,
+    "mtime": 1792943160.5549097,
     "ast_hash": "0d577cde9d2f34d468ea50c0bafb5e7b",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/service/SessionEvaluationService.java": {
-    "mtime": 1792660524.4925463,
+    "mtime": 1792943160.5559065,
     "ast_hash": "4481f4f42345cb31c527b530901b4e8d",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/coaching/service/TrainingPlanService.java": {
-    "mtime": 1792660524.4935496,
+    "mtime": 1792943160.5569117,
     "ast_hash": "a820330e67f65a3915d75a5063d6b3d5",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/health/dto/HealthMetricCreateDto.java": {
-    "mtime": 1792660524.501791,
+    "mtime": 1792943160.5629148,
     "ast_hash": "d3d89f5dccb555716b454639dccd82b5",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/reports/dto/ClassUtilizationDto.java": {
-    "mtime": 1792660524.5123153,
+    "mtime": 1792943160.57895,
     "ast_hash": "c875cd11f6ffc10804f7a398aa7e3099",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/reports/repository/SessionAttendanceReportRepository.java": {
-    "mtime": 1792660524.5123153,
+    "mtime": 1792943160.5799446,
     "ast_hash": "0b6919e6025bcba93b21d6290d4df6d4",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiChatControllerTest.java": {
-    "mtime": 1792660524.5203133,
+    "mtime": 1792943160.6055298,
     "ast_hash": "dd3b096b62813c218f609665545b04a7",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiChatServiceTest.java": {
-    "mtime": 1792660524.5203133,
-    "ast_hash": "8ef37db27ec4814f3d1db8f89de01977",
+    "mtime": 1792943980.380769,
+    "ast_hash": "e37ed166cd5e4579785b29bb615a8640",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/ai/AiRecommendationControllerTest.java": {
-    "mtime": 1792660524.5217295,
+    "mtime": 1792943160.6075246,
     "ast_hash": "87b2784ec2b75a84d2c89acbe1af6d7f",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/coaching/SessionEvaluationControllerTest.java": {
-    "mtime": 1792660524.5227365,
+    "mtime": 1792943160.6135232,
     "ast_hash": "b9e3ca8ce932b1774eb3d16fd7df8118",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/coaching/SessionEvaluationServiceTest.java": {
-    "mtime": 1792660524.5227365,
+    "mtime": 1792943160.6140265,
     "ast_hash": "2d33b157ba19cb71170523e2371b1616",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/coaching/TrainingPlanControllerTest.java": {
-    "mtime": 1792660524.5237377,
+    "mtime": 1792943160.6140265,
     "ast_hash": "4737624f1a6ebba02b8a10a385666437",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/coaching/TrainingPlanServiceTest.java": {
-    "mtime": 1792660524.5247364,
+    "mtime": 1792943160.6150322,
     "ast_hash": "3234f6a26c4fc914a404c8bb38b96e76",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/FitnessLanding.tsx": {
-    "mtime": 1792691168.4701574,
-    "ast_hash": "673555cb3d5b777215131c62b7ee2e46",
+    "mtime": 1792943160.7657819,
+    "ast_hash": "eb77269afc178172a6d75e07b64e1b8f",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/PublicLayout.tsx": {
-    "mtime": 1792683046.6703937,
-    "ast_hash": "b1d5051cf9642e8baaa0f82a67c8a81e",
+    "mtime": 1792943980.3821347,
+    "ast_hash": "c8fda9126db8bf237b5c567501ee93e8",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/hooks/useComponentReveal.ts": {
-    "mtime": 1792683680.487808,
-    "ast_hash": "73ea376a52e7993e96ee929335ffbec4",
+    "mtime": 1792943160.7742884,
+    "ast_hash": "bf76399e14d0a8c65c5885c4d0b85bdc",
     "semantic_hash": ""
   },
   "scripts/verify-public-animation.cjs": {
-    "mtime": 1792691458.6936285,
-    "ast_hash": "51b41e9fc6cfb4a30fbd70aa9185e43f",
+    "mtime": 1792943161.3540385,
+    "ast_hash": "3c012fb784d07c25ff57020e2ee834f2",
     "semantic_hash": ""
   },
   "scripts/verify-public-ui.cjs": {
-    "mtime": 1792691084.81489,
-    "ast_hash": "d13f1ecaaf8c4c281e2dfdc12f80cc1b",
+    "mtime": 1792943161.3540385,
+    "ast_hash": "03c3732660413f91a872a3421854ae39",
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1792691169.2527342,
-    "ast_hash": "1d3d9183dd08fb8f2bef7d835eeed72b",
+    "mtime": 1792943160.5248568,
+    "ast_hash": "15675f8664c0741f94707423dec51d64",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/README.md": {
-    "mtime": 1792660524.6191103,
+    "mtime": 1792943160.8295088,
     "ast_hash": "f08cfa8e8900b7c6defa897b1b309f24",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/image-prompts.md": {
-    "mtime": 1792660524.635006,
+    "mtime": 1792943160.8485372,
     "ast_hash": "b857edbb7df77ae4da1606dca0c9c61d",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/coach-movement.png": {
-    "mtime": 1792660524.5539012,
+    "mtime": 1792943160.7022269,
     "ast_hash": "a73fd258a6acb488b02f6e82901e04cb",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/coach-strength.png": {
-    "mtime": 1792660524.5739193,
+    "mtime": 1792943160.727779,
     "ast_hash": "2e2c45a4dec56cda5305fdc7d28a1657",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/gym-floor.jpg": {
-    "mtime": 1792660524.5764842,
+    "mtime": 1792943160.7355678,
     "ast_hash": "64b865b878822995c4b5ceeb8da2e2df",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/hero-athlete.png": {
-    "mtime": 1792660524.5850792,
+    "mtime": 1792943160.7457194,
     "ast_hash": "643e2ced19a3e8149e500a7f403e0558",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/strength-session.jpg": {
-    "mtime": 1792660524.5860808,
+    "mtime": 1792943160.7467184,
     "ast_hash": "39bdfd69878e73019ec0ff48017ea96a",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/trainer-strength.jpg": {
-    "mtime": 1792660524.5880513,
+    "mtime": 1792943160.7547665,
     "ast_hash": "bf908c383fa64ca7e05f87b471a32a83",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/animation-pricing-desktop.png": {
-    "mtime": 1792691468.6491606,
-    "ast_hash": "154bb8007e62accf1104145cec69957f",
+    "mtime": 1792943160.831509,
+    "ast_hash": "c1fd93359b01b498db7b7bf431c5acc2",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/before-desktop.png": {
-    "mtime": 1792660524.6262481,
+    "mtime": 1792943160.838023,
     "ast_hash": "d3e720eab2db377d0a5525b12cf1e13c",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/hero-desktop.png": {
-    "mtime": 1792691101.6258833,
-    "ast_hash": "85ce2caefeea3e536f4ef69df7577c28",
+    "mtime": 1792943160.8420246,
+    "ast_hash": "880e3fa70c678a2e952891f02f66366f",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/hero-mobile.png": {
-    "mtime": 1792691098.6808484,
-    "ast_hash": "5efc7cd78e078d018617f482982685fc",
+    "mtime": 1792943160.8435297,
+    "ast_hash": "0fc7fb9b679a32728b0451e35595ec78",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/hero-wide.png": {
-    "mtime": 1792691102.3695943,
-    "ast_hash": "ff3fa719e41824d8863620e97e1ad6aa",
+    "mtime": 1792943160.8475428,
+    "ast_hash": "458ae724c321648f74a922902c76761c",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/landing-desktop.png": {
-    "mtime": 1792691101.4489975,
-    "ast_hash": "c2c520f541c281200ed8f0aa2dfefcac",
+    "mtime": 1792943160.8681886,
+    "ast_hash": "3ad7563ba6b3b59cc6c12a4acac0f70e",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/landing-mobile.png": {
-    "mtime": 1792691098.545851,
-    "ast_hash": "19b6a1363998b8fdf1e9274837a55315",
+    "mtime": 1792943160.8777103,
+    "ast_hash": "208a4618591658698b6e38e90c83c85d",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/login-desktop.png": {
-    "mtime": 1792691106.7787151,
-    "ast_hash": "67cb6c9deb07ffd8427acff14e8f71b4",
+    "mtime": 1792943160.8807073,
+    "ast_hash": "8da89141b8aa83df78f6e38dd3dd1fb6",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/login-error-desktop.png": {
-    "mtime": 1792691104.0045438,
-    "ast_hash": "11c1b28500aa8c6c7351eedaa1edc20e",
+    "mtime": 1792943160.8847568,
+    "ast_hash": "4985625c0fe14dfa66da9c23413b0343",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/login-mobile.png": {
-    "mtime": 1792691104.6058376,
-    "ast_hash": "3d649f760fe7c056ec984562d27282f5",
+    "mtime": 1792943160.8857927,
+    "ast_hash": "354bbad3d0082acd0297f02a5bdbf1d8",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/otp-desktop.png": {
-    "mtime": 1792691107.807814,
-    "ast_hash": "b8b3e45e427fc680385bd99c97c5ec7d",
+    "mtime": 1792943160.8887637,
+    "ast_hash": "063e94e94d76cc5a199d22a6335d674e",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/otp-mobile.png": {
-    "mtime": 1792691107.8658142,
-    "ast_hash": "2c493a1f4933319d5a09006b81ad2d41",
+    "mtime": 1792943160.8897936,
+    "ast_hash": "c0da161a3ea2dfe5a3dc6376b1d1f00e",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/register-desktop.png": {
-    "mtime": 1792691107.2697134,
-    "ast_hash": "1610b07015936392f3663a651c576a9a",
+    "mtime": 1792943160.892765,
+    "ast_hash": "adbb975442666739d5caf0b9032579ea",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/register-mobile.png": {
-    "mtime": 1792691105.28363,
-    "ast_hash": "8cbfb1018575170be2d89af14b862f4a",
+    "mtime": 1792943160.894333,
+    "ast_hash": "d7e8185775abee4a5382ee451ff6221c",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/services-desktop.png": {
-    "mtime": 1792691101.5408833,
-    "ast_hash": "de143c0dc25ac267acbcb99aada7be24",
+    "mtime": 1792943160.894333,
+    "ast_hash": "6375dd6802e046a4b59217d79b3aaca8",
     "semantic_hash": ""
   },
   "docs/ui-review/fitness-reference/services-mobile.png": {
-    "mtime": 1792691098.635849,
-    "ast_hash": "b037b1c7697efbfa46e96a7474798329",
+    "mtime": 1792943160.896037,
+    "ast_hash": "a25dc09716c704efbf84c2dd60ccfe5e",
     "semantic_hash": ""
   },
   "scripts/verify-ux-consistency.cjs": {
-    "mtime": 1792665153.866858,
-    "ast_hash": "45baad407cef1682d558ae8fe875c46a",
+    "mtime": 1792943161.3560717,
+    "ast_hash": "a13f79d7baa0dcdb8bae0eceb1871b99",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/README.md": {
-    "mtime": 1792665392.0304053,
-    "ast_hash": "944433741e137c3af63fa0e4c12d445d",
+    "mtime": 1792943161.032883,
+    "ast_hash": "ce9ecce149b62b5e1ae88dae50ab8439",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/aquatics-pool.jpg": {
-    "mtime": 1792666157.6213796,
+    "mtime": 1792943160.6346464,
     "ast_hash": "4dd59f543a72de181bcd291ed8ab9cd2",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/tennis-court.jpg": {
-    "mtime": 1792666182.0923364,
+    "mtime": 1792943160.753718,
     "ast_hash": "dba6ea6f35c8e88154fcf7557f6249e1",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-cancellations-1440.png": {
-    "mtime": 1792691453.1559973,
-    "ast_hash": "1ca55e0fde0c8c756d19b70b0f98b483",
+    "mtime": 1792943161.0339086,
+    "ast_hash": "619e6ec001abd5de55006a93a6200e0f",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-cancellations-390.png": {
-    "mtime": 1792691442.2881422,
-    "ast_hash": "1624ae9028ffe3cbd8c5335046f48970",
+    "mtime": 1792943161.035002,
+    "ast_hash": "47a55037556876f211f6e1f8da559772",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-catalogs-1440.png": {
-    "mtime": 1792691452.3386645,
-    "ast_hash": "16ed3ddd9e8a98ac8538184fca353ad3",
+    "mtime": 1792943161.036028,
+    "ast_hash": "a1f2e5db62f38e2eec27c5c94f14d601",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-catalogs-390.png": {
-    "mtime": 1792691441.5467372,
-    "ast_hash": "f17ff7153a7d503637605c34e18307d2",
+    "mtime": 1792943161.03681,
+    "ast_hash": "7139d8d803d566b7edcdf3d4cd7c096c",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-catalogs-create.png": {
-    "mtime": 1792691457.7253945,
-    "ast_hash": "5c92509fa354e0e836fba25a7aa8240f",
+    "mtime": 1792943161.0388403,
+    "ast_hash": "20928232792d1d4bbe0860a6348cf623",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-reports-1440.png": {
-    "mtime": 1792691454.014025,
-    "ast_hash": "9c3fc6633efdd106582ea6b1b1a8bfa9",
+    "mtime": 1792943161.039847,
+    "ast_hash": "2e2f160efa3e85286f9d56273ef664a0",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-reports-390.png": {
-    "mtime": 1792691443.142196,
-    "ast_hash": "76c8c90f1ff1937544b441c953361ef5",
+    "mtime": 1792943161.0408487,
+    "ast_hash": "190f142088bffc435d76801fe60a0a3e",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-users-1440.png": {
-    "mtime": 1792691451.5238051,
-    "ast_hash": "2c47456084f7450b3ec2798082662b57",
+    "mtime": 1792943161.042822,
+    "ast_hash": "6f71bd099d4878ebed6d74c37b54aefb",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-users-390.png": {
-    "mtime": 1792691440.7982035,
-    "ast_hash": "0e93df805c5c4b22875cc5019eabbfa2",
+    "mtime": 1792943161.0438528,
+    "ast_hash": "c6688921fde87edf42bfb23cef9de388",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/manager-users-create.png": {
-    "mtime": 1792691458.6946237,
-    "ast_hash": "d28fbf182e752e67037456a233d9f50d",
+    "mtime": 1792943161.0450954,
+    "ast_hash": "43bb899807752381db223029d15853c5",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-card-1440.png": {
-    "mtime": 1792691446.4851458,
-    "ast_hash": "86e88deff82e82c5109a507467c71a7d",
+    "mtime": 1792943161.0470707,
+    "ast_hash": "e48703ca83627a67307df9ae81dfd584",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-card-390.png": {
-    "mtime": 1792691435.899502,
-    "ast_hash": "f378ec6f1b4c5eaff36e8fb2e6fb063d",
+    "mtime": 1792943161.048069,
+    "ast_hash": "430fd66d597f4d7ee153b1db68e863e8",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-classes-1440.png": {
-    "mtime": 1792691445.643613,
-    "ast_hash": "51399cf0694537586216d7dc788e4d6f",
+    "mtime": 1792943161.049096,
+    "ast_hash": "5d78a64266a2ecc1b780e2ee558e4c66",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-classes-390.png": {
-    "mtime": 1792691435.0501473,
-    "ast_hash": "d15615f9d04e8f9857506e04a29e20a4",
+    "mtime": 1792943161.0501044,
+    "ast_hash": "6133f38f09f0aca874adf4a47b415837",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-1440.png": {
-    "mtime": 1792691444.0262089,
-    "ast_hash": "ba87cd99ae1153d2c1a38f7526c64066",
+    "mtime": 1792943161.053572,
+    "ast_hash": "e2c2e3b322ce82accfb34ec3f22dbae5",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-1920.png": {
-    "mtime": 1792691455.8182733,
-    "ast_hash": "0c406ef98568ac0df1bccda6d00b2a43",
+    "mtime": 1792943161.0565784,
+    "ast_hash": "9839dfd699191df82aa694be9469a8ef",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-2560.png": {
-    "mtime": 1792691456.7419658,
-    "ast_hash": "aa13ed2ccc4686bf01fad050e3d4a69b",
+    "mtime": 1792943161.061583,
+    "ast_hash": "58d8c7996fb3df1e220703558698557b",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-390.png": {
-    "mtime": 1792691433.3416877,
-    "ast_hash": "a564641fe7e43316101bd4f04bae57ce",
+    "mtime": 1792943161.0651531,
+    "ast_hash": "ba464e9b7c6d16074cb4e1be8c5c302c",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-768.png": {
-    "mtime": 1792691454.8951929,
-    "ast_hash": "a9b21977c71caa986feacf9b37541a98",
+    "mtime": 1792943161.0681598,
+    "ast_hash": "18c9265f3128305e75f09b071c950860",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-empty.png": {
-    "mtime": 1792691460.7590556,
-    "ast_hash": "6cdeeba44978a460ba92b00e53ef5ee0",
+    "mtime": 1792943161.072162,
+    "ast_hash": "c9383de5d675797f0e88842a6a77e92f",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-dashboard-error.png": {
-    "mtime": 1792691461.8009126,
-    "ast_hash": "a24ebc807e08e7e5b6fa469e630afdd1",
+    "mtime": 1792943161.074684,
+    "ast_hash": "b9c44c6c6eea1001e5a9ebdc5fbca265",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-packages-1440.png": {
-    "mtime": 1792691444.8564336,
-    "ast_hash": "fe9f536bcdbd47cf39a3facf8347a25c",
+    "mtime": 1792943161.0756843,
+    "ast_hash": "5543952bdce7f04cb04b7599aeb89e91",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-packages-390.png": {
-    "mtime": 1792691434.2088935,
-    "ast_hash": "bc0969a2f9852fbec6b0c7b98600255c",
+    "mtime": 1792943161.0776844,
+    "ast_hash": "822a265c81cf139b91f5dc078c15047d",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-profile-1440.png": {
-    "mtime": 1792691447.3389156,
-    "ast_hash": "bd25e71c77139c3b734ca94cf0a67c14",
+    "mtime": 1792943161.0796802,
+    "ast_hash": "03b2227369c1f723dbc3e4b342c8aa60",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/member-profile-390.png": {
-    "mtime": 1792691436.707893,
-    "ast_hash": "3652ec76215e2be741c78d2d8780fcc3",
+    "mtime": 1792943161.0806806,
+    "ast_hash": "dc6acd141a1ce557ee3adeb8bb6bcb27",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-attendance-1440.png": {
-    "mtime": 1792691448.1510751,
-    "ast_hash": "4506e8deac45f9afd67678a1a23b64a1",
+    "mtime": 1792943161.0826824,
+    "ast_hash": "27c0488351224a32b0c78e97afac3e51",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-attendance-390.png": {
-    "mtime": 1792691437.5018373,
-    "ast_hash": "1541f557a4145c1e76539b8179aa063a",
+    "mtime": 1792943161.0848017,
+    "ast_hash": "738bf681f6f8d7d6010205e5de004b82",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-check-in-1440.png": {
-    "mtime": 1792691450.6856701,
-    "ast_hash": "6b844b5a1cc8f76f6f96ca95ac032ce7",
+    "mtime": 1792943161.08583,
+    "ast_hash": "4d7cc6019ae91825d8ade5980384048d",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-check-in-390.png": {
-    "mtime": 1792691439.9698677,
-    "ast_hash": "61e10dee47976d117ea057ad6e93f217",
+    "mtime": 1792943161.0867991,
+    "ast_hash": "f600adcc32073cb19d4ed8cd7d53ff1c",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-classes-1440.png": {
-    "mtime": 1792691448.9487014,
-    "ast_hash": "2175bb39c144ef1327cdd1f94625c348",
+    "mtime": 1792943161.0878017,
+    "ast_hash": "e68207f9849bdce5bc980c9374e9c2f8",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-classes-390.png": {
-    "mtime": 1792691438.2694623,
-    "ast_hash": "61ce2dc42d640f19cb465c1b2fc4670c",
+    "mtime": 1792943161.0888295,
+    "ast_hash": "2a46759182d1331cdf41329400fdb67e",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-classes-create.png": {
-    "mtime": 1792691459.7760148,
-    "ast_hash": "01e5f949267d548173292857cf701010",
+    "mtime": 1792943161.0908291,
+    "ast_hash": "ed8a494e51b97c4000cae31514d764f8",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-reception-1440.png": {
-    "mtime": 1792691449.825611,
-    "ast_hash": "40ee429c1a4beddd83238d0b952f9468",
+    "mtime": 1792943161.092805,
+    "ast_hash": "6cddc313e663755688a852341128d215",
     "semantic_hash": ""
   },
   "docs/ui-review/ux-cleanup/staff-reception-390.png": {
-    "mtime": 1792691439.1594253,
-    "ast_hash": "2af1aaac46a3fae5d0859f4e5a02121a",
+    "mtime": 1792943161.0943358,
+    "ast_hash": "cb4d985d302d10bf6d1c1d89761c8dc5",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/TrainerStoryPage.tsx": {
-    "mtime": 1792690887.4675071,
+    "mtime": 1792943160.7642698,
     "ast_hash": "c1137162846e777dc44ca8bdde5ff862",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/data/trainersData.ts": {
-    "mtime": 1792691280.1539047,
-    "ast_hash": "0844d11bfe6c485b679932d238694a03",
+    "mtime": 1792943160.7717834,
+    "ast_hash": "181928c272caae5dc1e13d047f385977",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/SportPage.tsx": {
-    "mtime": 1792691171.153565,
-    "ast_hash": "02fe468293b29c5a1c740175522dc89f",
+    "mtime": 1792943160.763764,
+    "ast_hash": "0a6a1a49586e82259cb13340c638c465",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/catalog/PublicCatalogController.java": {
-    "mtime": 1792690604.6685297,
-    "ast_hash": "10f9466ebe1436fc8c370b05b1465131",
+    "mtime": 1792943160.5453897,
+    "ast_hash": "6975067986549e20a3491820dc6acfc3",
     "semantic_hash": ""
   },
   "apps/api/src/main/java/com/swp391/scms/catalog/PublicCatalogService.java": {
-    "mtime": 1792690631.4709098,
-    "ast_hash": "0f1304d7af86d55ca9972cb8b5f4d70e",
+    "mtime": 1792943160.5453897,
+    "ast_hash": "83446fc4cefd8c5fb667ae01f1e350c1",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/catalog/PublicCatalogServiceTest.java": {
-    "mtime": 1792690515.5196888,
-    "ast_hash": "b96341611b21922febf86ab5f952fd10",
+    "mtime": 1792943160.6115253,
+    "ast_hash": "2a759f789466e289ac8000fafd2b4076",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/CatalogSections.tsx": {
-    "mtime": 1792691083.8236723,
-    "ast_hash": "1643b92ede701bd484c9ee9e73a3df4b",
+    "mtime": 1792943160.7647748,
+    "ast_hash": "0e3d9083377942505e39053f22f557d0",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/publicCatalog.test.tsx": {
-    "mtime": 1792691240.5978642,
-    "ast_hash": "e827eae6a23d7c3abf0e9420efb7abc8",
+    "mtime": 1792943160.7752912,
+    "ast_hash": "1328ec19980cb3eca9ad26f9d5c57452",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/publicCatalog.ts": {
-    "mtime": 1792691122.405761,
-    "ast_hash": "c8b098be0840c83715c55efb1e91a866",
+    "mtime": 1792943160.7752912,
+    "ast_hash": "19df2019ae4ee6b30d036fe33fa23a72",
     "semantic_hash": ""
   },
   "apps/web/src/shared/lib/membershipPresentation.ts": {
-    "mtime": 1792690702.4562354,
-    "ast_hash": "503177c0a242f3ae31ec34729c17d976",
+    "mtime": 1792943160.797969,
+    "ast_hash": "598cda46122a6a3b447fc37e35f3c1f6",
     "semantic_hash": ""
   },
   "docs/api-contracts/openapi-public.yaml": {
-    "mtime": 1792690884.011259,
-    "ast_hash": "fe3de0ef3fb056c96c8a6250b34b1c61",
+    "mtime": 1792943160.813985,
+    "ast_hash": "01daed527331e67f5df63fc1a0864c19",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/coach-aquatics.jpg": {
-    "mtime": 1792690655.775094,
+    "mtime": 1792943160.6837082,
     "ast_hash": "c5a632178efaf02c47508efa72515781",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/coach-personal.jpg": {
-    "mtime": 1792690677.147833,
+    "mtime": 1792943160.7077494,
     "ast_hash": "083a3fe929371cae37705faf1617408c",
     "semantic_hash": ""
   },
   "apps/web/public/images/fitness/coach-tennis.jpg": {
-    "mtime": 1792690634.8305793,
+    "mtime": 1792943160.7330549,
     "ast_hash": "de9c34fbcb0eb33640cbdb88c65cd7b9",
     "semantic_hash": ""
   },
   "apps/api/src/test/java/com/swp391/scms/catalog/PublicCatalogSecurityTest.java": {
-    "mtime": 1792690961.8588865,
-    "ast_hash": "23811f1e4371e8fba7a782578dbe12c4",
+    "mtime": 1792943160.6105227,
+    "ast_hash": "49660bb96a8b404447d907725385edb0",
     "semantic_hash": ""
   },
   "apps/web/src/features/landing/components/LiveTrainerProfile.tsx": {
-    "mtime": 1792690886.3991454,
-    "ast_hash": "f74d117d4bb7b666b2f916ae4403c821",
+    "mtime": 1792943160.7667851,
+    "ast_hash": "b070879d0f49e2f1f499dd0c04f7a017",
     "semantic_hash": ""
   },
   "apps/web/src/shared/lib/coachIllustration.ts": {
-    "mtime": 1792690884.8084626,
-    "ast_hash": "1e12dde337fa758ce3fb033fbecc2824",
+    "mtime": 1792943160.796968,
+    "ast_hash": "4d25531975521c5ba848b19ff53ff007",
     "semantic_hash": ""
   },
   "scripts/public-catalog-fixture.cjs": {
-    "mtime": 1792691064.7642987,
-    "ast_hash": "b8f8fffbb90fd105d46ffcb02ef64c5d",
+    "mtime": 1792943161.3514676,
+    "ast_hash": "371da4f451d195c27bf555654f958f5a",
     "semantic_hash": ""
   },
   "scripts/verify-catalog-sync.cjs": {
-    "mtime": 1792691241.3962176,
-    "ast_hash": "943cff1532e59f02f544cf3021b51946",
+    "mtime": 1792943161.3525066,
+    "ast_hash": "72b2bff7c8e10d7f17e9e003217163d6",
     "semantic_hash": ""
   },
   "docs/ui-review/catalog-sync/packages-1440.png": {
-    "mtime": 1792691392.6719074,
+    "mtime": 1792943160.820031,
     "ast_hash": "07663c77635843f08a7d5ad4b6a80385",
     "semantic_hash": ""
   },
   "docs/ui-review/catalog-sync/packages-390.png": {
-    "mtime": 1792691390.243363,
+    "mtime": 1792943160.8210306,
     "ast_hash": "a3a9a1997cf9a4a75e9fcc076928f5d0",
     "semantic_hash": ""
   },
   "docs/ui-review/catalog-sync/schedule-1440.png": {
-    "mtime": 1792691393.0196323,
+    "mtime": 1792943160.8219965,
     "ast_hash": "ce20987d66ffd23e9a1e8fae78ef317a",
     "semantic_hash": ""
   },
   "docs/ui-review/catalog-sync/schedule-390.png": {
-    "mtime": 1792691390.6522043,
+    "mtime": 1792943160.823503,
     "ast_hash": "de2c986c6f9180cab2142658996b9086",
     "semantic_hash": ""
   },
   "docs/ui-review/catalog-sync/trainers-1440.png": {
-    "mtime": 1792691392.9291093,
-    "ast_hash": "7b28782a7b3008c279052d29b050db7d",
+    "mtime": 1792943160.826511,
+    "ast_hash": "faff343e33b7f836d61a30c98d898cec",
     "semantic_hash": ""
   },
   "docs/ui-review/catalog-sync/trainers-390.png": {
-    "mtime": 1792691390.5392053,
-    "ast_hash": "a00ec6ad28dc419427839ec3a19dfd38",
+    "mtime": 1792943160.8285098,
+    "ast_hash": "99e35672c63222aca0a46982cedda394",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/ai/client/AiChatProvider.java": {
+    "mtime": 1792943980.3662095,
+    "ast_hash": "b0345643b19f979c8ad1e5db0256d760",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/attendance/SessionAttendanceController.java": {
+    "mtime": 1792943687.6238675,
+    "ast_hash": "94c4ab9b036d8ee6e64fddf8219f85e0",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/attendance/dto/BatchAttendanceRequest.java": {
+    "mtime": 1792943687.6248674,
+    "ast_hash": "efcf02b2b72c74d6a53eec9dabdd6824",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/attendance/dto/SessionAttendanceResponse.java": {
+    "mtime": 1792943687.626868,
+    "ast_hash": "c43ffc1efbd63d01868a667cebd8fa48",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/attendance/entity/AttendanceStatus.java": {
+    "mtime": 1792943687.6279325,
+    "ast_hash": "915f301ae0ae53dafd4a393a7052ba3a",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/attendance/repository/SessionAttendanceRepository.java": {
+    "mtime": 1792943687.6288724,
+    "ast_hash": "a8987116a58cac2f196d7cb3961c1777",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/attendance/service/SessionAttendanceService.java": {
+    "mtime": 1792943687.6308677,
+    "ast_hash": "c6c9e573b826a6645dc1d7245a4beccd",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/audit/AuditController.java": {
+    "mtime": 1792943160.5398781,
+    "ast_hash": "eaf0aa1dd1a3ec4a0c91ef856f3de920",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/audit/AuditService.java": {
+    "mtime": 1792943160.542879,
+    "ast_hash": "c4aade1b8730c8f2bb301ecf7fa9505b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/audit/AuditSpecifications.java": {
+    "mtime": 1792943160.542879,
+    "ast_hash": "c702dc068bc132af368964102b1b0045",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/audit/dto/AuditLogDto.java": {
+    "mtime": 1792943160.5443854,
+    "ast_hash": "656d611337758b5f11414b36181ecf39",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/coaching/TrainingCompletionController.java": {
+    "mtime": 1792943911.4483893,
+    "ast_hash": "2d763efc284eb638b0a97ff2989edccf",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/coaching/dto/TrainingCompletionDto.java": {
+    "mtime": 1792943911.4498956,
+    "ast_hash": "7a45ef6b061e17db7e5ca3c51ce9dfc9",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingItemCompletion.java": {
+    "mtime": 1792943911.4510312,
+    "ast_hash": "46ae42495ea890dee63ea26c5c1b07f8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/coaching/repository/TrainingItemCompletionRepository.java": {
+    "mtime": 1792943911.4520383,
+    "ast_hash": "905a7b1569249b638b85badf55f5551d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/coaching/service/TrainingCompletionService.java": {
+    "mtime": 1792943911.4530475,
+    "ast_hash": "2c4276ab92df13f6fb87c69fa65b37e5",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/config/AsyncConfig.java": {
+    "mtime": 1792943160.5579126,
+    "ast_hash": "c4cbd92e336039066dd791a1560a3d08",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/finance/MemberInvoiceController.java": {
+    "mtime": 1792943761.1599777,
+    "ast_hash": "53b91c37da48e5b0b7386522c06bff67",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/finance/service/MemberInvoicePdfService.java": {
+    "mtime": 1792943761.1634872,
+    "ast_hash": "64304b68f4723dc25e5df8b1bc976024",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/NotificationScheduler.java": {
+    "mtime": 1792943160.5684254,
+    "ast_hash": "a353545b028e5852137ca34eba66e40a",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/adapter/InAppNotificationChannelAdapter.java": {
+    "mtime": 1792943160.5704255,
+    "ast_hash": "e2f2b5cd756a59fae34965f05ca0ccb5",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/adapter/MockEmailNotificationChannelAdapter.java": {
+    "mtime": 1792943160.5704255,
+    "ast_hash": "0641bee06bcba5695520282d807de978",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/adapter/MockPushNotificationChannelAdapter.java": {
+    "mtime": 1792943160.5724275,
+    "ast_hash": "1180f549afc2cbbc22d73b6914f6a26f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/adapter/MockWebhookNotificationChannelAdapter.java": {
+    "mtime": 1792943160.5724275,
+    "ast_hash": "15e7437772977bf19cde80e8ff7eb991",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/event/SessionCancelledEvent.java": {
+    "mtime": 1792943687.6343844,
+    "ast_hash": "1e20f650a099e3d7d71303f1b0649493",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/port/NotificationChannel.java": {
+    "mtime": 1792943160.5739334,
+    "ast_hash": "1ca8a8a2c7f854925add1ffd9afe29ea",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/port/NotificationChannelAdapter.java": {
+    "mtime": 1792943160.5749397,
+    "ast_hash": "22b7be042e2442b8429c8f3f9d61cb11",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/port/NotificationDispatcher.java": {
+    "mtime": 1792943160.5749397,
+    "ast_hash": "abaeefe7f561ccdc0ed85d5716bd0a14",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/port/NotificationPayload.java": {
+    "mtime": 1792943160.5759447,
+    "ast_hash": "9b66a08386b8d02a6c71f8f720adce0c",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/notifications/service/AsyncNotificationDispatcher.java": {
+    "mtime": 1792943160.5769465,
+    "ast_hash": "931a9e6b115fa90076d6bae360665f03",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/scheduling/ClassSessionController.java": {
+    "mtime": 1792943687.635384,
+    "ast_hash": "84e039bfd647ec5a67f3773a39185761",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/scheduling/dto/CancelSessionRequest.java": {
+    "mtime": 1792943687.6363854,
+    "ast_hash": "12dfa8b159164a7fa8fd07809ef31b5c",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/scheduling/event/WaitlistPromotedEvent.java": {
+    "mtime": 1792943687.6373844,
+    "ast_hash": "b5878feed6051d7c0eaeb8339e272b3e",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/scheduling/scheduler/WaitlistPromotionScheduler.java": {
+    "mtime": 1792943687.6388896,
+    "ast_hash": "cdb94c22b679d35ab03bccf1350e2b7b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/scheduling/service/ClassSessionService.java": {
+    "mtime": 1792943687.6398952,
+    "ast_hash": "67ee98ce63bb3791f3539191c1fc173b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/scheduling/service/WaitlistPromotionService.java": {
+    "mtime": 1792943687.6408956,
+    "ast_hash": "3b2b7c7de1da333ace2897fca23a569b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/support/SupportRequestMessageRepository.java": {
+    "mtime": 1792943160.5909731,
+    "ast_hash": "aae9470e78db3dc623c2f34be3008c77",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/support/dto/CreateSupportMessageDto.java": {
+    "mtime": 1792943160.5934794,
+    "ast_hash": "b18b2162f8d8235207c0d4084daea81d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/main/java/com/swp391/scms/support/dto/SupportRequestMessageDto.java": {
+    "mtime": 1792943160.5944853,
+    "ast_hash": "dc3d7afd0e72c22795af0d42e3df20a7",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/ai/AiChatConfigurationTest.java": {
+    "mtime": 1792943980.3777692,
+    "ast_hash": "b31bf843dd5e52eafbe822eb73c7d82c",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/ai/AiChatProviderTest.java": {
+    "mtime": 1792943980.378768,
+    "ast_hash": "2ba225295d0c17916a323edbda58ade2",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/ai/AiChatSecurityTest.java": {
+    "mtime": 1792943980.3798006,
+    "ast_hash": "ff2baa95100cd7740a316bede0658b6a",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/attendance/SessionAttendanceControllerTest.java": {
+    "mtime": 1792943687.648415,
+    "ast_hash": "3fb835607542b7a4306f53ed26538a54",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/attendance/SessionAttendanceServiceTest.java": {
+    "mtime": 1792943687.649415,
+    "ast_hash": "9977326f0712523de449959a7b6fb728",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/audit/AuditControllerTest.java": {
+    "mtime": 1792943160.608523,
+    "ast_hash": "2a8c1001fb3b90b0d979938955b28f0f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/audit/AuditServiceTest.java": {
+    "mtime": 1792943160.609523,
+    "ast_hash": "81fa701bcbb4c346099dc45a50dc3c06",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/coaching/TrainingCompletionControllerTest.java": {
+    "mtime": 1792943911.460048,
+    "ast_hash": "8a0c0204c38d3baf501309258dffc148",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/coaching/TrainingCompletionServiceTest.java": {
+    "mtime": 1792943911.4610481,
+    "ast_hash": "a148cbb55337a778917ad43e1445cd84",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/coaching/TrainingPlanItemRepositoryTest.java": {
+    "mtime": 1792943911.4615538,
+    "ast_hash": "da03140eeb5650c520fab2360d46d3c1",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/finance/MemberInvoicePdfTest.java": {
+    "mtime": 1792943761.1714916,
+    "ast_hash": "1d3eaba0351201849c240a020e1f004a",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/finance/MemberInvoiceSecurityTest.java": {
+    "mtime": 1792943761.1714916,
+    "ast_hash": "091c5bf729d9f3d66322bf8fa7ac6eef",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/notifications/NotificationSchedulerTest.java": {
+    "mtime": 1792943160.620038,
+    "ast_hash": "83e77a168e5087b77deaf4c6500f8d2f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/notifications/adapter/NotificationChannelAdaptersTest.java": {
+    "mtime": 1792943160.6220393,
+    "ast_hash": "54b31fd4b265efbb10cd41d935b39df8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/notifications/service/AsyncNotificationDispatcherTest.java": {
+    "mtime": 1792943160.6220393,
+    "ast_hash": "1f0f6d443a65275108858d2bcdb0a4a6",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/scheduling/ClassSessionControllerTest.java": {
+    "mtime": 1792943687.6519227,
+    "ast_hash": "4a395846a5f506355a888f4f637260d7",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/scheduling/ClassSessionServiceTest.java": {
+    "mtime": 1792943687.6529312,
+    "ast_hash": "ea8bb5ee43c524927a7aa942bb1b8b68",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/scheduling/ConcurrencyBookingIntegrationTest.java": {
+    "mtime": 1792943687.6539361,
+    "ast_hash": "913419529734be5541b6361a27e6df57",
+    "semantic_hash": ""
+  },
+  "apps/api/src/test/java/com/swp391/scms/scheduling/WaitlistPromotionServiceTest.java": {
+    "mtime": 1792943687.6549385,
+    "ast_hash": "88b01635d07a7611d5597a6105e7110b",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/CoachAttendancePage.test.tsx": {
+    "mtime": 1792943688.8551764,
+    "ast_hash": "66d56ba1b0d17a24adab35e8a02e825f",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/CoachClassesPage.test.tsx": {
+    "mtime": 1792944360.0504005,
+    "ast_hash": "5491204952171c0532e61385ea850182",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/CoachClassesPage.tsx": {
+    "mtime": 1792944310.1807458,
+    "ast_hash": "7ec883cadb93a421a05c0757dd8f0afc",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/CoachTrainingPlanPage.test.tsx": {
+    "mtime": 1792944290.3988273,
+    "ast_hash": "4a6445d2ededea44bd7ee11516f08568",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/CoachTrainingPlanPage.tsx": {
+    "mtime": 1792943688.2798638,
+    "ast_hash": "ed618184f0b9165745cd4cfa615eef8e",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/aiApi.ts": {
+    "mtime": 1792944269.1384923,
+    "ast_hash": "564f123f2fe4cfdbca2bf8e6ac4e76a0",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/attendanceApi.ts": {
+    "mtime": 1792943688.8561738,
+    "ast_hash": "bee22fae4f9772fcf8608e3070157a44",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/coaching/coachingApi.ts": {
+    "mtime": 1792944262.5818155,
+    "ast_hash": "b7b703cd30cdb40c84c4187f61fd037d",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/components/SportStack.test.tsx": {
+    "mtime": 1792943160.7687821,
+    "ast_hash": "990b2d84c25c9a7057c97675f127f16e",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/components/SportStack.tsx": {
+    "mtime": 1792943160.769781,
+    "ast_hash": "401677f41b77e26f9a394e5b2e5ba987",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/landing/hooks/useComponentReveal.test.tsx": {
+    "mtime": 1792943160.7737803,
+    "ast_hash": "64609168523103bf50934b1ceb91ff3f",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/manager/ManagerAuditLogsPage.test.tsx": {
+    "mtime": 1792943689.4237213,
+    "ast_hash": "a1ed61bc7b969d2149fe0bf6b0be754e",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/manager/ManagerAuditLogsPage.tsx": {
+    "mtime": 1792943689.4247272,
+    "ast_hash": "9b1b767f47f835a860705574f6667478",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/manager/auditApi.ts": {
+    "mtime": 1792943689.4258554,
+    "ast_hash": "9b856b5e684706d988a23b8f3a0eb7d9",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberInvoicesPage.test.tsx": {
+    "mtime": 1792943761.17475,
+    "ast_hash": "bde237cd5cf33bfe5713857432a8dafc",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberInvoicesPage.tsx": {
+    "mtime": 1792943761.17475,
+    "ast_hash": "f705ce5cf55c5f2db112d53ceaf4dd59",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberNotificationsPage.test.tsx": {
+    "mtime": 1792943706.456217,
+    "ast_hash": "897e088026bea704ab75bfdb4dc2e4c0",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberNotificationsPage.tsx": {
+    "mtime": 1792943706.4572184,
+    "ast_hash": "8413fcc0468db7dd6c42d62ec9eb60e6",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberProgressPage.test.tsx": {
+    "mtime": 1792943911.4635699,
+    "ast_hash": "81860a38026d47777c05d7f3af083170",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberProgressPage.tsx": {
+    "mtime": 1792943911.4645698,
+    "ast_hash": "0cbb2add9b70326ac6ec7b877eaf4bbc",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberSupportPage.test.tsx": {
+    "mtime": 1792943832.4581673,
+    "ast_hash": "83263cd15a729c178a7ab1781dd24fb6",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/MemberSupportPage.tsx": {
+    "mtime": 1792943832.4591694,
+    "ast_hash": "4b238872bfa311890f04b041886f06d8",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/memberInvoicesApi.test.ts": {
+    "mtime": 1792943761.176747,
+    "ast_hash": "846a1797301f299a97b6175e7afe5a52",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/memberInvoicesApi.ts": {
+    "mtime": 1792943761.1777458,
+    "ast_hash": "f6b900c38e561c303c59df0611727df7",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/memberProgressApi.test.ts": {
+    "mtime": 1792943911.4665706,
+    "ast_hash": "a6c2dbf0d9fe4255a306a4dccaa96e06",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/memberProgressApi.ts": {
+    "mtime": 1792943911.4675744,
+    "ast_hash": "f68ec00de7bf2d97e22d3ace01e208e1",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/memberSupportApi.test.ts": {
+    "mtime": 1792943832.4601688,
+    "ast_hash": "624f311299c5b59f2472d1688b34b64b",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/memberSupportApi.ts": {
+    "mtime": 1792943832.4611683,
+    "ast_hash": "0226e8ecfe4593219c2d7983bdc33f1a",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/notificationsApi.test.ts": {
+    "mtime": 1792944038.4484744,
+    "ast_hash": "5d560c5ff59e7b1e1917fa47f2c59af8",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/notificationsApi.ts": {
+    "mtime": 1792944036.7297835,
+    "ast_hash": "1e3880d37cd1c83e3daa2fb7c25e90fc",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/progressPresentation.test.ts": {
+    "mtime": 1792943911.4675744,
+    "ast_hash": "be2441467930aec64e609c80fe312440",
+    "semantic_hash": ""
+  },
+  "apps/web/src/features/member/progressPresentation.ts": {
+    "mtime": 1792943911.4685755,
+    "ast_hash": "df427dc5f34785904ff3042d221922c7",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/liquid-glass/LiquidGlassChatbot.test.tsx": {
+    "mtime": 1792943980.3841658,
+    "ast_hash": "d946ef38d9e34a4cd8f3ba8a1d35221d",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/liquid-glass/aiChatApi.test.ts": {
+    "mtime": 1792943980.3871348,
+    "ast_hash": "754e409146f6dcefc185417d395fdd9a",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/liquid-glass/aiChatApi.ts": {
+    "mtime": 1792943980.388168,
+    "ast_hash": "ce71764c5e7c1da453f4559490f43a30",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/ui/ThemeToggle.test.tsx": {
+    "mtime": 1792943160.8019683,
+    "ast_hash": "4de6920567d35850296090298839925d",
+    "semantic_hash": ""
+  },
+  "apps/web/src/shared/ui/ThemeToggle.tsx": {
+    "mtime": 1792943160.8034754,
+    "ast_hash": "d8d394207034c3e87543ca15ec1d6319",
+    "semantic_hash": ""
+  },
+  "scripts/audit-heading-sizes.cjs": {
+    "mtime": 1792943161.3504984,
+    "ast_hash": "a512d8dde311576453c61261fe54991f",
+    "semantic_hash": ""
+  },
+  "scripts/benchmark-sport-stack.cjs": {
+    "mtime": 1792943161.3514676,
+    "ast_hash": "7d235c74042a9ff874b2cc77a80da4cb",
+    "semantic_hash": ""
+  },
+  "scripts/verify-membership-periods.cjs": {
+    "mtime": 1792943161.3525066,
+    "ast_hash": "330fb6d6f9edf0bacba608a8ad72f324",
+    "semantic_hash": ""
+  },
+  "scripts/verify-sport-stack.cjs": {
+    "mtime": 1792943161.3550406,
+    "ast_hash": "39495016bf37aa725ed65f2b1ffd5e3c",
+    "semantic_hash": ""
+  },
+  "scripts/verify-theme.cjs": {
+    "mtime": 1792943161.3550406,
+    "ast_hash": "14031f87350871037e69e2554a7e3567",
+    "semantic_hash": ""
+  },
+  "docs/api-contracts/openapi-sprint3-ai-chat.yaml": {
+    "mtime": 1792943980.3906412,
+    "ast_hash": "91e91423730e0313dfe706390e37d113",
+    "semantic_hash": ""
+  },
+  "docs/api-contracts/openapi-sprint3-coaching-analytics.yaml": {
+    "mtime": 1792944190.0887313,
+    "ast_hash": "e5128a9cf7f8956655ca4da242641a76",
+    "semantic_hash": ""
+  },
+  "docs/api-contracts/openapi-sprint3-member-progress.yaml": {
+    "mtime": 1792943911.471083,
+    "ast_hash": "28ea5be49aac3bb827bc019c671f9f85",
+    "semantic_hash": ""
+  },
+  "docs/api-contracts/openapi-sprint3-operations.yaml": {
+    "mtime": 1792943687.6639502,
+    "ast_hash": "e45b79039df175a8a33a21b3b5243900",
+    "semantic_hash": ""
+  },
+  "docs/plans/SCRUM-129-completion-schema-review.md": {
+    "mtime": 1792943911.4720936,
+    "ast_hash": "21e4317436ff6b30c86179688c454e38",
+    "semantic_hash": ""
+  },
+  "docs/qa/SCRUM-126-ai-chat-verification.md": {
+    "mtime": 1792943980.3916502,
+    "ast_hash": "f0e4de011798d88e80f2e22ceba58c5d",
+    "semantic_hash": ""
+  },
+  "docs/qa/sport-stack-performance.md": {
+    "mtime": 1792943160.8180006,
+    "ast_hash": "76c9608250037087bd7f5cf07da2459c",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/catalog-sync/README.md": {
+    "mtime": 1792943160.8189962,
+    "ast_hash": "bc7dd23c82090f527e8d4577cd43811d",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/heading-audit/README.md": {
+    "mtime": 1792943160.8970487,
+    "ast_hash": "1590f76af6eb4c87323a14a36a5afb28",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack-responsive/README.md": {
+    "mtime": 1792943160.9987595,
+    "ast_hash": "21606d1aff5d12328fa33f6b77b70ef3",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/badminton-court.png": {
+    "mtime": 1792943160.6556685,
+    "ast_hash": "70dca1bf27b6c62656d619b03f9db4f4",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/badminton-court.webp": {
+    "mtime": 1792943160.6576774,
+    "ast_hash": "3356253b0aa83e7f1df1c2940557c06c",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/basketball-court.png": {
+    "mtime": 1792943160.6772027,
+    "ast_hash": "53f9ecd81d68ef2c8d12505f12b702e2",
+    "semantic_hash": ""
+  },
+  "apps/web/public/images/fitness/basketball-court.webp": {
+    "mtime": 1792943160.6791985,
+    "ast_hash": "9aef6210ed75cd6488129866f4eb11ac",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/heading-audit/dashboard-1440.png": {
+    "mtime": 1792943160.9000733,
+    "ast_hash": "58f51cf4a1b1ede4e43acfd15abcb601",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/heading-audit/dashboard-390.png": {
+    "mtime": 1792943160.9035535,
+    "ast_hash": "5781235aed101ba4080612b20a8affbd",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/landing-typography/desktop.png": {
+    "mtime": 1792943160.9075644,
+    "ast_hash": "0357a1ce1973ef99398f8ca8af655d98",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/landing-typography/mobile.png": {
+    "mtime": 1792943160.9095905,
+    "ast_hash": "69cc46457ded5e734dd80a1e5987169f",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-cancellations-1440.png": {
+    "mtime": 1792943160.9115605,
+    "ast_hash": "ff4a31991d55ae67d30f4673e5ddcb14",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-cancellations-390.png": {
+    "mtime": 1792943160.9125595,
+    "ast_hash": "9b0bcb0d801671b20209fa2ce4ea88a4",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-catalogs-1440.png": {
+    "mtime": 1792943160.9135625,
+    "ast_hash": "a1f2e5db62f38e2eec27c5c94f14d601",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-catalogs-390.png": {
+    "mtime": 1792943160.9148026,
+    "ast_hash": "7139d8d803d566b7edcdf3d4cd7c096c",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-catalogs-create.png": {
+    "mtime": 1792943160.916802,
+    "ast_hash": "52482d4c5edd7b9fd37c2386f073db3e",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-reports-1440.png": {
+    "mtime": 1792943160.9188008,
+    "ast_hash": "8b2c955d49f5838150b478e096594f84",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-reports-390.png": {
+    "mtime": 1792943160.9197998,
+    "ast_hash": "190f142088bffc435d76801fe60a0a3e",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-users-1440.png": {
+    "mtime": 1792943160.9208343,
+    "ast_hash": "8179581d11db84ba44273eecd4a8040c",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-users-390.png": {
+    "mtime": 1792943160.921798,
+    "ast_hash": "c6688921fde87edf42bfb23cef9de388",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/manager-users-create.png": {
+    "mtime": 1792943160.9237971,
+    "ast_hash": "e78536b2aebfe76c9944819bb4de83f5",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-card-1440.png": {
+    "mtime": 1792943160.9249153,
+    "ast_hash": "e48703ca83627a67307df9ae81dfd584",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-card-390.png": {
+    "mtime": 1792943160.9269152,
+    "ast_hash": "430fd66d597f4d7ee153b1db68e863e8",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-classes-1440.png": {
+    "mtime": 1792943160.9279468,
+    "ast_hash": "5d78a64266a2ecc1b780e2ee558e4c66",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-classes-390.png": {
+    "mtime": 1792943160.9289148,
+    "ast_hash": "6133f38f09f0aca874adf4a47b415837",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-1440.png": {
+    "mtime": 1792943160.932922,
+    "ast_hash": "7536ed4288b7c1acaa460e170e4b33d8",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-1920.png": {
+    "mtime": 1792943160.936432,
+    "ast_hash": "e9559760dd7d0334b07eb23f90de06cf",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-2560.png": {
+    "mtime": 1792943160.942431,
+    "ast_hash": "43195c42a16ef027907eacc0790dffe4",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-390.png": {
+    "mtime": 1792943160.9459734,
+    "ast_hash": "e0ea42ec5cb3fde049b0b31959bd86a6",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-768.png": {
+    "mtime": 1792943160.9489763,
+    "ast_hash": "131a5e88cf7980e0e99e79bfc6b6de41",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-empty.png": {
+    "mtime": 1792943160.9519427,
+    "ast_hash": "a79caba5444cc97c1a37cdb5e07cd0b4",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-dashboard-error.png": {
+    "mtime": 1792943160.9544559,
+    "ast_hash": "803b5f9791c983d0e69fc9333a81f8bb",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-packages-1440.png": {
+    "mtime": 1792943160.9554584,
+    "ast_hash": "5543952bdce7f04cb04b7599aeb89e91",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-packages-390.png": {
+    "mtime": 1792943160.956457,
+    "ast_hash": "822a265c81cf139b91f5dc078c15047d",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-profile-1440.png": {
+    "mtime": 1792943160.958457,
+    "ast_hash": "03b2227369c1f723dbc3e4b342c8aa60",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/member-profile-390.png": {
+    "mtime": 1792943160.9594562,
+    "ast_hash": "dc6acd141a1ce557ee3adeb8bb6bcb27",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-attendance-1440.png": {
+    "mtime": 1792943160.961457,
+    "ast_hash": "27c0488351224a32b0c78e97afac3e51",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-attendance-390.png": {
+    "mtime": 1792943160.9634569,
+    "ast_hash": "738bf681f6f8d7d6010205e5de004b82",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-check-in-1440.png": {
+    "mtime": 1792943160.9651167,
+    "ast_hash": "ba8b0c25abec6f32e8f1f5109b0a8d55",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-check-in-390.png": {
+    "mtime": 1792943160.9661207,
+    "ast_hash": "213702be9453c8f935a9fee9c81febeb",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-classes-1440.png": {
+    "mtime": 1792943160.9671242,
+    "ast_hash": "e68207f9849bdce5bc980c9374e9c2f8",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-classes-390.png": {
+    "mtime": 1792943160.9681282,
+    "ast_hash": "2a46759182d1331cdf41329400fdb67e",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-classes-create.png": {
+    "mtime": 1792943160.9691565,
+    "ast_hash": "f0e85b423ff4458f0b8c0a23c4deb207",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-reception-1440.png": {
+    "mtime": 1792943160.9711206,
+    "ast_hash": "6cddc313e663755688a852341128d215",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/dark-regression/staff-reception-390.png": {
+    "mtime": 1792943160.9736602,
+    "ast_hash": "cb4d985d302d10bf6d1c1d89761c8dc5",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/landing-1440.png": {
+    "mtime": 1792943160.9766726,
+    "ast_hash": "2576274a9d6a612d49505d791b391733",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/landing-390.png": {
+    "mtime": 1792943160.9786663,
+    "ast_hash": "fe4995815ec3a14ae35c955178c7f3ec",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/login-1440.png": {
+    "mtime": 1792943160.981666,
+    "ast_hash": "5c5a142236be5d2a4196f5f5e8ec7625",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/login-390.png": {
+    "mtime": 1792943160.982667,
+    "ast_hash": "e290abd885da69a74ceff8fc9402760d",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/member-dashboard-1440.png": {
+    "mtime": 1792943160.9852746,
+    "ast_hash": "666bb8b3d6650d892524709767b31d91",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/member-dashboard-390.png": {
+    "mtime": 1792943160.9872463,
+    "ast_hash": "8d75080fa2b68a792658dff657610783",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/member-packages-1440.png": {
+    "mtime": 1792943160.9892807,
+    "ast_hash": "b05da1809eaf5dbdf7841d42e10c61e4",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/member-packages-390.png": {
+    "mtime": 1792943160.990276,
+    "ast_hash": "542b0088ea66da08f6851e39a85a4203",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/light-theme/muscle-callout-light.png": {
+    "mtime": 1792943160.990276,
+    "ast_hash": "d5499a30550be6a51d500183cb7ed2d0",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/portal-membership-periods/periods-1440.png": {
+    "mtime": 1792943160.9922457,
+    "ast_hash": "c76042b60b3a164b633c3c6a81652b83",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/portal-membership-periods/periods-390.png": {
+    "mtime": 1792943160.9937499,
+    "ast_hash": "e6c9d0efbd38fbfa8c9ba79a7ff85d6b",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack-responsive/1366x650.png": {
+    "mtime": 1792943160.996764,
+    "ast_hash": "ea2323d7dc659c9aa9ff73acb74cae3e",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack-responsive/390x844.png": {
+    "mtime": 1792943160.9987595,
+    "ast_hash": "a2c54a51718e06aecc7420ca61702b75",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/badminton-1440.png": {
+    "mtime": 1792943161.0042999,
+    "ast_hash": "86b4e842fbb5e71e80f524a542aac72c",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/badminton-390.png": {
+    "mtime": 1792943161.0063024,
+    "ast_hash": "f590e0c063ea153f55d960db21c7cfb3",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/basketball-1440.png": {
+    "mtime": 1792943161.0103354,
+    "ast_hash": "e942404b38b4e205b81d86e0bef4152f",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/basketball-390.png": {
+    "mtime": 1792943161.0123363,
+    "ast_hash": "47c0f1eacb82a9d6a73aa270e5992127",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/section-desktop.png": {
+    "mtime": 1792943161.0168507,
+    "ast_hash": "1af369417960f7862e1e0cb652f976d5",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/swimming-1440.png": {
+    "mtime": 1792943161.0228555,
+    "ast_hash": "ec2590e6a90583bf8189639f7915aedc",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/swimming-390.png": {
+    "mtime": 1792943161.0243623,
+    "ast_hash": "f1b03c4729bcefbc46c7a9d9f7c07927",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/tennis-1440.png": {
+    "mtime": 1792943161.0293958,
+    "ast_hash": "47c438557aa92fb2e5c522c1e07ce7a6",
+    "semantic_hash": ""
+  },
+  "docs/ui-review/sport-stack/tennis-390.png": {
+    "mtime": 1792943161.031364,
+    "ast_hash": "8d46fd882128d874b93a57af1c06bd59",
     "semantic_hash": ""
   }
 }

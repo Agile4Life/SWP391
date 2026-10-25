@@ -130,3 +130,4 @@ paths:
       responses:
         '200':
           description: Class utilization report retrieved successfully
+
