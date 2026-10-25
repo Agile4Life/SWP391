@@ -9,6 +9,7 @@ import com.swp391.scms.membership.dto.SubscriptionRequests;
 import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
 import com.swp391.scms.membership.entity.MembershipSubscription;
+import com.swp391.scms.membership.repository.MembershipCancellationRequestRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.membership.service.DynamicQrService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
@@ -56,6 +57,9 @@ class MembershipSubscriptionServiceTest {
 
     @Mock
     private PaymentRepository paymentRepository;
+
+    @Mock
+    private MembershipCancellationRequestRepository cancellationRequests;
 
     private Clock clock;
     private MembershipSubscriptionService service;
@@ -804,6 +808,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.get(0).id()).isEqualTo(201L);
         assertThat(result.get(0).memberName()).isEqualTo("Active Member");
     }
+
     @Test
     void renew_findsPaidTailAndCreatesFourthPeriod() {
         Member member = new Member(); member.setUserId(10L);
@@ -849,6 +854,7 @@ class MembershipSubscriptionServiceTest {
         sub.setStartDate(start); sub.setEndDate(end);
         return sub;
     }
+
     @Test
     void renew_ignoresCancelledAttemptButNeverRewritesEarlierPeriods() {
         Member member = new Member(); member.setUserId(10L);
@@ -886,6 +892,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.endDate()).isEqualTo(today.plusDays(59));
         assertThat(previous.getEndDate()).isEqualTo(today.plusDays(29));
     }
+
     @Test
     void upgrade_blocksPaidFutureRenewalWithoutChangingIt() {
         Member member = new Member(); member.setUserId(10L);
@@ -949,6 +956,184 @@ class MembershipSubscriptionServiceTest {
         SubscriptionDto next = service.renew(principal, 101L);
         assertThat(next.previousSubscriptionId()).isEqualTo(101L);
         assertThat(next.startDate()).isEqualTo(today.plusDays(90));
+    }
+
+    @Test
+    void requestHold_rejectsNonOwnerNonActiveExpiredFutureAndInvalidReasons() {
+        Member member = new Member(); member.setUserId(10L);
+        Member other = new Member(); other.setUserId(99L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = period(100L, other, pack, null, today.minusDays(5), today.plusDays(24));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Lý do")))
+                .isInstanceOf(ForbiddenException.class);
+
+        sub.setMember(member);
+        for (String nonActive : List.of("frozen", "expired", "pending_payment", "cancelled")) {
+            sub.setStatus(nonActive);
+            assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Lý do")))
+                    .isInstanceOf(BadRequestException.class);
+        }
+
+        sub.setStatus("active");
+        sub.setEndDate(today.minusDays(1));
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Lý do")))
+                .isInstanceOf(BadRequestException.class);
+
+        sub.setStartDate(today.plusDays(1));
+        sub.setEndDate(today.plusDays(30));
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Lý do")))
+                .isInstanceOf(BadRequestException.class);
+
+        sub.setStartDate(today.minusDays(5));
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("   ")))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("a".repeat(501))))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void requestHold_rejectsDuplicatePendingHoldPendingPaymentPaidFutureRenewalAndPendingCancellation() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "cancellationRequests", cancellationRequests);
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(5), today.plusDays(24));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+
+        sub.setHoldStatus("PENDING");
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác")))
+                .isInstanceOf(ConflictException.class);
+        sub.setHoldStatus(null);
+
+        when(subscriptions.existsByMemberUserIdAndStatus(10L, "pending_payment")).thenReturn(true);
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác")))
+                .isInstanceOf(ConflictException.class);
+        when(subscriptions.existsByMemberUserIdAndStatus(10L, "pending_payment")).thenReturn(false);
+
+        MembershipSubscription future = period(101L, member, pack, sub, today.plusDays(25), today.plusDays(54));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(sub, future));
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác")))
+                .isInstanceOf(ConflictException.class);
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(sub));
+
+        when(cancellationRequests.existsBySubscriptionIdAndStatus(100L, "PENDING")).thenReturn(true);
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác")))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void requestHold_succeedsAfterRejectedHoldAndClearsResolutionMetadata() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(5), today.plusDays(24));
+        sub.setHoldStatus("REJECTED");
+        sub.setHoldResolvedAt(today.minusDays(1).atStartOfDay());
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto result = service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác mới"));
+
+        assertThat(result.holdStatus()).isEqualTo("PENDING");
+        assertThat(result.holdReason()).isEqualTo("Đi công tác mới");
+        assertThat(result.holdResolvedAt()).isNull();
+    }
+
+    @Test
+    void approveHold_and_rejectHold_enforcePendingStateAndBlockConflicts() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "cancellationRequests", cancellationRequests);
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(5), today.plusDays(24));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.approveHold(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.rejectHold(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
+
+        sub.setHoldStatus("PENDING");
+        when(subscriptions.existsByMemberUserIdAndStatus(10L, "pending_payment")).thenReturn(true);
+        assertThatThrownBy(() -> service.approveHold(staffPrincipal, 100L)).isInstanceOf(ConflictException.class);
+        when(subscriptions.existsByMemberUserIdAndStatus(10L, "pending_payment")).thenReturn(false);
+
+        when(cancellationRequests.existsBySubscriptionIdAndStatus(100L, "PENDING")).thenReturn(true);
+        assertThatThrownBy(() -> service.approveHold(staffPrincipal, 100L)).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void listPendingHolds_returnsOnlyActionableActiveUnexpiredHoldsForNonDeletedMembers() {
+        LocalDate today = LocalDate.now(clock);
+        com.swp391.scms.users.entity.User activeUser = new com.swp391.scms.users.entity.User();
+        activeUser.setId(10L); activeUser.setFullName("Active Member");
+        Member activeMember = new Member(); activeMember.setUserId(10L); activeMember.setUser(activeUser);
+
+        com.swp391.scms.users.entity.User deletedUser = new com.swp391.scms.users.entity.User();
+        deletedUser.setId(11L); deletedUser.setDeletedAt(java.time.LocalDateTime.now(clock));
+        Member deletedMember = new Member(); deletedMember.setUserId(11L); deletedMember.setUser(deletedUser);
+
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L); pack.setName("Essential");
+
+        MembershipSubscription validHold = period(100L, activeMember, pack, null, today.minusDays(3), today.plusDays(10));
+        validHold.setHoldStatus("PENDING");
+        MembershipSubscription expiredHold = period(101L, activeMember, pack, null, today.minusDays(20), today.minusDays(1));
+        expiredHold.setHoldStatus("PENDING");
+        MembershipSubscription futureHold = period(102L, activeMember, pack, null, today.plusDays(1), today.plusDays(30));
+        futureHold.setHoldStatus("PENDING");
+        MembershipSubscription deletedMemberHold = period(103L, deletedMember, pack, null, today.minusDays(3), today.plusDays(10));
+        deletedMemberHold.setHoldStatus("PENDING");
+
+        when(subscriptions.findByHoldStatusOrderByHoldRequestedAtDesc("PENDING"))
+                .thenReturn(List.of(validHold, expiredHold, futureHold, deletedMemberHold));
+
+        List<HoldRequestDto> list = service.listPendingHolds();
+        assertThat(list).hasSize(1);
+        assertThat(list.get(0).id()).isEqualTo(100L);
+    }
+
+    @Test
+    void resume_handlesSameDayAndLastDayFreezeCorrectly() {
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sameDay = frozenSubscription();
+        sameDay.setStartDate(today.minusDays(5));
+        sameDay.setEndDate(today.plusDays(24));
+        sameDay.setHoldResolvedAt(today.atTime(8, 0));
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(sameDay));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SubscriptionDto sameDayResult = service.resume(principal, 7L);
+        assertThat(sameDayResult.status()).isEqualTo("active");
+        assertThat(sameDayResult.endDate()).isEqualTo(today.plusDays(24));
+        assertThat(sameDay.getHoldStatus()).isNull();
+
+        MembershipSubscription lastDay = frozenSubscription();
+        lastDay.setStartDate(today.minusDays(34));
+        lastDay.setEndDate(today.minusDays(5));
+        lastDay.setHoldResolvedAt(today.minusDays(5).atTime(9, 0));
+        when(subscriptions.findByIdForUpdate(7L)).thenReturn(Optional.of(lastDay));
+
+        SubscriptionDto lastDayResult = service.resume(principal, 7L);
+        assertThat(lastDayResult.status()).isEqualTo("active");
+        assertThat(lastDayResult.endDate()).isEqualTo(today);
+        assertThat(lastDay.getHoldStatus()).isNull();
+    }
+
+    @Test
+    void renew_and_upgrade_rejectWhenHoldRequestIsPending() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage basic = new MembershipPackage();
+        basic.setId(1L); basic.setStatus("active"); basic.setDurationDays(30); basic.setPrice(new BigDecimal("500000"));
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription current = period(100L, member, basic, null, today.minusDays(5), today.plusDays(24));
+        current.setHoldStatus("PENDING");
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+
+        assertThatThrownBy(() -> service.renew(principal, 100L))
+                .isInstanceOf(ConflictException.class);
+        assertThatThrownBy(() -> service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L)))
+                .isInstanceOf(ConflictException.class);
     }
 
 }

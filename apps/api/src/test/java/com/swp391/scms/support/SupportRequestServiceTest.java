@@ -2,6 +2,11 @@ package com.swp391.scms.support;
 
 import com.swp391.scms.common.exception.AppException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ForbiddenException;
+import com.swp391.scms.support.dto.CreateSupportMessageDto;
+import com.swp391.scms.support.dto.SupportRequestMessageDto;
+import com.swp391.scms.support.entity.SupportRequestMessage;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
@@ -50,6 +55,9 @@ class SupportRequestServiceTest {
     private com.swp391.scms.notifications.NotificationService notificationService;
 
     @Mock
+    private SupportRequestMessageRepository supportRequestMessageRepository;
+
+    @Mock
     private com.swp391.scms.common.i18n.MessageService messageService;
 
     @InjectMocks
@@ -70,6 +78,7 @@ class SupportRequestServiceTest {
         sampleMember.setUser(sampleUser);
 
         sampleRequest = new SupportRequest(sampleMember, "Lỗi tủ đồ", "Tủ số 12 bị kẹt");
+        sampleRequest.setId(1L);
         sampleRequest.setStatus("open");
     }
 
@@ -267,5 +276,156 @@ class SupportRequestServiceTest {
 
         assertThat(sampleRequest.getAssignedTo()).isEqualTo(staff);
         assertThat(result.assignedToName()).isEqualTo("Lễ tân Lan");
+    }
+
+    @Test
+    @DisplayName("Gửi tin nhắn phản hồi thành công bởi Member và gửi thông báo cho Assigned Staff")
+    void sendMessage_asMember_Success() {
+        User staff = new User();
+        staff.setId(20L);
+        staff.setFullName("Lễ tân Lan");
+        sampleRequest.setAssignedTo(staff);
+
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tôi vẫn chưa mở được tủ");
+        SupportRequestMessageDto expectedDto = new SupportRequestMessageDto(
+                100L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tôi vẫn chưa mở được tủ", LocalDateTime.now()
+        );
+
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toMessageDto(any(SupportRequestMessage.class))).thenReturn(expectedDto);
+
+        SupportRequestMessageDto result = supportRequestService.sendMessage(1L, 10L, "MEMBER", messageDto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.message()).isEqualTo("Tôi vẫn chưa mở được tủ");
+        verify(notificationService).send(eq(20L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+    }
+
+    @Test
+    @DisplayName("Gửi tin nhắn phản hồi thành công bởi Staff và gửi thông báo cho Member")
+    void sendMessage_asStaff_Success() {
+        User staff = new User();
+        staff.setId(20L);
+        staff.setFullName("Lễ tân Lan");
+
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Nhân viên đang tới hỗ trợ bạn");
+        SupportRequestMessageDto expectedDto = new SupportRequestMessageDto(
+                101L, 1L, 20L, "Lễ tân Lan", "RECEPTIONIST", "Nhân viên đang tới hỗ trợ bạn", LocalDateTime.now()
+        );
+
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staff));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toMessageDto(any(SupportRequestMessage.class))).thenReturn(expectedDto);
+
+        SupportRequestMessageDto result = supportRequestService.sendMessage(1L, 20L, "RECEPTIONIST", messageDto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.message()).isEqualTo("Nhân viên đang tới hỗ trợ bạn");
+        verify(notificationService).send(eq(10L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+    }
+
+    @Test
+    @DisplayName("Gửi tin nhắn thất bại khi phiếu hỗ trợ đã đóng (closed)")
+    void sendMessage_whenTicketClosed_throwsBadRequestException() {
+        sampleRequest.setStatus("closed");
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tin nhắn mới");
+
+        assertThatThrownBy(() -> supportRequestService.sendMessage(1L, 10L, "MEMBER", messageDto))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    @DisplayName("Gửi tin nhắn thất bại khi Member không phải chủ phiếu hỗ trợ")
+    void sendMessage_whenMemberNotOwner_throwsForbiddenException() {
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tin nhắn từ người khác");
+
+        assertThatThrownBy(() -> supportRequestService.sendMessage(1L, 999L, "MEMBER", messageDto))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("Lấy danh sách tin nhắn thành công theo thứ tự thời gian cho Member chủ phiếu")
+    void getMessages_asMember_Success() {
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+
+        SupportRequestMessage msg1 = new SupportRequestMessage(sampleRequest, sampleUser, "Tin nhắn 1");
+        SupportRequestMessage msg2 = new SupportRequestMessage(sampleRequest, sampleUser, "Tin nhắn 2");
+
+        when(supportRequestMessageRepository.findBySupportRequestIdOrderByCreatedAtAsc(1L))
+                .thenReturn(List.of(msg1, msg2));
+
+        SupportRequestMessageDto dto1 = new SupportRequestMessageDto(1L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tin nhắn 1", LocalDateTime.now());
+        SupportRequestMessageDto dto2 = new SupportRequestMessageDto(2L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tin nhắn 2", LocalDateTime.now());
+
+        when(supportRequestMapper.toMessageDto(msg1)).thenReturn(dto1);
+        when(supportRequestMapper.toMessageDto(msg2)).thenReturn(dto2);
+
+        List<SupportRequestMessageDto> result = supportRequestService.getMessages(1L, 10L, "MEMBER");
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).message()).isEqualTo("Tin nhắn 1");
+        assertThat(result.get(1).message()).isEqualTo("Tin nhắn 2");
+    }
+
+    @Test
+    @DisplayName("Lấy danh sách tin nhắn thất bại khi Member không phải chủ phiếu")
+    void getMessages_asMember_whenNotOwner_throwsForbiddenException() {
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+
+        assertThatThrownBy(() -> supportRequestService.getMessages(1L, 999L, "MEMBER"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("Lấy danh sách tin nhắn thành công cho Staff dù không phải Member chủ phiếu")
+    void getMessages_asStaff_Success() {
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestMessageRepository.findBySupportRequestIdOrderByCreatedAtAsc(1L))
+                .thenReturn(List.of());
+
+        List<SupportRequestMessageDto> result = supportRequestService.getMessages(1L, 50L, "CENTER_MANAGER");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Gửi tin nhắn bởi Member vào ticket chưa có assignedTo sẽ phát thông báo cho tất cả Staff trực")
+    void sendMessage_asMember_whenTicketUnassigned_notifiesAllActiveStaff() {
+        sampleRequest.setAssignedTo(null);
+
+        User manager = new User();
+        manager.setId(50L);
+        manager.setFullName("Quản lý Minh");
+
+        User receptionist = new User();
+        receptionist.setId(51L);
+        receptionist.setFullName("Lễ tân Hoa");
+
+        CreateSupportMessageDto messageDto = new CreateSupportMessageDto("Tôi cần hỗ trợ gấp");
+        SupportRequestMessageDto expectedDto = new SupportRequestMessageDto(
+                102L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Tôi cần hỗ trợ gấp", LocalDateTime.now()
+        );
+
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findActiveStaffUsers()).thenReturn(List.of(manager, receptionist));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toMessageDto(any(SupportRequestMessage.class))).thenReturn(expectedDto);
+
+        SupportRequestMessageDto result = supportRequestService.sendMessage(1L, 10L, "MEMBER", messageDto);
+
+        assertThat(result).isNotNull();
+        verify(notificationService).send(eq(50L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+        verify(notificationService).send(eq(51L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
     }
 }

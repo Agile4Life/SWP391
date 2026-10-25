@@ -1,6 +1,8 @@
+import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { PortalIcon } from '../portal/PortalIcon';
 import {
   cancelPendingMembershipSubscription,
   createMembershipSubscription,
@@ -31,22 +33,7 @@ interface RequestResult {
   action: 'register' | 'renew' | 'upgrade';
 }
 
-interface PackageDetails {
-  tierBadge: string;
-  summary: string;
-  benefits: string[];
-}
-
-const priceFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-});
-
 const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.';
-
-function formatPrice(price: number): string {
-  return priceFormatter.format(price);
-}
 
 function formatDate(value: string): string {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
@@ -63,57 +50,6 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   if (targetPkg.price > currentPkg.price) return true;
   if (targetPkg.price === currentPkg.price && targetPkg.durationDays > currentPkg.durationDays) return true;
   return false;
-}
-
-function getPackageDetails(pkg: MembershipPackage): PackageDetails {
-  const lowerName = pkg.name.toLowerCase();
-  const isAnnual = pkg.durationDays >= 300 || lowerName.includes('sovereign') || lowerName.includes('annual');
-  const isVip = !isAnnual && (pkg.durationDays >= 80 || lowerName.includes('sanctuary') || lowerName.includes('vip'));
-
-  const tierBadge = isAnnual
-    ? `Gói Thượng Hạng • ${pkg.durationDays} ngày`
-    : isVip
-      ? `Gói Đặc Quyền VIP • ${pkg.durationDays} ngày`
-      : `Gói Tiêu Chuẩn • ${pkg.durationDays} ngày`;
-
-  const rawDesc = pkg.description?.trim() ?? '';
-  const isShortEnglish =
-    !rawDesc ||
-    /^(8 classes per month|unlimited classes|unlimited classes \+ 24 pt sessions)$/i.test(rawDesc);
-
-  const summary = !isShortEnglish
-    ? rawDesc
-    : isAnnual
-      ? 'Trải nghiệm đặc quyền toàn diện suốt 365 ngày với lộ trình huấn luyện cá nhân hóa 1-kèm-1 và sử dụng trọn vẹn mọi phân khu dịch vụ.'
-      : isVip
-        ? 'Tập luyện và phục hồi không giới hạn trong 90 ngày tại toàn bộ Studio chuyên sâu, khu vực Gym và tổ hợp Thủy trị liệu – Sauna.'
-        : 'Khởi đầu hành trình rèn luyện thể lực 30 ngày linh hoạt với khu vực Gym tự do và các lớp học nhóm có Huấn luyện viên hướng dẫn.';
-
-  const classBenefit =
-    pkg.classCreditLimit != null
-      ? `Tối đa ${pkg.classCreditLimit} buổi đặt lịch lớp học HLV chuyên sâu / kỳ (Yoga, Pilates, Boxing)`
-      : 'Không giới hạn số buổi đặt lịch tất cả lớp học cùng HLV (Reformer Pilates, Yoga, Boxing, Strength)';
-
-  const facilityBenefit = isAnnual
-    ? 'Toàn quyền sử dụng khu Gym, Studio VIP, Hồ bơi khoáng ấm, Sauna & kèm 24 buổi PT 1-kèm-1'
-    : isVip
-      ? 'Sử dụng trọn vẹn khu Gym, Reformer Pilates, Hồ bơi khoáng ấm & phòng xông hơi Sauna phục hồi'
-      : 'Tập luyện tự do khu vực Gym & Cardio toàn khung giờ mở cửa (06:00 – 22:00 mỗi ngày)';
-
-  const extraBenefit = isAnnual
-    ? 'Cấp thẻ QR định danh ưu tiên, tủ đồ cá nhân cố định, khăn tập cao cấp & đo InBody định kỳ'
-    : 'Cấp thẻ hội viên QR điện tử định danh Check-in nhanh tại quầy, miễn phí tủ đồ & khăn tập';
-
-  return {
-    tierBadge,
-    summary,
-    benefits: [
-      `Thời hạn hiệu lực ${pkg.durationDays} ngày liên tục kể từ thời điểm kích hoạt`,
-      classBenefit,
-      facilityBenefit,
-      extraBenefit,
-    ],
-  };
 }
 
 function renderModalOverlay(content: ReactNode) {
@@ -151,6 +87,7 @@ export function MemberPackagesPage() {
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancellationError, setCancellationError] = useState<string | null>(null);
   const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
+  const [isPeriodsOpen, setIsPeriodsOpen] = useState(false);
 
   const loadPackages = useCallback(async () => {
     setPackagesState({ status: 'loading' });
@@ -500,7 +437,7 @@ export function MemberPackagesPage() {
       )}
 
       {holdSuccessMessage && (
-        <div className="portal-alert" role="status" style={{ marginBottom: 24, borderColor: '#86EFAC', backgroundColor: '#F0FDF4', color: '#166534' }}>
+        <div className="portal-alert" role="status" style={{ marginBottom: 24, borderColor: '#86EFAC', backgroundColor: '#20372b', color: '#86efac' }}>
           <span>{holdSuccessMessage}</span>
         </div>
       )}
@@ -526,17 +463,17 @@ export function MemberPackagesPage() {
               </p>
               {current.status === 'active' && paymentsState.status === 'success' &&
                 paymentsState.data.some((payment) => payment.subscriptionId === current.id && payment.status === 'success') && (
-                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#15803D', fontSize: '0.84rem' }}>
+                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#86efac', fontSize: '0.84rem' }}>
                     ✓ Gói đã kích hoạt. Bạn có thể sử dụng thẻ QR để check-in và đặt lịch lớp học.
                   </p>
                 )}
               {current.holdStatus === 'PENDING' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#996515', fontSize: '0.86rem' }}>
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--color-accent-gold)', fontSize: '0.86rem' }}>
                   ⏳ Đang chờ Lễ tân xử lý yêu cầu bảo lưu{current.holdReason ? ` • Lý do: "${current.holdReason}"` : ''}
                 </p>
               )}
               {current.holdStatus === 'REJECTED' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#B91C1C', fontSize: '0.84rem' }}>
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem' }}>
                   Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.
                 </p>
               )}
@@ -598,7 +535,7 @@ export function MemberPackagesPage() {
       {frozenSubscription && (
         <section
           className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: '#EFF6FF' }}
+          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: 'var(--portal-info-surface, #263444)' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
@@ -629,13 +566,49 @@ export function MemberPackagesPage() {
       )}
 
       {futurePeriods.length > 0 && (
-        <section className="portal-card" aria-label="Các kỳ đã thanh toán tiếp theo" style={{ marginBottom: 24 }}>
-          <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
-          {futurePeriods.map((period) => (
-            <p className="row-card__meta" key={period.id}>
-              {period.packageName}: {formatDate(period.startDate)} – {formatDate(period.endDate)}
-            </p>
-          ))}
+        <section className={`portal-card membership-periods ${isPeriodsOpen ? 'is-open' : ''}`.trim()} aria-label="Các kỳ đã thanh toán tiếp theo">
+          <button
+            type="button"
+            className="membership-periods__toggle"
+            aria-expanded={isPeriodsOpen}
+            aria-controls="membership-future-periods-list"
+            onClick={() => setIsPeriodsOpen((prev) => !prev)}
+          >
+            <div className="membership-periods__heading">
+              <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
+              <div>
+                <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
+                <span className="membership-periods__summary">
+                  Kỳ kế tiếp từ {formatDate(futurePeriods[0].startDate)} đến {formatDate(futurePeriods[0].endDate)}
+                </span>
+              </div>
+            </div>
+            <div className="membership-periods__meta">
+              <span className="membership-periods__count">{futurePeriods.length} kỳ</span>
+              <span className="membership-periods__action">
+                <span>{isPeriodsOpen ? 'Thu gọn' : 'Xem chi tiết'}</span>
+                <svg className="membership-periods__chevron" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2.25 4.5 6 8.25 9.75 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
+          </button>
+          {isPeriodsOpen && (
+            <ul id="membership-future-periods-list" className="membership-periods__list">
+              {futurePeriods.map((period) => (
+                <li className="membership-periods__row" key={period.id}>
+                  <div className="membership-periods__package">
+                    <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
+                    <strong>{period.packageName}</strong>
+                  </div>
+                  <dl className="membership-periods__dates">
+                    <div><dt>Từ ngày</dt><dd><time dateTime={period.startDate}>{formatDate(period.startDate)}</time></dd></div>
+                    <div><dt>Đến ngày</dt><dd><time dateTime={period.endDate}>{formatDate(period.endDate)}</time></dd></div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -654,7 +627,7 @@ export function MemberPackagesPage() {
       {pending && (
         <section
           className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid #D6C7B8', background: '#FCF9F4' }}
+          style={{ marginBottom: 24, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
@@ -674,7 +647,7 @@ export function MemberPackagesPage() {
             Yêu cầu #{pending.id} đang ở trạng thái chờ thanh toán và đã được chuyển thẳng vào danh sách chờ tại Quầy Lễ Tân (POS).
           </p>
           {pendingPackage && (
-            <p className="row-card__meta" style={{ fontWeight: 600, color: '#211C18' }}>
+            <p className="row-card__meta" style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>
               Số tiền thanh toán: {formatPrice(pendingPackage.price)} ({pendingPackage.durationDays} ngày)
             </p>
           )}
@@ -692,7 +665,7 @@ export function MemberPackagesPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                  style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                   disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
                   onClick={() => setPendingToCancel(pending)}
                 >
@@ -728,7 +701,7 @@ export function MemberPackagesPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                 disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
                 onClick={() => setPendingToCancel(pending)}
               >
@@ -1055,7 +1028,7 @@ export function MemberPackagesPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                 onClick={() => setPendingToCancel(requestResult.subscription)}
                 disabled={isCancellingPending || paymentsState.status !== 'success' ||
                   paymentsState.data.some((payment) => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}
@@ -1113,7 +1086,7 @@ export function MemberPackagesPage() {
               <textarea id="membership-cancellation-reason" className="portal-input" required maxLength={500} rows={4}
                 value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)}
                 disabled={isSubmittingCancellation} style={{ width: '100%', resize: 'vertical' }} />
-              {cancellationError && <p role="alert" style={{ color: '#B91C1C' }}>{cancellationError}</p>}
+              {cancellationError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{cancellationError}</p>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                 <button type="button" className="btn-secondary" disabled={isSubmittingCancellation}
                   onClick={() => setIsCancellationModalOpen(false)}>Quay lại</button>
@@ -1189,7 +1162,7 @@ export function MemberPackagesPage() {
               </div>
 
               {holdError && (
-                <p role="alert" style={{ color: '#B91C1C', fontSize: '0.86rem', marginTop: 8 }}>
+                <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.86rem', marginTop: 8 }}>
                   {holdError}
                 </p>
               )}

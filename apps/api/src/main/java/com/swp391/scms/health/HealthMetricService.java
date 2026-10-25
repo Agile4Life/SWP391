@@ -3,6 +3,7 @@ package com.swp391.scms.health;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.health.dto.HealthMetricCreateDto;
 import com.swp391.scms.health.dto.HealthMetricDto;
 import com.swp391.scms.health.entity.MemberProgressLog;
 import com.swp391.scms.users.MemberRepository;
@@ -20,7 +21,10 @@ import java.util.stream.Collectors;
 @Service
 public class HealthMetricService {
 
-    private static final Set<String> ALLOWED_METRICS = Set.of("weight", "height", "bmi", "body_fat", "muscle_mass");
+    private static final Set<String> ALLOWED_METRICS = Set.of(
+            "weight", "height", "bmi", "body_fat", "muscle_mass", "waist"
+    );
+
     private final MemberProgressLogRepository progressLogRepository;
     private final MemberRepository memberRepository;
     private final UserRepository userRepository;
@@ -46,9 +50,22 @@ public class HealthMetricService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Returns member's own health metrics ordered ascending by recordedAt for Line Chart rendering (SCRUM-119).
+     */
+    @Transactional(readOnly = true)
+    public List<HealthMetricDto> getMyMetricsChronological(Long currentUserId) {
+        if (!memberRepository.existsById(currentUserId)) {
+            throw new ResourceNotFoundException("resource.member", currentUserId);
+        }
+        return progressLogRepository.findByMemberUserIdOrderByRecordedAtAsc(currentUserId).stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public HealthMetricDto addMetric(Long memberId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
-        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole)) {
+        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null, null);
         }
         String metricName = request.metricName().toLowerCase(Locale.ROOT);
@@ -68,6 +85,15 @@ public class HealthMetricService {
         log.setUnit(request.unit());
         log.setRecordedBy(recordedBy);
         return toDto(progressLogRepository.save(log));
+    }
+
+    @Transactional
+    public HealthMetricDto recordMetric(HealthMetricCreateDto request, Long currentUserId, String currentUserRole) {
+        Long targetMemberId = request.memberId() != null ? request.memberId() : currentUserId;
+        HealthMetricDto dto = new HealthMetricDto(
+                null, request.metricName(), request.metricValue(), request.unit(), currentUserId, null
+        );
+        return addMetric(targetMemberId, dto, currentUserId, currentUserRole);
     }
 
     private HealthMetricDto toDto(MemberProgressLog log) {

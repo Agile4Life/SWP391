@@ -1,5 +1,7 @@
 # Portal SÖL: thiết kế và kiểm chứng UI
 
+> **Phạm vi tài liệu:** hồ sơ ngày 18/10/2026; tiếp tục tham khảo cho portal. Landing/login đã được làm lại ngày 22/10/2026 và tuân theo [DESIGN.md](../../DESIGN.md). Không dùng ảnh hoặc bảng màu công khai cũ trong hồ sơ này để thay thế theme charcoal–salmon hiện hành.
+
 Ngày: 18/10/2026. Nhánh: `feat/portal-board-redesign`.
 
 ## Yêu cầu và phân tích

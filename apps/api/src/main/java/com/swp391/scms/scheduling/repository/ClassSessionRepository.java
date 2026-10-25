@@ -12,6 +12,19 @@ import java.util.List;
 @Repository
 public interface ClassSessionRepository extends JpaRepository<ClassSession, Long> {
 
+    @Query("""
+            select s from ClassSession s
+            join fetch s.gymClass c join fetch c.discipline join fetch c.room r
+            join fetch c.coach co join fetch co.user u
+            where s.status = 'scheduled' and c.status = 'active' and r.status = 'available'
+              and co.employmentStatus = 'active' and u.status = 'active' and u.deletedAt is null
+              and s.sessionDate between :fromDate and :toDate
+              and (s.sessionDate > :fromDate or s.startTime > :now)
+            order by s.sessionDate, s.startTime, s.id
+            """)
+    List<ClassSession> findPublicSessions(@Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate, @Param("now") java.time.LocalTime now);
+
     List<ClassSession> findByGymClassIdOrderBySessionDateAscStartTimeAsc(Long classId);
 
     /**
@@ -48,4 +61,15 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     }
 
     long countByGymClassIdAndStatus(Long classId, String status);
+
+    @Query("""
+            select s from ClassSession s
+            join fetch s.gymClass c
+            where s.status = 'scheduled'
+              and s.sessionDate >= :startDate
+              and s.sessionDate <= :endDate
+            """)
+    List<ClassSession> findScheduledSessionsBetweenDates(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }

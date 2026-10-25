@@ -53,6 +53,13 @@ describe('SCRUM-86 packages', () => {
   let host: HTMLDivElement;
   let root: Root;
 
+  it('shows package data without inventing VIP facilities or PT benefits', async () => {
+    api.packages.mockResolvedValue([{ ...higherPackage, description: 'Lớp nhóm và phòng tập.' }]);
+    await render();
+    expect(host.textContent).toContain('Lớp nhóm và phòng tập.');
+    expect(host.textContent).not.toMatch(/Hồ bơi|Sauna|khăn tập|1-kèm-1|Gói Đặc Quyền VIP/);
+  });
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
@@ -141,6 +148,12 @@ describe('SCRUM-86 packages', () => {
     api.renew.mockResolvedValue({ ...pending, id: 7, previousSubscriptionId: 6 });
     await render();
     expect(host.textContent).toContain('Kỳ đã thanh toán tiếp theo');
+    expect(host.querySelector('.membership-periods__list')).toBeNull();
+    const toggle = host.querySelector<HTMLButtonElement>('.membership-periods__toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(host.querySelectorAll('.membership-periods__row')).toHaveLength(2);
 
     expect(button('Gia hạn')?.disabled).toBe(false);
     await act(async () => button('Gia hạn')?.click());

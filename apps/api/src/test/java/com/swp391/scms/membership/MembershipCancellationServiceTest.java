@@ -157,6 +157,21 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    @Test
+    void requestAndApproveRejectWhenHoldRequestIsPending() {
+        active.setHoldStatus("PENDING");
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.request(owner, 100L, new CancellationDtos.Request("Moving")))
+                .isInstanceOf(ConflictException.class);
+
+        stubDecision();
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class);
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(pending.getStatus()).isEqualTo("PENDING");
+        verifyNoInteractions(enrollments);
+    }
+
     private void stubDecision() {
         when(requests.findById(7L)).thenReturn(Optional.of(pending));
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(pending));

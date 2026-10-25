@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1a1614" />
+    <meta name="theme-color" content="#f5f5f3" />
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('scms_theme') === 'dark' ? 'dark' : 'light'; }
+      catch { document.documentElement.dataset.theme = 'light'; }
+    </script>
     <title>SÖL WELLNESS SANCTUARY | Luxury Sports &amp; Health Club - SCMS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

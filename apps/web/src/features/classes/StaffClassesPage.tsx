@@ -132,7 +132,7 @@ export function StaffClassesPage() {
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
             </h2>
-            <p style={{ color: '#7E7771', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và quản lý lớp học.
             </p>
             <a href="/portal" className="btn-secondary">
@@ -341,7 +341,7 @@ export function StaffClassesPage() {
     <div className="portal-container">
       <PageHeader
         eyebrow="Huấn luyện"
-        title="Quản lý lớp học & Xếp lịch"
+        title="Quản lý lớp học & xếp lịch"
         actions={
           <button
             type="button"
@@ -349,7 +349,7 @@ export function StaffClassesPage() {
             onClick={handleOpenModal}
             data-testid="create-class-button"
           >
-            + Tạo lớp học &amp; Xếp lịch
+            + Tạo lớp học &amp; xếp lịch
           </button>
         }
       />
@@ -361,7 +361,7 @@ export function StaffClassesPage() {
           style={{
             marginBottom: 20,
             padding: '16px 20px',
-            backgroundColor: '#FDF2F2',
+            backgroundColor: '#3d2828',
             border: '1px solid #F8B4B4',
             borderRadius: '8px',
             display: 'flex',
@@ -371,7 +371,7 @@ export function StaffClassesPage() {
           }}
           data-testid="classes-error"
         >
-          <div style={{ color: '#9B1C1C' }}>
+          <div style={{ color: '#fca5a5' }}>
             <strong>Lỗi tải dữ liệu:</strong> {error}
           </div>
           <button
@@ -402,13 +402,13 @@ export function StaffClassesPage() {
                     borderBottom: '1px solid rgba(0,0,0,0.06)',
                   }}
                 >
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 20, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
-                  <div style={{ height: 28, backgroundColor: '#EDE8E3', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div style={{ height: 20, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
+                  <div style={{ height: 28, backgroundColor: 'var(--color-border-subtle)', borderRadius: 4 }} />
                 </div>
               ))}
             </div>
@@ -422,7 +422,7 @@ export function StaffClassesPage() {
             <h3 className="portal-state__title" style={{ marginBottom: 6 }}>
               Chưa có lớp học nào
             </h3>
-            <p style={{ color: '#7E7771', maxWidth: 460, margin: '0 auto 16px auto' }}>
+            <p style={{ color: 'var(--color-text-muted)', maxWidth: 460, margin: '0 auto 16px auto' }}>
               Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.
             </p>
             <button type="button" className="btn-primary" onClick={handleOpenModal}>
@@ -437,14 +437,14 @@ export function StaffClassesPage() {
             <table className="portal-table">
               <thead>
                 <tr>
-                  <th>Tên Lớp Học</th>
-                  <th>Bộ Môn</th>
-                  <th>Huấn Luyện Viên</th>
-                  <th>Phòng Tập</th>
-                  <th>Lịch Học</th>
-                  <th>Sức Chứa</th>
-                  <th>Trạng Thái</th>
-                  <th>Thao Tác</th>
+                  <th>Tên lớp học</th>
+                  <th>Bộ môn</th>
+                  <th>Huấn luyện viên</th>
+                  <th>Phòng tập</th>
+                  <th>Lịch học</th>
+                  <th>Sức chứa</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -474,9 +474,9 @@ export function StaffClassesPage() {
                       <button
                         type="button"
                         className="btn-secondary btn-sm"
-                        onClick={() => toast(`Đang tải danh sách học viên lớp ${cls.name}...`, 'success')}
+                        onClick={() => toast(`Danh sách học viên lớp ${cls.name} chưa được kết nối.`, 'success')}
                       >
-                        Danh Sách
+                        Danh sách
                       </button>
                     </td>
                   </tr>
@@ -489,11 +489,11 @@ export function StaffClassesPage() {
 
       {/* Modal: Tạo lớp học và xếp lịch */}
       {showModal && (
-        <Modal title="Tạo Lớp Học &amp; Xếp Lịch HLV" onClose={handleCloseModal}>
+        <Modal title="Tạo lớp học & xếp lịch" onClose={handleCloseModal}>
           <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-name">
-                Tên Lớp Học *
+                Tên lớp học *
               </label>
               <input
                 id="class-name"
@@ -504,7 +504,7 @@ export function StaffClassesPage() {
                 className="portal-input"
                 style={
                   isDuplicateClassName
-                    ? { borderColor: '#E02424', backgroundColor: '#FFF5F5' }
+                    ? { borderColor: '#fca5a5', backgroundColor: '#3d2828' }
                     : undefined
                 }
                 value={formData.name}
@@ -521,7 +521,7 @@ export function StaffClassesPage() {
                     alignItems: 'center',
                     gap: '6px',
                     marginTop: '5px',
-                    color: '#E02424',
+                    color: '#fca5a5',
                     fontSize: '0.84rem',
                     fontWeight: 600,
                   }}
@@ -539,7 +539,7 @@ export function StaffClassesPage() {
             <div className="grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="class-discipline">
-                  Bộ Môn *
+                  Bộ môn *
                 </label>
                 <Select
                   id="class-discipline"
@@ -559,7 +559,7 @@ export function StaffClassesPage() {
 
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="class-capacity">
-                  Sức Chứa Tối Đa *
+                  Sức chứa Tối Đa *
                 </label>
                 <input
                   id="class-capacity"
@@ -578,7 +578,7 @@ export function StaffClassesPage() {
             {/* BR-02: Dropdown HLV chỉ liệt kê HLV đang active */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-coach">
-                Huấn Luyện Viên Phụ Trách *
+                Huấn luyện viên Phụ Trách *
               </label>
               <Select
                 id="class-coach"
@@ -599,7 +599,7 @@ export function StaffClassesPage() {
             {/* BR-02: Dropdown Phòng chỉ liệt kê phòng available */}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-room">
-                Phòng Tập *
+                Phòng tập *
               </label>
               <Select
                 id="class-room"
@@ -618,8 +618,8 @@ export function StaffClassesPage() {
             </div>
 
             {/* Khung giờ và ngày học */}
-            <div style={{ padding: '12px', backgroundColor: '#F9F8F6', borderRadius: 8, border: '1px solid #ECE7E1' }}>
-              <strong style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', color: '#4A4541' }}>
+            <div style={{ padding: '12px', backgroundColor: 'var(--color-bg-warm)', borderRadius: 8, border: '1px solid var(--color-border-subtle)' }}>
+              <strong style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', color: 'var(--color-text-main)' }}>
                 Xếp lịch buổi học đầu tiên
               </strong>
 
@@ -706,10 +706,10 @@ export function StaffClassesPage() {
               <div
                 style={{
                   padding: '12px 16px',
-                  backgroundColor: '#FDF2F2',
+                  backgroundColor: '#3d2828',
                   border: '1px solid #F8B4B4',
                   borderRadius: '6px',
-                  color: '#9B1C1C',
+                  color: '#fca5a5',
                   fontSize: '0.88rem',
                   fontWeight: 500,
                   display: 'flex',
