@@ -40,7 +40,8 @@ public class HealthMetricService {
     @Transactional(readOnly = true)
     public List<HealthMetricDto> getMetrics(Long memberId, Long currentUserId, String currentUserRole) {
         if (!memberId.equals(currentUserId) && !isManager(currentUserRole) && !isCoach(currentUserRole)) {
-            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden", null, null);
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden", null,
+                    "You do not have permission to view these health metrics");
         }
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("resource.member", memberId);
@@ -66,11 +67,13 @@ public class HealthMetricService {
     @Transactional
     public HealthMetricDto addMetric(Long memberId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
         if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
-            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null, null);
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
+                    "You do not have permission to modify this health metric");
         }
         String metricName = request.metricName().toLowerCase(Locale.ROOT);
         if (!ALLOWED_METRICS.contains(metricName)) {
-            throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null, null);
+            throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null,
+                    "Invalid health metric name");
         }
 
         Member member = memberRepository.findById(memberId)
@@ -85,6 +88,51 @@ public class HealthMetricService {
         log.setUnit(request.unit());
         log.setRecordedBy(recordedBy);
         return toDto(progressLogRepository.save(log));
+    }
+
+    @Transactional
+    public HealthMetricDto updateMetric(Long memberId, Long metricId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
+        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
+                    "You do not have permission to modify this health metric");
+        }
+        MemberProgressLog log = progressLogRepository.findById(metricId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
+        if (!log.getMember().getUserId().equals(memberId)) {
+            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null,
+                    "Health metric does not belong to this member");
+        }
+
+        if (request.metricName() != null && !request.metricName().isBlank()) {
+            String metricName = request.metricName().toLowerCase(Locale.ROOT);
+            if (!ALLOWED_METRICS.contains(metricName)) {
+                throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null,
+                        "Invalid health metric name");
+            }
+            log.setMetricName(metricName);
+        }
+        if (request.metricValue() != null) {
+            log.setMetricValue(request.metricValue());
+        }
+        if (request.unit() != null) {
+            log.setUnit(request.unit());
+        }
+        return toDto(progressLogRepository.save(log));
+    }
+
+    @Transactional
+    public void deleteMetric(Long memberId, Long metricId, Long currentUserId, String currentUserRole) {
+        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
+                    "You do not have permission to modify this health metric");
+        }
+        MemberProgressLog log = progressLogRepository.findById(metricId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
+        if (!log.getMember().getUserId().equals(memberId)) {
+            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null,
+                    "Health metric does not belong to this member");
+        }
+        progressLogRepository.delete(log);
     }
 
     @Transactional

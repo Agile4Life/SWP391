@@ -11,6 +11,8 @@ const mockApi = vi.hoisted(() => ({
   updateProfile: vi.fn(),
   listHealthMetrics: vi.fn(),
   addHealthMetric: vi.fn(),
+  updateHealthMetric: vi.fn(),
+  deleteHealthMetric: vi.fn(),
 }));
 
 vi.mock('./profileApi', () => ({
@@ -18,6 +20,8 @@ vi.mock('./profileApi', () => ({
   updateProfile: mockApi.updateProfile,
   listHealthMetrics: mockApi.listHealthMetrics,
   addHealthMetric: mockApi.addHealthMetric,
+  updateHealthMetric: mockApi.updateHealthMetric,
+  deleteHealthMetric: mockApi.deleteHealthMetric,
 }));
 
 const sampleProfile: Profile = {
@@ -61,6 +65,8 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     mockApi.updateProfile.mockReset();
     mockApi.listHealthMetrics.mockReset();
     mockApi.addHealthMetric.mockReset();
+    mockApi.updateHealthMetric.mockReset();
+    mockApi.deleteHealthMetric.mockReset();
 
     mockApi.getProfile.mockResolvedValue(sampleProfile);
     mockApi.listHealthMetrics.mockResolvedValue(sampleMetrics);
@@ -101,6 +107,69 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect(host.textContent).toContain('Trình độ thể lực');
     expect(host.textContent).toContain('Mục tiêu thể lực');
     expect(host.textContent).toContain('Ghi chú sức khỏe & chấn thương');
+  });
+
+  it('allows editing a health metric and saving update', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: '10', name: 'Nguyen Van Test', identifier: 'member1', role: 'MEMBER' })
+    );
+    mockApi.updateHealthMetric.mockResolvedValue({
+      id: 1,
+      metricName: 'weight',
+      metricValue: 70,
+      unit: 'kg',
+      recordedAt: '2026-10-01T08:00:00Z',
+    });
+
+    await renderPage();
+
+    const editBtn = host.querySelector('.btn-metric-edit') as HTMLButtonElement | null;
+    expect(editBtn).not.toBeNull();
+    expect(editBtn?.textContent).toBe('Sửa');
+
+    await act(async () => {
+      editBtn?.click();
+    });
+
+    // Should display editing state
+    expect(host.textContent).toContain('Đang sửa chỉ số');
+    expect(host.textContent).toContain('Lưu cập nhật');
+
+    const form = host.querySelector('.profile-metric-form') as HTMLFormElement | null;
+    expect(form).not.toBeNull();
+
+    await act(async () => {
+      form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    expect(mockApi.updateHealthMetric).toHaveBeenCalledWith(10, 1, {
+      metricName: 'weight',
+      metricValue: 70,
+      unit: 'kg',
+    });
+  });
+
+  it('allows deleting a health metric when confirmed', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: '10', name: 'Nguyen Van Test', identifier: 'member1', role: 'MEMBER' })
+    );
+    window.confirm = vi.fn().mockReturnValue(true);
+    mockApi.deleteHealthMetric.mockResolvedValue(null);
+
+    await renderPage();
+
+    const deleteBtn = host.querySelector('.btn-metric-delete') as HTMLButtonElement | null;
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn?.textContent).toBe('Xóa');
+
+    await act(async () => {
+      deleteBtn?.click();
+    });
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(mockApi.deleteHealthMetric).toHaveBeenCalledWith(10, 1);
   });
 
   it('hides health metrics section and member fitness fields for COACH role', async () => {
@@ -158,4 +227,3 @@ describe('MemberProfilePage role-based health metrics rendering', () => {
     expect(host.textContent).toContain('Quản lý trung tâm');
   });
 });
-

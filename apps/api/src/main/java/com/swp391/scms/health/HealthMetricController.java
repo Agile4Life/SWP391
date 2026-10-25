@@ -51,6 +51,25 @@ public class HealthMetricController {
                 healthMetricService.addMetric(memberId, request, principal.id(), principal.role()));
     }
 
+    @Operation(summary = "Cập nhật chỉ số sức khỏe", description = "Chỉnh sửa giá trị chỉ số thể chất đã đo")
+    @PutMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
+    public ApiResponse<HealthMetricDto> updateMetric(@PathVariable Long memberId,
+                                                     @PathVariable Long metricId,
+                                                     @Valid @RequestBody HealthMetricDto request,
+                                                     @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("health.metrics.update.success"),
+                healthMetricService.updateMetric(memberId, metricId, request, principal.id(), principal.role()));
+    }
+
+    @Operation(summary = "Xóa chỉ số sức khỏe", description = "Xóa một bản ghi chỉ số thể chất")
+    @DeleteMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
+    public ApiResponse<Void> deleteMetric(@PathVariable Long memberId,
+                                          @PathVariable Long metricId,
+                                          @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        healthMetricService.deleteMetric(memberId, metricId, principal.id(), principal.role());
+        return ApiResponse.ok(msg("health.metrics.delete.success"), null);
+    }
+
     @Operation(summary = "Ghi nhận chỉ số sức khỏe mới (SCRUM-119)", description = "Hội viên hoặc HLV ghi nhận chỉ số sức khỏe mới (cân nặng, tỷ lệ mỡ, vòng eo, BMI...)")
     @PostMapping("/api/v1/health/metrics")
     public ApiResponse<HealthMetricDto> recordMetric(@Valid @RequestBody HealthMetricCreateDto request,

@@ -2,6 +2,8 @@ import { Select } from '../../shared/ui/Select';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   addHealthMetric,
+  updateHealthMetric,
+  deleteHealthMetric,
   getProfile,
   listHealthMetrics,
   updateProfile,
@@ -45,9 +47,11 @@ export function MemberProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [metrics, setMetrics] = useState<HealthMetric[]>([]);
   const [metric, setMetric] = useState(EMPTY_METRIC);
+  const [editingMetricId, setEditingMetricId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [addingMetric, setAddingMetric] = useState(false);
+  const [submittingMetric, setSubmittingMetric] = useState(false);
+  const [deletingMetricId, setDeletingMetricId] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -91,28 +95,83 @@ export function MemberProfilePage() {
     }
   };
 
-  const handleAddMetric = async (e: React.FormEvent) => {
+  const handleEditClick = (m: HealthMetric) => {
+    setEditingMetricId(m.id);
+    setMetric({
+      metricName: m.metricName,
+      metricValue: String(m.metricValue),
+      unit: m.unit ?? DEFAULT_UNITS[m.metricName] ?? '',
+    });
+    setError('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMetricId(null);
+    setMetric(EMPTY_METRIC);
+    setError('');
+  };
+
+  const handleDeleteMetric = async (metricId: number) => {
+    if (!profile) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa chỉ số này không?')) {
+      return;
+    }
+    setError('');
+    setDeletingMetricId(metricId);
+    try {
+      await deleteHealthMetric(profile.userId, metricId);
+      if (editingMetricId === metricId) {
+        handleCancelEdit();
+      }
+      setMetrics(await listHealthMetrics(profile.userId));
+      toast('Đã xóa chỉ số sức khỏe thành công!', 'success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể xóa chỉ số.');
+      toast('Xóa chỉ số thất bại.', 'error');
+    } finally {
+      setDeletingMetricId(null);
+    }
+  };
+
+  const handleMetricSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || addingMetric) return;
+    if (!profile || submittingMetric) return;
     if (!metric.metricName) {
       setError('Vui lòng chọn loại chỉ số.');
       return;
     }
     setError('');
-    setAddingMetric(true);
+    setSubmittingMetric(true);
     try {
-      await addHealthMetric(profile.userId, {
-        metricName: metric.metricName.trim(),
-        metricValue: Number(metric.metricValue),
-        unit: metric.unit.trim() || null,
-      });
+      if (editingMetricId !== null) {
+        await updateHealthMetric(profile.userId, editingMetricId, {
+          metricName: metric.metricName.trim(),
+          metricValue: Number(metric.metricValue),
+          unit: metric.unit.trim() || null,
+        });
+        toast('Đã cập nhật chỉ số sức khỏe thành công!', 'success');
+        setEditingMetricId(null);
+      } else {
+        await addHealthMetric(profile.userId, {
+          metricName: metric.metricName.trim(),
+          metricValue: Number(metric.metricValue),
+          unit: metric.unit.trim() || null,
+        });
+        toast('Đã ghi nhận chỉ số sức khỏe!', 'success');
+      }
       setMetric(EMPTY_METRIC);
       setMetrics(await listHealthMetrics(profile.userId));
-      toast('Đã ghi nhận chỉ số sức khỏe!', 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể ghi chỉ số.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : editingMetricId
+          ? 'Không thể cập nhật chỉ số.'
+          : 'Không thể ghi chỉ số.'
+      );
+      toast(editingMetricId ? 'Cập nhật chỉ số thất bại.' : 'Thêm chỉ số thất bại.', 'error');
     } finally {
-      setAddingMetric(false);
+      setSubmittingMetric(false);
     }
   };
 
@@ -194,6 +253,7 @@ export function MemberProfilePage() {
                   onChange={(e) => patch({ fullName: e.target.value })}
                 />
               </div>
+
               {isMember ? (
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="membershipCode">Mã hội viên</label>
@@ -376,7 +436,18 @@ export function MemberProfilePage() {
               <span className="badge badge-info">{metrics.length} bản ghi</span>
             </div>
 
-            <form onSubmit={handleAddMetric} className="profile-metric-form">
+            {editingMetricId && (
+              <div className="profile-metric-editing-bar">
+                <span>
+                  Đang sửa chỉ số <strong>#{editingMetricId}</strong> ({METRIC_LABELS[metric.metricName] ?? metric.metricName})
+                </span>
+                <button type="button" className="btn-secondary btn-sm" onClick={handleCancelEdit}>
+                  Hủy sửa
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleMetricSubmit} className="profile-metric-form">
               <div className="profile-metric-form__type">
                 <label className="portal-label" htmlFor="health-metric-name">Chỉ số</label>
                 <Select
@@ -426,9 +497,35 @@ export function MemberProfilePage() {
                   onChange={(e) => setMetric({ ...metric, unit: e.target.value })}
                 />
               </div>
-              <button type="submit" className="btn-primary" disabled={addingMetric} title="Thêm chỉ số">
-                {addingMetric ? <span className="spinner" /> : 'Thêm'}
-              </button>
+              <div className="profile-metric-form-btns">
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={submittingMetric}
+                  title={editingMetricId ? 'Lưu cập nhật chỉ số' : 'Thêm chỉ số'}
+                >
+                  {submittingMetric ? (
+                    <>
+                      <span className="spinner" />
+                      <span>{editingMetricId ? 'Đang cập nhật...' : 'Đang thêm...'}</span>
+                    </>
+                  ) : editingMetricId ? (
+                    'Lưu cập nhật'
+                  ) : (
+                    'Thêm'
+                  )}
+                </button>
+                {editingMetricId && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleCancelEdit}
+                    disabled={submittingMetric}
+                  >
+                    Hủy
+                  </button>
+                )}
+              </div>
             </form>
 
             {metrics.length === 0 ? (
@@ -439,13 +536,14 @@ export function MemberProfilePage() {
                 </p>
               </div>
             ) : (
-              <div className="portal-table-wrapper">
-                <table className="portal-table">
+              <div className="profile-metric-table-container">
+                <table className="profile-metric-table">
                   <thead>
                     <tr>
-                      <th>Ngày ghi</th>
-                      <th>Chỉ số</th>
-                      <th>Giá trị</th>
+                      <th style={{ width: '24%' }}>Ngày ghi</th>
+                      <th style={{ width: '28%' }}>Chỉ số</th>
+                      <th style={{ width: '18%' }}>Giá trị</th>
+                      <th style={{ width: '30%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -455,6 +553,28 @@ export function MemberProfilePage() {
                         <td>{METRIC_LABELS[m.metricName] ?? m.metricName}</td>
                         <td>
                           <strong>{m.metricValue}</strong> <span className="muted">{m.unit ?? ''}</span>
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div className="profile-metric-actions">
+                            <button
+                              type="button"
+                              className="btn-metric-action btn-metric-edit"
+                              onClick={() => handleEditClick(m)}
+                              title={`Sửa chỉ số ${METRIC_LABELS[m.metricName] ?? m.metricName}`}
+                              disabled={submittingMetric || deletingMetricId === m.id}
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-metric-action btn-metric-delete"
+                              onClick={() => handleDeleteMetric(m.id)}
+                              title={`Xóa chỉ số ${METRIC_LABELS[m.metricName] ?? m.metricName}`}
+                              disabled={submittingMetric || deletingMetricId === m.id}
+                            >
+                              {deletingMetricId === m.id ? '...' : 'Xóa'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
