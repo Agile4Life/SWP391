@@ -1,199 +1,341 @@
-import { Select } from '../../shared/ui/Select';
-import { useState } from 'react';
-import { toast } from '../../shared/ui/toast';
+import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { Select } from '../../shared/ui/Select';
+import { toast } from '../../shared/ui/toast';
+import {
+  attendanceApi,
+  type AttendanceStudent,
+  type AttendanceStatus,
+  type CoachClassSession,
+} from './attendanceApi';
+import './coach-attendance.css';
 
-interface AttendanceStudent {
-  id: number;
-  name: string;
-  code: string;
-  status: 'PRESENT' | 'ABSENT' | 'LATE';
-  evaluation: string;
-}
+const STATUS_CONFIG: {
+  value: AttendanceStatus;
+  label: string;
+  className: string;
+  indicatorColor: string;
+}[] = [
+  { value: 'present', label: 'Có mặt', className: 'is-present', indicatorColor: '#4ade80' },
+  { value: 'absent', label: 'Vắng mặt', className: 'is-absent', indicatorColor: '#f87171' },
+  { value: 'late', label: 'Đi muộn', className: 'is-late', indicatorColor: '#fbbf24' },
+  { value: 'excused', label: 'Có phép', className: 'is-excused', indicatorColor: '#9ca3af' },
+];
 
 export function CoachAttendancePage() {
-  const [selectedSession, setSelectedSession] = useState('session-1');
+  const [sessions, setSessions] = useState<CoachClassSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [students, setStudents] = useState<AttendanceStudent[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
 
-  const [students, setStudents] = useState<AttendanceStudent[]>([
-    {
-      id: 1,
-      name: 'Nguyễn Văn An',
-      code: 'MB-2026-089',
-      status: 'PRESENT',
-      evaluation: 'Thực hiện động tác Elephant & Long Stretch rất chuẩn, kiểm soát hơi thở tốt.',
-    },
-    {
-      id: 2,
-      name: 'Trần Thị Mai',
-      code: 'MB-2026-054',
-      status: 'PRESENT',
-      evaluation: 'Cơ vai còn hơi gồng, đã nhắc nhở thả lỏng trong động tác Chest Expansion.',
-    },
-    {
-      id: 3,
-      name: 'Lê Quốc Bảo',
-      code: 'MB-2026-112',
-      status: 'LATE',
-      evaluation: 'Đến trễ 10 phút, đã bù phần khởi động làm ấm khớp cổ chân.',
-    },
-    {
-      id: 4,
-      name: 'Vũ Minh Hằng',
-      code: 'MB-2026-077',
-      status: 'ABSENT',
-      evaluation: 'Có báo nghỉ trước 2h vì lịch công tác đột xuất.',
-    },
-  ]);
+  // Load danh sách buổi học của HLV
+  useEffect(() => {
+    let mounted = true;
+    const fetchSessions = async () => {
+      setLoading(true);
+      try {
+        const data = await attendanceApi.getCoachSessions();
+        if (mounted) {
+          setSessions(data);
+          if (data.length > 0) {
+            setSelectedSessionId((prev) => (prev === null ? data[0].id : prev));
+          }
+        }
+      } catch {
+        if (mounted) {
+          toast.error('Không thể tải danh sách buổi học của HLV.');
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
 
-  const updateStatus = (id: number, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+    fetchSessions();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Load danh sách học viên khi chọn buổi học khác
+  useEffect(() => {
+    if (!selectedSessionId) return;
+
+    let mounted = true;
+    const fetchStudents = async () => {
+      setLoading(true);
+      try {
+        const list = await attendanceApi.getSessionStudents(selectedSessionId);
+        if (mounted) {
+          setStudents(list);
+        }
+      } catch {
+        if (mounted) {
+          toast.error('Không thể tải danh sách học viên của buổi học.');
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchStudents();
+    return () => {
+      mounted = false;
+    };
+  }, [selectedSessionId]);
+
+  const activeSession = useMemo(() => {
+    return sessions.find((s) => s.id === selectedSessionId) || sessions[0];
+  }, [sessions, selectedSessionId]);
+
+  // Cập nhật trạng thái điểm danh cho 1 học viên
+  const handleUpdateStatus = (studentId: number, status: AttendanceStatus) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === studentId ? { ...s, status } : s))
+    );
   };
 
-  const updateEval = (id: number, evaluation: string) => {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, evaluation } : s)));
+  // Cập nhật điểm tiến bộ (slider 1-100)
+  const handleUpdateScore = (studentId: number, score: number) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === studentId ? { ...s, progressScore: score } : s))
+    );
   };
 
-  const handleSaveAttendance = () => {
-    toast('Đây là bản xem thử. Thay đổi chỉ giữ trong trang này và sẽ mất khi tải lại.', 'success');
+  // Cập nhật nhận xét kỹ thuật
+  const handleUpdateNotes = (studentId: number, notes: string) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === studentId ? { ...s, notes } : s))
+    );
   };
+
+  // Điểm danh nhanh: Đặt tất cả thành Có mặt
+  const handleMarkAllPresent = () => {
+    setStudents((prev) => prev.map((s) => ({ ...s, status: 'present' })));
+    toast.success('Đã chọn nhanh trạng thái Có mặt cho toàn bộ học viên.');
+  };
+
+  // Lưu điểm danh & Đánh giá hàng loạt (Batch Save)
+  const handleSaveBatchAttendance = async () => {
+    if (!selectedSessionId) {
+      toast.error('Vui lòng chọn buổi học cần lưu điểm danh.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = students.map((s) => ({
+        memberId: s.memberId,
+        status: s.status,
+        progressScore: s.progressScore,
+        notes: s.notes.trim(),
+      }));
+
+      const res = await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
+      toast.success(res.message || 'Lưu điểm danh & đánh giá thành công!');
+    } catch {
+      toast.error('Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Thống kê nhanh trạng thái
+  const summaryCounts = useMemo(() => {
+    return {
+      present: students.filter((s) => s.status === 'present').length,
+      absent: students.filter((s) => s.status === 'absent').length,
+      late: students.filter((s) => s.status === 'late').length,
+      excused: students.filter((s) => s.status === 'excused').length,
+    };
+  }, [students]);
 
   return (
-    <div className="portal-container">
+    <div className="coach-attendance-page portal-container">
       <PageHeader
         eyebrow="Huấn luyện"
-        title="Điểm danh buổi học"
-        actions={
-          <button type="button" className="btn-primary" onClick={handleSaveAttendance}>
-            Giữ bản xem thử
-          </button>
-        }
+        title="Điểm Danh Buổi Học & Đánh Giá"
+        subtitle="Quản lý chuyên biệt cho HLV: Ghi nhận chuyên cần và chấm điểm tiến bộ kỹ thuật học viên."
       />
 
-      {/* Session Header Selector */}
-      <div className="portal-card" style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <div className="meta-label">Buổi học minh họa</div>
-            <h3 className="row-card__title" style={{ fontSize: '1.5rem', margin: '8px 0 6px' }}>
-              Reformer Core • 17:30 - 18:30
-            </h3>
-            <div className="row-card__meta">
-              📍 Studio 01 (Level 2) • Sĩ số: <strong>4 học viên đăng ký</strong>
-            </div>
+      {/* Header Selector & Session Info */}
+      <div className="attendance-header-card">
+        <div className="attendance-session-meta">
+          <h3 className="session-name-title">
+            {activeSession?.className || 'Buổi tập Huấn luyện viên'}
+          </h3>
+          <div className="session-details-row">
+            <span>
+              📍 Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
+            </span>
+            <span>
+              ⏰ Giờ: <strong>{activeSession?.startTime} - {activeSession?.endTime}</strong>
+            </span>
+            <span>
+              👥 Đã book: <strong>{students.length} học viên</strong>
+            </span>
+            {activeSession?.disciplineName && (
+              <span>Bộ môn: <strong>{activeSession.disciplineName}</strong></span>
+            )}
           </div>
+        </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <Select
-              className="portal-select"
-              value={selectedSession}
-              onChange={(e) => setSelectedSession(e.target.value)}
-              style={{ width: 'auto' }}
-            >
-              <option value="session-1">Minh họa: Reformer Core, 17:30</option>
-              <option value="session-2">Minh họa: Yin Yoga, 19:00 (chưa có danh sách riêng)</option>
-              <option value="session-3">Minh họa: Barbell, 08:00 (chưa có danh sách riêng)</option>
-            </Select>
-          </div>
+        <div className="attendance-session-selector">
+          <Select
+            className="portal-select"
+            value={String(selectedSessionId || '')}
+            onChange={(e) => setSelectedSessionId(Number(e.target.value))}
+            aria-label="Chọn buổi học cần điểm danh"
+          >
+            {sessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.className} ({s.startTime} - {s.endTime})
+              </option>
+            ))}
+          </Select>
         </div>
       </div>
 
-      <div className="grid-2">
-        {/* Attendance List */}
-        <div className="portal-card" style={{ flex: 1.4 }}>
-          <div className="portal-card-header">
-            <h2 className="portal-card-title">Danh sách học viên</h2>
-          </div>
+      {/* Summary Pills */}
+      <div className="attendance-quick-summary">
+        <div className="summary-pill-card is-present">
+          <span className="pill-label">Có mặt (Xanh)</span>
+          <span className="pill-value">{summaryCounts.present}</span>
+        </div>
+        <div className="summary-pill-card is-absent">
+          <span className="pill-label">Vắng mặt (Đỏ)</span>
+          <span className="pill-value">{summaryCounts.absent}</span>
+        </div>
+        <div className="summary-pill-card is-late">
+          <span className="pill-label">Đi muộn (Vàng)</span>
+          <span className="pill-value">{summaryCounts.late}</span>
+        </div>
+        <div className="summary-pill-card is-excused">
+          <span className="pill-label">Có phép (Xám)</span>
+          <span className="pill-value">{summaryCounts.excused}</span>
+        </div>
+      </div>
 
-          <div className="stack" style={{ gap: '18px' }}>
-            {students.map((stu, index) => (
-              <div
-                key={stu.id}
-                className="row-card row-in"
-                style={{ ['--i' as string]: index, display: 'block' } as React.CSSProperties}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: '12px' }}>
-                  <div>
-                    <strong style={{ fontSize: '1rem' }}>{stu.name}</strong>
-                    <span className="meta-label" style={{ marginLeft: '10px', fontFamily: 'monospace' }}>
-                      {stu.code}
-                    </span>
+      {/* Toolbar */}
+      <div className="attendance-toolbar">
+        <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+          Danh sách <strong>{students.length}</strong> học viên đã ghi danh:
+        </span>
+        <button
+          type="button"
+          className="btn-quick-present"
+          onClick={handleMarkAllPresent}
+          disabled={loading || students.length === 0}
+        >
+          ✓ Điểm danh nhanh tất cả Có mặt
+        </button>
+      </div>
+
+      {/* Students Attendance List */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+          <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
+          <p>Đang tải danh sách học viên buổi học...</p>
+        </div>
+      ) : students.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+          <p>Chưa có học viên nào book buổi học này.</p>
+        </div>
+      ) : (
+        <div className="attendance-students-list">
+          {students.map((student) => {
+            return (
+              <div key={student.id} className="attendance-student-card">
+                <div className="student-card-top-row">
+                  <div className="student-identity-group">
+                    <div className="student-avatar-circle">
+                      {student.fullName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="student-meta-text">
+                      <h4 className="student-full-name">{student.fullName}</h4>
+                      <span className="student-code-badge">{student.membershipCode}</span>
+                    </div>
                   </div>
 
-                  {/* Attendance segmented pills */}
-                  <div className="seg-group" role="group" aria-label={`Điểm danh ${stu.name}`}>
-                    {([
-                      ['PRESENT', 'Có mặt', 'seg-btn--ok'],
-                      ['LATE', 'Trễ', 'seg-btn--warn'],
-                      ['ABSENT', 'Vắng', 'seg-btn--bad'],
-                    ] as const).map(([value, label, tone]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        aria-pressed={stu.status === value}
-                        className={`seg-btn ${tone} ${stu.status === value ? 'is-active' : ''}`}
-                        onClick={() => updateStatus(stu.id, value)}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                  {/* Radio button chọn nhanh 4 trạng thái */}
+                  <div
+                    className="attendance-radio-group"
+                    role="radiogroup"
+                    aria-label={`Trạng thái điểm danh của ${student.fullName}`}
+                  >
+                    {STATUS_CONFIG.map((cfg) => {
+                      const isSelected = student.status === cfg.value;
+                      return (
+                        <label
+                          key={cfg.value}
+                          className={`radio-status-label ${cfg.className} ${isSelected ? 'is-active' : ''}`}
+                        >
+                          <input
+                            type="radio"
+                            name={`attendance-status-${student.id}`}
+                            value={cfg.value}
+                            checked={isSelected}
+                            onChange={() => handleUpdateStatus(student.id, cfg.value)}
+                          />
+                          <span
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: cfg.indicatorColor,
+                              display: 'inline-block',
+                            }}
+                          />
+                          {cfg.label}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div>
+                {/* Form con đánh giá nhanh từng học viên */}
+                <div className="student-eval-subform">
+                  <div className="slider-container">
+                    <div className="slider-header">
+                      <span>Thang điểm tiến bộ (Progress Score):</span>
+                      <span className="score-badge">{student.progressScore}/100</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      className="eval-score-slider"
+                      value={student.progressScore}
+                      onChange={(e) => handleUpdateScore(student.id, Number(e.target.value))}
+                      aria-label={`Điểm tiến bộ của ${student.fullName}`}
+                    />
+                  </div>
+
                   <input
                     type="text"
-                    className="portal-input"
-                    placeholder="Ghi chú buổi học"
-                    value={stu.evaluation}
-                    onChange={(e) => updateEval(stu.id, e.target.value)}
-                    style={{ fontSize: '0.8rem', padding: '8px 12px' }}
+                    className="eval-comment-input"
+                    placeholder="Nhận xét kỹ thuật, tư thế động tác và lưu ý sức khỏe buổi tập..."
+                    value={student.notes}
+                    onChange={(e) => handleUpdateNotes(student.id, e.target.value)}
+                    aria-label={`Nhận xét kỹ thuật của ${student.fullName}`}
                   />
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
+      )}
 
-        {/* AI Coaching Assistant Panel */}
-        <div className="portal-card portal-card--feature">
-          <div className="portal-card-header">
-            <h2 className="portal-card-title">Hướng dẫn điểm danh</h2>
-          </div>
-
-          <p style={{ fontSize: '0.86rem', color: 'var(--color-text-muted)', lineHeight: 1.65 }}>
-            Chọn trạng thái và nhập ghi chú cho từng học viên. Dữ liệu của{' '}
-            <strong>Nguyễn Văn An (MB-2026-089)</strong> và danh sách bên cạnh chỉ dùng để minh họa.
-          </p>
-
-          <div
-            style={{
-              background: 'var(--color-bg-card)',
-              borderRadius: '6px',
-              padding: '16px',
-              border: '1px solid rgba(33, 28, 24, 0.08)',
-              marginTop: '16px',
-              marginBottom: '16px',
-              fontSize: '0.82rem',
-              lineHeight: 1.6,
-            }}
-          >
-            <div style={{ fontWeight: 600, marginBottom: '6px' }}>Cách sử dụng bản xem thử</div>
-            <div>• Chọn Có mặt, Trễ hoặc Vắng cho từng học viên.</div>
-            <div>• Ghi lại nhận xét buổi học trong ô bên dưới tên học viên.</div>
-            <div style={{ marginTop: '8px', color: 'var(--color-text-muted)' }}>
-              Thay đổi <strong>chỉ giữ trong trang này</strong> và sẽ mất khi tải lại.
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="btn-primary"
-            style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => toast('Bản xem thử chưa lưu điểm danh hoặc giao bài tập vào hệ thống.', 'success')}
-          >
-            Thông tin bản xem thử
-          </button>
-        </div>
+      {/* Bottom Batch Save Action */}
+      <div className="attendance-bottom-actions">
+        <button
+          type="button"
+          className="btn-batch-save"
+          onClick={handleSaveBatchAttendance}
+          disabled={saving || loading || students.length === 0}
+        >
+          {saving ? 'Đang lưu...' : '💾 Lưu điểm danh & Đánh giá'}
+        </button>
       </div>
     </div>
   );
