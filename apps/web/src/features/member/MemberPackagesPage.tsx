@@ -1,18 +1,24 @@
+import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { PortalIcon } from '../portal/PortalIcon';
 import {
   cancelPendingMembershipSubscription,
   createMembershipSubscription,
   getCurrentMembership,
   getMembershipHistory,
   getMembershipPackages,
+  getMyMembershipCancellations,
   getMyPayments,
   renewMembershipSubscription,
   requestMembershipHold,
+  resumeMembershipSubscription,
+  requestMembershipCancellation,
   upgradeMembershipSubscription,
   type MemberSubscription,
   type MembershipPackage,
+  type MembershipCancellationRequest,
   type Payment,
 } from './membershipApi';
 
@@ -27,22 +33,7 @@ interface RequestResult {
   action: 'register' | 'renew' | 'upgrade';
 }
 
-interface PackageDetails {
-  tierBadge: string;
-  summary: string;
-  benefits: string[];
-}
-
-const priceFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-});
-
 const paymentInstructionsNotice = 'Vui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.';
-
-function formatPrice(price: number): string {
-  return priceFormatter.format(price);
-}
 
 function formatDate(value: string): string {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
@@ -61,57 +52,6 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
-function getPackageDetails(pkg: MembershipPackage): PackageDetails {
-  const lowerName = pkg.name.toLowerCase();
-  const isAnnual = pkg.durationDays >= 300 || lowerName.includes('sovereign') || lowerName.includes('annual');
-  const isVip = !isAnnual && (pkg.durationDays >= 80 || lowerName.includes('sanctuary') || lowerName.includes('vip'));
-
-  const tierBadge = isAnnual
-    ? `Gói Thượng Hạng • ${pkg.durationDays} ngày`
-    : isVip
-      ? `Gói Đặc Quyền VIP • ${pkg.durationDays} ngày`
-      : `Gói Tiêu Chuẩn • ${pkg.durationDays} ngày`;
-
-  const rawDesc = pkg.description?.trim() ?? '';
-  const isShortEnglish =
-    !rawDesc ||
-    /^(8 classes per month|unlimited classes|unlimited classes \+ 24 pt sessions)$/i.test(rawDesc);
-
-  const summary = !isShortEnglish
-    ? rawDesc
-    : isAnnual
-      ? 'Trải nghiệm đặc quyền toàn diện suốt 365 ngày với lộ trình huấn luyện cá nhân hóa 1-kèm-1 và sử dụng trọn vẹn mọi phân khu dịch vụ.'
-      : isVip
-        ? 'Tập luyện và phục hồi không giới hạn trong 90 ngày tại toàn bộ Studio chuyên sâu, khu vực Gym và tổ hợp Thủy trị liệu – Sauna.'
-        : 'Khởi đầu hành trình rèn luyện thể lực 30 ngày linh hoạt với khu vực Gym tự do và các lớp học nhóm có Huấn luyện viên hướng dẫn.';
-
-  const classBenefit =
-    pkg.classCreditLimit != null
-      ? `Tối đa ${pkg.classCreditLimit} buổi đặt lịch lớp học HLV chuyên sâu / kỳ (Yoga, Pilates, Boxing)`
-      : 'Không giới hạn số buổi đặt lịch tất cả lớp học cùng HLV (Reformer Pilates, Yoga, Boxing, Strength)';
-
-  const facilityBenefit = isAnnual
-    ? 'Toàn quyền sử dụng khu Gym, Studio VIP, Hồ bơi khoáng ấm, Sauna & kèm 24 buổi PT 1-kèm-1'
-    : isVip
-      ? 'Sử dụng trọn vẹn khu Gym, Reformer Pilates, Hồ bơi khoáng ấm & phòng xông hơi Sauna phục hồi'
-      : 'Tập luyện tự do khu vực Gym & Cardio toàn khung giờ mở cửa (06:00 – 22:00 mỗi ngày)';
-
-  const extraBenefit = isAnnual
-    ? 'Cấp thẻ QR định danh ưu tiên, tủ đồ cá nhân cố định, khăn tập cao cấp & đo InBody định kỳ'
-    : 'Cấp thẻ hội viên QR điện tử định danh Check-in nhanh tại quầy, miễn phí tủ đồ & khăn tập';
-
-  return {
-    tierBadge,
-    summary,
-    benefits: [
-      `Thời hạn hiệu lực ${pkg.durationDays} ngày liên tục kể từ thời điểm kích hoạt`,
-      classBenefit,
-      facilityBenefit,
-      extraBenefit,
-    ],
-  };
-}
-
 function renderModalOverlay(content: ReactNode) {
   const portalShell = typeof document !== 'undefined' ? document.querySelector('.portal-v2') : null;
   return portalShell ? createPortal(content, portalShell) : content;
@@ -122,6 +62,7 @@ export function MemberPackagesPage() {
   const [currentState, setCurrentState] = useState<LoadState<MemberSubscription | null>>({ status: 'loading' });
   const [historyState, setHistoryState] = useState<LoadState<MemberSubscription[]>>({ status: 'loading' });
   const [paymentsState, setPaymentsState] = useState<LoadState<Payment[]>>({ status: 'loading' });
+  const [cancellationsState, setCancellationsState] = useState<LoadState<MembershipCancellationRequest[]>>({ status: 'loading' });
 
   const [submittingPackageId, setSubmittingPackageId] =
     useState<number | null>(null);
@@ -139,7 +80,14 @@ export function MemberPackagesPage() {
   const [holdReason, setHoldReason] = useState('');
   const [holdError, setHoldError] = useState<string | null>(null);
   const [isSubmittingHold, setIsSubmittingHold] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
+  const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
+  const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancellationError, setCancellationError] = useState<string | null>(null);
+  const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
+  const [isPeriodsOpen, setIsPeriodsOpen] = useState(false);
 
   const loadPackages = useCallback(async () => {
     setPackagesState({ status: 'loading' });
@@ -177,12 +125,19 @@ export function MemberPackagesPage() {
     }
   }, []);
 
+  const loadCancellations = useCallback(async () => {
+    setCancellationsState({ status: 'loading' });
+    try { setCancellationsState({ status: 'success', data: await getMyMembershipCancellations() }); }
+    catch { setCancellationsState({ status: 'error' }); }
+  }, []);
+
   useEffect(() => {
     void loadPackages();
     void loadCurrent();
     void loadHistory();
     void loadPayments();
-  }, [loadPackages, loadCurrent, loadHistory, loadPayments]);
+    void loadCancellations();
+  }, [loadPackages, loadCurrent, loadHistory, loadPayments, loadCancellations]);
 
   const packages = packagesState.status === 'success' ? packagesState.data : [];
   const current =
@@ -192,6 +147,9 @@ export function MemberPackagesPage() {
       : null;
   const currentPackage = current
     ? packages.find((item) => item.id === current.packageId) ?? null
+    : null;
+  const latestCancellation = current && cancellationsState.status === 'success'
+    ? cancellationsState.data.find((item) => item.subscriptionId === current.id) ?? null
     : null;
   const frozenSubscription =
     !current && historyState.status === 'success'
@@ -212,6 +170,49 @@ export function MemberPackagesPage() {
       : 0;
   }
 
+  function paidHistoryConflict(): boolean {
+    if (historyState.status !== 'success') return true;
+    const paid = historyState.data.filter((item) => item.status === 'active' || item.status === 'expired');
+    for (let i = 0; i < paid.length; i += 1) {
+      const a = paid[i];
+      if (!a.startDate || !a.endDate || a.startDate > a.endDate) return true;
+      for (let j = i + 1; j < paid.length; j += 1) {
+        const b = paid[j];
+        if (!b.startDate || !b.endDate || b.startDate > b.endDate) return true;
+        const upgradeTransition = (a.previousSubscriptionId === b.id && a.packageId !== b.packageId && a.startDate === b.endDate)
+          || (b.previousSubscriptionId === a.id && a.packageId !== b.packageId && b.startDate === a.endDate);
+        if (a.startDate <= b.endDate && b.startDate <= a.endDate && !upgradeTransition) return true;
+        if (a.previousSubscriptionId != null && a.previousSubscriptionId === b.previousSubscriptionId) return true;
+      }
+    }
+    return false;
+  }
+
+  function renewalPath(subscriptionId: number): { tail: MemberSubscription | null; conflict: boolean } {
+    if (historyState.status !== 'success' || paidHistoryConflict()
+      || historyState.data.some((item) => item.status === 'frozen')) return { tail: null, conflict: true };
+    let tail = historyState.data.find((item) => item.id === subscriptionId) ?? null;
+    const visited = new Set<number>();
+    while (tail) {
+      if (visited.has(tail.id)) return { tail: null, conflict: true };
+      visited.add(tail.id);
+      const next = historyState.data.filter((item) => item.previousSubscriptionId === tail?.id
+        && (item.status === 'active' || item.status === 'expired'));
+      if (next.length > 1) return { tail: null, conflict: true };
+      if (next.length === 0) return { tail, conflict: false };
+      if (next[0].startDate <= tail.endDate || next[0].packageId !== tail.packageId) {
+        return { tail: null, conflict: true };
+      }
+      tail = next[0];
+    }
+    return { tail: null, conflict: true };
+  }
+
+  const futurePeriods = historyState.status === 'success'
+    ? historyState.data.filter((item) => item.status === 'active' && item.startDate > todayKey())
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    : [];
+
   const isStatusSyncing =
     currentState.status === 'loading' ||
     historyState.status === 'loading' ||
@@ -225,7 +226,7 @@ export function MemberPackagesPage() {
     if (
       packagesState.status !== 'success' || currentState.status !== 'success' ||
       historyState.status !== 'success' || paymentsState.status !== 'success' ||
-      pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
+      frozenSubscription || pendingItems.length > 0 || submittingPackageId !== null || requestBusy.current
     ) {
       return;
     }
@@ -234,7 +235,7 @@ export function MemberPackagesPage() {
       return;
     }
 
-    if (renewFrom && renewalCount(renewFrom.id) > 0) {
+    if (renewFrom && renewalPath(renewFrom.id).conflict) {
       return;
     }
 
@@ -275,6 +276,26 @@ export function MemberPackagesPage() {
     } finally {
       await loadHistory();
       setSubmittingPackageId(null);
+      requestBusy.current = false;
+    }
+  }
+
+  async function handleResume() {
+    if (!frozenSubscription || requestBusy.current) return;
+    requestBusy.current = true;
+    setIsResuming(true);
+    setActionError(null);
+    try {
+      const resumed = await resumeMembershipSubscription(frozenSubscription.id);
+      setCurrentState({ status: 'success', data: resumed });
+      setHistoryState((previous) => previous.status === 'success'
+        ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
+        : previous);
+      setHoldSuccessMessage('Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.');
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Không thể mở lại gói tập. Vui lòng thử lại.');
+    } finally {
+      setIsResuming(false);
       requestBusy.current = false;
     }
   }
@@ -330,6 +351,7 @@ export function MemberPackagesPage() {
           : previous,
       );
       setRequestResult(null);
+      setPendingToCancel(null);
       setHoldSuccessMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`);
     } catch (error) {
       setActionError(
@@ -338,7 +360,33 @@ export function MemberPackagesPage() {
           : 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.',
       );
     } finally {
+      await Promise.all([loadCurrent(), loadHistory(), loadPayments()]);
       setIsCancellingPending(false);
+      requestBusy.current = false;
+    }
+  }
+
+  async function handleSubmitCancellation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!current || isSubmittingCancellation || requestBusy.current) return;
+    const reason = cancellationReason.trim();
+    if (!reason) {
+      setCancellationError('Vui lòng nhập lý do hủy gói tập.');
+      return;
+    }
+    requestBusy.current = true;
+    setIsSubmittingCancellation(true);
+    setCancellationError(null);
+    try {
+      await requestMembershipCancellation(current.id, reason);
+      await loadCancellations();
+      setIsCancellationModalOpen(false);
+      setCancellationReason('');
+      setHoldSuccessMessage('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.');
+    } catch (error) {
+      setCancellationError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.');
+    } finally {
+      setIsSubmittingCancellation(false);
       requestBusy.current = false;
     }
   }
@@ -381,9 +429,15 @@ export function MemberPackagesPage() {
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadPayments()}>Thử lại</button>
         </div>
       )}
+      {cancellationsState.status === 'error' && (
+        <div className="portal-alert" role="alert">
+          <span>Không thể kiểm tra trạng thái yêu cầu hủy gói.</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void loadCancellations()}>Thử lại</button>
+        </div>
+      )}
 
       {holdSuccessMessage && (
-        <div className="portal-alert" role="status" style={{ marginBottom: 24, borderColor: '#86EFAC', backgroundColor: '#F0FDF4', color: '#166534' }}>
+        <div className="portal-alert" role="status" style={{ marginBottom: 24, borderColor: '#86EFAC', backgroundColor: '#20372b', color: '#86efac' }}>
           <span>{holdSuccessMessage}</span>
         </div>
       )}
@@ -405,22 +459,32 @@ export function MemberPackagesPage() {
                 {current.packageName}
               </h2>
               <p className="row-card__meta" style={{ marginTop: 4 }}>
-                Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.endDate)}
+                Hiệu lực từ {formatDate(current.startDate)} đến {formatDate(current.paidThroughDate ?? current.endDate)}
               </p>
               {current.status === 'active' && paymentsState.status === 'success' &&
                 paymentsState.data.some((payment) => payment.subscriptionId === current.id && payment.status === 'success') && (
-                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#15803D', fontSize: '0.84rem' }}>
+                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#86efac', fontSize: '0.84rem' }}>
                     ✓ Gói đã kích hoạt. Bạn có thể sử dụng thẻ QR để check-in và đặt lịch lớp học.
                   </p>
                 )}
               {current.holdStatus === 'PENDING' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#996515', fontSize: '0.86rem' }}>
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--color-accent-gold)', fontSize: '0.86rem' }}>
                   ⏳ Đang chờ Lễ tân xử lý yêu cầu bảo lưu{current.holdReason ? ` • Lý do: "${current.holdReason}"` : ''}
                 </p>
               )}
               {current.holdStatus === 'REJECTED' && (
-                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#B91C1C', fontSize: '0.84rem' }}>
+                <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem' }}>
                   Yêu cầu bảo lưu trước đó đã bị từ chối. Bạn có thể gửi lại yêu cầu mới nếu cần.
+                </p>
+              )}
+              {latestCancellation?.status === 'PENDING' && (
+                <p role="status" className="row-card__meta" style={{ marginTop: 8 }}>
+                  Đang chờ quản lý duyệt yêu cầu hủy. Gói vẫn có hiệu lực.
+                </p>
+              )}
+              {latestCancellation?.status === 'REJECTED' && (
+                <p role="status" className="row-card__meta" style={{ marginTop: 8 }}>
+                  Yêu cầu hủy trước đó đã bị từ chối. {latestCancellation.resolutionNote ?? ''}
                 </p>
               )}
             </div>
@@ -443,15 +507,35 @@ export function MemberPackagesPage() {
               >
                 {current.holdStatus === 'PENDING' ? 'Đang chờ duyệt bảo lưu' : 'Bảo lưu gói tập'}
               </button>
+              <button type="button" className="btn-secondary btn-sm"
+                disabled={cancellationsState.status !== 'success' || latestCancellation?.status === 'PENDING'}
+                onClick={() => { setCancellationError(null); setIsCancellationModalOpen(true); }}>
+                {latestCancellation?.status === 'PENDING' ? 'Đang chờ duyệt hủy' : 'Yêu cầu hủy gói'}
+              </button>
             </div>
           </div>
+        </section>
+      )}
+
+      {!current && cancellationsState.status === 'success' && cancellationsState.data.length > 0 && (
+        <section className="portal-card" style={{ marginBottom: 24 }} aria-label="Kết quả yêu cầu hủy gói">
+          <div className="meta-label">Yêu cầu hủy gói gần nhất</div>
+          <h2 className="portal-card-title" style={{ marginTop: 8 }}>
+            {cancellationsState.data[0].packageName}
+          </h2>
+          <p className="row-card__meta" role="status">
+            {cancellationsState.data[0].status === 'APPROVED' ? 'Đã duyệt hủy' :
+              cancellationsState.data[0].status === 'REJECTED' ? 'Yêu cầu bị từ chối' : 'Đang chờ quản lý duyệt'}
+          </p>
+          {cancellationsState.data[0].resolutionNote &&
+            <p className="row-card__meta">Ghi chú: {cancellationsState.data[0].resolutionNote}</p>}
         </section>
       )}
 
       {frozenSubscription && (
         <section
           className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: '#EFF6FF' }}
+          style={{ marginBottom: 24, border: '1px solid #93C5FD', background: 'var(--portal-info-surface, #263444)' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
@@ -473,6 +557,58 @@ export function MemberPackagesPage() {
           <p className="row-card__meta" style={{ marginTop: 6 }}>
             Gói tập của bạn đã được Lễ tân xác nhận bảo lưu. Các lịch lớp học đặt trước trong tương lai đã được hủy tự động.
           </p>
+          <p className="row-card__meta">Mở lại để tiếp tục sử dụng số ngày còn lại, không cần thanh toán lại. Bạn có thể đặt lại lịch học sau khi mở gói.</p>
+          <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
+            onClick={() => void handleResume()}>
+            {isResuming ? 'Đang mở lại…' : 'Mở lại gói tập miễn phí'}
+          </button>
+        </section>
+      )}
+
+      {futurePeriods.length > 0 && (
+        <section className={`portal-card membership-periods ${isPeriodsOpen ? 'is-open' : ''}`.trim()} aria-label="Các kỳ đã thanh toán tiếp theo">
+          <button
+            type="button"
+            className="membership-periods__toggle"
+            aria-expanded={isPeriodsOpen}
+            aria-controls="membership-future-periods-list"
+            onClick={() => setIsPeriodsOpen((prev) => !prev)}
+          >
+            <div className="membership-periods__heading">
+              <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
+              <div>
+                <h2 className="portal-card-title">Kỳ đã thanh toán tiếp theo</h2>
+                <span className="membership-periods__summary">
+                  Kỳ kế tiếp từ {formatDate(futurePeriods[0].startDate)} đến {formatDate(futurePeriods[0].endDate)}
+                </span>
+              </div>
+            </div>
+            <div className="membership-periods__meta">
+              <span className="membership-periods__count">{futurePeriods.length} kỳ</span>
+              <span className="membership-periods__action">
+                <span>{isPeriodsOpen ? 'Thu gọn' : 'Xem chi tiết'}</span>
+                <svg className="membership-periods__chevron" viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2.25 4.5 6 8.25 9.75 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
+          </button>
+          {isPeriodsOpen && (
+            <ul id="membership-future-periods-list" className="membership-periods__list">
+              {futurePeriods.map((period) => (
+                <li className="membership-periods__row" key={period.id}>
+                  <div className="membership-periods__package">
+                    <span className="membership-periods__icon"><PortalIcon name="calendar" size={18} /></span>
+                    <strong>{period.packageName}</strong>
+                  </div>
+                  <dl className="membership-periods__dates">
+                    <div><dt>Từ ngày</dt><dd><time dateTime={period.startDate}>{formatDate(period.startDate)}</time></dd></div>
+                    <div><dt>Đến ngày</dt><dd><time dateTime={period.endDate}>{formatDate(period.endDate)}</time></dd></div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -491,7 +627,7 @@ export function MemberPackagesPage() {
       {pending && (
         <section
           className="portal-card"
-          style={{ marginBottom: 24, border: '1px solid #D6C7B8', background: '#FCF9F4' }}
+          style={{ marginBottom: 24, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
@@ -511,7 +647,7 @@ export function MemberPackagesPage() {
             Yêu cầu #{pending.id} đang ở trạng thái chờ thanh toán và đã được chuyển thẳng vào danh sách chờ tại Quầy Lễ Tân (POS).
           </p>
           {pendingPackage && (
-            <p className="row-card__meta" style={{ fontWeight: 600, color: '#211C18' }}>
+            <p className="row-card__meta" style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>
               Số tiền thanh toán: {formatPrice(pendingPackage.price)} ({pendingPackage.durationDays} ngày)
             </p>
           )}
@@ -529,11 +665,11 @@ export function MemberPackagesPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                  disabled={isCancellingPending}
-                  onClick={() => void handleCancelPending(pending.id)}
+                  style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
+                  disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
+                  onClick={() => setPendingToCancel(pending)}
                 >
-                  {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                  {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
                 </button>
               </div>
             </>
@@ -565,11 +701,11 @@ export function MemberPackagesPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending}
-                onClick={() => void handleCancelPending(pending.id)}
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
+                disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
+                onClick={() => setPendingToCancel(pending)}
               >
-                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
               </button>
             </div>
           )}
@@ -661,11 +797,8 @@ export function MemberPackagesPage() {
               current && !isCurrent && isHigherPackage(currentPackage, membershipPackage)
                 ? current
                 : null;
-            const nextRenewals = renewFrom
-              ? renewalCount(renewFrom.id)
-              : upgradeFrom
-                ? renewalCount(upgradeFrom.id)
-                : 0;
+            const renewalConflict = renewFrom && historyState.status === 'success' ? renewalPath(renewFrom.id).conflict : false;
+            const nextRenewals = upgradeFrom ? renewalCount(upgradeFrom.id) : 0;
 
             const isPending =
               pending?.packageId ===
@@ -679,11 +812,13 @@ export function MemberPackagesPage() {
               current !== null && !isCurrent && !upgradeFrom;
 
             const disabled =
+              frozenSubscription !== null ||
               submittingPackageId !== null ||
               packagesState.status !== 'success' || currentState.status !== 'success' ||
               historyState.status !== 'success' || paymentsState.status !== 'success' ||
               pendingItems.length > 0 ||
               nextRenewals > 0 ||
+              renewalConflict ||
               ambiguousRenewal ||
               hasLowerOrNonUpgradableCurrentPackage;
 
@@ -692,7 +827,9 @@ export function MemberPackagesPage() {
 
             if (isSubmitting) {
               buttonText = 'Đang xử lý…';
-            } else if (nextRenewals > 1) {
+            } else if (frozenSubscription) {
+              buttonText = 'Đang có gói bảo lưu';
+            } else if (renewalConflict || nextRenewals > 1) {
               buttonText = 'Cần kiểm tra gia hạn';
             } else if (nextRenewals === 1) {
               buttonText = renewFrom ? 'Đã gia hạn' : 'Có yêu cầu đang chờ';
@@ -770,9 +907,9 @@ export function MemberPackagesPage() {
                     Trọn gói {membershipPackage.durationDays} ngày • Kích hoạt ngay tại quầy
                   </div>
 
-                  {nextRenewals > 1 && (
+                  {(renewalConflict || nextRenewals > 1) && (
                     <p className="row-card__meta" role="alert">
-                      Có nhiều lượt gia hạn từ cùng gói. Vui lòng liên hệ nhân viên để kiểm tra.
+                      Lịch sử gói có kỳ trùng, chồng ngày hoặc chuỗi gia hạn bất thường. Vui lòng liên hệ nhân viên để kiểm tra.
                     </p>
                   )}
 
@@ -891,11 +1028,12 @@ export function MemberPackagesPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                style={{ color: '#B91C1C', borderColor: '#FCA5A5' }}
-                disabled={isCancellingPending}
-                onClick={() => void handleCancelPending(requestResult.subscription.id)}
+                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
+                onClick={() => setPendingToCancel(requestResult.subscription)}
+                disabled={isCancellingPending || paymentsState.status !== 'success' ||
+                  paymentsState.data.some((payment) => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}
               >
-                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
               </button>
               <button
                 type="button"
@@ -905,6 +1043,58 @@ export function MemberPackagesPage() {
                 Đóng
               </button>
             </div>
+          </section>
+        </div>,
+      )}
+
+      {pendingToCancel && renderModalOverlay(
+        <div role="presentation" onClick={(e) => e.target === e.currentTarget && !isCancellingPending && setPendingToCancel(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
+          <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-pending-title"
+            onKeyDown={(e) => { if (e.key === 'Escape' && !isCancellingPending) setPendingToCancel(null); }}
+            style={{ width: 'min(500px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+            <div className="meta-label">Xác nhận yêu cầu</div>
+            <h2 id="cancel-pending-title" className="portal-card-title" style={{ marginTop: 10 }}>Hủy yêu cầu đăng ký?</h2>
+            <p className="row-card__meta" style={{ marginTop: 12 }}>
+              Yêu cầu {pendingToCancel.packageName} sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+              <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
+                onClick={() => setPendingToCancel(null)}>Giữ yêu cầu</button>
+              <button type="button" className="btn-primary" disabled={isCancellingPending}
+                onClick={() => void handleCancelPending(pendingToCancel.id)}>
+                {isCancellingPending ? 'Đang hủy…' : 'Xác nhận hủy'}
+              </button>
+            </div>
+          </section>
+        </div>,
+      )}
+
+      {isCancellationModalOpen && current && renderModalOverlay(
+        <div role="presentation" onClick={(e) => e.target === e.currentTarget && !isSubmittingCancellation && setIsCancellationModalOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
+          <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-active-title"
+            onKeyDown={(e) => { if (e.key === 'Escape' && !isSubmittingCancellation) setIsCancellationModalOpen(false); }}
+            style={{ width: 'min(540px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+            <div className="meta-label">Yêu cầu quản lý xét duyệt</div>
+            <h2 id="cancel-active-title" className="portal-card-title" style={{ marginTop: 10 }}>Yêu cầu hủy {current.packageName}</h2>
+            <p className="row-card__meta" style={{ marginTop: 12 }}>
+              Gói tập sau khi được duyệt hủy sẽ không được hoàn tiền. Các lịch học tương lai có thể bị chấm dứt.
+            </p>
+            <form onSubmit={(e) => void handleSubmitCancellation(e)} style={{ marginTop: 20 }}>
+              <label className="portal-label" htmlFor="membership-cancellation-reason">Lý do hủy *</label>
+              <textarea id="membership-cancellation-reason" className="portal-input" required maxLength={500} rows={4}
+                value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)}
+                disabled={isSubmittingCancellation} style={{ width: '100%', resize: 'vertical' }} />
+              {cancellationError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{cancellationError}</p>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button type="button" className="btn-secondary" disabled={isSubmittingCancellation}
+                  onClick={() => setIsCancellationModalOpen(false)}>Quay lại</button>
+                <button type="submit" className="btn-primary" disabled={isSubmittingCancellation || !cancellationReason.trim()}>
+                  {isSubmittingCancellation ? 'Đang gửi…' : 'Xác nhận gửi yêu cầu'}
+                </button>
+              </div>
+            </form>
           </section>
         </div>,
       )}
@@ -972,7 +1162,7 @@ export function MemberPackagesPage() {
               </div>
 
               {holdError && (
-                <p role="alert" style={{ color: '#B91C1C', fontSize: '0.86rem', marginTop: 8 }}>
+                <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.86rem', marginTop: 8 }}>
                   {holdError}
                 </p>
               )}

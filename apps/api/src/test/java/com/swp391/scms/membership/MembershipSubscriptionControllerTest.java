@@ -76,6 +76,18 @@ class MembershipSubscriptionControllerTest {
     }
 
     @Test
+    void resume_returnsActiveSubscriptionAndLocalizedMessage() throws Exception {
+        SubscriptionDto dto = new SubscriptionDto(100L, 10L, 1L, "Essential", null,
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 20), "active", "paid-qr", LocalDateTime.now());
+        when(service.resume(any(), eq(100L))).thenReturn(dto);
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/100/resume").header("Accept-Language", "en"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(100L))
+                .andExpect(jsonPath("$.data.status").value("active"))
+                .andExpect(jsonPath("$.message").value("Subscription resumed successfully at no additional charge."));
+    }
+
+    @Test
     void create_returnsCreated() throws Exception {
         SubscriptionRequests.Create request = new SubscriptionRequests.Create(1L);
         SubscriptionDto dto = new SubscriptionDto(

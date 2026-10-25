@@ -530,8 +530,8 @@ export function MemberProfilePage() {
 
             {metrics.length === 0 ? (
               <div className="portal-state" style={{ minHeight: '140px', padding: '24px 16px' }}>
-                <p style={{ color: '#7E7771', margin: 0 }}>Chưa có chỉ số nào được ghi nhận.</p>
-                <p style={{ fontSize: '0.8rem', color: '#8C847C', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>Chưa có chỉ số nào được ghi nhận.</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>
                   Chọn chỉ số ở biểu mẫu trên và nhấn "Thêm" để bắt đầu theo dõi.
                 </p>
               </div>

@@ -2,6 +2,7 @@ package com.swp391.scms.finance.service;
 
 import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -23,6 +24,7 @@ import com.swp391.scms.users.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -48,6 +50,9 @@ public class PaymentService {
     private final ClassEnrollmentRepository classEnrollmentRepository;
     private final PaymentMapper paymentMapper;
     private final Clock clock;
+
+    @Autowired(required = false)
+    private EntityManager entityManager;
 
     @Autowired(required = false)
     private com.swp391.scms.common.i18n.MessageService messageService;
@@ -131,6 +136,31 @@ public class PaymentService {
         Member member = memberRepository.findById(dto.getMemberId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
 
+        if (dto.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
+            MembershipSubscription target = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", dto.getSubscriptionId()));
+            if (target.getMember() == null || !member.getUserId().equals(target.getMember().getUserId())) {
+                throw new BadRequestException("PAYMENT_MEMBER_MISMATCH",
+                        "finance.payment.member_mismatch", null, null);
+            }
+            memberRepository.findByUserIdForUpdate(member.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", member.getUserId()));
+            if (entityManager != null) entityManager.refresh(target);
+            if (!"pending_payment".equals(target.getStatus())) {
+                throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING",
+                        "finance.payment.subscription_not_pending", null, null);
+            }
+            if (!paymentRepository.findAllBySubscriptionId(target.getId()).isEmpty()) {
+                throw new ConflictException("RENEWAL_PAYMENT_EXISTS",
+                        "error.membership.renewal_payment_exists", null, "Payment already exists");
+            }
+            BigDecimal expectedPrice = target.getMembershipPackage().getPrice();
+            if (expectedPrice == null || dto.getAmount().compareTo(expectedPrice) != 0) {
+                throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                        new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
+            }
+        }
+
         User receiver = null;
         if (dto.getReceivedById() != null) {
             receiver = userRepository.findByIdAndDeletedAtIsNull(dto.getReceivedById())
@@ -145,6 +175,10 @@ public class PaymentService {
             payment.setMethod(dto.getMethod().toLowerCase(Locale.ROOT));
         }
         String initialStatus = dto.getStatus() != null ? dto.getStatus().toLowerCase(Locale.ROOT) : "pending";
+        if (dto.getSubscriptionId() != null && !"pending".equals(initialStatus)) {
+            throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING",
+                    "finance.payment.subscription_not_pending", null, "Confirm payment through the status flow");
+        }
         payment.setStatus(initialStatus);
         markPaidIfSuccess(payment, initialStatus);
 
@@ -172,11 +206,21 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
 
+        lockSubscriptionMember(payment);
         if (status == null || !VALID_STATUSES.contains(status.toLowerCase(Locale.ROOT))) {
             throw new BadRequestException("INVALID_PAYMENT_STATUS", "finance.payment.invalid_status", new Object[]{status}, null);
         }
         String normalizedStatus = status.toLowerCase(Locale.ROOT);
         String currentStatus = payment.getStatus() != null ? payment.getStatus().toLowerCase(Locale.ROOT) : "pending";
+
+        if (payment.getSubscriptionId() != null && "failed".equals(currentStatus) && "pending".equals(normalizedStatus)
+                && membershipSubscriptionRepository != null) {
+            MembershipSubscription target = membershipSubscriptionRepository.findById(payment.getSubscriptionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", payment.getSubscriptionId()));
+            if (!"pending_payment".equalsIgnoreCase(target.getStatus())) {
+                throw new ConflictException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending", null, null);
+            }
+        }
 
         if (!currentStatus.equals(normalizedStatus)) {
             boolean allowed = switch (currentStatus) {
@@ -189,8 +233,20 @@ public class PaymentService {
                 throw new BadRequestException("INVALID_STATUS_TRANSITION", "finance.payment.invalid_transition",
                         new Object[]{currentStatus, normalizedStatus}, null);
             }
+            if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)
+                    && payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
+                MembershipSubscription target = membershipSubscriptionRepository.findById(payment.getSubscriptionId())
+                        .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", payment.getSubscriptionId()));
+                if (!"pending_payment".equals(target.getStatus())) {
+                    throw new ConflictException("PAYMENT_SUBSCRIPTION_NOT_PENDING",
+                            "finance.payment.subscription_not_pending", null, null);
+                }
+            }
             payment.setStatus(normalizedStatus);
             markPaidIfSuccess(payment, normalizedStatus);
+            if ("pending".equals(currentStatus) && "failed".equals(normalizedStatus)) {
+                cancelFailedRenewal(payment);
+            }
             if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)) {
                 activateLinkedTargetsOnSuccess(payment);
             }
@@ -205,8 +261,22 @@ public class PaymentService {
                     "Target subscription or enrollment is required");
         }
 
-        Member member = memberRepository.findById(dto.getMemberId())
+        Member member = memberRepository.findByUserIdForUpdate(dto.getMemberId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
+
+        if (dto.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
+            MembershipSubscription target = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", dto.getSubscriptionId()));
+            if (entityManager != null) entityManager.refresh(target);
+            if (target.getMember() == null || !member.getUserId().equals(target.getMember().getUserId())) {
+                throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null, null);
+            }
+            if (dto.getPackageId() != null && (target.getMembershipPackage() == null
+                    || !dto.getPackageId().equals(target.getMembershipPackage().getId()))) {
+                throw new BadRequestException("PAYMENT_PACKAGE_MISMATCH", "error.membership.pos_package_mismatch",
+                        null, "Checkout package does not match the subscription");
+            }
+        }
 
         User receiver = null;
         if (dto.getReceivedById() != null) {
@@ -215,6 +285,7 @@ public class PaymentService {
         }
 
         Long resolvedSubscriptionId = dto.getSubscriptionId();
+        Payment pendingToSettle = null;
 
         if (resolvedSubscriptionId == null && dto.getPackageId() != null
                 && membershipPackageRepository != null && membershipSubscriptionRepository != null) {
@@ -224,30 +295,47 @@ public class PaymentService {
                 throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
                         new Object[]{dto.getAmount(), pkg.getPrice()}, "Payment amount mismatch");
             }
-            List<MembershipSubscription> pendingSubs = membershipSubscriptionRepository
-                    .findByMemberUserIdAndStatus(member.getUserId(), "pending_payment");
-            if (pendingSubs != null && !pendingSubs.isEmpty()) {
+            List<MembershipSubscription> history = membershipSubscriptionRepository.findByMemberUserId(member.getUserId());
+            if (history == null) history = List.of();
+            if (history.stream().anyMatch(sub -> "frozen".equalsIgnoreCase(sub.getStatus()))) {
+                throw new ConflictException("MEMBERSHIP_FROZEN_PAYMENT",
+                        "error.membership.frozen_payment", null, "Membership on hold cannot be activated by payment");
+            }
+            if (history.stream().anyMatch(sub -> sub.getPreviousSubscription() != null
+                    && "pending_payment".equals(sub.getStatus()))) {
+                throw new ConflictException("RENEWAL_REQUIRES_SUBSCRIPTION_ID",
+                        "error.membership.pos_renewal_requires_subscription", null,
+                        "Use the checked subscription renewal for checkout");
+            }
+            java.time.LocalDate today = java.time.LocalDate.now(clock);
+            if (history.stream().anyMatch(sub -> ("active".equals(sub.getStatus()) || "expired".equals(sub.getStatus()))
+                    && (sub.getEndDate() == null || !sub.getEndDate().isBefore(today)))) {
+                throw new ConflictException("MEMBERSHIP_ALREADY_ACTIVE",
+                        "error.membership.already_active", null, "Member already has a paid period");
+            }
+            List<MembershipSubscription> pendingSubs = history.stream()
+                    .filter(sub -> "pending_payment".equals(sub.getStatus())).toList();
+            if (pendingSubs.size() > 1) {
+                throw new ConflictException("MEMBERSHIP_PENDING_EXISTS",
+                        "error.membership.pending_exists", null, "Multiple pending subscriptions need review");
+            }
+            if (!pendingSubs.isEmpty()) {
                 MembershipSubscription pendingSub = pendingSubs.get(0);
-                pendingSub.setMembershipPackage(pkg);
+                if (pendingSub.getMembershipPackage() == null
+                        || !pkg.getId().equals(pendingSub.getMembershipPackage().getId())) {
+                    throw new BadRequestException("PAYMENT_PACKAGE_MISMATCH",
+                            "error.membership.pos_package_mismatch", null, "Checkout package does not match the subscription");
+                }
+                pendingToSettle = payableExistingPayment(member.getUserId(), pendingSub.getId(), dto.getAmount(), dto.getClassEnrollmentId());
                 pendingSub.setCreatedBy(receiver);
                 activateSubscription(pendingSub);
                 resolvedSubscriptionId = pendingSub.getId();
             } else {
-                java.time.LocalDate today = java.time.LocalDate.now(clock);
                 MembershipSubscription sub = new MembershipSubscription();
                 sub.setMember(member);
                 sub.setMembershipPackage(pkg);
-                java.time.LocalDate startDate = membershipSubscriptionRepository
-                        .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
-                                member.getUserId(), "active", today, today)
-                        .map(active -> {
-                            sub.setPreviousSubscription(active);
-                            return active.getEndDate().plusDays(1);
-                        })
-                        .orElse(today);
-                int durationDays = Math.max(1, pkg.getDurationDays());
-                sub.setStartDate(startDate);
-                sub.setEndDate(startDate.plusDays(durationDays - 1L));
+                sub.setStartDate(today);
+                sub.setEndDate(today.plusDays(Math.max(1, pkg.getDurationDays()) - 1L));
                 sub.setStatus("active");
                 sub.setCreatedBy(receiver);
                 sub.setCreatedAt(LocalDateTime.now(clock));
@@ -269,7 +357,7 @@ public class PaymentService {
             }
 
             if (subscription.getStatus() != null && !"pending_payment".equalsIgnoreCase(subscription.getStatus())) {
-                throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending",
+                throw new ConflictException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending",
                         null, "Subscription is not in pending_payment state");
             }
 
@@ -280,6 +368,8 @@ public class PaymentService {
                             new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
                 }
             }
+
+            pendingToSettle = payableExistingPayment(member.getUserId(), subscription.getId(), dto.getAmount(), dto.getClassEnrollmentId());
 
             activateSubscription(subscription);
         }
@@ -295,6 +385,15 @@ public class PaymentService {
 
             enrollment.setStatus("booked");
             classEnrollmentRepository.save(enrollment);
+        }
+
+        if (pendingToSettle != null) {
+            pendingToSettle.setStatus("success");
+            pendingToSettle.setPaidAt(LocalDateTime.now(clock));
+            pendingToSettle.setReceivedBy(receiver);
+            pendingToSettle.setMethod(dto.getMethod() != null ? dto.getMethod().toLowerCase(Locale.ROOT) : "cash");
+            pendingToSettle.setNote(dto.getNote());
+            return paymentMapper.toDto(paymentRepository.save(pendingToSettle));
         }
 
         Payment payment = new Payment();
@@ -362,6 +461,30 @@ public class PaymentService {
         return paymentMapper.toDto(saved);
     }
 
+    private void lockSubscriptionMember(Payment payment) {
+        if (payment.getSubscriptionId() == null || membershipSubscriptionRepository == null) return;
+        MembershipSubscription target = membershipSubscriptionRepository.findById(payment.getSubscriptionId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", payment.getSubscriptionId()));
+        memberRepository.findByUserIdForUpdate(target.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", target.getMember().getUserId()));
+        if (entityManager != null) {
+            entityManager.refresh(payment);
+            entityManager.refresh(target);
+        }
+    }
+    private void cancelFailedRenewal(Payment payment) {
+        if (payment.getSubscriptionId() == null || membershipSubscriptionRepository == null) return;
+        membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(subscription -> {
+            if (subscription.getPreviousSubscription() != null
+                    && "pending_payment".equals(subscription.getStatus())) {
+                // A failed renewal has never granted rights; allow a fresh request on its paid parent.
+                subscription.setStatus("cancelled");
+                subscription.setUpdatedAt(LocalDateTime.now(clock));
+                membershipSubscriptionRepository.save(subscription);
+            }
+        });
+    }
+
     private void activateLinkedTargetsOnSuccess(Payment payment) {
         if (payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
             membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(this::activateSubscription);
@@ -375,14 +498,38 @@ public class PaymentService {
     }
 
     private void activateSubscription(MembershipSubscription subscription) {
+        if (!"pending_payment".equalsIgnoreCase(subscription.getStatus())) {
+            throw new ConflictException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending", null, null);
+        }
         java.time.LocalDate today = java.time.LocalDate.now(clock);
+        if (membershipSubscriptionRepository.findByMemberUserId(
+                subscription.getMember().getUserId()).stream()
+                .anyMatch(item -> "frozen".equalsIgnoreCase(item.getStatus()))) {
+            throw new ConflictException("MEMBERSHIP_FROZEN_PAYMENT",
+                    "error.membership.frozen_payment", null,
+                    "Membership on hold cannot be activated by payment");
+        }
         MembershipSubscription previous = subscription.getPreviousSubscription();
+        if (previous != null && ("cancelled".equalsIgnoreCase(previous.getStatus())
+                || "frozen".equalsIgnoreCase(previous.getStatus()))) {
+            throw new ConflictException("PAYMENT_PREVIOUS_UNAVAILABLE", "finance.payment.previous_unavailable", null, null);
+        }
         boolean isUpgrade = previous != null
                 && subscription.getMembershipPackage() != null
                 && previous.getMembershipPackage() != null
                 && previous.getMembershipPackage().getId() != null
                 && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
 
+        if (isUpgrade && membershipSubscriptionRepository.findByMemberUserId(
+                subscription.getMember().getUserId()).stream()
+                .anyMatch(item -> item.getPreviousSubscription() != null
+                        && ("active".equalsIgnoreCase(item.getStatus())
+                            || "expired".equalsIgnoreCase(item.getStatus()))
+                        && item.getStartDate() != null && item.getStartDate().isAfter(today))) {
+            throw new ConflictException("MEMBERSHIP_FUTURE_PAID_RENEWAL",
+                    "error.membership.future_paid_renewal", null,
+                    "Paid future renewal requires manager review");
+        }
         if (isUpgrade && "active".equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus("expired");
             if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
@@ -406,6 +553,24 @@ public class PaymentService {
         }
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         membershipSubscriptionRepository.save(subscription);
+    }
+
+    private Payment payableExistingPayment(Long memberId, Long subscriptionId, BigDecimal amount, Long enrollmentId) {
+        List<Payment> related = paymentRepository.findAllBySubscriptionId(subscriptionId);
+        if (related == null || related.isEmpty()) return null;
+        List<Payment> unsettled = related.stream().filter(payment ->
+                "pending".equalsIgnoreCase(payment.getStatus()) || "success".equalsIgnoreCase(payment.getStatus())).toList();
+        if (unsettled.isEmpty()) return null;
+        if (unsettled.size() != 1 || !"pending".equalsIgnoreCase(unsettled.get(0).getStatus())
+                || unsettled.get(0).getMember() == null
+                || !memberId.equals(unsettled.get(0).getMember().getUserId())
+                || unsettled.get(0).getAmount().compareTo(amount) != 0) {
+            throw new ConflictException("PAYMENT_ALREADY_EXISTS", "finance.payment.already_exists", null, null);
+        }
+        if (enrollmentId != null) {
+            throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null, null);
+        }
+        return unsettled.get(0);
     }
 
     private String resolveRefundNote(BigDecimal refundAmount, String reason) {

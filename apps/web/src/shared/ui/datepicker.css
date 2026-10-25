@@ -122,9 +122,11 @@
 }
 
 .ldp-nav-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  line-height: 1;
   width: 28px;
   height: 28px;
   background: #FAF8F5;

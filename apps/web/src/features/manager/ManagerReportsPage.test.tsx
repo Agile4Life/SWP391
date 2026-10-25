@@ -25,7 +25,7 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 async function exportReport() {
   await act(async () => root.render(<ManagerReportsPage />));
-  const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xuất Báo Cáo'))!;
+  const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xuất báo cáo'))!;
   await act(async () => button.click());
 }
 it('protects every untrusted CSV text cell from spreadsheet formulas', async () => {

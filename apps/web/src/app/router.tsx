@@ -1,5 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LandingPage } from '../features/landing/LandingPage';
+import { TrainerStoryPage } from '../features/landing/TrainerStoryPage';
+import { SportPage } from '../features/landing/SportPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { AppLayout } from '../shared/ui/AppLayout';
@@ -23,10 +25,16 @@ import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
 import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
 import { UserManagerPage } from '../features/manager/UserManagerPage';
 import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
+import { ManagerCancellationPage } from '../features/manager/ManagerCancellationPage';
 
 export const router = createBrowserRouter([
   // Public Routes
   { path: '/', element: <LandingPage /> },
+  { path: '/swimming', element: <SportPage forcedSport="swimming" /> },
+  { path: '/tennis', element: <SportPage forcedSport="tennis" /> },
+  { path: '/sports/:sportId', element: <SportPage /> },
+  { path: '/trainers', element: <TrainerStoryPage /> },
+  { path: '/trainers/:trainerId', element: <TrainerStoryPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
 
@@ -135,6 +143,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/reports',
             element: <ManagerReportsPage />,
+          },
+          {
+            path: '/manager/cancellations',
+            element: <ManagerCancellationPage />,
           },
         ],
       },

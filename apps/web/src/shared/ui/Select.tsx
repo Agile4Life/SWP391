@@ -231,9 +231,22 @@ export function Select({
         </svg>
       </button>
 
-      {required && (
-        <input className="ui-select__native" tabIndex={-1} aria-hidden="true" required value={value} onChange={() => {}} />
-      )}
+        <select
+          className="ui-select__native"
+          tabIndex={-1}
+          aria-hidden="true"
+          required={required}
+          disabled={disabled}
+          value={value}
+          onChange={(e) => onChange({ target: { value: e.target.value } })}
+        >
+          {!options.some((o) => o.value === value) && <option value={value} />}
+          {options.map((o, i) => (
+            <option key={`${o.value}-${i}`} value={o.value} disabled={o.disabled}>
+              {o.label}
+            </option>
+          ))}
+        </select>
 
       {mounted && (
         <ul

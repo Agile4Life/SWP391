@@ -2,6 +2,7 @@ package com.swp391.scms.health;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swp391.scms.common.GlobalExceptionHandler;
+import com.swp391.scms.health.dto.HealthMetricCreateDto;
 import com.swp391.scms.health.dto.HealthMetricDto;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import org.junit.jupiter.api.BeforeEach;
@@ -146,5 +147,40 @@ class HealthMetricControllerTest {
         mockMvc.perform(delete("/api/v1/members/101/health-metrics/5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/health/metrics records metric and returns 200")
+    void recordMetricSuccess() throws Exception {
+        HealthMetricCreateDto request = new HealthMetricCreateDto(
+                101L, "waist", new BigDecimal("76.0"), "cm"
+        );
+        HealthMetricDto created = new HealthMetricDto(
+                3L, "waist", new BigDecimal("76.0"), "cm", 101L, LocalDateTime.now()
+        );
+        when(healthMetricService.recordMetric(any(), eq(101L), eq("MEMBER"))).thenReturn(created);
+
+        mockMvc.perform(post("/api/v1/health/metrics")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.metricName").value("waist"))
+                .andExpect(jsonPath("$.data.metricValue").value(76.0));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/health/metrics/my returns chronological metrics for Line Chart")
+    void getMyMetricsChronologicalSuccess() throws Exception {
+        HealthMetricDto m1 = new HealthMetricDto(1L, "weight", new BigDecimal("72.0"), "kg", 101L, LocalDateTime.now().minusDays(7));
+        HealthMetricDto m2 = new HealthMetricDto(2L, "weight", new BigDecimal("70.5"), "kg", 101L, LocalDateTime.now());
+        when(healthMetricService.getMyMetricsChronological(101L)).thenReturn(List.of(m1, m2));
+
+        mockMvc.perform(get("/api/v1/health/metrics/my"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].metricValue").value(72.0))
+                .andExpect(jsonPath("$.data[1].metricValue").value(70.5));
     }
 }

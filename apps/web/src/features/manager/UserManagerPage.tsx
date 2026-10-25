@@ -285,7 +285,7 @@ export function UserManagerPage() {
           className={`portal-tab ${activeTab === 'ROLES' ? 'active' : ''}`}
           onClick={() => setActiveTab('ROLES')}
         >
-          Phân Quyền
+          Phân quyền
         </button>
       </div>
 
@@ -517,7 +517,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.name && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.name}
                 </div>
               )}
@@ -537,7 +537,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.email && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.email}
                 </div>
               )}
@@ -559,7 +559,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.phone && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.phone}
                 </div>
               )}
@@ -580,7 +580,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.password && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.password}
                 </div>
               )}
@@ -642,7 +642,7 @@ export function UserManagerPage() {
         >
           <form onSubmit={handleUpdateUser} style={{ display: 'grid', gap: 14 }} noValidate>
             <div className="portal-form-group">
-              <label className="portal-label" htmlFor="edit-user-email">Email (Không thể thay đổi)</label>
+              <label className="portal-label" htmlFor="edit-user-email">Email (không thể thay đổi)</label>
               <input
                 id="edit-user-email"
                 type="email"
@@ -668,7 +668,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.name && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {editFieldErrors.name}
                 </div>
               )}
@@ -690,7 +690,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.phone && (
-                <div style={{ color: '#B91C1C', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {editFieldErrors.phone}
                 </div>
               )}

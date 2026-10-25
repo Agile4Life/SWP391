@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MembershipPackageRepository extends JpaRepository<MembershipPackage, Long> {
     List<MembershipPackage> findAllByOrderByPriceAsc();
+    List<MembershipPackage> findByStatusOrderByPriceAsc(String status);
 }

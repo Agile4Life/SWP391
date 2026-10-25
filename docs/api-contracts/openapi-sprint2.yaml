@@ -174,6 +174,40 @@ components:
           format: date-time
           nullable: true
 
+
+
+    CreateSupportMessageDto:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          maxLength: 2000
+          example: "Toi da thu mo lai nhung van chua duoc."
+
+    SupportRequestMessageDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        supportRequestId:
+          type: integer
+          format: int64
+        senderId:
+          type: integer
+          format: int64
+        senderName:
+          type: string
+        senderRole:
+          type: string
+          example: "MEMBER"
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
     # --- Membership Subscriptions Schemas (SCRUM-71) ---
     SubscriptionDto:
       type: object
@@ -199,6 +233,12 @@ components:
         endDate:
           type: string
           format: date
+          description: Ngày kết thúc kỳ hiện tại, dùng kiểm tra quyền và QR.
+        paidThroughDate:
+          type: string
+          format: date
+          nullable: true
+          description: GET /memberships/subscriptions/my trả hạn cuối chuỗi gia hạn cùng gói, liên tiếp và đã thanh toán (status active), bao gồm kỳ hiện tại. Không cộng pending_payment, frozen, cancelled, kỳ có khoảng trống hoặc chuỗi phân nhánh. Các response khác có thể trả null; client dùng endDate khi null. Không thay đổi ngày hoặc QR của từng kỳ.
         status:
           type: string
           enum: [pending_payment, active, frozen, expired, cancelled]
@@ -505,6 +545,36 @@ components:
           maxLength: 50
           nullable: true
           example: "Cổng chính A"
+
+    AuditLogDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        userFullName:
+          type: string
+        userEmail:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+          format: int64
+        oldValue:
+          description: Dữ liệu cũ dạng JSON
+        newValue:
+          description: Dữ liệu mới dạng JSON
+        ipAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
 security:
   - bearerAuth: []
 
@@ -778,6 +848,67 @@ paths:
         '404':
           description: Phiếu hỗ trợ không tồn tại
 
+  /support/requests/{id}/messages:
+    post:
+      summary: Gui tin nhan phan hoi vao phieu ho tro (SCRUM-106)
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupportMessageDto'
+      responses:
+        '200':
+          description: Gui tin nhan thanh cong
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SupportRequestMessageDto'
+        '400':
+          description: Phieu ho tro da dong hoac noi dung tin nhan khong hop le
+        '403':
+          description: Quyen truy cap bi tu choi (FORBIDDEN)
+        '404':
+          description: Phieu ho tro khong ton tai
+    get:
+      summary: Lay toan bo lich su trao doi trong phieu ho tro theo thu tu thoi gian (SCRUM-106)
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Lay danh sach tin nhan thanh cong
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SupportRequestMessageDto'
+        '403':
+          description: Quyen truy cap bi tu choi (FORBIDDEN)
+        '404':
+          description: Phieu ho tro khong ton tai
   # ==========================================
   # Membership Subscriptions (SCRUM-71)
   # ==========================================
@@ -821,12 +952,14 @@ paths:
       responses:
         '201':
           description: Tạo lượt gia hạn thành công
+        '400':
+          description: Kỳ nguồn không phải gói đã thanh toán hợp lệ
         '403':
           description: Không phải chủ sở hữu gói
         '404':
           description: Gói tập không tồn tại
         '409':
-          description: Gói tập đã có lượt gia hạn trước đó
+          description: Chuỗi gia hạn có kỳ chờ thanh toán, kỳ chồng lấn hoặc dữ liệu bất thường
 
   /memberships/subscriptions/{id}/upgrade:
     post:
@@ -853,7 +986,7 @@ paths:
         '403':
           description: Không phải chủ sở hữu gói
         '409':
-          description: Đang có yêu cầu chờ thanh toán
+          description: Có yêu cầu chờ thanh toán hoặc kỳ gia hạn tương lai đã thanh toán
 
   /memberships/subscriptions/{id}/cancel:
     post:
@@ -869,10 +1002,116 @@ paths:
       responses:
         '200':
           description: Hủy yêu cầu gói tập thành công
-        '400':
-          description: Gói tập không ở trạng thái chờ thanh toán
         '403':
           description: Không có quyền hủy yêu cầu này
+        '404':
+          description: Không tìm thấy subscription
+        '409':
+          description: Đã kích hoạt hoặc có payment đã hoàn tất/chưa đối soát
+
+  /memberships/cancellations/subscriptions/{subscriptionId}:
+    post:
+      summary: Member gửi yêu cầu hủy gói đang hoạt động; quyền lợi giữ nguyên khi chờ duyệt
+      tags: [Memberships]
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 1, maxLength: 500}
+      responses:
+        '201': {description: Đã gửi yêu cầu chờ quản lý duyệt}
+        '400': {description: Thiếu lý do}
+        '403': {description: Không phải chủ gói}
+        '404': {description: Không tìm thấy gói}
+        '409': {description: Gói không active hoặc đã có yêu cầu pending}
+
+  /memberships/cancellations/my:
+    get:
+      summary: Lịch sử yêu cầu hủy của member đang đăng nhập
+      tags: [Memberships]
+      responses:
+        '200': {description: Thành công}
+
+  /memberships/cancellations:
+    get:
+      summary: Manager xem các yêu cầu hủy gói tập
+      tags: [Memberships]
+      responses:
+        '200': {description: Thành công}
+        '403': {description: Chỉ Center Manager có quyền xem}
+
+  /memberships/cancellations/{id}/approve:
+    post:
+      summary: Manager duyệt hủy gói active; không hoàn tiền
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Đã duyệt; gói ngừng cấp quyền và booking tương lai bị chấm dứt}
+        '403': {description: Chỉ Center Manager có quyền duyệt}
+        '404': {description: Không tìm thấy yêu cầu}
+        '409': {description: Gói không còn active, còn lớp học sắp tới có payment pending/success hoặc có quyền lợi khác không thể phân định}
+
+  /memberships/cancellations/{id}/reject:
+    post:
+      summary: Manager từ chối yêu cầu; gói giữ nguyên quyền lợi
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: {type: string, maxLength: 500}
+      responses:
+        '200': {description: Đã từ chối yêu cầu}
+        '403': {description: Chỉ Center Manager có quyền từ chối}
+        '409': {description: Yêu cầu đã được xử lý}
+
+        '409':
+          description: Payment đang chờ hoặc đã thành công; chưa thể hủy yêu cầu
+  /memberships/subscriptions/{id}/resume:
+    post:
+      summary: Mở lại gói bảo lưu miễn phí (MEMBER, SCRUM-71)
+      description: Giữ nguyên subscription, QR và số buổi đã dùng. Cộng số ngày từ ngày duyệt bảo lưu đến ngày mở lại vào endDate. Không tạo payment. Mua mới bị chặn khi còn gói frozen. Yêu cầu thanh toán cũ phải được xử lý trước khi mở lại.
+      tags: [Memberships]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: ApiResponse với SubscriptionDto đã active và ngày hết hạn được cộng thời gian bảo lưu}
+        '400': {description: Gói không frozen hoặc dữ liệu ngày bảo lưu không hợp lệ}
+        '403': {description: Không phải chủ sở hữu hoặc không có role MEMBER}
+        '404': {description: Không tìm thấy gói}
+        '409': {description: Đã có gói active hoặc yêu cầu thanh toán đang chờ}
 
   /memberships/subscriptions/{id}/hold:
     post:
@@ -922,6 +1161,8 @@ paths:
         '200':
           description: Đã xác nhận bảo lưu và hủy lịch học tương lai
 
+        '409':
+          description: Có kỳ gia hạn tương lai đã thanh toán; cần quản lý xử lý
   /memberships/subscriptions/{id}/hold/reject:
     post:
       summary: Lễ tân từ chối yêu cầu bảo lưu gói tập (CENTER_MANAGER, RECEPTIONIST)
@@ -1414,11 +1655,13 @@ paths:
   /payments/process:
     post:
       summary: Xử lý thanh toán và tự động kích hoạt gói tập/ghi danh (CENTER_MANAGER, RECEPTIONIST)
+      description: Khi tái sử dụng payment subscription đang pending, không gửi thêm classEnrollmentId; thanh toán các mục tiêu riêng biệt.
       tags: [Payments]
       responses:
         '201': {description: Xử lý thanh toán thành công}
         '400': {description: Dữ liệu thanh toán không hợp lệ}
         '403': {description: Quyền truy cập bị từ chối}
+        '409': {description: Subscription đã hủy/không còn chờ thanh toán, giao dịch đã tồn tại hoặc quyền lợi gia hạn/bảo lưu cần xử lý trước}
 
   /payments/{id}:
     get:
@@ -1458,6 +1701,7 @@ paths:
       responses:
         '200': {description: Cập nhật thành công}
         '400': {description: Trạng thái chuyển đổi không hợp lệ}
+        '409': {description: Subscription đã hủy/không còn chờ thanh toán hoặc có quyền lợi gia hạn/bảo lưu cần xử lý trước}
 
   /payments/{id}/refund:
     post:
@@ -1632,4 +1876,74 @@ paths:
       responses:
         '200': {description: Thành công}
         '404': {description: Không tìm thấy snapshot}
+
+  /admin/audit-logs:
+    get:
+      summary: Tra cứu nhật ký kiểm toán hệ thống (Audit Logs)
+      description: Chỉ Quản lý Trung tâm (CENTER_MANAGER) có quyền truy cập. Hỗ trợ lọc theo user_id, entity_type, action, khoảng thời gian from - to, kèm phân trang.
+      tags: [Audit]
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: ID của người dùng thực hiện thao tác
+        - name: entity_type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Loại thực thể (PAYMENT, SUBSCRIPTION, USER,...)
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Hành động kiểm toán (CREATE, UPDATE, DELETE,...)
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Thời gian bắt đầu (ISO-8601 hoặc YYYY-MM-DD)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Thời gian kết thúc (ISO-8601 hoặc YYYY-MM-DD)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Danh sách nhật ký kiểm toán thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/AuditLogDto'
+        '401':
+          description: Chưa xác thực (UNAUTHORIZED)
+        '403':
+          description: Không có quyền truy cập (FORBIDDEN - Yêu cầu CENTER_MANAGER)
 

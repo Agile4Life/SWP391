@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser } from '../../shared/api/client';
 import { Modal } from '../../shared/ui/Modal';
+import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { PortalIcon } from './PortalIcon';
 import { PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 
@@ -75,6 +76,7 @@ export function PortalShell() {
             <span className="portal-workspace-role"><PortalIcon name="building" size={15} />{ROLE_LABELS[user.role]}</span>
           </div>
           <div className="portal-topbar-actions">
+            <ThemeToggle />
             <button type="button" className="portal-search-trigger" aria-label="Tìm màn hình" onClick={() => openNavigation('search')}>
               <PortalIcon name="search" size={17} /><span>Tìm màn hình…</span>
             </button>

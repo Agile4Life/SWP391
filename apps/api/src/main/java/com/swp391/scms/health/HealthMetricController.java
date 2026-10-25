@@ -2,6 +2,7 @@ package com.swp391.scms.health;
 
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.health.dto.HealthMetricCreateDto;
 import com.swp391.scms.health.dto.HealthMetricDto;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +15,6 @@ import java.util.List;
 
 @Tag(name = "Health Metrics", description = "Quản lý và ghi nhận chỉ số sức khỏe của hội viên")
 @RestController
-@RequestMapping("/api/v1/members/{memberId}/health-metrics")
 public class HealthMetricController {
 
     private final HealthMetricService healthMetricService;
@@ -35,7 +35,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Xem lịch sử chỉ số sức khỏe", description = "Lấy danh sách các chỉ số sức khỏe đã đo của hội viên")
-    @GetMapping
+    @GetMapping("/api/v1/members/{memberId}/health-metrics")
     public ApiResponse<List<HealthMetricDto>> getMetrics(@PathVariable Long memberId,
                                                          @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("health.metrics.list.success"),
@@ -43,7 +43,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Thêm chỉ số sức khỏe mới", description = "Ghi nhận chỉ số thể chất mới (chiều cao, cân nặng, huyết áp, v.v.)")
-    @PostMapping
+    @PostMapping("/api/v1/members/{memberId}/health-metrics")
     public ApiResponse<HealthMetricDto> addMetric(@PathVariable Long memberId,
                                                   @Valid @RequestBody HealthMetricDto request,
                                                   @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -52,7 +52,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Cập nhật chỉ số sức khỏe", description = "Chỉnh sửa giá trị chỉ số thể chất đã đo")
-    @PutMapping("/{metricId}")
+    @PutMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
     public ApiResponse<HealthMetricDto> updateMetric(@PathVariable Long memberId,
                                                      @PathVariable Long metricId,
                                                      @Valid @RequestBody HealthMetricDto request,
@@ -62,11 +62,27 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Xóa chỉ số sức khỏe", description = "Xóa một bản ghi chỉ số thể chất")
-    @DeleteMapping("/{metricId}")
+    @DeleteMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
     public ApiResponse<Void> deleteMetric(@PathVariable Long memberId,
                                           @PathVariable Long metricId,
                                           @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         healthMetricService.deleteMetric(memberId, metricId, principal.id(), principal.role());
         return ApiResponse.ok(msg("health.metrics.delete.success"), null);
+    }
+
+    @Operation(summary = "Ghi nhận chỉ số sức khỏe mới (SCRUM-119)", description = "Hội viên hoặc HLV ghi nhận chỉ số sức khỏe mới (cân nặng, tỷ lệ mỡ, vòng eo, BMI...)")
+    @PostMapping("/api/v1/health/metrics")
+    public ApiResponse<HealthMetricDto> recordMetric(@Valid @RequestBody HealthMetricCreateDto request,
+                                                     @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("health.metrics.add.success"),
+                healthMetricService.recordMetric(request, principal.id(), principal.role()));
+    }
+
+    @Operation(summary = "Chuỗi dữ liệu lịch sử chỉ số sức khỏe cá nhân (SCRUM-119)", description = "Trả về lịch sử chỉ số sức khỏe sắp xếp tăng dần theo recorded_at để vẽ biểu đồ tiến độ (Line Chart)")
+    @GetMapping("/api/v1/health/metrics/my")
+    public ApiResponse<List<HealthMetricDto>> getMyMetricsChronological(
+                                                     @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("health.metrics.list.success"),
+                healthMetricService.getMyMetricsChronological(principal.id()));
     }
 }

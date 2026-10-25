@@ -551,7 +551,9 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .luxury-login-submit-btn .submit-arrow {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.05rem;
   line-height: 1;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1077,6 +1079,11 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .portal-dialog__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
   width: 32px;
   height: 32px;
   border: none;
@@ -1711,8 +1718,10 @@ textarea.portal-textarea:focus-visible,
   color: #7D5D3B;
   font-size: 0.7rem;
   font-weight: 700;
-  display: grid;
-  place-items: center;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 2px;
 }
 

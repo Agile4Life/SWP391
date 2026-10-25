@@ -8,6 +8,7 @@ export interface MemberSubscription {
   previousSubscriptionId: number | null;
   startDate: string;
   endDate: string;
+  paidThroughDate?: string | null;
   status: string;
   qrCode: string | null;
   createdAt: string;

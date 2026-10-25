@@ -16,6 +16,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/staff/check-in', label: 'Cổng quét QR Check-in', icon: 'scan', roles: ['STAFF', 'MANAGER'] },
   { to: '/manager/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
+  { to: '/manager/cancellations', label: 'Yêu cầu hủy gói', icon: 'package', roles: ['MANAGER'] },
   { to: '/manager/reports', label: 'Báo cáo & Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER'] },
 ];

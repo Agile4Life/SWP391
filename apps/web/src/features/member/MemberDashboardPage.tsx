@@ -36,7 +36,7 @@ function dayNumber(date: Date): number {
 }
 
 function remainingDays(endDate: string, today: Date): number {
-  return Math.max(0, dayNumber(localDate(endDate)) - dayNumber(today));
+  return Math.max(0, dayNumber(localDate(endDate)) - dayNumber(today) + 1);
 }
 
 function membershipProgress(
@@ -44,8 +44,8 @@ function membershipProgress(
   today: Date,
 ): number {
   const start = dayNumber(localDate(subscription.startDate));
-  const end = dayNumber(localDate(subscription.endDate));
-  const duration = end - start;
+  const end = dayNumber(localDate(subscription.paidThroughDate ?? subscription.endDate));
+  const duration = end - start + 1;
 
   if (duration <= 0) return 0;
 
@@ -127,7 +127,7 @@ export function MemberDashboardPage() {
       <PageHeader
         eyebrow="Hội viên"
         title={`Xin chào, ${userName}`}
-        subtitle="Một không gian nhỏ cho hành trình khỏe mạnh của bạn."
+        subtitle="Gói tập, lịch học và thẻ hội viên của bạn."
         actions={<Link className="btn-primary" to="/member/classes"><PortalIcon name="calendar" size={16} />Khám phá lịch học</Link>}
       />
 
@@ -188,9 +188,9 @@ export function MemberDashboardPage() {
                     <p className="row-card__meta">
                       {formatDate(membership.startDate)}
                       {' – '}
-                      {formatDate(membership.endDate)}
+                      {formatDate(membership.paidThroughDate ?? membership.endDate)}
                       {' · Còn '}
-                      {remainingDays(membership.endDate, today)}
+                      {remainingDays(membership.paidThroughDate ?? membership.endDate, today)}
                       {' ngày'}
                     </p>
 
@@ -235,10 +235,10 @@ export function MemberDashboardPage() {
                     className="portal-card-title"
                     style={{ margin: '16px 0 10px' }}
                   >
-                    Hành trình của bạn bắt đầu tại đây
+                    Chưa có gói tập đang hoạt động
                   </h2>
 
-                  <p>Chọn gói tập phù hợp với nhịp sống của bạn.</p>
+                  <p>Đăng ký gói tập để đặt lớp và check-in.</p>
 
                   <Link
                     to="/member/packages"
@@ -252,7 +252,7 @@ export function MemberDashboardPage() {
             </>
           )}
 
-          <Link className="member-board-note" to="/member/packages"><PortalIcon name="package" size={18} /><span>Một gói tập, nhiều trải nghiệm<small>Khám phá gói tập phù hợp với bạn</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/packages"><PortalIcon name="package" size={18} /><span>Xem các gói tập<small>So sánh giá và quyền lợi</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
@@ -304,7 +304,7 @@ export function MemberDashboardPage() {
               classes.length > 0 && (
                 <div className="stack">
                   <p className="row-card__meta">
-                    Chưa thể hiển thị lịch 7 ngày chính xác vì hệ thống chưa lưu buổi học cụ thể của lượt đặt chỗ.
+                    Xem lịch lớp để kiểm tra buổi học.
                   </p>
                   {classes.map((item) => (
                     <div key={item.id} className="row-card member-booking-row">
@@ -320,7 +320,7 @@ export function MemberDashboardPage() {
                 </div>
               )}
           </section>
-          <Link className="member-discover-card" to="/member/classes"><img src="/images/pilates-reformer-studio.jpg" alt="Không gian tập Pilates tại SÖL" /><span><strong>Tìm nhịp tập của bạn</strong><small>Khám phá lịch Gym, Yoga, Pilates, Boxing</small></span><PortalIcon name="arrow" size={16} /></Link>
+          <Link className="member-discover-card" to="/member/classes"><img src="/images/pilates-reformer-studio.jpg" alt="Không gian tập Pilates tại SÖL" /><span><strong>Lịch lớp học</strong><small>Xem buổi học và đặt chỗ</small></span><PortalIcon name="arrow" size={16} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--blue" aria-labelledby="board-card">
@@ -331,14 +331,14 @@ export function MemberDashboardPage() {
             <strong>{userName}</strong>
             <div className="member-digital-card-bottom"><span>Thẻ hội viên điện tử</span><PortalIcon name="arrow" size={17} /></div>
           </Link>
-          <Link className="portal-card member-board-info" to="/member/card"><span className="member-info-icon"><PortalIcon name="scan" size={20} /></span><h3>Chạm vào hành trình</h3><p>Mở thẻ hội viên để xem mã QR check-in và trạng thái gói tập của bạn.</p><span className="member-text-link">Mở thẻ hội viên<PortalIcon name="arrow" size={14} /></span></Link>
+          <Link className="portal-card member-board-info" to="/member/card"><span className="member-info-icon"><PortalIcon name="scan" size={20} /></span><h3>Mã QR check-in</h3><p>Xuất trình mã QR khi đến tập.</p><span className="member-text-link">Mở thẻ hội viên<PortalIcon name="arrow" size={14} /></span></Link>
           <Link className="member-board-note" to="/member/packages"><PortalIcon name="card" size={18} /><span>Gói tập & thanh toán<small>Kiểm tra đăng ký và thanh toán</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
           <div className="member-column-heading"><h2 id="board-wellness"><i />Sức khỏe & cân bằng</h2><Link to="/member/profile" aria-label="Xem hồ sơ và sức khỏe"><PortalIcon name="arrow" size={16} /></Link></div>
-          <Link className="member-profile-card" to="/member/profile"><span className="member-info-icon"><PortalIcon name="profile" size={20} /></span><h3>Hiểu cơ thể của bạn</h3><p>Cập nhật hồ sơ và chỉ số sức khỏe để theo dõi từng bước tiến.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
-          <Link className="member-sanctuary-card" to="/"><img src="/images/about-thermal-recovery.jpg" alt="Không gian thư giãn tại SÖL" /><span><small>SÖL WELLNESS SANCTUARY</small><strong>Dành một chút<br />bình yên cho mình.</strong><span>Khám phá SÖL<PortalIcon name="arrow" size={14} /></span></span></Link>
+          <Link className="member-profile-card" to="/member/profile"><span className="member-info-icon"><PortalIcon name="profile" size={20} /></span><h3>Hồ sơ sức khỏe</h3><p>Cập nhật thông tin cá nhân và chỉ số cơ thể.</p><span className="member-text-link">Hồ sơ & sức khỏe<PortalIcon name="arrow" size={14} /></span></Link>
+          <Link className="member-sanctuary-card" to="/"><img src="/images/about-thermal-recovery.jpg" alt="Không gian thư giãn tại SÖL" /><span><small>SÖL FITNESS</small><strong>Thông tin<br />câu lạc bộ.</strong><span>Về trang chủ<PortalIcon name="arrow" size={14} /></span></span></Link>
         </section>
       </div>
     </div>

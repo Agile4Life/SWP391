@@ -67,6 +67,18 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.querySelector('.member-membership-card .member-text-link')?.getAttribute('href')).toBe('/member/packages');
   });
 
+  it('shows paid renewal expiry and remaining days across 120 days', async () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start); end.setDate(end.getDate() + 29);
+    const paid = new Date(start); paid.setDate(paid.getDate() + 119);
+    const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    api.membership.mockResolvedValue({ ...membership, startDate: key(start), endDate: key(end), paidThroughDate: key(paid) });
+    await renderDashboard();
+    expect(host.querySelector('.member-card-details-link')?.textContent).toContain(paid.toLocaleDateString('vi-VN'));
+    expect(host.querySelector('.member-card-details-link')?.textContent).toContain('Còn 120 ngày');
+  });
+
   it('opens Classes from the class card and discovery image', async () => {
     await renderDashboard();
     const classLink = host.querySelector<HTMLAnchorElement>('.member-card-overlay-link');
@@ -118,7 +130,7 @@ describe('SCRUM-85 dashboard', () => {
     await renderDashboard();
     expect(host.textContent).toContain('Không thể tải thông tin gói tập');
     expect(host.textContent).toContain('Yoga');
-    expect(host.textContent).toContain('Chưa thể hiển thị lịch 7 ngày chính xác');
+    expect(host.textContent).toContain('Xem lịch lớp để kiểm tra buổi học.');
     expect(host.textContent).not.toContain('2026-10-17');
   });
 
@@ -135,7 +147,7 @@ describe('SCRUM-85 dashboard', () => {
       cancelledAt: '2026-10-16T11:00:00', cancelReason: 'Cancelled by MEMBER',
     }]);
     await renderDashboard();
-    expect(host.textContent).toContain('Hành trình của bạn bắt đầu tại đây');
+    expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
     expect(host.textContent).not.toContain('Pilates Cancelled');
     expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
   });
