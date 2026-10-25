@@ -353,6 +353,18 @@ class SupportRequestServiceTest {
     }
 
     @Test
+    @DisplayName("Không tiết lộ trạng thái phiếu đóng cho Member không sở hữu")
+    void sendMessage_whenClosedAndMemberNotOwner_checksOwnershipFirst() {
+        sampleRequest.setStatus("closed");
+        when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));
+
+        assertThatThrownBy(() -> supportRequestService.sendMessage(
+                1L, 999L, "MEMBER", new CreateSupportMessageDto("Xin chào")))
+                .isInstanceOf(ForbiddenException.class);
+        verify(supportRequestMessageRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Lấy danh sách tin nhắn thành công theo thứ tự thời gian cho Member chủ phiếu")
     void getMessages_asMember_Success() {
         when(supportRequestRepository.findById(1L)).thenReturn(Optional.of(sampleRequest));

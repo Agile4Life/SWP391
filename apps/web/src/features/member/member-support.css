@@ -1,0 +1,29 @@
+.member-support { display: grid; gap: 20px; }
+.member-support-grid { display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.5fr); gap: 20px; align-items: start; }
+.member-support .portal-card { min-width: 0; }
+.member-support-form, .member-support-compose { display: grid; gap: 10px; }
+.member-support-form .btn-primary, .member-support-compose .btn-primary { justify-self: start; margin-top: 8px; }
+.member-support-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.member-support-link, .member-support-pages button { border: 0; background: transparent; color: var(--portal-salmon); cursor: pointer; font: inherit; font-weight: 650; }
+.member-support-link:disabled, .member-support-pages button:disabled { opacity: .45; cursor: not-allowed; }
+.member-support-list { display: grid; gap: 10px; }
+.member-support-ticket { display: grid; gap: 8px; width: 100%; min-width: 0; padding: 16px; text-align: left; color: inherit; border: 1px solid var(--portal-border); background: var(--portal-surface); border-radius: 14px; cursor: pointer; }
+.member-support-ticket:hover, .member-support-ticket.is-active { border-color: var(--portal-salmon); background: var(--portal-tint); }
+.member-support-ticket-top { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 8px; }
+.member-support-ticket-top strong { font-size: 14px; overflow-wrap: anywhere; }
+.member-support-status { padding: 4px 9px; border-radius: 20px; background: var(--portal-raised); font-size: 11px; white-space: nowrap; }
+.member-support-status--open { color: var(--portal-salmon); }
+.member-support-status--resolved { color: #8cbd95; }
+.member-support-meta, .member-support-summary, .member-support-context { color: var(--portal-muted); font-size: 12px; }
+.member-support-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-support-pages { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
+.member-support-messages { display: grid; gap: 12px; list-style: none; padding: 0; margin: 18px 0; }
+.member-support-messages li { max-width: min(75%, 560px); padding: 12px 15px; border-radius: 16px; background: var(--portal-raised); overflow-wrap: anywhere; }
+.member-support-messages li.is-member { justify-self: end; background: var(--portal-tint); }
+.member-support-messages strong { font-size: 12px; }
+.member-support-messages p { margin: 8px 0; white-space: pre-wrap; font-size: 13px; }
+.member-support-messages time { color: var(--portal-muted); font-size: 11px; }
+.member-support-error { color: #e99090; }
+.member-support-notice { color: #8cbd95; }
+.member-support :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+@media (max-width: 760px) { .member-support-grid { grid-template-columns: minmax(0, 1fr); } .member-support-messages li { max-width: 90%; } }

@@ -186,15 +186,6 @@ public class SupportRequestService {
         SupportRequest request = supportRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", requestId));
 
-        if ("closed".equalsIgnoreCase(request.getStatus())) {
-            throw new BadRequestException(
-                    "TICKET_CLOSED",
-                    "support.message.ticket_closed",
-                    new Object[]{requestId},
-                    "Cannot send message to a closed support request"
-            );
-        }
-
         boolean staff = isStaffRole(senderRole);
         Long memberUserId = request.getMember() != null ? request.getMember().getUserId() : null;
         if (!staff) {
@@ -206,6 +197,15 @@ public class SupportRequestService {
                         "You are not allowed to send messages in this support request"
                 );
             }
+        }
+
+        if ("closed".equalsIgnoreCase(request.getStatus())) {
+            throw new BadRequestException(
+                    "TICKET_CLOSED",
+                    "support.message.ticket_closed",
+                    new Object[]{requestId},
+                    "Cannot send message to a closed support request"
+            );
         }
 
         User sender = userRepository.findByIdAndDeletedAtIsNull(senderUserId)

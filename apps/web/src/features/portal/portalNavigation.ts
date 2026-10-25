@@ -10,6 +10,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/member/packages', label: 'Gói tập', icon: 'package', roles: ['MEMBER'] },
   { to: '/member/classes', label: 'Lịch học & Đặt chỗ', icon: 'calendar', roles: ['MEMBER'] },
   { to: '/member/card', label: 'Thẻ hội viên & Hóa đơn', icon: 'card', roles: ['MEMBER'] },
+  { to: '/member/support', label: 'Hỗ trợ', icon: 'support', roles: ['MEMBER'] },
   { to: '/staff/attendance', label: 'Điểm danh học viên', icon: 'check', roles: ['COACH'] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['COACH', 'STAFF', 'MANAGER'] },
   { to: '/staff/reception', label: 'Quầy Lễ tân & POS', icon: 'card', roles: ['STAFF', 'MANAGER'] },
