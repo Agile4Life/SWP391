@@ -26,7 +26,8 @@ public class TrainingCompletionService {
     @Transactional(readOnly = true)
     public List<Long> getCompletedItemIds(Long memberUserId, LocalDate exerciseDate, LocalDate today) {
         if (exerciseDate == null || exerciseDate.isAfter(today)) {
-            throw new BadRequestException("INVALID_EXERCISE_DATE", "coaching.completion.invalid_date", null, null);
+            throw new BadRequestException("INVALID_EXERCISE_DATE", "coaching.completion.invalid_date", null,
+                    "Exercise date is required and must not be in the future.");
         }
         return completionRepository.findByMemberUserIdAndExerciseDate(memberUserId, exerciseDate).stream()
                 .map(completion -> completion.getTrainingPlanItem().getId()).toList();
@@ -46,7 +47,8 @@ public class TrainingCompletionService {
                 || exerciseDate.isAfter(item.getTrainingPlan().getEndDate())
                 || item.getDayOfWeek() == null
                 || item.getDayOfWeek() != exerciseDate.getDayOfWeek().getValue()) {
-            throw new BadRequestException("INVALID_EXERCISE_DATE", "coaching.completion.invalid_date", null, null);
+            throw new BadRequestException("INVALID_EXERCISE_DATE", "coaching.completion.invalid_date", null,
+                    "Exercise must be scheduled for today in an active training plan within its date range.");
         }
         boolean exists = completionRepository.existsByMemberUserIdAndTrainingPlanItemIdAndExerciseDate(
                 memberUserId, itemId, exerciseDate);

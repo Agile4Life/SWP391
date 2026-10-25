@@ -23,6 +23,8 @@ async function render() { await act(async () => root.render(<MemberProgressPage 
 
 it('renders persisted weekly measurements without derived BMI', async () => {
   await render();
+  expect(host.firstElementChild?.classList.contains('portal-container')).toBe(true);
+  expect(host.firstElementChild?.classList.contains('member-progress')).toBe(true);
   expect(host.querySelectorAll('svg.member-progress-chart').length).toBe(2);
   expect(host.textContent).toContain('70 kg');
   expect(host.textContent).toContain('BMI 23');

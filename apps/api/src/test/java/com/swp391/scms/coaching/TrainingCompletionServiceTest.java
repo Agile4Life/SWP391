@@ -68,12 +68,42 @@ class TrainingCompletionServiceTest {
     @Test void rejectsInactivePlansAndUnscheduledItems() {
         item.getTrainingPlan().setStatus("draft");
         assertThatThrownBy(() -> service.setCompleted(10L, 5L, date, true, date))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Exercise must be scheduled for today in an active training plan within its date range.");
         item.getTrainingPlan().setStatus("active");
         item.setDayOfWeek(null);
         assertThatThrownBy(() -> service.setCompleted(10L, 5L, date, true, date))
-                .isInstanceOf(BadRequestException.class);
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Exercise must be scheduled for today in an active training plan within its date range.");
         verify(completionRepository, never()).save(any());
+    }
+
+    @Test void invalidReadDatesHaveFallbackWithoutMessageService() {
+        for (LocalDate invalidDate : new LocalDate[] { null, date.plusDays(1) }) {
+            assertThatThrownBy(() -> service.getCompletedItemIds(10L, invalidDate, date))
+                    .isInstanceOfSatisfying(BadRequestException.class, exception -> {
+                        assertThat(exception.getMessage()).isEqualTo("Exercise date is required and must not be in the future.");
+                        assertThat(exception.getErrorCode()).isEqualTo("INVALID_EXERCISE_DATE");
+                        assertThat(exception.getMessageKey()).isEqualTo("coaching.completion.invalid_date");
+                        assertThat(exception.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                        assertThat(exception.getMessageArgs()).isNull();
+                    });
+        }
+        verifyNoInteractions(completionRepository);
+    }
+
+    @Test void rejectsMissingDateAndDatesOutsidePlanWithoutWriting() {
+        assertThatThrownBy(() -> service.setCompleted(10L, 5L, null, true, date))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Exercise must be scheduled for today in an active training plan within its date range.");
+        item.getTrainingPlan().setStartDate(date.plusDays(1));
+        assertThatThrownBy(() -> service.setCompleted(10L, 5L, date, true, date))
+                .isInstanceOf(BadRequestException.class);
+        item.getTrainingPlan().setStartDate(date.minusDays(1));
+        item.getTrainingPlan().setEndDate(date.minusDays(1));
+        assertThatThrownBy(() -> service.setCompleted(10L, 5L, date, true, date))
+                .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(completionRepository);
     }
 
     @Test void listsOnlyOwnCompletionsForRequestedDate() {

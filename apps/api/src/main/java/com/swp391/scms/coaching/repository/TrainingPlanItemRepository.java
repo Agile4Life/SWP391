@@ -17,7 +17,13 @@ public interface TrainingPlanItemRepository extends JpaRepository<TrainingPlanIt
     List<TrainingPlanItem> findByTrainingPlanIdOrderByOrderIndexAscIdAsc(Long trainingPlanId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select item from TrainingPlanItem item where item.id = :id")
+    @Query("""
+            select item
+            from TrainingPlanItem item
+            join fetch item.trainingPlan plan
+            join fetch plan.member
+            where item.id = :id
+            """)
     Optional<TrainingPlanItem> findLockedById(@Param("id") Long id);
 }
 

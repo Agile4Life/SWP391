@@ -91,7 +91,7 @@ export function MemberProgressPage() {
 
   const points = metrics.kind === 'ready' ? weeklyMeasurements(metrics.data) : [];
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
-  return <div className="member-progress">
+  return <div className="portal-container member-progress">
     <PageHeader eyebrow="MEMBER WELLNESS" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
