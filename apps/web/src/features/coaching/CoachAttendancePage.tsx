@@ -38,8 +38,8 @@ export function CoachAttendancePage() {
         const data = await attendanceApi.getCoachSessions();
         if (mounted) {
           setSessions(data);
-          if (data.length > 0 && selectedSessionId === null) {
-            setSelectedSessionId(data[0].id);
+          if (data.length > 0) {
+            setSelectedSessionId((prev) => (prev === null ? data[0].id : prev));
           }
         }
       } catch {
