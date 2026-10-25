@@ -1,0 +1,331 @@
+/* ==========================================================================
+   COACH TRAINING PLAN & AI GENERATOR — SÖL FITNESS CHARCOAL–SALMON DESIGN
+   Conforming to DESIGN.md & SCRUM-122
+   ========================================================================== */
+
+.plan-editor-page {
+  padding-bottom: 80px;
+}
+
+/* Plan Info Header Card */
+.plan-meta-card {
+  background: var(--color-bg-card, #292929);
+  border: 1px solid var(--color-border-subtle, #333333);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.plan-meta-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+/* Day Selector Strip */
+.plan-day-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border-subtle, #333333);
+}
+
+.plan-day-tab {
+  background: #202020;
+  border: 1px solid var(--color-border-subtle, #333333);
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: var(--color-text-muted, #bcb8b5);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-day-tab:hover {
+  background: #282828;
+  color: var(--color-text-main, #faf9f6);
+  border-color: rgba(206, 145, 128, 0.4);
+}
+
+.plan-day-tab.is-active {
+  background: rgba(206, 145, 128, 0.15);
+  border-color: var(--fit-salmon, #ce9180);
+  color: var(--fit-salmon, #ce9180);
+}
+
+.plan-day-badge {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+}
+
+.plan-day-tab.is-active .plan-day-badge {
+  background: var(--fit-salmon, #ce9180);
+  color: #202020;
+  font-weight: 700;
+}
+
+/* AI Assistant Banner / Button */
+.btn-ai-sparkle {
+  background: linear-gradient(135deg, #ce9180 0%, #e1aa98 100%);
+  color: #1a1614;
+  border: none;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(206, 145, 128, 0.3);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-ai-sparkle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(206, 145, 128, 0.45);
+  background: linear-gradient(135deg, #e1aa98 0%, #f3c2b2 100%);
+}
+
+.btn-ai-sparkle:active {
+  transform: translateY(0);
+}
+
+/* Exercise Quick Form */
+.exercise-form-card {
+  background: #202020;
+  border: 1px solid var(--color-border-subtle, #333333);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.exercise-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr auto;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+/* Exercise Items List */
+.exercise-items-list {
+  display: grid;
+  gap: 12px;
+}
+
+.exercise-item-card {
+  background: #202020;
+  border: 1px solid var(--color-border-subtle, #333333);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.exercise-item-card:hover {
+  border-color: rgba(206, 145, 128, 0.35);
+  background: #232323;
+}
+
+.exercise-item-main {
+  flex: 1;
+}
+
+.exercise-item-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text-main, #faf9f6);
+  margin: 0 0 4px 0;
+}
+
+.exercise-item-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-muted, #bcb8b5);
+}
+
+.exercise-item-specs {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.exercise-spec-pill {
+  background: #292929;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.84rem;
+  color: var(--color-text-main, #faf9f6);
+  text-align: center;
+}
+
+.exercise-spec-pill strong {
+  color: var(--fit-salmon, #ce9180);
+}
+
+.btn-remove-exercise {
+  background: transparent;
+  border: none;
+  color: #f87171;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.btn-remove-exercise:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* AI Modal Styling */
+.ai-modal-container {
+  max-width: 760px;
+  width: 100%;
+}
+
+.ai-member-preview {
+  background: #202020;
+  border: 1px solid var(--color-border-subtle, #333333);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 14px 0 18px 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-size: 0.84rem;
+}
+
+.ai-member-stat-label {
+  color: var(--color-text-muted, #bcb8b5);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.ai-member-stat-val {
+  font-weight: 700;
+  color: var(--color-text-main, #faf9f6);
+}
+
+.ai-caution-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-left: 3px solid #ef4444;
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #fca5a5;
+  font-size: 0.82rem;
+  margin-bottom: 16px;
+}
+
+.ai-prompt-textarea {
+  width: 100%;
+  background: #202020;
+  border: 1px solid var(--color-border-subtle, #333333);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--color-text-main, #faf9f6);
+  font-size: 0.88rem;
+  min-height: 80px;
+  resize: vertical;
+  margin-bottom: 18px;
+}
+
+.ai-prompt-textarea:focus {
+  outline: none;
+  border-color: var(--fit-salmon, #ce9180);
+}
+
+/* AI Generating Loading State */
+.ai-loading-box {
+  text-align: center;
+  padding: 36px 20px;
+}
+
+.ai-pulse-orb {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ce9180, #e1aa98);
+  margin: 0 auto 16px auto;
+  animation: ai-pulse 1.6s infinite ease-in-out;
+}
+
+@keyframes ai-pulse {
+  0% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 0 0 rgba(206, 145, 128, 0.6); }
+  50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 24px 8px rgba(206, 145, 128, 0.4); }
+  100% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 0 0 rgba(206, 145, 128, 0); }
+}
+
+/* AI Results Box */
+.ai-result-box {
+  background: #202020;
+  border: 1px solid rgba(206, 145, 128, 0.35);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 18px;
+}
+
+.ai-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ai-analysis-text {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: #e5e5e5;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.ai-suggested-item {
+  background: #262626;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+/* Responsive queries */
+@media (max-width: 1100px) {
+  .plan-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .exercise-form-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .plan-meta-grid {
+    grid-template-columns: 1fr;
+  }
+  .exercise-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .exercise-item-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
