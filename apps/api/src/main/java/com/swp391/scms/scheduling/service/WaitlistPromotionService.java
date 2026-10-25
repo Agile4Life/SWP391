@@ -37,6 +37,7 @@ public class WaitlistPromotionService {
     private final MessageService messageService;
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public WaitlistPromotionService(ClassWaitlistRepository waitlistRepository,
                                   NotificationService notificationService,
                                   ApplicationEventPublisher eventPublisher,

@@ -49,6 +49,7 @@ public class SessionAttendanceService {
     private final MessageService messageService;
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
                                   ClassSessionRepository sessionRepository,
                                   ClassEnrollmentRepository enrollmentRepository,
