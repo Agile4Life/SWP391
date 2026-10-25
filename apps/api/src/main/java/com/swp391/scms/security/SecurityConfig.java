@@ -85,6 +85,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/reports/**").hasRole("CENTER_MANAGER")
                     .requestMatchers("/api/v1/admin/audit-logs/**", "/api/v1/admin/audit-logs").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/my", "/api/v1/training-plans/my").hasRole("MEMBER")
+                    .requestMatchers("/api/v1/coaching/training-completions/my", "/api/v1/coaching/training-completions/my/*").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/*", "/api/v1/training-plans/*").hasAnyRole("COACH", "CENTER_MANAGER", "MEMBER")
                     .requestMatchers("/api/v1/coaching/training-plans/**", "/api/v1/coaching/training-plans",
                             "/api/v1/training-plans/**", "/api/v1/training-plans").hasAnyRole("COACH", "CENTER_MANAGER")

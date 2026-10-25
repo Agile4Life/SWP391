@@ -17,6 +17,7 @@ import { MemberPackagesPage } from '../features/member/MemberPackagesPage';
 import { MemberNotificationsPage } from '../features/member/MemberNotificationsPage';
 import { MemberInvoicesPage } from '../features/member/MemberInvoicesPage';
 import { MemberSupportPage } from '../features/member/MemberSupportPage';
+import { MemberProgressPage } from '../features/member/MemberProgressPage';
 
 import { StaffReceptionPage } from '../features/reception/StaffReceptionPage';
 import { StaffCheckInPage } from '../features/reception/StaffCheckInPage';
@@ -68,6 +69,10 @@ export const router = createBrowserRouter([
           {
             path: '/member/invoices',
             element: <MemberInvoicesPage />,
+          },
+          {
+            path: '/member/progress',
+            element: <MemberProgressPage />,
           },
           {
             path: '/member/notifications',
