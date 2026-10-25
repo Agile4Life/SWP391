@@ -31,10 +31,13 @@ export function notificationDestination(notification: Pick<MemberNotification, '
     case 'class_session':
     case 'class_enrollment': return '/member/classes';
     case 'membership_subscription': return '/member/packages';
-    case 'payment': return '/member/packages';
+    case 'payment': return '/member/invoices';
+    case 'support_request': return '/member/support';
     default:
       if (notification.type === 'class_reminder' || notification.type === 'schedule_change') return '/member/classes';
-      if (notification.type === 'payment' || notification.type === 'package_expiry') return '/member/packages';
+      if (notification.type === 'package_expiry') return '/member/packages';
+      if (notification.type === 'payment') return '/member/invoices';
+      if (notification.type === 'support_reply') return '/member/support';
       return null;
   }
 }

@@ -21,7 +21,8 @@ describe('SCRUM-127 notification API', () => {
   it('maps only existing member destinations', () => {
     expect(notificationDestination({ relatedEntityType: 'class_session', type: 'schedule_change' })).toBe('/member/classes');
     expect(notificationDestination({ relatedEntityType: 'membership_subscription', type: 'package_expiry' })).toBe('/member/packages');
+    expect(notificationDestination({ relatedEntityType: 'payment', type: 'payment' })).toBe('/member/invoices');
     expect(notificationDestination({ relatedEntityType: null, type: 'class_reminder' })).toBe('/member/classes');
-    expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' })).toBeNull();
+    expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' })).toBe('/member/support');
   });
 });
