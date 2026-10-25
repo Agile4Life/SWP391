@@ -39,6 +39,62 @@ it('opens the latest persisted session and history', async () => {
   expect(host.textContent).toContain('Phản hồi thật từ API');
 });
 
+it('allows the first question without creating an empty session on open, then reuses the created session', async () => {
+  vi.mocked(api.listAiChatSessions).mockResolvedValue([]);
+  await open();
+  expect((host.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(false);
+  expect(api.createAiChatSession).not.toHaveBeenCalled();
+  await type('Câu hỏi'); await send();
+  expect(api.createAiChatSession).toHaveBeenCalledTimes(1);
+  expect(api.sendAiChatMessage).toHaveBeenCalledWith(8, 'Câu hỏi');
+  await act(async () => vi.advanceTimersByTime(2000));
+  await type('Câu tiếp theo'); await send();
+  expect(api.createAiChatSession).toHaveBeenCalledTimes(1);
+  expect(api.sendAiChatMessage).toHaveBeenLastCalledWith(8, 'Câu tiếp theo');
+});
+
+it('keeps the draft and allows retry when first-session creation fails', async () => {
+  vi.mocked(api.listAiChatSessions).mockResolvedValue([]);
+  vi.mocked(api.createAiChatSession).mockRejectedValueOnce(new ApiError('Không thể tạo phiên', 503));
+  await open(); await type('Câu hỏi'); await send();
+  expect((host.querySelector('textarea') as HTMLTextAreaElement).value).toBe('Câu hỏi');
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể tạo phiên');
+  expect(api.sendAiChatMessage).not.toHaveBeenCalled();
+  await send();
+  expect(api.createAiChatSession).toHaveBeenCalledTimes(2);
+  expect(api.sendAiChatMessage).toHaveBeenCalledTimes(1);
+});
+
+it('locks repeated submissions while the first session is being created', async () => {
+  vi.mocked(api.listAiChatSessions).mockResolvedValue([]);
+  let finish!: (value: api.AiChatSession) => void;
+  vi.mocked(api.createAiChatSession).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  await open(); await type('Câu hỏi'); await send(); await send();
+  expect(api.createAiChatSession).toHaveBeenCalledTimes(1);
+  expect(api.sendAiChatMessage).not.toHaveBeenCalled();
+  await act(async () => finish({ ...session, id: 8 }));
+  expect(api.sendAiChatMessage).toHaveBeenCalledTimes(1);
+});
+
+it('does not send after unmount while auto-creating a session', async () => {
+  vi.mocked(api.listAiChatSessions).mockResolvedValue([]);
+  let finish!: (value: api.AiChatSession) => void;
+  vi.mocked(api.createAiChatSession).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  await open(); await type('Câu hỏi'); await send();
+  await act(async () => root.render(null));
+  await act(async () => finish({ ...session, id: 8 }));
+  expect(api.sendAiChatMessage).not.toHaveBeenCalled();
+});
+
+it('blocks resubmission after an uncertain first message until history sync', async () => {
+  vi.mocked(api.listAiChatSessions).mockResolvedValue([]);
+  vi.mocked(api.sendAiChatMessage).mockRejectedValue(new ApiError('network', 0));
+  await open(); await type('Câu hỏi'); await send(); await send();
+  expect(api.createAiChatSession).toHaveBeenCalledTimes(1);
+  expect(api.sendAiChatMessage).toHaveBeenCalledTimes(1);
+  expect((host.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(true);
+});
+
 it('shows loading dots, prevents duplicate sends and types the API response', async () => {
   let resolve!: (value: api.AiChatReply) => void;
   vi.mocked(api.sendAiChatMessage).mockImplementation(() => new Promise((done) => { resolve = done; }));

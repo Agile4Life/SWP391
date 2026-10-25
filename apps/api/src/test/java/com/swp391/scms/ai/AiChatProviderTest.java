@@ -36,8 +36,11 @@ class AiChatProviderTest {
     }
 
     @Test void disabledProviderNeverReturnsMockContent() {
-        assertThrows(ServiceUnavailableException.class, () -> new AiChatProvider("mock", "", "", RestClient.builder())
+        var exception = assertThrows(ServiceUnavailableException.class, () -> new AiChatProvider("mock", "", "", RestClient.builder())
                 .generate("System", List.of()));
+        assertEquals("The AI assistant is not configured.", exception.getMessage());
+        assertEquals("AI_CHAT_NOT_CONFIGURED", exception.getErrorCode());
+        assertEquals("ai.chat.provider.not_configured", exception.getMessageKey());
     }
 
     @Test void upstreamErrorsAreSanitized() {
@@ -47,5 +50,7 @@ class AiChatProviderTest {
         var exception = assertThrows(ServiceUnavailableException.class, () -> new AiChatProvider("openai", "unit-test-key", "test-model", builder)
                 .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));
         assertFalse(exception.toString().contains("unit-test-key"));
+        assertEquals("The AI assistant is temporarily unavailable.", exception.getMessage());
+        assertEquals("AI_CHAT_UNAVAILABLE", exception.getErrorCode());
     }
 }

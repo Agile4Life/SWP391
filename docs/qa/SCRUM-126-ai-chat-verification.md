@@ -6,9 +6,9 @@ Member Portal mounts the existing LiquidGlassChatbot once. Session list/create/h
 
 The new chat-only adapter uses these backend environment variables (mapped in application.yml):
 
-- SCMS_AI_CHAT_PROVIDER: openai or gemini (default disabled).
-- SCMS_AI_CHAT_API_KEY: authorized provider credential, backend only.
-- SCMS_AI_CHAT_MODEL: an available model ID authorized for that account; required, no assumed default.
+- SCMS_AI_CHAT_PROVIDER: openai or gemini; falls back to SCMS_AI_PROVIDER, then disabled.
+- SCMS_AI_CHAT_API_KEY: authorized provider credential, backend only; falls back to SCMS_AI_API_KEY, then empty.
+- SCMS_AI_CHAT_MODEL: an available model ID authorized for that account; falls back to SCMS_AI_MODEL, then empty.
 
 No .env values were changed. No paid provider requests were made during implementation. Existing MockAiClient/OpenAiRestClient/GeminiRestClient remain outside the chat path; they are used by the separate recommendation feature and are not proof of real provider integration.
 
@@ -18,6 +18,6 @@ Request formats: [OpenAI Chat Completions](https://developers.openai.com/api/ref
 
 ## E2E pending
 
-Visual fixtures (API intercepted in a temporary test page, removed after capture): `scrum126-desktop.png` at 1440×900 and `scrum126-mobile.png` at 390×844. Browser used software rendering in the test environment; hardware GPU shader performance still needs checking on the target device. The generated browser profiles and temporary fixture were removed.
+Visual fixtures were captured at 1440×900 and 390×844 with intercepted APIs, not a live provider. The desktop/mobile PNGs are local-only, ignored attachments rather than repository assets. Drag the local screenshots from docs/qa into the description or a comment on PR #59 to upload them to GitHub. Browser used software rendering; hardware GPU shader performance still needs checking on the target device. The generated browser profiles and temporary fixture were removed.
 
 Use a backend reviewed for safe startup and an isolated Supabase dev/test environment. Configure an authorized model/key with explicit approval for provider costs, then verify MEMBER login, actual provider response, persisted chronological history after reload, New Chat retaining old sessions, and rejection of another MEMBER's session. Check 401/403/503 and interrupted requests. No schema changes are required by SCRUM-126. Do not restart a shared Supabase backend solely to run this checklist.

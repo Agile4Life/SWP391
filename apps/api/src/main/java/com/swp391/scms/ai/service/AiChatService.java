@@ -181,7 +181,8 @@ public class AiChatService {
                                            String userMessage) {
         if (chatProvider == null) {
             throw new com.swp391.scms.common.exception.ServiceUnavailableException(
-                    "AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null, null);
+                    "AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null,
+                    "The AI assistant is not configured.");
         }
         var turns = new java.util.ArrayList<AiChatProvider.Turn>();
         history.subList(Math.max(0, history.size() - MAX_CONTEXT_MESSAGES), history.size())

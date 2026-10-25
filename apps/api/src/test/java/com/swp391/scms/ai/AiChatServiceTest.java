@@ -154,6 +154,18 @@ class AiChatServiceTest {
     }
 
     @Test
+    void absentProviderHasFallbackWithoutMessageServiceAndDoesNotSaveMessages() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        var standalone = new AiChatService(sessionRepository, messageRepository, memberRepository, null);
+        var exception = assertThrows(ServiceUnavailableException.class, () -> standalone.sendMessage(
+                500L, new AiChatMessageCreateDto("Question"), 100L, "MEMBER"));
+        assertEquals("The AI assistant is not configured.", exception.getMessage());
+        assertEquals("AI_CHAT_NOT_CONFIGURED", exception.getErrorCode());
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
     void sendMessage_WhenDifferentMember_DoesNotCallProvider() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
         assertThrows(AccessDeniedException.class, () -> aiChatService.sendMessage(

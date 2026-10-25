@@ -45,7 +45,8 @@ public class AiChatProvider {
     public String generate(String systemPrompt, List<Turn> turns) {
         if (apiKey == null || apiKey.isBlank() || model == null || !model.matches("[A-Za-z0-9._-]+")
                 || !("openai".equals(provider) || "gemini".equals(provider))) {
-            throw new ServiceUnavailableException("AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null, null);
+            throw new ServiceUnavailableException("AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null,
+                    "The AI assistant is not configured.");
         }
         try {
             JsonNode response;
@@ -80,6 +81,7 @@ public class AiChatProvider {
     }
 
     private ServiceUnavailableException unavailable() {
-        return new ServiceUnavailableException("AI_CHAT_UNAVAILABLE", "ai.chat.provider.unavailable", null, null);
+        return new ServiceUnavailableException("AI_CHAT_UNAVAILABLE", "ai.chat.provider.unavailable", null,
+                "The AI assistant is temporarily unavailable.");
     }
 }

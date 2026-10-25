@@ -105,11 +105,20 @@ export function LiquidGlassChatbot() {
 
   async function send() {
     const text = input.trim();
-    if (!text || text.length > 2000 || sessionId == null || busy.current || needsSync) return;
+    if (!text || text.length > 2000 || !initialized || busy.current || needsSync) return;
     busy.current = true; setPhase('sending'); setError('');
-    setPending({ text, knownIds: messages.map((message) => message.id) }); setInput('');
+    let messageRequested = false;
     try {
-      const result = await sendAiChatMessage(sessionId, text);
+      let targetId = sessionId;
+      if (targetId == null) {
+        const created = await createAiChatSession();
+        if (!alive.current) return;
+        targetId = created.id;
+        setSessions((previous) => [created, ...previous]); setSessionId(targetId);
+      }
+      setPending({ text, knownIds: messages.map((message) => message.id) }); setInput('');
+      messageRequested = true;
+      const result = await sendAiChatMessage(targetId, text);
       if (!alive.current) return;
       setMessages((previous) => [...previous, result.memberMessage, result.aiMessage]);
       setPending(null); setTyped(0); setPhase('typing');
@@ -117,6 +126,7 @@ export function LiquidGlassChatbot() {
       busy.current = false;
       if (!alive.current) return;
       setError(errorText(cause)); setPhase('idle');
+      if (!messageRequested) { setInput(text); return; }
       const rolledBack = cause instanceof ApiError && ['AI_CHAT_NOT_CONFIGURED', 'AI_CHAT_UNAVAILABLE'].includes(cause.code ?? '');
       setNeedsSync(!rolledBack);
       if (rolledBack) setInput(text);
@@ -138,7 +148,7 @@ export function LiquidGlassChatbot() {
         </div>
         {sessions.length > 0 && <label className="ai-chat-session-label">Phiên chat<select aria-label="Phiên chat" value={sessionId ?? ''} disabled={disabled} onChange={(event) => void selectSession(Number(event.target.value))}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.topic} · #{session.id}</option>)}</select></label>}
         <div className="liquid-glass-chat-body" aria-label="Hội thoại">
-          {initialized && messages.length === 0 && !pending && phase === 'idle' && <p className="ai-chat-empty">{sessionId == null ? 'Chọn New Chat để bắt đầu.' : 'Bạn muốn trao đổi về điều gì?'}</p>}
+          {initialized && messages.length === 0 && !pending && phase === 'idle' && <p className="ai-chat-empty">Bạn muốn trao đổi về điều gì?</p>}
           {messages.map((message, index) => <div key={message.id} className={`chat-bubble-row ${message.sender === 'member' ? 'user-row' : 'bot-row'}`}><div className={`chat-bubble ${message.sender === 'member' ? 'user-bubble' : 'bot-bubble'}`}><div className="chat-bubble-text" style={{ whiteSpace: 'pre-wrap' }}>{phase === 'typing' && index === messages.length - 1 ? message.message.slice(0, typed) : message.message}</div><time className="chat-bubble-meta" dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time></div></div>)}
           {pending && <div className="chat-bubble-row user-row"><div className="chat-bubble user-bubble"><div className="chat-bubble-text">{pending.text}</div></div></div>}
           {(phase === 'sending' || phase === 'loading') && <div className="chat-bubble bot-bubble typing-bubble" role="status" aria-label={phase === 'sending' ? 'AI đang trả lời' : 'Đang tải hội thoại'}><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></div>}
@@ -147,8 +157,8 @@ export function LiquidGlassChatbot() {
         </div>
         {error && <div className="ai-chat-error" role="alert">{error}<button type="button" disabled={disabled} onClick={() => void (initialized ? syncHistory() : loadSessions())}>Tải lại hội thoại</button></div>}
         <form className="liquid-glass-chat-input-bar" onSubmit={(event) => { event.preventDefault(); void send(); }}>
-          <textarea className="liquid-glass-input" aria-label="Câu hỏi cho AI" placeholder="Hỏi về tập luyện…" rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.target.value)} disabled={disabled || sessionId == null || needsSync} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} />
-          <button type="submit" className="liquid-glass-send-btn" aria-label="Gửi tin nhắn" disabled={disabled || !input.trim() || sessionId == null || needsSync}>→</button>
+          <textarea className="liquid-glass-input" aria-label="Câu hỏi cho AI" placeholder="Hỏi về tập luyện…" rows={2} maxLength={2000} value={input} onChange={(event) => setInput(event.target.value)} disabled={disabled || !initialized || needsSync} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} />
+          <button type="submit" className="liquid-glass-send-btn" aria-label="Gửi tin nhắn" disabled={disabled || !input.trim() || !initialized || needsSync}>→</button>
         </form>
       </LiquidGlassContainer>
     </section>}
