@@ -15,11 +15,12 @@ import { MemberClassesPage } from '../features/member/MemberClassesPage';
 import { MemberCardPage } from '../features/member/MemberCardPage';
 import { MemberPackagesPage } from '../features/member/MemberPackagesPage';
 
-// Staff & Coach Feature Pages
 import { StaffReceptionPage } from '../features/reception/StaffReceptionPage';
 import { StaffCheckInPage } from '../features/reception/StaffCheckInPage';
 import { StaffClassesPage } from '../features/classes/StaffClassesPage';
 import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
+import { CoachClassesPage } from '../features/coaching/CoachClassesPage';
+import { CoachTrainingPlanPage } from '../features/coaching/CoachTrainingPlanPage';
 
 // Manager Feature Pages
 import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
@@ -122,6 +123,18 @@ export const router = createBrowserRouter([
           {
             path: '/staff/attendance',
             element: <CoachAttendancePage />,
+          },
+          {
+            path: '/coach/classes',
+            element: <CoachClassesPage />,
+          },
+          {
+            path: '/coach/training-plans',
+            element: <CoachTrainingPlanPage />,
+          },
+          {
+            path: '/staff/coach-classes',
+            element: <CoachClassesPage />,
           },
         ],
       },
