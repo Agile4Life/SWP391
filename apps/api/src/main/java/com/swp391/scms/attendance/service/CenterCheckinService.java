@@ -274,7 +274,7 @@ public class CenterCheckinService {
                 saved.getMethod(),
                 saved.getGate(),
                 saved.getStatus(),
-                saved.getDenialReason()
+                saved.getDenialReason() != null ? resolveMessage(saved.getDenialReason()) : null
         );
     }
 
