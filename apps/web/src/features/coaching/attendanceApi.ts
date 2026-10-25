@@ -180,7 +180,7 @@ export const attendanceApi = {
     try {
       const user = getCurrentUser();
       const res = await apiFetch<CoachClassSession[]>(
-        `/classes/coach/sessions?coachId=${user?.id || ''}`
+        `/classes/sessions?coachId=${user?.id || ''}`
       );
       if (Array.isArray(res) && res.length > 0) {
         return res;
@@ -197,7 +197,7 @@ export const attendanceApi = {
   getSessionStudents: async (sessionId: number): Promise<AttendanceStudent[]> => {
     try {
       const res = await apiFetch<AttendanceStudent[]>(
-        `/classes/sessions/${sessionId}/attendance`
+        `/attendance/sessions/${sessionId}`
       );
       if (Array.isArray(res) && res.length > 0) {
         return res;
@@ -230,10 +230,10 @@ export const attendanceApi = {
   ): Promise<{ success: boolean; updatedCount: number; message: string }> => {
     try {
       return await apiFetch<{ success: boolean; updatedCount: number; message: string }>(
-        `/classes/sessions/${sessionId}/attendance/batch`,
+        `/attendance/sessions/${sessionId}/batch`,
         {
           method: 'POST',
-          body: JSON.stringify({ sessionId, attendances: payload }),
+          body: JSON.stringify({ records: payload.map((item) => ({ memberId: item.memberId, status: item.status, notes: item.notes || '' })) }),
         }
       );
     } catch {
