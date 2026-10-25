@@ -2,44 +2,36 @@ import { apiFetch } from '../../shared/api/client';
 
 export interface CheckinDto {
   id: number;
-<<<<<<< Updated upstream
   memberId?: number | null;
-  memberName?: string | null;
-=======
-  memberId: number | null;
   memberCode?: string | null;
   memberName?: string | null;
   avatarUrl?: string | null;
   packageName?: string | null;
   remainingDays?: number | null;
->>>>>>> Stashed changes
   checkInTime: string;
   checkOutTime?: string | null;
   method: string;
   gate?: string | null;
-<<<<<<< Updated upstream
   status: 'GRANTED' | 'DENIED' | 'success' | 'denied' | string;
   denialReason?: string | null;
 }
 
 export interface ScanCheckinPayload {
-=======
-  status: 'GRANTED' | 'DENIED';
-  denialReason?: string | null;
-}
-
-export interface ScanPayload {
->>>>>>> Stashed changes
   qrCode: string;
   gate?: string;
 }
 
-<<<<<<< Updated upstream
+export interface ScanPayload {
+  qrCode: string;
+  gate?: string;
+}
+
 export interface CheckinHistoryFilter {
   memberId?: number;
   fromDate?: string;
   toDate?: string;
-=======
+}
+
 export interface QrValidationResult {
   valid: boolean;
   error?: string;
@@ -67,42 +59,42 @@ export function validateQrFormat(rawQr: string): QrValidationResult {
     };
   }
   return { valid: true };
->>>>>>> Stashed changes
 }
 
 export const checkinApi = {
   /**
-<<<<<<< Updated upstream
    * Quét mã QR hội viên tại cổng/lễ tân (POST /api/v1/check-in/scan)
+   * Hỗ trợ cả 2 cách gọi: scan({ qrCode, gate }) và scan(qrCode, gate)
    */
-  scan: async (payload: ScanCheckinPayload): Promise<CheckinDto> => {
-    return apiFetch<CheckinDto>('/check-in/scan', {
-      method: 'POST',
-      body: JSON.stringify({
-        qrCode: payload.qrCode.trim(),
-        gate: payload.gate?.trim() || 'Turnstile A1 - Sảnh Chính',
-=======
-   * Gọi POST /check-in/scan để xác thực lượt check-in ra vào cổng
-   * Phản hồi trả về kết quả quyết định từ BE (GRANTED hoặc DENIED)
-   */
-  scan: async (qrCode: string, gate: string = 'Turnstile A1 - Sảnh Chính'): Promise<CheckinDto> => {
-    const validation = validateQrFormat(qrCode);
+  scan: async (
+    payloadOrQr: ScanCheckinPayload | string,
+    gate?: string
+  ): Promise<CheckinDto> => {
+    let qr = '';
+    let g = 'Turnstile A1 - Sảnh Chính';
+    if (typeof payloadOrQr === 'string') {
+      qr = payloadOrQr;
+      if (gate) g = gate;
+    } else {
+      qr = payloadOrQr.qrCode;
+      if (payloadOrQr.gate) g = payloadOrQr.gate;
+    }
+
+    const validation = validateQrFormat(qr);
     if (!validation.valid) {
       throw new Error(validation.error);
     }
 
-    return await apiFetch<CheckinDto>('/check-in/scan', {
+    return apiFetch<CheckinDto>('/check-in/scan', {
       method: 'POST',
       body: JSON.stringify({
-        qrCode: qrCode.trim(),
-        gate,
->>>>>>> Stashed changes
+        qrCode: qr.trim(),
+        gate: g.trim(),
       }),
     });
   },
 
   /**
-<<<<<<< Updated upstream
    * Ghi nhận hội viên ra về / checkout (POST /api/v1/check-in/{id}/checkout)
    */
   checkout: async (checkinId: number): Promise<CheckinDto> => {
@@ -120,30 +112,11 @@ export const checkinApi = {
     if (filter?.fromDate) params.set('fromDate', filter.fromDate);
     if (filter?.toDate) params.set('toDate', filter.toDate);
     const qs = params.toString() ? `?${params.toString()}` : '';
-    const list = await apiFetch<CheckinDto[]>(`/check-in/history${qs}`);
-    return Array.isArray(list) ? list : [];
-  },
-};
-
-=======
-   * Lấy danh sách lịch sử ra vào trong ngày (tối đa tất cả, FE lấy 10 lượt gần nhất)
-   */
-  getHistory: async (): Promise<CheckinDto[]> => {
     try {
-      const data = await apiFetch<CheckinDto[]>('/check-in/history');
-      return Array.isArray(data) ? data : [];
+      const list = await apiFetch<CheckinDto[]>(`/check-in/history${qs}`);
+      return Array.isArray(list) ? list : [];
     } catch {
       return [];
     }
   },
-
-  /**
-   * Checkout ra khỏi trung tâm
-   */
-  checkout: async (id: number): Promise<CheckinDto> => {
-    return await apiFetch<CheckinDto>(`/check-in/${id}/checkout`, {
-      method: 'POST',
-    });
-  },
 };
->>>>>>> Stashed changes
