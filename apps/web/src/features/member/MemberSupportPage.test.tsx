@@ -73,3 +73,46 @@ it('keeps message draft when the send API fails', async () => {
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể hoàn tất');
   expect((host.querySelector('#support-message') as HTMLTextAreaElement).value).toBe('Thử lại');
 });
+
+it('uses the refreshed ticket status and preserves draft until the ticket is closed', async () => {
+  await render(); await click(host.querySelector('.member-support-ticket') as HTMLButtonElement);
+  await type('#support-message', 'Nội dung đang soạn');
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValueOnce({ content: [{ ...ticket, status: 'resolved' }], totalPages: 1 });
+  const refresh = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Làm mới')!;
+  await click(refresh);
+  expect(host.querySelector('.member-support-context')?.textContent).toContain('Đã giải quyết');
+  expect((host.querySelector('#support-message') as HTMLTextAreaElement).value).toBe('Nội dung đang soạn');
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValueOnce({ content: [{ ...ticket, status: 'closed' }], totalPages: 1 });
+  await click(refresh);
+  expect(host.querySelector('.member-support-context')?.textContent).toContain('Đã đóng');
+  expect(host.querySelector('.member-support-compose')).toBeNull();
+  expect(supportApi.sendSupportMessage).not.toHaveBeenCalled();
+  expect(host.querySelector('.portal-container.member-support')).not.toBeNull();
+});
+
+it('hides unavailable selection and keeps its draft across pagination', async () => {
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 2 });
+  await render(); await click(host.querySelector('.member-support-ticket') as HTMLButtonElement);
+  await type('#support-message', 'Bản nháp chưa gửi');
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValueOnce({ content: [{ ...ticket, id: 8 }], totalPages: 2 });
+  await click([...host.querySelectorAll('button')].find((button) => button.textContent === 'Sau')!);
+  expect(host.querySelector('.member-support-compose')).toBeNull();
+  expect(host.querySelector('#support-conversation-title')?.textContent).toBe('Trao đổi');
+  await click([...host.querySelectorAll('button')].find((button) => button.textContent === 'Trước')!);
+  expect((host.querySelector('#support-message') as HTMLTextAreaElement).value).toBe('Bản nháp chưa gửi');
+  expect(supportApi.getMySupportTickets).toHaveBeenLastCalledWith(0);
+});
+
+it('prevents duplicate sends while a message is pending', async () => {
+  let resolve!: (message: supportApi.SupportMessage) => void;
+  vi.mocked(supportApi.sendSupportMessage).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+  await render(); await click(host.querySelector('.member-support-ticket') as HTMLButtonElement);
+  await type('#support-message', 'Xin chào');
+  await act(async () => {
+    const form = host.querySelector('.member-support-compose') as HTMLFormElement;
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  });
+  expect(supportApi.sendSupportMessage).toHaveBeenCalledTimes(1);
+  await act(async () => resolve({ id: 2, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Xin chào', createdAt: ticket.createdAt }));
+});

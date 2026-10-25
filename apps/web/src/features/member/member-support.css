@@ -1,4 +1,5 @@
-.member-support { display: grid; gap: 20px; }
+.member-support { --member-support-success: #8cbd95; display: grid; gap: 20px; }
+:root[data-theme='light'] .member-support { --member-support-success: #226442; }
 .member-support-grid { display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.5fr); gap: 20px; align-items: start; }
 .member-support .portal-card { min-width: 0; }
 .member-support-form, .member-support-compose { display: grid; gap: 10px; }
@@ -12,8 +13,10 @@
 .member-support-ticket-top { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 8px; }
 .member-support-ticket-top strong { font-size: 14px; overflow-wrap: anywhere; }
 .member-support-status { padding: 4px 9px; border-radius: 20px; background: var(--portal-raised); font-size: 11px; white-space: nowrap; }
-.member-support-status--open { color: var(--portal-salmon); }
-.member-support-status--resolved { color: #8cbd95; }
+.member-support-status--open { color: var(--portal-salmon); background: var(--portal-surface); box-shadow: inset 0 0 0 1px var(--portal-border); }
+.member-support-status--in_progress { color: var(--portal-paper); background: var(--portal-tint); }
+.member-support-status--resolved { color: var(--portal-success, var(--member-support-success)); }
+.member-support-status--closed { color: var(--portal-muted); }
 .member-support-meta, .member-support-summary, .member-support-context { color: var(--portal-muted); font-size: 12px; }
 .member-support-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .member-support-pages { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
@@ -23,7 +26,7 @@
 .member-support-messages strong { font-size: 12px; }
 .member-support-messages p { margin: 8px 0; white-space: pre-wrap; font-size: 13px; }
 .member-support-messages time { color: var(--portal-muted); font-size: 11px; }
-.member-support-error { color: #e99090; }
-.member-support-notice { color: #8cbd95; }
+.member-support-error { color: var(--portal-danger, #e99090); }
+.member-support-notice { color: var(--portal-success, var(--member-support-success)); }
 .member-support :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 @media (max-width: 760px) { .member-support-grid { grid-template-columns: minmax(0, 1fr); } .member-support-messages li { max-width: 90%; } }

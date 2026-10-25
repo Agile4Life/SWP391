@@ -36,7 +36,8 @@ export function MemberSupportPage() {
   const creatingRef = useRef(false);
   const [notice, setNotice] = useState('');
   const [formError, setFormError] = useState('');
-  const [selected, setSelected] = useState<SupportTicket | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selected = tickets.find((ticket) => ticket.id === selectedId) ?? null;
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messagesError, setMessagesError] = useState('');
@@ -44,7 +45,6 @@ export function MemberSupportPage() {
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
   const [sendError, setSendError] = useState('');
-  const selectedId = selected?.id;
 
   const loadTickets = useCallback(async (targetPage: number) => {
     setLoading(true); setListError('');
@@ -98,7 +98,7 @@ export function MemberSupportPage() {
     finally { sendingRef.current = false; setSending(false); }
   }
 
-  return <div className="member-support">
+  return <div className="portal-container member-support">
     <PageHeader eyebrow="MEMBER SERVICES" title="Hỗ trợ & khiếu nại" subtitle="Kết nối trực tiếp với đội ngũ SÖL qua từng phiếu hỗ trợ." />
     <div className="member-support-grid">
       <section className="portal-card" aria-labelledby="support-create-title">
@@ -119,7 +119,7 @@ export function MemberSupportPage() {
       </section>
       <section className="portal-card" aria-labelledby="support-list-title">
         <div className="portal-card-header member-support-heading"><h2 id="support-list-title" className="portal-card-title">Phiếu của tôi</h2><button type="button" className="member-support-link" onClick={() => void loadTickets(page)} disabled={loading}>Làm mới</button></div>
-        {loading ? <p role="status">Đang tải phiếu hỗ trợ…</p> : listError ? <div role="alert"><p>{listError}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>Thử lại</button></div> : tickets.length === 0 ? <p className="portal-empty">Bạn chưa có phiếu hỗ trợ nào.</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={() => setSelected(ticket)} aria-current={selectedId === ticket.id ? 'true' : undefined}>
+        {loading ? <p role="status">Đang tải phiếu hỗ trợ…</p> : listError ? <div role="alert"><p>{listError}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>Thử lại</button></div> : tickets.length === 0 ? <p className="portal-empty">Bạn chưa có phiếu hỗ trợ nào.</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={() => setSelectedId(ticket.id)} aria-current={selectedId === ticket.id ? 'true' : undefined}>
           <span className="member-support-ticket-top"><strong>#{ticket.id} · {displaySubject(ticket.subject)}</strong><span className={`member-support-status member-support-status--${ticket.status}`}>{statusLabel[ticket.status] ?? ticket.status}</span></span>
           <span className="member-support-meta">{categoryOf(ticket.subject)} · {dateTime(ticket.createdAt)}</span>
           {ticket.description && <span className="member-support-summary">{ticket.description}</span>}
