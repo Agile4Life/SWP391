@@ -106,6 +106,17 @@ public class InvoiceService {
         return invoiceMapper.toDto(invoice);
     }
 
+    @Transactional(readOnly = true)
+    public InvoiceDto getMemberInvoiceByPaymentId(Long paymentId, Long userId) {
+        Invoice invoice = invoiceRepository.findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(paymentId, userId, "success")
+                .orElseThrow(() -> new ResourceNotFoundException("resource.invoice_for_payment", paymentId));
+        InvoiceDto dto = invoiceMapper.toDto(invoice);
+        // The member view must never substitute an in-memory calculation for the stored column.
+        dto.setTotalAmount(invoice.getPersistedTotalAmount());
+        dto.setPdfUrl(null); // Do not expose internal or third-party storage locations.
+        return dto;
+    }
+
     /**
      * Automatically generates and issues an electronic invoice for a successful payment.
      */

@@ -84,6 +84,31 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   return body as T;
 }
 
+/** Authenticated binary response for endpoints that do not use the JSON ApiResponse envelope. */
+export async function apiFetchPdf(path: string): Promise<Blob> {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1${path}`, {
+      headers: { 'Accept-Language': 'vi', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+  } catch {
+    throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 0);
+  }
+  if (res.status === 401 && token) {
+    clearAuthSession();
+    window.location.assign('/login?expired=1');
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
+  }
+  if (!res.headers.get('Content-Type')?.toLowerCase().startsWith('application/pdf')) {
+    throw new ApiError('Máy chủ không trả về file PDF hợp lệ.', res.status);
+  }
+  return res.blob();
+}
+
 export async function loginApi(identifier: string, password: string): Promise<LoginResponse> {
   const data = await apiFetch<{ token: string; username: string; role: string }>('/auth/login', {
     method: 'POST',
