@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building';
+export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell';
 
 const paths: Record<PortalIconName, string> = {
   board: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
@@ -19,6 +19,7 @@ const paths: Record<PortalIconName, string> = {
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   arrow: 'M5 12h14 M13 6l6 6-6 6',
   building: 'M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-5h6v5 M8 7h1 M15 7h1 M8 11h1 M15 11h1',
+  bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
 };
 
 export function PortalIcon({ name, size = 20, style }: { name: PortalIconName; size?: number; style?: CSSProperties }) {
