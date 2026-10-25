@@ -74,6 +74,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/refund").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/payments/*/status").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/my/**").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/invoices/my/by-payment/*").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/invoices/my/by-payment/*/download").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/process").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")

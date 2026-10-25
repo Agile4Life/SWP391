@@ -127,6 +127,10 @@ public class Invoice {
         return totalAmount != null ? totalAmount : calculateComputedTotal();
     }
 
+    public BigDecimal getPersistedTotalAmount() {
+        return totalAmount;
+    }
+
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
     }

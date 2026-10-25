@@ -54,6 +54,33 @@ class InvoiceServiceTest {
     }
 
     @Test
+    void memberInvoiceUsesOwnedQueryAndPersistedTotalOnly() {
+        Invoice invoice = new Invoice();
+        invoice.setSubtotalAmount(new BigDecimal("100.00"));
+        invoice.setTaxAmount(new BigDecimal("10.00"));
+        invoice.setTotalAmount(new BigDecimal("109.00"));
+        InvoiceDto mapped = new InvoiceDto();
+        mapped.setTotalAmount(new BigDecimal("110.00"));
+        mapped.setPdfUrl("private/invoice.pdf");
+        when(invoiceRepository.findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(5L, 7L, "success")).thenReturn(Optional.of(invoice));
+        when(invoiceMapper.toDto(invoice)).thenReturn(mapped);
+
+        InvoiceDto result = invoiceService.getMemberInvoiceByPaymentId(5L, 7L);
+
+        assertEquals(new BigDecimal("109.00"), result.getTotalAmount());
+        assertNull(result.getPdfUrl());
+        verify(invoiceRepository, never()).findByPaymentId(5L);
+    }
+
+    @Test
+    void memberInvoiceDoesNotExposeOtherMembersInvoice() {
+        when(invoiceRepository.findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(5L, 8L, "success")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class,
+                () -> invoiceService.getMemberInvoiceByPaymentId(5L, 8L));
+        verifyNoInteractions(invoiceMapper);
+    }
+
+    @Test
     @DisplayName("Should create invoice with auto-generated invoice number when blank")
     void shouldCreateInvoiceWithGeneratedNumber() {
         InvoiceCreateDto dto = new InvoiceCreateDto();
