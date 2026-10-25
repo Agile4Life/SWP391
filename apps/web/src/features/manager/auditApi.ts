@@ -185,7 +185,7 @@ export const auditApi = {
     params.set('size', String(filter?.size ?? 10));
 
     try {
-      const res = await apiFetch<PageResult<AuditLogItem>>(`/audit-logs?${params.toString()}`);
+      const res = await apiFetch<PageResult<AuditLogItem>>(`/admin/audit-logs?${params.toString()}`);
       if (res && Array.isArray(res.content)) {
         return res;
       }
