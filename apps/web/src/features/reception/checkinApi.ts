@@ -70,15 +70,10 @@ export const checkinApi = {
     payloadOrQr: ScanCheckinPayload | string,
     gate?: string
   ): Promise<CheckinDto> => {
-    let qr = '';
-    let g = 'Turnstile A1 - Sảnh Chính';
-    if (typeof payloadOrQr === 'string') {
-      qr = payloadOrQr;
-      if (gate) g = gate;
-    } else {
-      qr = payloadOrQr.qrCode;
-      if (payloadOrQr.gate) g = payloadOrQr.gate;
-    }
+    const qr = typeof payloadOrQr === 'string' ? payloadOrQr : payloadOrQr.qrCode;
+    const g =
+      (typeof payloadOrQr === 'string' ? gate : payloadOrQr.gate) ||
+      'Turnstile A1 - Sảnh Chính';
 
     const validation = validateQrFormat(qr);
     if (!validation.valid) {
