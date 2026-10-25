@@ -68,6 +68,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/check-in/*/checkout", "/api/v1/check-in/checkout").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/check-in/history").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "MEMBER")
+                    .requestMatchers("/api/v1/attendance/sessions/**").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
 
                     // Payments & Invoices (SCRUM-76, 77, 78)
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/*/refund").hasRole("CENTER_MANAGER")
@@ -114,6 +115,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/waitlist").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/waitlists/*").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/waitlists/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/cancel").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
