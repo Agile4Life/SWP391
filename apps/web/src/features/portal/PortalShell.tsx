@@ -5,6 +5,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { PortalIcon } from './PortalIcon';
 import { PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
+import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
 
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -93,6 +94,7 @@ export function PortalShell() {
         <footer className="portal-workspace-footer"><span>SÖL · Không gian của bạn</span><span>Chuyển động mỗi ngày. Cân bằng mỗi khoảnh khắc.</span></footer>
       </div>
 
+      {isMember && <LiquidGlassChatbot />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>
         <p className="portal-subtitle">Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.</p>
         <div className="form-actions" style={{ marginTop: 24 }}>

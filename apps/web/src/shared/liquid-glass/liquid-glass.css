@@ -558,3 +558,34 @@
   cursor: not-allowed !important;
 }
 
+/* SCRUM-126: reuse the glass optics inside the charcoal/salmon member portal. */
+.member-ai-chat { --color-accent-gold: #ce9180; --font-sans: 'Plus Jakarta Sans', sans-serif; }
+.member-ai-chat .liquid-glass-chat-trigger { right: 20px; bottom: 20px; z-index: 90; }
+.member-ai-chat .liquid-glass-chat-window { right: 20px; bottom: 86px; z-index: 90; max-height: calc(100dvh - 110px); }
+.member-ai-chat .liquid-glass-chat-container { background: #202020ed !important; border-color: #ce918080 !important; }
+.member-ai-chat .liquid-glass-chat-container::after { content: ''; position: absolute; inset: -50%; pointer-events: none; background: linear-gradient(120deg, transparent 45%, #ce91800a 50%, transparent 55%); animation: member-chat-glint 14s ease-in-out infinite alternate; }
+@keyframes member-chat-glint { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
+.member-ai-chat .liquid-glass-chat-trigger .glass-button { background: #292929ed !important; border-color: #ce9180a0 !important; }
+.member-ai-chat .liquid-glass-chat-header, .member-ai-chat .liquid-glass-chat-input-bar { background: #292929ed !important; }
+.member-ai-chat .liquid-glass-chat-body { background: #202020cc !important; }
+.member-ai-chat .liquid-glass-bot-name { font-family: var(--font-sans); font-size: 15px; }
+.member-ai-chat .liquid-glass-bot-status { color: #bcb8b5 !important; }
+.member-ai-chat .user-bubble { background: #ce9180 !important; }
+.member-ai-chat .bot-bubble, .member-ai-chat .liquid-glass-input { background: #303030eb !important; border-color: #ce918050 !important; }
+.member-ai-chat .liquid-glass-input { resize: none; min-width: 0; line-height: 1.5; max-height: 110px; }
+.member-ai-chat .suggestion-chip { background: #303030 !important; border-color: #ce918060 !important; }
+.member-ai-chat button:disabled { cursor: not-allowed !important; opacity: .5; }
+.member-ai-chat :is(button, select, textarea):focus-visible { outline: 2px solid #ce9180 !important; outline-offset: 2px; }
+.ai-chat-session-label { display: flex; align-items: center; gap: 10px; padding: 10px 18px; color: #bcb8b5; background: #292929; font-size: 11px; }
+.ai-chat-session-label select { min-width: 0; flex: 1; background: #303030; color: #faf9f6; border: 1px solid #ce918050; border-radius: 8px; padding: 6px; }
+.ai-chat-empty { color: #bcb8b5; font-size: 12px; }
+.ai-chat-error { padding: 10px 18px; font-size: 12px; color: #f2b6aa; background: #292929; }
+.ai-chat-error button { display: block; border: 0; padding: 8px 0; background: none; color: #ce9180; text-decoration: underline; cursor: pointer; }
+@media (max-width: 600px) {
+  .member-ai-chat .liquid-glass-chat-trigger { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .member-ai-chat .liquid-glass-chat-window { right: 12px; width: calc(100vw - 24px); max-width: none; bottom: 82px; max-height: calc(100dvh - 100px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .member-ai-chat *, .member-ai-chat *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+

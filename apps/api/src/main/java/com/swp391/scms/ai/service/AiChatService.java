@@ -1,5 +1,6 @@
 package com.swp391.scms.ai.service;
 
+import com.swp391.scms.ai.client.AiChatProvider;
 import com.swp391.scms.ai.dto.AiChatMessageCreateDto;
 import com.swp391.scms.ai.dto.AiChatMessageDto;
 import com.swp391.scms.ai.dto.AiChatReplyDto;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Service managing 24/7 AI Chatbot sessions and messages for SCMS members (SCRUM-118).
@@ -36,31 +36,34 @@ public class AiChatService {
             2. Cung cấp lời khuyên dinh dưỡng thể thao cơ bản, tính toán cân đối calo/macro an toàn.
             3. Tuyệt đối bảo mật dữ liệu cá nhân của các hội viên khác.
             4. Từ chối lịch sự mọi câu hỏi ngoài phạm vi thể thao, sức khỏe, dinh dưỡng hoặc dịch vụ trung tâm SCMS.
+            5. Không suy đoán bảng giá, lịch lớp, trạng thái gói tập hay dữ liệu cá nhân khi chưa có dữ liệu xác thực; hướng dẫn hội viên tra cứu các màn hình portal tương ứng.
             """;
 
     private static final int MAX_CONTEXT_MESSAGES = 6;
-
-    private static final List<String> OFF_TOPIC_KEYWORDS = List.of(
-            "chứng khoán", "cổ phiếu", "bitcoin", "crypto", "cá độ", "đánh bạc",
-            "chính trị", "hack", "mật khẩu người khác", "thông tin hội viên khác",
-            "số điện thoại của", "email của hội viên", "stock market", "gambling",
-            "politics", "other member's", "other members"
-    );
 
     private final AiChatSessionRepository sessionRepository;
     private final AiChatMessageRepository messageRepository;
     private final MemberRepository memberRepository;
     private final MessageService messageService;
+    private final AiChatProvider chatProvider;
+
+    public AiChatService(AiChatSessionRepository sessionRepository,
+                         AiChatMessageRepository messageRepository,
+                         MemberRepository memberRepository,
+                         MessageService messageService) {
+        this(sessionRepository, messageRepository, memberRepository, messageService, null);
+    }
 
     @Autowired
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
-                         MessageService messageService) {
+                         MessageService messageService, AiChatProvider chatProvider) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.memberRepository = memberRepository;
         this.messageService = messageService;
+        this.chatProvider = chatProvider;
     }
 
     /**
@@ -111,6 +114,7 @@ public class AiChatService {
         AiChatSession session = getAuthorizedSession(sessionId, currentUserId, currentRole);
         List<AiChatMessage> existingHistory = messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(sessionId);
 
+        String aiReplyText = generateContextualReply(existingHistory, dto.message().trim());
         LocalDateTime now = LocalDateTime.now();
         AiChatMessage memberMsg = new AiChatMessage();
         memberMsg.setSession(session);
@@ -118,8 +122,6 @@ public class AiChatService {
         memberMsg.setMessage(dto.message().trim());
         memberMsg.setCreatedAt(now);
         AiChatMessage savedMemberMsg = messageRepository.save(memberMsg);
-
-        String aiReplyText = generateContextualReply(session, existingHistory, dto.message().trim());
 
         AiChatMessage aiMsg = new AiChatMessage();
         aiMsg.setSession(session);
@@ -175,77 +177,18 @@ public class AiChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", targetId));
     }
 
-    private String generateContextualReply(AiChatSession session,
-                                           List<AiChatMessage> history,
+    private String generateContextualReply(List<AiChatMessage> history,
                                            String userMessage) {
-        String normalized = userMessage.toLowerCase(Locale.ROOT);
-
-        for (String keyword : OFF_TOPIC_KEYWORDS) {
-            if (normalized.contains(keyword)) {
-                return "Xin lỗi bạn, tôi là Trợ lý Tư vấn Thể thao & Dinh dưỡng của Trung tâm SCMS. "
-                        + "Vì lý do bảo mật và phạm vi chuyên môn, tôi chỉ hỗ trợ các câu hỏi liên quan đến tập luyện thể thao, "
-                        + "dinh dưỡng, sức khỏe và dịch vụ lớp học tại SCMS.";
-            }
+        if (chatProvider == null) {
+            throw new com.swp391.scms.common.exception.ServiceUnavailableException(
+                    "AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null, null);
         }
-
-        int startIdx = Math.max(0, history.size() - MAX_CONTEXT_MESSAGES);
-        List<AiChatMessage> recentContext = history.subList(startIdx, history.size());
-        String previousTopicHint = recentContext.stream()
-                .filter(m -> "member".equalsIgnoreCase(m.getSender()))
-                .reduce((first, second) -> second)
-                .map(AiChatMessage::getMessage)
-                .orElse(session.getTopic());
-
-        if (normalized.contains("dinh dưỡng") || normalized.contains("ăn") || normalized.contains("calo")
-                || normalized.contains("nutrition") || normalized.contains("diet")) {
-            return String.format(
-                    "[Trợ lý SCMS - Chủ đề: %s] Về chế độ dinh dưỡng thể thao: Bạn nên ưu tiên bổ sung 1.6-2.0g protein/kg cân nặng mỗi ngày, "
-                            + "kết hợp tinh bột hấp thu chậm (yến mạch, gạo lứt, khoai lang) trước buổi tập 60-90 phút và uống đủ 2-2.5 lít nước/ngày.",
-                    session.getTopic()
-            );
-        }
-
-        if (normalized.contains("giảm cân") || normalized.contains("giảm mỡ")
-                || normalized.contains("weight loss") || normalized.contains("fat")) {
-            return String.format(
-                    "[Trợ lý SCMS - Chủ đề: %s] Để giảm mỡ hiệu quả và an toàn tại SCMS, bạn nên kết hợp 3 buổi tập kháng lực (Strength/Gym) "
-                            + "với 2 buổi Cardio hoặc HIIT mỗi tuần, duy trì mức thâm hụt 300-500 kcal/ngày và ngủ đủ 7-8 tiếng.",
-                    session.getTopic()
-            );
-        }
-
-        if (normalized.contains("lịch") || normalized.contains("lớp") || normalized.contains("đặt chỗ")
-                || normalized.contains("class") || normalized.contains("schedule")) {
-            return String.format(
-                    "[Trợ lý SCMS - Chủ đề: %s] Bạn có thể tra cứu lịch lớp học (Gym, Yoga, Boxing, Bơi lội) tại mục Lịch Tập trên hệ thống SCMS. "
-                            + "Hãy đảm bảo gói tập của bạn đang ở trạng thái Active và đặt lịch trước giờ khai giảng để giữ chỗ.",
-                    session.getTopic()
-            );
-        }
-
-        if (!recentContext.isEmpty()) {
-            return String.format(
-                    "[Trợ lý SCMS - Tiếp nối hội thoại '%s'] Dựa trên trao đổi trước đó (%s), tôi khuyên bạn nên duy trì cường độ tập luyện điều độ 3-5 buổi/tuần, "
-                            + "khởi động kỹ 10 phút trước khi tập và theo dõi chỉ số cơ thể định kỳ trên hệ thống SCMS.",
-                    session.getTopic(),
-                    abbreviate(previousTopicHint, 50)
-            );
-        }
-
-        return String.format(
-                "[Trợ lý SCMS - %s] Xin chào! Tôi là Trợ lý Tư vấn Thể thao & Dinh dưỡng 24/7 của SCMS. "
-                        + "Với câu hỏi của bạn về '%s', tôi gợi ý bạn bắt đầu với kế hoạch tập luyện phù hợp thể trạng, kết hợp khởi động kỹ và dinh dưỡng cân bằng. "
-                        + "Bạn muốn tư vấn chi tiết hơn về bài tập, lịch lớp hay chế độ ăn uống?",
-                session.getTopic(),
-                abbreviate(userMessage, 60)
-        );
-    }
-
-    private String abbreviate(String text, int maxLength) {
-        if (text == null || text.length() <= maxLength) {
-            return text;
-        }
-        return text.substring(0, maxLength) + "...";
+        var turns = new java.util.ArrayList<AiChatProvider.Turn>();
+        history.subList(Math.max(0, history.size() - MAX_CONTEXT_MESSAGES), history.size())
+                .forEach(message -> turns.add(new AiChatProvider.Turn(
+                        "ai".equals(message.getSender()) ? "assistant" : "user", message.getMessage())));
+        turns.add(new AiChatProvider.Turn("user", userMessage));
+        return chatProvider.generate(SYSTEM_PROMPT, turns);
     }
 
     private AiChatSessionDto toSessionDto(AiChatSession session) {

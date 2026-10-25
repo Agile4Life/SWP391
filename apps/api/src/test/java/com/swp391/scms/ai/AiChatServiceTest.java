@@ -5,6 +5,8 @@ import com.swp391.scms.ai.dto.AiChatMessageDto;
 import com.swp391.scms.ai.dto.AiChatReplyDto;
 import com.swp391.scms.ai.dto.AiChatSessionCreateDto;
 import com.swp391.scms.ai.dto.AiChatSessionDto;
+import com.swp391.scms.ai.client.AiChatProvider;
+import com.swp391.scms.common.exception.ServiceUnavailableException;
 import com.swp391.scms.ai.entity.AiChatMessage;
 import com.swp391.scms.ai.entity.AiChatSession;
 import com.swp391.scms.ai.repository.AiChatMessageRepository;
@@ -30,10 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class AiChatServiceTest {
@@ -50,6 +54,9 @@ class AiChatServiceTest {
     @Mock
     private MessageService messageService;
 
+    @Mock
+    private AiChatProvider chatProvider;
+
     private AiChatService aiChatService;
     private Member member;
     private AiChatSession session;
@@ -57,7 +64,8 @@ class AiChatServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(messageService.getMessage(any())).thenAnswer(inv -> inv.getArgument(0));
-        aiChatService = new AiChatService(sessionRepository, messageRepository, memberRepository, messageService);
+        aiChatService = new AiChatService(sessionRepository, messageRepository, memberRepository, messageService, chatProvider);
+        lenient().when(chatProvider.generate(any(), any())).thenReturn("Câu trả lời từ provider");
 
         member = new Member();
         member.setUserId(100L);
@@ -86,6 +94,13 @@ class AiChatServiceTest {
     }
 
     @Test
+    void createSession_RejectsAnotherMemberId() {
+        assertThrows(AccessDeniedException.class, () -> aiChatService.createSession(
+                new AiChatSessionCreateDto(999L, "Topic"), 100L, "MEMBER"));
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
     void sendMessage_ShouldPersistMemberAndAiMessagesAndMaintainContext() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
@@ -106,12 +121,13 @@ class AiChatServiceTest {
         assertEquals(500L, reply.sessionId());
         assertEquals("member", reply.memberMessage().sender());
         assertEquals("ai", reply.aiMessage().sender());
-        assertTrue(reply.reply().contains("protein"));
+        assertEquals("Câu trả lời từ provider", reply.reply());
+        verify(chatProvider).generate(eq(AiChatService.SYSTEM_PROMPT), any());
         verify(messageRepository, times(2)).save(any(AiChatMessage.class));
     }
 
     @Test
-    void sendMessage_WhenOffTopicOrSensitive_ShouldPolitelyRefuse() {
+    void sendMessage_ForwardsScopeInstructionsToProvider() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
         when(messageRepository.save(any(AiChatMessage.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -123,8 +139,26 @@ class AiChatServiceTest {
                 "MEMBER"
         );
 
-        assertTrue(reply.reply().contains("Xin lỗi bạn"));
-        assertTrue(reply.reply().contains("bảo mật"));
+        assertEquals("Câu trả lời từ provider", reply.reply());
+        verify(chatProvider).generate(eq(AiChatService.SYSTEM_PROMPT), any());
+    }
+
+    @Test
+    void providerFailureDoesNotPersistAnUnansweredQuestion() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        when(chatProvider.generate(any(), any())).thenThrow(new ServiceUnavailableException("offline"));
+        assertThrows(ServiceUnavailableException.class, () -> aiChatService.sendMessage(
+                500L, new AiChatMessageCreateDto("Xin chào"), 100L, "MEMBER"));
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void sendMessage_WhenDifferentMember_DoesNotCallProvider() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.sendMessage(
+                500L, new AiChatMessageCreateDto("Xin chào"), 999L, "MEMBER"));
+        verify(chatProvider, never()).generate(any(), any());
     }
 
     @Test

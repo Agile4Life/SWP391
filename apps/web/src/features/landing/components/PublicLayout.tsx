@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
-import { LiquidGlassChatbot } from '../../../shared/liquid-glass/LiquidGlassChatbot';
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import '../fitness-public.css';
@@ -136,7 +135,6 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         <div className="fit-footer-watermark" aria-hidden="true">SÖL FITNESS</div>
       </footer>
     </div>
-    {pathname === '/' && <LiquidGlassChatbot />}
   </div>;
 }
 
