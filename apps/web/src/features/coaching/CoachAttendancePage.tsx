@@ -153,6 +153,7 @@ export function CoachAttendancePage() {
   return (
     <div className="coach-attendance-page portal-container">
       <PageHeader
+        eyebrow="Huấn luyện"
         title="Điểm Danh Buổi Học & Đánh Giá"
         subtitle="Quản lý chuyên biệt cho HLV: Ghi nhận chuyên cần và chấm điểm tiến bộ kỹ thuật học viên."
       />
