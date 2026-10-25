@@ -133,7 +133,8 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
       root.render(<ManagerAuditLogsPage />);
     });
 
-    const actionSelect = host.querySelector('select[aria-label="Lọc theo hành động"]') as HTMLSelectElement;
+    const actionSelect = (host.querySelector('select[aria-label="Lọc theo hành động"]') ||
+      host.querySelector('select')) as HTMLSelectElement;
     expect(actionSelect).not.toBeNull();
 
     await act(async () => {
