@@ -1,0 +1,92 @@
+openapi: 3.0.3
+info:
+  title: SCMS Member Training Completion API (SCRUM-129)
+  version: 1.0.0
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Completion:
+      type: object
+      required: [itemId, exerciseDate, completed]
+      properties:
+        itemId: { type: integer, format: int64 }
+        exerciseDate: { type: string, format: date }
+        completed: { type: boolean }
+    CompletionResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        status: { type: integer }
+        message: { type: string }
+        data:
+          $ref: '#/components/schemas/Completion'
+paths:
+  /coaching/training-completions/my:
+    get:
+      summary: List IDs of exercises completed by the authenticated MEMBER on a date
+      description: MEMBER identity comes exclusively from the JWT. Past dates and today are readable; future dates are rejected.
+      parameters:
+        - name: exerciseDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Completed training-plan item IDs for this MEMBER and date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  status: { type: integer }
+                  message: { type: string }
+                  data:
+                    type: array
+                    items: { type: integer, format: int64 }
+        '400': { description: Invalid date }
+        '401': { description: Unauthenticated }
+        '403': { description: Not a MEMBER }
+  /coaching/training-completions/my/{itemId}:
+    parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+      - name: exerciseDate
+        in: query
+        required: true
+        schema: { type: string, format: date }
+    put:
+      summary: Idempotently mark today's assigned exercise as completed
+      description: Requires own active plan, today's date in Asia/Ho_Chi_Minh, plan date range, and matching ISO weekday (1=Monday). MEMBER ID is never accepted from the client.
+      responses:
+        '200':
+          description: Persisted completion
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompletionResponse' }
+        '400': { description: Wrong day, inactive plan, or date outside plan }
+        '401': { description: Unauthenticated }
+        '403': { description: Not a MEMBER }
+        '404': { description: Item not found or not owned by this MEMBER }
+    delete:
+      summary: Idempotently unmark today's assigned exercise
+      responses:
+        '200':
+          description: Completion removed or already absent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompletionResponse' }
+        '400': { description: Wrong day, inactive plan, or date outside plan }
+        '401': { description: Unauthenticated }
+        '403': { description: Not a MEMBER }
+        '404': { description: Item not found or not owned by this MEMBER }

@@ -1,0 +1,22 @@
+.member-progress { display: grid; gap: 20px; }
+.member-progress-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.member-progress-charts > div { min-width: 0; }
+.member-progress-charts h3 { margin: 0 0 12px; font-size: 15px; }
+.member-progress-charts h3 small { color: var(--portal-muted); font-weight: 400; }
+.member-progress-chart-scroll { overflow-x: auto; color: var(--portal-muted); }
+.member-progress-chart { display: block; max-width: none; }
+.member-progress-values { grid-column: 1 / -1; display: flex; gap: 10px; overflow-x: auto; }
+.member-progress-values p { display: grid; gap: 5px; min-width: 110px; padding: 12px; border-radius: 12px; background: var(--portal-surface); margin: 0; font-size: 12px; }
+.member-progress-values time { color: var(--portal-muted); }
+.member-progress-exercises { list-style: none; padding: 0; margin: 0; }
+.member-progress-exercises li { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--portal-border); }
+.member-progress-exercises h3 { margin: 5px 0; font-size: 15px; }
+.member-progress-exercises p { margin: 6px 0 0; color: var(--portal-muted); font-size: 12px; }
+.member-progress-day { color: var(--portal-salmon); font-size: 11px; }
+.member-progress-dose { display: grid; align-content: center; gap: 5px; flex-shrink: 0; font-size: 12px; }
+.member-progress-dependency { margin: 18px 0 0; color: var(--portal-muted); font-size: 12px; }
+.member-progress-check { display: inline-flex; align-items: center; gap: 8px; color: var(--portal-muted); font-size: 11px; }
+.member-progress-check input { width: 18px; height: 18px; accent-color: var(--portal-salmon); cursor: pointer; }
+.member-progress-link { border: 0; background: transparent; color: var(--portal-salmon); font: inherit; cursor: pointer; text-decoration: underline; }
+.member-progress-link:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
+@media (max-width: 760px) { .member-progress-charts { grid-template-columns: minmax(0, 1fr); } .member-progress-values { grid-column: 1; } .member-progress-exercises li { flex-direction: column; gap: 8px; } }

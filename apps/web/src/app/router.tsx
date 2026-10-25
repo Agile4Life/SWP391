@@ -14,6 +14,7 @@ import { MemberProfilePage } from '../features/member/MemberProfilePage';
 import { MemberClassesPage } from '../features/member/MemberClassesPage';
 import { MemberCardPage } from '../features/member/MemberCardPage';
 import { MemberPackagesPage } from '../features/member/MemberPackagesPage';
+import { MemberProgressPage } from '../features/member/MemberProgressPage';
 
 // Staff & Coach Feature Pages
 import { StaffReceptionPage } from '../features/reception/StaffReceptionPage';
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
           {
             path: '/member/card',
             element: <MemberCardPage />,
+          },
+          {
+            path: '/member/progress',
+            element: <MemberProgressPage />,
           },
         ],
       },
