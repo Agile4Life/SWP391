@@ -57,7 +57,8 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh Buổi học & Đánh
       updatedCount: 2,
       message: 'Đã lưu điểm danh & đánh giá thành công cho 2 học viên.',
     });
-    vi.spyOn(toast, 'success');
+    vi.spyOn(toast, 'success').mockImplementation(() => {});
+    vi.spyOn(toast, 'error').mockImplementation(() => {});
   });
 
   afterEach(async () => {

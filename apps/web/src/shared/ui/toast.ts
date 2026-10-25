@@ -18,3 +18,6 @@ export function toast(message: string, type: 'success' | 'error' = 'success') {
 
   window.setTimeout(() => el.remove(), type === 'error' ? 5000 : 3200);
 }
+
+toast.success = (message: string) => toast(message, 'success');
+toast.error = (message: string) => toast(message, 'error');
