@@ -130,20 +130,15 @@ public class CenterCheckinService {
 
         // Trường hợp 1: Mã QR không tồn tại
         if (subOpt.isEmpty()) {
-            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid", null, null, null);
+            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid");
         }
 
         MembershipSubscription sub = subOpt.get();
         Member member = sub.getMember();
-        String memberCode = member != null ? member.getMembershipCode() : null;
-        String memberName = (member != null && member.getUser() != null) ? member.getUser().getFullName() : null;
-        String avatarUrl = (member != null && member.getUser() != null) ? member.getUser().getAvatarUrl() : null;
-        String packageName = sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null;
-        Long remainingDays = (sub.getEndDate() != null) ? java.time.temporal.ChronoUnit.DAYS.between(today, sub.getEndDate()) : null;
 
         // Trường hợp 2: Không tìm thấy hội viên liên kết
         if (member == null) {
-            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found", packageName, null, null);
+            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found");
         }
 
         // Serialize every QR belonging to the same member before checking for an open visit.
@@ -158,15 +153,15 @@ public class CenterCheckinService {
 
         // Trường hợp 3: Gói tập chưa active (vd: pending_payment, cancelled)
         if (!STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus())) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active", packageName, avatarUrl, remainingDays);
+            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
         }
 
         // Trường hợp 4: Gói tập chưa đến ngày hoặc đã hết hạn
         if (sub.getStartDate() != null && sub.getStartDate().isAfter(today)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active", packageName, avatarUrl, remainingDays);
+            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
         }
         if (sub.getEndDate() != null && sub.getEndDate().isBefore(today)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_expired", packageName, avatarUrl, remainingDays);
+            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_expired");
         }
 
         // Tự động đóng các lượt check-in GRANTED bị treo quá 12 tiếng của hội viên (giải phóng bẫy anti-passback)
@@ -174,7 +169,7 @@ public class CenterCheckinService {
 
         // Trường hợp 5 (BR-04 Anti-passback): Hội viên đang ở trong phòng tập chưa checkout
         if (checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(member.getUserId(), RESULT_GRANTED)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.already_checked_in", packageName, avatarUrl, remainingDays);
+            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.already_checked_in");
         }
 
         // Hợp lệ -> GRANTED
@@ -187,22 +182,7 @@ public class CenterCheckinService {
         checkin.setStatus(RESULT_GRANTED);
         checkin.setDenialReason(null);
 
-        CenterCheckin saved = checkins.saveAndFlush(checkin);
-        return new CheckinDto(
-                saved.getId(),
-                member.getUserId(),
-                memberCode,
-                memberName,
-                avatarUrl,
-                packageName,
-                remainingDays,
-                saved.getCheckInTime(),
-                saved.getCheckOutTime(),
-                saved.getMethod(),
-                saved.getGate(),
-                saved.getStatus(),
-                saved.getDenialReason()
-        );
+        return toDto(checkins.saveAndFlush(checkin));
     }
 
     /**
@@ -244,11 +224,6 @@ public class CenterCheckinService {
     }
 
     private CheckinDto saveDeniedRecord(Member member, LocalDateTime now, String gate, User recorder, String reasonKey) {
-        return saveDeniedRecord(member, now, gate, recorder, reasonKey, null, null, null);
-    }
-
-    private CheckinDto saveDeniedRecord(Member member, LocalDateTime now, String gate, User recorder, String reasonKey,
-                                        String packageName, String avatarUrl, Long remainingDays) {
         CenterCheckin checkin = new CenterCheckin();
         checkin.setMember(member);
         checkin.setCheckInTime(now);
@@ -258,24 +233,7 @@ public class CenterCheckinService {
         checkin.setStatus(RESULT_DENIED);
         checkin.setDenialReason(reasonKey);
 
-        CenterCheckin saved = checkins.saveAndFlush(checkin);
-        String memberName = (member != null && member.getUser() != null) ? member.getUser().getFullName() : null;
-        String memberCode = member != null ? member.getMembershipCode() : null;
-        return new CheckinDto(
-                saved.getId(),
-                member != null ? member.getUserId() : null,
-                memberCode,
-                memberName,
-                avatarUrl,
-                packageName,
-                remainingDays,
-                saved.getCheckInTime(),
-                saved.getCheckOutTime(),
-                saved.getMethod(),
-                saved.getGate(),
-                saved.getStatus(),
-                saved.getDenialReason() != null ? resolveMessage(saved.getDenialReason()) : null
-        );
+        return toDto(checkins.saveAndFlush(checkin));
     }
 
     /**
@@ -364,36 +322,13 @@ public class CenterCheckinService {
     private CheckinDto toDto(CenterCheckin c) {
         Member member = c.getMember();
         String memberName = null;
-        String memberCode = null;
-        String avatarUrl = null;
-        String packageName = null;
-        Long remainingDays = null;
-        if (member != null) {
-            memberCode = member.getMembershipCode();
-            if (member.getUser() != null) {
-                memberName = member.getUser().getFullName();
-                avatarUrl = member.getUser().getAvatarUrl();
-            }
-            List<MembershipSubscription> activeSubs = subscriptions.findByMemberUserIdAndStatus(member.getUserId(), STATUS_ACTIVE);
-            if (activeSubs != null && !activeSubs.isEmpty()) {
-                MembershipSubscription sub = activeSubs.get(0);
-                if (sub.getMembershipPackage() != null) {
-                    packageName = sub.getMembershipPackage().getName();
-                }
-                if (sub.getEndDate() != null) {
-                    LocalDate today = LocalDate.now(clock);
-                    remainingDays = java.time.temporal.ChronoUnit.DAYS.between(today, sub.getEndDate());
-                }
-            }
+        if (member != null && member.getUser() != null) {
+            memberName = member.getUser().getFullName();
         }
         return new CheckinDto(
                 c.getId(),
                 member != null ? member.getUserId() : null,
-                memberCode,
                 memberName,
-                avatarUrl,
-                packageName,
-                remainingDays,
                 c.getCheckInTime(),
                 c.getCheckOutTime(),
                 c.getMethod(),

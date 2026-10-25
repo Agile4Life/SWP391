@@ -61,22 +61,54 @@ export function StaffCheckInPage() {
     }
   }, [hasAccess, loadHistory]);
 
-  const executeScan = async (code: string) => {
-    const trimmed = code.trim();
-    if (!trimmed) return;
+  if (!hasAccess) {
+    return (
+      <div className="portal-container" data-testid="checkin-forbidden-guard">
+        <div className="portal-card">
+          <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
+              🚫
+            </div>
+            <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+              403 - Quyền truy cập bị từ chối
+            </h2>
+            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+              Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền vận hành cổng kiểm soát QR Check-in.
+            </p>
+            <a href="/portal" className="btn-secondary">
+              Về trang chủ Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const executeScan = async (codeToScan: string) => {
+    const trimmed = codeToScan.trim();
+    if (!trimmed) {
+      toast('Vui lòng nhập hoặc quét mã QR thẻ hội viên.', 'error');
+      return;
+    }
+    if (isScanning) return;
+
     setIsScanning(true);
     try {
-      const res = await checkinApi.scan({ qrCode: trimmed, gate: selectedGate });
+      const res = await checkinApi.scan({
+        qrCode: trimmed,
+        gate: selectedGate,
+      });
       setCurrentResult(res);
-      setScanCode('');
       setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)]);
+      setScanCode('');
+
       if (isCheckinGranted(res.status)) {
-        toast(`Mở cổng: Xác thực thành công cho ${res.memberName || 'Hội viên'}`, 'success');
+        toast(`Check-in hợp lệ: ${res.memberName || 'Hội viên'}`, 'success');
       } else {
-        toast(`Cửa khóa: ${res.denialReason || 'Từ chối vào trung tâm'}`, 'error');
+        toast(res.denialReason || 'Từ chối mở cổng: Thẻ không hợp lệ hoặc đã hết hạn.', 'error');
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lỗi kết nối tới hệ thống cửa check-in';
+      const msg = err instanceof Error ? err.message : 'Không thể xác thực mã QR lúc này.';
       const deniedRecord: CheckinDto = {
         id: Date.now(),
         memberId: 0,
@@ -124,29 +156,11 @@ export function StaffCheckInPage() {
   const openVisits = recentCheckins.filter((record) => isCheckinGranted(record.status) && !record.checkOutTime);
   const visibleVisits = historyView === 'inside' ? openVisits : recentCheckins.slice(0, 10);
 
-  if (!hasAccess) {
-    return (
-      <div className="portal-container">
-        <PageHeader eyebrow="Lễ tân" title="Kiểm soát ra vào cổng" />
-        <div className="portal-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <StatusMark type="error" size={56} />
-          </div>
-          <h2 style={{ color: '#B91C1C', marginBottom: '8px' }}>Truy cập bị từ chối (403 Forbidden)</h2>
-          <p style={{ color: '#6A635D' }}>
-            Chức năng quầy kiểm soát ra vào chỉ dành riêng cho tài khoản <strong>STAFF</strong> hoặc{' '}
-            <strong>MANAGER</strong>. Vui lòng đăng nhập với tài khoản hợp lệ.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="portal-container checkin-page">
       <PageHeader
-        eyebrow="Lễ tân &amp; Kiểm soát sảnh"
-        title="Check-in & Checkout tại cổng"
+        eyebrow="Lễ tân"
+        title="Check-in & checkout"
         actions={
           <button
             type="button"
@@ -163,7 +177,7 @@ export function StaffCheckInPage() {
         {/* Scanner Panel */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">Mắt đọc mã QR cổng Turnstile</h2>
+            <h2 className="portal-card-title">Quét mã hội viên</h2>
           </div>
 
           <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
@@ -209,56 +223,10 @@ export function StaffCheckInPage() {
                 </button>
               </div>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#8C847C' }}>
-              * Ô nhập tự động bắt sự kiện <strong>Enter</strong> từ máy quét barcode chuyên dụng.
-            </div>
           </form>
 
-          {/* Quick Simulation Buttons for QA / Demo */}
-          <div
-            style={{
-              padding: '12px 14px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '6px',
-              marginBottom: '20px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-          >
-            <div className="meta-label" style={{ marginBottom: '8px', fontSize: '0.72rem', letterSpacing: '0.08em', color: 'var(--color-text-muted)' }}>
-              PHÍM MÔ PHỎNG THỬ NGHIỆM NHANH
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => void executeScan('QR-VALID')}
-                disabled={isScanning}
-              >
-                ✓ Thẻ hợp lệ (QR-VALID)
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => void executeScan('QR-EXPIRED')}
-                disabled={isScanning}
-                style={{ color: '#fca5a5' }}
-              >
-                ✕ Thẻ hết hạn (QR-EXPIRED)
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-sm"
-                onClick={() => void executeScan('QR-NON-EXISTENT-999')}
-                disabled={isScanning}
-                style={{ color: '#fca5a5' }}
-              >
-                ✕ Không tồn tại
-              </button>
-            </div>
-          </div>
-
           {/* Visual Door Gate Feedback */}
-          {currentResult ? (
+          {currentResult && (
             <div
               key={currentResult.id}
               role="status"
@@ -273,14 +241,13 @@ export function StaffCheckInPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                <StatusMark type={isGranted ? 'success' : 'error'} size={60} />
+                <StatusMark type={isGranted ? 'success' : 'error'} size={64} />
               </div>
 
               <h3
                 style={{
                   margin: '0 0 8px 0',
                   color: isGranted ? '#86efac' : '#fca5a5',
-                  fontSize: '1.2rem',
                 }}
               >
                 {isGranted ? 'CỬA MỞ: XÁC THỰC HỢP LỆ' : 'CỬA KHÓA: TỪ CHỐI CHECK-IN'}
@@ -300,46 +267,22 @@ export function StaffCheckInPage() {
                 </div>
               )}
             </div>
-          ) : (
-            <div
-              style={{
-                border: '2px dashed rgba(255, 255, 255, 0.15)',
-                borderRadius: '6px',
-                padding: '36px 20px',
-                textAlign: 'center',
-                color: 'var(--color-text-muted)',
-              }}
-            >
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🚪</div>
-              <div style={{ fontWeight: 600 }}>Chưa có lượt quét gần nhất</div>
-              <div style={{ fontSize: '0.82rem', marginTop: '4px' }}>
-                Quét mã QR từ ứng dụng hội viên để xem trạng thái mở cổng tại đây
-              </div>
-            </div>
           )}
         </div>
 
-        {/* Keep open visits separate from the latest ten audit entries */}
+        {/* Keep open visits separate from the latest ten audit entries. */}
         <div className="portal-card">
           <div className="portal-card-header">
             <h2 className="portal-card-title">Theo dõi ra vào hôm nay</h2>
           </div>
 
-          <div className="portal-tabs" aria-label="Danh sách ra vào" style={{ marginBottom: '16px' }}>
-            <button
-              type="button"
-              className={`portal-tab ${historyView === 'inside' ? 'active' : ''}`}
-              aria-pressed={historyView === 'inside'}
-              onClick={() => setHistoryView('inside')}
-            >
+          <div className="portal-tabs" aria-label="Danh sách ra vào">
+            <button type="button" className={`portal-tab ${historyView === 'inside' ? 'active' : ''}`}
+              aria-pressed={historyView === 'inside'} onClick={() => setHistoryView('inside')}>
               Đang trong trung tâm ({openVisits.length})
             </button>
-            <button
-              type="button"
-              className={`portal-tab ${historyView === 'recent' ? 'active' : ''}`}
-              aria-pressed={historyView === 'recent'}
-              onClick={() => setHistoryView('recent')}
-            >
+            <button type="button" className={`portal-tab ${historyView === 'recent' ? 'active' : ''}`}
+              aria-pressed={historyView === 'recent'} onClick={() => setHistoryView('recent')}>
               10 lượt gần nhất
             </button>
           </div>
