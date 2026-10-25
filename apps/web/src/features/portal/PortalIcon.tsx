@@ -15,7 +15,7 @@ const paths: Record<PortalIconName, string> = {
   chart: 'M3 3v18h18 M8.5 16v-5 M13.5 16V7 M18.5 16v-9',
   profile: 'M19 21v-2a7 7 0 0 0-14 0v2 M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
   home: 'm3 10 9-7 9 7 M5 9v12h14V9 M9 21v-8h6v8',
-  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
+  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
   search: 'M21 21l-4.35-4.35 M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
   menu: 'M4 6h16 M4 12h16 M4 18h16',
   arrow: 'M5 12h14 M13 6l6 6-6 6',

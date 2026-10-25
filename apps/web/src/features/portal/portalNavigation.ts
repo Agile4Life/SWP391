@@ -12,6 +12,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/member/card', label: 'Thẻ hội viên', icon: 'card', roles: ['MEMBER'] },
   { to: '/member/invoices', label: 'Giao dịch & Hóa đơn', icon: 'receipt', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER'] },
+  { to: '/member/support', label: 'Hỗ trợ & Khiếu nại', icon: 'support', roles: ['MEMBER'] },
   { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH', 'MANAGER'] },
   { to: '/coach/training-plans', label: 'Soạn giáo án & AI Gợi ý', icon: 'profile', roles: ['COACH', 'MANAGER'] },
   { to: '/staff/attendance', label: 'Điểm danh học viên', icon: 'check', roles: ['COACH'] },
