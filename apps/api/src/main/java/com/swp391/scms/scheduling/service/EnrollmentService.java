@@ -226,6 +226,24 @@ public class EnrollmentService {
                 ? cancelReason
                 : msg("scheduling.enrollment.cancelled_by_hold");
 
+        if (waitlists != null) {
+            List<com.swp391.scms.scheduling.entity.ClassWaitlist> memberWaitlists =
+                    waitlists.findByMemberUserIdOrderByRequestedAtAsc(memberId);
+            if (memberWaitlists != null) {
+                for (com.swp391.scms.scheduling.entity.ClassWaitlist wl : memberWaitlists) {
+                    if (wl == null) continue;
+                    boolean wasNotified = "notified".equalsIgnoreCase(wl.getStatus());
+                    if (WAITING.equalsIgnoreCase(wl.getStatus()) || wasNotified) {
+                        wl.setStatus("expired");
+                        waitlists.save(wl);
+                        if (wasNotified && wl.getGymClass() != null && wl.getGymClass().getId() != null) {
+                            promoteNextWaitlistEntry(wl.getGymClass().getId(), now);
+                        }
+                    }
+                }
+            }
+        }
+
         int cancelledCount = 0;
         List<ClassEnrollment> memberEnrollments = enrollments.findByMemberUserId(memberId);
         if (memberEnrollments != null) {
@@ -253,24 +271,6 @@ public class EnrollmentService {
 
                 if (enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
                     promoteNextWaitlistEntry(enrollment.getGymClass().getId(), now);
-                }
-            }
-        }
-
-        if (waitlists != null) {
-            List<com.swp391.scms.scheduling.entity.ClassWaitlist> memberWaitlists =
-                    waitlists.findByMemberUserIdOrderByRequestedAtAsc(memberId);
-            if (memberWaitlists != null) {
-                for (com.swp391.scms.scheduling.entity.ClassWaitlist wl : memberWaitlists) {
-                    if (wl == null) continue;
-                    boolean wasNotified = "notified".equalsIgnoreCase(wl.getStatus());
-                    if (WAITING.equalsIgnoreCase(wl.getStatus()) || wasNotified) {
-                        wl.setStatus("expired");
-                        waitlists.save(wl);
-                        if (wasNotified && wl.getGymClass() != null && wl.getGymClass().getId() != null) {
-                            promoteNextWaitlistEntry(wl.getGymClass().getId(), now);
-                        }
-                    }
                 }
             }
         }

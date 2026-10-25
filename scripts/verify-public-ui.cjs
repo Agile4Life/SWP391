@@ -12,6 +12,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
   fs.mkdirSync(output, { recursive: true });
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  await page.addInitScript(() => localStorage.setItem('scms_theme', 'dark'));
   await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -43,6 +44,11 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
   try {
     await page.goto(base);
     await page.evaluate(() => document.fonts.ready);
+    assert.equal(await page.locator('.fit-site--landing').count(),1);
+    assert.equal(await page.locator('h1,h2').evaluateAll(elements=>elements.every(element=>{
+      const style=getComputedStyle(element);
+      return style.fontFamily.includes('Plus Jakarta Sans') && style.fontWeight==='900' && style.textTransform==='uppercase';
+    })),true,'landing display typography matches the membership-benefits reference');
     await page.locator('.fit-hero-athlete').evaluate((image) => image.decode());
     assert.equal(await page.locator('h1').count(), 1);
     assert.equal(await page.locator('.fit-service').count(), 3);

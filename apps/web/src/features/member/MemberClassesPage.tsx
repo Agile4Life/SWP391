@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { Select } from '../../shared/ui/Select';
+import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
 import {
   cancelEnrollment,
@@ -271,10 +273,12 @@ export function MemberClassesPage() {
       </div>
 
       <div style={{ margin: '16px 0 24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div>
-          <label htmlFor="member-classes-day" className="meta-label" style={{ marginRight: 12 }}>Thứ trong tuần</label>
-          <select
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <label htmlFor="member-classes-day" className="meta-label">Thứ trong tuần</label>
+          <Select
             id="member-classes-day"
+            className="portal-select"
+            style={{ width: 'auto', minWidth: 196 }}
             value={day}
             onChange={(event) => {
               clearActionFeedback();
@@ -282,7 +286,7 @@ export function MemberClassesPage() {
             }}
           >
             {days.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          </Select>
         </div>
         <p className="row-card__meta" style={{ margin: 0 }}>
           Cần gói tập đang hoạt động để đặt chỗ. <Link to="/member/packages">Xem gói tập</Link>
@@ -297,7 +301,7 @@ export function MemberClassesPage() {
 
       {actionError && (
         <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'rgba(180, 60, 60, 0.35)' }}>
-          <strong style={{ color: '#fca5a5' }}>{actionError}</strong>
+          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{actionError}</strong>
           <div style={{ marginTop: 8 }}>
             <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
               Kiểm tra gói tập của tôi
@@ -402,18 +406,21 @@ export function MemberClassesPage() {
                 return (
                   <div key={item.id} className="portal-card portal-card--list">
                     <div>
-                      <div className="row-card__meta">
-                        <span className="badge badge-info">{item.disciplineName}</span> · {date}/{month}/{year}
+                      <div className="row-card__meta row-card__meta--inline">
+                        <span className="badge badge-info">{item.disciplineName}</span>
+                        <span><PortalIcon name="calendar" size={14} />{date}/{month}/{year}</span>
                         {myEnrollment && (
-                          <span className="badge badge-success" style={{ marginLeft: 8 }}>Đã đặt chỗ</span>
+                          <span className="badge badge-success">Đã đặt chỗ</span>
                         )}
                         {!myEnrollment && myWaitlist && (
-                          <span className="badge badge-warning" style={{ marginLeft: 8 }}>Đang chờ chỗ</span>
+                          <span className="badge badge-warning">Đang chờ chỗ</span>
                         )}
                       </div>
                       <h3 className="row-card__title">{item.className}</h3>
-                      <div className="row-card__meta">
-                        {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · {item.roomName} · {item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}
+                      <div className="row-card__meta row-card__meta--inline">
+                        <span><strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
+                        <span><PortalIcon name="building" size={14} />{item.roomName}</span>
+                        <span><PortalIcon name="profile" size={14} />{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
                       </div>
                       <div className="row-card__meta">
                         Trạng thái: {past ? 'Đã qua giờ mở lớp' : item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
@@ -522,16 +529,14 @@ export function MemberClassesPage() {
                   {activeEnrollments.map((item) => (
                     <div key={item.id} className="portal-card portal-card--list">
                       <div>
-                        <div className="row-card__meta">
+                        <div className="row-card__meta row-card__meta--inline">
                           <span className="badge badge-success">Đã xác nhận chỗ</span>
-                          {item.sessionDate ? ` · Ngày học: ${formatShortDate(item.sessionDate)}` : ''}
+                          {item.sessionDate && <span><PortalIcon name="calendar" size={14} />Ngày học: {formatShortDate(item.sessionDate)}</span>}
                         </div>
                         <h3 className="row-card__title">{item.className}</h3>
-                        <div className="row-card__meta">
-                          {item.startTime && item.endTime
-                            ? `Khung giờ: ${item.startTime.slice(0, 5)}–${item.endTime.slice(0, 5)} · `
-                            : ''}
-                          Đăng ký lúc: {item.enrolledAt.replace('T', ' ').slice(0, 16)}
+                        <div className="row-card__meta row-card__meta--inline">
+                          {item.startTime && item.endTime && <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>}
+                          <span>Đăng ký lúc: {item.enrolledAt.replace('T', ' ').slice(0, 16)}</span>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -561,8 +566,9 @@ export function MemberClassesPage() {
                           </span>
                         </div>
                         <h3 className="row-card__title">{item.className}</h3>
-                        <div className="row-card__meta">
-                          Đăng ký chờ lúc: {item.requestedAt.replace('T', ' ').slice(0, 16)} · Tự động đôn lên khi có học viên hủy chỗ
+                        <div className="row-card__meta row-card__meta--inline">
+                          <span>Đăng ký chờ lúc: {item.requestedAt.replace('T', ' ').slice(0, 16)}</span>
+                          <span>Tự động đôn lên khi có học viên hủy chỗ</span>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>

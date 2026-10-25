@@ -1,0 +1,6569 @@
+{
+  "measurements": [
+    {
+      "path": "/",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 28,
+          "weight": "800",
+          "lineHeight": "30.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 30,
+          "weight": "700",
+          "lineHeight": "35.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 16,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 16,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 22,
+          "weight": "750",
+          "lineHeight": "26.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 20,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 20,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 20,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 32,
+          "weight": "900",
+          "lineHeight": "31.36px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 25,
+          "weight": "800",
+          "lineHeight": "27px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 42,
+          "weight": "800",
+          "lineHeight": "44.1px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "state": "muscle-callout",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 28,
+          "weight": "800",
+          "lineHeight": "30.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cơ Ngực (Pectorals)",
+          "size": 13,
+          "weight": "750",
+          "lineHeight": "16.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 30,
+          "weight": "700",
+          "lineHeight": "35.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 16,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 16,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 22,
+          "weight": "750",
+          "lineHeight": "26.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 20,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 20,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 20,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 14,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 30,
+          "weight": "750",
+          "lineHeight": "35.1px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 32,
+          "weight": "900",
+          "lineHeight": "31.36px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 25,
+          "weight": "800",
+          "lineHeight": "27px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 42,
+          "weight": "800",
+          "lineHeight": "44.1px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Trở lạilịch tập của bạn.",
+          "size": 38,
+          "weight": "800",
+          "lineHeight": "42.56px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đăng nhập",
+          "size": 29.6,
+          "weight": "600",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/register",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Bắt đầucùng SÖL.",
+          "size": 38,
+          "weight": "800",
+          "lineHeight": "42.56px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Đăng ký hội viên",
+          "size": 26,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/swimming",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa.Bơi lội · Sức bền · Thả lỏng",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Làm Quen & Nhịp Thở",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bơi Sải & Sức Bền",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thả Lỏng Dưới Nước",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/tennis",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ.Kỹ thuật · Bộ chân · Đánh đôi",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nhập Môn & Cầm Vợt",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Giao Bóng & Lên Lưới",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bộ Chân & Đánh Đôi",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/trainers/1",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "HLV kiểm chứng 1.Strength & Barbell",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-catalog-heading",
+          "text": "Lịch lớp của HLV kiểm chứng 1",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/dashboard",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Xin chào, Nguyễn An",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Gói tập của tôi",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "19.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Lịch tập của tôi",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "19.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Lớp đã đăng ký",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Lịch lớp học",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "19.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thẻ & thanh toán",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "19.5px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Mã QR check-in",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Sức khỏe & cân bằng",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "19.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ sơ sức khỏe",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/packages",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Gói tập & Đặc quyền",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/classes",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Lịch học & đặt chỗ",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "22.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/card",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Thẻ thành viên & Mã QR",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 21,
+          "weight": "700",
+          "lineHeight": "33.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/profile",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Hồ sơ & Chỉ số sức khỏe",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin cá nhân",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Chỉ số sức khỏe",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/attendance",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Điểm danh buổi học",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Reformer Core • 17:30 - 18:30",
+          "size": 24,
+          "weight": "650",
+          "lineHeight": "36px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Danh sách học viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Hướng dẫn điểm danh",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/classes",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quản lý lớp học & xếp lịch",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/reception",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quầy lễ tân",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập chờ thanh toán (1)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Yêu cầu bảo lưu (0)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Xác nhận thanh toán",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/check-in",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Check-in & checkout",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Quét mã hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Theo dõi ra vào hôm nay",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 390,
+      "state": "create-dialog",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thêm tài khoản",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/catalogs",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Danh mục vận hành",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/cancellations",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Yêu cầu hủy gói tập",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Nguyễn An — Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/reports",
+      "width": 390,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Báo cáo doanh thu",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "31.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo ngày",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo gói tập",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Giao dịch gần đây",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 24.192,
+          "weight": "800",
+          "lineHeight": "26.6112px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 36,
+          "weight": "700",
+          "lineHeight": "42.48px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 15,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 15,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 22,
+          "weight": "750",
+          "lineHeight": "26.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 33.792,
+          "weight": "900",
+          "lineHeight": "33.1162px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 25,
+          "weight": "800",
+          "lineHeight": "27px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 49.92,
+          "weight": "800",
+          "lineHeight": "52.416px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 768,
+      "state": "muscle-callout",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 24.192,
+          "weight": "800",
+          "lineHeight": "26.6112px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cơ Ngực (Pectorals)",
+          "size": 13,
+          "weight": "750",
+          "lineHeight": "16.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 36,
+          "weight": "700",
+          "lineHeight": "42.48px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 20,
+          "weight": "750",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 15,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 15,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 22,
+          "weight": "750",
+          "lineHeight": "26.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "32.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 33.792,
+          "weight": "900",
+          "lineHeight": "33.1162px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 22,
+          "weight": "800",
+          "lineHeight": "23.76px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 25,
+          "weight": "800",
+          "lineHeight": "27px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 49.92,
+          "weight": "800",
+          "lineHeight": "52.416px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Trở lạilịch tập của bạn.",
+          "size": 36,
+          "weight": "800",
+          "lineHeight": "40.32px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đăng nhập",
+          "size": 29.6,
+          "weight": "600",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/register",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Bắt đầucùng SÖL.",
+          "size": 36,
+          "weight": "800",
+          "lineHeight": "40.32px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Đăng ký hội viên",
+          "size": 26,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/swimming",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa.Bơi lội · Sức bền · Thả lỏng",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Làm Quen & Nhịp Thở",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bơi Sải & Sức Bền",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thả Lỏng Dưới Nước",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/tennis",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ.Kỹ thuật · Bộ chân · Đánh đôi",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nhập Môn & Cầm Vợt",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Giao Bóng & Lên Lưới",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bộ Chân & Đánh Đôi",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/trainers/1",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "HLV kiểm chứng 1.Strength & Barbell",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-catalog-heading",
+          "text": "Lịch lớp của HLV kiểm chứng 1",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/dashboard",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Xin chào, Nguyễn An",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Gói tập của tôi",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Lịch tập của tôi",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Lớp đã đăng ký",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Lịch lớp học",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "19.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thẻ & thanh toán",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Mã QR check-in",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Sức khỏe & cân bằng",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ sơ sức khỏe",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/packages",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Gói tập & Đặc quyền",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/classes",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Lịch học & đặt chỗ",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "22.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/card",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Thẻ thành viên & Mã QR",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 21,
+          "weight": "700",
+          "lineHeight": "33.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/profile",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Hồ sơ & Chỉ số sức khỏe",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin cá nhân",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Chỉ số sức khỏe",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/attendance",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Điểm danh buổi học",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Reformer Core • 17:30 - 18:30",
+          "size": 24,
+          "weight": "650",
+          "lineHeight": "36px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Danh sách học viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Hướng dẫn điểm danh",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/classes",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quản lý lớp học & xếp lịch",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/reception",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quầy lễ tân",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập chờ thanh toán (1)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Yêu cầu bảo lưu (0)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Xác nhận thanh toán",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/check-in",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Check-in & checkout",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Quét mã hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Theo dõi ra vào hôm nay",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 768,
+      "state": "create-dialog",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thêm tài khoản",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/catalogs",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Danh mục vận hành",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/cancellations",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Yêu cầu hủy gói tập",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Nguyễn An — Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/reports",
+      "width": 768,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Báo cáo doanh thu",
+          "size": 23,
+          "weight": "700",
+          "lineHeight": "29.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo ngày",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo gói tập",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Giao dịch gần đây",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 46.08,
+          "weight": "800",
+          "lineHeight": "50.688px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 36,
+          "weight": "700",
+          "lineHeight": "42.48px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 60,
+          "weight": "900",
+          "lineHeight": "58.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 34,
+          "weight": "800",
+          "lineHeight": "36.72px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 88,
+          "weight": "800",
+          "lineHeight": "92.4px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "state": "muscle-callout",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 46.08,
+          "weight": "800",
+          "lineHeight": "50.688px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cơ Ngực (Pectorals)",
+          "size": 13,
+          "weight": "750",
+          "lineHeight": "16.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 36,
+          "weight": "700",
+          "lineHeight": "42.48px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 60,
+          "weight": "900",
+          "lineHeight": "58.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 34,
+          "weight": "800",
+          "lineHeight": "36.72px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 88,
+          "weight": "800",
+          "lineHeight": "92.4px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Trở lạilịch tập của bạn.",
+          "size": 58,
+          "weight": "800",
+          "lineHeight": "64.96px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đăng nhập",
+          "size": 29.6,
+          "weight": "600",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/register",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Bắt đầucùng SÖL.",
+          "size": 58,
+          "weight": "800",
+          "lineHeight": "64.96px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Đăng ký hội viên",
+          "size": 26,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/swimming",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa.Bơi lội · Sức bền · Thả lỏng",
+          "size": 46,
+          "weight": "800",
+          "lineHeight": "51.52px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Làm Quen & Nhịp Thở",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bơi Sải & Sức Bền",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thả Lỏng Dưới Nước",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/tennis",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ.Kỹ thuật · Bộ chân · Đánh đôi",
+          "size": 46,
+          "weight": "800",
+          "lineHeight": "51.52px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nhập Môn & Cầm Vợt",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Giao Bóng & Lên Lưới",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bộ Chân & Đánh Đôi",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/trainers/1",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "HLV kiểm chứng 1.Strength & Barbell",
+          "size": 46,
+          "weight": "800",
+          "lineHeight": "51.52px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-catalog-heading",
+          "text": "Lịch lớp của HLV kiểm chứng 1",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/dashboard",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Xin chào, Nguyễn An",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Gói tập của tôi",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Lịch tập của tôi",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Lớp đã đăng ký",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Lịch lớp học",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "19.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thẻ & thanh toán",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Mã QR check-in",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Sức khỏe & cân bằng",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ sơ sức khỏe",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/packages",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Gói tập & Đặc quyền",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/classes",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Lịch học & đặt chỗ",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "22.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/card",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Thẻ thành viên & Mã QR",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 21,
+          "weight": "700",
+          "lineHeight": "33.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/profile",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Hồ sơ & Chỉ số sức khỏe",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin cá nhân",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Chỉ số sức khỏe",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/attendance",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Điểm danh buổi học",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Reformer Core • 17:30 - 18:30",
+          "size": 24,
+          "weight": "650",
+          "lineHeight": "36px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Danh sách học viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Hướng dẫn điểm danh",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/classes",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quản lý lớp học & xếp lịch",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/reception",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quầy lễ tân",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập chờ thanh toán (1)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Yêu cầu bảo lưu (0)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Xác nhận thanh toán",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/check-in",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Check-in & checkout",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Quét mã hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Theo dõi ra vào hôm nay",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 1440,
+      "state": "create-dialog",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thêm tài khoản",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/catalogs",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Danh mục vận hành",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/cancellations",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Yêu cầu hủy gói tập",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Nguyễn An — Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/reports",
+      "width": 1440,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Báo cáo doanh thu",
+          "size": 31.68,
+          "weight": "700",
+          "lineHeight": "41.184px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo ngày",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo gói tập",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Giao dịch gần đây",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 48,
+          "weight": "800",
+          "lineHeight": "52.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 36,
+          "weight": "700",
+          "lineHeight": "42.48px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 60,
+          "weight": "900",
+          "lineHeight": "58.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 34,
+          "weight": "800",
+          "lineHeight": "36.72px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 88,
+          "weight": "800",
+          "lineHeight": "92.4px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/",
+      "width": 2560,
+      "state": "muscle-callout",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "fit-hero-title",
+          "text": "BUILD YOURBODY SHAPES.",
+          "size": 48,
+          "weight": "800",
+          "lineHeight": "52.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cơ Ngực (Pectorals)",
+          "size": 13,
+          "weight": "750",
+          "lineHeight": "16.9px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "WeightLifting",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Private Training",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Build Muscle",
+          "size": 19,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Không gian cho những mục tiêu lớn.",
+          "size": 36,
+          "weight": "700",
+          "lineHeight": "42.48px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Khung giờ hoạt động thực tế",
+          "size": 19,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H4",
+          "className": "",
+          "text": "Khởi động thể lực sáng sớm",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Hồ Bơi Bốn Mùa &Sân Tennis Tiêu Chuẩn.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ",
+          "size": 25,
+          "weight": "750",
+          "lineHeight": "30px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Our Trainers.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 1",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV kiểm chứng 2",
+          "size": 18,
+          "weight": "750",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Weekly ClassSchedule.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 3",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 4",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Your First WeekAt SÖL.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tạo tài khoản & chọn gói tập",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Cập nhật chỉ số & mục tiêu",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt lịch & quét QR check-in",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tính Nhanh BMI & Lộ Trình.",
+          "size": 28,
+          "weight": "750",
+          "lineHeight": "33.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Membership Pricing.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 30 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 90 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói kiểm chứng 365 ngày",
+          "size": 17,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Mỗi người,một nhịp tập.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Derek",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Anthony",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Jhon",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Ezekiel",
+          "size": 15,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-split-heading",
+          "text": "Frequently AskedQuestions.",
+          "size": 45,
+          "weight": "750",
+          "lineHeight": "52.65px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Người mới bắt đầu có theo kịp không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Gói hội viên đã bao gồm Hồ bơi và Sân Tennis chưa?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fit-faq-trigger",
+          "text": "Làm sao để đặt lớp học hoặc đặt sân?",
+          "size": 18.72,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-benefits-title",
+          "text": "Bạn nhận đượcgì khi có gói.",
+          "size": 60,
+          "weight": "900",
+          "lineHeight": "58.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đặt sân & lịch bơi online",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp nhóm theo gói tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "HLV theo dõi từng buổi tập",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Kế hoạch tuần cho riêng bạn",
+          "size": 30,
+          "weight": "800",
+          "lineHeight": "32.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Chưa có gói vẫn trải nghiệm được",
+          "size": 34,
+          "weight": "800",
+          "lineHeight": "36.72px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "READY WHENYOU ARE.",
+          "size": 88,
+          "weight": "800",
+          "lineHeight": "92.4px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Trở lạilịch tập của bạn.",
+          "size": 58,
+          "weight": "800",
+          "lineHeight": "64.96px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Đăng nhập",
+          "size": 29.6,
+          "weight": "600",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/register",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Bắt đầucùng SÖL.",
+          "size": 58,
+          "weight": "800",
+          "lineHeight": "64.96px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Đăng ký hội viên",
+          "size": 26,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/swimming",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Hồ Bơi Bốn Mùa.Bơi lội · Sức bền · Thả lỏng",
+          "size": 46,
+          "weight": "800",
+          "lineHeight": "51.52px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Làm Quen & Nhịp Thở",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bơi Sải & Sức Bền",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thả Lỏng Dưới Nước",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/tennis",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "Sân Tennis Câu Lạc Bộ.Kỹ thuật · Bộ chân · Đánh đôi",
+          "size": 46,
+          "weight": "800",
+          "lineHeight": "51.52px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nhập Môn & Cầm Vợt",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Giao Bóng & Lên Lưới",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Bộ Chân & Đánh Đôi",
+          "size": 14,
+          "weight": "750",
+          "lineHeight": "18.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 5",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 6",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/trainers/1",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "",
+          "text": "HLV kiểm chứng 1.Strength & Barbell",
+          "size": 46,
+          "weight": "800",
+          "lineHeight": "51.52px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "fit-catalog-heading",
+          "text": "Lịch lớp của HLV kiểm chứng 1",
+          "size": 24,
+          "weight": "700",
+          "lineHeight": "normal",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 1",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Lớp kiểm chứng 2",
+          "size": 16,
+          "weight": "700",
+          "lineHeight": "21.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/dashboard",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Xin chào, Nguyễn An",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Gói tập của tôi",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Lịch tập của tôi",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Lớp đã đăng ký",
+          "size": 14,
+          "weight": "650",
+          "lineHeight": "22.4px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Lịch lớp học",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "19.2px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Thẻ & thanh toán",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "STRONG",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "24px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Mã QR check-in",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Sức khỏe & cân bằng",
+          "size": 12,
+          "weight": "650",
+          "lineHeight": "18px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "",
+          "text": "Hồ sơ sức khỏe",
+          "size": 13,
+          "weight": "650",
+          "lineHeight": "20.8px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/packages",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Gói tập & Đặc quyền",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/classes",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Lịch học & đặt chỗ",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Yoga cơ bản",
+          "size": 15,
+          "weight": "650",
+          "lineHeight": "22.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/card",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Thẻ thành viên & Mã QR",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "",
+          "text": "Nguyễn An",
+          "size": 21,
+          "weight": "700",
+          "lineHeight": "33.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/member/profile",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Hồ sơ & Chỉ số sức khỏe",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin cá nhân",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Chỉ số sức khỏe",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/attendance",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Điểm danh buổi học",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H3",
+          "className": "row-card__title",
+          "text": "Reformer Core • 17:30 - 18:30",
+          "size": 24,
+          "weight": "650",
+          "lineHeight": "36px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Danh sách học viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Hướng dẫn điểm danh",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/classes",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quản lý lớp học & xếp lịch",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/reception",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Quầy lễ tân",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Gói tập chờ thanh toán (1)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Yêu cầu bảo lưu (0)",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thông tin hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Xác nhận thanh toán",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/staff/check-in",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Check-in & checkout",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Quét mã hội viên",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Theo dõi ra vào hôm nay",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/users",
+      "width": 2560,
+      "state": "create-dialog",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Tài khoản & phân quyền",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Thêm tài khoản",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/catalogs",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Danh mục vận hành",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/cancellations",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Yêu cầu hủy gói tập",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Nguyễn An — Gói tập tháng",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "path": "/manager/reports",
+      "width": 2560,
+      "state": "page",
+      "headings": [
+        {
+          "tag": "H1",
+          "className": "portal-title",
+          "text": "Báo cáo doanh thu",
+          "size": 32,
+          "weight": "700",
+          "lineHeight": "41.6px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo ngày",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Doanh thu theo gói tập",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        },
+        {
+          "tag": "H2",
+          "className": "portal-card-title",
+          "text": "Giao dịch gần đây",
+          "size": 17,
+          "weight": "650",
+          "lineHeight": "25.5px",
+          "clipped": false
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

@@ -17,6 +17,10 @@ Nội dung portal được rút gọn theo tác vụ; không dùng khẩu hiệu
 
 ## Nhận diện và màu
 
+### Chế độ sáng tùy chọn — 23/10/2026
+
+Trang công khai, auth và portal có nút chuyển sáng/tối trên header, dùng chung lựa chọn lưu tại `localStorage.scms_theme` và `html[data-theme]`. Mặc định là sáng (cập nhật 23/10/2026); chỉ dùng tối khi người dùng đã lưu lựa chọn `dark`. Khi không đọc được localStorage, vẫn dùng sáng. Tải lại hoặc chuyển trang giữ lựa chọn. Chế độ sáng dùng nền `#F5F5F3`, card trắng `#FFFFFF`, bề mặt phụ `#EEEFEC`, chữ `#202020`, chữ phụ `#68645F`, viền `#E4E2DE`. Nút chính vẫn salmon `#CE9180` với chữ charcoal; điểm nhấn dạng chữ dùng salmon đậm `#A35B49` để đọc rõ trên nền sáng. Ảnh có overlay tối giữ caption sáng. Không đổi font, bố cục, animation hoặc biến theme sáng thành phong cách serif/Quiet Luxury. CSS bổ sung nằm tại `shared/ui/theme.css`.
+
 Giữ thương hiệu **SÖL**; wordmark công khai là **SÖL Fitness**. Ảnh tham chiếu ban đầu dùng nhãn khác, nhưng không đổi tên sản phẩm để khớp ảnh.
 
 | Token / vai trò | Giá trị | Cách dùng |
@@ -42,6 +46,17 @@ Dùng cùng bảng màu trong `fitness-public.css` và token `--portal-*` của 
 
 ## Chữ và component
 
+Typography landing (23/10/2026, thử theo ảnh “Bạn nhận được gì khi có gói”): dùng cùng họ **Plus Jakarta Sans** cho toàn bộ landing. Tiêu đề H1/H2 đồng bộ kiểu mục Quyền lợi thành viên: đậm `900`, in hoa, tracking `-.035em`; H3–H6 đậm `800`, tracking `-.025em`, giữ cách viết thường/hoa của nội dung. Menu và CTA đậm `700`, tracking nhẹ `-.015em`; kicker in hoa, đậm `700`, tracking `.14em`. Nội dung mô tả dùng độ đậm đọc được, không áp dụng kiểu chữ display đậm/in hoa cho cả đoạn văn. Chỉ áp dụng qua `.fit-site--landing` tại `/`; auth, trang bộ môn/HLV và portal giữ typography hiện hành. Bảng màu, bố cục và animation giữ nguyên; kiểm tra lại xuống dòng tiếng Việt và stack sau thay đổi chữ.
+
+Responsive stack (23/10/2026, quyết định mới nhất): tiêu đề “Bốn bộ môn. Một nhịp sống năng động.”, hướng dẫn cuộn và chồng thẻ được ghim trong **cùng một cụm**, nằm trọn trong một viewport dưới header. **Không có scrollbar hoặc vùng cuộn bên trong bất kỳ thẻ nào.** Deck dùng cùng kích thước thiết kế cho bốn thẻ (desktop rộng 1240px, mobile rộng 380px), lấy đủ chiều cao nội dung rồi co đồng đều theo cùng một tỷ lệ để vừa cả chiều rộng và chiều cao còn lại. Mọi nội dung, phần đối tượng và CTA phải hiện cùng lúc, không cắt hoặc ẩn nội dung để vừa khung. Cỡ tiêu đề và khoảng cách co theo chiều cao viewport; màn hình cao tối đa 700px ẩn dòng hướng dẫn phụ. Laptop giữ ảnh bên trái/nội dung bên phải; điện thoại xếp ảnh trên, nội dung dưới. Giữ nhịp cuộn vừa phải, hiệu ứng đưa thẻ ra sau, thoát cuối 48px và fallback reduced motion dạng danh sách tĩnh.
+
+Độ nhạy stack (23/10/2026, điều chỉnh mới nhất): chuyển động bắt đầu ngay từ những pixel cuộn đầu tiên ở mỗi thẻ, không khôi phục khoảng chờ 35% trước chuyển động. Để nhịp chuyển vừa phải hơn, mỗi lần chuyển dùng **65% chiều cao viewport**, giới hạn **420–680px**, thay cho mức 45%/280–480px quá nhanh; giữ ghim deck, hiệu ứng đưa ra sau và cuộn ngược. Sau khi hiện thẻ cuối chỉ giữ thêm **48px** cuộn rồi nhả ghim xuống section kế tiếp, không tăng khoảng chờ cuối theo quãng chuyển thẻ. Không bắt wheel để tăng delta hoặc làm mất khả năng đọc nội dung dài trong card.
+
+**Ghim stack (23/10/2026):** giữ cụm tiêu đề và deck dưới header trong suốt ba lần chuyển thẻ, chỉ giữ thêm 48px sau thẻ cuối rồi nhả ghim sang section kế tiếp. Không đặt điểm ghim âm làm khuất phần đầu thẻ. Co đồng đều toàn bộ deck để mọi nội dung và CTA hiện đầy đủ; không tạo vùng cuộn bên trong card. Hiệu ứng nhấc/nghiêng/đưa ra sau vẫn bám theo cuộn; reduced motion dùng danh sách tĩnh.
+
+- Giới thiệu bộ môn ở landing (23/10/2026, quyết định mới nhất): section `#multisport` giữ chồng bốn card lớn (bơi, tennis, cầu lông, bóng rổ) và hiệu ứng thẻ trước nhấc lên, nghiêng sang bên rồi thu về phía sau chồng. Tiến độ hiệu ứng bám theo vị trí cuộn dọc native, cuộn ngược chạy ngược cùng chuyển động; không thay bằng danh sách thẻ trượt đè lên nhau. Bỏ nút “Bộ môn tiếp theo”. Dùng deck sticky cục bộ với khoảng cuộn riêng; không bắt wheel/touch/keyboard hoặc khóa cuộn. Đo chiều cao deck để card cao hơn viewport vẫn đọc hết nội dung và CTA trước khi chuyển. Chỉ thẻ đang ở phía trước nhận focus, thẻ sau có `inert`/`aria-hidden`. Reduced motion hiển thị cả bốn card thành danh sách tĩnh, cập nhật ngay khi đổi tùy chọn. Mỗi card giữ ảnh minh họa, giới thiệu, trọng tâm, ba nội dung luyện tập, đối tượng và link lịch học. Header/footer và các route bộ môn cũ giữ nguyên. Không tự suy đoán lịch, giá, số sân hoặc quyền lợi. Đây là ngoại lệ sticky cục bộ cho stack bộ môn; các section khác tiếp tục reveal component như hiện hành.
+- Thẻ “Kỳ đã thanh toán tiếp theo” trong portal (23/10/2026): hiển thị danh sách hàng phẳng, ngăn cách bằng đường kẻ mảnh; tên gói đi cùng icon lịch salmon, ngày bắt đầu/kết thúc có nhãn riêng và chữ sáng trên nền than. Header có số kỳ; mobile đưa hai mốc ngày xuống dưới tên gói. Dùng `.membership-periods`, không xếp các kỳ thành đoạn `.row-card__meta` rời rạc hoặc thêm thẻ lồng nhau.
+- Card portal (23/10/2026): giữ bề mặt charcoal, bo góc và cỡ chữ hiện hành. Card trong `.stack` dùng `gap` của danh sách, không cộng thêm margin dưới mỗi card. Meta có nhiều trường dùng `.row-card__meta--inline`, từng trường trong `span` riêng để wrap theo cụm; ngày/phòng/HLV có thể dùng `PortalIcon` salmon, giờ học nhấn bằng `strong`. Giữ meta mô tả dài ở dạng văn bản thường; không áp dụng flex cho mọi `.row-card__meta`.
 - Topbar công khai (23/10/2026): menu `15px`, đậm `600`; CTA `14px`; wordmark header `26px` (mobile `24px`). Dùng menu thu gọn từ `1100px` trở xuống để chữ lớn không chen chúc; giữ font Plus Jakarta Sans và màu charcoal–salmon.
 - Font công khai: **Plus Jakarta Sans**, sans-serif. Tiêu đề đậm, hình học; hero dùng chữ in hoa tách hai vế trên desktop, xuống dòng trên mobile.
 - Không phục hồi Cormorant/Playfair, chữ serif nghiêng hoặc nền kem như phong cách chính của phần công khai. Các font và token cũ có thể còn tồn tại để phục vụ mã lịch sử hoặc phạm vi khác.
@@ -57,6 +72,8 @@ Dùng cùng bảng màu trong `fitness-public.css` và token `--portal-*` của 
 - Dùng lại `PublicLayout`, `AuthLayout`, `RoundArrow` và các class `.fit-*`. Giữ page ở vai trò compose feature. Không thay stack hoặc thêm thư viện animation/UI chỉ để thực hiện các hiệu ứng đã có bằng CSS.
 
 ## Chuyển động đã chốt
+
+Hiệu năng stack bộ môn (23/10/2026): cập nhật trực tiếp `transform` theo cuộn, gom mỗi nhịp bằng `requestAnimationFrame`; không tua CSS animation qua `animation-delay` hoặc ghi biến CSS kế thừa ở mỗi frame. Chỉ đổi depth/accessibility khi chuyển trạng thái, cache geometry và đo lại khi resize/layout đổi. Thanh tiến độ landing cập nhật trực tiếp trên chính thanh; hook cuộn đọc geometry trước rồi mới ghi style, bỏ qua giá trị không đổi. Giữ hiệu ứng đưa thẻ ra sau, ghim deck, cuộn ngược và reduced motion. Dùng `scripts/benchmark-sport-stack.cjs` để đo ngân sách khung hình 16,7 ms; kết quả headless không bảo đảm FPS trên mọi thiết bị.
 
 **Quyết định mới nhất: tập trung vào animation xuất hiện của component, lặp lại khi cuộn xuống và cuộn ngược lên; không làm slide trang ngang–dọc.**
 

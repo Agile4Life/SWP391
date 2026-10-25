@@ -16,66 +16,65 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     let previousScrollY = window.scrollY;
     let direction: 'up' | 'down' = 'down';
 
+    const header = root.querySelector<HTMLElement>('.fit-header');
+    const progressBar = root.querySelector<HTMLElement>('.fit-scroll-progress');
+    const benefits = root.querySelector<HTMLElement>('.fit-benefits');
+    const benefitsTrack = benefits?.querySelector<HTMLElement>('.fit-benefits-track');
+    const hero = root.querySelector<HTMLElement>('.fit-hero');
+    const finalCta = root.querySelector<HTMLElement>('.fit-final-cta');
+    const manifestos = [...root.querySelectorAll<HTMLElement>('[data-scroll-scrub="manifesto"]')]
+      .map(element => ({ element, words: [...element.querySelectorAll<HTMLElement>('.fit-manifesto-word > span')] }));
+    let scrollFrame = 0;
+    const setProperty = (element: HTMLElement | null | undefined, name: string, value: string) => {
+      if (element && element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
+    };
     const syncScrollEffects = () => {
+      // Read geometry first. Writing inherited styles between reads forces repeated layouts.
       const currentScrollY = window.scrollY;
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      const progress = clamp(currentScrollY / maxScroll, 0, 1);
-      root.style.setProperty('--fit-scroll-progress', preference.matches ? '0' : progress.toFixed(4));
+      const viewportHeight = window.innerHeight;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - viewportHeight);
+      const progress = preference.matches ? 0 : clamp(currentScrollY / maxScroll, 0, 1);
+      const benefitRect = benefits?.getBoundingClientRect();
+      const benefitHeight = benefits?.offsetHeight ?? 0;
+      const maxShift = benefits && benefitsTrack && window.innerWidth > 1100
+        ? Math.max(0, benefitsTrack.scrollWidth - benefits.clientWidth) : 0;
+      const heroHeight = hero?.offsetHeight ?? 1;
+      const manifestoRects = preference.matches ? [] : manifestos.map(({ element }) => element.getBoundingClientRect());
+      const ctaRect = !preference.matches ? finalCta?.getBoundingClientRect() : undefined;
 
-      const header = root.querySelector<HTMLElement>('.fit-header');
-      if (header) {
-        header.classList.toggle('is-scrolled', currentScrollY > 36);
+      // The progress bar consumes this value directly; changing a variable on root invalidates the whole page.
+      setProperty(progressBar, 'transform', `scaleX(${progress.toFixed(4)})`);
+      header?.classList.toggle('is-scrolled', currentScrollY > 36);
+      if (benefits && benefitRect) {
+        const benefitProgress = benefitHeight > viewportHeight * 1.15
+          ? clamp(-benefitRect.top / Math.max(1, benefitHeight - viewportHeight), 0, 1)
+          : clamp((viewportHeight * .72 - benefitRect.top) / Math.max(1, viewportHeight * .8), 0, 1);
+        setProperty(benefits, '--fit-benefits-progress', benefitProgress.toFixed(4));
+        setProperty(benefits, '--fit-benefits-shift', `${(-benefitProgress * maxShift).toFixed(1)}px`);
       }
-
-      const benefits = root.querySelector<HTMLElement>('.fit-benefits');
-      if (benefits) {
-        const rect = benefits.getBoundingClientRect();
-        const scrollable = Math.max(1, benefits.offsetHeight - window.innerHeight);
-        const benefitProgress = benefits.offsetHeight > window.innerHeight * 1.15
-          ? clamp(-rect.top / scrollable, 0, 1)
-          : clamp((window.innerHeight * 0.72 - rect.top) / Math.max(1, window.innerHeight * 0.8), 0, 1);
-        const track = benefits.querySelector<HTMLElement>('.fit-benefits-track');
-        const maxShift = track && window.innerWidth > 1100
-          ? Math.max(0, track.scrollWidth - benefits.clientWidth)
-          : 0;
-        benefits.style.setProperty('--fit-benefits-progress', benefitProgress.toFixed(4));
-        benefits.style.setProperty('--fit-benefits-shift', `${(-benefitProgress * maxShift).toFixed(1)}px`);
-      }
-
       if (preference.matches) return;
-
-      const hero = root.querySelector<HTMLElement>('.fit-hero');
-      if (hero) {
-        const heroHeight = Math.max(1, hero.offsetHeight);
-        const heroProgress = clamp(currentScrollY / heroHeight, 0, 1);
-        hero.style.setProperty('--fit-hero-scroll', heroProgress.toFixed(3));
-      }
-
-      root.querySelectorAll<HTMLElement>('[data-scroll-scrub="manifesto"]').forEach((manifesto) => {
-        const rect = manifesto.getBoundingClientRect();
-        const start = window.innerHeight * 0.88;
-        const end = window.innerHeight * 0.28;
-        const scrub = clamp((start - rect.top) / Math.max(1, start - end), 0, 1);
-        const words = manifesto.querySelectorAll<HTMLElement>('.fit-manifesto-word > span');
-        const total = Math.max(1, words.length);
+      setProperty(hero, '--fit-hero-scroll', clamp(currentScrollY / Math.max(1, heroHeight), 0, 1).toFixed(3));
+      manifestos.forEach(({ words }, i) => {
+        const scrub = clamp((viewportHeight * .88 - manifestoRects[i].top) / Math.max(1, viewportHeight * .6), 0, 1);
         words.forEach((word, index) => {
-          const wordStart = (index / total) * 0.76;
-          const wordProgress = clamp((scrub - wordStart) / 0.24, 0, 1);
-          word.style.opacity = (0.18 + wordProgress * 0.82).toFixed(3);
+          const wordStart = (index / Math.max(1, words.length)) * .76;
+          const wordProgress = clamp((scrub - wordStart) / .24, 0, 1);
+          setProperty(word, 'opacity', String(Number((.18 + wordProgress * .82).toFixed(3))));
         });
       });
-
-      const finalCta = root.querySelector<HTMLElement>('.fit-final-cta');
-      if (finalCta) {
-        const rect = finalCta.getBoundingClientRect();
-        const ctaProgress = clamp((window.innerHeight - rect.top) / Math.max(1, window.innerHeight * 0.72), 0, 1);
-        finalCta.style.setProperty('--fit-cta-progress', ctaProgress.toFixed(3));
+      if (ctaRect) {
+        const ctaProgress = clamp((viewportHeight - ctaRect.top) / Math.max(1, viewportHeight * .72), 0, 1);
+        setProperty(finalCta, '--fit-cta-progress', ctaProgress.toFixed(3));
       }
+    };
+    const scheduleScrollEffects = () => {
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; syncScrollEffects(); });
     };
 
     const onScroll = () => {
       const currentScrollY = window.scrollY;
-      syncScrollEffects();
+      scheduleScrollEffects();
       if (currentScrollY === previousScrollY) return;
       const nextDirection = currentScrollY < previousScrollY ? 'up' : 'down';
       previousScrollY = currentScrollY;
@@ -113,7 +112,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       sectionObserver?.disconnect();
       [...targets].forEach(unregister);
       if (preference.matches) {
-        root.style.setProperty('--fit-scroll-progress', '0');
+        setProperty(progressBar, 'transform', 'scaleX(0)');
         root.querySelector<HTMLElement>('.fit-hero')?.style.removeProperty('--fit-hero-scroll');
         root.querySelectorAll<HTMLElement>('.fit-manifesto-word > span').forEach((word) => {
           word.style.opacity = '1';
@@ -178,7 +177,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     mutations.observe(root, { childList: true, subtree: true });
     preference.addEventListener('change', configure);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', syncScrollEffects, { passive: true });
+    window.addEventListener('resize', scheduleScrollEffects, { passive: true });
     root.addEventListener('focusin', onFocus);
     return () => {
       observer?.disconnect();
@@ -186,7 +185,8 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       mutations.disconnect();
       preference.removeEventListener('change', configure);
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', syncScrollEffects);
+      window.removeEventListener('resize', scheduleScrollEffects);
+      cancelAnimationFrame(scrollFrame);
       root.removeEventListener('focusin', onFocus);
       [...targets].forEach(unregister);
     };

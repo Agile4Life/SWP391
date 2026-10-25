@@ -2,7 +2,7 @@
 /* Palette adapters only: keep component sizes, placement and behavior. */
 html:has(.portal-backdrop), body:has(.portal-backdrop) { background: #202020; color-scheme: dark; scrollbar-color: #ce9180 #202020; }
 body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
-.portal-v2 .ui-select.is-open .ui-select__trigger, .portal-v2 .ui-select__trigger:focus-visible { box-shadow: 0 0 0 3px #ce91802e; }
+.portal-v2 :is(.ui-select.is-open .ui-select__trigger, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) { outline: none; outline-offset: 0; border-color: var(--portal-salmon); box-shadow: 0 0 0 3px #ce91802e; }
 .portal-backdrop, .portal-backdrop * { scrollbar-color: #ce9180 #202020; }
 .portal-v2 :is(.portal-state__title, .portal-card-title) { color: var(--portal-paper); }
 .portal-v2 :is(.portal-state, .metric-trend) { color: var(--portal-muted); }
@@ -17,21 +17,32 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-v2 .btn-danger { color: #fca5a5; background: #fca5a515; border-color: #fca5a550; }
 .portal-v2 .btn-danger:hover:not(:disabled) { color: #fca5a5; background: #fca5a530; }
 .portal-v2 .portal-field-error { color: #fca5a5; }
-.portal-v2 :is(.portal-input, .portal-select, .portal-textarea):disabled { background: var(--portal-ink); color: var(--portal-muted); }
-.portal-v2 :is(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover) { background: var(--portal-surface); color: var(--portal-paper); border-color: var(--portal-border-strong); }
-.portal-v2 :is(.luxury-datepicker-trigger, .luxury-timepicker-trigger, .ldp-nav-btn, .ltp-item-btn) { background: var(--portal-raised); color: var(--portal-paper); border-color: var(--portal-border-strong); }
-.portal-v2 :is(.luxury-datepicker-trigger, .luxury-timepicker-trigger):hover:not(:disabled) { background: var(--portal-raised); border-color: var(--portal-salmon); }
+.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .luxury-datepicker-trigger, .luxury-timepicker-trigger):disabled { background: var(--portal-ink); color: var(--portal-muted); border-color: var(--portal-border); }
+.portal-v2 :is(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover) { background: var(--portal-surface); color: var(--portal-paper); border: 1px solid var(--portal-border-strong); border-radius: 12px; box-shadow: 0 18px 42px -12px #00000080; scrollbar-color: var(--portal-salmon) transparent; }
+.portal-v2 .ui-select__option { border-radius: 8px; font-size: 13px; color: var(--portal-paper); }
+.portal-v2 :is(.luxury-datepicker-trigger, .luxury-timepicker-trigger) { min-height: 44px; border-radius: 10px; border: 1px solid var(--portal-border-strong); background: var(--portal-raised); color: var(--portal-paper); font-size: 13px; transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+.portal-v2 .ldp-nav-btn { background: var(--portal-raised); color: var(--portal-paper); border-color: var(--portal-border-strong); }
+.portal-v2 .ldp-nav-btn:hover:not(:disabled) { background: var(--portal-tint); border-color: var(--portal-salmon); color: var(--portal-salmon); }
+.portal-v2 .ltp-item-btn { background: transparent; color: var(--portal-paper); }
+.portal-v2 .ltp-item-btn:hover:not(.is-active) { background: var(--portal-tint); color: var(--portal-salmon); }
+.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)):hover:not(:disabled) { background: var(--portal-raised); border-color: var(--portal-salmon); }
 .portal-v2 :is(.ldp-header, .ltp-header, .ldp-footer, .ltp-footer, .package-benefit-list, .ltp-col-scroll) { border-color: var(--portal-border); }
-.portal-v2 .ltp-col-scroll { background: var(--portal-ink); }
+.portal-v2 .ltp-col-scroll { background: var(--portal-ink); scrollbar-color: var(--portal-salmon) transparent; }
 .portal-v2 :is(.ldp-title, .ltp-title, .ldp-day-cell, .package-benefit-item) { color: var(--portal-paper); }
+.portal-v2 .ldp-day-cell.is-other-month { color: var(--portal-muted); opacity: .45; }
 .portal-v2 :is(.luxury-datepicker-placeholder, .luxury-timepicker-placeholder, .ldp-weekday, .ltp-col-label) { color: var(--portal-muted); }
 .portal-v2 :is(.luxury-datepicker-icon, .luxury-timepicker-icon, .ldp-action-btn) { color: var(--portal-salmon); }
+.portal-v2 :is(.luxury-datepicker-trigger:hover .luxury-datepicker-icon, .luxury-timepicker-trigger:hover .luxury-timepicker-icon) { color: var(--portal-hover); }
+.portal-v2 .ldp-action-btn:hover { background: var(--portal-tint); color: var(--portal-salmon); }
+.portal-v2 .ldp-action-btn.btn-clear { color: #fca5a5; }
+.portal-v2 .ldp-action-btn.btn-clear:hover { background: #fca5a51f; color: #fca5a5; }
 .portal-v2 :is(.ui-select__option.is-active, .ui-select__option.is-selected) { background: var(--portal-tint); color: var(--portal-salmon); }
 .portal-v2 .ldp-day-cell:hover:not(.is-disabled):not(.is-selected) { background: var(--portal-tint); color: var(--portal-paper); }
-.portal-v2 .ldp-day-cell.is-selected { background: var(--portal-salmon); color: var(--portal-ink) !important; border-color: var(--portal-salmon); }
+.portal-v2 .ldp-day-cell.is-selected { background: var(--portal-salmon); color: var(--portal-ink) !important; border-color: var(--portal-salmon); box-shadow: none; }
 .portal-v2 .ldp-day-cell.is-today:not(.is-selected) { background: var(--portal-tint); color: var(--portal-salmon); border-color: var(--portal-salmon); }
 .portal-v2 .ldp-day-cell.is-disabled { color: var(--portal-muted); opacity: .4; }
-.portal-v2 :is(.ltp-item-btn.is-active, .ltp-done-btn) { background: var(--portal-salmon); color: var(--portal-ink); }
+.portal-v2 :is(.ltp-item-btn.is-active, .ltp-done-btn) { background: var(--portal-salmon); color: var(--portal-ink); box-shadow: none; }
+.portal-v2 .ltp-done-btn:hover { background: var(--portal-hover); color: var(--portal-ink); }
 .portal-v2 :is(.package-benefit-check, .ltp-preview-badge) { background: var(--portal-tint); color: var(--portal-salmon); }
 .portal-v2 :is(.portal-skeleton, .portal-skeleton-line, .member-skeleton) { background: linear-gradient(90deg, #303030 25%, #3b3b3b 50%, #303030 75%); background-size: 200% 100%; }
 .portal-v2 .checkin-page .portal-table .checkin-actions { background: var(--portal-surface); }
@@ -233,7 +244,8 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
   box-shadow: 0 6px 22px -16px #00000030;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
-.portal-v2 .portal-card { padding: 24px; margin-bottom: 20px; }
+.portal-v2 .portal-card { padding: 24px; margin-bottom: 20px; overflow-wrap: anywhere; }
+.portal-v2 .portal-card:has(.ui-select.is-open, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) { z-index: 40; }
 .portal-v2 .portal-card::before, .portal-v2 .metric-card::before, .portal-v2 .metric-card::after { display: none; }
 .portal-v2 .portal-card:hover, .portal-v2 .metric-card:hover { border-color: var(--portal-border-strong); box-shadow: 0 10px 24px -18px #00000030; transform: none; }
 .portal-v2 .portal-card-header { flex-wrap: wrap; gap: 12px; padding-bottom: 16px; margin-bottom: 18px; }
@@ -241,8 +253,34 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-v2 .portal-card-subtitle { font-size: 12px; }
 .portal-v2 .portal-card--feature { background: var(--portal-tint); border-color: var(--portal-border-strong); }
 .portal-v2 .portal-card--flush { padding: 0; }
-.portal-v2 .portal-card--list { flex-wrap: wrap; gap: 16px; }
+.portal-v2 .membership-periods { margin-bottom: 24px; padding: 16px 20px; }
+.portal-v2 .membership-periods .portal-card-header { margin-bottom: 0; }
+.membership-periods__toggle { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.membership-periods__heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.membership-periods__summary { display: block; margin-top: 2px; color: var(--portal-muted); font-size: 12px; font-weight: 400; }
+.membership-periods__meta { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.membership-periods__count { padding: 5px 10px; border-radius: 20px; background: var(--portal-tint); color: var(--portal-salmon); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.membership-periods__action { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--portal-border-strong); border-radius: 999px; background: var(--portal-raised); color: var(--portal-paper); font-size: 12px; font-weight: 600; white-space: nowrap; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease; }
+.membership-periods__toggle:hover .membership-periods__action { border-color: var(--portal-salmon); background: var(--portal-tint); color: var(--portal-salmon); }
+.membership-periods__chevron { width: 12px; height: 12px; color: var(--portal-salmon); transition: transform 200ms cubic-bezier(.2,.7,.3,1); }
+.membership-periods.is-open .membership-periods__chevron { transform: rotate(180deg); }
+.membership-periods__list { list-style: none; margin: 14px 0 0; padding: 4px 0 0; border-top: 1px solid var(--portal-border); animation: portal-enter 220ms cubic-bezier(.2,.7,.3,1); }
+.membership-periods__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 14px 0; border-bottom: 1px solid var(--portal-border); }
+.membership-periods__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.membership-periods__package { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 180px; color: var(--portal-paper); font-size: 13px; overflow-wrap: anywhere; }
+.membership-periods__package strong { min-width: 0; font-weight: 600; }
+.membership-periods__icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 10px; background: var(--portal-tint); color: var(--portal-salmon); }
+.membership-periods__dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 0; font-size: 12px; }
+.membership-periods__dates dt { margin-bottom: 5px; color: var(--portal-muted); font-size: 11px; }
+.membership-periods__dates dd { margin: 0; color: var(--portal-paper); font-weight: 500; font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) {
+  .membership-periods__dates { flex: 1 1 100%; gap: 16px; padding-left: 48px; }
+}
+.portal-v2 .portal-card--list { flex-wrap: wrap; gap: 16px; margin-bottom: 0; }
 .portal-v2 .portal-card--list > div:first-child { min-width: 0; flex: 1 1 240px; }
+.portal-v2 .portal-card--list > div:last-child:not(:first-child) { flex-shrink: 0; }
+.portal-v2 .portal-card--list .row-card__meta + .row-card__title { margin-top: 10px; }
+.portal-v2 .portal-card--list .row-card__meta + .row-card__meta { margin-top: 8px; }
 .portal-v2 .portal-empty { padding: 36px 20px; }
 .portal-v2 .portal-empty h3 { font-size: 18px; font-weight: 650; }
 .portal-v2 .portal-empty p { font-size: 13px; line-height: 1.8; font-weight: 400; }
@@ -256,9 +294,9 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-v2 .portal-table-wrapper { max-width: 100%; border-radius: inherit; }
 .portal-v2 .portal-table td.actions { white-space: normal; min-width: 150px; }
 .portal-v2 .portal-label, .portal-v2 .meta-label, .portal-v2 .metric-label { font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: none; color: var(--portal-muted); }
-.portal-v2 .portal-input, .portal-v2 .portal-select, .portal-v2 .portal-textarea { min-width: 0; min-height: 44px; border-radius: 10px; border-color: var(--portal-border-strong); background: var(--portal-raised); font-size: 13px; }
+.portal-v2 .portal-input, .portal-v2 .portal-select, .portal-v2 .portal-textarea, .portal-v2 select:not(.ui-select__native) { min-width: 0; min-height: 44px; border-radius: 10px; border: 1px solid var(--portal-border-strong); background: var(--portal-raised); color: var(--portal-paper); font-size: 13px; transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
 .portal-v2 .portal-input::placeholder, .portal-v2 .portal-textarea::placeholder { color: var(--portal-muted); }
-.portal-v2 .portal-input:focus, .portal-v2 .portal-select:focus, .portal-v2 .portal-textarea:focus { border-color: var(--portal-salmon); box-shadow: 0 0 0 3px #ce918033; }
+.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)):is(:focus, :focus-visible) { outline: none; outline-offset: 0; border-color: var(--portal-salmon); box-shadow: 0 0 0 3px #ce91802e; }
 .portal-v2 .portal-hint, .portal-v2 .portal-table .muted { color: var(--portal-muted); }
 .portal-v2 .form-row { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
 .portal-v2 .form-actions { flex-wrap: wrap; }
@@ -275,10 +313,18 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-v2 .filter-chip { min-height: 38px; padding: 7px 15px; font-size: 11px; letter-spacing: 0; text-transform: none; }
 .portal-v2 .filter-chip.is-active { background: var(--portal-salmon); border-color: var(--portal-salmon); color: var(--portal-ink); box-shadow: none; }
 .portal-v2 .badge { padding: 4px 9px; font-size: 10px; letter-spacing: 0; text-transform: none; white-space: nowrap; }
-.portal-v2 .row-card { flex-wrap: wrap; border-radius: 12px; background: var(--portal-raised); box-shadow: none; }
+.portal-v2 .row-card { min-width: 0; flex-wrap: wrap; border-radius: 12px; background: var(--portal-raised); box-shadow: none; }
+.portal-v2 .row-card > div { min-width: 0; }
 .portal-v2 .row-card:hover { transform: none; border-color: var(--portal-border-strong); background: var(--portal-raised); box-shadow: none; }
 .portal-v2 .row-card__title { font: 650 15px/1.5 var(--font-sans); overflow-wrap: anywhere; }
-.portal-v2 .row-card__meta { font-size: 12px; color: var(--portal-muted); }
+.portal-v2 .row-card__meta { font-size: 12px; line-height: 1.7; color: var(--portal-muted); overflow-wrap: anywhere; }
+.portal-v2 .row-card__meta strong { color: var(--portal-paper); font-weight: 600; }
+.portal-v2 .row-card__meta a { color: var(--portal-salmon); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.portal-v2 .row-card__meta a:hover { color: var(--portal-hover); }
+.portal-v2 .row-card__meta--inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.portal-v2 .row-card__meta--inline > span { min-width: 0; }
+.portal-v2 .row-card__meta--inline > span:not(.badge) { display: inline-flex; align-items: center; gap: 6px; }
+.portal-v2 .row-card__meta--inline svg { color: var(--portal-salmon); }
 .portal-v2 .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; margin-bottom: 24px; }
 .portal-v2 .metric-card { padding: 22px; }
 .portal-v2 .metric-value { font: 700 30px/1.4 var(--font-sans); color: var(--portal-paper); background: none; -webkit-text-fill-color: currentColor; }
@@ -304,7 +350,6 @@ body:has(.portal-backdrop) .click-ripple { border-color: #ce9180; }
 .portal-v2 .skip-link { position: fixed; top: 12px; left: 18px; transform: translateY(calc(-100% - 24px)); }
 .portal-v2 .skip-link:focus { transform: none; }
 .portal-v2 :focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 4px; }
-.portal-v2 .portal-input:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 .portal-v2 button:disabled { transform: none; box-shadow: none; }
 
 @keyframes portal-enter { from { opacity: 0; } to { opacity: 1; } }

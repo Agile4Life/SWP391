@@ -46,7 +46,8 @@ const routes = [
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   const page = await browser.newPage();
-  const output = 'docs/ui-review/ux-cleanup'; fs.mkdirSync(output, { recursive: true });
+  await page.addInitScript(() => localStorage.setItem('scms_theme', 'dark'));
+  const output = process.env.UX_REVIEW_OUTPUT || 'docs/ui-review/ux-cleanup'; fs.mkdirSync(output, { recursive: true });
   const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';
   const failures = [], errors = [], unknown = new Set();
   let role = 'MEMBER', mode = 'populated';

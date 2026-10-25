@@ -6,13 +6,13 @@ import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.MembershipPackage;
-import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.dto.SubscriptionRequests;
 import com.swp391.scms.membership.dto.SubscriptionResponses.HoldRequestDto;
 import com.swp391.scms.membership.dto.SubscriptionResponses.SubscriptionDto;
 import com.swp391.scms.membership.entity.MembershipSubscription;
+import com.swp391.scms.membership.repository.MembershipCancellationRequestRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.service.EnrollmentService;
@@ -60,6 +60,9 @@ public class MembershipSubscriptionService {
 
     @Autowired(required = false)
     private PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    private MembershipCancellationRequestRepository cancellationRequests;
 
     @Autowired(required = false)
     private EntityManager entityManager;
@@ -175,7 +178,18 @@ public class MembershipSubscriptionService {
         members.findByUserIdForUpdate(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
         if (entityManager != null) entityManager.refresh(requested);
+        if (HOLD_PENDING.equalsIgnoreCase(requested.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING",
+                    "error.membership.hold_already_pending", null,
+                    "Subscription already has a pending hold request");
+        }
         List<MembershipSubscription> history = subscriptions.findByMemberUserId(principal.id());
+        if (history.stream().anyMatch(item -> STATUS_ACTIVE.equalsIgnoreCase(item.getStatus())
+                && HOLD_PENDING.equalsIgnoreCase(item.getHoldStatus()))) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING",
+                    "error.membership.hold_already_pending", null,
+                    "Subscription already has a pending hold request");
+        }
         List<MembershipSubscription> paidPeriods = history.stream().filter(this::isPaidPeriod).toList();
         for (MembershipSubscription item : paidPeriods) {
             long siblings = paidPeriods.stream().filter(other -> other.getPreviousSubscription() != null
@@ -290,12 +304,22 @@ public class MembershipSubscriptionService {
         if (entityManager != null) entityManager.refresh(current);
         LocalDate today = LocalDate.now(clock);
         if (!STATUS_ACTIVE.equalsIgnoreCase(current.getStatus())
-                || (current.getEndDate() != null && current.getEndDate().isBefore(today))) {
+                || !validPeriod(current)
+                || current.getStartDate().isAfter(today)
+                || current.getEndDate().isBefore(today)) {
             throw new BadRequestException(
                     "MEMBERSHIP_UPGRADE_REQUIRES_ACTIVE",
                     "error.membership.upgrade_requires_active",
                     null,
                     "Only an active subscription can be upgraded");
+        }
+
+        if (HOLD_PENDING.equalsIgnoreCase(current.getHoldStatus())) {
+            throw new ConflictException(
+                    "MEMBERSHIP_HOLD_ALREADY_PENDING",
+                    "error.membership.hold_already_pending",
+                    null,
+                    "Subscription already has a pending hold request");
         }
 
         if (subscriptions.existsByMemberUserIdAndStatus(current.getMember().getUserId(), STATUS_PENDING_PAYMENT)
@@ -426,9 +450,15 @@ public class MembershipSubscriptionService {
                     "Subscription does not belong to the authenticated member");
         }
 
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        if (entityManager != null) entityManager.refresh(subscription);
+
         LocalDate today = LocalDate.now(clock);
         if (!STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
-                || (subscription.getEndDate() != null && subscription.getEndDate().isBefore(today))) {
+                || !validPeriod(subscription)
+                || subscription.getStartDate().isAfter(today)
+                || subscription.getEndDate().isBefore(today)) {
             throw new BadRequestException(
                     "MEMBERSHIP_HOLD_REQUIRES_ACTIVE",
                     "error.membership.hold_requires_active",
@@ -444,6 +474,27 @@ public class MembershipSubscriptionService {
                     "Subscription already has a pending hold request");
         }
 
+        if (subscriptions.existsByMemberUserIdAndStatus(principal.id(), STATUS_PENDING_PAYMENT)) {
+            throw new ConflictException(
+                    "MEMBERSHIP_PENDING_EXISTS",
+                    "error.membership.pending_exists",
+                    null,
+                    "Member already has a pending payment subscription");
+        }
+
+        if (hasPaidFutureRenewal(principal.id(), today)) {
+            throw futurePaidConflict();
+        }
+
+        if (cancellationRequests != null
+                && cancellationRequests.existsBySubscriptionIdAndStatus(subscriptionId, "PENDING")) {
+            throw new ConflictException(
+                    "CANCELLATION_PENDING_EXISTS",
+                    "error.membership.cancellation_pending_exists",
+                    null,
+                    "A cancellation request is already pending for this membership");
+        }
+
         String reason = request != null && request.reason() != null ? request.reason().trim() : "";
         if (reason.isEmpty()) {
             throw new BadRequestException(
@@ -451,6 +502,13 @@ public class MembershipSubscriptionService {
                     "validation.membership.hold_reason.not_blank",
                     null,
                     "Hold reason is required");
+        }
+        if (reason.length() > 500) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_HOLD_REASON_TOO_LONG",
+                    "validation.membership.hold_reason.size",
+                    null,
+                    "Hold reason must not exceed 500 characters");
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -470,6 +528,7 @@ public class MembershipSubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        if (entityManager != null) entityManager.refresh(subscription);
         if (subscription.getMember() == null || !principal.id().equals(subscription.getMember().getUserId())) {
             throw new ForbiddenException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
         }
@@ -483,7 +542,8 @@ public class MembershipSubscriptionService {
             throw new BadRequestException("MEMBERSHIP_RESUME_INVALID", "error.membership.resume_invalid", null, null);
         }
         if (subscriptions.existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(principal.id(), STATUS_ACTIVE, today)
-                || subscriptions.existsByMemberUserIdAndStatus(principal.id(), STATUS_PENDING_PAYMENT)) {
+                || subscriptions.existsByMemberUserIdAndStatus(principal.id(), STATUS_PENDING_PAYMENT)
+                || hasPaidFutureRenewal(principal.id(), today)) {
             throw new ConflictException("MEMBERSHIP_RESUME_CONFLICT", "error.membership.resume_conflict", null, null);
         }
         // Preserve the original paid period and class-credit usage; only extend its expiry.
@@ -499,10 +559,15 @@ public class MembershipSubscriptionService {
      */
     @Transactional(readOnly = true)
     public List<HoldRequestDto> listPendingHolds() {
+        LocalDate today = LocalDate.now(clock);
         return subscriptions.findByHoldStatusOrderByHoldRequestedAtDesc(HOLD_PENDING).stream()
                 .filter(s -> s.getMember() != null
                         && s.getMember().getUser() != null
-                        && s.getMember().getUser().getDeletedAt() == null)
+                        && s.getMember().getUser().getDeletedAt() == null
+                        && STATUS_ACTIVE.equalsIgnoreCase(s.getStatus())
+                        && validPeriod(s)
+                        && !s.getStartDate().isAfter(today)
+                        && !s.getEndDate().isBefore(today))
                 .map(s -> toHoldRequestDto(s, 0))
                 .toList();
     }
@@ -515,8 +580,9 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
 
-        members.findByUserIdForUpdate(subscription.getMember().getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.member", subscription.getMember().getUserId()));
+        Long memberId = subscription.getMember().getUserId();
+        members.findByUserIdForUpdate(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
         if (entityManager != null) entityManager.refresh(subscription);
         if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())
                 || !STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())) {
@@ -533,8 +599,23 @@ public class MembershipSubscriptionService {
             throw new BadRequestException("MEMBERSHIP_HOLD_REQUIRES_ACTIVE",
                     "error.membership.hold_requires_active", null, null);
         }
-        if (hasPaidFutureRenewal(subscription.getMember().getUserId(), today))
+        if (subscriptions.existsByMemberUserIdAndStatus(memberId, STATUS_PENDING_PAYMENT)) {
+            throw new ConflictException(
+                    "MEMBERSHIP_PENDING_EXISTS",
+                    "error.membership.pending_exists",
+                    null,
+                    "Member already has a pending payment subscription");
+        }
+        if (hasPaidFutureRenewal(memberId, today))
             throw futurePaidConflict();
+        if (cancellationRequests != null
+                && cancellationRequests.existsBySubscriptionIdAndStatus(subscriptionId, "PENDING")) {
+            throw new ConflictException(
+                    "CANCELLATION_PENDING_EXISTS",
+                    "error.membership.cancellation_pending_exists",
+                    null,
+                    "A cancellation request is already pending for this membership");
+        }
 
         LocalDateTime now = LocalDateTime.now(clock);
         subscription.setStatus(STATUS_FROZEN);
@@ -575,6 +656,12 @@ public class MembershipSubscriptionService {
     public HoldRequestDto rejectHold(AuthenticatedPrincipal principal, Long subscriptionId) {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+
+        if (subscription.getMember() != null && subscription.getMember().getUserId() != null) {
+            members.findByUserIdForUpdate(subscription.getMember().getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", subscription.getMember().getUserId()));
+        }
+        if (entityManager != null) entityManager.refresh(subscription);
 
         if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())) {
             throw new BadRequestException(
@@ -684,8 +771,15 @@ public class MembershipSubscriptionService {
             throw new ConflictException("MEMBERSHIP_FROZEN_PAYMENT",
                     "error.membership.frozen_payment", null,
                     "Membership on hold cannot be activated by payment");
-        }        LocalDate today = LocalDate.now(clock);
+        }
+        LocalDate today = LocalDate.now(clock);
         MembershipSubscription previous = subscription.getPreviousSubscription();
+        if (previous != null && ("cancelled".equalsIgnoreCase(previous.getStatus())
+                || STATUS_FROZEN.equalsIgnoreCase(previous.getStatus()))) {
+            throw new ConflictException("PAYMENT_PREVIOUS_UNAVAILABLE",
+                    "finance.payment.previous_unavailable", null,
+                    "Source subscription was cancelled or frozen");
+        }
         boolean isUpgrade = previous != null
                 && subscription.getMembershipPackage() != null
                 && previous.getMembershipPackage() != null
@@ -694,6 +788,9 @@ public class MembershipSubscriptionService {
 
         if (isUpgrade && STATUS_ACTIVE.equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus(STATUS_EXPIRED);
+            if (HOLD_PENDING.equalsIgnoreCase(previous.getHoldStatus())) {
+                previous.setHoldStatus(null);
+            }
             if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
                 previous.setEndDate(today);
             }
@@ -732,6 +829,7 @@ public class MembershipSubscriptionService {
                 "error.membership.future_paid_renewal", null,
                 "Paid future renewal requires manager review");
     }
+
     private Member findMember(Long userId) {
         return members.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", userId));
@@ -844,4 +942,3 @@ public class MembershipSubscriptionService {
                 cancelledEnrollmentsCount);
     }
 }
-

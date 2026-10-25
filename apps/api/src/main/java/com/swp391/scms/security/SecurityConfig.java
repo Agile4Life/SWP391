@@ -61,6 +61,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/support/requests/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/support/requests").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/support/requests/*/status").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/support/requests/*/messages").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/support/requests/*/messages").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
 
                     // Attendance & Check-in (SCRUM-75)
                     .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
@@ -78,6 +80,7 @@ public class SecurityConfig {
 
                     // Reports (SCRUM-79)
                     .requestMatchers("/api/v1/reports/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers("/api/v1/admin/audit-logs/**", "/api/v1/admin/audit-logs").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/my", "/api/v1/training-plans/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/*", "/api/v1/training-plans/*").hasAnyRole("COACH", "CENTER_MANAGER", "MEMBER")
                     .requestMatchers("/api/v1/coaching/training-plans/**", "/api/v1/coaching/training-plans",

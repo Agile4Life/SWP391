@@ -1,0 +1,126 @@
+.theme-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid #ffffff30; border-radius: 50%; background: #292929; color: #faf9f6; cursor: pointer; }
+.theme-toggle:hover { border-color: #ce9180; background: #ce91801f; }
+.theme-toggle:focus-visible { outline: 2px solid #ce9180; outline-offset: 4px; }
+:root[data-theme='light'] .theme-toggle { background: #fff; border-color: #e4e2de; color: #202020; }
+:root[data-theme='light'] .theme-toggle:hover { background: #f8eae4; border-color: #a35b49; }
+
+/* Light is an optional palette. Existing dark styles remain the default. */
+:root[data-theme='light'] { color-scheme: light; background: #f5f5f3; }
+:root[data-theme='light']:has(.fit-site, .portal-backdrop),
+:root[data-theme='light'] body:has(.fit-site, .portal-backdrop) { background: #f5f5f3; color-scheme: light; scrollbar-color: #ce9180 #f5f5f3; }
+:root[data-theme='light'] :is(.fit-site, .portal-backdrop, .portal-backdrop *) { scrollbar-color: #ce9180 #f5f5f3; }
+:root[data-theme='light']::-webkit-scrollbar-track,
+:root[data-theme='light'] :is(.fit-site, .portal-backdrop) ::-webkit-scrollbar-track { background: #f5f5f3; }
+:root[data-theme='light']::-webkit-scrollbar-thumb,
+:root[data-theme='light'] :is(.fit-site, .portal-backdrop) ::-webkit-scrollbar-thumb { border-color: #f5f5f3; }
+
+:root[data-theme='light'] .portal-backdrop {
+  --portal-ink: #f5f5f3;
+  --portal-surface: #ffffff;
+  --portal-raised: #eeefec;
+  --portal-paper: #202020;
+  --portal-muted: #68645f;
+  --portal-salmon: #a35b49;
+  --portal-hover: #e1aa98;
+  --portal-tint: #ce91801f;
+  --portal-border: #e4e2de;
+  --portal-border-strong: #ccc8c2;
+  --portal-danger: #a33030;
+  --portal-info-surface: #eef3fa;
+  color-scheme: light;
+}
+:root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected),
+:root[data-theme='light'] .portal-logo { background: #ce9180; border-color: #ce9180; color: #202020; }
+:root[data-theme='light'] .portal-v2 .ldp-day-cell.is-selected { color: #202020 !important; }
+:root[data-theme='light'] .portal-logo > span { color: #202020; }
+:root[data-theme='light'] .portal-v2 .btn-primary:hover:not(:disabled) { background: #e1aa98; color: #202020; border-color: #e1aa98; }
+:root[data-theme='light'] .portal-v2 .portal-rail-tooltip { background: #fff; border: 1px solid #e4e2de; }
+:root[data-theme='light'] .portal-v2 input:is([type='date'], [type='time'], [type='datetime-local']) { color-scheme: light; }
+:root[data-theme='light'] .portal-v2 :is(.portal-field-error, .btn-danger) { color: #a33030; }
+:root[data-theme='light'] .portal-v2 .payment-invoice__success { color: #226442; }
+:root[data-theme='light'] .portal-v2 .seg-btn--ok { --tone: #226442; }
+:root[data-theme='light'] .portal-v2 .seg-btn--warn { --tone: #805400; }
+:root[data-theme='light'] .portal-v2 .seg-btn--bad { --tone: #a33030; }
+:root[data-theme='light'] .portal-v2 :is(.portal-skeleton, .portal-skeleton-line, .member-skeleton) { background-image: linear-gradient(90deg, #eeefec 25%, #e4e2de 50%, #eeefec 75%); }
+
+:root[data-theme='light'] .fit-site {
+  --fit-paper: #202020;
+  --fit-muted: #68645f;
+  --color-bg-base: #f5f5f3;
+  --color-bg-warm: #eeefec;
+  --color-bg-card: #ffffff;
+  --color-border-subtle: #e4e2de;
+  --color-border-medium: #ccc8c2;
+  background: #f5f5f3;
+}
+:root[data-theme='light'] .fit-canvas { background: #f5f5f3; }
+:root[data-theme='light'] .fit-header.is-scrolled { background: #f5f5f3ed; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-nav a { color: #45423f; }
+:root[data-theme='light'] .fit-nav a:is(:hover, .is-active) { color: #a35b49; }
+:root[data-theme='light'] .fit-site :is(.fit-service, .fit-service h2, .fit-service p) { color: #202020; }
+:root[data-theme='light'] .fit-service-rule { background: #20202030; }
+:root[data-theme='light'] .fit-site :is(.fit-hero-action > span, .fit-hero-index) { color: #68645f; }
+:root[data-theme='light'] .fit-menu { color: #202020; border-color: #ccc8c2; }
+:root[data-theme='light'] .fit-pill { background: #ce9180; color: #202020; }
+:root[data-theme='light'] .fit-pill:hover { background: #e1aa98; }
+:root[data-theme='light'] .fit-round-arrow { color: #202020; }
+:root[data-theme='light'] .fit-skip { background: #202020; color: #faf9f6; }
+:root[data-theme='light'] .fit-site :is(.fit-metric-card, .fit-schedule-card, .fit-intro-pillar-card, .fit-rhythm-explorer, .fit-sport-curriculum, .fit-sport-pillar, .fit-sport-specs, .fit-step-item, .fit-journey-preview, .fit-bmi-card, .fit-bmi-result, .fit-faq-item, .fit-auth-card, .fit-auth-facts > div, .fit-trainer-chip) { background: #fff; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-site :is(.fit-faq-item.is-open, .fit-step-item.is-active, .fit-step-item:hover, .fit-trainer-chip:hover) { background: #f8eae4; border-color: #ce9180; }
+:root[data-theme='light'] .fit-plan:not(.fit-plan-featured) { background: #fff; border: 1px solid #e4e2de; }
+:root[data-theme='light'] .fit-site :is(.fit-plan:not(.fit-plan-featured) > p, .fit-rhythm-copy li, .fit-sport-pillar p, .fit-sport-spec-item dt, .fit-footer nav, .fit-footer address, .fit-footer-bottom, .fit-disclosure) { color: #68645f; }
+:root[data-theme='light'] .fit-site :is(.fit-trainer-chip, .fit-slot-pill, .fit-chat-bot, .fit-rhythm-tabs button, .fit-bmi-goals button) { color: #202020; background: #eeefec; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-site :is(.fit-schedule-spots, .fit-intro-pillar-badge, .fit-preview-live, .fit-sport-pillar-metric, .fit-kicker, .fit-trainer-chip strong) { color: #a35b49; }
+:root[data-theme='light'] .fit-site :is(.fit-rhythm-tabs button.is-active, .fit-slot-pill.is-selected, .fit-bmi-goals button[aria-pressed='true']) { background: #ce9180; color: #202020; }
+:root[data-theme='light'] .fit-site :is(.fit-rhythm-body, .fit-sport-spec-item, .fit-footer-bottom) { border-color: #e4e2de; }
+:root[data-theme='light'] .fit-footer-watermark { color: #2020200c; }
+:root[data-theme='light'] .fit-faq-icon { background: #eeefec; color: #a35b49; }
+:root[data-theme='light'] .fit-site :is(input, select, textarea) { background: #fff; color: #202020; border-color: #ccc8c2; color-scheme: light; }
+:root[data-theme='light'] .fit-site :is(input, textarea)::placeholder { color: #77716b; }
+:root[data-theme='light'] .fit-auth-form :is(.luxury-login-container, .fit-auth-card) { background: #fff !important; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-auth .portal-label { color: #202020; }
+:root[data-theme='light'] .fit-bmi-inputs label { color: #202020; }
+:root[data-theme='light'] .fit-auth .btn-secondary { color: #202020; border-color: #ccc8c2; }
+:root[data-theme='light'] .fit-auth .portal-alert { color: #8d4230; }
+:root[data-theme='light'] .fit-muscle-callout { background: #fff; color: #202020; }
+:root[data-theme='light'] .fit-muscle-goal { color: #68645f; }
+:root[data-theme='light'] .fit-muscle-zone-badge { background: #f8eae4; color: #a35b49; }
+:root[data-theme='light'] .fit-muscle-exercises { background: #f5f5f3; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-muscle-exercises li { background: transparent; color: #45423f; }
+:root[data-theme='light'] .fit-muscle-exercises li > span { color: #a35b49; }
+:root[data-theme='light'] :is(.fit-pointer-line, .fit-pointer-head) { stroke: #a35b49; }
+:root[data-theme='light'] .fit-muscle-callout { box-shadow: 0 12px 32px #20202018; }
+:root[data-theme='light'] .fit-hero-lines, :root[data-theme='light'] .fit-hero-lines::after { border-color: #20202012; }
+:root[data-theme='light'] .fit-site :is(.liquid-glass-chat-container, .liquid-glass-chat-header, .liquid-glass-chat-body, .bot-bubble) { background: #fff !important; color: #202020; border-color: #e4e2de !important; }
+:root[data-theme='light'] .fit-site .liquid-glass-bot-name { color: #202020; }
+:root[data-theme='light'] .fit-site .bot-bubble .chat-bubble-text { color: #202020 !important; }
+:root[data-theme='light'] .fit-site :is(.fit-trainer-switch-pill, .fit-trainer-quote, .fit-trainer-stat-box, .fit-trainer-story-article, .fit-trainer-milestones, .fit-trainer-action-banner, .fit-milestone-item, .fit-trainer-specialty-box, .fit-trainer-step-card, .fit-trainer-schedule-card, .fit-sport-page-program-card, .fit-back-link) { background: #fff; border-color: #e4e2de; color: #202020; }
+:root[data-theme='light'] .fit-site :is(.fit-trainer-paragraphs p, .fit-trainer-specialty-box li) { color: #68645f; }
+:root[data-theme='light'] .fit-trainer-switch-pill:is(.is-active, :hover) { background: #ce9180; }
+:root[data-theme='light'] .fit-benefits { background: #eeefec; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-benefits-eyebrow { color: #68645f; }
+:root[data-theme='light'] .fit-benefits-bg { -webkit-text-stroke-color: #20202012; }
+:root[data-theme='light'] .fit-benefits-progress { background: #20202026; }
+:root[data-theme='light'] .fit-benefit-card:not(.fit-benefit-end) { background: #fff; border-color: #e4e2de; }
+:root[data-theme='light'] .fit-benefit-idx { color: #20202026; }
+:root[data-theme='light'] .fit-benefit-card:not(.fit-benefit-end) p,
+:root[data-theme='light'] .fit-benefit-card li { color: #68645f; }
+:root[data-theme='light'] .fit-benefit-card :is(ul, li) { border-color: #e4e2de; }
+
+/* Photographs retain their dark overlays and readable white captions. */
+:root[data-theme='light'] .fit-site :is(.fit-story, .fit-trainer-card, .fit-sport-card, .fit-space-image, .fit-trainer-portrait-card, .fit-auth-photo) { --fit-paper: #faf9f6; color: #faf9f6; }
+:root[data-theme='light'] .fit-site :is(.fit-image-caption, .fit-sport-trigger, .fit-benefit-end-btn) { color: #faf9f6; }
+:root[data-theme='light'] .fit-sport-trigger[aria-pressed='true'] { color: #202020; }
+:root[data-theme='light'] .fit-auth-photo .fit-round-arrow { color: #202020; }
+@media (max-width: 1100px) {
+  :root[data-theme='light'] .fit-nav { background: #fff; border-color: #e4e2de; }
+}
+@media (max-width: 760px) {
+  .fit-header-actions { gap: 8px; }
+  .fit-header .theme-toggle { flex-basis: 40px; width: 40px; height: 40px; }
+}
+@media (max-width: 480px) {
+  .fit-header { gap: 10px; }
+  .fit-header .fit-header-cta { width: 40px; min-height: 40px; padding: 3px; gap: 0; justify-content: center; }
+  .fit-header-cta-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}

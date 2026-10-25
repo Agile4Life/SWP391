@@ -118,5 +118,20 @@ class NotificationServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
         verify(notificationRepository, never()).save(any());
     }
-}
 
+    @Test
+    @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
+    void springContextResolvesAutowiredConstructor() {
+        org.springframework.context.annotation.AnnotationConfigApplicationContext context =
+                new org.springframework.context.annotation.AnnotationConfigApplicationContext();
+        context.getDefaultListableBeanFactory().registerSingleton("notificationRepository", notificationRepository);
+        context.getDefaultListableBeanFactory().registerSingleton("userRepository", userRepository);
+        context.getDefaultListableBeanFactory().registerSingleton("notificationMapper", notificationMapper);
+        context.register(NotificationService.class);
+        context.refresh();
+
+        NotificationService bean = context.getBean(NotificationService.class);
+        assertThat(bean).isNotNull();
+        context.close();
+    }
+}

@@ -148,6 +148,12 @@ describe('SCRUM-86 packages', () => {
     api.renew.mockResolvedValue({ ...pending, id: 7, previousSubscriptionId: 6 });
     await render();
     expect(host.textContent).toContain('Kỳ đã thanh toán tiếp theo');
+    expect(host.querySelector('.membership-periods__list')).toBeNull();
+    const toggle = host.querySelector<HTMLButtonElement>('.membership-periods__toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(host.querySelectorAll('.membership-periods__row')).toHaveLength(2);
 
     expect(button('Gia hạn')?.disabled).toBe(false);
     await act(async () => button('Gia hạn')?.click());

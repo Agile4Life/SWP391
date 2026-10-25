@@ -517,7 +517,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.name && (
-                <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.name}
                 </div>
               )}
@@ -537,7 +537,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.email && (
-                <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.email}
                 </div>
               )}
@@ -559,7 +559,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.phone && (
-                <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.phone}
                 </div>
               )}
@@ -580,7 +580,7 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.password && (
-                <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {fieldErrors.password}
                 </div>
               )}
@@ -668,7 +668,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.name && (
-                <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {editFieldErrors.name}
                 </div>
               )}
@@ -690,7 +690,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.phone && (
-                <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginTop: 4 }}>
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
                   {editFieldErrors.phone}
                 </div>
               )}

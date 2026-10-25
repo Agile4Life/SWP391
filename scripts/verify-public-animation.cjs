@@ -8,6 +8,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'no-preference' });
+  await page.addInitScript(() => localStorage.setItem('scms_theme', 'dark'));
   await page.route('**/api/v1/public/catalog', route => route.fulfill({ json: { success: true, data: require('./public-catalog-fixture.cjs') } }));
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -75,7 +76,8 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
       await page.waitForFunction(() => document.querySelectorAll('.fit-schedule-card').length === 6);
       assert.equal(await page.locator('.fit-schedule-card').count(), 6);
       await page.waitForFunction(() => [...document.querySelectorAll('.fit-schedule-card')].every((card) => card.classList.contains('fit-reveal-ready')));
-      assert.equal(await page.locator('.fit-schedule-card').nth(5).evaluate((card) => getComputedStyle(card).getPropertyValue('--fit-reveal-delay').trim()), '200ms');
+      const delay = await page.locator('.fit-schedule-card').nth(5).evaluate((card) => getComputedStyle(card).getPropertyValue('--fit-reveal-delay').trim());
+      assert.equal(parseFloat(delay) * (delay.endsWith('ms') ? 1 : 1000), 200);
       await page.locator('#fit-bmi-height').fill('175');
       await page.locator('#fit-bmi-weight').fill('70');
       await page.getByRole('button', { name: 'Giảm mỡ & Săn chắc' }).click();
