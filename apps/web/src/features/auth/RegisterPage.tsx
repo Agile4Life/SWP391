@@ -78,7 +78,7 @@ export function RegisterPage() {
   };
 
   const handleResendOtp = async () => {
-    if (countdown > 0 || requestBusy.current || !pendingAccount) return;
+    if (countdown > 0 || requestBusy.current || !pendingAccount || success) return;
     requestBusy.current = true;
     setBusy(true);
     setError('');
@@ -168,8 +168,13 @@ export function RegisterPage() {
             <summary className="fit-auth-link">Thông tin tài khoản đã tạo</summary>
             <p className="row-card__meta">{pendingAccount?.username} · {pendingAccount?.email}</p>
             <p className="row-card__meta">Tài khoản đã được tạo. Xác thực email trước khi cập nhật thông tin trong hồ sơ.</p>
+            <p className="row-card__meta">Nếu email chưa đúng, bạn có thể tạo tài khoản khác với tên đăng nhập và email mới. Tài khoản đã tạo vẫn được giữ trên hệ thống.</p>
+            <button type="button" className="fit-auth-link" disabled={busy || success} onClick={() => {
+              savePendingRegistration(null); setPendingAccount(null); setError(''); setOtp(''); setDebugOtp(''); setCountdown(0);
+              setForm({ username: '', email: '', phone: '', password: '' }); setFieldErrors({});
+            }}>Đăng ký tài khoản khác</button>
           </details>
-          <button className="fit-auth-link" type="button" disabled={countdown > 0 || busy} onClick={handleResendOtp}>{countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã OTP'}</button>
+          <button className="fit-auth-link" type="button" disabled={countdown > 0 || busy || success} onClick={handleResendOtp}>{countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã OTP'}</button>
         </div>
       </form>}
       <p className="fit-auth-bottom">Đã có tài khoản? <Link to={purchaseAuthPath('/login', search)}>Đăng nhập ngay ↗</Link></p>

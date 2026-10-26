@@ -66,3 +66,13 @@ it('restores only the pending account identity after remount without storing cre
   expect(host.textContent).toContain('buyer@example.test');
   expect(api.register).toHaveBeenCalledTimes(1);
 });
+
+it('lets the buyer explicitly start another account when the pending mailbox is inaccessible', async () => {
+  await render(); await validForm(); await submit();
+  const restart = [...host.querySelectorAll('button')].find(b => b.textContent === 'Đăng ký tài khoản khác')!;
+  await act(async () => restart.click());
+  expect(host.querySelector('#reg-email')).not.toBeNull();
+  expect(host.querySelector<HTMLInputElement>('#reg-email')?.value).toBe('');
+  expect(sessionStorage.getItem('scms_pending_registration')).toBeNull();
+  expect(api.register).toHaveBeenCalledTimes(1);
+});
