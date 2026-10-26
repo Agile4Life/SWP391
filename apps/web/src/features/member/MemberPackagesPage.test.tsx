@@ -63,6 +63,8 @@ describe('SCRUM-86 packages', () => {
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
+    vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (this: HTMLDialogElement) { this.removeAttribute('open'); });
     host = document.createElement('div');
     document.body.append(host);
     root = createRoot(host);
@@ -80,6 +82,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => root.unmount());
     host.remove();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   async function render() {
@@ -514,6 +517,17 @@ describe('SCRUM-86 packages', () => {
     expect(api.createPayment).not.toHaveBeenCalled();
     expect(api.create).toHaveBeenCalledTimes(1);
     expect(host.textContent).toContain('Yêu cầu #12');
+  });
+
+  it('shows a cancellation conflict inside one confirmation dialog', async () => {
+    api.cancelPending.mockRejectedValue(new Error('Yêu cầu đã được thanh toán, không thể hủy.'));
+    await render();
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => button('Hủy yêu cầu đăng ký')?.click());
+    await act(async () => button('Xác nhận hủy')?.click());
+    const dialogs = host.querySelectorAll('[role="dialog"], dialog');
+    expect(dialogs).toHaveLength(1);
+    expect(dialogs[0].querySelector('[role="alert"]')?.textContent).toContain('không thể hủy');
   });
 
   it('renews the latest expired subscription of the selected package', async () => {
