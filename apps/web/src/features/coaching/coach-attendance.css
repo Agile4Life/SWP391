@@ -3,8 +3,8 @@
 }
 
 .attendance-header-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 14px;
   padding: 20px 24px;
   margin-bottom: 24px;
@@ -24,7 +24,7 @@
 .session-name-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -35,11 +35,11 @@
   gap: 14px;
   flex-wrap: wrap;
   font-size: 0.88rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .session-details-row strong {
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
 }
 
 .attendance-quick-summary {
@@ -50,8 +50,8 @@
 }
 
 .summary-pill-card {
-  background: #242424;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -64,19 +64,19 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .summary-pill-card .pill-value {
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
 }
 
-.summary-pill-card.is-present .pill-value { color: #4ade80; }
-.summary-pill-card.is-absent .pill-value { color: #f87171; }
-.summary-pill-card.is-late .pill-value { color: #fbbf24; }
-.summary-pill-card.is-excused .pill-value { color: #9ca3af; }
+.summary-pill-card.is-present .pill-value { color: #16a34a; }
+.summary-pill-card.is-absent .pill-value { color: #dc2626; }
+.summary-pill-card.is-late .pill-value { color: #d97706; }
+.summary-pill-card.is-excused .pill-value { color: var(--portal-muted); }
 
 .attendance-toolbar {
   display: flex;
@@ -88,9 +88,9 @@
 }
 
 .btn-quick-present {
-  background: #333333;
-  color: #faf9f6;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 8px 16px;
   font-size: 0.85rem;
@@ -100,14 +100,14 @@
 }
 
 .btn-quick-present:hover {
-  background: #3d3d3d;
-  border-color: rgba(74, 222, 128, 0.4);
-  color: #4ade80;
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 .attendance-student-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 18px 20px;
   margin-bottom: 16px;
@@ -115,7 +115,7 @@
 }
 
 .attendance-student-card:hover {
-  border-color: rgba(206, 145, 128, 0.3);
+  border-color: var(--portal-salmon);
 }
 
 .student-card-top-row {
@@ -137,9 +137,9 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(206, 145, 128, 0.15);
-  color: var(--fit-salmon, #ce9180);
-  border: 1.5px solid var(--fit-salmon, #ce9180);
+  background: var(--portal-raised);
+  color: var(--portal-salmon);
+  border: 1.5px solid var(--portal-salmon);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -156,21 +156,21 @@
 .student-full-name {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0;
 }
 
 .student-code-badge {
   font-family: monospace;
   font-size: 0.82rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 /* Radio button 4 trạng thái */
 .attendance-radio-group {
   display: inline-flex;
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 4px;
   gap: 4px;
@@ -187,7 +187,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .radio-status-label input[type="radio"] {
@@ -195,39 +195,39 @@
 }
 
 .radio-status-label:hover {
-  background: #2b2b2b;
-  color: var(--color-text-main, #faf9f6);
+  background: var(--portal-surface);
+  color: var(--portal-paper);
 }
 
 /* Active styles cho từng radio */
 .radio-status-label.is-present {
-  background: rgba(74, 222, 128, 0.18);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.5);
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.5);
 }
 
 .radio-status-label.is-absent {
-  background: rgba(248, 113, 113, 0.18);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
 .radio-status-label.is-late {
-  background: rgba(251, 191, 36, 0.18);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.5);
 }
 
 .radio-status-label.is-excused {
-  background: rgba(156, 163, 175, 0.18);
-  color: #d1d5db;
-  border: 1px solid rgba(156, 163, 175, 0.5);
+  background: var(--portal-surface);
+  color: var(--portal-muted);
+  border: 1px solid var(--portal-border);
 }
 
 /* Evaluation sub-form */
 .student-eval-subform {
-  background: #222222;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
@@ -246,7 +246,7 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.84rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .score-badge {
@@ -254,26 +254,27 @@
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 6px;
-  background: #2b2b2b;
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-surface);
+  color: var(--portal-salmon);
+  border: 1px solid var(--portal-border);
 }
 
 .eval-score-slider {
   width: 100%;
-  accent-color: var(--fit-salmon, #ce9180);
+  accent-color: var(--portal-salmon);
   height: 6px;
   border-radius: 3px;
-  background: #333333;
+  background: var(--portal-border);
   outline: none;
   cursor: pointer;
 }
 
 .eval-comment-input {
   width: 100%;
-  background: #1c1c1c;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
   border-radius: 8px;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   padding: 8px 12px;
   font-size: 0.88rem;
   outline: none;
@@ -281,7 +282,7 @@
 }
 
 .eval-comment-input:focus {
-  border-color: var(--fit-salmon, #ce9180);
+  border-color: var(--portal-salmon);
 }
 
 .attendance-bottom-actions {
@@ -291,14 +292,14 @@
   gap: 14px;
   margin-top: 24px;
   padding: 16px 20px;
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
 }
 
 .btn-batch-save {
-  background: var(--fit-salmon, #ce9180);
-  color: #1a1818;
+  background: var(--portal-salmon);
+  color: var(--portal-ink);
   border: none;
   border-radius: 8px;
   padding: 11px 24px;
@@ -312,7 +313,7 @@
 }
 
 .btn-batch-save:hover:not(:disabled) {
-  background: #e1aa98;
+  background: var(--portal-hover);
   transform: translateY(-1px);
 }
 
