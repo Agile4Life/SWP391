@@ -46,3 +46,23 @@ it('links validation errors to their inputs and focuses the first invalid field'
   expect(document.activeElement).toBe(phone);
   expect(api.register).not.toHaveBeenCalled();
 });
+
+it('keeps the registered account at OTP when delivery fails and retries only delivery', async () => {
+  api.sendOtp.mockRejectedValueOnce(new Error('Mail unavailable')).mockResolvedValue({});
+  await render(); await validForm(); await submit();
+  expect(host.querySelector('#otp-code')).not.toBeNull();
+  expect(host.textContent).toContain('Mail unavailable');
+  const resend = [...host.querySelectorAll('button')].find(b => b.textContent === 'Gửi lại mã OTP')!;
+  await act(async () => resend.click());
+  expect(api.register).toHaveBeenCalledTimes(1);
+  expect(api.sendOtp).toHaveBeenCalledTimes(2);
+});
+
+it('restores only the pending account identity after remount without storing credentials', async () => {
+  await render(); await validForm(); await submit();
+  expect(JSON.stringify(sessionStorage)).not.toContain('Buyer123!');
+  await act(async () => root.unmount()); root = createRoot(host); await render();
+  expect(host.querySelector('#otp-code')).not.toBeNull();
+  expect(host.textContent).toContain('buyer@example.test');
+  expect(api.register).toHaveBeenCalledTimes(1);
+});

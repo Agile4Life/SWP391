@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
 import { AuthLayout } from '../landing/components/PublicLayout';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import { registrationSchema, otpSchema, type RegistrationFields } from './authValidation';
-
-type Step = 'register' | 'otp';
+import { readPendingRegistration, savePendingRegistration, type PendingRegistration } from './pendingRegistration';
 
 const RESEND_COOLDOWN = 30;
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>('register');
+  const [pendingAccount, setPendingAccount] = useState(readPendingRegistration);
+  const step = pendingAccount ? 'otp' : 'register';
   const [form, setForm] = useState({ username: '', email: '', phone: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState('');
@@ -20,8 +20,9 @@ export function RegisterPage() {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof RegistrationFields, string>>>({});
   const [busy, setBusy] = useState(false);
+  const requestBusy = useRef(false);
   const [success, setSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(() => Math.max(0, Math.ceil(((pendingAccount?.resendAt ?? 0) - Date.now()) / 1000)));
 
   // Timer countdown for resending OTP
   useEffect(() => {
@@ -32,16 +33,19 @@ export function RegisterPage() {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const sendOtp = async () => {
-    const res = await requestOtp(form.email.trim());
-    if (res.debugOtp) setDebugOtp(res.debugOtp);
+  const sendOtp = async (account: PendingRegistration = pendingAccount!) => {
+    const res = await requestOtp(account.email);
+    setDebugOtp(res.debugOtp || '');
+    const next = { ...account, resendAt: Date.now() + RESEND_COOLDOWN * 1000 };
+    savePendingRegistration(next);
+    setPendingAccount(next);
     setCountdown(RESEND_COOLDOWN);
-    toast(`Mã OTP đã được gửi tới ${form.email.trim()}`);
+    toast(`Mã OTP đã được gửi tới ${account.email}`);
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (requestBusy.current) return;
     const parsed = registrationSchema.safeParse(form);
     if (!parsed.success) {
       setFieldErrors(Object.fromEntries(parsed.error.issues.map(issue => [issue.path[0], issue.message])));
@@ -51,22 +55,28 @@ export function RegisterPage() {
     }
     setFieldErrors({});
 
+    requestBusy.current = true;
     setBusy(true);
     setError('');
 
     try {
       await register(parsed.data);
-      await sendOtp();
-      setStep('otp');
+      const account = { username: parsed.data.username, email: parsed.data.email, createdAt: Date.now(), resendAt: 0 };
+      savePendingRegistration(account);
+      setPendingAccount(account);
+      setForm(previous => ({ ...previous, password: '' }));
+      await sendOtp(account);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đăng ký không thành công.');
     } finally {
+      requestBusy.current = false;
       setBusy(false);
     }
   };
 
   const handleResendOtp = async () => {
-    if (countdown > 0 || busy) return;
+    if (countdown > 0 || requestBusy.current || !pendingAccount) return;
+    requestBusy.current = true;
     setBusy(true);
     setError('');
     try {
@@ -74,23 +84,27 @@ export function RegisterPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể gửi lại mã OTP.');
     } finally {
+      requestBusy.current = false;
       setBusy(false);
     }
   };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (requestBusy.current || !pendingAccount || success) return;
     const parsed = otpSchema.safeParse(otp);
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
       return;
     }
 
+    requestBusy.current = true;
     setBusy(true);
     setError('');
 
     try {
-      await verifyOtp(form.email.trim(), parsed.data);
+      await verifyOtp(pendingAccount!.email, parsed.data);
+      savePendingRegistration(null);
       setSuccess(true);
       toast('Tài khoản đã được kích hoạt thành công!', 'success');
       window.setTimeout(() => {
@@ -99,6 +113,7 @@ export function RegisterPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xác thực OTP thất bại.');
     } finally {
+      requestBusy.current = false;
       setBusy(false);
     }
   };
@@ -108,7 +123,7 @@ export function RegisterPage() {
       <header>
         <span className="fit-kicker">WELCOME TO THE CLUB</span>
         <h2>{step === 'register' ? 'Đăng ký hội viên' : 'Xác thực OTP'}</h2>
-        <p>{step === 'register' ? 'Bắt đầu hành trình thể chất theo cách của bạn.' : `Nhập mã gồm 6 chữ số đã gửi tới ${form.email}.`}</p>
+        <p>{step === 'register' ? 'Bắt đầu hành trình thể chất theo cách của bạn.' : `Nhập mã gồm 6 chữ số đã gửi tới ${pendingAccount?.email}.`}</p>
       </header>
       {error && <div role="alert" className="portal-alert">{error}</div>}
       {step === 'register' ? <form onSubmit={handleRegister} aria-busy={busy} noValidate>
@@ -146,7 +161,11 @@ export function RegisterPage() {
           {success ? <><StatusMark size={22} /><span>ĐÃ KÍCH HOẠT</span></> : <><span>{busy ? 'ĐANG XÁC THỰC...' : 'XÁC THỰC & HOÀN TẤT'}</span><span className="submit-arrow" aria-hidden="true">→</span></>}
         </button>
         <div className="fit-otp-actions">
-          <button className="fit-auth-link" type="button" disabled={busy} onClick={() => setStep('register')}>← Đổi thông tin</button>
+          <details>
+            <summary className="fit-auth-link">Thông tin tài khoản đã tạo</summary>
+            <p className="row-card__meta">{pendingAccount?.username} · {pendingAccount?.email}</p>
+            <p className="row-card__meta">Tài khoản đã được tạo. Xác thực email trước khi cập nhật thông tin trong hồ sơ.</p>
+          </details>
           <button className="fit-auth-link" type="button" disabled={countdown > 0 || busy} onClick={handleResendOtp}>{countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã OTP'}</button>
         </div>
       </form>}
