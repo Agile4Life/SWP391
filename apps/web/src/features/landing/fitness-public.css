@@ -188,7 +188,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-section { margin: 0 auto; padding: 105px 0 0; width: 83%; max-width: 1160px; }
 .fit-section-heading h2 { font-size: clamp(28px, 3.25vw, 45px); line-height: 1.17; font-weight: 750; letter-spacing: .015em; margin: 12px 0 20px; text-wrap: balance; }
 .fit-section-heading > p { font-size: 11px; line-height: 1.95; color: var(--fit-muted); }
-.fit-word { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .08em; margin-bottom: -.08em; }
+.fit-word { display: inline-block; overflow: hidden; vertical-align: bottom; padding: .18em 0 .16em; margin: -.18em 0 -.16em; }
 .fit-word > span { display: inline-block; }
 .fit-centered { text-align: center; }
 .fit-kicker { display: block; color: var(--fit-salmon); font-size: 8px; letter-spacing: .18em; font-weight: 600; }
