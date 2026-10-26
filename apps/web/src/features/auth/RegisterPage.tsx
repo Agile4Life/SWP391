@@ -4,11 +4,10 @@ import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
 import { AuthLayout } from '../landing/components/PublicLayout';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
+import { registrationSchema, otpSchema, type RegistrationFields } from './authValidation';
 
 type Step = 'register' | 'otp';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE_RE = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 const RESEND_COOLDOWN = 30;
 
 export function RegisterPage() {
@@ -19,6 +18,7 @@ export function RegisterPage() {
   const [otp, setOtp] = useState('');
   const [debugOtp, setDebugOtp] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof RegistrationFields, string>>>({});
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -41,32 +41,21 @@ export function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanUser = form.username.trim();
-    const cleanEmail = form.email.trim();
-    const cleanPhone = form.phone.trim();
-
-    if (cleanUser.length < 3) {
-      setError('Tên đăng nhập cần tối thiểu 3 ký tự.');
+    if (busy) return;
+    const parsed = registrationSchema.safeParse(form);
+    if (!parsed.success) {
+      setFieldErrors(Object.fromEntries(parsed.error.issues.map(issue => [issue.path[0], issue.message])));
+      setError('Vui lòng kiểm tra thông tin được đánh dấu.');
+      document.getElementById(`reg-${String(parsed.error.issues[0].path[0])}`)?.focus();
       return;
     }
-    if (!EMAIL_RE.test(cleanEmail)) {
-      setError('Email không đúng định dạng (vd: user@example.com).');
-      return;
-    }
-    if (cleanPhone && !PHONE_RE.test(cleanPhone)) {
-      setError('Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).');
-      return;
-    }
-    if (form.password.length < 6) {
-      setError('Mật khẩu cần tối thiểu 6 ký tự.');
-      return;
-    }
+    setFieldErrors({});
 
     setBusy(true);
     setError('');
 
     try {
-      await register({ username: cleanUser, email: cleanEmail, phone: cleanPhone || undefined, password: form.password });
+      await register(parsed.data);
       await sendOtp();
       setStep('otp');
     } catch (err) {
@@ -91,8 +80,9 @@ export function RegisterPage() {
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\d{6}$/.test(otp.trim())) {
-      setError('Mã OTP gồm đúng 6 chữ số.');
+    const parsed = otpSchema.safeParse(otp);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0].message);
       return;
     }
 
@@ -100,7 +90,7 @@ export function RegisterPage() {
     setError('');
 
     try {
-      await verifyOtp(form.email.trim(), otp.trim());
+      await verifyOtp(form.email.trim(), parsed.data);
       setSuccess(true);
       toast('Tài khoản đã được kích hoạt thành công!', 'success');
       window.setTimeout(() => {
@@ -121,25 +111,29 @@ export function RegisterPage() {
         <p>{step === 'register' ? 'Bắt đầu hành trình thể chất theo cách của bạn.' : `Nhập mã gồm 6 chữ số đã gửi tới ${form.email}.`}</p>
       </header>
       {error && <div role="alert" className="portal-alert">{error}</div>}
-      {step === 'register' ? <form onSubmit={handleRegister} aria-busy={busy}>
+      {step === 'register' ? <form onSubmit={handleRegister} aria-busy={busy} noValidate>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-username">Tên đăng nhập</label>
-          <input id="reg-username" className="portal-input" type="text" autoComplete="username" placeholder="Tên đăng nhập của bạn" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <input id="reg-username" aria-invalid={!!fieldErrors.username} aria-describedby={fieldErrors.username ? 'reg-username-error' : undefined} className="portal-input" type="text" autoComplete="username" placeholder="Tên đăng nhập của bạn" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          {fieldErrors.username && <p id="reg-username-error" className="portal-field-error">{fieldErrors.username}</p>}
         </div>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-email">Địa chỉ email</label>
-          <input id="reg-email" className="portal-input" type="email" autoComplete="email" placeholder="ban@example.com" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input id="reg-email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'reg-email-error' : undefined} className="portal-input" type="email" autoComplete="email" placeholder="ban@example.com" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          {fieldErrors.email && <p id="reg-email-error" className="portal-field-error">{fieldErrors.email}</p>}
         </div>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-phone">Số điện thoại <small>(Tùy chọn)</small></label>
-          <input id="reg-phone" className="portal-input" type="tel" autoComplete="tel" placeholder="0912 345 678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <input id="reg-phone" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'reg-phone-error' : undefined} className="portal-input" type="tel" autoComplete="tel" placeholder="0912 345 678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          {fieldErrors.phone && <p id="reg-phone-error" className="portal-field-error">{fieldErrors.phone}</p>}
         </div>
         <div className="portal-form-group">
           <div className="portal-label-row">
             <label className="portal-label" htmlFor="reg-password">Mật khẩu</label>
             <button className="fit-auth-link" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}</button>
           </div>
-          <input id="reg-password" className="portal-input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <input id="reg-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'reg-password-error' : undefined} className="portal-input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Tối thiểu 6 ký tự" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          {fieldErrors.password && <p id="reg-password-error" className="portal-field-error">{fieldErrors.password}</p>}
         </div>
         <button className="luxury-login-submit-btn" type="submit" disabled={busy}><span>{busy ? 'ĐANG TẠO TÀI KHOẢN...' : 'TIẾP TỤC XÁC THỰC'}</span><span className="submit-arrow" aria-hidden="true">→</span></button>
       </form> : <form onSubmit={handleVerify} aria-busy={busy}>

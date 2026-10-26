@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, homePath, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
+import { loginSchema } from './authValidation';
 import {
   getGoogleOAuthAuthorizeUrl,
   googleOAuthCallback,
@@ -256,12 +257,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsExpired(false);
-    if (!identifier.trim()) {
-      fail('Vui lòng nhập tên đăng nhập hoặc email.');
-      return;
-    }
-    if (!password) {
-      fail('Vui lòng nhập mật khẩu.');
+    const parsed = loginSchema.safeParse({ identifier, password });
+    if (!parsed.success) {
+      fail(parsed.error.issues[0].message);
+      document.getElementById(parsed.error.issues[0].path[0] === 'identifier' ? 'login-identifier' : 'login-password')?.focus();
       return;
     }
 
@@ -269,7 +268,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     setFormError('');
 
     try {
-      const res = await loginApi(identifier, password);
+      const res = await loginApi(parsed.data.identifier, parsed.data.password);
       if (onSuccess) onSuccess();
 
       setSuccess(true);
