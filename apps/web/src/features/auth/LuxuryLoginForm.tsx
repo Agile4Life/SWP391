@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { clearAuthSession, getCurrentUser, homePath, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
+import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { loginSchema } from './authValidation';
 import {
   getGoogleOAuthAuthorizeUrl,
@@ -29,6 +30,8 @@ type AuthMode = 'standard' | 'google_otp';
 
 export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const navigate = useNavigate();
+  const { search } = useLocation();
+  useEffect(() => rememberPurchaseIntent(search), [search]);
 
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => getCurrentUser());
   const [mode, setMode] = useState<AuthMode>('standard');
@@ -79,8 +82,8 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     setSuccess(true);
     if (onSuccess) onSuccess();
     toast('Đăng nhập thành công!', 'success');
-    window.setTimeout(() => navigate(homePath(user.role), { viewTransition: true }), 700);
-  }, [navigate, onSuccess]);
+    window.setTimeout(() => navigate(authDestination(user.role, search), { viewTransition: true }), 700);
+  }, [navigate, onSuccess, search]);
 
   const processGoogleOAuthCallback = useCallback(async (payload: GoogleOAuthCallbackInput) => {
     setIsGoogleLoading(true);
@@ -272,7 +275,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       if (onSuccess) onSuccess();
 
       setSuccess(true);
-      window.setTimeout(() => navigate(homePath(res.user.role), { viewTransition: true }), 700);
+      window.setTimeout(() => navigate(authDestination(res.user.role, search), { viewTransition: true }), 700);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Đăng nhập không thành công.';
       fail(msg);
@@ -390,7 +393,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           <button
             type="button"
             className="btn-primary"
-            onClick={() => navigate(homePath(currentUser.role), { viewTransition: true })}
+            onClick={() => navigate(authDestination(currentUser.role, search), { viewTransition: true })}
           >
             Tiếp tục vào Portal ({ROLE_NAMES[currentUser.role]}) →
           </button>
@@ -574,7 +577,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>Đang xác thực Google và gửi mã OTP...</p>}
           <p style={{ marginTop: '20px', fontSize: '0.85rem', textAlign: 'center' }}>
             Chưa có tài khoản?{' '}
-            <Link to="/register" viewTransition style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
+            <Link to={purchaseAuthPath('/register', search)} viewTransition style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
               Đăng ký hội viên
             </Link>
           </p>

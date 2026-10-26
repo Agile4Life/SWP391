@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
 import { AuthLayout } from '../landing/components/PublicLayout';
+import { purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import { registrationSchema, otpSchema, type RegistrationFields } from './authValidation';
@@ -11,6 +12,8 @@ const RESEND_COOLDOWN = 30;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const { search } = useLocation();
+  useEffect(() => rememberPurchaseIntent(search), [search]);
   const [pendingAccount, setPendingAccount] = useState(readPendingRegistration);
   const step = pendingAccount ? 'otp' : 'register';
   const [form, setForm] = useState({ username: '', email: '', phone: '', password: '' });
@@ -108,7 +111,7 @@ export function RegisterPage() {
       setSuccess(true);
       toast('Tài khoản đã được kích hoạt thành công!', 'success');
       window.setTimeout(() => {
-        navigate('/login', { replace: true, viewTransition: true });
+        navigate(purchaseAuthPath('/login', search), { replace: true, viewTransition: true });
       }, 800);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xác thực OTP thất bại.');
@@ -169,7 +172,7 @@ export function RegisterPage() {
           <button className="fit-auth-link" type="button" disabled={countdown > 0 || busy} onClick={handleResendOtp}>{countdown > 0 ? `Gửi lại mã sau ${countdown}s` : 'Gửi lại mã OTP'}</button>
         </div>
       </form>}
-      <p className="fit-auth-bottom">Đã có tài khoản? <Link to="/login">Đăng nhập ngay ↗</Link></p>
+      <p className="fit-auth-bottom">Đã có tài khoản? <Link to={purchaseAuthPath('/login', search)}>Đăng nhập ngay ↗</Link></p>
     </div>
   </AuthLayout>;
 }

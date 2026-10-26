@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom';
+import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -58,6 +60,11 @@ function renderModalOverlay(content: ReactNode) {
 }
 
 export function MemberPackagesPage() {
+  const [searchParams] = useSearchParams();
+  const selectedId = selectedPackageId(searchParams.toString());
+  useEffect(() => clearPurchaseIntent(), []);
+  const selectedCard = useRef<HTMLElement | null>(null);
+  const focusedSelection = useRef<number | null>(null);
   const [packagesState, setPackagesState] = useState<LoadState<MembershipPackage[]>>({ status: 'loading' });
   const [currentState, setCurrentState] = useState<LoadState<MemberSubscription | null>>({ status: 'loading' });
   const [historyState, setHistoryState] = useState<LoadState<MemberSubscription[]>>({ status: 'loading' });
@@ -217,6 +224,13 @@ export function MemberPackagesPage() {
     currentState.status === 'loading' ||
     historyState.status === 'loading' ||
     paymentsState.status === 'loading';
+
+  useEffect(() => {
+    if (isStatusSyncing || packagesState.status !== 'success' || !selectedCard.current || focusedSelection.current === selectedId) return;
+    selectedCard.current.scrollIntoView({ block: 'center' });
+    selectedCard.current.focus({ preventScroll: true });
+    focusedSelection.current = selectedId;
+  }, [isStatusSyncing, packagesState.status, selectedId]);
 
   async function handleMembershipAction(
     membershipPackage: MembershipPackage,
@@ -851,7 +865,9 @@ export function MemberPackagesPage() {
 
             return (
               <article
-                className={`portal-card ${isCurrent ? 'portal-card--feature' : ''}`}
+                tabIndex={selectedId === membershipPackage.id ? -1 : undefined}
+                ref={selectedId === membershipPackage.id ? selectedCard : undefined}
+                className={`portal-card ${isCurrent || selectedId === membershipPackage.id ? 'portal-card--feature' : ''}`}
                 key={membershipPackage.id}
                 style={{
                   marginBottom: 0,
@@ -863,7 +879,7 @@ export function MemberPackagesPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <div className="meta-label">
-                      {details.tierBadge}
+                      {selectedId === membershipPackage.id ? 'Gói bạn đã chọn · ' : ''}{details.tierBadge}
                     </div>
                     <span className="badge badge-info">
                       {membershipPackage.classCreditLimit != null

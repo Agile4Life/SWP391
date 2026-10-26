@@ -1,3 +1,4 @@
+import { purchaseAuthPath } from '../../../shared/lib/purchaseIntent';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
@@ -101,7 +102,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="fit-header-actions">
           <ThemeToggle />
-          <Link to={user ? homePath(user.role) : pathname === '/login' ? '/register' : '/login'} className="fit-pill fit-header-cta">
+          <Link to={user ? homePath(user.role) : pathname === '/login' ? purchaseAuthPath('/register', window.location.search) : purchaseAuthPath('/login', window.location.search)} className="fit-pill fit-header-cta">
             <span className="fit-header-cta-label">{user ? 'Vào portal' : pathname === '/login' ? 'Tham gia ngay' : 'Đăng nhập'}</span><RoundArrow />
           </Link>
           <button type="button" className="fit-menu" aria-controls="public-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? 'Đóng menu' : 'Mở menu'} onClick={() => setMenuOpen(!menuOpen)}>

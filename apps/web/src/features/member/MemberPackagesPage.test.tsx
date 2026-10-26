@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -82,7 +83,7 @@ describe('SCRUM-86 packages', () => {
   });
 
   async function render() {
-    await act(async () => root.render(<MemberPackagesPage />));
+    await act(async () => root.render(<MemoryRouter><MemberPackagesPage /></MemoryRouter>));
   }
 
   function button(label: string) {
