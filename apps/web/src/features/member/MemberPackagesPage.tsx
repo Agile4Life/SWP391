@@ -59,6 +59,7 @@ export function MemberPackagesPage() {
   const selectedId = selectedPackageId(searchParams.toString());
   useEffect(() => clearPurchaseIntent(), []);
   const selectedCard = useRef<HTMLElement | null>(null);
+  const membershipFocus = useRef<HTMLElement | null>(null);
   const focusedSelection = useRef<number | null>(null);
   const [packagesState, setPackagesState] = useState<LoadState<MembershipPackage[]>>({ status: 'loading' });
   const [currentState, setCurrentState] = useState<LoadState<MemberSubscription | null>>({ status: 'loading' });
@@ -635,6 +636,8 @@ export function MemberPackagesPage() {
 
       {pending && (
         <section
+          ref={membershipFocus}
+          tabIndex={-1}
           className="portal-card"
           style={{ marginBottom: 24, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
         >
@@ -784,7 +787,7 @@ export function MemberPackagesPage() {
           <p>Vui lòng quay lại sau.</p>
         </div>
       ) : (
-        <div className="grid-3">
+        <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
           {activePackages.map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
             const isCurrent =
@@ -943,11 +946,11 @@ export function MemberPackagesPage() {
               </article>
             );
           })}
-        </div>
+        </section>
       ))}
 
       {requestResult && !pendingToCancel && (
-        <Modal title={requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} onClose={() => setRequestResult(null)} busy={false}>
+        <Modal returnFocusRef={membershipFocus} title={requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} onClose={() => setRequestResult(null)} busy={false}>
             <div className="meta-label">
               Yêu cầu đã được tạo
             </div>
@@ -1020,7 +1023,7 @@ export function MemberPackagesPage() {
       )}
 
       {pendingToCancel && (
-        <Modal title={'Hủy yêu cầu đăng ký?'} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
+        <Modal returnFocusRef={membershipFocus} title={'Hủy yêu cầu đăng ký?'} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
             <div className="meta-label">Xác nhận yêu cầu</div>
 <p className="row-card__meta" style={{ marginTop: 12 }}>
               Yêu cầu {pendingToCancel.packageName} sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.
@@ -1038,7 +1041,7 @@ export function MemberPackagesPage() {
       )}
 
       {isCancellationModalOpen && current && (
-        <Modal title={`Yêu cầu hủy ${current.packageName}`} onClose={() => setIsCancellationModalOpen(false)} busy={isSubmittingCancellation}>
+        <Modal returnFocusRef={membershipFocus} title={`Yêu cầu hủy ${current.packageName}`} onClose={() => setIsCancellationModalOpen(false)} busy={isSubmittingCancellation}>
             <div className="meta-label">Yêu cầu quản lý xét duyệt</div>
 <p className="row-card__meta" style={{ marginTop: 12 }}>
               Gói tập sau khi được duyệt hủy sẽ không được hoàn tiền. Các lịch học tương lai có thể bị chấm dứt.
@@ -1061,7 +1064,7 @@ export function MemberPackagesPage() {
       )}
 
       {isHoldModalOpen && current && (
-        <Modal title={`Bảo lưu ${current.packageName}`} onClose={() => setIsHoldModalOpen(false)} busy={isSubmittingHold}>
+        <Modal returnFocusRef={membershipFocus} title={`Bảo lưu ${current.packageName}`} onClose={() => setIsHoldModalOpen(false)} busy={isSubmittingHold}>
             <div className="meta-label">
               Yêu cầu bảo lưu gói tập
             </div>

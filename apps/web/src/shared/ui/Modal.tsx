@@ -1,22 +1,29 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 
 interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
   busy?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Hộp thoại dựa trên <dialog> gốc: có sẵn focus trap, phím Esc và backdrop. */
-export function Modal({ title, onClose, children, busy = false }: ModalProps) {
+export function Modal({ title, onClose, children, busy = false, returnFocusRef }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
-    return () => { if (dialog?.open) dialog.close(); };
-  }, []);
+    return () => {
+      if (dialog?.open) dialog.close();
+      // Successful cancellation replaces the pending panel with the catalog before cleanup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const returnTarget = returnFocusRef?.current;
+      if (returnTarget?.isConnected) returnTarget.focus({ preventScroll: true });
+    };
+  }, [returnFocusRef]);
 
   return (
     <dialog
@@ -27,6 +34,18 @@ export function Modal({ title, onClose, children, busy = false }: ModalProps) {
       className="portal-dialog"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby={titleId}
+      onKeyDown={event => {
+        if (event.key !== 'Tab') return;
+        const dialog = event.currentTarget;
+        const controls = [...dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
+          .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls.at(-1);
+        if (!first) { event.preventDefault(); dialog.focus(); }
+        else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }}
+      tabIndex={-1}
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) onClose();
