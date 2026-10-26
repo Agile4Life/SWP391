@@ -170,7 +170,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     assert.equal(await page.locator('.fit-hero-action a').getAttribute('href'), '/member/packages');
     await page.locator('.fit-muscle-zone[data-muscle="chest"] path').first().hover({ force: true });
     assert.equal(await page.locator('.fit-muscle-cta').getAttribute('href'), '/member/packages');
-    assert.equal(await page.locator('.fit-plan a').first().getAttribute('href'), '/member/packages');
+    assert.equal(await page.locator('.fit-plan a').first().getAttribute('href'), '/member/packages?packageId=1');
     assert.equal(await page.locator('.fit-header-cta').getAttribute('href'), '/member/dashboard');
     await page.evaluate(() => localStorage.removeItem('fitcenter_auth_session'));
     check('signed-in member CTAs lead to existing portal routes');

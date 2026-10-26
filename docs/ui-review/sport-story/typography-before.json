@@ -1,0 +1,422 @@
+[
+  {
+    "name": "reference",
+    "width": 390,
+    "styles": {
+      "heading": {
+        "fontSize": "38px",
+        "fontWeight": "800",
+        "lineHeight": "38px",
+        "letterSpacing": "-0.19px",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "10px 0px 22px"
+      },
+      "number": {
+        "fontSize": "64px",
+        "fontWeight": "800",
+        "lineHeight": "64px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "title": {
+        "fontSize": "28px",
+        "fontWeight": "700",
+        "lineHeight": "30.24px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "summary": {
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "lineHeight": "27.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px 0px 18px"
+      },
+      "bullet": {
+        "fontSize": "15px",
+        "fontWeight": "500",
+        "lineHeight": "22.5px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px"
+      },
+      "hint": {
+        "fontSize": "18px",
+        "fontWeight": "400",
+        "lineHeight": "27.9px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px 0px 44px"
+      },
+      "kicker": {
+        "fontSize": "15px",
+        "fontWeight": "600",
+        "lineHeight": "22.5px",
+        "letterSpacing": "1.8px",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px"
+      },
+      "button": {
+        "fontSize": "14px",
+        "fontWeight": "600",
+        "lineHeight": "21px",
+        "letterSpacing": "normal",
+        "fontFamily": "Inter, sans-serif",
+        "margin": "0px"
+      }
+    }
+  },
+  {
+    "name": "reference",
+    "width": 1440,
+    "styles": {
+      "heading": {
+        "fontSize": "74px",
+        "fontWeight": "800",
+        "lineHeight": "74px",
+        "letterSpacing": "-0.37px",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "10px 0px 22px"
+      },
+      "number": {
+        "fontSize": "64px",
+        "fontWeight": "800",
+        "lineHeight": "64px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "title": {
+        "fontSize": "40px",
+        "fontWeight": "700",
+        "lineHeight": "43.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "summary": {
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "lineHeight": "27.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px 0px 18px"
+      },
+      "bullet": {
+        "fontSize": "15px",
+        "fontWeight": "500",
+        "lineHeight": "22.5px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px"
+      },
+      "hint": {
+        "fontSize": "18px",
+        "fontWeight": "400",
+        "lineHeight": "27.9px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px 0px 44px"
+      },
+      "kicker": {
+        "fontSize": "15px",
+        "fontWeight": "600",
+        "lineHeight": "22.5px",
+        "letterSpacing": "1.8px",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px"
+      },
+      "button": {
+        "fontSize": "14px",
+        "fontWeight": "600",
+        "lineHeight": "21px",
+        "letterSpacing": "normal",
+        "fontFamily": "Inter, sans-serif",
+        "margin": "0px"
+      }
+    }
+  },
+  {
+    "name": "reference",
+    "width": 1920,
+    "styles": {
+      "heading": {
+        "fontSize": "74px",
+        "fontWeight": "800",
+        "lineHeight": "74px",
+        "letterSpacing": "-0.37px",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "10px 0px 22px"
+      },
+      "number": {
+        "fontSize": "64px",
+        "fontWeight": "800",
+        "lineHeight": "64px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "title": {
+        "fontSize": "40px",
+        "fontWeight": "700",
+        "lineHeight": "43.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "summary": {
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "lineHeight": "27.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px 0px 18px"
+      },
+      "bullet": {
+        "fontSize": "15px",
+        "fontWeight": "500",
+        "lineHeight": "22.5px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px"
+      },
+      "hint": {
+        "fontSize": "18px",
+        "fontWeight": "400",
+        "lineHeight": "27.9px",
+        "letterSpacing": "normal",
+        "fontFamily": "Barlow, Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif",
+        "margin": "0px 0px 44px"
+      },
+      "kicker": {
+        "fontSize": "15px",
+        "fontWeight": "600",
+        "lineHeight": "22.5px",
+        "letterSpacing": "1.8px",
+        "fontFamily": "\"Barlow Condensed\", \"Arial Narrow\", sans-serif",
+        "margin": "0px"
+      },
+      "button": {
+        "fontSize": "14px",
+        "fontWeight": "600",
+        "lineHeight": "21px",
+        "letterSpacing": "normal",
+        "fontFamily": "Inter, sans-serif",
+        "margin": "0px"
+      }
+    }
+  },
+  {
+    "name": "local",
+    "width": 390,
+    "styles": {
+      "heading": {
+        "fontSize": "30px",
+        "fontWeight": "900",
+        "lineHeight": "35.1px",
+        "letterSpacing": "-1.05px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "12px 0px 17px"
+      },
+      "number": {
+        "fontSize": "52px",
+        "fontWeight": "800",
+        "lineHeight": "52px",
+        "letterSpacing": "-3.12px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "title": {
+        "fontSize": "28px",
+        "fontWeight": "800",
+        "lineHeight": "30.24px",
+        "letterSpacing": "-0.7px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "10px 0px 14px"
+      },
+      "summary": {
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "lineHeight": "27.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px 0px 18px"
+      },
+      "bullet": {
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "hint": {
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "kicker": {
+        "fontSize": "7px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "letterSpacing": "0.98px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "button": {
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "letterSpacing": "-0.195px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      }
+    }
+  },
+  {
+    "name": "local",
+    "width": 1440,
+    "styles": {
+      "heading": {
+        "fontSize": "45px",
+        "fontWeight": "900",
+        "lineHeight": "52.65px",
+        "letterSpacing": "-1.575px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "12px 0px 20px"
+      },
+      "number": {
+        "fontSize": "64px",
+        "fontWeight": "800",
+        "lineHeight": "64px",
+        "letterSpacing": "-3.84px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "title": {
+        "fontSize": "40px",
+        "fontWeight": "800",
+        "lineHeight": "43.2px",
+        "letterSpacing": "-1px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "10px 0px 14px"
+      },
+      "summary": {
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "lineHeight": "27.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px 0px 18px"
+      },
+      "bullet": {
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "hint": {
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "kicker": {
+        "fontSize": "8px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "letterSpacing": "1.12px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "button": {
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "letterSpacing": "-0.195px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      }
+    }
+  },
+  {
+    "name": "local",
+    "width": 1920,
+    "styles": {
+      "heading": {
+        "fontSize": "45px",
+        "fontWeight": "900",
+        "lineHeight": "52.65px",
+        "letterSpacing": "-1.575px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "12px 0px 20px"
+      },
+      "number": {
+        "fontSize": "64px",
+        "fontWeight": "800",
+        "lineHeight": "64px",
+        "letterSpacing": "-3.84px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px 0px 14px"
+      },
+      "title": {
+        "fontSize": "40px",
+        "fontWeight": "800",
+        "lineHeight": "43.2px",
+        "letterSpacing": "-1px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "10px 0px 14px"
+      },
+      "summary": {
+        "fontSize": "17px",
+        "fontWeight": "400",
+        "lineHeight": "27.2px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px 0px 18px"
+      },
+      "bullet": {
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "hint": {
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "letterSpacing": "normal",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "kicker": {
+        "fontSize": "8px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "letterSpacing": "1.12px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      },
+      "button": {
+        "fontSize": "13px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "letterSpacing": "-0.195px",
+        "fontFamily": "\"Plus Jakarta Sans\", sans-serif",
+        "margin": "0px"
+      }
+    }
+  }
+]
