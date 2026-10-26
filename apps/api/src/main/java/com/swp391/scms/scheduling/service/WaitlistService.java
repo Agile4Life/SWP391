@@ -175,8 +175,12 @@ public class WaitlistService {
         List<ClassWaitlist> expiredList = waitlists
                 .findByStatusAndReservationExpiresAtLessThan("notified", now);
         for (ClassWaitlist expired : expiredList) {
-            expired.setStatus("expired");
-            waitlists.save(expired);
+            if (enrollmentService != null) {
+                enrollmentService.expireReservationAndNotify(expired);
+            } else {
+                expired.setStatus("expired");
+                waitlists.save(expired);
+            }
             if (expired.getGymClass() != null && expired.getGymClass().getId() != null) {
                 enrollmentService.promoteNextWaitlistEntry(expired.getGymClass().getId(), now);
             }

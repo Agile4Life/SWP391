@@ -60,6 +60,12 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.facilities.repository.MembershipPackageRepository membershipPackageRepository;
 
+    @Autowired(required = false)
+    private InvoiceService invoiceService;
+
+    @Autowired(required = false)
+    private com.swp391.scms.scheduling.service.EnrollmentService enrollmentService;
+
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -250,9 +256,16 @@ public class PaymentService {
             if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)) {
                 activateLinkedTargetsOnSuccess(payment);
             }
+            if ("success".equals(currentStatus) && "refunded".equals(normalizedStatus)) {
+                cancelLinkedTargetsOnRefund(payment, null);
+            }
         }
 
-        return paymentMapper.toDto(payment);
+        PaymentDto dto = paymentMapper.toDto(payment);
+        if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)) {
+            attachAutoIssuedInvoiceNumber(payment, dto);
+        }
+        return dto;
     }
 
     public PaymentDto processPayment(PaymentProcessDto dto) {
@@ -291,6 +304,10 @@ public class PaymentService {
                 && membershipPackageRepository != null && membershipSubscriptionRepository != null) {
             com.swp391.scms.facilities.entity.MembershipPackage pkg = membershipPackageRepository.findById(dto.getPackageId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.package", dto.getPackageId()));
+            if (pkg.getStatus() != null && !"active".equalsIgnoreCase(pkg.getStatus())) {
+                throw new BadRequestException("MEMBERSHIP_PACKAGE_INACTIVE", "membership.package.inactive",
+                        new Object[]{pkg.getId()}, "Membership package is inactive");
+            }
             if (pkg.getPrice() != null && dto.getAmount().compareTo(pkg.getPrice()) != 0) {
                 throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
                         new Object[]{dto.getAmount(), pkg.getPrice()}, "Payment amount mismatch");
@@ -361,11 +378,18 @@ public class PaymentService {
                         null, "Subscription is not in pending_payment state");
             }
 
-            if (subscription.getMembershipPackage() != null && subscription.getMembershipPackage().getPrice() != null) {
-                BigDecimal expectedPrice = subscription.getMembershipPackage().getPrice();
-                if (dto.getAmount().compareTo(expectedPrice) != 0) {
-                    throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
-                            new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
+            if (subscription.getMembershipPackage() != null) {
+                if (subscription.getMembershipPackage().getStatus() != null
+                        && !"active".equalsIgnoreCase(subscription.getMembershipPackage().getStatus())) {
+                    throw new BadRequestException("MEMBERSHIP_PACKAGE_INACTIVE", "membership.package.inactive",
+                            new Object[]{subscription.getMembershipPackage().getId()}, "Membership package is inactive");
+                }
+                if (subscription.getMembershipPackage().getPrice() != null) {
+                    BigDecimal expectedPrice = subscription.getMembershipPackage().getPrice();
+                    if (dto.getAmount().compareTo(expectedPrice) != 0) {
+                        throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                                new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
+                    }
                 }
             }
 
@@ -393,7 +417,11 @@ public class PaymentService {
             pendingToSettle.setReceivedBy(receiver);
             pendingToSettle.setMethod(dto.getMethod() != null ? dto.getMethod().toLowerCase(Locale.ROOT) : "cash");
             pendingToSettle.setNote(dto.getNote());
-            return paymentMapper.toDto(paymentRepository.save(pendingToSettle));
+            Payment savedPending = paymentRepository.save(pendingToSettle);
+            Payment targetPayment = savedPending != null ? savedPending : pendingToSettle;
+            PaymentDto resultDto = paymentMapper.toDto(targetPayment);
+            attachAutoIssuedInvoiceNumber(targetPayment, resultDto);
+            return resultDto;
         }
 
         Payment payment = new Payment();
@@ -408,7 +436,10 @@ public class PaymentService {
         payment.setNote(dto.getNote());
 
         Payment saved = paymentRepository.save(payment);
-        return paymentMapper.toDto(saved);
+        Payment targetPayment = saved != null ? saved : payment;
+        PaymentDto resultDto = paymentMapper.toDto(targetPayment);
+        attachAutoIssuedInvoiceNumber(targetPayment, resultDto);
+        return resultDto;
     }
 
     @Audited(action = "PAYMENT_REFUND", entity = "payments")
@@ -438,27 +469,52 @@ public class PaymentService {
         }
         payment.setNote(combinedNote);
 
-        // Cancel associated subscription
+        cancelLinkedTargetsOnRefund(payment, request.getReason());
+
+        Payment saved = paymentRepository.save(payment);
+        return paymentMapper.toDto(saved);
+    }
+
+    private void cancelLinkedTargetsOnRefund(Payment payment, String cancelReason) {
         if (payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
             membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(sub -> {
                 sub.setStatus("cancelled");
+                sub.setHoldStatus(null);
                 sub.setUpdatedAt(LocalDateTime.now(clock));
                 membershipSubscriptionRepository.save(sub);
             });
         }
 
-        // Cancel associated class enrollment
         if (payment.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
             classEnrollmentRepository.findById(payment.getClassEnrollmentId()).ifPresent(enrollment -> {
                 enrollment.setStatus("cancelled");
-                enrollment.setCancelReason(request.getReason());
+                if (cancelReason != null) {
+                    enrollment.setCancelReason(cancelReason);
+                }
                 enrollment.setCancelledAt(LocalDateTime.now(clock));
                 classEnrollmentRepository.save(enrollment);
+                if (enrollmentService != null && enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
+                    enrollmentService.promoteNextWaitlistEntry(enrollment.getGymClass().getId(), LocalDateTime.now(clock));
+                }
             });
         }
+    }
 
-        Payment saved = paymentRepository.save(payment);
-        return paymentMapper.toDto(saved);
+    private void attachAutoIssuedInvoiceNumber(Payment payment, PaymentDto dto) {
+        if (invoiceService == null || payment == null || payment.getId() == null || dto == null) {
+            return;
+        }
+        if (dto.getInvoiceNumber() != null && !dto.getInvoiceNumber().isBlank()) {
+            return;
+        }
+        try {
+            com.swp391.scms.finance.dto.InvoiceDto issued = invoiceService.autoIssueInvoiceForPayment(payment.getId());
+            if (issued != null && issued.getInvoiceNumber() != null) {
+                dto.setInvoiceNumber(issued.getInvoiceNumber());
+            }
+        } catch (Exception ignored) {
+            // Best-effort auto-issue in 1-step checkout flow
+        }
     }
 
     private void lockSubscriptionMember(Payment payment) {
@@ -532,6 +588,7 @@ public class PaymentService {
         }
         if (isUpgrade && "active".equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus("expired");
+            previous.setHoldStatus(null);
             if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
                 previous.setEndDate(today);
             }

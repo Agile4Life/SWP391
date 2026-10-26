@@ -5,6 +5,8 @@ import com.swp391.scms.attendance.dto.SessionAttendanceResponse;
 import com.swp391.scms.attendance.dto.SessionAttendanceResponse.MemberAttendanceItem;
 import com.swp391.scms.attendance.entity.SessionAttendance;
 import com.swp391.scms.attendance.repository.SessionAttendanceRepository;
+import com.swp391.scms.coaching.entity.SessionEvaluation;
+import com.swp391.scms.coaching.repository.SessionEvaluationRepository;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -21,13 +23,16 @@ import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,7 +54,10 @@ public class SessionAttendanceService {
     private final MessageService messageService;
     private final Clock clock;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired(required = false)
+    private SessionEvaluationRepository evaluationRepository;
+
+    @Autowired
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
                                   ClassSessionRepository sessionRepository,
                                   ClassEnrollmentRepository enrollmentRepository,
@@ -97,6 +105,18 @@ public class SessionAttendanceService {
                 .filter(a -> a.getMember() != null)
                 .collect(Collectors.toMap(a -> a.getMember().getUserId(), a -> a, (first, second) -> first));
 
+        Map<Long, Integer> scoreMap = new HashMap<>();
+        if (evaluationRepository != null) {
+            List<SessionEvaluation> evaluations = evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(sessionId);
+            if (evaluations != null) {
+                for (SessionEvaluation eval : evaluations) {
+                    if (eval.getMember() != null && eval.getMember().getUserId() != null && eval.getProgressScore() != null) {
+                        scoreMap.putIfAbsent(eval.getMember().getUserId(), eval.getProgressScore().intValue());
+                    }
+                }
+            }
+        }
+
         List<MemberAttendanceItem> memberItems = new ArrayList<>();
         int presentCount = 0;
         int absentCount = 0;
@@ -140,7 +160,8 @@ public class SessionAttendanceService {
                     checkInTime,
                     coachId,
                     coachName,
-                    notes
+                    notes,
+                    scoreMap.get(member.getUserId())
             ));
         }
 
@@ -166,7 +187,7 @@ public class SessionAttendanceService {
 
     /**
      * SCRUM-111 AC: POST /api/v1/attendance/sessions/{id}/batch
-     * Transactional batch attendance recording by authenticated coach / staff.
+     * Transactional batch attendance recording (and optional progress evaluation) by authenticated coach / staff.
      */
     @Transactional
     public List<MemberAttendanceItem> recordBatchAttendance(Long sessionId,
@@ -178,6 +199,18 @@ public class SessionAttendanceService {
         Coach recordingCoach = resolveRecordingCoach(principal, session);
         LocalDateTime now = LocalDateTime.now(clock);
         List<MemberAttendanceItem> result = new ArrayList<>();
+
+        Map<Long, SessionEvaluation> existingEvalMap = new HashMap<>();
+        if (evaluationRepository != null) {
+            List<SessionEvaluation> existingEvals = evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(sessionId);
+            if (existingEvals != null) {
+                for (SessionEvaluation eval : existingEvals) {
+                    if (eval.getMember() != null && eval.getMember().getUserId() != null) {
+                        existingEvalMap.putIfAbsent(eval.getMember().getUserId(), eval);
+                    }
+                }
+            }
+        }
 
         try {
             for (BatchAttendanceRequest.AttendanceItem item : request.records()) {
@@ -215,6 +248,20 @@ public class SessionAttendanceService {
 
                 SessionAttendance saved = attendanceRepository.saveAndFlush(attendance);
 
+                if (item.progressScore() != null && evaluationRepository != null) {
+                    SessionEvaluation eval = existingEvalMap.getOrDefault(member.getUserId(), new SessionEvaluation());
+                    eval.setSession(session);
+                    eval.setMember(member);
+                    eval.setCoach(recordingCoach);
+                    eval.setProgressScore(BigDecimal.valueOf(item.progressScore()));
+                    eval.setPerformanceNotes(item.notes());
+                    eval.setEvaluatedAt(now);
+                    if (eval.getCreatedAt() == null) {
+                        eval.setCreatedAt(now);
+                    }
+                    evaluationRepository.save(eval);
+                }
+
                 User user = member.getUser();
                 result.add(new MemberAttendanceItem(
                         member.getUserId(),
@@ -228,7 +275,8 @@ public class SessionAttendanceService {
                         saved.getCheckedInAt(),
                         recordingCoach.getUserId(),
                         recordingCoach.getUser() != null ? recordingCoach.getUser().getFullName() : null,
-                        saved.getNotes()
+                        saved.getNotes(),
+                        item.progressScore()
                 ));
             }
         } catch (DataIntegrityViolationException ex) {
@@ -247,10 +295,22 @@ public class SessionAttendanceService {
     }
 
     private Coach resolveRecordingCoach(AuthenticatedPrincipal principal, ClassSession session) {
+        Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
         if (principal == null) {
-            Coach sessionCoach = session.getGymClass().getCoach();
             if (sessionCoach != null) return sessionCoach;
             throw new ForbiddenException("ATTENDANCE_UNAUTHENTICATED", "error.unauthorized", null, "Unauthenticated");
+        }
+
+        if ("COACH".equalsIgnoreCase(principal.role())
+                && sessionCoach != null
+                && sessionCoach.getUserId() != null
+                && !sessionCoach.getUserId().equals(principal.id())) {
+            throw new ForbiddenException(
+                    "ATTENDANCE_NOT_COACH",
+                    "attendance.forbidden.not_coach",
+                    null,
+                    "Only the assigned coach or authorized staff may record session attendance"
+            );
         }
 
         Optional<Coach> coachOpt = coachRepository.findById(principal.id());
@@ -258,8 +318,7 @@ public class SessionAttendanceService {
             return coachOpt.get();
         }
 
-        // If the caller is staff/manager, use the session's designated coach
-        Coach sessionCoach = session.getGymClass().getCoach();
+        // If the caller is staff/manager/receptionist, use the session's designated coach
         if (sessionCoach != null) {
             return sessionCoach;
         }

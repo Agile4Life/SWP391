@@ -11,10 +11,12 @@ import com.swp391.scms.users.mapper.UserMapper;
 import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,15 +30,25 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final ReceptionistRepository receptionistRepository;
+    private final Clock clock;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository) {
+        this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, null);
+    }
+
+    @Autowired
+    public UserService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, UserMapper userMapper,
+                       ReceptionistRepository receptionistRepository,
+                       @Autowired(required = false) Clock clock) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.receptionistRepository = receptionistRepository;
+        this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
     @Transactional(readOnly = true)
@@ -70,15 +82,15 @@ public class UserService {
         user.setPhone(dto.getPhone() == null || dto.getPhone().isBlank() ? null : dto.getPhone().trim());
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         user.setStatus("active");
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setCreatedAt(LocalDateTime.now(clock));
+        user.setUpdatedAt(LocalDateTime.now(clock));
 
         User saved = userRepository.saveAndFlush(user);
         if ("MEMBER".equalsIgnoreCase(role.getCode())) {
             Member member = new Member();
             member.setUser(saved);
             member.setMembershipCode("MEM-" + saved.getId());
-            member.setJoinDate(LocalDate.now());
+            member.setJoinDate(LocalDate.now(clock));
             member.setFitnessLevel("beginner");
             saved.setMember(member);
             userRepository.save(saved);
@@ -104,9 +116,18 @@ public class UserService {
             user.setPhone(phone);
         }
         if (dto.getRoleId() != null) {
-            user.setRole(findRole(dto.getRoleId()));
+            Role newRole = findRole(dto.getRoleId());
+            user.setRole(newRole);
+            if ("MEMBER".equalsIgnoreCase(newRole.getCode()) && user.getMember() == null) {
+                Member member = new Member();
+                member.setUser(user);
+                member.setMembershipCode("MEM-" + user.getId());
+                member.setJoinDate(LocalDate.now(clock));
+                member.setFitnessLevel("beginner");
+                user.setMember(member);
+            }
         }
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
     }
 
@@ -114,7 +135,7 @@ public class UserService {
     @Audited(action = "USER_DELETE", entity = "users")
     public void deleteUser(Long id) {
         User user = findActiveUser(id);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         user.setDeletedAt(now);
         user.setUpdatedAt(now);
         userRepository.save(user);
@@ -128,7 +149,7 @@ public class UserService {
         }
         User user = findActiveUser(id);
         user.setStatus(status);
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
     }
 

@@ -8,11 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Base64;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,12 +19,10 @@ public class MembershipService {
 
     private static final String PENDING_PAYMENT = "pending_payment";
     private static final String ACTIVE = "active";
-    private static final int QR_BYTES = 32;
     private static final int QR_GENERATION_ATTEMPTS = 5;
 
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
     private final Clock clock;
-    private final SecureRandom secureRandom = new SecureRandom();
 
     @Autowired
     public MembershipService(MembershipSubscriptionRepository membershipSubscriptionRepository, Clock clock) {
@@ -63,6 +60,7 @@ public class MembershipService {
 
         if (isUpgrade && ACTIVE.equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus("expired");
+            previous.setHoldStatus(null);
             if (previous.getEndDate() != null && previous.getEndDate().isAfter(today)) {
                 previous.setEndDate(today);
             }
@@ -73,7 +71,8 @@ public class MembershipService {
         }
 
         LocalDate activationStartDate = startDate;
-        LocalDate endDate = activationStartDate.plusDays(subscription.getMembershipPackage().getDurationDays());
+        int durationDays = Math.max(1, subscription.getMembershipPackage().getDurationDays());
+        LocalDate endDate = activationStartDate.plusDays(durationDays - 1L);
 
         Long prevId = previous != null ? previous.getId() : null;
         if (subscription.getMember() != null) {
@@ -103,9 +102,7 @@ public class MembershipService {
 
     private String generateUniqueQrCode() {
         for (int attempt = 0; attempt < QR_GENERATION_ATTEMPTS; attempt++) {
-            byte[] bytes = new byte[QR_BYTES];
-            secureRandom.nextBytes(bytes);
-            String candidate = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+            String candidate = UUID.randomUUID().toString();
             if (membershipSubscriptionRepository.findByQrCode(candidate).isEmpty()) {
                 return candidate;
             }

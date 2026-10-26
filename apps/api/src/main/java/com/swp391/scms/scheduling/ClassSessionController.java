@@ -42,7 +42,7 @@ public class ClassSessionController {
 
     @Operation(summary = "Cancel a class session with reason and auto-refund booked enrollments")
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
     public ApiResponse<ClassSessionDto> cancelSession(
             @PathVariable Long id,
             @Valid @RequestBody CancelSessionRequest request,

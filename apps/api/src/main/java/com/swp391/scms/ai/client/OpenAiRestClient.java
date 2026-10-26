@@ -1,8 +1,14 @@
 package com.swp391.scms.ai.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.client.RestClient;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class OpenAiRestClient implements AiClient {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final String apiKey;
     private final String model;
@@ -32,6 +38,15 @@ public class OpenAiRestClient implements AiClient {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
         }
-        return "{\"status\": \"success\", \"provider\": \"openai\", \"model\": \"" + model + "\", \"content\": \"OpenAI generated response for: " + userMessage + "\"}";
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("status", "success");
+        payload.put("provider", "openai");
+        payload.put("model", model);
+        payload.put("content", "OpenAI generated response for: " + (userMessage != null ? userMessage : ""));
+        try {
+            return MAPPER.writeValueAsString(payload);
+        } catch (Exception e) {
+            return "{\"status\":\"success\",\"provider\":\"openai\"}";
+        }
     }
 }

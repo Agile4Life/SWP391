@@ -178,7 +178,10 @@ public class ClassSessionService {
         }
 
         String role = principal.role();
-        if ("CENTER_MANAGER".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role) || "STAFF".equalsIgnoreCase(role)) {
+        if ("CENTER_MANAGER".equalsIgnoreCase(role)
+                || "MANAGER".equalsIgnoreCase(role)
+                || "STAFF".equalsIgnoreCase(role)
+                || "RECEPTIONIST".equalsIgnoreCase(role)) {
             return;
         }
 

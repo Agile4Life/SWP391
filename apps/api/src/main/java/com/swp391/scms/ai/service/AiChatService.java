@@ -99,6 +99,43 @@ public class AiChatService {
     }
 
     /**
+     * Quick-send message flow: if dto.sessionId() is provided, appends to that session;
+     * otherwise reuses the member's most recent active session or auto-creates one.
+     */
+    @Transactional
+    public AiChatReplyDto sendQuickMessage(AiChatMessageCreateDto dto, Long currentUserId, String currentRole) {
+        if (dto == null || dto.message() == null || dto.message().isBlank()) {
+            throw new BadRequestException(msg("validation.ai.chat.message.required"));
+        }
+        Long sessionId = dto.sessionId();
+        if (sessionId == null) {
+            List<AiChatSession> existing = sessionRepository.findByMemberUserIdOrderByStartedAtDesc(currentUserId);
+            if (!existing.isEmpty() && existing.get(0).getEndedAt() == null) {
+                sessionId = existing.get(0).getId();
+            } else {
+                String derivedTopic = deriveTopicFromMessage(dto.topic(), dto.message());
+                AiChatSessionDto created = createSession(
+                        new AiChatSessionCreateDto(currentUserId, derivedTopic),
+                        currentUserId,
+                        currentRole);
+                sessionId = created.id();
+            }
+        }
+        return sendMessage(sessionId, dto, currentUserId, currentRole);
+    }
+
+    private String deriveTopicFromMessage(String explicitTopic, String rawMessage) {
+        if (explicitTopic != null && !explicitTopic.isBlank()) {
+            return explicitTopic.trim();
+        }
+        String cleaned = rawMessage != null ? rawMessage.trim().replaceAll("\\s+", " ") : "";
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+        return cleaned.length() <= 60 ? cleaned : cleaned.substring(0, 57) + "...";
+    }
+
+    /**
      * Sends a member message in an existing chat session, generates the AI reply with session context,
      * and persists both messages in chronological order.
      */
@@ -164,15 +201,13 @@ public class AiChatService {
     }
 
     private Member resolveTargetMember(Long requestedMemberId, Long currentUserId, String currentRole) {
-        if ("MEMBER".equalsIgnoreCase(currentRole)) {
-            if (requestedMemberId != null && currentUserId != null && !requestedMemberId.equals(currentUserId)) {
-                throw new AccessDeniedException(msg("coaching.plan.not_owner"));
-            }
-            Long targetId = currentUserId != null ? currentUserId : requestedMemberId;
-            return memberRepository.findById(targetId)
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", targetId));
+        boolean isMember = "MEMBER".equalsIgnoreCase(currentRole);
+        if (isMember && requestedMemberId != null && currentUserId != null && !requestedMemberId.equals(currentUserId)) {
+            throw new AccessDeniedException(msg("coaching.plan.not_owner"));
         }
-        Long targetId = requestedMemberId != null ? requestedMemberId : currentUserId;
+        Long targetId = isMember
+                ? (currentUserId != null ? currentUserId : requestedMemberId)
+                : (requestedMemberId != null ? requestedMemberId : currentUserId);
         return memberRepository.findById(targetId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", targetId));
     }

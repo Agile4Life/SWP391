@@ -44,6 +44,8 @@ import java.util.stream.Collectors;
 @Transactional
 public class RevenueReportService {
 
+    private record DateRange(LocalDate start, LocalDate end) {}
+
     private final PaymentRepository paymentRepository;
     private final MembershipSubscriptionRepository subscriptionRepository;
     private final ReportSnapshotRepository snapshotRepository;
@@ -89,27 +91,28 @@ public class RevenueReportService {
         this.sessionAttendanceReportRepository = sessionAttendanceReportRepository;
     }
 
-    @Transactional(readOnly = true)
-    public List<RecentTransactionDto> getRecentTransactions(LocalDate startDate, LocalDate endDate) {
+    private DateRange resolveValidatedDateRange(LocalDate startDate, LocalDate endDate) {
         LocalDate start = startDate != null ? startDate : LocalDate.now(clock).minusDays(30);
         LocalDate end = endDate != null ? endDate : LocalDate.now(clock);
         if (start.isAfter(end)) {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
                     "Start date cannot be after end date");
         }
+        return new DateRange(start, end);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecentTransactionDto> getRecentTransactions(LocalDate startDate, LocalDate endDate) {
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
         return transactionReportRepository.findRecentTransactions(
-                start.atStartOfDay(), end.plusDays(1).atStartOfDay(), PageRequest.of(0, 10));
+                range.start().atStartOfDay(), range.end().plusDays(1).atStartOfDay(), PageRequest.of(0, 10));
     }
 
     @Transactional(readOnly = true)
     public List<DailyRevenueDto> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
-        LocalDate start = (startDate != null) ? startDate : LocalDate.now(clock).minusDays(30);
-        LocalDate end = (endDate != null) ? endDate : LocalDate.now(clock);
-
-        if (start.isAfter(end)) {
-            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
-                    "Start date cannot be after end date");
-        }
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
+        LocalDate start = range.start();
+        LocalDate end = range.end();
 
         List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
                 start.atStartOfDay(), end.atTime(23, 59, 59));
@@ -135,16 +138,10 @@ public class RevenueReportService {
 
     @Transactional(readOnly = true)
     public List<PackageRevenueDto> getRevenueByPackage(LocalDate startDate, LocalDate endDate) {
-        LocalDate start = (startDate != null) ? startDate : LocalDate.now(clock).minusDays(30);
-        LocalDate end = (endDate != null) ? endDate : LocalDate.now(clock);
-
-        if (start.isAfter(end)) {
-            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
-                    "Start date cannot be after end date");
-        }
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
 
         List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
-                start.atStartOfDay(), end.atTime(23, 59, 59));
+                range.start().atStartOfDay(), range.end().atTime(23, 59, 59));
 
         Map<Long, BigDecimal> revenueMap = new HashMap<>();
         Map<Long, Integer> countMap = new HashMap<>();

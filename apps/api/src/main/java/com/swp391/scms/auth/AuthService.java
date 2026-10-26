@@ -205,67 +205,7 @@ public class AuthService {
             throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_not_verified", null, "Google email is not verified");
         }
 
-        String email = normalize(googleUser.email());
-        String googleSub = googleUser.sub();
-
-        Optional<User> bySub = (googleSub != null && !googleSub.isBlank())
-                ? userRepository.findByGoogleSub(googleSub)
-                : Optional.empty();
-        Optional<User> byEmail = userRepository.findByEmailIgnoreCase(email);
-
-        User user;
-        if (bySub.isPresent()) {
-            user = bySub.get();
-        } else if (byEmail.isPresent()) {
-            user = byEmail.get();
-            String linkedSub = user.getGoogleSub();
-            if (linkedSub != null && !linkedSub.isBlank() && !linkedSub.equals(googleSub)) {
-                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
-            }
-            boolean googleManagedEmail = email.endsWith("@gmail.com")
-                    || (googleUser.hostedDomain() != null && !googleUser.hostedDomain().isBlank());
-            if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
-                throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
-            }
-            user.setGoogleSub(googleSub);
-            if (googleUser.picture() != null && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
-                user.setAvatarUrl(googleUser.picture());
-            }
-            if (googleUser.name() != null && !googleUser.name().isBlank()
-                    && (user.getFullName() == null || user.getFullName().equals(user.getUsername()))) {
-                user.setFullName(googleUser.name());
-            }
-            user.setUpdatedAt(LocalDateTime.now(clock));
-            userRepository.save(user);
-        } else {
-            Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
-
-            String username = generateUniqueUsernameFromEmail(email);
-
-            user = new User();
-            user.setUsername(username);
-            user.setRole(memberRole);
-            user.setFullName(googleUser.name() != null && !googleUser.name().isBlank() ? googleUser.name() : username);
-            user.setEmail(email);
-            user.setGoogleSub(googleSub);
-            user.setAvatarUrl(googleUser.picture());
-            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
-            user.setStatus("inactive");
-            LocalDateTime now = LocalDateTime.now(clock);
-            user.setCreatedAt(now);
-            user.setUpdatedAt(now);
-            userRepository.saveAndFlush(user);
-
-            Member member = new Member();
-            member.setUser(user);
-            member.setMembershipCode("MEM-" + user.getId());
-            member.setJoinDate(LocalDate.now(clock));
-            member.setFitnessLevel("beginner");
-            user.setMember(member);
-            userRepository.save(user);
-        }
-
+        User user = resolveOrCreateGoogleUser(googleUser, "inactive", true);
         ensureGoogleOtpAccountAllowed(user);
 
         if ("active".equalsIgnoreCase(user.getStatus())) {
@@ -324,17 +264,31 @@ public class AuthService {
     }
 
     private User createPendingMemberUser(String username, String email, String phone, String rawPassword) {
+        return createMemberAccount(username, username, email, phone, rawPassword, null, null, "inactive");
+    }
+
+    private User createMemberAccount(
+            String username,
+            String fullName,
+            String email,
+            String phone,
+            String rawPassword,
+            String googleSub,
+            String avatarUrl,
+            String initialStatus) {
         Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
                 .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
 
         User user = new User();
         user.setUsername(username);
         user.setRole(memberRole);
-        user.setFullName(username);
+        user.setFullName(fullName != null && !fullName.isBlank() ? fullName : username);
         user.setEmail(email);
         user.setPhone(phone);
+        user.setGoogleSub(googleSub);
+        user.setAvatarUrl(avatarUrl);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        user.setStatus("inactive");
+        user.setStatus(initialStatus);
         LocalDateTime now = LocalDateTime.now(clock);
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
@@ -348,6 +302,59 @@ public class AuthService {
         user.setMember(member);
         userRepository.save(user);
         return user;
+    }
+
+    private User resolveOrCreateGoogleUser(
+            GoogleUserInfo googleUser,
+            String initialStatusForNewUser,
+            boolean saveImmediatelyOnEmailLink) {
+        String email = normalize(googleUser.email());
+        String googleSub = googleUser.sub();
+
+        Optional<User> bySub = (googleSub != null && !googleSub.isBlank())
+                ? userRepository.findByGoogleSub(googleSub)
+                : Optional.empty();
+        Optional<User> byEmail = userRepository.findByEmailIgnoreCase(email);
+
+        if (bySub.isPresent()) {
+            return bySub.get();
+        }
+        if (byEmail.isPresent()) {
+            User user = byEmail.get();
+            String linkedSub = user.getGoogleSub();
+            if (linkedSub != null && !linkedSub.isBlank() && !linkedSub.equals(googleSub)) {
+                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
+            }
+            boolean googleManagedEmail = email.endsWith("@gmail.com")
+                    || (googleUser.hostedDomain() != null && !googleUser.hostedDomain().isBlank());
+            if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
+                throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
+            }
+            user.setGoogleSub(googleSub);
+            if (googleUser.picture() != null && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
+                user.setAvatarUrl(googleUser.picture());
+            }
+            if (googleUser.name() != null && !googleUser.name().isBlank()
+                    && (user.getFullName() == null || user.getFullName().equals(user.getUsername()))) {
+                user.setFullName(googleUser.name());
+            }
+            user.setUpdatedAt(LocalDateTime.now(clock));
+            if (saveImmediatelyOnEmailLink) {
+                userRepository.save(user);
+            }
+            return user;
+        }
+
+        String username = generateUniqueUsernameFromEmail(email);
+        return createMemberAccount(
+                username,
+                googleUser.name(),
+                email,
+                null,
+                UUID.randomUUID().toString(),
+                googleSub,
+                googleUser.picture(),
+                initialStatusForNewUser);
     }
 
     private String issueAndSendOtp(String normalizedTarget) {
@@ -381,58 +388,8 @@ public class AuthService {
             throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_not_verified", null, "Google email is not verified");
         }
 
-        String email = normalize(googleUser.email());
-        String googleSub = googleUser.sub();
-
-        // BR-03 & BR-04: Match by googleSub or email
-        Optional<User> bySub = userRepository.findByGoogleSub(googleSub);
-        Optional<User> byEmail = userRepository.findByEmailIgnoreCase(email);
-
-        User user;
-        if (bySub.isPresent()) {
-            user = bySub.get();
-        } else if (byEmail.isPresent()) {
-            user = byEmail.get();
-            String linkedSub = user.getGoogleSub();
-            if (linkedSub != null && !linkedSub.isBlank() && !linkedSub.equals(googleSub)) {
-                throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, null);
-            }
-            boolean googleManagedEmail = email.endsWith("@gmail.com")
-                    || (googleUser.hostedDomain() != null && !googleUser.hostedDomain().isBlank());
-            if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
-                throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
-            }
-            // Bind google_sub to existing account
-            user.setGoogleSub(googleSub);
-        } else {
-            // Auto create new user with role MEMBER, status active
-            Role memberRole = roleRepository.findByCodeIgnoreCase("MEMBER")
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.role_member", "MEMBER"));
-
-            String username = generateUniqueUsernameFromEmail(email);
-
-            user = new User();
-            user.setUsername(username);
-            user.setRole(memberRole);
-            user.setFullName(googleUser.name() != null && !googleUser.name().isBlank() ? googleUser.name() : username);
-            user.setEmail(email);
-            user.setGoogleSub(googleSub);
-            user.setAvatarUrl(googleUser.picture());
-            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
-            user.setStatus("active");
-            LocalDateTime now = LocalDateTime.now(clock);
-            user.setCreatedAt(now);
-            user.setUpdatedAt(now);
-            userRepository.saveAndFlush(user);
-
-            Member member = new Member();
-            member.setUser(user);
-            member.setMembershipCode("MEM-" + user.getId());
-            member.setJoinDate(LocalDate.now(clock));
-            member.setFitnessLevel("beginner");
-            user.setMember(member);
-            userRepository.save(user);
-        }
+        // BR-03 & BR-04: Match by googleSub/email or auto-create active MEMBER account
+        User user = resolveOrCreateGoogleUser(googleUser, "active", false);
 
         // BR-05: Only role MEMBER is allowed! COACH / STAFF / RECEPTIONIST / CENTER_MANAGER / MANAGER -> 403 Forbidden!
         String roleCode = user.getRole().getCode();

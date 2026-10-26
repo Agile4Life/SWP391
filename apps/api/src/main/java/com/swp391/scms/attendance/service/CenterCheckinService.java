@@ -195,12 +195,7 @@ public class CenterCheckinService {
         List<CenterCheckin> staleVisits = checkins
                 .findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
                         memberUserId, RESULT_GRANTED, cutoff);
-        for (CenterCheckin stale : staleVisits) {
-            stale.setCheckOutTime(stale.getCheckInTime().plusHours(4).isBefore(now)
-                    ? stale.getCheckInTime().plusHours(4) : now);
-            stale.setNotes(AUTO_CHECKOUT_NOTE);
-            checkins.save(stale);
-        }
+        closeStaleVisits(staleVisits, now);
     }
 
     /**
@@ -214,9 +209,13 @@ public class CenterCheckinService {
         LocalDateTime cutoff = now.minusHours(ANTI_PASSBACK_TIMEOUT_HOURS);
         List<CenterCheckin> staleVisits = checkins
                 .findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(RESULT_GRANTED, cutoff);
+        return closeStaleVisits(staleVisits, now);
+    }
+
+    private int closeStaleVisits(List<CenterCheckin> staleVisits, LocalDateTime now) {
         for (CenterCheckin stale : staleVisits) {
-            stale.setCheckOutTime(stale.getCheckInTime().plusHours(4).isBefore(now)
-                    ? stale.getCheckInTime().plusHours(4) : now);
+            LocalDateTime defaultEnd = stale.getCheckInTime().plusHours(4);
+            stale.setCheckOutTime(defaultEnd.isBefore(now) ? defaultEnd : now);
             stale.setNotes(AUTO_CHECKOUT_NOTE);
             checkins.save(stale);
         }

@@ -10,6 +10,7 @@ import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.EnrollmentDto;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
+import com.swp391.scms.scheduling.entity.ClassWaitlist;
 import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
@@ -227,10 +228,10 @@ public class EnrollmentService {
                 : msg("scheduling.enrollment.cancelled_by_hold");
 
         if (waitlists != null) {
-            List<com.swp391.scms.scheduling.entity.ClassWaitlist> memberWaitlists =
+            List<ClassWaitlist> memberWaitlists =
                     waitlists.findByMemberUserIdOrderByRequestedAtAsc(memberId);
             if (memberWaitlists != null) {
-                for (com.swp391.scms.scheduling.entity.ClassWaitlist wl : memberWaitlists) {
+                for (ClassWaitlist wl : memberWaitlists) {
                     if (wl == null) continue;
                     boolean wasNotified = "notified".equalsIgnoreCase(wl.getStatus());
                     if (WAITING.equalsIgnoreCase(wl.getStatus()) || wasNotified) {
@@ -301,10 +302,10 @@ public class EnrollmentService {
     @Transactional
     public void promoteNextWaitlistEntry(Long classId, LocalDateTime now) {
         if (classId == null) return;
-        List<com.swp391.scms.scheduling.entity.ClassWaitlist> waitingList =
+        List<ClassWaitlist> waitingList =
                 waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(classId, WAITING);
         if (waitingList != null && !waitingList.isEmpty()) {
-            com.swp391.scms.scheduling.entity.ClassWaitlist nextWaiting = waitingList.get(0);
+            ClassWaitlist nextWaiting = waitingList.get(0);
             nextWaiting.setStatus("notified");
             nextWaiting.setNotifiedAt(now);
             nextWaiting.setReservationExpiresAt(now.plusMinutes(WAITLIST_RESERVATION_MINUTES));
@@ -328,21 +329,25 @@ public class EnrollmentService {
     @Transactional
     public void processExpiredWaitlistReservations(Long classId, LocalDateTime now) {
         if (classId == null) return;
-        List<com.swp391.scms.scheduling.entity.ClassWaitlist> expiredList = waitlists
+        List<ClassWaitlist> expiredList = waitlists
                 .findByGymClassIdAndStatusAndReservationExpiresAtLessThan(classId, "notified", now);
-        for (com.swp391.scms.scheduling.entity.ClassWaitlist expired : expiredList) {
-            expired.setStatus("expired");
-            waitlists.save(expired);
-            if (expired.getMember() != null && expired.getMember().getUserId() != null) {
-                notifications.send(expired.getMember().getUserId(),
-                        msg("notifications.waitlist.expired.title"),
-                        msg("notifications.waitlist.expired.body",
-                                expired.getGymClass() != null ? expired.getGymClass().getName() : ""),
-                        "schedule_change",
-                        "class_session",
-                        expired.getId());
-            }
+        for (ClassWaitlist expired : expiredList) {
+            expireReservationAndNotify(expired);
             promoteNextWaitlistEntry(classId, now);
+        }
+    }
+
+    public void expireReservationAndNotify(ClassWaitlist expired) {
+        expired.setStatus("expired");
+        waitlists.save(expired);
+        if (expired.getMember() != null && expired.getMember().getUserId() != null) {
+            notifications.send(expired.getMember().getUserId(),
+                    msg("notifications.waitlist.expired.title"),
+                    msg("notifications.waitlist.expired.body",
+                            expired.getGymClass() != null ? expired.getGymClass().getName() : ""),
+                    "schedule_change",
+                    "class_session",
+                    expired.getId());
         }
     }
 
