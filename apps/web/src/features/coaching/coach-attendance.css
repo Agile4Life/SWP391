@@ -73,9 +73,9 @@
   color: var(--portal-paper);
 }
 
-.summary-pill-card.is-present .pill-value { color: #16a34a; }
-.summary-pill-card.is-absent .pill-value { color: #dc2626; }
-.summary-pill-card.is-late .pill-value { color: #d97706; }
+.summary-pill-card.is-present .pill-value { color: light-dark(#226442, #4ade80); }
+.summary-pill-card.is-absent .pill-value { color: light-dark(#a33030, #f87171); }
+.summary-pill-card.is-late .pill-value { color: light-dark(#805400, #fbbf24); }
 .summary-pill-card.is-excused .pill-value { color: var(--portal-muted); }
 
 .attendance-toolbar {
@@ -202,19 +202,19 @@
 /* Active styles cho từng radio */
 .radio-status-label.is-present {
   background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.5);
 }
 
 .radio-status-label.is-absent {
   background: rgba(239, 68, 68, 0.15);
-  color: #dc2626;
+  color: light-dark(#a33030, #fca5a5);
   border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
 .radio-status-label.is-late {
   background: rgba(245, 158, 11, 0.15);
-  color: #d97706;
+  color: light-dark(#805400, #fbbf24);
   border: 1px solid rgba(245, 158, 11, 0.5);
 }
 
@@ -298,8 +298,8 @@
 }
 
 .btn-batch-save {
-  background: var(--portal-salmon);
-  color: var(--portal-ink);
+  background: #ce9180;
+  color: #202020;
   border: none;
   border-radius: 8px;
   padding: 11px 24px;
