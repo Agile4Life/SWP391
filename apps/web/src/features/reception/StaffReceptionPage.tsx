@@ -126,7 +126,7 @@ export function StaffReceptionPage() {
       toast(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, 'success');
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Hủy yêu cầu gói tập thất bại.';
+      const msg = err instanceof Error ? err.message : 'Hủy yêu cầu gói tập thất bại.'; await loadPendingSubscriptions();
       toast(msg, 'error');
     } finally {
       setCancellingPendingId(null);
@@ -144,7 +144,7 @@ export function StaffReceptionPage() {
       );
       await loadPendingHolds();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Xác nhận bảo lưu thất bại.';
+      const msg = err instanceof Error ? err.message : 'Xác nhận bảo lưu thất bại.'; await loadPendingHolds();
       toast(msg, 'error');
     } finally {
       setProcessingHoldId(null);
@@ -159,7 +159,7 @@ export function StaffReceptionPage() {
       toast(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, 'success');
       await loadPendingHolds();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Từ chối yêu cầu bảo lưu thất bại.';
+      const msg = err instanceof Error ? err.message : 'Từ chối yêu cầu bảo lưu thất bại.'; await loadPendingHolds();
       toast(msg, 'error');
     } finally {
       setProcessingHoldId(null);
@@ -172,8 +172,8 @@ export function StaffReceptionPage() {
       <div className="portal-container" data-testid="reception-forbidden-guard">
         <div className="portal-card">
           <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
-              🚫
+            <div style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }} role="img" aria-label="Forbidden">
+              403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
@@ -263,11 +263,11 @@ export function StaffReceptionPage() {
       setCompletedPackageName(selectedPending.packageName);
       setCompletedMemberName(selectedPending.memberName);
       setCompletedMembershipCode(selectedPending.membershipCode);
-      setCompletedPayment(result);
-      toast(`Đã xác nhận thu tiền thành công! Hóa đơn: ${result.invoiceNumber}`, 'success');
+      const normalizedResult: PaymentResponseDto = { ...result, id: result?.id ?? selectedPending.id, memberId: result?.memberId ?? selectedPending.memberId, memberName: result?.memberName || selectedPending.memberName, amount: result?.amount ?? selectedPending.packagePrice, method: (result?.method || paymentMethod || 'pos') as PaymentMethod, paidAt: result?.paidAt || new Date().toISOString(), invoiceNumber: result?.invoiceNumber || `INV-${selectedPending.id}` }; setCompletedPayment(normalizedResult);
+      toast(`Đã xác nhận thu tiền thành công! Hóa đơn: ${normalizedResult.invoiceNumber}`, 'success');
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Giao dịch thanh toán thất bại.';
+      const msg = err instanceof Error ? err.message : 'Giao dịch thanh toán thất bại.'; await loadPendingSubscriptions();
       toast(msg, 'error');
     } finally {
       setIsSubmittingPayment(false);
@@ -456,7 +456,7 @@ export function StaffReceptionPage() {
                     <button
                       type="button"
                       className="btn-secondary btn-sm"
-                      style={{ color: '#fca5a5', borderColor: '#FCA5A5' }}
+                      style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
                       disabled={cancellingPendingId !== null || isSubmittingPayment}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -659,7 +659,7 @@ export function StaffReceptionPage() {
           ) : (
             /* BR-01: Trạng thái trống rõ ràng */
             <div className="portal-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🔍</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '10px' }}>TRA CỨU</div>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: 'var(--color-text-main)' }}>
                 {hasSearched ? 'Không tìm thấy hội viên' : 'Chưa chọn hội viên'}
               </h3>

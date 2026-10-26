@@ -39,7 +39,7 @@ export function CoachAttendancePage() {
         if (mounted) {
           setSessions(data);
           if (data.length > 0) {
-            setSelectedSessionId((prev) => (prev === null ? data[0].id : prev));
+            const preferred = data.find((s) => (s.bookedCount ?? 0) > 0) ?? data[0]; setSelectedSessionId((prev) => (prev === null ? preferred.id : prev));
           }
         }
       } catch {
@@ -166,13 +166,13 @@ export function CoachAttendancePage() {
           </h3>
           <div className="session-details-row">
             <span>
-              📍 Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
+              Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
             </span>
             <span>
-              ⏰ Giờ: <strong>{activeSession?.startTime} - {activeSession?.endTime}</strong>
+              Giờ: <strong>{activeSession?.startTime} - {activeSession?.endTime}</strong>
             </span>
             <span>
-              👥 Đã book: <strong>{students.length} học viên</strong>
+              Đã book: <strong>{students.length} học viên</strong>
             </span>
             {activeSession?.disciplineName && (
               <span>Bộ môn: <strong>{activeSession.disciplineName}</strong></span>
@@ -199,19 +199,19 @@ export function CoachAttendancePage() {
       {/* Summary Pills */}
       <div className="attendance-quick-summary">
         <div className="summary-pill-card is-present">
-          <span className="pill-label">Có mặt (Xanh)</span>
+          <span className="pill-label">Có mặt</span>
           <span className="pill-value">{summaryCounts.present}</span>
         </div>
         <div className="summary-pill-card is-absent">
-          <span className="pill-label">Vắng mặt (Đỏ)</span>
+          <span className="pill-label">Vắng mặt</span>
           <span className="pill-value">{summaryCounts.absent}</span>
         </div>
         <div className="summary-pill-card is-late">
-          <span className="pill-label">Đi muộn (Vàng)</span>
+          <span className="pill-label">Đi muộn</span>
           <span className="pill-value">{summaryCounts.late}</span>
         </div>
         <div className="summary-pill-card is-excused">
-          <span className="pill-label">Có phép (Xám)</span>
+          <span className="pill-label">Có phép</span>
           <span className="pill-value">{summaryCounts.excused}</span>
         </div>
       </div>
@@ -334,7 +334,7 @@ export function CoachAttendancePage() {
           onClick={handleSaveBatchAttendance}
           disabled={saving || loading || students.length === 0}
         >
-          {saving ? 'Đang lưu...' : '💾 Lưu điểm danh & Đánh giá'}
+          {saving ? 'Đang lưu...' : 'Lưu điểm danh & Đánh giá'}
         </button>
       </div>
     </div>

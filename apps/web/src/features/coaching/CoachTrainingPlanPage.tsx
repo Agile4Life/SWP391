@@ -182,7 +182,7 @@ export function CoachTrainingPlanPage() {
     }
 
     setIsAiModalOpen(false);
-    toast('✨ Đã áp dụng giáo án từ AI! HLV có thể tinh chỉnh các thông số trước khi lưu.', 'success');
+    toast('Đã áp dụng giáo án từ AI! HLV có thể tinh chỉnh các thông số trước khi lưu.', 'success');
   };
 
   // Lưu & Kích hoạt giáo án
@@ -249,7 +249,7 @@ export function CoachTrainingPlanPage() {
                 setIsAiModalOpen(true);
               }}
             >
-              <span>✨</span>
+              <span aria-hidden="true">↗</span>
               <span>Gợi ý giáo án bằng AI</span>
             </button>
 
@@ -346,9 +346,9 @@ export function CoachTrainingPlanPage() {
           style={{
             marginTop: '16px',
             padding: '12px 16px',
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: 'var(--portal-raised)',
             borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
+            border: '1px solid var(--portal-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -361,8 +361,8 @@ export function CoachTrainingPlanPage() {
             <span>Mục tiêu thể lực: </span>
             <strong style={{ color: 'var(--fit-salmon, #ce9180)' }}>{planGoal}</strong>
           </div>
-          <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? '#fca5a5' : 'var(--color-text-muted)' }}>
-            ⚠️ Lưu ý sức khỏe: <strong>{selectedMember.healthNotes || 'Bình thường'}</strong>
+          <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
+            Lưu ý sức khỏe: <strong>{selectedMember.healthNotes || 'Bình thường'}</strong>
           </div>
         </div>
       </div>
@@ -506,15 +506,15 @@ export function CoachTrainingPlanPage() {
               style={{
                 textAlign: 'center',
                 padding: '40px 20px',
-                border: '2px dashed rgba(255, 255, 255, 0.1)',
+                border: '1.5px dashed var(--portal-border-strong)',
                 borderRadius: '8px',
                 color: 'var(--color-text-muted)',
               }}
             >
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🏋️‍♂️</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '8px' }}>GIÁO ÁN NGÀY</div>
               <div style={{ fontWeight: 600 }}>Chưa có bài tập nào cho ngày này</div>
               <p style={{ margin: '4px 0 14px 0', fontSize: '0.84rem' }}>
-                Thêm bài tập bằng form ở trên hoặc bấm nút <strong>"✨ Gợi ý giáo án bằng AI"</strong> để tự động điền.
+                Thêm bài tập bằng form ở trên hoặc bấm nút <strong>"Gợi ý giáo án bằng AI"</strong> để tự động điền.
               </p>
             </div>
           ) : (
@@ -527,7 +527,8 @@ export function CoachTrainingPlanPage() {
                         width: '28px',
                         height: '28px',
                         borderRadius: '50%',
-                        background: '#333333',
+                        background: 'var(--portal-raised)',
+                        border: '1px solid var(--portal-border)',
                         color: 'var(--fit-salmon, #ce9180)',
                         fontWeight: 700,
                         fontSize: '0.84rem',
@@ -582,7 +583,7 @@ export function CoachTrainingPlanPage() {
 
       {/* AC: Modal Tương Tác AI Gợi Ý Giáo Án */}
       {isAiModalOpen && (
-        <Modal title="✨ Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa" onClose={() => setIsAiModalOpen(false)}>
+        <Modal title="Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa" onClose={() => setIsAiModalOpen(false)}>
           <div className="ai-modal-container">
             <div>
               <label className="portal-label" htmlFor="ai-member-select">
@@ -626,7 +627,7 @@ export function CoachTrainingPlanPage() {
             {/* Lưu ý y tế & Tiền sử chấn thương */}
             {aiSelectedMember.healthNotes && (
               <div className="ai-caution-box">
-                <strong>⚠️ Tiền sử sức khỏe &amp; chấn thương: </strong>
+                <strong>Tiền sử sức khỏe &amp; chấn thương: </strong>
                 {aiSelectedMember.healthNotes}
               </div>
             )}
@@ -653,7 +654,7 @@ export function CoachTrainingPlanPage() {
                 onClick={() => void handleGenerateAiPlan()}
                 disabled={isGeneratingAi}
               >
-                <span>✨</span>
+                <span aria-hidden="true">↗</span>
                 <span>{isGeneratingAi ? 'Đang phân tích...' : 'Phân tích & Sinh giáo án bằng AI'}</span>
               </button>
             </div>
@@ -676,7 +677,7 @@ export function CoachTrainingPlanPage() {
               <div className="ai-result-box">
                 <div className="ai-result-header">
                   <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--fit-salmon, #ce9180)' }}>
-                    🎯 Phân tích chuyên sâu từ AI ({aiResult.modelName})
+                    Phân tích chuyên sâu từ AI ({aiResult.modelName})
                   </span>
                   <span className="badge badge-success">Đã hoàn thành đề xuất</span>
                 </div>

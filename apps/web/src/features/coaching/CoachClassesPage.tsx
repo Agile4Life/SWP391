@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
+import { Select } from '../../shared/ui/Select';
 import { toast } from '../../shared/ui/toast';
 import {
   coachingApi,
@@ -145,7 +146,7 @@ export function CoachClassesPage() {
   }, [currentMonday]);
 
   return (
-    <div className="coach-page">
+    <div className="portal-container coach-page">
       <PageHeader
         eyebrow="Huấn luyện viên"
         title="Thời Khóa Biểu & Học Viên Phụ Trách"
@@ -241,7 +242,7 @@ export function CoachClassesPage() {
                 <div key={session.id} className="coach-session-card">
                   <div className="coach-session-top">
                     <div className="coach-session-time">
-                      <span className="time-icon">⏰</span>
+                      <span className="time-icon" aria-hidden="true" />
                       <span className="time-text">
                         {session.startTime} - {session.endTime}
                       </span>
@@ -260,18 +261,18 @@ export function CoachClassesPage() {
 
                   <div className="coach-session-info">
                     <div className="info-row">
-                      <span className="info-label">📍 Phòng:</span>
+                      <span className="info-label">Phòng:</span>
                       <span className="info-value">{session.roomName || 'Studio chính'}</span>
                     </div>
                     <div className="info-row">
-                      <span className="info-label">👥 Sĩ số:</span>
+                      <span className="info-label">Sĩ số:</span>
                       <span className="info-value">
                         {session.bookedCount} / {session.capacity} học viên
                       </span>
                     </div>
                     {session.level && (
                       <div className="info-row">
-                        <span className="info-label">🎯 Trình độ:</span>
+                        <span className="info-label">Trình độ:</span>
                         <span className="info-value">{session.level}</span>
                       </div>
                     )}
@@ -283,7 +284,7 @@ export function CoachClassesPage() {
                       className="btn-view-students"
                       onClick={() => handleOpenStudentsModal(session)}
                     >
-                      👥 Xem danh sách học viên ({session.bookedCount})
+                      Xem danh sách học viên ({session.bookedCount})
                     </button>
                   </div>
                 </div>
@@ -307,7 +308,7 @@ export function CoachClassesPage() {
                 value={studentSearch}
                 onChange={(e) => setStudentSearch(e.target.value)}
               />
-              <select
+              <Select
                 className="portal-select student-level-filter"
                 value={selectedFitnessFilter}
                 onChange={(e) => setSelectedFitnessFilter(e.target.value)}
@@ -316,7 +317,7 @@ export function CoachClassesPage() {
                 <option value="beginner">Mới bắt đầu (Beginner)</option>
                 <option value="intermediate">Trung cấp (Intermediate)</option>
                 <option value="advanced">Nâng cao (Advanced)</option>
-              </select>
+              </Select>
             </div>
 
             {studentsLoading ? (
@@ -351,8 +352,8 @@ export function CoachClassesPage() {
                           </span>
                         </div>
                         <div className="student-contact-row">
-                          <span>📧 {st.email}</span>
-                          {st.phone && <span>📞 {st.phone}</span>}
+                          <span>{st.email}</span>
+                          {st.phone && <span>{st.phone}</span>}
                           {st.emergencyContactName && (
                             <span className="emergency-tag">
                               SOS: {st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
@@ -364,12 +365,12 @@ export function CoachClassesPage() {
 
                     <div className="student-details-grid">
                       <div className="student-detail-box goal-box">
-                        <span className="box-title">🎯 Mục tiêu thể lực (fitness_goal):</span>
+                        <span className="box-title">Mục tiêu thể lực (fitness_goal):</span>
                         <p className="box-content">{st.fitnessGoal || 'Chưa cập nhật'}</p>
                       </div>
 
                       <div className="student-detail-box health-box">
-                        <span className="box-title">⚠️ Lưu ý sức khỏe & Chấn thương (health_notes):</span>
+                        <span className="box-title">Lưu ý sức khỏe & Chấn thương (health_notes):</span>
                         <p className="box-content warning-text">
                           {st.healthNotes || 'Sức khỏe bình thường, không có ghi chú chấn thương.'}
                         </p>
@@ -384,7 +385,7 @@ export function CoachClassesPage() {
               <span className="footer-count">
                 Hiển thị {filteredStudents.length} / {students.length} học viên
               </span>
-              <button type="button" className="portal-btn portal-btn--ghost" onClick={handleCloseModal}>
+              <button type="button" className="btn-secondary" onClick={handleCloseModal}>
                 Đóng
               </button>
             </div>

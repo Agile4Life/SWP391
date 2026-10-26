@@ -34,7 +34,7 @@ function InvoiceDocument({ payment, memberName, membershipCode, packageName, cas
       {membershipCode && <div><dt>Mã hội viên</dt><dd>{membershipCode}</dd></div>}
       <div><dt>Giao dịch</dt><dd>#{payment.id}</dd></div>
       {cashierName && <div><dt>Thu ngân</dt><dd>{cashierName}</dd></div>}
-      <div><dt>Thanh toán</dt><dd>{methods[payment.method.toLowerCase()] ?? payment.method}</dd></div>
+      <div><dt>Thanh toán</dt><dd>{methods[(payment.method || '').toLowerCase()] ?? (payment.method || '—')}</dd></div>
     </dl>
 
     <table className="invoice-document__items">

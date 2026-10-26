@@ -330,6 +330,7 @@ export function MemberPackagesPage() {
       setHoldSuccessMessage('Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.');
       await loadHistory();
     } catch (error) {
+      await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
       setHoldError(
         error instanceof Error
           ? error.message
@@ -394,7 +395,7 @@ export function MemberPackagesPage() {
       setCancellationReason('');
       setHoldSuccessMessage('Đã gửi yêu cầu hủy gói. Gói vẫn có hiệu lực cho đến khi quản lý duyệt.');
     } catch (error) {
-      setCancellationError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.');
+      setCancellationError(error instanceof Error ? error.message : 'Không thể gửi yêu cầu hủy. Vui lòng thử lại.'); await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
     } finally {
       setIsSubmittingCancellation(false);
       requestBusy.current = false;
@@ -447,7 +448,7 @@ export function MemberPackagesPage() {
       )}
 
       {holdSuccessMessage && (
-        <div className="portal-alert" role="status" style={{ marginBottom: 24, borderColor: '#86EFAC', backgroundColor: '#20372b', color: '#86efac' }}>
+        <div className="portal-alert portal-alert--success" role="status" style={{ marginBottom: 24 }}>
           <span>{holdSuccessMessage}</span>
         </div>
       )}
@@ -473,13 +474,13 @@ export function MemberPackagesPage() {
               </p>
               {current.status === 'active' && paymentsState.status === 'success' &&
                 paymentsState.data.some((payment) => payment.subscriptionId === current.id && payment.status === 'success') && (
-                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: '#86efac', fontSize: '0.84rem' }}>
+                  <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--portal-success, #86efac)', fontSize: '0.84rem' }}>
                     ✓ Gói đã kích hoạt. Bạn có thể sử dụng thẻ QR để check-in và đặt lịch lớp học.
                   </p>
                 )}
               {current.holdStatus === 'PENDING' && (
                 <p role="status" style={{ margin: '8px 0 0', fontWeight: 600, color: 'var(--color-accent-gold)', fontSize: '0.86rem' }}>
-                  ⏳ Đang chờ Lễ tân xử lý yêu cầu bảo lưu{current.holdReason ? ` • Lý do: "${current.holdReason}"` : ''}
+                  Đang chờ Lễ tân xử lý yêu cầu bảo lưu{current.holdReason ? ` • Lý do: "${current.holdReason}"` : ''}
                 </p>
               )}
               {current.holdStatus === 'REJECTED' && (

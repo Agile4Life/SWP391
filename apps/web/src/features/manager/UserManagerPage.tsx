@@ -258,7 +258,7 @@ export function UserManagerPage() {
       case 'COACH':
         return <span className="badge badge-info">Huấn luyện viên</span>;
       case 'RECEPTIONIST':
-        return <span className="badge" style={{ background: '#E0F2FE', color: '#0369A1' }}>Lễ tân</span>;
+        return <span className="badge badge-neutral">Lễ tân</span>;
       case 'MEMBER':
         return <span className="badge">Hội viên</span>;
     }
@@ -291,7 +291,7 @@ export function UserManagerPage() {
 
       {loadError && (
         <div role="alert" className="portal-alert">
-          <span>⚠️ {loadError}</span>
+          <span>{loadError}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadData()}>
             Thử lại
           </button>
@@ -433,7 +433,7 @@ export function UserManagerPage() {
       ) : (
         /* Matrix Phân quyền RBAC */
         <div className="portal-card portal-card--flush">
-          <div style={{ padding: '18px 24px', borderBottom: '1px solid rgba(33, 28, 24, 0.08)' }}>
+          <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--portal-border)' }}>
             <h2 className="portal-card-title">Phân quyền vai trò</h2>
           </div>
 
@@ -474,7 +474,7 @@ export function UserManagerPage() {
                             style={{
                               width: '18px',
                               height: '18px',
-                              accentColor: 'var(--color-accent-gold)',
+                              accentColor: 'var(--portal-salmon)',
                               cursor: isManager ? 'not-allowed' : 'pointer',
                               opacity: isManager ? 0.7 : 1,
                             }}

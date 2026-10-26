@@ -133,7 +133,7 @@ export const aiApi = {
       memberId: selectedMember.id,
       memberCode: selectedMember.memberCode,
       memberName: selectedMember.fullName,
-      modelName: 'OpenAI GPT-4o / SÖL AI Intelligence v2.6',
+      modelName: 'SÖL Training Assistant',
       goal: selectedMember.fitnessGoal || 'Tăng cường sức mạnh cơ lõi và phục hồi chức năng vận động toàn diện',
       analysis: `Phân tích thể trạng: Hội viên ${selectedMember.fullName} (BMI: ${selectedMember.bmi || '21.5'}, Trình độ: ${selectedMember.fitnessLevel}). ${
         hasBackIssue
@@ -228,10 +228,12 @@ export const aiApi = {
 
   /**
    * Lưu giáo án huấn luyện vào hệ thống (POST /api/v1/coaching/training-plans)
-   * và kích hoạt giáo án nếu cần (PUT /api/v1/coaching/training-plans/{id}/activate)
+   * Hỗ trợ tạo + kích hoạt trong 1 bước duy nhất qua tham số status/activate.
    */
   saveTrainingPlan: async (payload: TrainingPlanPayload, activate = true) => {
     try {
+      const targetStatus = payload.status || (activate ? 'active' : 'draft');
+      const shouldActivate = targetStatus === 'active' || activate;
       const plan = await apiFetch<{ id?: number; status?: string }>('/coaching/training-plans', {
         method: 'POST',
         body: JSON.stringify({
@@ -240,6 +242,10 @@ export const aiApi = {
           goal: payload.goal,
           start_date: payload.startDate,
           end_date: payload.endDate,
+          status: targetStatus,
+          activate: shouldActivate,
+          is_ai_generated: payload.isAiGenerated,
+          ai_recommendation_id: payload.aiRecommendationLogId,
           items: payload.items.map((item, idx) => ({
             day_of_week: item.dayOfWeek,
             exercise_name: item.exerciseName,
@@ -252,13 +258,13 @@ export const aiApi = {
         }),
       });
 
-      if (activate && plan?.id) {
+      if (shouldActivate && plan?.id && plan?.status !== 'active') {
         try {
           await apiFetch(`/coaching/training-plans/${plan.id}/activate`, {
             method: 'PUT',
           });
         } catch {
-          // Ignore activate failure if plan is already saved
+          // Ignore activate failure if plan is already saved/activated
         }
       }
       return plan;

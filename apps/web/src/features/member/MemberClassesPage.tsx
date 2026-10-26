@@ -26,9 +26,9 @@ const days = [
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
+    if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED', 'SCHEDULING_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
       return 'Lớp đã đầy. Bạn có thể tham gia hàng chờ để được tự động đôn lên khi có chỗ trống.';
-    if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED'].includes(error.code ?? ''))
+    if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED', 'SCHEDULING_NO_ACTIVE_SUBSCRIPTION'].includes(error.code ?? ''))
       return 'Gói tập chưa hoạt động hoặc đã hết hạn. Vui lòng kích hoạt gói tập trước khi đặt lịch.';
     return error.message;
   }
@@ -131,6 +131,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -156,6 +157,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -181,6 +183,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -206,6 +209,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -295,7 +299,7 @@ export function MemberClassesPage() {
 
       {notice && (
         <div className="portal-card" role="status" style={{ marginBottom: 16, borderColor: 'rgba(46, 107, 79, 0.35)', background: 'rgba(46, 107, 79, 0.06)' }}>
-          <strong style={{ color: '#86efac' }}>{notice}</strong>
+          <strong style={{ color: 'var(--portal-success, #86efac)' }}>{notice}</strong>
         </div>
       )}
 

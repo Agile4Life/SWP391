@@ -172,6 +172,19 @@ const INITIAL_STUDENTS_BY_SESSION: Record<number, AttendanceStudent[]> = {
   ],
 };
 
+interface SessionAttendanceRosterResponse {
+  sessionId?: number;
+  members?: Array<{
+    attendanceId?: number | null;
+    memberId: number;
+    memberCode?: string; membershipCode?: string;
+    fullName: string;
+    status?: AttendanceStatus | null; attendanceStatus?: AttendanceStatus | null;
+    notes?: string | null;
+    progressScore?: number | null;
+  }>;
+}
+
 export const attendanceApi = {
   /**
    * Lấy danh sách buổi học phụ trách của HLV hôm nay
@@ -182,7 +195,7 @@ export const attendanceApi = {
       const res = await apiFetch<CoachClassSession[]>(
         `/classes/sessions?coachId=${user?.id || ''}`
       );
-      if (Array.isArray(res) && res.length > 0) {
+      if (Array.isArray(res)) {
         return res;
       }
     } catch {
@@ -196,11 +209,22 @@ export const attendanceApi = {
    */
   getSessionStudents: async (sessionId: number): Promise<AttendanceStudent[]> => {
     try {
-      const res = await apiFetch<AttendanceStudent[]>(
+      const res = await apiFetch<AttendanceStudent[] | SessionAttendanceRosterResponse>(
         `/attendance/sessions/${sessionId}`
       );
-      if (Array.isArray(res) && res.length > 0) {
+      if (Array.isArray(res)) {
         return res;
+      }
+      if (res && !Array.isArray(res) && Array.isArray(res.members)) {
+        return res.members.map((m, idx) => ({
+          id: m.attendanceId ?? m.memberId ?? idx + 1,
+          memberId: m.memberId,
+          fullName: m.fullName,
+          membershipCode: m.membershipCode || m.memberCode || `MB-${m.memberId}`,
+          status: ((m.attendanceStatus || m.status) as AttendanceStatus) || 'present',
+          progressScore: m.progressScore != null ? Number(m.progressScore) : 80,
+          notes: m.notes || '',
+        }));
       }
     } catch {
       // Fallback
@@ -222,7 +246,7 @@ export const attendanceApi = {
   },
 
   /**
-   * Lưu điểm danh & Đánh giá hàng loạt (Batch Save)
+   * Lưu điểm danh & Đánh giá hàng loạt (Batch Save trong 1 bước)
    */
   saveBatchAttendance: async (
     sessionId: number,
@@ -233,7 +257,14 @@ export const attendanceApi = {
         `/attendance/sessions/${sessionId}/batch`,
         {
           method: 'POST',
-          body: JSON.stringify({ records: payload.map((item) => ({ memberId: item.memberId, status: item.status, notes: item.notes || '' })) }),
+          body: JSON.stringify({
+            records: payload.map((item) => ({
+              memberId: item.memberId,
+              status: item.status,
+              progressScore: item.progressScore,
+              notes: item.notes || '',
+            })),
+          }),
         }
       );
     } catch {

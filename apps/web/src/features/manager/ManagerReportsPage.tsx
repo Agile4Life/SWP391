@@ -217,8 +217,8 @@ export function ManagerReportsPage() {
       <div className="portal-container" data-testid="reports-forbidden-guard">
         <div className="portal-card">
           <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
-              🚫
+            <div style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }} role="img" aria-label="Forbidden">
+              403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
@@ -306,8 +306,8 @@ export function ManagerReportsPage() {
           </button>
 
           {isInvalidRange && (
-            <span style={{ fontSize: '0.82rem', color: '#DC2626', fontWeight: 500 }}>
-              ⚠️ Ngày kết thúc không được nhỏ hơn ngày bắt đầu.
+            <span style={{ fontSize: '0.82rem', color: 'var(--portal-danger, #fca5a5)', fontWeight: 500 }}>
+              Ngày kết thúc không được nhỏ hơn ngày bắt đầu.
             </span>
           )}
 
@@ -336,7 +336,7 @@ export function ManagerReportsPage() {
       {error && !loading && (
         <div className="portal-card" style={{ marginBottom: '24px' }}>
           <div className="portal-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚠️</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }}>LỖI DỮ LIỆU</div>
             <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Lỗi khi tải dữ liệu báo cáo</h3>
             <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>{error}</p>
             <button type="button" className="btn-primary" onClick={() => fetchReports(startDate, endDate)}>
@@ -378,7 +378,7 @@ export function ManagerReportsPage() {
           <div className="metric-card">
             <div className="metric-label">Doanh thu hôm nay</div>
             <div className="metric-value">{vnd(summary.todayRevenue)}</div>
-            <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? '#86efac' : 'var(--color-text-muted)' }}>
+            <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? 'var(--portal-success, #86efac)' : 'var(--color-text-muted)' }}>
               {summary.todayRevenue > 0 ? '↑ Giao dịch phát sinh trong ngày' : 'Chưa có giao dịch hôm nay'}
             </div>
           </div>
@@ -427,7 +427,7 @@ export function ManagerReportsPage() {
                 <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
                   {hoveredBar && (
                     <span style={{ color: 'var(--color-accent-gold)' }}>
-                      📅 Ngày {hoveredBar.date}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
+                      Ngày {hoveredBar.date}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} giao dịch)
                     </span>
                   )}
                 </div>
@@ -468,7 +468,7 @@ export function ManagerReportsPage() {
                           style={{
                             width: '100%',
                             height: `${heightPercent}%`,
-                            background: isHovered ? 'var(--portal-hover)' : 'var(--color-text-main)',
+                            background: isHovered ? 'var(--portal-hover)' : 'var(--portal-salmon)',
                             borderRadius: '4px 4px 0 0',
                             transition: 'all 0.2s ease',
                             cursor: 'pointer',
@@ -517,7 +517,7 @@ export function ManagerReportsPage() {
                         style={{
                           width: `${Math.min(100, pkg.percentage)}%`,
                           height: '100%',
-                          background: 'var(--color-text-main)',
+                          background: 'var(--portal-salmon)',
                           borderRadius: '4px',
                           transition: 'width 0.4s ease',
                         }}
@@ -562,7 +562,7 @@ export function ManagerReportsPage() {
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tx.invoiceNumber ?? 'Chưa xuất hóa đơn'}</td>
                       <td>{tx.memberName}</td>
                       <td>{tx.packageName ?? '—'}</td>
-                      <td style={{ fontWeight: 600, color: '#86efac' }}>{vnd(tx.amount)}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--portal-success, #86efac)' }}>{vnd(tx.amount)}</td>
                       <td>
                         <span className="badge badge-success" style={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>
                           {paymentMethods[tx.method] ?? tx.method}

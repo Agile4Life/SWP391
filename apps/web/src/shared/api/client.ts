@@ -16,7 +16,9 @@ export const AUTH_STORAGE_KEY = 'fitcenter_auth_session';
 export function getCurrentUser(): UserSession | null {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserSession) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as UserSession;
+    return { ...parsed, role: SESSION_ROLE[parsed.role] ?? parsed.role };
   } catch {
     return null;
   }

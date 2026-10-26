@@ -104,7 +104,14 @@ export const router = createBrowserRouter([
       {
         element: (
           <RoleGuard
-            allowedRoles={['MEMBER', 'STAFF', 'COACH', 'MANAGER']}
+            allowedRoles={[
+              'MEMBER',
+              'STAFF',
+              'RECEPTIONIST',
+              'COACH',
+              'MANAGER',
+              'CENTER_MANAGER',
+            ]}
           />
         ),
         children: [

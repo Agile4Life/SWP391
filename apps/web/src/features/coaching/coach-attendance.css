@@ -200,25 +200,25 @@
 }
 
 /* Active styles cho từng radio */
-.radio-status-label.is-present {
+.radio-status-label.is-present.is-active {
   background: rgba(34, 197, 94, 0.15);
   color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.5);
 }
 
-.radio-status-label.is-absent {
+.radio-status-label.is-absent.is-active {
   background: rgba(239, 68, 68, 0.15);
   color: light-dark(#a33030, #fca5a5);
   border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
-.radio-status-label.is-late {
+.radio-status-label.is-late.is-active {
   background: rgba(245, 158, 11, 0.15);
   color: light-dark(#805400, #fbbf24);
   border: 1px solid rgba(245, 158, 11, 0.5);
 }
 
-.radio-status-label.is-excused {
+.radio-status-label.is-excused.is-active {
   background: var(--portal-surface);
   color: var(--portal-muted);
   border: 1px solid var(--portal-border);
