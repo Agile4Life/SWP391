@@ -8,8 +8,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 16px 20px;
   margin-bottom: 24px;
@@ -24,7 +24,7 @@
 .coach-week-range {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   letter-spacing: -0.01em;
 }
 
@@ -35,9 +35,9 @@
 }
 
 .btn-nav-week {
-  background: #333333;
-  color: var(--color-text-main, #faf9f6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 7px 14px;
   font-size: 0.85rem;
@@ -50,20 +50,20 @@
 }
 
 .btn-nav-week:hover:not(:disabled) {
-  background: #3d3d3d;
-  border-color: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 .btn-nav-week.is-today {
-  background: rgba(206, 145, 128, 0.15);
-  border-color: var(--fit-salmon, #ce9180);
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 .btn-nav-week.is-today:hover {
-  background: rgba(206, 145, 128, 0.25);
-  color: #e1aa98;
+  background: var(--portal-salmon);
+  color: var(--portal-ink);
 }
 
 .coach-day-strip {
@@ -75,14 +75,14 @@
 }
 
 .coach-day-tab {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 10px 8px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -91,16 +91,16 @@
 }
 
 .coach-day-tab:hover {
-  background: #272727;
-  border-color: rgba(206, 145, 128, 0.35);
-  color: var(--color-text-main, #faf9f6);
+  background: var(--portal-raised);
+  border-color: var(--portal-salmon);
+  color: var(--portal-paper);
 }
 
 .coach-day-tab.is-active {
-  background: #2b2827;
-  border-color: var(--fit-salmon, #ce9180);
-  color: var(--fit-salmon, #ce9180);
-  box-shadow: 0 0 0 1px var(--fit-salmon, #ce9180);
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
+  box-shadow: 0 0 0 1px var(--portal-salmon);
 }
 
 .coach-day-tab.is-current-day::after {
@@ -111,7 +111,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--fit-salmon, #ce9180);
+  background: var(--portal-salmon);
 }
 
 .coach-day-name {
@@ -130,15 +130,16 @@
 
 .coach-day-count {
   font-size: 0.7rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--portal-raised);
+  color: var(--portal-muted);
   padding: 2px 6px;
   border-radius: 10px;
   margin-top: 2px;
 }
 
 .coach-day-tab.is-active .coach-day-count {
-  background: rgba(206, 145, 128, 0.2);
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-salmon);
+  color: var(--portal-ink);
   font-weight: 600;
 }
 
@@ -150,8 +151,8 @@
 }
 
 .coach-metric-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 18px 20px;
   position: relative;
@@ -163,7 +164,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -173,24 +174,24 @@
 .coach-metric-value {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   margin-bottom: 4px;
 }
 
 .coach-metric-value.highlight {
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
 }
 
 .coach-metric-desc {
   font-size: 0.8rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .coach-sessions-section {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 24px;
 }
@@ -207,7 +208,7 @@
 .coach-sessions-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0;
 }
 
@@ -218,8 +219,8 @@
 }
 
 .coach-session-card {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 18px;
   display: flex;
@@ -231,8 +232,8 @@
 
 .coach-session-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(206, 145, 128, 0.45);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-color: var(--portal-salmon);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .coach-session-card-top {
@@ -246,7 +247,7 @@
 .coach-session-time {
   font-size: 1.15rem;
   font-weight: 800;
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
   letter-spacing: -0.01em;
   display: flex;
   align-items: center;
@@ -255,7 +256,7 @@
 
 .coach-session-date {
   font-size: 0.78rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   margin-top: 2px;
 }
 
@@ -270,33 +271,33 @@
 
 .coach-session-badge.status-scheduled {
   background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .coach-session-badge.status-completed {
-  background: rgba(148, 163, 184, 0.15);
-  color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: var(--portal-raised);
+  color: var(--portal-muted);
+  border: 1px solid var(--portal-border);
 }
 
 .coach-session-badge.status-cancelled {
   background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
+  color: light-dark(#a33030, #fca5a5);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .coach-session-name {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0 0 6px 0;
   line-height: 1.3;
 }
 
 .coach-session-meta {
   font-size: 0.82rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -310,7 +311,8 @@
 }
 
 .coach-capacity-box {
-  background: #272727;
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 16px;
@@ -325,32 +327,32 @@
 }
 
 .coach-capacity-label {
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   font-weight: 500;
 }
 
 .coach-capacity-numbers {
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
 }
 
 .coach-capacity-bar-track {
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--portal-border);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .coach-capacity-bar-fill {
   height: 100%;
-  background: var(--fit-salmon, #ce9180);
+  background: var(--portal-salmon);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 
 .coach-capacity-bar-fill.is-full {
-  background: #f87171;
+  background: #ef4444;
 }
 
 .coach-session-actions {
@@ -361,9 +363,9 @@
 
 .btn-session-students {
   flex: 1;
-  background: rgba(206, 145, 128, 0.12);
-  border: 1px solid rgba(206, 145, 128, 0.35);
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-tint);
+  border: 1px solid var(--portal-salmon);
+  color: var(--portal-salmon);
   padding: 9px 12px;
   border-radius: 8px;
   font-size: 0.84rem;
@@ -377,14 +379,13 @@
 }
 
 .btn-session-students:hover {
-  background: var(--fit-salmon, #ce9180);
-  color: #202020;
-  border-color: var(--fit-salmon, #ce9180);
+  background: var(--portal-salmon);
+  color: var(--portal-ink);
 }
 
 .roster-header-summary {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 14px 16px;
   margin-bottom: 18px;
@@ -398,14 +399,14 @@
 .roster-class-info h3 {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0 0 4px 0;
 }
 
 .roster-class-info p {
   margin: 0;
   font-size: 0.82rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .roster-search-bar {
@@ -414,18 +415,18 @@
 
 .roster-search-input {
   width: 100%;
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
   border-radius: 8px;
   padding: 10px 14px;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.2s ease;
 }
 
 .roster-search-input:focus {
-  border-color: var(--fit-salmon, #ce9180);
+  border-color: var(--portal-salmon);
 }
 
 .roster-students-list {
@@ -437,15 +438,15 @@
 }
 
 .roster-student-card {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 16px;
   transition: border-color 0.2s ease;
 }
 
 .roster-student-card:hover {
-  border-color: rgba(206, 145, 128, 0.4);
+  border-color: var(--portal-salmon);
 }
 
 .roster-student-header {
@@ -466,28 +467,28 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #333333;
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-raised);
+  color: var(--portal-salmon);
   font-weight: 700;
   font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(206, 145, 128, 0.3);
+  border: 1px solid var(--portal-salmon);
   flex-shrink: 0;
 }
 
 .roster-student-name {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0;
 }
 
 .roster-student-code {
   font-family: var(--font-mono, monospace);
   font-size: 0.78rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .roster-level-badge {
@@ -500,19 +501,19 @@
 
 .roster-level-beginner {
   background: rgba(34, 197, 94, 0.12);
-  color: #4ade80;
+  color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
 .roster-level-intermediate {
   background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
+  color: light-dark(#0369a1, #38bdf8);
   border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
 .roster-level-advanced {
   background: rgba(168, 85, 247, 0.12);
-  color: #c084fc;
+  color: light-dark(#6b21a8, #c084fc);
   border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
@@ -534,15 +535,15 @@
 }
 
 .roster-goal-box {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 6px;
   padding: 8px 12px;
-  color: #e5e5e5;
+  color: var(--portal-paper);
 }
 
 .roster-goal-box .roster-detail-label {
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
 }
 
 .roster-health-box {
@@ -551,11 +552,11 @@
   border-left: 4px solid #ef4444;
   border-radius: 6px;
   padding: 8px 12px;
-  color: #fecaca;
+  color: light-dark(#a33030, #fca5a5);
 }
 
 .roster-health-box .roster-detail-label {
-  color: #f87171;
+  color: light-dark(#a33030, #fca5a5);
 }
 
 .roster-contact-bar {
@@ -563,8 +564,8 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.78rem;
-  color: var(--color-text-muted, #bcb8b5);
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  color: var(--portal-muted);
+  border-top: 1px dashed var(--portal-border);
   padding-top: 8px;
   margin-top: 8px;
 }
@@ -572,7 +573,7 @@
 .coach-empty-state {
   text-align: center;
   padding: 48px 20px;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .coach-empty-icon {
@@ -584,7 +585,7 @@
 .coach-empty-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin-bottom: 6px;
 }
 

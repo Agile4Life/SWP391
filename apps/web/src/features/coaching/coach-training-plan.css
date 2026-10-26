@@ -9,8 +9,8 @@
 
 /* Plan Info Header Card */
 .plan-meta-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 24px;
@@ -30,15 +30,15 @@
   overflow-x: auto;
   padding-bottom: 8px;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--color-border-subtle, #333333);
+  border-bottom: 1px solid var(--portal-border);
 }
 
 .plan-day-tab {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 10px 16px;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   font-weight: 600;
   font-size: 0.88rem;
   cursor: pointer;
@@ -50,27 +50,28 @@
 }
 
 .plan-day-tab:hover {
-  background: #282828;
-  color: var(--color-text-main, #faf9f6);
-  border-color: rgba(206, 145, 128, 0.4);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  border-color: var(--portal-salmon);
 }
 
 .plan-day-tab.is-active {
-  background: rgba(206, 145, 128, 0.15);
-  border-color: var(--fit-salmon, #ce9180);
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 .plan-day-badge {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--portal-raised);
+  color: var(--portal-muted);
   padding: 2px 7px;
   border-radius: 10px;
   font-size: 0.72rem;
 }
 
 .plan-day-tab.is-active .plan-day-badge {
-  background: var(--fit-salmon, #ce9180);
-  color: #202020;
+  background: var(--portal-salmon);
+  color: var(--portal-ink);
   font-weight: 700;
 }
 
@@ -102,8 +103,8 @@
 
 /* Exercise Quick Form */
 .exercise-form-card {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 24px;
@@ -123,8 +124,8 @@
 }
 
 .exercise-item-card {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 16px 20px;
   display: flex;
@@ -135,8 +136,8 @@
 }
 
 .exercise-item-card:hover {
-  border-color: rgba(206, 145, 128, 0.35);
-  background: #232323;
+  border-color: var(--portal-salmon);
+  background: var(--portal-raised);
 }
 
 .exercise-item-main {
@@ -146,13 +147,13 @@
 .exercise-item-name {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   margin: 0 0 4px 0;
 }
 
 .exercise-item-desc {
   font-size: 0.82rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .exercise-item-specs {
@@ -162,23 +163,23 @@
 }
 
 .exercise-spec-pill {
-  background: #292929;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 0.84rem;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   text-align: center;
 }
 
 .exercise-spec-pill strong {
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
 }
 
 .btn-remove-exercise {
   background: transparent;
   border: none;
-  color: #f87171;
+  color: light-dark(#a33030, #fca5a5);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 6px 10px;
@@ -197,8 +198,8 @@
 }
 
 .ai-member-preview {
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 14px 16px;
   margin: 14px 0 18px 0;
@@ -209,7 +210,7 @@
 }
 
 .ai-member-stat-label {
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   font-size: 0.72rem;
   text-transform: uppercase;
   margin-bottom: 2px;
@@ -217,7 +218,7 @@
 
 .ai-member-stat-val {
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
 }
 
 .ai-caution-box {
@@ -226,18 +227,18 @@
   border-left: 3px solid #ef4444;
   border-radius: 6px;
   padding: 10px 14px;
-  color: #fca5a5;
+  color: light-dark(#a33030, #fca5a5);
   font-size: 0.82rem;
   margin-bottom: 16px;
 }
 
 .ai-prompt-textarea {
   width: 100%;
-  background: #202020;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
   border-radius: 8px;
   padding: 12px 14px;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
   font-size: 0.88rem;
   min-height: 80px;
   resize: vertical;
@@ -246,7 +247,7 @@
 
 .ai-prompt-textarea:focus {
   outline: none;
-  border-color: var(--fit-salmon, #ce9180);
+  border-color: var(--portal-salmon);
 }
 
 /* AI Generating Loading State */
@@ -272,8 +273,8 @@
 
 /* AI Results Box */
 .ai-result-box {
-  background: #202020;
-  border: 1px solid rgba(206, 145, 128, 0.35);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-salmon);
   border-radius: 10px;
   padding: 20px;
   margin-top: 18px;
@@ -289,15 +290,18 @@
 .ai-analysis-text {
   font-size: 0.86rem;
   line-height: 1.6;
-  color: #e5e5e5;
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--portal-paper);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 12px 14px;
   margin-bottom: 16px;
 }
 
 .ai-suggested-item {
-  background: #262626;
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  color: var(--portal-paper);
   border-radius: 6px;
   padding: 10px 14px;
   margin-bottom: 8px;

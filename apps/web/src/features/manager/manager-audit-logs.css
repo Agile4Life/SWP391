@@ -6,13 +6,13 @@
   display: flex;
   gap: 10px;
   margin-bottom: 24px;
-  border-bottom: 1px solid var(--color-border-subtle, #333333);
+  border-bottom: 1px solid var(--portal-border);
   padding-bottom: 12px;
 }
 
 .audit-tab-btn {
   background: transparent;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 8px 16px;
@@ -26,20 +26,20 @@
 }
 
 .audit-tab-btn:hover {
-  color: var(--color-text-main, #faf9f6);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--portal-paper);
+  background: var(--portal-raised);
 }
 
 .audit-tab-btn.is-active {
-  background: rgba(206, 145, 128, 0.15);
-  border-color: var(--fit-salmon, #ce9180);
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 /* Filter bar */
 .audit-filter-bar {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 16px 20px;
   margin-bottom: 20px;
@@ -60,13 +60,13 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 /* Audit table */
 .audit-table-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 14px;
   overflow: hidden;
   margin-bottom: 24px;
@@ -80,24 +80,24 @@
 }
 
 .audit-table th {
-  background: #202020;
-  color: var(--color-text-muted, #bcb8b5);
+  background: var(--portal-raised);
+  color: var(--portal-muted);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 12px 18px;
-  border-bottom: 1px solid var(--color-border-subtle, #333333);
+  border-bottom: 1px solid var(--portal-border);
 }
 
 .audit-table td {
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: var(--color-text-main, #faf9f6);
+  border-bottom: 1px solid var(--portal-border);
+  color: var(--portal-paper);
   vertical-align: middle;
 }
 
 .audit-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--portal-tint);
 }
 
 .action-badge {
@@ -111,28 +111,28 @@
 }
 
 .action-badge.is-create {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(34, 197, 94, 0.15);
+  color: light-dark(#226442, #4ade80);
+  border: 1px solid rgba(34, 197, 94, 0.35);
 }
 
 .action-badge.is-update {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(245, 158, 11, 0.15);
+  color: light-dark(#805400, #fbbf24);
+  border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 .action-badge.is-delete,
 .action-badge.is-cancel {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(239, 68, 68, 0.15);
+  color: light-dark(#a33030, #fca5a5);
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .action-badge.is-scan {
-  background: rgba(206, 145, 128, 0.15);
-  color: var(--fit-salmon, #ce9180);
-  border: 1px solid rgba(206, 145, 128, 0.35);
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
+  border: 1px solid var(--portal-salmon);
 }
 
 .actor-meta {
@@ -143,18 +143,18 @@
 
 .actor-name {
   font-weight: 600;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
 }
 
 .actor-email {
   font-size: 0.76rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .btn-view-diff {
-  background: #333333;
-  color: var(--color-text-main, #faf9f6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  border: 1px solid var(--portal-border);
   border-radius: 6px;
   padding: 5px 12px;
   font-size: 0.8rem;
@@ -164,9 +164,9 @@
 }
 
 .btn-view-diff:hover {
-  background: #3d3d3d;
-  border-color: var(--fit-salmon, #ce9180);
-  color: var(--fit-salmon, #ce9180);
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 /* Pagination bar */
@@ -175,10 +175,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 20px;
-  background: #202020;
-  border-top: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border-top: 1px solid var(--portal-border);
   font-size: 0.85rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .pagination-controls {
@@ -187,9 +187,9 @@
 }
 
 .btn-page-nav {
-  background: #2b2b2b;
-  color: var(--color-text-main, #faf9f6);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  border: 1px solid var(--portal-border);
   border-radius: 6px;
   padding: 5px 12px;
   font-size: 0.82rem;
@@ -199,8 +199,9 @@
 }
 
 .btn-page-nav:hover:not(:disabled) {
-  background: #383838;
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--portal-tint);
+  border-color: var(--portal-salmon);
+  color: var(--portal-salmon);
 }
 
 .btn-page-nav:disabled {
@@ -223,7 +224,7 @@
   flex-wrap: wrap;
   gap: 10px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border-subtle, #333333);
+  border-bottom: 1px solid var(--portal-border);
 }
 
 .diff-grid-comparison {
@@ -239,8 +240,8 @@
 }
 
 .diff-box {
-  background: #1e1e1e;
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
   border-radius: 10px;
   padding: 14px;
 }
@@ -257,22 +258,22 @@
 }
 
 .diff-box.is-old .diff-box-title {
-  color: #f87171;
+  color: light-dark(#a33030, #f87171);
 }
 
 .diff-box.is-new .diff-box-title {
-  color: #4ade80;
+  color: light-dark(#226442, #4ade80);
 }
 
 .diff-code-content {
-  background: #161616;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 12px;
   font-family: monospace;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #e5e5e5;
+  color: var(--portal-paper);
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 280px;
@@ -288,8 +289,8 @@
 }
 
 .occupancy-stat-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 12px;
   padding: 16px 20px;
   display: flex;
@@ -301,18 +302,18 @@
   font-size: 0.8rem;
   text-transform: uppercase;
   font-weight: 600;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
 
 .stat-card-number {
   font-size: 1.8rem;
   font-weight: 800;
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
 }
 
 .occupancy-chart-card {
-  background: var(--color-bg-card, #292929);
-  border: 1px solid var(--color-border-subtle, #333333);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 14px;
   padding: 20px 24px;
 }
@@ -339,27 +340,27 @@
 
 .discipline-name-bold {
   font-weight: 700;
-  color: var(--color-text-main, #faf9f6);
+  color: var(--portal-paper);
 }
 
 .discipline-rate-badge {
   font-weight: 800;
   font-size: 0.95rem;
-  color: var(--fit-salmon, #ce9180);
+  color: var(--portal-salmon);
 }
 
 .progress-track-bg {
   width: 100%;
   height: 12px;
-  background: #1c1c1c;
+  background: var(--portal-raised);
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--portal-border);
 }
 
 .progress-fill-bar {
   height: 100%;
-  background: linear-gradient(90deg, #ce9180 0%, #e1aa98 100%);
+  background: var(--portal-salmon);
   border-radius: 6px;
   transition: width 0.4s ease;
 }
@@ -368,5 +369,5 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.78rem;
-  color: var(--color-text-muted, #bcb8b5);
+  color: var(--portal-muted);
 }
