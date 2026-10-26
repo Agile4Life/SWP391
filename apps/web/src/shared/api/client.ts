@@ -35,6 +35,11 @@ export function clearAuthSession(): void {
 
 export const TOKEN_STORAGE_KEY = 'fitcenter_token';
 
+function expiredLoginPath(): string {
+  const target = window.location.pathname === '/member/packages' ? window.location.pathname + window.location.search : null;
+  return '/login?expired=1' + (target ? `&returnTo=${encodeURIComponent(target)}` : '');
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -74,7 +79,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   if (res.status === 401 && token && !path.startsWith('/auth/')) {
     // Phiên đăng nhập hết hạn: đưa người dùng về trang đăng nhập kèm lời giải thích
     clearAuthSession();
-    window.location.assign('/login?expired=1');
+    window.location.assign(expiredLoginPath());
   }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
   // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
@@ -97,7 +102,7 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
   }
   if (res.status === 401 && token) {
     clearAuthSession();
-    window.location.assign('/login?expired=1');
+    window.location.assign(expiredLoginPath());
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);

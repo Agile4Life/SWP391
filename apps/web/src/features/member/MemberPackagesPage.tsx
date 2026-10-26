@@ -1,6 +1,8 @@
+import { useSearchParams } from 'react-router-dom';
+import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails } from '../../shared/lib/membershipPresentation';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { PortalIcon } from '../portal/PortalIcon';
 import {
@@ -52,12 +54,13 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
-function renderModalOverlay(content: ReactNode) {
-  const portalShell = typeof document !== 'undefined' ? document.querySelector('.portal-v2') : null;
-  return portalShell ? createPortal(content, portalShell) : content;
-}
-
 export function MemberPackagesPage() {
+  const [searchParams] = useSearchParams();
+  const selectedId = selectedPackageId(searchParams.toString());
+  useEffect(() => clearPurchaseIntent(), []);
+  const selectedCard = useRef<HTMLElement | null>(null);
+  const membershipFocus = useRef<HTMLElement | null>(null);
+  const focusedSelection = useRef<number | null>(null);
   const [packagesState, setPackagesState] = useState<LoadState<MembershipPackage[]>>({ status: 'loading' });
   const [currentState, setCurrentState] = useState<LoadState<MemberSubscription | null>>({ status: 'loading' });
   const [historyState, setHistoryState] = useState<LoadState<MemberSubscription[]>>({ status: 'loading' });
@@ -217,6 +220,13 @@ export function MemberPackagesPage() {
     currentState.status === 'loading' ||
     historyState.status === 'loading' ||
     paymentsState.status === 'loading';
+
+  useEffect(() => {
+    if (isStatusSyncing || packagesState.status !== 'success' || !selectedCard.current || focusedSelection.current === selectedId) return;
+    selectedCard.current.scrollIntoView({ block: 'center' });
+    selectedCard.current.focus({ preventScroll: true });
+    focusedSelection.current = selectedId;
+  }, [isStatusSyncing, packagesState.status, selectedId]);
 
   async function handleMembershipAction(
     membershipPackage: MembershipPackage,
@@ -626,6 +636,8 @@ export function MemberPackagesPage() {
 
       {pending && (
         <section
+          ref={membershipFocus}
+          tabIndex={-1}
           className="portal-card"
           style={{ marginBottom: 24, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
         >
@@ -667,7 +679,7 @@ export function MemberPackagesPage() {
                   className="btn-secondary"
                   style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                   disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
-                  onClick={() => setPendingToCancel(pending)}
+                  onClick={() => { setActionError(null); setPendingToCancel(pending); }}
                 >
                   {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
                 </button>
@@ -703,7 +715,7 @@ export function MemberPackagesPage() {
                 className="btn-secondary"
                 style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
                 disabled={isCancellingPending || paymentsState.status !== 'success' || relatedPayments.some((payment) => payment.status !== 'failed')}
-                onClick={() => setPendingToCancel(pending)}
+                onClick={() => { setActionError(null); setPendingToCancel(pending); }}
               >
                 {isCancellingPending ? 'Đang hủy…' : 'Hủy yêu cầu đăng ký'}
               </button>
@@ -712,7 +724,7 @@ export function MemberPackagesPage() {
         </section>
       )}
 
-      {actionError && (
+      {actionError && !pendingToCancel && (
         <div
           className="portal-card"
           role="alert"
@@ -775,7 +787,7 @@ export function MemberPackagesPage() {
           <p>Vui lòng quay lại sau.</p>
         </div>
       ) : (
-        <div className="grid-3">
+        <section className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label="Danh mục gói tập">
           {activePackages.map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage);
             const isCurrent =
@@ -851,7 +863,9 @@ export function MemberPackagesPage() {
 
             return (
               <article
-                className={`portal-card ${isCurrent ? 'portal-card--feature' : ''}`}
+                tabIndex={selectedId === membershipPackage.id ? -1 : undefined}
+                ref={selectedId === membershipPackage.id ? selectedCard : undefined}
+                className={`portal-card ${isCurrent || selectedId === membershipPackage.id ? 'portal-card--feature' : ''}`}
                 key={membershipPackage.id}
                 style={{
                   marginBottom: 0,
@@ -863,7 +877,7 @@ export function MemberPackagesPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <div className="meta-label">
-                      {details.tierBadge}
+                      {selectedId === membershipPackage.id ? 'Gói bạn đã chọn · ' : ''}{details.tierBadge}
                     </div>
                     <span className="badge badge-info">
                       {membershipPackage.classCreditLimit != null
@@ -932,54 +946,16 @@ export function MemberPackagesPage() {
               </article>
             );
           })}
-        </div>
+        </section>
       ))}
 
-      {requestResult && renderModalOverlay(
-        <div
-          role="presentation"
-          onClick={(e) => e.target === e.currentTarget && setRequestResult(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(51, 39, 29, 0.48)',
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            padding: 24,
-            zIndex: 1200,
-          }}
-        >
-          <section
-            className="portal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="membership-request-title"
-            style={{
-              width: 'min(520px, 100%)',
-              marginBottom: 0,
-              borderRadius: 22,
-              boxShadow: '0 30px 90px rgba(56, 43, 32, 0.25)',
-            }}
-          >
+      {requestResult && !pendingToCancel && (
+        <Modal returnFocusRef={membershipFocus} title={requestResult.action === 'upgrade' ? 'Nâng cấp gói tập' : requestResult.action === 'renew' ? 'Gia hạn gói tập' : 'Đăng ký gói tập'} onClose={() => setRequestResult(null)} busy={false}>
             <div className="meta-label">
               Yêu cầu đã được tạo
             </div>
 
-            <h2
-              id="membership-request-title"
-              className="portal-card-title"
-              style={{ marginTop: 12 }}
-            >
-              {requestResult.action === 'upgrade'
-                ? 'Nâng cấp gói tập'
-                : requestResult.action === 'renew'
-                  ? 'Gia hạn gói tập'
-                  : 'Đăng ký gói tập'}
-            </h2>
-
-            <div
+<div
               className="stack"
               style={{ marginTop: 24 }}
             >
@@ -1024,12 +1000,12 @@ export function MemberPackagesPage() {
               Yêu cầu đã được đồng bộ tới Quầy Lễ Tân. Gói tập sẽ được kích hoạt ngay sau khi nhân viên xác nhận thanh toán.
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
               <button
                 type="button"
                 className="btn-secondary"
                 style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: '#FCA5A5' }}
-                onClick={() => setPendingToCancel(requestResult.subscription)}
+                onClick={() => { setActionError(null); setPendingToCancel(requestResult.subscription); }}
                 disabled={isCancellingPending || paymentsState.status !== 'success' ||
                   paymentsState.data.some((payment) => payment.subscriptionId === requestResult.subscription.id && payment.status !== 'failed')}
               >
@@ -1043,42 +1019,31 @@ export function MemberPackagesPage() {
                 Đóng
               </button>
             </div>
-          </section>
-        </div>,
+        </Modal>
       )}
 
-      {pendingToCancel && renderModalOverlay(
-        <div role="presentation" onClick={(e) => e.target === e.currentTarget && !isCancellingPending && setPendingToCancel(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
-          <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-pending-title"
-            onKeyDown={(e) => { if (e.key === 'Escape' && !isCancellingPending) setPendingToCancel(null); }}
-            style={{ width: 'min(500px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+      {pendingToCancel && (
+        <Modal returnFocusRef={membershipFocus} title={'Hủy yêu cầu đăng ký?'} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
             <div className="meta-label">Xác nhận yêu cầu</div>
-            <h2 id="cancel-pending-title" className="portal-card-title" style={{ marginTop: 10 }}>Hủy yêu cầu đăng ký?</h2>
-            <p className="row-card__meta" style={{ marginTop: 12 }}>
+<p className="row-card__meta" style={{ marginTop: 12 }}>
               Yêu cầu {pendingToCancel.packageName} sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+            {actionError && <p role="alert" className="portal-alert">{actionError}</p>}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
               <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
-                onClick={() => setPendingToCancel(null)}>Giữ yêu cầu</button>
+                onClick={() => { setActionError(null); setPendingToCancel(null); }}>Giữ yêu cầu</button>
               <button type="button" className="btn-primary" disabled={isCancellingPending}
                 onClick={() => void handleCancelPending(pendingToCancel.id)}>
                 {isCancellingPending ? 'Đang hủy…' : 'Xác nhận hủy'}
               </button>
             </div>
-          </section>
-        </div>,
+        </Modal>
       )}
 
-      {isCancellationModalOpen && current && renderModalOverlay(
-        <div role="presentation" onClick={(e) => e.target === e.currentTarget && !isSubmittingCancellation && setIsCancellationModalOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
-          <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="cancel-active-title"
-            onKeyDown={(e) => { if (e.key === 'Escape' && !isSubmittingCancellation) setIsCancellationModalOpen(false); }}
-            style={{ width: 'min(540px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+      {isCancellationModalOpen && current && (
+        <Modal returnFocusRef={membershipFocus} title={`Yêu cầu hủy ${current.packageName}`} onClose={() => setIsCancellationModalOpen(false)} busy={isSubmittingCancellation}>
             <div className="meta-label">Yêu cầu quản lý xét duyệt</div>
-            <h2 id="cancel-active-title" className="portal-card-title" style={{ marginTop: 10 }}>Yêu cầu hủy {current.packageName}</h2>
-            <p className="row-card__meta" style={{ marginTop: 12 }}>
+<p className="row-card__meta" style={{ marginTop: 12 }}>
               Gói tập sau khi được duyệt hủy sẽ không được hoàn tiền. Các lịch học tương lai có thể bị chấm dứt.
             </p>
             <form onSubmit={(e) => void handleSubmitCancellation(e)} style={{ marginTop: 20 }}>
@@ -1087,7 +1052,7 @@ export function MemberPackagesPage() {
                 value={cancellationReason} onChange={(e) => setCancellationReason(e.target.value)}
                 disabled={isSubmittingCancellation} style={{ width: '100%', resize: 'vertical' }} />
               {cancellationError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{cancellationError}</p>}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                 <button type="button" className="btn-secondary" disabled={isSubmittingCancellation}
                   onClick={() => setIsCancellationModalOpen(false)}>Quay lại</button>
                 <button type="submit" className="btn-primary" disabled={isSubmittingCancellation || !cancellationReason.trim()}>
@@ -1095,51 +1060,16 @@ export function MemberPackagesPage() {
                 </button>
               </div>
             </form>
-          </section>
-        </div>,
+        </Modal>
       )}
 
-      {isHoldModalOpen && current && renderModalOverlay(
-        <div
-          role="presentation"
-          onClick={(e) => e.target === e.currentTarget && !isSubmittingHold && setIsHoldModalOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(51, 39, 29, 0.48)',
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            padding: 24,
-            zIndex: 1200,
-          }}
-        >
-          <section
-            className="portal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="membership-hold-title"
-            style={{
-              width: 'min(520px, 100%)',
-              marginBottom: 0,
-              borderRadius: 22,
-              boxShadow: '0 30px 90px rgba(56, 43, 32, 0.25)',
-            }}
-          >
+      {isHoldModalOpen && current && (
+        <Modal returnFocusRef={membershipFocus} title={`Bảo lưu ${current.packageName}`} onClose={() => setIsHoldModalOpen(false)} busy={isSubmittingHold}>
             <div className="meta-label">
               Yêu cầu bảo lưu gói tập
             </div>
 
-            <h2
-              id="membership-hold-title"
-              className="portal-card-title"
-              style={{ marginTop: 12 }}
-            >
-              Bảo lưu {current.packageName}
-            </h2>
-
-            <p className="row-card__meta" style={{ marginTop: 8 }}>
+<p className="row-card__meta" style={{ marginTop: 8 }}>
               Khi Lễ tân xác nhận bảo lưu, gói tập hiện tại của bạn sẽ tạm dừng hoạt động và toàn bộ các lịch học bạn đã đặt trong tương lai sẽ được hủy tự động.
             </p>
 
@@ -1167,7 +1097,7 @@ export function MemberPackagesPage() {
                 </p>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                 <button
                   type="button"
                   className="btn-secondary"
@@ -1185,9 +1115,10 @@ export function MemberPackagesPage() {
                 </button>
               </div>
             </form>
-          </section>
-        </div>,
+        </Modal>
       )}
+
+
     </div>
   );
 }

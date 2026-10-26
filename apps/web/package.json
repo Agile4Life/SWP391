@@ -16,7 +16,8 @@
     "qrcode": "^1.5.4",
     "react": "latest",
     "react-dom": "latest",
-    "react-router-dom": "latest"
+    "react-router-dom": "latest",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "latest",
