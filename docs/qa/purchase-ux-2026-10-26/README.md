@@ -1,5 +1,7 @@
 # Kiểm thử hành trình mua gói tập — 26/10/2026
 
+> Đây là bằng chứng **trước sửa**. Các bản sửa và kết quả regression mới nhất nằm tại [báo cáo sau sửa](after/README.md).
+
 **Kết luận:** người mua mới hoàn tất được yêu cầu mua gói trên desktop và mobile dọc. Luồng còn vòng vèo sau xác thực; việc phục hồi OTP và xử lý hộp thoại chưa đủ tốt. Nên sửa đường phục hồi OTP trước khi đưa luồng này cho người dùng mới.
 
 ## Phạm vi và bằng chứng

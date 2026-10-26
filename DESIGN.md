@@ -71,6 +71,14 @@ Responsive stack (23/10/2026, quyết định mới nhất): tiêu đề “Bố
 - Câu hỏi thường gặp (`#faq`): danh sách accordion tối (`.fit-faq-item`), nút mở/đóng tròn (`+` / `−`) chuyển sang nền salmon khi mở.
 - Dùng lại `PublicLayout`, `AuthLayout`, `RoundArrow` và các class `.fit-*`. Giữ page ở vai trò compose feature. Không thay stack hoặc thêm thư viện animation/UI chỉ để thực hiện các hiệu ứng đã có bằng CSS.
 
+## Luồng mua gói và xác thực — 26/10/2026
+
+- Gói đã chọn ở landing được giữ qua đăng ký, OTP, đăng nhập thường/Google và đăng nhập lại khi hết phiên. Sau xác thực, hội viên quay về danh mục và thấy gói được đánh dấu; không tự tạo yêu cầu mua. Đường quay lại chỉ cho phép trang gói hội viên và ID gói hợp lệ, không mở redirect ra ngoài hoặc sang màn hình của vai trò khác.
+- Form auth dùng Zod để kiểm tra và chuẩn hóa dữ liệu: trim tên đăng nhập/email, bỏ khoảng trắng định dạng số điện thoại, giữ nguyên mật khẩu. Lỗi có nội dung ngay cạnh trường, liên kết trợ năng và focus trường lỗi đầu tiên. Nút auth giữ chữ charcoal cả khi hover ở hai theme.
+- Khi tài khoản đã tạo, lỗi gửi OTP hoặc refresh tiếp tục ở bước xác thực; gửi lại mã không đăng ký tài khoản lần nữa. Browser chỉ lưu username, email và mốc thời gian phục hồi trong sessionStorage, không lưu mật khẩu/OTP. Thông tin tài khoản pending hiển thị rõ thay vì giả vờ chỉnh sửa tài khoản đã tạo; có lựa chọn bắt đầu tài khoản khác nếu email nhập sai, giải thích rằng tài khoản cũ vẫn còn trên hệ thống.
+- Các hộp thoại mua, hủy và bảo lưu gói dùng `Modal` native `<dialog>`, giới hạn chiều cao theo viewport và cho cuộn nội dung. Không chồng hộp thoại kết quả và xác nhận hủy. Lỗi thao tác hiển thị trong hộp thoại đang mở; khóa đóng khi đang gửi. Tab/Shift+Tab ở trong hộp thoại, Escape đóng khi có thể, và focus trở về vùng yêu cầu/danh mục hợp lý nếu nút mở đã bị vô hiệu hóa.
+- Giữ thanh toán tại quầy và thông báo yêu cầu chờ xác nhận; kiểm thử thao tác ghi dùng dữ liệu giả lập. Không thêm payment gateway thật trong phạm vi sửa UX này.
+
 ## Chuyển động đã chốt
 
 Hiệu năng stack bộ môn (23/10/2026): cập nhật trực tiếp `transform` theo cuộn, gom mỗi nhịp bằng `requestAnimationFrame`; không tua CSS animation qua `animation-delay` hoặc ghi biến CSS kế thừa ở mỗi frame. Chỉ đổi depth/accessibility khi chuyển trạng thái, cache geometry và đo lại khi resize/layout đổi. Thanh tiến độ landing cập nhật trực tiếp trên chính thanh; hook cuộn đọc geometry trước rồi mới ghi style, bỏ qua giá trị không đổi. Giữ hiệu ứng đưa thẻ ra sau, ghim deck, cuộn ngược và reduced motion. Dùng `scripts/benchmark-sport-stack.cjs` để đo ngân sách khung hình 16,7 ms; kết quả headless không bảo đảm FPS trên mọi thiết bị.

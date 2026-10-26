@@ -21,9 +21,10 @@ async function setup(browser, options = {}) {
   const state = { packages: structuredClone(catalog.packages), history: [], current: null, payments: [], calls: [], registered: false, failures: {}, ...options.state };
   await context.addInitScript(({ member, theme }) => {
     localStorage.setItem('scms_theme', theme);
-    if (member) {
+    if (member && !sessionStorage.getItem('audit_fixture_seeded')) {
       localStorage.setItem('fitcenter_auth_session', JSON.stringify({ id: '9001', identifier: 'ux_buyer', name: 'Khách kiểm thử', role: 'MEMBER' }));
       localStorage.setItem('fitcenter_token', 'fixture-only');
+      sessionStorage.setItem('audit_fixture_seeded', '1');
     }
   }, { member: !!options.member, theme: options.theme || 'light' });
   await context.route('**/accounts.google.com/**', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
@@ -46,6 +47,7 @@ async function setup(browser, options = {}) {
     }
     if (endpoint === '/auth/verify-otp') return req.postDataJSON().otpCode === '123456' ? reply(null) : reply(null, 400, 'Mã OTP không hợp lệ hoặc đã hết hạn.');
     if (endpoint === '/auth/login') return state.loginError ? reply(null, 401, 'Tên đăng nhập hoặc mật khẩu không đúng.') : reply({ token: 'fixture-only', username: 'ux_buyer', role: 'MEMBER' });
+    if (endpoint === '/auth/google/handoff') return reply({ token: 'fixture-only', username: 'ux_buyer', role: 'MEMBER' });
     if (endpoint === '/profile') return reply({ userId: 9001, fullName: 'Khách kiểm thử', email: 'buyer@example.test', membershipCode: 'UX-9001' });
     if (endpoint === '/packages') return reply(state.packages);
     if (endpoint === '/memberships/subscriptions/my') return reply(state.current);
@@ -109,13 +111,19 @@ async function login(page) {
   await page.locator('#login-identifier').fill('ux_buyer');
   await page.locator('#login-password').fill('Buyer123!');
   await page.locator('form button[type="submit"]').first().click();
-  await page.waitForURL('**/member/dashboard');
+  await page.waitForURL(url => ['/member/dashboard', '/member/packages'].includes(url.pathname));
 }
 const writes = state => state.calls.filter(c => c.endpoint === '/memberships/subscriptions' && c.method === 'POST').length;
 
 (async () => {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
   try {
+    if (process.env.AUDIT_CATALOG_SNAPSHOT) {
+      const snapshot = JSON.parse(fs.readFileSync(process.env.AUDIT_CATALOG_SNAPSHOT, 'utf8'));
+      catalog = { packages: snapshot.liveCatalog, coaches: [], sessions: [] };
+      results.push({ id: 'live-catalog', title: 'Real public catalog availability', status: 'SKIP', detail: 'Local API stopped; fixtures use the previously captured catalog.', notes: [], runtimeErrors: [], requests: [] });
+      console.log('SNAPSHOT catalog: live API verification skipped explicitly.');
+    } else {
     const live = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     const health = await live.request.get(`${api}/api/v1/health`);
     assert.equal((await health.json()).status, 'UP');
@@ -136,6 +144,8 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
     await live.close();
     console.log(`LIVE read-only: health UP, ${catalog.packages.length} public packages`);
 
+    }
+
     for (const [width, height] of [[1440, 900], [390, 844]]) {
       await check(browser, `journey-${width}`, 'New buyer: landing → register → OTP → login → package request', async ({ page, state, note }) => {
         await page.goto(`${base}/#packages`);
@@ -145,16 +155,17 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
         assert.ok((await vip.innerText()).includes(new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(catalog.packages[1].price)));
         await page.locator('#packages').screenshot({ path: path.join(output, `pricing-${width}.png`) });
         await vip.getByRole('link', { name: 'Chọn gói tập' }).click();
-        assert.ok(page.url().endsWith('/register'));
+        assert.equal(new URL(page.url()).pathname, '/register');
         note({ selectedPackage: catalog.packages[1].name, registrationURL: page.url() });
         await fillRegister(page);
         await page.getByRole('button', { name: 'TIẾP TỤC XÁC THỰC' }).click();
         await page.locator('#otp-code').fill('123456');
         await page.getByRole('button', { name: 'XÁC THỰC & HOÀN TẤT' }).click();
-        await page.waitForURL('**/login');
+        await page.waitForURL(url => url.pathname === '/login');
         await login(page);
-        note({ afterLogin: page.url(), selectedPackageRetained: new URL(page.url()).searchParams.has('packageId') });
-        await page.locator('a[href="/member/packages"]:visible').first().click();
+        note({ afterLogin: page.url(), selectedPackageRetained: new URL(page.url()).searchParams.get('packageId') === String(catalog.packages[1].id) });
+        assert.equal(new URL(page.url()).pathname, '/member/packages');
+        assert.equal(new URL(page.url()).searchParams.get('packageId'), String(catalog.packages[1].id));
         await createButtons(page).first().waitFor();
         const chosen = page.locator('.grid-3 article').filter({ hasText: catalog.packages[1].name });
         await page.locator('.grid-3').screenshot({ path: path.join(output, `portal-catalog-${width}.png`) });
@@ -203,17 +214,18 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
       assert.equal(await page.getByRole('button', { name: /Gửi lại mã sau/ }).isDisabled(), true);
       await page.locator('#otp-code').fill('123456');
       await page.getByRole('button', { name: 'XÁC THỰC & HOÀN TẤT' }).click();
-      await page.waitForURL('**/login');
+      await page.waitForURL(url => url.pathname === '/login');
     });
 
-    await check(browser, 'otp-send-recovery', 'A failed OTP delivery after account creation can be retried', async ({ page, note }) => {
+    await check(browser, 'otp-send-recovery', 'A failed OTP delivery after account creation can be retried', async ({ page, state, note }) => {
       await page.goto(`${base}/register`); await fillRegister(page);
       await page.getByRole('button', { name: 'TIẾP TỤC XÁC THỰC' }).click();
       await page.getByRole('alert').waitFor();
-      await page.getByRole('button', { name: 'TIẾP TỤC XÁC THỰC' }).click();
-      await page.waitForTimeout(200);
-      note(await page.getByRole('alert').innerText());
-      assert.equal(await page.locator('#otp-code').count(), 1, 'Retry registers the already-created account again and hits 409, instead of resending OTP.');
+      assert.equal(await page.locator('#otp-code').count(), 1, 'Created account must stay at verification after delivery fails.');
+      await page.getByRole('button', { name: 'Gửi lại mã OTP', exact: true }).click();
+      await page.getByRole('button', { name: /Gửi lại mã sau/ }).waitFor();
+      assert.equal(state.calls.filter(c => c.endpoint === '/auth/register').length, 1);
+      note('OTP resent without repeating registration.');
     }, { state: { failOtpOnce: true }, capture: true });
 
     await check(browser, 'otp-refresh', 'Refreshing the OTP screen preserves the email and verification step', async ({ page }) => {
@@ -283,6 +295,7 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
       await page.getByRole('status').filter({ hasText: 'Đã hủy yêu cầu' }).waitFor();
       assert.equal(state.history[0].status, 'cancelled');
       assert.equal(await page.locator('.grid-3 article button:enabled').count(), 3);
+      assert.ok(await page.evaluate(() => document.activeElement.matches('[aria-label="Danh mục gói tập"]')), 'Cancellation restores focus to the catalog.');
     }, { member: true });
 
     await check(browser, 'dialog-keyboard', 'Purchase dialog captures focus, traps Tab, and closes with Escape', async ({ page, note }) => {
@@ -290,15 +303,19 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
       const dialog = page.getByRole('dialog', { name: 'Đăng ký gói tập', exact: true });
       await dialog.waitFor();
       const inside = await dialog.evaluate(el => el.contains(document.activeElement));
-      await page.keyboard.press('Escape');
+      await page.keyboard.press('Shift+Tab');
+      assert.ok(await dialog.evaluate(el => el.contains(document.activeElement)), 'Shift+Tab stays in the dialog.');
       const tabFocus = [];
       for (let i = 0; i < 6; i++) {
         await page.keyboard.press('Tab');
         tabFocus.push(await dialog.evaluate(el => el.contains(document.activeElement)));
       }
+      await page.keyboard.press('Escape');
       note({ focusInside: inside, stillOpenAfterEscape: await dialog.count(), tabFocusInsideDialog: tabFocus });
       assert.ok(inside, 'Focus stays on the disabled purchase button behind the dialog.');
-      assert.equal(await dialog.count(), 0, 'Escape does not close the purchase dialog.');
+      assert.ok(tabFocus.every(Boolean), 'Tab must stay in the dialog.');
+      assert.equal(await dialog.count(), 0, 'Escape must close the purchase dialog.');
+      assert.ok(await page.evaluate(() => document.activeElement.matches('section[tabindex="-1"]')), 'Focus returns to the pending request after closing.');
     }, { member: true, capture: true });
 
     for (const [width, height] of [[390, 844], [375, 667], [320, 568], [844, 390]]) {
@@ -306,7 +323,9 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
         await packages(page); await createButtons(page).first().click();
         const dialog = page.getByRole('dialog', { name: 'Đăng ký gói tập', exact: true }); await dialog.waitFor();
         const box = await dialog.boundingBox();
-        const close = await dialog.getByRole('button', { name: 'Đóng', exact: true }).boundingBox();
+        const closeButton = dialog.getByRole('button', { name: 'Đóng', exact: true });
+        await closeButton.scrollIntoViewIfNeeded();
+        const close = await closeButton.boundingBox();
         note({ dialog: box, close, viewport: { width, height }, overflow: await page.evaluate(() => document.documentElement.scrollWidth > innerWidth) });
         assert.ok(box.y >= 0 && box.y + box.height <= height, 'Fixed overlay dialog exceeds the viewport without its own scroll area.');
         assert.ok(close.y + close.height <= height, 'Close button is below the viewport.');
@@ -333,10 +352,13 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
       assert.equal(await page.getByRole('button', { name: 'Gia hạn', exact: true }).count(), 1);
     }, { member: true });
 
-    await check(browser, 'expired-session', 'Expired session returns to login with an explanation', async ({ page }) => {
-      await page.goto(`${base}/member/packages`);
-      await page.waitForURL('**/login?expired=1');
+    await check(browser, 'expired-session', 'Expired session explains expiry and resumes the selected package after login', async ({ page, state }) => {
+      await page.goto(`${base}/member/packages?packageId=2`);
+      await page.waitForURL(url => url.pathname === '/login' && url.searchParams.get('expired') === '1');
       await page.getByRole('status').filter({ hasText: 'Phiên đăng nhập đã hết hạn' }).waitFor();
+      state.failures = {};
+      await login(page);
+      assert.equal(new URL(page.url()).searchParams.get('packageId'), '2');
     }, { member: true, state: { failures: { '/memberships/subscriptions/my': 401 } } });
 
     await check(browser, 'login-error-retry', 'Incorrect credentials keep input; retry succeeds without registering again', async ({ page, state }) => {
@@ -351,14 +373,35 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
       state.loginError = false; await login(page);
     }, { state: { loginError: true } });
 
-    await check(browser, 'otp-back-edit', 'Changing optional information during OTP does not re-register the same account', async ({ page }) => {
+    await check(browser, 'otp-back-edit', 'Pending account details do not send the buyer back into duplicate registration', async ({ page, state }) => {
       await page.goto(`${base}/register`); await fillRegister(page);
       await page.getByRole('button', { name: 'TIẾP TỤC XÁC THỰC' }).click();
-      await page.getByRole('button', { name: '← Đổi thông tin' }).click();
-      await page.locator('#reg-phone').fill('0912345678');
+      await page.getByText('Thông tin tài khoản đã tạo', { exact: true }).click();
+      assert.ok((await page.locator('details').innerText()).includes('buyer@example.test'));
+      assert.equal(await page.locator('#otp-code').count(), 1);
+      assert.equal(await page.locator('#reg-username').count(), 0);
+      assert.equal(state.calls.filter(c => c.endpoint === '/auth/register').length, 1);
+    });
+
+    await check(browser, 'otp-another-account', 'An inaccessible pending mailbox has an explicit new-account exit', async ({ page, state }) => {
+      await page.goto(`${base}/register`); await fillRegister(page);
       await page.getByRole('button', { name: 'TIẾP TỤC XÁC THỰC' }).click();
-      await page.waitForTimeout(200);
-      assert.equal(await page.locator('#otp-code').count(), 1, 'Change information returns to account creation, which now fails as duplicate.');
+      await page.getByText('Thông tin tài khoản đã tạo', { exact: true }).click();
+      await page.getByRole('button', { name: 'Đăng ký tài khoản khác', exact: true }).click();
+      assert.equal(await page.locator('#reg-email').inputValue(), '');
+      assert.equal(await page.evaluate(() => sessionStorage.getItem('scms_pending_registration')), null);
+      assert.equal(state.calls.filter(c => c.endpoint === '/auth/register').length, 1);
+    });
+
+    await check(browser, 'google-purchase-continuity', 'A Google redirect callback returns to the selected package', async ({ page }) => {
+      await page.goto(`${base}/login?returnTo=${encodeURIComponent('/member/packages?packageId=2')}`);
+      await page.locator('#login-identifier').waitFor();
+      await page.evaluate(() => sessionStorage.setItem('scms_google_redirect_verifier', 'fixture-verifier'));
+      await page.goto(`${base}/login?google_oauth=authenticated#google_login_code=fixture-handoff`);
+      await page.waitForURL(url => url.pathname === '/member/packages');
+      assert.equal(new URL(page.url()).searchParams.get('packageId'), '2');
+      assert.equal(await page.evaluate(() => sessionStorage.getItem('scms_google_redirect_verifier')), null);
+      await page.getByText('Gói bạn đã chọn', { exact: false }).waitFor();
     });
 
     await check(browser, 'registration-error-a11y', 'Invalid phone is associated with its input for keyboard/screen-reader users', async ({ page, note }) => {
@@ -414,5 +457,6 @@ const writes = state => state.calls.filter(c => c.endpoint === '/memberships/sub
     }
 
     console.log('SUMMARY', JSON.stringify(results.reduce((counts, r) => ({ ...counts, [r.status]: (counts[r.status] || 0) + 1 }), {})));
+    if (process.env.AUDIT_STRICT === '1' && results.some(result => !['PASS', 'SKIP'].includes(result.status))) process.exitCode = 1;
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
