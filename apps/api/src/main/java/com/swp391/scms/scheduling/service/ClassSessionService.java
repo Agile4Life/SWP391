@@ -4,8 +4,6 @@ import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
-import com.swp391.scms.membership.entity.MembershipSubscription;
-import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.notifications.event.SessionCancelledEvent;
 import com.swp391.scms.scheduling.dto.CancelSessionRequest;
@@ -16,24 +14,19 @@ import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
-import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
-import com.swp391.scms.users.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
- * SCRUM-113: Class Session Service for session lifecycle and cancellation workflow with auto-refund.
+ * SCRUM-113: Class session lifecycle and cancellation notifications.
  */
 @Service
 public class ClassSessionService {
@@ -42,40 +35,28 @@ public class ClassSessionService {
 
     private final ClassSessionRepository sessionRepository;
     private final ClassEnrollmentRepository enrollmentRepository;
-    private final MembershipSubscriptionRepository subscriptionRepository;
-    private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ApplicationEventPublisher eventPublisher;
     private final MessageService messageService;
-    private final Clock clock;
 
     @org.springframework.beans.factory.annotation.Autowired
     public ClassSessionService(ClassSessionRepository sessionRepository,
                                ClassEnrollmentRepository enrollmentRepository,
-                               MembershipSubscriptionRepository subscriptionRepository,
-                               UserRepository userRepository,
                                NotificationService notificationService,
                                ApplicationEventPublisher eventPublisher,
-                               MessageService messageService,
-                               Clock clock) {
+                               MessageService messageService) {
         this.sessionRepository = sessionRepository;
         this.enrollmentRepository = enrollmentRepository;
-        this.subscriptionRepository = subscriptionRepository;
-        this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.eventPublisher = eventPublisher;
         this.messageService = messageService;
-        this.clock = clock;
     }
 
     public ClassSessionService(ClassSessionRepository sessionRepository,
                                ClassEnrollmentRepository enrollmentRepository,
-                               MembershipSubscriptionRepository subscriptionRepository,
-                               UserRepository userRepository,
                                NotificationService notificationService,
                                ApplicationEventPublisher eventPublisher) {
-        this(sessionRepository, enrollmentRepository, subscriptionRepository, userRepository,
-                notificationService, eventPublisher, null, Clock.systemUTC());
+        this(sessionRepository, enrollmentRepository, notificationService, eventPublisher, null);
     }
 
     private String msg(String key, Object... args) {
@@ -83,8 +64,8 @@ public class ClassSessionService {
     }
 
     /**
-     * SCRUM-113 AC: Cancel class session, update status to CANCELLED, cancel all booked enrollments,
-     * restore credits to active membership subscriptions, and dispatch in-app notifications.
+     * Cancel one session and notify enrolled members. Enrollments belong to the class,
+     * so they remain valid for the other sessions.
      */
     @Transactional
     public ClassSessionDto cancelSession(Long sessionId, CancelSessionRequest request, AuthenticatedPrincipal principal) {
@@ -102,14 +83,9 @@ public class ClassSessionService {
 
         validateCancellationPermission(session, principal);
 
-        LocalDateTime now = LocalDateTime.now(clock);
         session.setStatus("cancelled");
         session.setCancelReason(request.reason());
         ClassSession savedSession = sessionRepository.saveAndFlush(session);
-
-        User cancellingUser = principal != null && principal.id() != null
-                ? userRepository.findById(principal.id()).orElse(null)
-                : null;
 
         Long classId = session.getGymClass().getId();
         List<ClassEnrollment> bookedEnrollments = enrollmentRepository.findByGymClassId(classId).stream()
@@ -121,25 +97,10 @@ public class ClassSessionService {
         String sessionDateStr = session.getSessionDate().toString();
 
         for (ClassEnrollment enrollment : bookedEnrollments) {
-            enrollment.setStatus("cancelled");
-            enrollment.setCancelledAt(now);
-            enrollment.setCancelReason(request.reason());
-            enrollment.setCancelledBy(cancellingUser);
-            enrollmentRepository.save(enrollment);
-
             Member member = enrollment.getMember();
             if (member != null && member.getUserId() != null) {
                 Long memberId = member.getUserId();
                 affectedMemberUserIds.add(memberId);
-
-                // Auto-refund credit/session check
-                Optional<MembershipSubscription> subOpt = subscriptionRepository
-                        .findFirstByMemberUserIdAndStatusOrderByEndDateDesc(memberId, "active");
-                if (subOpt.isPresent()) {
-                    MembershipSubscription sub = subOpt.get();
-                    log.info("Auto-refunded class session credit to member {} active subscription {}",
-                            memberId, sub.getId());
-                }
 
                 // Send in-app notification of type schedule_change
                 notificationService.send(
@@ -152,8 +113,6 @@ public class ClassSessionService {
                 );
             }
         }
-        enrollmentRepository.flush();
-
         // Emit SessionCancelledEvent for decoupled listeners
         SessionCancelledEvent event = new SessionCancelledEvent(
                 sessionId,
@@ -166,8 +125,7 @@ public class ClassSessionService {
         );
         eventPublisher.publishEvent(event);
 
-        log.info("Session {} cancelled successfully. Cancelled {} booked enrollments and notified {} members.",
-                sessionId, bookedEnrollments.size(), affectedMemberUserIds.size());
+        log.info("Session {} cancelled successfully. Notified {} members.", sessionId, affectedMemberUserIds.size());
 
         return toDto(savedSession);
     }

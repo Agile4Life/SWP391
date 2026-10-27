@@ -6,8 +6,6 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
-import com.swp391.scms.membership.entity.MembershipSubscription;
-import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.notifications.event.SessionCancelledEvent;
 import com.swp391.scms.scheduling.dto.CancelSessionRequest;
@@ -19,7 +17,6 @@ import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.service.ClassSessionService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
-import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
@@ -47,12 +44,9 @@ class ClassSessionServiceTest {
 
     @Mock private ClassSessionRepository sessionRepository;
     @Mock private ClassEnrollmentRepository enrollmentRepository;
-    @Mock private MembershipSubscriptionRepository subscriptionRepository;
-    @Mock private UserRepository userRepository;
     @Mock private NotificationService notificationService;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private MessageService messageService;
-    @Mock private Clock clock;
 
     @InjectMocks
     private ClassSessionService sessionService;
@@ -67,9 +61,6 @@ class ClassSessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(clock.instant()).thenReturn(Instant.parse("2026-10-25T08:00:00Z"));
-        lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
-
         coachPrincipal = new AuthenticatedPrincipal(10L, "coach@test.com", "COACH");
         managerPrincipal = new AuthenticatedPrincipal(1L, "manager@test.com", "CENTER_MANAGER");
 
@@ -126,12 +117,6 @@ class ClassSessionServiceTest {
         when(sessionRepository.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
         when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
 
-        MembershipSubscription activeSub = new MembershipSubscription();
-        ReflectionTestUtils.setField(activeSub, "id", 300L);
-        activeSub.setStatus("active");
-        when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(20L, "active"))
-                .thenReturn(Optional.of(activeSub));
-
         CancelSessionRequest request = new CancelSessionRequest("Coach has medical emergency");
 
         ClassSessionDto dto = sessionService.cancelSession(100L, request, coachPrincipal);
@@ -139,8 +124,8 @@ class ClassSessionServiceTest {
         assertNotNull(dto);
         assertEquals("cancelled", dto.status());
         assertEquals("Coach has medical emergency", dto.cancelReason());
-        assertEquals("cancelled", enrollment.getStatus());
-        assertEquals("Coach has medical emergency", enrollment.getCancelReason());
+        assertEquals("booked", enrollment.getStatus());
+        verify(enrollmentRepository, never()).save(any(ClassEnrollment.class));
 
         // Verify notification sent
         verify(notificationService, times(1)).send(

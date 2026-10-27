@@ -40,7 +40,7 @@ public class ClassSessionController {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
-    @Operation(summary = "Cancel a class session with reason and auto-refund booked enrollments")
+    @Operation(summary = "Cancel a class session with reason and notify enrolled members")
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
     public ApiResponse<ClassSessionDto> cancelSession(

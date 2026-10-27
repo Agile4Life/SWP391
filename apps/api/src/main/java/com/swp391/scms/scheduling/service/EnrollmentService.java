@@ -41,7 +41,7 @@ import java.util.List;
 @Service
 public class EnrollmentService {
 
-    public static final int WAITLIST_RESERVATION_MINUTES = 15;
+    public static final int WAITLIST_RESERVATION_HOURS = 24;
     private static final String BOOKED = "booked";
     private static final String CANCELLED = "cancelled";
     private static final String WAITING = "waiting";
@@ -126,7 +126,7 @@ public class EnrollmentService {
         long activeReservations = waitlists
                 .countByGymClassIdAndStatusAndReservationExpiresAtGreaterThan(gymClass.getId(), "notified", now);
 
-        // Khóa chống cướp chỗ: nếu không giữ slot notified và lớp đã đầy (tính cả suất giữ ảo 15 phút), chặn người ngoài
+        // Khóa chống cướp chỗ, tính cả các suất đang được giữ cho hàng chờ.
         if (!isHoldingReservation && (booked + activeReservations >= gymClass.getCapacity())) {
             throw new ConflictException(
                     "SCHEDULING_CLASS_FULL",
@@ -203,7 +203,7 @@ public class EnrollmentService {
                 "class_enrollment",
                 saved.getId());
 
-        // Đôn người tiếp theo trong hàng chờ và cấp Reservation Window 15 phút
+        // Đôn người tiếp theo trong hàng chờ và giữ chỗ 24 giờ.
         if (enrollment.getGymClass() != null && enrollment.getGymClass().getId() != null) {
             promoteNextWaitlistEntry(enrollment.getGymClass().getId(), now);
         }
@@ -297,7 +297,7 @@ public class EnrollmentService {
     }
 
     /**
-     * Đôn người đầu tiên trong waitlist lên trạng thái 'notified' kèm Reservation Window 15 phút.
+     * Đôn người đầu tiên trong waitlist lên trạng thái 'notified' và giữ chỗ 24 giờ.
      */
     @Transactional
     public void promoteNextWaitlistEntry(Long classId, LocalDateTime now) {
@@ -308,14 +308,14 @@ public class EnrollmentService {
             ClassWaitlist nextWaiting = waitingList.get(0);
             nextWaiting.setStatus("notified");
             nextWaiting.setNotifiedAt(now);
-            nextWaiting.setReservationExpiresAt(now.plusMinutes(WAITLIST_RESERVATION_MINUTES));
+            nextWaiting.setReservationExpiresAt(now.plusHours(WAITLIST_RESERVATION_HOURS));
             waitlists.save(nextWaiting);
             if (nextWaiting.getMember() != null && nextWaiting.getMember().getUserId() != null) {
                 notifications.send(nextWaiting.getMember().getUserId(),
                         msg("notifications.waitlist.notified.title"),
                         msg("notifications.waitlist.notified.body_window",
                                 nextWaiting.getGymClass() != null ? nextWaiting.getGymClass().getName() : "",
-                                WAITLIST_RESERVATION_MINUTES),
+                                WAITLIST_RESERVATION_HOURS),
                         "schedule_change",
                         "class_session",
                         nextWaiting.getId());
@@ -324,7 +324,7 @@ public class EnrollmentService {
     }
 
     /**
-     * Tự động kiểm tra và hết hạn các lượt giữ chỗ notified quá 15 phút, sau đó đôn người kế tiếp.
+     * Kiểm tra các lượt giữ chỗ đã hết hạn trước khi xử lý đặt chỗ.
      */
     @Transactional
     public void processExpiredWaitlistReservations(Long classId, LocalDateTime now) {

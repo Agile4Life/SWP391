@@ -29,7 +29,7 @@ public class WaitlistPromotionService {
 
     private static final Logger log = LoggerFactory.getLogger(WaitlistPromotionService.class);
     private static final int CHUNK_SIZE = 50;
-    private static final int PROMOTION_WINDOW_HOURS = 24;
+    private static final int PROMOTION_WINDOW_HOURS = EnrollmentService.WAITLIST_RESERVATION_HOURS;
 
     private final ClassWaitlistRepository waitlistRepository;
     private final NotificationService notificationService;
