@@ -26,18 +26,8 @@ public class MockPushNotificationChannelAdapter implements NotificationChannelAd
             return;
         }
 
-        log.info("""
-                [MOCK-PUSH] ========================================================
-                [MOCK-PUSH] Target User ID: {}
-                [MOCK-PUSH] Title: {}
-                [MOCK-PUSH] Body: {}
-                [MOCK-PUSH] Type: {}
-                [MOCK-PUSH] Entity: {} #{}
-                [MOCK-PUSH] Timestamp: {}
-                [MOCK-PUSH] Delivery: Simulated Mobile APNs / FCM Push Success
-                [MOCK-PUSH] ========================================================""",
-                payload.userId(), payload.title(), payload.message(), payload.type(),
-                payload.relatedEntityType(), payload.relatedEntityId(), payload.timestamp());
+        log.info("[MOCK-PUSH] Simulated delivery for user {} (type={}, entity={} #{})",
+                payload.userId(), payload.type(), payload.relatedEntityType(), payload.relatedEntityId());
     }
 }
 

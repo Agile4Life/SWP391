@@ -23,6 +23,28 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @ExtendWith(MockitoExtension.class)
 class AuditAspectTest {
 
+    @Test
+    void capturesOldAndNewUserStateWithoutPassword() throws Throwable {
+        var entityManager = mock(jakarta.persistence.EntityManager.class);
+        var point = mock(org.aspectj.lang.ProceedingJoinPoint.class);
+        var user = new com.swp391.scms.users.entity.User();
+        user.setId(42L);
+        user.setFullName("Before");
+        user.setPasswordHash("secret");
+        when(point.getArgs()).thenReturn(new Object[]{42L});
+        when(entityManager.find(com.swp391.scms.users.entity.User.class, 42L, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)).thenReturn(user);
+        when(point.proceed()).thenAnswer(invocation -> { user.setFullName("After"); return null; });
+
+        new AuditAspect(repository, new ObjectMapper(), entityManager)
+                .around(point, audited("USER_UPDATE", "users"));
+
+        ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
+        verify(repository).save(captor.capture());
+        assertEquals("Before", new ObjectMapper().readTree(captor.getValue().getOldValue()).get("fullName").asText());
+        assertEquals("After", new ObjectMapper().readTree(captor.getValue().getNewValue()).get("fullName").asText());
+        org.junit.jupiter.api.Assertions.assertFalse(captor.getValue().getOldValue().contains("secret"));
+    }
+
     @Mock AuditLogRepository repository;
     @Mock JoinPoint joinPoint;
 

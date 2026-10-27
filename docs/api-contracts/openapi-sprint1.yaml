@@ -5,6 +5,8 @@ info:
   description: >
     Endpoint contract for Sprint 1 (auth, users/RBAC, profile, health, catalog, reception lookup).
     All responses use the ApiResponse envelope. Messages are localized via the Accept-Language header (default vi).
+    Requests to /auth/** share a per-client limit of 60 per minute; excess requests return HTTP 429
+    with code RATE_LIMIT_EXCEEDED and a Retry-After header.
 servers:
   - url: /api/v1
 components:

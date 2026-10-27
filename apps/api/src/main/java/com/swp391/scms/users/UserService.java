@@ -164,6 +164,7 @@ public class UserService {
     }
 
     @Transactional
+    @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistShift(Long userId, com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
         User user = findActiveUser(userId);
         if (!"RECEPTIONIST".equalsIgnoreCase(user.getRole().getCode())) {

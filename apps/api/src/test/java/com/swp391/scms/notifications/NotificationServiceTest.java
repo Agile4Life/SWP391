@@ -20,12 +20,55 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
+
+    @Test
+    void sendDispatchesExternalChannelsOnlyAfterCommit() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        var user = new User();
+        user.setId(101L);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.send(101L, "Title", "Message", "system", null, null);
+            verify(notificationRepository).save(any(Notification.class));
+            verifyNoInteractions(dispatcher);
+            org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);
+            verify(dispatcher).dispatch(101L, "Title", "Message", "system", null, null,
+                    java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.EMAIL,
+                                     com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void rejectedDispatchDoesNotFailAfterCommit() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        var user = new User();
+        user.setId(101L);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+        doThrow(new org.springframework.core.task.TaskRejectedException("executor full"))
+                .when(dispatcher).dispatch(eq(101L), eq("Title"), eq("Message"), eq("system"), isNull(), isNull(), any());
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.send(101L, "Title", "Message", "system", null, null);
+            assertThatCode(() -> org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit)).doesNotThrowAnyException();
+            verify(dispatcher).dispatch(eq(101L), eq("Title"), eq("Message"), eq("system"), isNull(), isNull(), any());
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
 
     @Mock
     private NotificationRepository notificationRepository;

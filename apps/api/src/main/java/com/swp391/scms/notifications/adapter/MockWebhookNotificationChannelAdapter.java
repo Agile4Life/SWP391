@@ -26,20 +26,8 @@ public class MockWebhookNotificationChannelAdapter implements NotificationChanne
             return;
         }
 
-        log.info("""
-                [MOCK-WEBHOOK] ========================================================
-                [MOCK-WEBHOOK] HTTP POST -> https://webhook.internal/events/notifications
-                [MOCK-WEBHOOK] Event Type: {}
-                [MOCK-WEBHOOK] User ID: {}
-                [MOCK-WEBHOOK] Entity: {} #{}
-                [MOCK-WEBHOOK] Title: {}
-                [MOCK-WEBHOOK] Message: {}
-                [MOCK-WEBHOOK] Timestamp: {}
-                [MOCK-WEBHOOK] Status: 200 OK (Simulated)
-                [MOCK-WEBHOOK] ========================================================""",
-                payload.type(), payload.userId(), payload.relatedEntityType(),
-                payload.relatedEntityId(), payload.title(), payload.message(),
-                payload.timestamp());
+        log.info("[MOCK-WEBHOOK] Simulated delivery for user {} (type={}, entity={} #{})",
+                payload.userId(), payload.type(), payload.relatedEntityType(), payload.relatedEntityId());
     }
 }
 

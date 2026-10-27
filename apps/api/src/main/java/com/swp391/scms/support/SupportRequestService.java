@@ -1,5 +1,6 @@
 package com.swp391.scms.support;
 
+import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -126,6 +127,7 @@ public class SupportRequestService {
     }
 
     @Transactional
+    @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
     public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto) {
         SupportRequest request = supportRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
