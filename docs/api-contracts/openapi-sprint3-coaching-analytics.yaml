@@ -52,7 +52,7 @@ paths:
         '201':
           description: Exercise item added successfully
   /api/v1/coaching/training-plans/{id}/activate:
-    patch:
+    put:
       summary: Activate a draft training plan and archive older active plans (SCRUM-116)
       tags: [Coaching]
       parameters:
@@ -107,18 +107,50 @@ paths:
       responses:
         '200':
           description: Session evaluations retrieved successfully
+  /api/v1/health/metrics:
+    post:
+      summary: Record a health metric (SCRUM-119)
+      tags: [Health]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [metricName, metricValue]
+              properties:
+                memberId:
+                  type: integer
+                  format: int64
+                metricName:
+                  type: string
+                metricValue:
+                  type: number
+                  minimum: 0.01
+                unit:
+                  type: string
+      responses:
+        '200':
+          description: Health metric recorded successfully
+  /api/v1/health/metrics/my:
+    get:
+      summary: Retrieve current member's health metric history (SCRUM-119)
+      tags: [Health]
+      responses:
+        '200':
+          description: Health metric history retrieved successfully
   /api/v1/reports/class-utilization:
     get:
       summary: Retrieve class occupancy and attendance utilization report (SCRUM-120, SCRUM-124)
       tags: [Analytics]
       parameters:
         - in: query
-          name: from
+          name: startDate
           schema:
             type: string
             format: date
         - in: query
-          name: to
+          name: endDate
           schema:
             type: string
             format: date

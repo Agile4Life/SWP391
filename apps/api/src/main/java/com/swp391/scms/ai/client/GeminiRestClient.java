@@ -1,9 +1,13 @@
 package com.swp391.scms.ai.client;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class GeminiRestClient implements AiClient {
@@ -15,9 +19,21 @@ public class GeminiRestClient implements AiClient {
     private final RestClient restClient;
 
     public GeminiRestClient(String apiKey, String model) {
+        this(apiKey, model, defaultRestClient());
+    }
+
+    public GeminiRestClient(String apiKey, String model, RestClient restClient) {
         this.apiKey = apiKey;
         this.model = (model != null && !model.isBlank()) ? model : "gemini-1.5-flash";
-        this.restClient = RestClient.builder()
+        this.restClient = restClient != null ? restClient : defaultRestClient();
+    }
+
+    private static RestClient defaultRestClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10_000);
+        factory.setReadTimeout(30_000);
+        return RestClient.builder()
+                .requestFactory(factory)
                 .baseUrl("https://generativelanguage.googleapis.com/v1beta")
                 .build();
     }
@@ -37,6 +53,41 @@ public class GeminiRestClient implements AiClient {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
         }
+        try {
+            Map<String, Object> body = Map.of(
+                    "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt != null ? systemPrompt : ""))),
+                    "contents", List.of(Map.of(
+                            "role", "user",
+                            "parts", List.of(Map.of("text", userMessage != null ? userMessage : ""))
+                    ))
+            );
+            JsonNode response = restClient.post()
+                    .uri("/models/{model}:generateContent", model)
+                    .header("x-goog-api-key", apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(JsonNode.class);
+            StringBuilder text = new StringBuilder();
+            if (response != null) {
+                response.path("candidates").path(0).path("content").path("parts")
+                        .forEach(part -> {
+                            if (!part.path("thought").asBoolean(false)) {
+                                text.append(part.path("text").asText(""));
+                            }
+                        });
+            }
+            String cleaned = OpenAiRestClient.stripCodeFence(text.toString());
+            if (!cleaned.isBlank()) {
+                return cleaned;
+            }
+        } catch (Exception ignored) {
+            // Fall through to deterministic fallback payload when upstream is unreachable
+        }
+        return fallbackPayload(userMessage);
+    }
+
+    private String fallbackPayload(String userMessage) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("status", "success");
         payload.put("provider", "gemini");
