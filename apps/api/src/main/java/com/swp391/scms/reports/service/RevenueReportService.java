@@ -15,6 +15,7 @@ import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.RecentTransactionDto;
+import com.swp391.scms.reports.dto.RenewalRateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.entity.ReportSnapshot;
@@ -99,6 +100,18 @@ public class RevenueReportService {
                     "Start date cannot be after end date");
         }
         return new DateRange(start, end);
+    }
+
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public RenewalRateDto getRenewalRate(LocalDate startDate, LocalDate endDate) {
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
+        LocalDate yesterday = LocalDate.now(clock).minusDays(1);
+        LocalDate lastExpired = range.end().isBefore(yesterday) ? range.end() : yesterday;
+        if (range.start().isAfter(lastExpired)) return new RenewalRateDto(0, 0, null);
+
+        long expired = subscriptionRepository.countExpiredPaidPeriods(range.start(), lastExpired);
+        long renewed = expired == 0 ? 0 : subscriptionRepository.countRenewedExpiredPaidPeriods(range.start(), lastExpired);
+        return new RenewalRateDto(expired, renewed, expired == 0 ? null : 100.0 * renewed / expired);
     }
 
     @Transactional(readOnly = true)

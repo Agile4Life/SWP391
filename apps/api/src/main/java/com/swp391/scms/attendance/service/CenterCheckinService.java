@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -182,7 +183,11 @@ public class CenterCheckinService {
         checkin.setStatus(RESULT_GRANTED);
         checkin.setDenialReason(null);
 
-        return toDto(checkins.saveAndFlush(checkin));
+        CheckinDto result = toDto(checkins.saveAndFlush(checkin));
+        return new CheckinDto(result.id(), result.memberId(), result.memberName(), result.checkInTime(),
+                result.checkOutTime(), result.method(), result.gate(), result.status(), result.denialReason(),
+                memberUser.getAvatarUrl(), sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null,
+                sub.getEndDate() != null ? ChronoUnit.DAYS.between(today, sub.getEndDate()) : null);
     }
 
     /**

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
@@ -33,7 +33,8 @@ export function CoachTrainingPlanPage() {
     return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
   }, [currentUser]);
 
-  // Thông tin tổng quan giáo án
+  // Danh sách học viên và thông tin tổng quan giáo án
+  const [members, setMembers] = useState<MemberOption[]>(SAMPLE_MEMBERS);
   const [selectedMemberId, setSelectedMemberId] = useState<number>(SAMPLE_MEMBERS[0].id);
   const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
   const [planGoal, setPlanGoal] = useState(SAMPLE_MEMBERS[0].fitnessGoal || 'Tăng cường sức mạnh và cải thiện tư thế');
@@ -85,16 +86,30 @@ export function CoachTrainingPlanPage() {
   );
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiResult, setAiResult] = useState<AiWorkoutPlanResult | null>(null);
+  const [appliedRecommendationId, setAppliedRecommendationId] = useState<number | undefined>();
+
+  useEffect(() => {
+    let active = true;
+    void aiApi.getCoachMembers().then((loaded) => {
+      if (!active || loaded.length === 0) return;
+      setMembers(loaded);
+      setSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
+      setAiSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Học viên đang chọn trong form
   const selectedMember: MemberOption = useMemo(() => {
-    return SAMPLE_MEMBERS.find((m) => m.id === selectedMemberId) || SAMPLE_MEMBERS[0];
-  }, [selectedMemberId]);
+    return members.find((m) => m.id === selectedMemberId) || members[0] || SAMPLE_MEMBERS[0];
+  }, [members, selectedMemberId]);
 
   // Học viên đang chọn trong AI Modal
   const aiSelectedMember: MemberOption = useMemo(() => {
-    return SAMPLE_MEMBERS.find((m) => m.id === aiSelectedMemberId) || SAMPLE_MEMBERS[0];
-  }, [aiSelectedMemberId]);
+    return members.find((m) => m.id === aiSelectedMemberId) || members[0] || SAMPLE_MEMBERS[0];
+  }, [members, aiSelectedMemberId]);
 
   // Thêm bài tập thủ công vào ngày đang chọn
   const handleAddExercise = (e: React.FormEvent) => {
@@ -165,6 +180,7 @@ export function CoachTrainingPlanPage() {
 
     // Cập nhật thông tin hội viên & mục tiêu theo kết quả AI
     setSelectedMemberId(aiResult.memberId);
+    setAppliedRecommendationId(aiResult.id);
     setPlanGoal(aiResult.goal);
     setPlanTitle(`Giáo án Cá nhân hóa: ${aiResult.memberName || 'Hội viên'}`);
 
@@ -204,7 +220,8 @@ export function CoachTrainingPlanPage() {
           endDate,
           items: exercises,
           status: 'active',
-          isAiGenerated: !!aiResult,
+          isAiGenerated: appliedRecommendationId !== undefined,
+          aiRecommendationLogId: appliedRecommendationId,
         },
         true
       );
@@ -302,11 +319,12 @@ export function CoachTrainingPlanPage() {
               onChange={(e) => {
                 const id = Number(e.target.value);
                 setSelectedMemberId(id);
-                const m = SAMPLE_MEMBERS.find((item) => item.id === id);
+                setAppliedRecommendationId(undefined);
+                const m = members.find((item) => item.id === id);
                 if (m?.fitnessGoal) setPlanGoal(m.fitnessGoal);
               }}
             >
-              {SAMPLE_MEMBERS.map((m) => (
+              {members.map((m) => (
                 <option key={m.id} value={String(m.id)}>
                   {m.fullName} ({m.memberCode})
                 </option>
@@ -596,7 +614,7 @@ export function CoachTrainingPlanPage() {
                 onChange={(e) => setAiSelectedMemberId(Number(e.target.value))}
                 disabled={isGeneratingAi}
               >
-                {SAMPLE_MEMBERS.map((m) => (
+                {members.map((m) => (
                   <option key={m.id} value={String(m.id)}>
                     {m.fullName} ({m.memberCode}) — Mục tiêu: {m.fitnessGoal?.slice(0, 40)}...
                   </option>
@@ -609,12 +627,12 @@ export function CoachTrainingPlanPage() {
               <div>
                 <div className="ai-member-stat-label">Chiều cao / Cân nặng</div>
                 <div className="ai-member-stat-val">
-                  {aiSelectedMember.heightCm} cm / {aiSelectedMember.weightKg} kg
+                  {aiSelectedMember.heightCm ?? '—'} cm / {aiSelectedMember.weightKg ?? '—'} kg
                 </div>
               </div>
               <div>
                 <div className="ai-member-stat-label">Chỉ số BMI</div>
-                <div className="ai-member-stat-val">{aiSelectedMember.bmi} (Bình thường)</div>
+                <div className="ai-member-stat-val">{aiSelectedMember.bmi ?? '—'}</div>
               </div>
               <div>
                 <div className="ai-member-stat-label">Trình độ luyện tập</div>

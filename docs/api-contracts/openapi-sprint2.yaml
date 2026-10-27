@@ -531,6 +531,20 @@ components:
         denialReason:
           type: string
           nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Ảnh hội viên, chỉ có trong kết quả quét GRANTED khi hồ sơ có ảnh.
+        packageName:
+          type: string
+          nullable: true
+          description: Tên gói được quét, chỉ có trong kết quả quét GRANTED.
+        remainingDays:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+          description: Số ngày từ ngày quét đến ngày hết hạn; bằng 0 vào ngày hết hạn. Chỉ có trong kết quả quét GRANTED.
 
     CheckinScanRequest:
       type: object
@@ -937,6 +951,39 @@ paths:
           description: Gói tập không hoạt động
         '409':
           description: Đã có gói tập đang hoạt động hoặc đang chờ thanh toán
+
+  /memberships/subscriptions/members/{memberId}/renewal-candidates:
+    get:
+      summary: Danh sách kỳ đã thanh toán của hội viên để gia hạn tại quầy
+      tags: [Membership]
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Danh sách SubscriptionDto của hội viên}
+        '403': {description: Chỉ CENTER_MANAGER hoặc RECEPTIONIST}
+        '404': {description: Không tìm thấy hội viên}
+
+  /memberships/subscriptions/members/{memberId}/renew/{id}:
+    post:
+      summary: Tạo yêu cầu gia hạn tại quầy cho hội viên
+      description: Tạo kỳ pending_payment liên kết kỳ đã thanh toán; dùng cùng quy tắc và khóa với gia hạn của hội viên.
+      tags: [Membership]
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '201': {description: Đã tạo yêu cầu gia hạn chờ thanh toán}
+        '403': {description: Không đủ quyền hoặc gói không thuộc hội viên}
+        '409': {description: Xung đột kỳ hạn hoặc yêu cầu đang chờ}
 
   /memberships/subscriptions/{id}/renew:
     post:
@@ -1861,6 +1908,40 @@ paths:
           schema: {type: string, format: date}
       responses:
         '200': {description: Thành công}
+        '403': {description: Chỉ CENTER_MANAGER được truy cập}
+
+  /reports/renewal-rate:
+    get:
+      summary: Tỷ lệ gia hạn các gói hết hạn trong kỳ (CENTER_MANAGER)
+      description: >-
+        Mẫu số gồm các gói đã thanh toán thành công, trạng thái active hoặc expired, có endDate
+        trong khoảng ngày lọc và trước hôm nay. Tử số là số gói trong mẫu có ít nhất một gói
+        tiếp nối qua previousSubscription đã thanh toán thành công và chưa bị hủy, kể cả nâng cấp.
+        Tính theo trạng thái hiện tại, nên kết quả kỳ cũ có thể thay đổi khi có gia hạn sau đó.
+        Nếu mẫu số bằng 0, renewalRate là null. Mặc định từ 30 ngày trước đến hôm nay.
+      tags: [Reports]
+      parameters:
+        - name: startDate
+          in: query
+          schema: {type: string, format: date}
+        - name: endDate
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Counts and renewal rate in ApiResponse.data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      expiredCount: {type: integer, format: int64}
+                      renewedCount: {type: integer, format: int64}
+                      renewalRate: {type: number, format: double, nullable: true, description: Percentage}
+        '400': {description: Ngày bắt đầu sau ngày kết thúc}
         '403': {description: Chỉ CENTER_MANAGER được truy cập}
 
   /reports/transactions/recent:

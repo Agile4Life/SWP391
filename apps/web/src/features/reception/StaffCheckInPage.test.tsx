@@ -54,6 +54,22 @@ it('places the checkout action before horizontally scrollable history details', 
   expect(host.querySelector('tbody tr td:first-child button')?.textContent).toContain('Checkout');
 });
 
+it('shows the granted member photo, package and days remaining from the scan', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify({ success: true,
+    data: url.endsWith('/scan') ? { ...visit, avatarUrl: 'https://example.test/photo.jpg', packageName: 'Gói tập 30 ngày', remainingDays: 7 } : history }))));
+  await renderPage();
+  const input = host.querySelector('#checkin-qr-input') as HTMLInputElement;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'valid-qr');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => (host.querySelector('[data-testid="scan-submit-button"]') as HTMLButtonElement).click());
+  const banner = host.querySelector('[data-testid="checkin-result-banner"]')!;
+  expect(banner.textContent).toContain('Gói tập 30 ngày');
+  expect(banner.textContent).toContain('7 ngày');
+  expect(banner.querySelector('img')?.getAttribute('src')).toBe('https://example.test/photo.jpg');
+});
+
 it('checks out through the real API client and removes the visit from the open list', async () => {
   await renderPage();
   await act(async () => checkoutButtons()[0].click());

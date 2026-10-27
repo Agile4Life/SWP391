@@ -402,7 +402,7 @@ export function ManagerReportsPage() {
               {summary.renewalRate !== null ? `${summary.renewalRate.toFixed(1)}%` : '—'}
             </div>
             <div className="metric-trend">
-              {summary.renewalRate !== null ? 'Khách hàng tiếp tục duy trì' : 'Chưa có dữ liệu tỷ lệ gia hạn'}
+              {summary.renewalRate !== null ? 'Gói hết hạn trong kỳ được gia hạn' : 'Chưa có gói hết hạn trong kỳ'}
             </div>
           </div>
         </div>

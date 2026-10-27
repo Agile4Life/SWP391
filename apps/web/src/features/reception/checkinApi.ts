@@ -10,6 +10,9 @@ export interface CheckinDto {
   gate?: string | null;
   status: 'GRANTED' | 'DENIED' | 'success' | 'denied' | string;
   denialReason?: string | null;
+  avatarUrl?: string | null;
+  packageName?: string | null;
+  remainingDays?: number | null;
 }
 
 export interface ScanCheckinPayload {

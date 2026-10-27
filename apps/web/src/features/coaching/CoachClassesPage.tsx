@@ -3,7 +3,6 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
-import { toast } from '../../shared/ui/toast';
 import {
   coachingApi,
   type CoachSession,
@@ -42,6 +41,7 @@ export function CoachClassesPage() {
   const [activeSession, setActiveSession] = useState<CoachSession | null>(null);
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState<boolean>(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState<string>('');
   const [selectedFitnessFilter, setSelectedFitnessFilter] = useState<string>('all');
 
@@ -66,14 +66,14 @@ export function CoachClassesPage() {
     setError(null);
     try {
       const mondayStr = formatYmd(currentMonday);
-      const res = await coachingApi.getCoachWeeklySchedule(currentUser?.id, mondayStr);
+      const res = await coachingApi.getCoachWeeklySchedule(mondayStr);
       setSessions(res);
     } catch {
       setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
-  }, [currentMonday, currentUser?.id]);
+  }, [currentMonday]);
 
   useEffect(() => {
     void loadWeeklySessions();
@@ -110,13 +110,15 @@ export function CoachClassesPage() {
   const handleOpenStudentsModal = async (session: CoachSession) => {
     setActiveSession(session);
     setStudentsLoading(true);
+    setStudents([]);
+    setStudentsError(null);
     setStudentSearch('');
     setSelectedFitnessFilter('all');
     try {
       const res = await coachingApi.getSessionStudents(session.id, session.classId);
       setStudents(res);
     } catch {
-      toast.error('Không thể tải danh sách học viên buổi học này.');
+      setStudentsError('Không thể tải danh sách học viên buổi học này.');
     } finally {
       setStudentsLoading(false);
     }
@@ -131,7 +133,7 @@ export function CoachClassesPage() {
     return students.filter((st) => {
       const matchSearch =
         st.fullName.toLowerCase().includes(studentSearch.toLowerCase()) ||
-        st.membershipCode.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        (st.membershipCode ?? '').toLowerCase().includes(studentSearch.toLowerCase()) ||
         (st.phone && st.phone.includes(studentSearch));
       const matchLevel =
         selectedFitnessFilter === 'all' || st.fitnessLevel === selectedFitnessFilter;
@@ -325,6 +327,8 @@ export function CoachClassesPage() {
                 <div className="portal-spinner" />
                 <p>Đang tải thông tin sức khỏe và mục tiêu của học viên...</p>
               </div>
+            ) : studentsError ? (
+              <div className="students-empty-state" role="alert"><p>{studentsError}</p></div>
             ) : filteredStudents.length === 0 ? (
               <div className="students-empty-state">
                 <p>Không tìm thấy học viên nào phù hợp.</p>
@@ -348,7 +352,7 @@ export function CoachClassesPage() {
                               ? 'Cơ bản'
                               : st.fitnessLevel === 'intermediate'
                               ? 'Trung cấp'
-                              : 'Nâng cao'}
+                              : st.fitnessLevel === 'advanced' ? 'Nâng cao' : 'Chưa cập nhật'}
                           </span>
                         </div>
                         <div className="student-contact-row">
@@ -372,7 +376,7 @@ export function CoachClassesPage() {
                       <div className="student-detail-box health-box">
                         <span className="box-title">Lưu ý sức khỏe & Chấn thương (health_notes):</span>
                         <p className="box-content warning-text">
-                          {st.healthNotes || 'Sức khỏe bình thường, không có ghi chú chấn thương.'}
+                          {st.healthNotes || 'Chưa cập nhật'}
                         </p>
                       </div>
                     </div>

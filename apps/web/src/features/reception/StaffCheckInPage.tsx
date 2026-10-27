@@ -244,6 +244,11 @@ export function StaffCheckInPage() {
                 <StatusMark type={isGranted ? 'success' : 'error'} size={64} />
               </div>
 
+              {isGranted && currentResult.avatarUrl && (
+                <img src={currentResult.avatarUrl} alt={`Ảnh hội viên ${currentResult.memberName || ''}`}
+                  referrerPolicy="no-referrer" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', marginBottom: 12 }} />
+              )}
+
               <h3
                 style={{
                   margin: '0 0 8px 0',
@@ -256,6 +261,9 @@ export function StaffCheckInPage() {
               <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '4px' }}>
                 {currentResult.memberName || 'Mã QR không xác định'} {currentResult.memberId ? `(HV #${currentResult.memberId})` : ''}
               </div>
+
+              {isGranted && currentResult.packageName && <div>Gói tập: {currentResult.packageName}</div>}
+              {isGranted && currentResult.remainingDays != null && <div>Còn {currentResult.remainingDays} ngày</div>}
 
               <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                 {currentResult.gate || selectedGate} — {formatTime(currentResult.checkInTime)}

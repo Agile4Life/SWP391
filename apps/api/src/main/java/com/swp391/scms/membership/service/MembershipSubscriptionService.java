@@ -166,21 +166,57 @@ public class MembershipSubscriptionService {
         MembershipSubscription requested = subscriptions.findById(previousId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", previousId));
         ensureOwner(requested, principal);
+        return renewForOwner(requested, principal.id(), previousId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionDto> renewalCandidatesForStaff(AuthenticatedPrincipal principal, Long memberId) {
+        ensureReceptionStaff(principal);
+        Member member = findMember(memberId);
+        if (member.getUser() == null || member.getUser().getDeletedAt() != null) {
+            throw new ResourceNotFoundException("resource.member", memberId);
+        }
+        return subscriptions.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
+                .filter(this::isPaidPeriod).map(this::toDto).toList();
+    }
+
+    @Transactional
+    public SubscriptionDto renewForMember(AuthenticatedPrincipal principal, Long memberId, Long previousId) {
+        ensureReceptionStaff(principal);
+        MembershipSubscription requested = subscriptions.findById(previousId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", previousId));
+        if (requested.getMember() == null || !memberId.equals(requested.getMember().getUserId())) {
+            throw new ForbiddenException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
+        }
+        if (requested.getMember().getUser() != null && requested.getMember().getUser().getDeletedAt() != null) {
+            throw new ResourceNotFoundException("resource.member", memberId);
+        }
+        return renewForOwner(requested, memberId, previousId);
+    }
+
+    private void ensureReceptionStaff(AuthenticatedPrincipal principal) {
+        if (principal == null || !("RECEPTIONIST".equalsIgnoreCase(principal.role())
+                || "CENTER_MANAGER".equalsIgnoreCase(principal.role()))) {
+            throw new ForbiddenException("MEMBERSHIP_FORBIDDEN", "error.forbidden", null, null);
+        }
+    }
+
+    private SubscriptionDto renewForOwner(MembershipSubscription requested, Long memberId, Long previousId) {
         if (!isPaidPeriod(requested)) {
             throw new BadRequestException("MEMBERSHIP_INVALID_RENEWAL_STATUS",
                     "membership.subscription.invalid_renewal_status", new Object[]{requested.getStatus()},
                     "Only a paid subscription can be renewed");
         }
         // Serialize all renewal requests for this member, then read the chain afresh.
-        members.findByUserIdForUpdate(principal.id())
-                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
+        members.findByUserIdForUpdate(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
         if (entityManager != null) entityManager.refresh(requested);
         if (HOLD_PENDING.equalsIgnoreCase(requested.getHoldStatus())) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING",
                     "error.membership.hold_already_pending", null,
                     "Subscription already has a pending hold request");
         }
-        List<MembershipSubscription> history = subscriptions.findByMemberUserId(principal.id());
+        List<MembershipSubscription> history = subscriptions.findByMemberUserId(memberId);
         if (history.stream().anyMatch(item -> STATUS_ACTIVE.equalsIgnoreCase(item.getStatus())
                 && HOLD_PENDING.equalsIgnoreCase(item.getHoldStatus()))) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING",

@@ -104,126 +104,68 @@ export const SAMPLE_MEMBERS: MemberOption[] = [
 
 export const aiApi = {
   /**
+   * Lấy danh sách học viên thực tế đã ghi danh trong các lớp học từ Backend
+   */
+  getCoachMembers: async (): Promise<MemberOption[]> => {
+    try {
+      const classes = await apiFetch<Array<{ id: number }>>('/classes');
+      if (!Array.isArray(classes) || classes.length === 0) {
+        return SAMPLE_MEMBERS;
+      }
+      const byMemberId = new Map<number, MemberOption>();
+      for (const cls of classes) {
+        try {
+          const students = await apiFetch<
+            Array<{
+              memberId: number;
+              membershipCode?: string;
+              fullName?: string;
+              fitnessGoal?: string;
+              healthNotes?: string;
+              fitnessLevel?: string;
+            }>
+          >(`/classes/${cls.id}/students`);
+          if (Array.isArray(students)) {
+            for (const s of students) {
+              if (s.memberId && !byMemberId.has(s.memberId)) {
+                byMemberId.set(s.memberId, {
+                  id: s.memberId,
+                  memberCode: s.membershipCode || `MEM-${s.memberId}`,
+                  fullName: s.fullName || `Hội viên #${s.memberId}`,
+                  fitnessGoal: s.fitnessGoal || 'Cải thiện thể lực toàn diện',
+                  healthNotes: s.healthNotes || 'Bình thường',
+                  fitnessLevel: s.fitnessLevel || 'beginner',
+                });
+              }
+            }
+          }
+        } catch {
+          // Ignore individual class fetch errors
+        }
+      }
+      return byMemberId.size > 0 ? Array.from(byMemberId.values()) : SAMPLE_MEMBERS;
+    } catch {
+      return SAMPLE_MEMBERS;
+    }
+  },
+
+  /**
    * Gọi động cơ AI phân tích thể trạng và gợi ý giáo án bài tập cá nhân hóa
    * (POST /api/v1/ai/generate-workout-plan)
    */
   generateWorkoutPlan: async (payload: GenerateWorkoutPlanPayload): Promise<AiWorkoutPlanResult> => {
-    try {
-      const response = await apiFetch<AiWorkoutPlanResult>('/ai/generate-workout-plan', {
-        method: 'POST',
-        body: JSON.stringify({
-          member_id: payload.memberId,
-          additional_requirements: payload.additionalRequirements || '',
-          duration_weeks: payload.durationWeeks || 4,
-        }),
-      });
-      if (response && response.items && response.items.length > 0) {
-        return response;
-      }
-    } catch {
-      // Khi API chưa sẵn sàng hoặc AI backend đang tắt, trả về gợi ý thông minh từ mô hình dự phòng
+    const response = await apiFetch<AiWorkoutPlanResult>('/ai/generate-workout-plan', {
+      method: 'POST',
+      body: JSON.stringify({
+        member_id: payload.memberId,
+        additional_requirements: payload.additionalRequirements || '',
+        duration_weeks: payload.durationWeeks || 4,
+      }),
+    });
+    if (response && response.items && response.items.length > 0) {
+      return response;
     }
-
-    const selectedMember = SAMPLE_MEMBERS.find((m) => m.id === payload.memberId) || SAMPLE_MEMBERS[0];
-    const hasKneeIssue = selectedMember.healthNotes?.toLowerCase().includes('gối') || selectedMember.healthNotes?.toLowerCase().includes('dây chằng');
-    const hasBackIssue = selectedMember.healthNotes?.toLowerCase().includes('đĩa đệm') || selectedMember.healthNotes?.toLowerCase().includes('lưng');
-
-    return {
-      id: Date.now(),
-      memberId: selectedMember.id,
-      memberCode: selectedMember.memberCode,
-      memberName: selectedMember.fullName,
-      modelName: 'SÖL Training Assistant',
-      goal: selectedMember.fitnessGoal || 'Tăng cường sức mạnh cơ lõi và phục hồi chức năng vận động toàn diện',
-      analysis: `Phân tích thể trạng: Hội viên ${selectedMember.fullName} (BMI: ${selectedMember.bmi || '21.5'}, Trình độ: ${selectedMember.fitnessLevel}). ${
-        hasBackIssue
-          ? '⚠️ Lưu ý tiền sử cột sống thắt lưng: Loại bỏ biến thể Deadlift nặng, thay bằng Glute Bridge và Roman Chair Hyper-extension có kiểm soát.'
-          : hasKneeIssue
-          ? '⚠️ Lưu ý khớp gối: Hạn chế Squat quá góc 90 độ, thay thế bằng Box Squat và Leg Press kiểm soát tải trọng.'
-          : '✓ Thể lực tim mạch và cơ xương khớp tốt, phù hợp áp dụng chu kỳ tập luyện phân chia thân trên / thân dưới.'
-      } Yêu cầu HLV bổ sung: "${payload.additionalRequirements || 'Chuẩn hóa kỹ thuật và tăng tính linh hoạt khớp'}".`,
-      items: [
-        {
-          id: 'item-1',
-          dayOfWeek: 1, // Thứ 2
-          exerciseName: 'Kéo xà trợ lực (Assisted Pull-up) & Dumbbell Row',
-          description: 'Kích hoạt nhóm cơ lưng xô, giữ vai hạ thấp, siết chặt cơ bả vai ở điểm co.',
-          sets: 4,
-          reps: 10,
-          durationMinutes: 12,
-          restSeconds: 60,
-          orderIndex: 1,
-        },
-        {
-          id: 'item-2',
-          dayOfWeek: 1, // Thứ 2
-          exerciseName: 'Incline Dumbbell Chest Press',
-          description: 'Đẩy ngực trên với tạ đơn góc 30 độ, kiểm soát pha hạ tạ trong 3 giây.',
-          sets: 4,
-          reps: 12,
-          durationMinutes: 15,
-          restSeconds: 75,
-          orderIndex: 2,
-        },
-        {
-          id: 'item-3',
-          dayOfWeek: 2, // Thứ 3
-          exerciseName: hasKneeIssue ? 'Goblet Box Squat (Chạm ghế)' : 'Barbell Back Squat',
-          description: hasKneeIssue
-            ? 'Squat chạm hộp đệm bảo vệ khớp gối, giữ thân người nghiêng tự nhiên.'
-            : 'Siết cơ bụng, đầu gối mở theo hướng mũi chân, kiểm soát nhịp thở.',
-          sets: 4,
-          reps: 10,
-          durationMinutes: 18,
-          restSeconds: 90,
-          orderIndex: 1,
-        },
-        {
-          id: 'item-4',
-          dayOfWeek: 2, // Thứ 3
-          exerciseName: hasBackIssue ? 'Banded Glute Bridge' : 'Romanian Deadlift (Tạ nhẹ)',
-          description: 'Tập trung kích hoạt nhóm cơ mông và đùi sau, không cong vùng thắt lưng.',
-          sets: 3,
-          reps: 12,
-          durationMinutes: 12,
-          restSeconds: 60,
-          orderIndex: 2,
-        },
-        {
-          id: 'item-5',
-          dayOfWeek: 3, // Thứ 4
-          exerciseName: 'Dead Bug & Plank Hollow Body Hold',
-          description: 'Rèn luyện cơ lõi sâu (Deep Core), áp sát lưng dưới xuống thảm tập.',
-          sets: 3,
-          reps: 15,
-          durationMinutes: 10,
-          restSeconds: 45,
-          orderIndex: 1,
-        },
-        {
-          id: 'item-6',
-          dayOfWeek: 4, // Thứ 5
-          exerciseName: 'Dumbbell Overhead Shoulder Press',
-          description: 'Đẩy tạ qua đầu ngồi thẳng lưng trên ghế 75 độ, không ưỡn thắt lưng.',
-          sets: 4,
-          reps: 10,
-          durationMinutes: 14,
-          restSeconds: 60,
-          orderIndex: 1,
-        },
-        {
-          id: 'item-7',
-          dayOfWeek: 5, // Thứ 6
-          exerciseName: 'Walking Lunges & Calf Raises',
-          description: 'Bước chùng chân bước dài, tập trung thăng bằng và cơ bắp chuối.',
-          sets: 3,
-          reps: 12,
-          durationMinutes: 15,
-          restSeconds: 60,
-          orderIndex: 1,
-        },
-      ],
-    };
+    throw new Error('Dữ liệu gợi ý giáo án không hợp lệ');
   },
 
   /**
@@ -231,50 +173,37 @@ export const aiApi = {
    * Hỗ trợ tạo + kích hoạt trong 1 bước duy nhất qua tham số status/activate.
    */
   saveTrainingPlan: async (payload: TrainingPlanPayload, activate = true) => {
-    try {
-      const targetStatus = payload.status || (activate ? 'active' : 'draft');
-      const shouldActivate = targetStatus === 'active' || activate;
-      const plan = await apiFetch<{ id?: number; status?: string }>('/coaching/training-plans', {
-        method: 'POST',
-        body: JSON.stringify({
-          member_id: payload.memberId,
-          title: payload.title,
-          goal: payload.goal,
-          start_date: payload.startDate,
-          end_date: payload.endDate,
-          status: targetStatus,
-          activate: shouldActivate,
-          is_ai_generated: payload.isAiGenerated,
-          ai_recommendation_id: payload.aiRecommendationLogId,
-          items: payload.items.map((item, idx) => ({
-            day_of_week: item.dayOfWeek,
-            exercise_name: item.exerciseName,
-            description: item.description,
-            sets: item.sets,
-            reps: item.reps,
-            duration_minutes: item.durationMinutes || 15,
-            order_index: item.orderIndex || idx + 1,
-          })),
-        }),
-      });
+    const targetStatus = payload.status || (activate ? 'active' : 'draft');
+    const shouldActivate = targetStatus === 'active' || activate;
+    const plan = await apiFetch<{ id?: number; status?: string }>('/coaching/training-plans', {
+      method: 'POST',
+      body: JSON.stringify({
+        member_id: payload.memberId,
+        title: payload.title,
+        goal: payload.goal,
+        start_date: payload.startDate,
+        end_date: payload.endDate,
+        status: targetStatus,
+        activate: shouldActivate,
+        is_ai_generated: payload.isAiGenerated,
+        ai_recommendation_id: payload.aiRecommendationLogId,
+        items: payload.items.map((item, idx) => ({
+          day_of_week: item.dayOfWeek,
+          exercise_name: item.exerciseName,
+          description: item.description,
+          sets: item.sets,
+          reps: item.reps,
+          duration_minutes: item.durationMinutes || 15,
+          order_index: item.orderIndex || idx + 1,
+        })),
+      }),
+    });
 
-      if (shouldActivate && plan?.id && plan?.status !== 'active') {
-        try {
-          await apiFetch(`/coaching/training-plans/${plan.id}/activate`, {
-            method: 'PUT',
-          });
-        } catch {
-          // Ignore activate failure if plan is already saved/activated
-        }
-      }
-      return plan;
-    } catch {
-      // Local fallback simulation
-      return {
-        id: Date.now(),
-        ...payload,
-        status: activate ? 'active' : 'draft',
-      };
+    if (shouldActivate && plan?.id && plan?.status !== 'active') {
+      await apiFetch(`/coaching/training-plans/${plan.id}/activate`, {
+        method: 'PUT',
+      });
     }
+    return plan;
   },
 };

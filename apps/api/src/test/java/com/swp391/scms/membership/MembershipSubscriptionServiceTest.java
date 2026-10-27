@@ -288,6 +288,42 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void staffRenewalPreservesMemberAndPreviousSubscription() {
+        Member member = new Member();
+        member.setUserId(10L);
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L); pack.setStatus("active"); pack.setDurationDays(30);
+        MembershipSubscription previous = new MembershipSubscription();
+        previous.setId(100L); previous.setMember(member); previous.setMembershipPackage(pack);
+        previous.setStatus("active"); previous.setStartDate(LocalDate.now(clock).minusDays(10));
+        previous.setEndDate(LocalDate.now(clock).plusDays(10));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(previous));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(previous));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.renewForMember(new AuthenticatedPrincipal(20L, "staff@test.com", "RECEPTIONIST"), 10L, 100L);
+
+        assertThat(result.memberId()).isEqualTo(10L);
+        assertThat(result.previousSubscriptionId()).isEqualTo(100L);
+        assertThat(result.status()).isEqualTo("pending_payment");
+    }
+
+    @Test
+    void staffRenewalRejectsOtherMemberAndUnauthorizedRole() {
+        Member owner = new Member(); owner.setUserId(10L);
+        MembershipSubscription previous = new MembershipSubscription(); previous.setId(100L); previous.setMember(owner);
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(previous));
+        assertThatThrownBy(() -> service.renewForMember(
+                new AuthenticatedPrincipal(20L, "staff@test.com", "RECEPTIONIST"), 11L, 100L))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service.renewForMember(
+                new AuthenticatedPrincipal(20L, "coach@test.com", "COACH"), 10L, 100L))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
     void renew_startsFromTodayWhenPreviousAlreadyExpired() {
         Member member = new Member();
         member.setUserId(10L);
