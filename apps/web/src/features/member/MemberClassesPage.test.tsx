@@ -207,6 +207,12 @@ describe('MemberClassesPage', () => {
     await act(async () => finishBooking(booked));
     expect(host.textContent).toContain('2 / 12');
     await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!.click());
+    expect(mocks.cancelEnrollment).not.toHaveBeenCalled();
+    expect(host.querySelector('[role=dialog]')?.textContent).toContain('Yoga Flow');
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((item) => item.textContent === 'Giữ đặt chỗ')!.click());
+    expect(mocks.cancelEnrollment).not.toHaveBeenCalled();
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy đặt chỗ')!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((item) => item.textContent === 'Xác nhận hủy')!.click());
     expect(mocks.cancelEnrollment).toHaveBeenCalledExactlyOnceWith(41);
     expect(host.textContent).toContain('1 / 12');
   });

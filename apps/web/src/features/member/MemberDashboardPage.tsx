@@ -313,7 +313,12 @@ export function MemberDashboardPage() {
                         <h3 className="row-card__title">
                           {item.className}
                         </h3>
-                        <div className="row-card__meta">Đã đặt chỗ</div>
+                        <div className="row-card__meta">
+                          {validDate(item.sessionDate) && <span>{formatDate(item.sessionDate!)} · </span>}
+                          {item.startTime && item.endTime && <span>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · </span>}
+                          {item.roomName && <span>{item.roomName} · </span>}
+                          Đã đặt chỗ
+                        </div>
                       </div>
                     </div>
                   ))}
