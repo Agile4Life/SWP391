@@ -129,11 +129,13 @@ export function LiquidGlassChatbot() {
       if (!messageRequested) { setInput(text); return; }
       const rolledBack = cause instanceof ApiError && ['AI_CHAT_NOT_CONFIGURED', 'AI_CHAT_UNAVAILABLE'].includes(cause.code ?? '');
       setNeedsSync(!rolledBack);
-      if (rolledBack) setInput(text);
+      if (rolledBack) { setPending(null); setInput(text); }
     }
   }
 
   const disabled = phase !== 'idle';
+  const showPending = pending && !messages.some((message) => !pending.knownIds.includes(message.id)
+    && message.sender === 'member' && message.message === pending.text);
   return <div className="member-ai-chat">
     <div className="liquid-glass-chat-trigger">
       <LiquidGlassButton shape="circle" size={18} title={open ? 'Đóng trợ lý AI' : 'Mở trợ lý AI'} onClick={() => {
@@ -150,7 +152,7 @@ export function LiquidGlassChatbot() {
         <div className="liquid-glass-chat-body" aria-label="Hội thoại">
           {initialized && messages.length === 0 && !pending && phase === 'idle' && <p className="ai-chat-empty">Bạn muốn trao đổi về điều gì?</p>}
           {messages.map((message, index) => <div key={`${message.id}-${index}`} className={`chat-bubble-row ${message.sender === 'member' ? 'user-row' : 'bot-row'}`}><div className={`chat-bubble ${message.sender === 'member' ? 'user-bubble' : 'bot-bubble'}`}><div className="chat-bubble-text" style={{ whiteSpace: 'pre-wrap' }}>{phase === 'typing' && index === messages.length - 1 ? message.message.slice(0, typed) : message.message}</div><time className="chat-bubble-meta" dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time></div></div>)}
-          {pending && <div className="chat-bubble-row user-row"><div className="chat-bubble user-bubble"><div className="chat-bubble-text">{pending.text}</div></div></div>}
+          {showPending && <div className="chat-bubble-row user-row"><div className="chat-bubble user-bubble"><div className="chat-bubble-text">{pending.text}</div></div></div>}
           {(phase === 'sending' || phase === 'loading') && <div className="chat-bubble bot-bubble typing-bubble" role="status" aria-label={phase === 'sending' ? 'AI đang trả lời' : 'Đang tải hội thoại'}><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></div>}
           {phase === 'typing' && <span className="ai-chat-empty" role="status">Đang hiển thị câu trả lời…</span>}
           <div ref={endRef} />
