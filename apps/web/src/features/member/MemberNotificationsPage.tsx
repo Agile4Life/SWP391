@@ -23,11 +23,12 @@ export function MemberNotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
-  const loadRequest = useRef(0);
+  const loadRequest = useRef<symbol | null>(null);
 
   const load = useCallback(async () => {
     if (busyRef.current) return;
-    const request = ++loadRequest.current;
+    const request = Symbol();
+    loadRequest.current = request;
     setLoading(true); setError(null);
     try {
       const [list, unread] = await Promise.all([getNotifications(page), getUnreadCount()]);
@@ -44,7 +45,7 @@ export function MemberNotificationsPage() {
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', visible);
     return () => {
-      loadRequest.current++;
+      loadRequest.current = null;
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', visible);
     };
