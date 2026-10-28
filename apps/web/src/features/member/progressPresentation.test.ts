@@ -20,3 +20,9 @@ it('uses active date range and ISO weekday, with no cross-day exercises', () => 
   expect(dailyExercises([plan], '2026-10-26').map(({ item }) => item.id)).toEqual([10]);
   expect(dailyExercises([plan], '2026-11-02')).toEqual([]);
 });
+
+it('selects only Thursday items for the lecturer review on 29 October 2026', () => {
+  const item = { id: 40, dayOfWeek: 4, exerciseName: 'Thursday', description: null, sets: 3, reps: 10, durationMinutes: null, orderIndex: 1 };
+  const plan: TrainingPlan = { id: 2, status: 'active', startDate: '2026-10-29', endDate: '2026-10-29', goal: null, coachName: 'Coach', items: [item, { ...item, id: 30, dayOfWeek: 3 }] };
+  expect(dailyExercises([plan, { ...plan, id: 3, status: 'draft' }], '2026-10-29').map(({ item }) => item.id)).toEqual([40]);
+});
