@@ -94,6 +94,125 @@ describe('SCRUM-86 packages', () => {
   }
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
+  it('renders the proposed prices and durations only when returned by the catalog API', async () => {
+    api.packages.mockResolvedValue([
+      { ...membershipPackage, price: 900000, durationDays: 30, classCreditLimit: 2 },
+      { ...higherPackage, price: 2400000, durationDays: 90, classCreditLimit: 4 },
+      { ...lowerPackage, price: 3900000, durationDays: 180, classCreditLimit: 6 },
+    ]);
+    await render();
+    for (const value of ['900.000', '2.400.000', '3.900.000', '30 ngày', '90 ngày', '180 ngày']) {
+      expect(host.textContent).toContain(value);
+    }
+  });
+
+  it('keeps payment confirmation separate from activation', async () => {
+    api.history.mockResolvedValue([pending]);
+    await render();
+    api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
+    await act(async () => window.dispatchEvent(new Event('online')));
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Đã thanh toán, đang chờ kích hoạt.');
+    expect(host.textContent).not.toContain('Gói đã kích hoạt.');
+  });
+
+  it('ignores an older background snapshot when a newer purchase has completed', async () => {
+    await render();
+    let resolveHistory!: (value: MemberSubscription[]) => void;
+    api.history.mockImplementationOnce(() => new Promise<MemberSubscription[]>(resolve => { resolveHistory = resolve; }));
+    await act(async () => window.dispatchEvent(new Event('online')));
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => resolveHistory([]));
+    expect(button('Đang chờ xác nhận')?.disabled).toBe(true);
+    expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not overwrite a newer manual payment refresh with an older response', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.payments.mockResolvedValue([payment]);
+    await render();
+    let resolveOld!: (value: typeof payment[]) => void;
+    api.payments.mockImplementationOnce(() => new Promise<typeof payment[]>(resolve => { resolveOld = resolve; }))
+      .mockResolvedValueOnce([{ ...payment, status: 'success' }]);
+    const reload = button('Tải lại trạng thái')!;
+    await act(async () => { reload.click(); reload.click(); });
+    expect(host.textContent).toContain('gói chưa active');
+    await act(async () => resolveOld([payment]));
+    expect(host.textContent).toContain('gói chưa active');
+    expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
+  });
+
+  it('does not poll a hidden tab and refreshes when it becomes visible', async () => {
+    vi.useFakeTimers();
+    try {
+      await render();
+      const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      await act(async () => vi.advanceTimersByTimeAsync(30000));
+      expect(api.history).toHaveBeenCalledTimes(1);
+      visibility.mockReturnValue('visible');
+      await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+      expect(api.history).toHaveBeenCalledTimes(2);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('blocks renewal and upgrade while an active package has a pending hold', async () => {
+    api.packages.mockResolvedValue([membershipPackage, higherPackage]);
+    const holding = { ...active, holdStatus: 'PENDING' };
+    api.current.mockResolvedValue(holding);
+    api.history.mockResolvedValue([holding]);
+    await render();
+    expect(button('Đang chờ bảo lưu')?.disabled).toBe(true);
+    expect([...host.querySelectorAll('.grid-3 button')].every(item => (item as HTMLButtonElement).disabled)).toBe(true);
+  });
+  it('refetches staff changes without F5 and announces only API-confirmed payment once', async () => {
+    api.history.mockResolvedValue([pending]);
+    await render();
+    api.current.mockResolvedValue({ ...active, id: pending.id });
+    api.history.mockResolvedValue([{ ...active, id: pending.id }]);
+    api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
+    await act(async () => window.dispatchEvent(new Event('online')));
+    expect(host.textContent).toContain('Thanh toán thành công');
+    expect(host.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(button('Gia hạn')?.disabled).toBe(false);
+    await act(async () => button('Đóng')?.click());
+    await act(async () => window.dispatchEvent(new Event('online')));
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('shows a clear request success without claiming payment success', async () => {
+    await render();
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    const dialog = host.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('Đã gửi yêu cầu thành công');
+    expect(dialog?.textContent).toContain('Yêu cầu của bạn đang chờ xử lý.');
+    expect(dialog?.textContent).not.toContain('Thanh toán thành công');
+  });
+
+  it('polls without hiding current membership and cleans up on unmount', async () => {
+    vi.useFakeTimers();
+    try {
+      api.current.mockResolvedValue(active);
+      api.history.mockResolvedValue([active]);
+      await render();
+      await act(async () => vi.advanceTimersByTimeAsync(15000));
+      expect(api.current).toHaveBeenCalledTimes(2);
+      expect(host.textContent).toContain('Essential');
+      await act(async () => root.unmount());
+      await act(async () => vi.advanceTimersByTimeAsync(30000));
+      window.dispatchEvent(new Event('online'));
+      expect(api.current).toHaveBeenCalledTimes(2);
+      root = createRoot(host);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('blocks purchases when background synchronization fails and recovers online', async () => {
+    await render();
+    api.history.mockRejectedValueOnce(new Error('offline'));
+    await act(async () => window.dispatchEvent(new Event('online')));
+    expect(host.textContent).toContain('Không thể đồng bộ trạng thái mới nhất');
+    expect(button('Đăng ký lần đầu')?.disabled).toBe(true);
+    await act(async () => window.dispatchEvent(new Event('online')));
+    expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
+  });
   it('shows the same paid-through expiry as the member card and dashboard', async () => {
     api.current.mockResolvedValue({ ...active, paidThroughDate: '2100-03-01' });
     api.history.mockResolvedValue([active]);
@@ -128,6 +247,15 @@ describe('SCRUM-86 packages', () => {
   });
   const renewal = { ...pending, id: 5, previousSubscriptionId: 1, status: 'active',
     startDate: '2099-11-18', endDate: '2099-12-18' };
+
+  it('explains a paid future period as paid rather than a pending request when blocking upgrade', async () => {
+    api.packages.mockResolvedValue([membershipPackage, higherPackage]);
+    api.current.mockResolvedValue(active);
+    api.history.mockResolvedValue([active, renewal]);
+    await render();
+    expect(button('Có kỳ đã thanh toán')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
+  });
 
   it('allows an active subscription without a successor to renew only once', async () => {
     api.current.mockResolvedValue(active);

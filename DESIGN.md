@@ -4,6 +4,8 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
+Member Packages — SCRUM-86 (29/10/2026): giữ bố cục portal và token Light/Dark; giá/thời hạn/quyền lợi lấy API authoritative. Popup kết quả giữa viewport, gần vuông, có icon và native dialog hỗ trợ focus/Escape; phân biệt gửi yêu cầu với thanh toán được backend xác nhận. Skeleton tĩnh, không animation lặp. Đồng bộ trạng thái bằng polling REST 15 giây khi tab hiển thị và khi quay lại tab/kết nối lại; không gọi đây là Supabase Realtime. Bảng giá mới và dependency backend được ghi riêng trong [hồ sơ SCRUM-86](docs/qa/SCRUM-86-packages-feedback.md), chưa triển khai bằng thay đổi UI này.
+
 | Khu vực | Quy chuẩn hiện hành | Nguồn triển khai |
 | --- | --- | --- |
 | Landing `/`, đăng nhập `/login`, đăng ký `/register`, OTP và trang công khai mới | **SÖL Fitness: charcoal–salmon, full width, animation xuất hiện từng component** | `features/landing/fitness-public.css`, `components/PublicLayout.tsx`, `components/FitnessLanding.tsx` |
