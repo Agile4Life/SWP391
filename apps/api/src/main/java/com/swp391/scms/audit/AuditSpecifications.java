@@ -28,7 +28,7 @@ public final class AuditSpecifications {
                 predicates.add(cb.equal(root.get("userId"), userId));
             }
 
-            if (entityType != null && !entityType.isBlank()) {
+            if (entityType != null && !entityType.isBlank() && !"ALL".equalsIgnoreCase(entityType.trim())) {
                 String normalized = entityType.trim().toLowerCase();
                 predicates.add(cb.or(
                         cb.equal(cb.lower(root.get("entityType")), normalized),
@@ -36,7 +36,7 @@ public final class AuditSpecifications {
                 ));
             }
 
-            if (action != null && !action.isBlank()) {
+            if (action != null && !action.isBlank() && !"ALL".equalsIgnoreCase(action.trim())) {
                 String normalized = "%" + action.trim().toLowerCase() + "%";
                 predicates.add(cb.like(cb.lower(root.get("action")), normalized));
             }
@@ -53,4 +53,3 @@ public final class AuditSpecifications {
         };
     }
 }
-

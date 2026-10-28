@@ -177,8 +177,8 @@ export const auditApi = {
   getAuditLogs: async (filter?: AuditLogFilter): Promise<PageResult<AuditLogItem>> => {
     const params = new URLSearchParams();
     if (filter?.userId) params.set('user_id', String(filter.userId));
-    if (filter?.entityType) params.set('entity_type', filter.entityType);
-    if (filter?.action) params.set('action', filter.action);
+    if (filter?.entityType && filter.entityType !== 'ALL') params.set('entity_type', filter.entityType);
+    if (filter?.action && filter.action !== 'ALL') params.set('action', filter.action);
     if (filter?.from) params.set('from', filter.from);
     if (filter?.to) params.set('to', filter.to);
     params.set('page', String(filter?.page ?? 0));
