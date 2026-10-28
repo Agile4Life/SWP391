@@ -29,7 +29,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private static final int SCAN_LIMIT_PER_MINUTE = 60;
     private static final int DYNAMIC_QR_LIMIT_PER_MINUTE = 30;
-    private static final int AUTH_LIMIT_PER_MINUTE = 60;
+    private static final int AUTH_LIMIT_PER_MINUTE = 5;
 
     private static final String SCAN_PATH = "/api/v1/check-in/scan";
     private static final String DYNAMIC_QR_PATH = "/api/v1/memberships/subscriptions/my/dynamic-qr";
