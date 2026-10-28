@@ -117,7 +117,7 @@ it('prevents duplicate sends while a message is pending', async () => {
   await act(async () => resolve({ id: 2, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Xin chào', createdAt: ticket.createdAt }));
 });
 
-it('ignores messages from A arriving after B, including an older request for the same ticket', async () => {
+it('ignores messages from A arriving after B', async () => {
   vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket, { ...ticket, id: 8 }], totalPages: 1 });
   let finishA!: (messages: supportApi.SupportMessage[]) => void;
   vi.mocked(supportApi.getSupportMessages).mockImplementationOnce(() => new Promise(resolve => { finishA = resolve; }))
@@ -129,6 +129,21 @@ it('ignores messages from A arriving after B, including an older request for the
   expect(host.querySelector('#support-conversation-title')?.textContent).toContain('#8');
   expect(host.textContent).toContain('Tin của B');
   expect(host.textContent).not.toContain('Tin của A');
+});
+
+it('ignores the first A response after switching A to B and back to A', async () => {
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket, { ...ticket, id: 8 }], totalPages: 1 });
+  let finish!: (messages: supportApi.SupportMessage[]) => void;
+  const message: supportApi.SupportMessage = { id: 70, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'A mới', createdAt: ticket.createdAt };
+  vi.mocked(supportApi.getSupportMessages).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+    .mockResolvedValueOnce([]).mockResolvedValueOnce([message]);
+  await render();
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[0]);
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[1]);
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[0]);
+  await act(async () => finish([{ ...message, message: 'A cũ' }]));
+  expect(host.textContent).toContain('A mới');
+  expect(host.textContent).not.toContain('A cũ');
 });
 
 it('does not clear B draft or reload A when an A send finishes after switching tickets', async () => {

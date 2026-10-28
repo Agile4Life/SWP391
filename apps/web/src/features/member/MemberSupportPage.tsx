@@ -39,7 +39,7 @@ export function MemberSupportPage() {
   const [formError, setFormError] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selection = useRef({ id: null as number | null, version: 0 });
-  const messagesRequest = useRef(0);
+  const messagesRequest = useRef<symbol | null>(null);
   const selected = tickets.find((ticket) => ticket.id === selectedId) ?? null;
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -62,7 +62,8 @@ export function MemberSupportPage() {
 
   const loadMessages = useCallback(async (id: number) => {
     if (selection.current.id !== id) return;
-    const request = ++messagesRequest.current;
+    const request = Symbol();
+    messagesRequest.current = request;
     const version = selection.current.version;
     const current = () => request === messagesRequest.current && version === selection.current.version;
     setMessagesLoading(true); setMessagesError('');
@@ -75,7 +76,7 @@ export function MemberSupportPage() {
     if (selectedId == null) return;
     setMessages([]); setDraft(''); setSendError('');
     void loadMessages(selectedId);
-    return () => { messagesRequest.current++; };
+    return () => { messagesRequest.current = null; };
   }, [selectedId, loadMessages]);
 
   function selectTicket(id: number) {
