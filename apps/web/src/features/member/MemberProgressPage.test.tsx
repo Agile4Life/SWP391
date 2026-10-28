@@ -102,3 +102,21 @@ it('hides checkboxes if completion loading fails and retries from the backend', 
   await act(async () => retry?.click());
   expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
 });
+
+it.each(['2026-10-28T17:00:00Z', '2026-10-28T23:59:59Z'])('uses Vietnam date at %s and reloads confirmed completion', async (instant) => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(instant));
+  try {
+    const { plan } = todayPlan();
+    expect(plan.items[0].dayOfWeek).toBe(4);
+    vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
+    await render();
+    expect(api.getMyCompletedItemIds).toHaveBeenLastCalledWith('2026-10-29');
+    await act(async () => (host.querySelector('input[type="checkbox"]') as HTMLInputElement).click());
+    expect(api.setTrainingItemCompleted).toHaveBeenLastCalledWith(5, '2026-10-29', true);
+    vi.mocked(api.getMyCompletedItemIds).mockResolvedValueOnce([5]);
+    await act(async () => root.render(null));
+    await render();
+    expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
+  } finally { vi.useRealTimers(); }
+});

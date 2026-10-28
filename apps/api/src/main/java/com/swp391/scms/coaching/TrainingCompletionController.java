@@ -48,7 +48,7 @@ public class TrainingCompletionController {
     private String msg(String key) { return messageService != null ? messageService.getMessage(key) : key; }
 
     private LocalDate today() {
-        return LocalDate.now(clock);
+        return LocalDate.now(clock.withZone(CENTER_ZONE));
     }
 
     @Operation(summary = "Đọc bài tập đã hoàn thành của MEMBER trong ngày")
