@@ -136,6 +136,22 @@ it('allows safe retry after a confirmed provider rollback', async () => {
   await open(); await type('Câu hỏi'); await send();
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Chưa cấu hình AI');
   expect((host.querySelector('textarea') as HTMLTextAreaElement).value).toBe('Câu hỏi');
+  expect(host.querySelectorAll('.user-row')).toHaveLength(0);
+});
+
+it('does not render the pending question twice when partial history already contains it', async () => {
+  vi.mocked(api.sendAiChatMessage).mockRejectedValue(new ApiError('network', 0));
+  await open(); await type('Câu hỏi'); await send();
+  vi.mocked(api.getAiChatHistory).mockResolvedValue([reply.memberMessage]);
+  await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Tải lại hội thoại')?.click());
+  expect(host.querySelectorAll('.user-row')).toHaveLength(1);
+  expect((host.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(true);
+  await send();
+  expect(api.sendAiChatMessage).toHaveBeenCalledTimes(1);
+  vi.mocked(api.getAiChatHistory).mockResolvedValue([reply.memberMessage, reply.aiMessage]);
+  await act(async () => [...host.querySelectorAll('button')].find(button => button.textContent === 'Tải lại hội thoại')?.click());
+  expect(host.querySelectorAll('.user-row')).toHaveLength(1);
+  expect((host.querySelector('textarea') as HTMLTextAreaElement).disabled).toBe(false);
 });
 
 it('respects reduced motion when revealing the returned answer', async () => {
