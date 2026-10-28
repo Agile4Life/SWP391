@@ -11,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
     private final String[] allowedOrigins;
 
-    public WebConfig(@Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
+    public WebConfig(@Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5180,http://127.0.0.1:5180,http://localhost:3000}") String allowedOrigins) {
         this.allowedOrigins = java.util.Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim).filter(origin -> !origin.isEmpty()).toArray(String[]::new);
     }
