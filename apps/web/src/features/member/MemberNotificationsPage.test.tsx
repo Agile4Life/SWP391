@@ -115,4 +115,38 @@ describe('SCRUM-127 member notifications', () => {
       window.removeEventListener('member-notifications-changed', changed);
     }
   });
+
+  it('refreshes on focus and returning visible without changing the current page, and cleans up on unmount', async () => {
+    api.list.mockResolvedValue({ content: [], number: 0, totalPages: 3 });
+    await render();
+    await act(async () => button('Sau')?.click());
+    expect(api.list).toHaveBeenLastCalledWith(1);
+    api.list.mockResolvedValue({ content: [{ id: 9, title: 'Tin mới', message: 'Mới', type: 'system', isRead: false, createdAt: '2026-10-28T08:00:00' }], number: 1, totalPages: 3 });
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(api.list).toHaveBeenCalledTimes(3);
+    expect(api.list).toHaveBeenLastCalledWith(1);
+    expect(host.textContent).toContain('Tin mới');
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+    expect(api.list).toHaveBeenCalledTimes(3);
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+    expect(api.list).toHaveBeenCalledTimes(4);
+    await act(async () => root.render(null));
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(api.list).toHaveBeenCalledTimes(4);
+  });
+
+  it('does not overwrite newer notifications with a late refresh response', async () => {
+    api.list.mockResolvedValue({ content: [], number: 0, totalPages: 3 });
+    await render();
+    let finish!: (value: unknown) => void;
+    api.list.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(api.list).toHaveBeenCalledTimes(3);
+    await act(async () => finish({ content: [{ id: 1, title: 'Trang cũ', message: 'Cũ', type: 'system', isRead: false, createdAt: '2026-10-28T08:00:00' }], number: 1, totalPages: 3 }));
+    expect(host.textContent).not.toContain('Trang cũ');
+    expect(host.textContent).toContain('Trang 1 / 3');
+  });
 });

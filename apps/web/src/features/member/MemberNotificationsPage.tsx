@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
@@ -22,20 +22,37 @@ export function MemberNotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const loadRequest = useRef(0);
 
   const load = useCallback(async () => {
+    if (busyRef.current) return;
+    const request = ++loadRequest.current;
     setLoading(true); setError(null);
     try {
       const [list, unread] = await Promise.all([getNotifications(page), getUnreadCount()]);
+      if (request !== loadRequest.current) return;
       setData(list); setCount(unread);
-    } catch (reason) { setData(null); setError(errorMessage(reason)); }
-    finally { setLoading(false); }
+    } catch (reason) { if (request === loadRequest.current) { setData(null); setError(errorMessage(reason)); } }
+    finally { if (request === loadRequest.current) setLoading(false); }
   }, [page]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const refresh = () => { void load(); };
+    const visible = () => { if (document.visibilityState === 'visible') refresh(); };
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      loadRequest.current++;
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, [load]);
 
   async function open(item: MemberNotification) {
-    if (busy) return;
+    if (busyRef.current || loading) return;
+    busyRef.current = true;
     setBusy(true); setError(null);
     try {
       if (!item.isRead) {
@@ -47,11 +64,12 @@ export function MemberNotificationsPage() {
       const destination = notificationDestination(item);
       if (destination) navigate(destination);
     } catch (reason) { setError(errorMessage(reason)); }
-    finally { setBusy(false); }
+    finally { busyRef.current = false; setBusy(false); }
   }
 
   async function readAll() {
-    if (busy) return;
+    if (busyRef.current || loading) return;
+    busyRef.current = true;
     setBusy(true); setError(null);
     try {
       await markAllNotificationsRead();
@@ -59,14 +77,14 @@ export function MemberNotificationsPage() {
       setCount(0);
       window.dispatchEvent(new Event('member-notifications-changed'));
     } catch (reason) { setError(errorMessage(reason)); }
-    finally { setBusy(false); }
+    finally { busyRef.current = false; setBusy(false); }
   }
 
   const hasUnread = count > 0 || Boolean(data?.content.some((item) => !item.isRead));
 
   return <div className="portal-container">
     <PageHeader eyebrow="Hội viên" title="Thông báo" subtitle="Cập nhật về lịch học, gói tập và dịch vụ của bạn."
-      actions={<button className="notification-action" type="button" disabled={busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button>} />
+      actions={<button className="notification-action" type="button" disabled={loading || busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button>} />
     {error && <div className="portal-alert notification-error" role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></div>}
     {loading ? <div className="portal-state" role="status">Đang tải thông báo…</div> : !data?.content.length && !error ?
       <div className="portal-empty"><h3>Chưa có thông báo</h3><p>Thông báo mới sẽ xuất hiện tại đây.</p></div> :

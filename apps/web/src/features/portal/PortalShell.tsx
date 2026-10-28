@@ -31,20 +31,25 @@ export function PortalShell() {
   useEffect(() => {
     if (!isMember) return;
     let active = true;
+    let request = 0;
     const refresh = () => {
+      const current = ++request;
       void getUnreadCount().then((count) => {
-        if (active) { setUnreadCount(count); setNotificationError(false); }
+        if (active && current === request) { setUnreadCount(count); setNotificationError(false); }
       }).catch(() => {
-        if (active) { setUnreadCount(null); setNotificationError(true); }
+        if (active && current === request) { setUnreadCount(null); setNotificationError(true); }
       });
     };
+    const visible = () => { if (document.visibilityState === 'visible') refresh(); };
     refresh();
     window.addEventListener('member-notifications-changed', refresh);
     window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', visible);
     return () => {
       active = false;
       window.removeEventListener('member-notifications-changed', refresh);
       window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', visible);
     };
   }, [isMember]);
 
