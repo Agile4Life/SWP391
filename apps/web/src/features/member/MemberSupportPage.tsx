@@ -38,6 +38,8 @@ export function MemberSupportPage() {
   const [notice, setNotice] = useState('');
   const [formError, setFormError] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selection = useRef({ id: null as number | null, version: 0 });
+  const messagesRequest = useRef(0);
   const selected = tickets.find((ticket) => ticket.id === selectedId) ?? null;
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -59,17 +61,28 @@ export function MemberSupportPage() {
   useEffect(() => { void loadTickets(0); }, [loadTickets]);
 
   const loadMessages = useCallback(async (id: number) => {
+    if (selection.current.id !== id) return;
+    const request = ++messagesRequest.current;
+    const version = selection.current.version;
+    const current = () => request === messagesRequest.current && version === selection.current.version;
     setMessagesLoading(true); setMessagesError('');
-    try { setMessages(await getSupportMessages(id)); }
-    catch (error) { setMessagesError(failure(error)); }
-    finally { setMessagesLoading(false); }
+    try { const result = await getSupportMessages(id); if (current()) setMessages(result); }
+    catch (error) { if (current()) setMessagesError(failure(error)); }
+    finally { if (current()) setMessagesLoading(false); }
   }, []);
 
   useEffect(() => {
     if (selectedId == null) return;
     setMessages([]); setDraft(''); setSendError('');
     void loadMessages(selectedId);
+    return () => { messagesRequest.current++; };
   }, [selectedId, loadMessages]);
+
+  function selectTicket(id: number) {
+    if (selection.current.id === id) return;
+    selection.current = { id, version: selection.current.version + 1 };
+    setSelectedId(id);
+  }
 
   async function submitTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,11 +104,13 @@ export function MemberSupportPage() {
     const value = draft.trim();
     if (!selected || sendingRef.current || !value || value.length > 2000 || selected.status === 'closed') return;
     sendingRef.current = true; setSending(true); setSendError('');
+    const version = selection.current.version;
     try {
       await sendSupportMessage(selected.id, value);
+      if (version !== selection.current.version) return;
       setDraft('');
       await loadMessages(selected.id);
-    } catch (error) { setSendError(failure(error)); }
+    } catch (error) { if (version === selection.current.version) setSendError(failure(error)); }
     finally { sendingRef.current = false; setSending(false); }
   }
 
@@ -120,7 +135,7 @@ export function MemberSupportPage() {
       </section>
       <section className="portal-card" aria-labelledby="support-list-title">
         <div className="portal-card-header member-support-heading"><h2 id="support-list-title" className="portal-card-title">Phiếu của tôi</h2><button type="button" className="member-support-link" onClick={() => void loadTickets(page)} disabled={loading}>Làm mới</button></div>
-        {loading ? <p role="status">Đang tải phiếu hỗ trợ…</p> : listError ? <div role="alert"><p>{listError}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>Thử lại</button></div> : tickets.length === 0 ? <p className="portal-empty">Bạn chưa có phiếu hỗ trợ nào.</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={() => setSelectedId(ticket.id)} aria-current={selectedId === ticket.id ? 'true' : undefined}>
+        {loading ? <p role="status">Đang tải phiếu hỗ trợ…</p> : listError ? <div role="alert"><p>{listError}</p><button type="button" className="member-support-link" onClick={() => void loadTickets(page)}>Thử lại</button></div> : tickets.length === 0 ? <p className="portal-empty">Bạn chưa có phiếu hỗ trợ nào.</p> : <div className="member-support-list">{tickets.map((ticket) => <button type="button" key={ticket.id} className={`member-support-ticket${selectedId === ticket.id ? ' is-active' : ''}`} onClick={() => selectTicket(ticket.id)} aria-current={selectedId === ticket.id ? 'true' : undefined}>
           <span className="member-support-ticket-top"><strong>#{ticket.id} · {displaySubject(ticket.subject)}</strong><span className={`member-support-status member-support-status--${ticket.status}`}>{statusLabel[ticket.status] ?? ticket.status}</span></span>
           <span className="member-support-meta">{categoryOf(ticket.subject)} · {dateTime(ticket.createdAt)}</span>
           {ticket.description && <span className="member-support-summary">{ticket.description}</span>}

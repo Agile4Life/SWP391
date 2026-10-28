@@ -116,3 +116,32 @@ it('prevents duplicate sends while a message is pending', async () => {
   expect(supportApi.sendSupportMessage).toHaveBeenCalledTimes(1);
   await act(async () => resolve({ id: 2, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Xin chào', createdAt: ticket.createdAt }));
 });
+
+it('ignores messages from A arriving after B, including an older request for the same ticket', async () => {
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket, { ...ticket, id: 8 }], totalPages: 1 });
+  let finishA!: (messages: supportApi.SupportMessage[]) => void;
+  vi.mocked(supportApi.getSupportMessages).mockImplementationOnce(() => new Promise(resolve => { finishA = resolve; }))
+    .mockResolvedValueOnce([{ id: 80, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Tin của B', createdAt: ticket.createdAt }]);
+  await render();
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[0]);
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[1]);
+  await act(async () => finishA([{ id: 70, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Tin của A', createdAt: ticket.createdAt }]));
+  expect(host.querySelector('#support-conversation-title')?.textContent).toContain('#8');
+  expect(host.textContent).toContain('Tin của B');
+  expect(host.textContent).not.toContain('Tin của A');
+});
+
+it('does not clear B draft or reload A when an A send finishes after switching tickets', async () => {
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket, { ...ticket, id: 8 }], totalPages: 1 });
+  let finish!: (message: supportApi.SupportMessage) => void;
+  vi.mocked(supportApi.sendSupportMessage).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  await render();
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[0]);
+  await type('#support-message', 'Gửi A');
+  await act(async () => host.querySelector('form.member-support-compose')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  await click(host.querySelectorAll<HTMLButtonElement>('.member-support-ticket')[1]);
+  await type('#support-message', 'Draft B');
+  await act(async () => finish({ id: 70, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: 'Gửi A', createdAt: ticket.createdAt }));
+  expect((host.querySelector('#support-message') as HTMLTextAreaElement).value).toBe('Draft B');
+  expect(supportApi.getSupportMessages).toHaveBeenCalledTimes(2);
+});
