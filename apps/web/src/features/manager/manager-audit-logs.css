@@ -112,20 +112,20 @@
 
 .action-badge.is-create {
   background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.35);
 }
 
 .action-badge.is-update {
   background: rgba(245, 158, 11, 0.15);
-  color: #d97706;
+  color: light-dark(#805400, #fbbf24);
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 .action-badge.is-delete,
 .action-badge.is-cancel {
   background: rgba(239, 68, 68, 0.15);
-  color: #dc2626;
+  color: light-dark(#a33030, #fca5a5);
   border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
@@ -258,11 +258,11 @@
 }
 
 .diff-box.is-old .diff-box-title {
-  color: #ef4444;
+  color: light-dark(#a33030, #f87171);
 }
 
 .diff-box.is-new .diff-box-title {
-  color: #16a34a;
+  color: light-dark(#226442, #4ade80);
 }
 
 .diff-code-content {
@@ -299,114 +299,75 @@
 }
 
 .stat-card-title {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--portal-muted);
   font-weight: 600;
+  color: var(--portal-muted);
 }
 
-.stat-card-val {
-  font-size: 1.7rem;
+.stat-card-number {
+  font-size: 1.8rem;
   font-weight: 800;
-  color: var(--portal-paper);
-  line-height: 1.1;
-}
-
-.stat-card-val.highlight {
   color: var(--portal-salmon);
 }
 
-.occupancy-table-card {
+.occupancy-chart-card {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
   border-radius: 14px;
-  overflow: hidden;
-  padding: 20px;
+  padding: 20px 24px;
 }
 
-.occupancy-table-header {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-  margin: 0 0 16px 0;
-}
-
-.occupancy-discipline-group {
-  margin-bottom: 24px;
-}
-
-.discipline-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--portal-salmon);
-  margin: 0 0 12px 0;
+.chart-discipline-list {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.discipline-chart-item {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.occupancy-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+.discipline-chart-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: var(--portal-raised);
-  border: 1px solid var(--portal-border);
-  margin-bottom: 8px;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
 }
 
-.occupancy-row-name {
-  font-weight: 600;
+.discipline-name-bold {
+  font-weight: 700;
   color: var(--portal-paper);
 }
 
-.occupancy-progress-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.discipline-rate-badge {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--portal-salmon);
 }
 
-.progress-label-val {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--portal-muted);
-}
-
-.progress-track {
+.progress-track-bg {
   width: 100%;
-  height: 6px;
-  background: var(--portal-border);
-  border-radius: 3px;
+  height: 12px;
+  background: var(--portal-raised);
+  border-radius: 6px;
   overflow: hidden;
+  border: 1px solid var(--portal-border);
 }
 
-.progress-fill {
+.progress-fill-bar {
   height: 100%;
   background: var(--portal-salmon);
-  border-radius: 3px;
-  transition: width 0.3s ease;
+  border-radius: 6px;
+  transition: width 0.4s ease;
 }
 
-.progress-fill.is-high {
-  background: #16a34a;
-}
-
-.progress-fill.is-medium {
-  background: var(--portal-salmon);
-}
-
-.progress-fill.is-low {
-  background: #f59e0b;
-}
-
-@media (max-width: 760px) {
-  .occupancy-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
+.discipline-chart-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--portal-muted);
 }

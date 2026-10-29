@@ -179,7 +179,7 @@
 .btn-remove-exercise {
   background: transparent;
   border: none;
-  color: #ef4444;
+  color: light-dark(#a33030, #fca5a5);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 6px 10px;
@@ -227,7 +227,7 @@
   border-left: 3px solid #ef4444;
   border-radius: 6px;
   padding: 10px 14px;
-  color: #ef4444;
+  color: light-dark(#a33030, #fca5a5);
   font-size: 0.82rem;
   margin-bottom: 16px;
 }

@@ -304,7 +304,7 @@
 .status-pill.status-scheduled,
 .coach-session-badge.status-scheduled {
   background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
@@ -318,7 +318,7 @@
 .status-pill.status-cancelled,
 .coach-session-badge.status-cancelled {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  color: light-dark(#a33030, #fca5a5);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -663,23 +663,23 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 
 .fitness-level-badge.level-beginner,
 .roster-level-beginner {
-  background: rgba(34, 197, 94, 0.15);
+  background: rgba(34, 197, 94, 0.12);
   color: #16a34a;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
 .fitness-level-badge.level-intermediate,
 .roster-level-intermediate {
-  background: rgba(56, 189, 248, 0.15);
+  background: rgba(56, 189, 248, 0.12);
   color: #0284c7;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
 .fitness-level-badge.level-advanced,
 .roster-level-advanced {
-  background: rgba(168, 85, 247, 0.15);
+  background: rgba(168, 85, 247, 0.12);
   color: #9333ea;
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
 .student-contact-row,
@@ -835,22 +835,12 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 .status-pill {
   padding: 4px 12px;
   border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
+  padding: 8px 12px;
+  color: #dc2626;
 }
 
-.status-pill.is-present {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.status-pill.is-absent {
-  background: rgba(239, 68, 68, 0.15);
+.roster-health-box .roster-detail-label {
   color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .score-badge {
@@ -950,17 +940,21 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   .coach-metrics-grid {
     grid-template-columns: 1fr;
   }
+
   .coach-day-strip {
     grid-template-columns: repeat(4, 1fr);
   }
+
   .coach-session-grid,
   .coach-sessions-grid {
     grid-template-columns: 1fr;
   }
+
   .coach-week-bar {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .student-details-grid {
     grid-template-columns: 1fr;
   }
@@ -1090,4 +1084,3 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   color: #1e293b;
   border-color: var(--portal-salmon);
 }
-
