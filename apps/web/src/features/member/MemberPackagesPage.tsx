@@ -6,6 +6,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { PortalIcon } from '../portal/PortalIcon';
 import './member-packages.css';
+import { subscribeMembershipChanges } from './membershipRealtime';
 import {
   cancelPendingMembershipSubscription,
   createMembershipSubscription,
@@ -75,6 +76,8 @@ export function MemberPackagesPage() {
   const syncVersion = useRef(0);
   const readVersions = useRef({ packages: 0, current: 0, history: 0, payments: 0, cancellations: 0 });
   const refreshNow = useRef<() => void>(() => {});
+  const refreshQueued = useRef(false);
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
   const [syncError, setSyncError] = useState(false);
@@ -256,21 +259,29 @@ export function MemberPackagesPage() {
     }
   }, [historyState]);
 
-  // REST fallback: keep the five authoritative resources together, without flashing skeletons.
+  // Supabase Broadcast invalidates data; the authenticated API remains authoritative.
   // A foreground read or mutation invalidates an older background snapshot.
   useEffect(() => {
     let disposed = false;
     let inFlight = false;
     async function refresh() {
-      if (disposed || inFlight || document.visibilityState === 'hidden' || requestBusy.current
-        || isStatusSyncing || packagesState.status === 'loading' || cancellationsState.status === 'loading') return;
+      if (disposed) return;
+      if (inFlight || document.visibilityState === 'hidden' || requestBusy.current
+        || isStatusSyncing || packagesState.status === 'loading' || cancellationsState.status === 'loading') {
+        refreshQueued.current = true;
+        return;
+      }
+      refreshQueued.current = false;
       inFlight = true;
       const version = syncVersion.current;
       try {
         const [catalog, membership, history, payments, cancellations] = await Promise.all([
           getMembershipPackages(), getCurrentMembership(), getMembershipHistory(), getMyPayments(), getMyMembershipCancellations(),
         ]);
-        if (disposed || version !== syncVersion.current || requestBusy.current) return;
+        if (disposed || version !== syncVersion.current || requestBusy.current) {
+          refreshQueued.current = true;
+          return;
+        }
         setPackagesState({ status: 'success', data: catalog });
         setCurrentState({ status: 'success', data: membership });
         setHistoryState({ status: 'success', data: history });
@@ -292,23 +303,36 @@ export function MemberPackagesPage() {
         }
       } catch {
         if (!disposed && version === syncVersion.current && !requestBusy.current) setSyncError(true);
-      } finally { inFlight = false; }
+      } finally {
+        inFlight = false;
+        if (!disposed && refreshQueued.current && !requestBusy.current && !isStatusSyncing) {
+          refreshQueued.current = false;
+          void refresh();
+        }
+      }
     }
-    const timer = window.setInterval(() => void refresh(), 15000);
+
     const onRefresh = () => void refresh();
     refreshNow.current = onRefresh;
+    if (refreshQueued.current) onRefresh();
     window.addEventListener('focus', onRefresh);
     window.addEventListener('online', onRefresh);
     document.addEventListener('visibilitychange', onRefresh);
     return () => {
       disposed = true;
+      if (inFlight) refreshQueued.current = true;
       refreshNow.current = () => {};
-      window.clearInterval(timer);
+
       window.removeEventListener('focus', onRefresh);
       window.removeEventListener('online', onRefresh);
       document.removeEventListener('visibilitychange', onRefresh);
     };
-  }, [isStatusSyncing, packagesState.status, cancellationsState.status]);
+  }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId]);
+
+  useEffect(() => subscribeMembershipChanges(
+    () => refreshNow.current(),
+    () => setSyncError(true),
+  ), []);
 
   useEffect(() => {
     if (isStatusSyncing || packagesState.status !== 'success' || !selectedCard.current || focusedSelection.current === selectedId) return;
@@ -368,7 +392,7 @@ export function MemberPackagesPage() {
         action: upgradeFrom ? 'upgrade' : renewFrom ? 'renew' : 'register',
       });
     } catch (error) {
-      setActionError(
+      setBlockedMessage(
         error instanceof Error
           ? error.message
           : 'Không thể xử lý yêu cầu. Vui lòng thử lại.',
@@ -377,6 +401,7 @@ export function MemberPackagesPage() {
       await loadHistory();
       setSubmittingPackageId(null);
       requestBusy.current = false;
+      if (refreshQueued.current) refreshNow.current();
     }
   }
 
@@ -398,6 +423,7 @@ export function MemberPackagesPage() {
     } finally {
       setIsResuming(false);
       requestBusy.current = false;
+      if (refreshQueued.current) refreshNow.current();
     }
   }
 
@@ -432,6 +458,7 @@ export function MemberPackagesPage() {
     } finally {
       setIsSubmittingHold(false);
       requestBusy.current = false;
+      if (refreshQueued.current) refreshNow.current();
     }
   }
 
@@ -469,6 +496,7 @@ export function MemberPackagesPage() {
       await Promise.all([loadCurrent(), loadHistory(), loadPayments()]);
       setIsCancellingPending(false);
       requestBusy.current = false;
+      if (refreshQueued.current) refreshNow.current();
     }
   }
 
@@ -495,6 +523,7 @@ export function MemberPackagesPage() {
     } finally {
       setIsSubmittingCancellation(false);
       requestBusy.current = false;
+      if (refreshQueued.current) refreshNow.current();
     }
   }
 
@@ -502,6 +531,13 @@ export function MemberPackagesPage() {
 
   return (
     <div className="portal-container member-packages">
+      {blockedMessage && <Modal returnFocusRef={membershipFocus} title="Chưa thể thực hiện" onClose={() => setBlockedMessage(null)}>
+        <div className="package-result">
+          <span className="package-result__icon" aria-hidden="true">!</span>
+          <p role="alert">{blockedMessage}</p>
+          <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>Đóng</button>
+        </div>
+      </Modal>}
       <PageHeader
         eyebrow="Hội viên"
         title="Gói tập & Đặc quyền"
@@ -509,7 +545,7 @@ export function MemberPackagesPage() {
       />
 
       {syncError && <div className="portal-alert" role="alert">
-        Không thể đồng bộ trạng thái mới nhất. Thao tác mua tạm khóa; hệ thống sẽ thử lại khi có kết nối hoặc sau 15 giây.
+        Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.
         <button type="button" className="btn-secondary btn-sm" onClick={() => refreshNow.current()}>Thử đồng bộ lại</button>
       </div>}
 
@@ -1033,12 +1069,7 @@ export function MemberPackagesPage() {
                       </li>
                     ))}
                   </ul>
-                  {(renewalConflict || nextRenewals > 1) && (
-                    <p className="row-card__meta" role="alert">
-                      Lịch sử gói có kỳ trùng, chồng ngày hoặc chuỗi gia hạn bất thường. Vui lòng liên hệ nhân viên để kiểm tra.
-                    </p>
-                  )}
-                  {blockedReason && <p id={`package-blocked-${membershipPackage.id}`} className="row-card__meta">{blockedReason}</p>}
+
                 </div>
 
                 <div>
@@ -1059,15 +1090,20 @@ export function MemberPackagesPage() {
                     type="button"
                     className="btn-primary"
                     style={{ marginTop: 18, width: '100%' }}
-                    disabled={disabled}
-                    aria-describedby={blockedReason ? `package-blocked-${membershipPackage.id}` : undefined}
-                    onClick={() =>
+                    disabled={submittingPackageId !== null || isStatusSyncing}
+                    onClick={() => {
+                      if (disabled) {
+                        setBlockedMessage(blockedReason ?? (renewalConflict || nextRenewals > 1
+                          ? 'Lịch sử gói có kỳ trùng, chồng ngày hoặc chuỗi gia hạn bất thường. Vui lòng liên hệ nhân viên để kiểm tra.'
+                          : 'Chưa thể thực hiện thao tác với gói tập này. Vui lòng tải lại trạng thái hoặc liên hệ lễ tân.'));
+                        return;
+                      }
                       void handleMembershipAction(
                         membershipPackage,
                         renewFrom,
                         upgradeFrom,
-                      )
-                    }
+                      );
+                    }}
                   >
                     {buttonText}
                   </button>
@@ -1078,7 +1114,7 @@ export function MemberPackagesPage() {
         </section>
       ))}
 
-      {paymentResult && !pendingToCancel && !isHoldModalOpen && !isCancellationModalOpen && (
+      {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && !isCancellationModalOpen && (
         <Modal returnFocusRef={membershipFocus} title="Thanh toán thành công" onClose={() => setPaymentResult(null)}>
           <div className="package-result">
             <span className="package-result__icon" aria-hidden="true">✓</span>
@@ -1092,7 +1128,7 @@ export function MemberPackagesPage() {
         </Modal>
       )}
 
-      {requestResult && !pendingToCancel && !paymentResult && (
+      {requestResult && !blockedMessage && !pendingToCancel && !paymentResult && (
         <Modal returnFocusRef={membershipFocus} title="Đã gửi yêu cầu thành công" onClose={() => setRequestResult(null)}>
           <div className="package-result">
             <span className="package-result__icon" aria-hidden="true">✓</span>

@@ -1,5 +1,7 @@
 # SCRUM-86 — Member Packages feedback, 29/10/2026
 
+> Hồ sơ bản PR ban đầu. Quyết định mới nhất và thay đổi giá/Realtime/popup được ghi tại [SCRUM-86-realtime-prices.md](SCRUM-86-realtime-prices.md). Bảng giá đề xuất dưới đây không còn là giá rollout.
+
 Branch: `feat/SCRUM-86-member-packages-feedback`. Working tree sạch trước khi sửa. Owner màn hình: Thịnh, theo backlog. Không fetch/đổi branch/tích hợp PR #55–#59/commit/push/merge. Không sửa secret hoặc kết nối shared DB.
 
 ## Phạm vi và phát hiện

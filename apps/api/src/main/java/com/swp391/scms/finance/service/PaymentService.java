@@ -308,10 +308,6 @@ public class PaymentService {
                 throw new BadRequestException("MEMBERSHIP_PACKAGE_INACTIVE", "membership.package.inactive",
                         new Object[]{pkg.getId()}, "Membership package is inactive");
             }
-            if (pkg.getPrice() != null && dto.getAmount().compareTo(pkg.getPrice()) != 0) {
-                throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
-                        new Object[]{dto.getAmount(), pkg.getPrice()}, "Payment amount mismatch");
-            }
             List<MembershipSubscription> history = membershipSubscriptionRepository.findByMemberUserId(member.getUserId());
             if (history == null) history = List.of();
             if (history.stream().anyMatch(sub -> "frozen".equalsIgnoreCase(sub.getStatus()))) {
@@ -344,10 +340,12 @@ public class PaymentService {
                             "error.membership.pos_package_mismatch", null, "Checkout package does not match the subscription");
                 }
                 pendingToSettle = payableExistingPayment(member.getUserId(), pendingSub.getId(), dto.getAmount(), dto.getClassEnrollmentId());
+                validateCheckoutAmount(dto.getAmount(), pkg, pendingToSettle);
                 pendingSub.setCreatedBy(receiver);
                 activateSubscription(pendingSub);
                 resolvedSubscriptionId = pendingSub.getId();
             } else {
+                validateCheckoutAmount(dto.getAmount(), pkg, null);
                 MembershipSubscription sub = new MembershipSubscription();
                 sub.setMember(member);
                 sub.setMembershipPackage(pkg);
@@ -384,17 +382,12 @@ public class PaymentService {
                     throw new BadRequestException("MEMBERSHIP_PACKAGE_INACTIVE", "membership.package.inactive",
                             new Object[]{subscription.getMembershipPackage().getId()}, "Membership package is inactive");
                 }
-                if (subscription.getMembershipPackage().getPrice() != null) {
-                    BigDecimal expectedPrice = subscription.getMembershipPackage().getPrice();
-                    if (dto.getAmount().compareTo(expectedPrice) != 0) {
-                        throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
-                                new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
-                    }
-                }
             }
 
             pendingToSettle = payableExistingPayment(member.getUserId(), subscription.getId(), dto.getAmount(), dto.getClassEnrollmentId());
-
+            if (subscription.getMembershipPackage() != null) {
+                validateCheckoutAmount(dto.getAmount(), subscription.getMembershipPackage(), pendingToSettle);
+            }
             activateSubscription(subscription);
         }
 
@@ -610,6 +603,16 @@ public class PaymentService {
         }
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         membershipSubscriptionRepository.save(subscription);
+    }
+
+    private void validateCheckoutAmount(BigDecimal amount,
+            com.swp391.scms.facilities.entity.MembershipPackage pkg, Payment existing) {
+        // A stored pending payment keeps its original amount after catalog repricing.
+        BigDecimal expected = existing != null ? existing.getAmount() : pkg.getPrice();
+        if (expected != null && amount.compareTo(expected) != 0) {
+            throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                    new Object[]{amount, expected}, null);
+        }
     }
 
     private Payment payableExistingPayment(Long memberId, Long subscriptionId, BigDecimal amount, Long enrollmentId) {

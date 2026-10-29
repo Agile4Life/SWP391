@@ -1172,4 +1172,21 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void pendingCashierQuoteUsesExistingPaymentAmountAfterRepricing(boolean hasPendingPayment) {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
+        var user = new com.swp391.scms.users.entity.User(); user.setId(10L);
+        Member member = new Member(); member.setUserId(10L); member.setUser(user);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(1L); pack.setPrice(new BigDecimal("299000"));
+        MembershipSubscription pending = new MembershipSubscription(); pending.setId(20L);
+        pending.setMember(member); pending.setMembershipPackage(pack); pending.setStatus("pending_payment");
+        Payment payment = new Payment(); payment.setMember(member); payment.setSubscriptionId(20L);
+        payment.setAmount(new BigDecimal("2800000")); payment.setStatus(hasPendingPayment ? "pending" : "failed");
+        when(subscriptions.findByStatusOrderByCreatedAtDesc("pending_payment")).thenReturn(List.of(pending));
+        when(paymentRepository.findAllBySubscriptionId(20L)).thenReturn(List.of(payment));
+        assertThat(service.listPending().getFirst().packagePrice())
+                .isEqualByComparingTo(hasPendingPayment ? "2800000" : "299000");
+    }
+
 }

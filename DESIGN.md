@@ -4,7 +4,7 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
-Member Packages — SCRUM-86 (29/10/2026): giữ bố cục portal và token Light/Dark; giá/thời hạn/quyền lợi lấy API authoritative. Popup kết quả giữa viewport, gần vuông, có icon và native dialog hỗ trợ focus/Escape; phân biệt gửi yêu cầu với thanh toán được backend xác nhận. Skeleton tĩnh, không animation lặp. Đồng bộ trạng thái bằng polling REST 15 giây khi tab hiển thị và khi quay lại tab/kết nối lại; không gọi đây là Supabase Realtime. Bảng giá mới và dependency backend được ghi riêng trong [hồ sơ SCRUM-86](docs/qa/SCRUM-86-packages-feedback.md), chưa triển khai bằng thay đổi UI này.
+Member Packages — SCRUM-86 (29/10/2026, quyết định mới nhất): giữ nguyên phong cách, bố cục, token Light/Dark, thẻ và popup của contributor. Giá ba gói thấp → cao là **299.000đ / 499.000đ / 999.000đ**, do catalog backend quản lý; FE chỉ hiển thị dữ liệu API, không ghi đè giá/thời hạn/quyền lợi. Thanh toán cập nhật qua **Supabase Realtime Broadcast**, không polling định kỳ: trigger sau thay đổi gửi tín hiệu không chứa dữ liệu tài chính vào kênh UUID của hội viên, FE đọc lại API đã xác thực. Đồng bộ bổ sung khi focus/online/quay lại tab. Nút mua/gia hạn/nâng cấp vẫn bấm được khi chưa đủ điều kiện nghiệp vụ, bấm mới mở popup giải thích; chỉ tạm disable lúc đang tải/gửi. Skeleton tĩnh. Native dialog giữ focus/Escape; chỉ báo thanh toán thành công từ API, phân biệt kích hoạt và kỳ tương lai. Xem [kiểm chứng cập nhật](docs/qa/SCRUM-86-realtime-prices.md).
 
 | Khu vực | Quy chuẩn hiện hành | Nguồn triển khai |
 | --- | --- | --- |

@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberPackagesPage } from './MemberPackagesPage';
 import type { MemberSubscription } from './membershipApi';
 
+const realtime = vi.hoisted(() => ({ subscribe: vi.fn(), changed: () => {}, cleanup: vi.fn() }));
+vi.mock('./membershipRealtime', () => ({ subscribeMembershipChanges: realtime.subscribe }));
+
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
   create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), cancelPending: vi.fn(), createPayment: vi.fn(),
@@ -69,6 +72,8 @@ describe('SCRUM-86 packages', () => {
     document.body.append(host);
     root = createRoot(host);
     Object.values(api).forEach((mock) => mock.mockReset());
+    realtime.subscribe.mockImplementation((changed: () => void) => { realtime.changed = changed; return realtime.cleanup; });
+    realtime.cleanup.mockClear();
     api.packages.mockResolvedValue([membershipPackage]);
     api.current.mockResolvedValue(null);
     api.history.mockResolvedValue([]);
@@ -94,14 +99,14 @@ describe('SCRUM-86 packages', () => {
   }
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
-  it('renders the proposed prices and durations only when returned by the catalog API', async () => {
+  it('renders the requested prices and durations only when returned by the catalog API', async () => {
     api.packages.mockResolvedValue([
-      { ...membershipPackage, price: 900000, durationDays: 30, classCreditLimit: 2 },
-      { ...higherPackage, price: 2400000, durationDays: 90, classCreditLimit: 4 },
-      { ...lowerPackage, price: 3900000, durationDays: 180, classCreditLimit: 6 },
+      { ...membershipPackage, price: 299000, durationDays: 30, classCreditLimit: 2 },
+      { ...higherPackage, price: 499000, durationDays: 90, classCreditLimit: 4 },
+      { ...lowerPackage, price: 999000, durationDays: 180, classCreditLimit: 6 },
     ]);
     await render();
-    for (const value of ['900.000', '2.400.000', '3.900.000', '30 ngày', '90 ngày', '180 ngày']) {
+    for (const value of ['299.000', '499.000', '999.000', '30 ngày', '90 ngày', '180 ngày']) {
       expect(host.textContent).toContain(value);
     }
   });
@@ -120,10 +125,25 @@ describe('SCRUM-86 packages', () => {
     let resolveHistory!: (value: MemberSubscription[]) => void;
     api.history.mockImplementationOnce(() => new Promise<MemberSubscription[]>(resolve => { resolveHistory = resolve; }));
     await act(async () => window.dispatchEvent(new Event('online')));
+    api.history.mockResolvedValue([pending]);
     await act(async () => button('Đăng ký lần đầu')?.click());
     await act(async () => resolveHistory([]));
-    expect(button('Đang chờ xác nhận')?.disabled).toBe(true);
+    expect(button('Đang chờ xác nhận')?.disabled).toBe(false);
     expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays a Realtime invalidation interrupted by a foreground status read', async () => {
+    api.history.mockResolvedValue([pending]);
+    await render();
+    let resolveOld!: (value: MemberSubscription[]) => void;
+    api.history.mockImplementationOnce(() => new Promise<MemberSubscription[]>(resolve => { resolveOld = resolve; }));
+    await act(async () => realtime.changed());
+    api.history.mockResolvedValue([{ ...active, id: pending.id }]);
+    api.current.mockResolvedValue({ ...active, id: pending.id });
+    api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
+    await act(async () => button('Tải lại trạng thái')?.click());
+    await act(async () => resolveOld([pending]));
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Thanh toán thành công');
   });
 
   it('does not overwrite a newer manual payment refresh with an older response', async () => {
@@ -141,27 +161,17 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
   });
 
-  it('does not poll a hidden tab and refreshes when it becomes visible', async () => {
-    vi.useFakeTimers();
-    try {
-      await render();
-      const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
-      await act(async () => vi.advanceTimersByTimeAsync(30000));
-      expect(api.history).toHaveBeenCalledTimes(1);
-      visibility.mockReturnValue('visible');
-      await act(async () => document.dispatchEvent(new Event('visibilitychange')));
-      expect(api.history).toHaveBeenCalledTimes(2);
-    } finally { vi.useRealTimers(); }
-  });
-
   it('blocks renewal and upgrade while an active package has a pending hold', async () => {
     api.packages.mockResolvedValue([membershipPackage, higherPackage]);
     const holding = { ...active, holdStatus: 'PENDING' };
     api.current.mockResolvedValue(holding);
     api.history.mockResolvedValue([holding]);
     await render();
-    expect(button('Đang chờ bảo lưu')?.disabled).toBe(true);
-    expect([...host.querySelectorAll('.grid-3 button')].every(item => (item as HTMLButtonElement).disabled)).toBe(true);
+    expect(button('Đang chờ bảo lưu')?.disabled).toBe(false);
+    await act(async () => button('Đang chờ bảo lưu')?.click());
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Yêu cầu bảo lưu đang chờ xử lý');
+    expect(api.renew).not.toHaveBeenCalled();
+    expect(api.upgrade).not.toHaveBeenCalled();
   });
   it('refetches staff changes without F5 and announces only API-confirmed payment once', async () => {
     api.history.mockResolvedValue([pending]);
@@ -187,19 +197,21 @@ describe('SCRUM-86 packages', () => {
     expect(dialog?.textContent).not.toContain('Thanh toán thành công');
   });
 
-  it('polls without hiding current membership and cleans up on unmount', async () => {
+  it('refreshes immediately on Supabase events and unsubscribes on unmount without polling', async () => {
     vi.useFakeTimers();
     try {
-      api.current.mockResolvedValue(active);
-      api.history.mockResolvedValue([active]);
+      api.history.mockResolvedValue([pending]);
       await render();
-      await act(async () => vi.advanceTimersByTimeAsync(15000));
-      expect(api.current).toHaveBeenCalledTimes(2);
-      expect(host.textContent).toContain('Essential');
-      await act(async () => root.unmount());
+      api.current.mockResolvedValue({ ...active, id: pending.id });
+      api.history.mockResolvedValue([{ ...active, id: pending.id }]);
+      api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
+      await act(async () => realtime.changed());
+      expect(host.textContent).toContain('Thanh toán thành công');
+      const reads = api.current.mock.calls.length;
       await act(async () => vi.advanceTimersByTimeAsync(30000));
-      window.dispatchEvent(new Event('online'));
-      expect(api.current).toHaveBeenCalledTimes(2);
+      expect(api.current).toHaveBeenCalledTimes(reads);
+      await act(async () => root.unmount());
+      expect(realtime.cleanup).toHaveBeenCalled();
       root = createRoot(host);
     } finally { vi.useRealTimers(); }
   });
@@ -209,7 +221,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockRejectedValueOnce(new Error('offline'));
     await act(async () => window.dispatchEvent(new Event('online')));
     expect(host.textContent).toContain('Không thể đồng bộ trạng thái mới nhất');
-    expect(button('Đăng ký lần đầu')?.disabled).toBe(true);
+    expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
     await act(async () => window.dispatchEvent(new Event('online')));
     expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
   });
@@ -225,7 +237,7 @@ describe('SCRUM-86 packages', () => {
     api.resume.mockResolvedValue(active);
     await render();
     expect(button('Mở lại gói tập miễn phí')).toBeDefined();
-    expect(button('Đang có gói bảo lưu')?.disabled).toBe(true);
+    expect(button('Đang có gói bảo lưu')?.disabled).toBe(false);
     await act(async () => button('Mở lại gói tập miễn phí')?.click());
     expect(api.resume).toHaveBeenCalledExactlyOnceWith(1);
     expect(api.create).not.toHaveBeenCalled();
@@ -253,7 +265,7 @@ describe('SCRUM-86 packages', () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active, renewal]);
     await render();
-    expect(button('Có kỳ đã thanh toán')?.disabled).toBe(true);
+    expect(button('Có kỳ đã thanh toán')?.disabled).toBe(false);
     expect(button('Gia hạn')?.disabled).toBe(false);
   });
 
@@ -307,7 +319,7 @@ describe('SCRUM-86 packages', () => {
 
     await render();
 
-    expect(button('Đang có gói hoạt động')?.disabled).toBe(true);
+    expect(button('Đang có gói hoạt động')?.disabled).toBe(false);
     expect(button('Gia hạn')?.disabled).toBe(false);
     expect(button('Nâng cấp gói')?.disabled).toBe(false);
 
@@ -408,15 +420,17 @@ describe('SCRUM-86 packages', () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active, { ...renewal, status: 'pending_payment' }]);
     await render();
-    expect(button('Đang chờ xác nhận')?.disabled).toBe(true);
+    expect(button('Đang chờ xác nhận')?.disabled).toBe(false);
     expect(api.renew).not.toHaveBeenCalled();
   });
   it('warns about multiple valid successors of the same subscription', async () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active, renewal, { ...renewal, id: 9 }, { ...renewal, id: 10 }]);
     await render();
-    expect(button('Cần kiểm tra gia hạn')?.disabled).toBe(true);
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('chuỗi gia hạn bất thường');
+    expect(button('Cần kiểm tra gia hạn')?.disabled).toBe(false);
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => button('Cần kiểm tra gia hạn')?.click());
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('chuỗi gia hạn bất thường');
     expect(api.renew).not.toHaveBeenCalled();
   });
 
@@ -458,10 +472,11 @@ describe('SCRUM-86 packages', () => {
     api.current.mockResolvedValue(active);
     api.history.mockRejectedValueOnce(new Error('offline')).mockResolvedValue([active, renewal]);
     await render();
-    expect(button('Gia hạn')?.disabled).toBe(true);
+    expect(button('Gia hạn')?.disabled).toBe(false);
     expect(host.textContent).toContain('Không thể kiểm tra lịch sử gói');
     await act(async () => button('Gia hạn')?.click());
     expect(api.renew).not.toHaveBeenCalled();
+    await act(async () => button('Đóng')?.click());
     await act(async () => button('Thử lại')?.click());
     expect(button('Gia hạn')?.disabled).toBe(false);
   });
@@ -490,7 +505,7 @@ describe('SCRUM-86 packages', () => {
     await render();
     expect(host.textContent).toContain('Essential');
     expect(host.textContent).toContain('Không thể kiểm tra lịch sử gói');
-    expect(button('Đăng ký gói mới')?.disabled).toBe(true);
+    expect(button('Đăng ký gói mới')?.disabled).toBe(false);
   });
 
   it('keeps catalog when payment or current API fails', async () => {
@@ -500,7 +515,7 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Essential');
     expect(host.textContent).toContain('Không thể kiểm tra thanh toán');
     expect(host.textContent).toContain('Không thể kiểm tra gói hiện tại');
-    expect(button('Đăng ký lần đầu')?.disabled).toBe(true);
+    expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
   });
 
   it('shows an empty catalog', async () => {
@@ -632,7 +647,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending, { ...pending, id: 13 }]);
     await render();
     expect(host.textContent).toContain('Có nhiều yêu cầu đang chờ');
-    expect(button('Có yêu cầu đang chờ')?.disabled).toBe(true);
+    expect(button('Có yêu cầu đang chờ')?.disabled).toBe(false);
   });
 
   it('keeps the created subscription after closing the modal', async () => {
@@ -683,7 +698,7 @@ describe('SCRUM-86 packages', () => {
       { ...pending, id: 21, status: 'expired', endDate: '2020-01-01' },
     ]);
     await render();
-    expect(button('Cần kiểm tra lịch sử')?.disabled).toBe(true);
+    expect(button('Cần kiểm tra lịch sử')?.disabled).toBe(false);
     expect(api.renew).not.toHaveBeenCalled();
   });
 
