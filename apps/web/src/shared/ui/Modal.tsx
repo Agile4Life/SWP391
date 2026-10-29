@@ -4,10 +4,11 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
 }
 
 /** Hộp thoại dựa trên <dialog> gốc: có sẵn focus trap, phím Esc và backdrop. */
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
   return (
     <dialog
       ref={ref}
-      className="portal-dialog"
+      className={`portal-dialog ${className || ''}`.trim()}
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby="portal-dialog-title"
       onCancel={(e) => {

@@ -156,4 +156,17 @@ class UserControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/users/cleanup-inactive calls cleanupInactiveUsers and returns deletedCount")
+    void cleanupInactiveUsersSuccess() throws Exception {
+        when(userService.cleanupInactiveUsers()).thenReturn(3);
+
+        mockMvc.perform(post("/api/v1/users/cleanup-inactive"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deletedCount").value(3));
+
+        verify(userService).cleanupInactiveUsers();
+    }
 }

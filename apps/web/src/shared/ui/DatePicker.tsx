@@ -207,8 +207,17 @@ export function DatePicker({
 
   return (
     <div className={`luxury-datepicker-wrap ${className}`} ref={containerRef} style={style}>
-      <button
+      <input
+        type="hidden"
         id={id}
+        name={id}
+        value={value}
+        min={min}
+        max={max}
+        readOnly
+      />
+      <button
+        id={id ? `${id}-trigger` : undefined}
         type="button"
         className={`luxury-datepicker-trigger ${isOpen ? 'is-open' : ''}`}
         disabled={disabled}

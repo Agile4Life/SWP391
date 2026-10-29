@@ -3,6 +3,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
+import { DatePicker } from '../../shared/ui/DatePicker';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { toast } from '../../shared/ui/toast';
 import {
@@ -37,12 +38,51 @@ export function CoachTrainingPlanPage() {
   const [selectedMemberId, setSelectedMemberId] = useState<number>(SAMPLE_MEMBERS[0].id);
   const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
   const [planGoal, setPlanGoal] = useState(SAMPLE_MEMBERS[0].fitnessGoal || 'Tăng cường sức mạnh và cải thiện tư thế');
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, []);
+
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
   const [endDate, setEndDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 28);
-    return d.toISOString().split('T')[0];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   });
+
+  const handleStartDateChange = (e: { target: { value: string } }) => {
+    const val = e.target.value;
+    setStartDate(val);
+    if (val && endDate && val > endDate) {
+      const nextDate = new Date(val);
+      nextDate.setDate(nextDate.getDate() + 28);
+      const y = nextDate.getFullYear();
+      const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+      const d = String(nextDate.getDate()).padStart(2, '0');
+      setEndDate(`${y}-${m}-${d}`);
+    }
+  };
+
+  const handleEndDateChange = (e: { target: { value: string } }) => {
+    const val = e.target.value;
+    if (val && startDate && val < startDate) {
+      toast('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.', 'error');
+      return;
+    }
+    setEndDate(val);
+  };
 
   // Quản lý ngày đang chọn và danh sách bài tập
   const [activeDay, setActiveDay] = useState<number>(1); // 1 = Thứ 2
@@ -185,17 +225,51 @@ export function CoachTrainingPlanPage() {
     toast('✨ Đã áp dụng giáo án từ AI! HLV có thể tinh chỉnh các thông số trước khi lưu.', 'success');
   };
 
+  // Thông báo nổi bật chính giữa màn hình (Center Notification Toast)
+  const [centerNotification, setCenterNotification] = useState<{
+    message: string;
+    type: 'success' | 'error';
+    title: string;
+  } | null>(null);
+
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+
+  const showCenterNotification = (message: string, type: 'success' | 'error' = 'success', title?: string) => {
+    const heading = title || (type === 'success' ? 'Lưu giáo án thành công' : 'Không thể lưu giáo án');
+    setCenterNotification({ message, type, title: heading });
+    if (type === 'success') {
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
+    setTimeout(() => {
+      setCenterNotification(null);
+    }, 3500);
+  };
+
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
   const handleSavePlan = async () => {
     if (exercises.length === 0) {
-      toast('Giáo án chưa có bài tập nào. Vui lòng thêm bài tập hoặc nhờ AI gợi ý.', 'error');
+      showCenterNotification(
+        'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập hoặc bấm "Gợi ý giáo án bằng AI" trước khi lưu.',
+        'error',
+        'Chưa có bài tập'
+      );
+      return;
+    }
+    if (startDate && endDate && endDate < startDate) {
+      showCenterNotification(
+        'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.',
+        'error',
+        'Thời gian không hợp lệ'
+      );
       return;
     }
 
     setIsSaving(true);
     try {
-      await aiApi.saveTrainingPlan(
+      const savedRes = await aiApi.saveTrainingPlan(
         {
           memberId: selectedMemberId,
           title: planTitle,
@@ -208,9 +282,40 @@ export function CoachTrainingPlanPage() {
         },
         true
       );
-      toast(`✓ Đã lưu & kích hoạt giáo án "${planTitle}" thành công cho ${selectedMember.fullName}!`, 'success');
+
+      const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      setLastSavedTime(nowTime);
+
+      // Lưu trữ đồng bộ vào localStorage
+      try {
+        const storedPlans = JSON.parse(localStorage.getItem('sol_coach_training_plans') || '[]');
+        const planRecord = {
+          id: (savedRes as { id?: number })?.id || Date.now(),
+          memberId: selectedMemberId,
+          memberName: selectedMember.fullName,
+          title: planTitle,
+          goal: planGoal,
+          startDate,
+          endDate,
+          totalExercises: exercises.length,
+          status: 'active',
+          savedAt: nowTime,
+        };
+        localStorage.setItem(
+          'sol_coach_training_plans',
+          JSON.stringify([planRecord, ...storedPlans.filter((p: { id?: number }) => p.id !== planRecord.id)])
+        );
+      } catch {
+        // ignore storage error
+      }
+
+      showCenterNotification(
+        `Đã lưu & kích hoạt giáo án "${planTitle}" thành công cho học viên ${selectedMember.fullName}!`,
+        'success',
+        'Lưu giáo án thành công'
+      );
     } catch {
-      toast('Lỗi khi lưu giáo án.', 'error');
+      showCenterNotification('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error', 'Lưu thất bại');
     } finally {
       setIsSaving(false);
     }
@@ -267,10 +372,17 @@ export function CoachTrainingPlanPage() {
 
       {/* Plan Meta Information Card */}
       <div className="plan-meta-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 className="portal-card-title" style={{ margin: 0, fontSize: '1.2rem' }}>
-            Thông tin kế hoạch huấn luyện
-          </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h2 className="portal-card-title" style={{ margin: 0, fontSize: '1.2rem' }}>
+              Thông tin kế hoạch huấn luyện
+            </h2>
+            {lastSavedTime && (
+              <span className="plan-saved-badge">
+                ✓ Đã kích hoạt ({lastSavedTime})
+              </span>
+            )}
+          </div>
           <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
             Tổng số: <strong>{exercises.length} động tác</strong> được thiết lập trong tuần
           </span>
@@ -318,12 +430,12 @@ export function CoachTrainingPlanPage() {
             <label className="portal-label" htmlFor="plan-start-date">
               Ngày bắt đầu
             </label>
-            <input
+            <DatePicker
               id="plan-start-date"
-              type="date"
-              className="portal-input"
+              min={todayStr}
+              max={endDate || undefined}
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={handleStartDateChange}
             />
           </div>
 
@@ -331,12 +443,11 @@ export function CoachTrainingPlanPage() {
             <label className="portal-label" htmlFor="plan-end-date">
               Ngày kết thúc
             </label>
-            <input
+            <DatePicker
               id="plan-end-date"
-              type="date"
-              className="portal-input"
+              min={startDate || todayStr}
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={handleEndDateChange}
             />
           </div>
         </div>
@@ -493,10 +604,10 @@ export function CoachTrainingPlanPage() {
         {/* Danh sách động tác của ngày đang chọn */}
         <div style={{ marginTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--portal-paper)' }}>
               Danh sách bài tập {DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name}
             </h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>
               {dayExercises.length} động tác đã lập
             </span>
           </div>
@@ -506,9 +617,9 @@ export function CoachTrainingPlanPage() {
               style={{
                 textAlign: 'center',
                 padding: '40px 20px',
-                border: '2px dashed rgba(255, 255, 255, 0.1)',
+                border: '2px dashed var(--portal-border-strong)',
                 borderRadius: '8px',
-                color: 'var(--color-text-muted)',
+                color: 'var(--portal-muted)',
               }}
             >
               <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🏋️‍♂️</div>
@@ -527,8 +638,9 @@ export function CoachTrainingPlanPage() {
                         width: '28px',
                         height: '28px',
                         borderRadius: '50%',
-                        background: '#333333',
-                        color: 'var(--fit-salmon, #ce9180)',
+                        background: 'var(--portal-raised)',
+                        border: '1px solid var(--portal-border)',
+                        color: 'var(--portal-salmon)',
                         fontWeight: 700,
                         fontSize: '0.84rem',
                         display: 'flex',
@@ -662,10 +774,10 @@ export function CoachTrainingPlanPage() {
             {isGeneratingAi && (
               <div className="ai-loading-box">
                 <div className="ai-pulse-orb" />
-                <h4 style={{ margin: '0 0 6px 0', color: 'var(--color-text-main)' }}>
+                <h4 style={{ margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
                   Đang phân tích dữ liệu thể trạng học viên...
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+                <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
                   Mô hình AI đang đối chiếu tiền sử chấn thương và tối ưu hóa các bài tập, hiệp, lần lặp phù hợp nhất.
                 </p>
               </div>
@@ -675,7 +787,7 @@ export function CoachTrainingPlanPage() {
             {aiResult && !isGeneratingAi && (
               <div className="ai-result-box">
                 <div className="ai-result-header">
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--fit-salmon, #ce9180)' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--portal-salmon)' }}>
                     🎯 Phân tích chuyên sâu từ AI ({aiResult.modelName})
                   </span>
                   <span className="badge badge-success">Đã hoàn thành đề xuất</span>
@@ -683,7 +795,7 @@ export function CoachTrainingPlanPage() {
 
                 <div className="ai-analysis-text">{aiResult.analysis}</div>
 
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '10px', color: 'var(--color-text-main)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '10px', color: 'var(--portal-paper)' }}>
                   Đề xuất {aiResult.items.length} bài tập theo chu kỳ tuần:
                 </div>
 
@@ -692,9 +804,9 @@ export function CoachTrainingPlanPage() {
                     <div key={idx} className="ai-suggested-item">
                       <div>
                         <strong>{DAYS_OF_WEEK.find((d) => d.id === item.dayOfWeek)?.name}:</strong> {item.exerciseName}
-                        <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{item.description}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--portal-muted)' }}>{item.description}</div>
                       </div>
-                      <div style={{ fontWeight: 700, color: 'var(--fit-salmon, #ce9180)', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--portal-salmon)', whiteSpace: 'nowrap' }}>
                         {item.sets} hiệp × {item.reps} lần
                       </div>
                     </div>
@@ -715,6 +827,43 @@ export function CoachTrainingPlanPage() {
             )}
           </div>
         </Modal>
+      )}
+
+      {/* THÔNG BÁO NỔI BẬT CHÍNH GIỮA MÀN HÌNH (Center Toast Notification) */}
+      {centerNotification && (
+        <div className="center-toast-overlay" onClick={() => setCenterNotification(null)}>
+          <div
+            className={`center-toast-card ${centerNotification.type === 'error' ? 'is-error' : ''}`}
+            role="alert"
+            aria-live="assertive"
+          >
+            <div className="center-toast-icon-wrap">
+              {centerNotification.type === 'error' ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+            <div className="center-toast-body">
+              <h4 className="center-toast-title">{centerNotification.title}</h4>
+              <p className="center-toast-msg">{centerNotification.message}</p>
+            </div>
+            <button
+              type="button"
+              className="center-toast-close"
+              aria-label="Đóng thông báo"
+              onClick={() => setCenterNotification(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

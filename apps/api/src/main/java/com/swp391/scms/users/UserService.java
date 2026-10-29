@@ -28,27 +28,49 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final ReceptionistRepository receptionistRepository;
+    private final com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository) {
+        this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public UserService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, UserMapper userMapper,
+                       ReceptionistRepository receptionistRepository,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false)
+                       com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.receptionistRepository = receptionistRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
         return userRepository.findAllByDeletedAtIsNullOrderByIdAsc().stream()
-                .map(userMapper::toDto)
+                .map(u -> {
+                    UserDto dto = userMapper.toDto(u);
+                    if (subscriptionRepository != null && u.getRole() != null && "MEMBER".equalsIgnoreCase(u.getRole().getCode())) {
+                        dto.setSubscriptionFrozen(subscriptionRepository.existsByMemberUserIdAndStatus(u.getId(), "frozen"));
+                    }
+                    return dto;
+                })
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public UserDto getUserById(Long id) {
-        return userMapper.toDto(findActiveUser(id));
+        User u = findActiveUser(id);
+        UserDto dto = userMapper.toDto(u);
+        if (subscriptionRepository != null && u.getRole() != null && "MEMBER".equalsIgnoreCase(u.getRole().getCode())) {
+            dto.setSubscriptionFrozen(subscriptionRepository.existsByMemberUserIdAndStatus(u.getId(), "frozen"));
+        }
+        return dto;
     }
 
     @Transactional
@@ -155,5 +177,49 @@ public class UserService {
         });
         receptionist.setShift(request.shift());
         receptionistRepository.save(receptionist);
+    }
+
+    /**
+     * Tự động xóa mềm tài khoản không đăng nhập quá 6 tháng (180 ngày).
+     * Ngoại trừ: Tài khoản Quản lý trung tâm (CENTER_MANAGER) và các tài khoản hội viên đang có gói bảo lưu tập (frozen).
+     */
+    @Transactional
+    @Audited(action = "USER_CLEANUP_INACTIVE", entity = "users")
+    public int cleanupInactiveUsers() {
+        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+        List<User> users = userRepository.findAllByDeletedAtIsNullOrderByIdAsc();
+        int count = 0;
+        for (User user : users) {
+            // Không bao giờ tự động xóa Quản lý trung tâm
+            if (user.getRole() != null && "CENTER_MANAGER".equalsIgnoreCase(user.getRole().getCode())) {
+                continue;
+            }
+
+            LocalDateTime refTime = user.getLastLoginAt() != null ? user.getLastLoginAt() : user.getCreatedAt();
+            if (refTime != null && refTime.isBefore(sixMonthsAgo)) {
+                boolean isFrozen = false;
+                if (subscriptionRepository != null && user.getId() != null) {
+                    isFrozen = subscriptionRepository.existsByMemberUserIdAndStatus(user.getId(), "frozen");
+                }
+
+                // Nếu không đang trong thời gian bảo lưu tập -> tự động xóa mềm
+                if (!isFrozen) {
+                    LocalDateTime now = LocalDateTime.now();
+                    user.setDeletedAt(now);
+                    user.setUpdatedAt(now);
+                    userRepository.save(user);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Tác vụ tự động quét dọn dẹp chạy định kỳ hàng ngày vào 02:00 sáng.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(cron = "${app.users.cleanup.cron:0 0 2 * * ?}")
+    public void scheduleInactiveUsersCleanup() {
+        cleanupInactiveUsers();
     }
 }

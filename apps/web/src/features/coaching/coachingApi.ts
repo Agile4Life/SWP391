@@ -38,7 +38,7 @@ export interface EnrolledStudent {
   status: 'booked' | 'attended' | 'cancelled' | string;
 }
 
-const DEFAULT_STUDENTS_POOL: EnrolledStudent[] = [
+export const DEFAULT_STUDENTS_POOL: EnrolledStudent[] = [
   {
     id: 101,
     memberId: 1,
@@ -353,5 +353,17 @@ export const coachingApi = {
     }
 
     return result;
+  },
+
+  getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {
+    try {
+      const res = await apiFetch<EnrolledStudent[]>('/coaching/students');
+      if (Array.isArray(res) && res.length > 0) {
+        return res;
+      }
+    } catch {
+      // Backend fallback
+    }
+    return DEFAULT_STUDENTS_POOL;
   },
 };

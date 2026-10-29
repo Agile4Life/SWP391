@@ -216,5 +216,19 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     });
 
     expect(aiApi.saveTrainingPlan).toHaveBeenCalled();
+    expect(host.querySelector('.center-toast-card')).not.toBeNull();
+    expect(host.textContent).toContain('Đã lưu & kích hoạt giáo án');
+    expect(host.querySelector('.plan-saved-badge')).not.toBeNull();
+  });
+
+  it('enforces that endDate min constraint is set to startDate', async () => {
+    await renderComponent();
+
+    const startInput = host.querySelector('input#plan-start-date') as HTMLInputElement;
+    const endInput = host.querySelector('input#plan-end-date') as HTMLInputElement;
+
+    expect(startInput).not.toBeNull();
+    expect(endInput).not.toBeNull();
+    expect(endInput.getAttribute('min')).toBe(startInput.value);
   });
 });

@@ -55,6 +55,13 @@ export function UserManagerPage() {
   const [loadError, setLoadError] = useState('');
   const [permissions, setPermissions] = useState<Permission[]>([]);
 
+  const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<{ deletedCount: number; message: string } | null>(null);
+
   useEffect(() => {
     void loadData();
   }, []);
@@ -107,6 +114,39 @@ export function UserManagerPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Thao tác thất bại.';
       toast(msg, 'error');
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingUser) return;
+    setIsDeleting(true);
+    try {
+      await userApi.deleteUser(deletingUser.id);
+      setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+      toast(`Đã xóa tài khoản "${deletingUser.name}" thành công!`, 'success');
+      setDeletingUser(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể xóa tài khoản.';
+      toast(msg, 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleRunCleanup() {
+    setIsCleaning(true);
+    try {
+      const res = await userApi.cleanupInactiveUsers();
+      setCleanupResult(res);
+      toast(res.message || `Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, 'success');
+      // Refresh user list
+      const u = await userApi.getUsers();
+      setUsers(u);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Dọn dẹp tài khoản thất bại.';
+      toast(msg, 'error');
+    } finally {
+      setIsCleaning(false);
     }
   }
 
@@ -309,6 +349,45 @@ export function UserManagerPage() {
         </div>
       ) : activeTab === 'USERS' ? (
         <div>
+          {/* Policy Notice: 6-month inactivity auto-deletion */}
+          <div
+            className="portal-card"
+            style={{
+              marginBottom: 16,
+              padding: '14px 18px',
+              background: 'rgba(235, 94, 40, 0.06)',
+              border: '1px solid rgba(235, 94, 40, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: '1.35rem' }} role="img" aria-label="clock">⏱️</span>
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--portal-text-main, #211c18)' }}>
+                  Chính sách tự động dọn dẹp tài khoản (quá 6 tháng)
+                </strong>
+                <span style={{ fontSize: '0.82rem', color: 'var(--portal-text-muted, #78716c)' }}>
+                  Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (Ngoại trừ hội viên đang bảo lưu tập).
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              style={{ borderColor: 'var(--color-accent-gold, #eb5e28)', color: 'var(--color-accent-gold, #eb5e28)' }}
+              onClick={() => {
+                setCleanupResult(null);
+                setShowCleanupModal(true);
+              }}
+            >
+              Quét & Dọn dẹp ngay
+            </button>
+          </div>
+
           {/* Controls / Filter Bar */}
           <div className="portal-toolbar">
             <input
@@ -371,7 +450,7 @@ export function UserManagerPage() {
                       <th>Liên hệ</th>
                       <th>Vai trò</th>
                       <th>Trạng thái</th>
-                      <th>Ngày tạo</th>
+                      <th>Đăng nhập / Ngày tạo</th>
                       <th className="actions">Thao tác</th>
                     </tr>
                   </thead>
@@ -388,13 +467,38 @@ export function UserManagerPage() {
                         </td>
                         <td>{getRoleBadge(u.role)}</td>
                         <td>
-                          {u.status === 'ACTIVE' ? (
-                            <span className="badge badge-success">● Đang hoạt động</span>
-                          ) : (
-                            <span className="badge badge-warning">● Đã khóa</span>
-                          )}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                            {u.status === 'ACTIVE' ? (
+                              <span className="badge badge-success">● Đang hoạt động</span>
+                            ) : (
+                              <span className="badge badge-warning">● Đã khóa</span>
+                            )}
+                            {u.is_frozen && (
+                              <span
+                                className="badge"
+                                style={{
+                                  background: 'rgba(14, 165, 233, 0.12)',
+                                  color: '#0284c7',
+                                  border: '1px solid rgba(14, 165, 233, 0.3)',
+                                  fontSize: '0.72rem',
+                                }}
+                                title="Hội viên đang có gói bảo lưu tập (được miễn trừ tự động xóa)"
+                              >
+                                ❄️ Đang bảo lưu tập
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td>{u.created_at || '—'}</td>
+                        <td>
+                          <div style={{ fontSize: '0.85rem' }}>
+                            {u.last_login_at ? (
+                              <span>ĐN: {u.last_login_at.split('T')[0]}</span>
+                            ) : (
+                              <span className="muted" style={{ fontStyle: 'italic' }}>Chưa đăng nhập</span>
+                            )}
+                          </div>
+                          <div className="muted" style={{ fontSize: '0.75rem', marginTop: 2 }}>Tạo: {u.created_at || '—'}</div>
+                        </td>
                         <td className="actions">
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
                             <button
@@ -419,6 +523,20 @@ export function UserManagerPage() {
                               onClick={() => handleToggleLock(u)}
                             >
                               {u.status === 'ACTIVE' ? 'Khóa' : 'Kích hoạt'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                              disabled={u.role === 'CENTER_MANAGER'}
+                              title={
+                                u.role === 'CENTER_MANAGER'
+                                  ? 'Không thể xóa tài khoản Quản lý trung tâm'
+                                  : 'Xóa tài khoản'
+                              }
+                              onClick={() => setDeletingUser(u)}
+                            >
+                              Xóa
                             </button>
                           </div>
                         </td>
@@ -737,6 +855,138 @@ export function UserManagerPage() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Modal Xác nhận xóa tài khoản */}
+      {deletingUser && (
+        <Modal
+          title="Xác nhận xóa tài khoản"
+          onClose={() => {
+            if (!isDeleting) setDeletingUser(null);
+          }}
+        >
+          <div style={{ display: 'grid', gap: 14 }}>
+            <p style={{ margin: 0, lineHeight: 1.5 }}>
+              Bạn có chắc chắn muốn xóa tài khoản của <strong>{deletingUser.name}</strong> ({deletingUser.email})?
+            </p>
+            {deletingUser.is_frozen && (
+              <div
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: 6,
+                  background: 'rgba(14, 165, 233, 0.1)',
+                  border: '1px solid rgba(14, 165, 233, 0.25)',
+                  fontSize: '0.85rem',
+                  color: '#0284c7',
+                }}
+              >
+                ❄️ Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.
+              </div>
+            )}
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: 6,
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                fontSize: '0.85rem',
+                color: '#b91c1c',
+              }}
+            >
+              ⚠️ Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isDeleting}
+                onClick={() => setDeletingUser(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: '#ef4444', borderColor: '#ef4444' }}
+                disabled={isDeleting}
+                onClick={() => void handleConfirmDelete()}
+              >
+                {isDeleting ? 'Đang xóa...' : 'Xác nhận xóa'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Quét & dọn dẹp tài khoản > 6 tháng */}
+      {showCleanupModal && (
+        <Modal
+          title="Quét & dọn dẹp tài khoản quá 6 tháng"
+          onClose={() => {
+            if (!isCleaning) {
+              setShowCleanupModal(false);
+              setCleanupResult(null);
+            }
+          }}
+        >
+          <div style={{ display: 'grid', gap: 14 }}>
+            <p style={{ margin: 0, lineHeight: 1.5 }}>
+              Hệ thống sẽ quét toàn bộ tài khoản và tự động xóa mềm những tài khoản thỏa mãn các điều kiện:
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.88rem', display: 'grid', gap: 6 }}>
+              <li>Không đăng nhập trong vòng <strong>6 tháng qua</strong> (hoặc tạo quá 6 tháng nhưng chưa từng đăng nhập).</li>
+              <li><strong>Không</strong> xóa tài khoản Quản lý trung tâm (Center Manager).</li>
+              <li><strong>Không</strong> xóa tài khoản hội viên đang có gói dịch vụ trong trạng thái <strong>bảo lưu tập (frozen)</strong>.</li>
+            </ul>
+
+            {cleanupResult && (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 6,
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  fontSize: '0.88rem',
+                  color: '#065f46',
+                }}
+              >
+                ✅ {cleanupResult.message || `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isCleaning}
+                onClick={() => {
+                  setShowCleanupModal(false);
+                  setCleanupResult(null);
+                }}
+              >
+                {cleanupResult ? 'Đóng' : 'Hủy'}
+              </button>
+              {!cleanupResult && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={isCleaning}
+                  onClick={() => void handleRunCleanup()}
+                >
+                  {isCleaning ? (
+                    <>
+                      <span className="spinner" />
+                      <span>Đang quét & dọn dẹp...</span>
+                    </>
+                  ) : (
+                    'Bắt đầu quét & dọn dẹp'
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
         </Modal>
       )}
     </div>

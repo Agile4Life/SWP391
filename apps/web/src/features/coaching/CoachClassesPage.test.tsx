@@ -124,6 +124,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
 
     vi.spyOn(coachingApi, 'getCoachWeeklySchedule').mockResolvedValue(mockSessions);
     vi.spyOn(coachingApi, 'getSessionStudents').mockResolvedValue(mockStudents);
+    vi.spyOn(coachingApi, 'getAllAssignedStudents').mockResolvedValue(mockStudents);
   });
 
   afterEach(async () => {
@@ -146,10 +147,18 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     });
 
     expect(host.textContent).toContain('Thời Khóa Biểu & Học Viên Phụ Trách');
+    expect(host.textContent).toContain('Thời khóa biểu');
+    expect(host.textContent).toContain('Học viên phụ trách');
     expect(host.textContent).toContain('Tuần trước');
     expect(host.textContent).toContain('Tuần sau');
     expect(host.textContent).toContain('Thứ 2');
     expect(host.textContent).toContain('Chủ Nhật');
+
+    // Ensure raw emojis are removed
+    expect(host.textContent).not.toContain('⏰');
+    expect(host.textContent).not.toContain('📍');
+    expect(host.textContent).not.toContain('👥');
+    expect(host.textContent).not.toContain('🎯');
   });
 
   it('allows switching weeks and triggers schedule reload', async () => {
@@ -171,7 +180,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     expect(coachingApi.getCoachWeeklySchedule).toHaveBeenCalled();
   });
 
-  it('opens modal to view enrolled students with fitness_goal and health_notes', async () => {
+  it('switches to dedicated "Học viên phụ trách" tab and displays assigned students without icons', async () => {
     await act(async () => {
       root.render(
         <MemoryRouter>
@@ -180,18 +189,78 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    // Switch to first day or check if session cards are rendered
-    const viewStudentsBtn = host.querySelector('.btn-view-students') as HTMLButtonElement;
-    if (viewStudentsBtn) {
-      await act(async () => {
-        viewStudentsBtn.click();
-      });
+    const tabButtons = Array.from(host.querySelectorAll('.coach-tab-btn'));
+    const studentsTabBtn = tabButtons.find((btn) => btn.textContent?.includes('Học viên phụ trách'));
+    expect(studentsTabBtn).toBeDefined();
 
-      expect(coachingApi.getSessionStudents).toHaveBeenCalled();
-      expect(host.textContent).toContain('Mục tiêu thể lực (fitness_goal)');
-      expect(host.textContent).toContain('Lưu ý sức khỏe & Chấn thương (health_notes)');
-      expect(host.textContent).toContain('Lê Hoàng Long');
-      expect(host.textContent).toContain('thoát vị đĩa đệm');
+    await act(async () => {
+      studentsTabBtn?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(host.textContent).toContain('Danh sách học viên phụ trách');
+    expect(host.textContent).toContain('Lê Hoàng Long');
+    expect(host.textContent).toContain('Trần Thị Thu Thảo');
+    expect(host.textContent).toContain('Mục tiêu thể lực');
+    expect(host.textContent).toContain('Lưu ý sức khỏe & Chấn thương');
+
+    // Ensure emojis are not present in the students tab
+    expect(host.textContent).not.toContain('📧');
+    expect(host.textContent).not.toContain('📞');
+    expect(host.textContent).not.toContain('⚠️');
+  });
+
+  it('opens modal to view enrolled students, and allows switching to attendance and evaluation history', async () => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>
+      );
+    });
+
+    let viewStudentsBtn = host.querySelector('.btn-view-students') as HTMLButtonElement;
+    if (!viewStudentsBtn) {
+      const prevWeekBtn = host.querySelector('button[aria-label="Tuần trước"]') as HTMLButtonElement;
+      if (prevWeekBtn) {
+        await act(async () => {
+          prevWeekBtn.click();
+        });
+      }
+      viewStudentsBtn = host.querySelector('.btn-view-students') as HTMLButtonElement;
     }
+    expect(viewStudentsBtn).not.toBeNull();
+    expect(viewStudentsBtn.textContent).toContain('Xem lịch sử');
+
+    await act(async () => {
+      viewStudentsBtn.click();
+    });
+
+    expect(coachingApi.getSessionStudents).toHaveBeenCalled();
+    expect(host.textContent).toContain('Mục tiêu thể lực (fitness_goal)');
+    expect(host.textContent).toContain('Lưu ý sức khỏe & Chấn thương (health_notes)');
+    expect(host.textContent).toContain('Lê Hoàng Long');
+    expect(host.textContent).toContain('thoát vị đĩa đệm');
+
+    const filterSelect = host.querySelector('.students-modal-filter-bar select') as HTMLSelectElement;
+    expect(filterSelect).not.toBeNull();
+
+    // Chuyển sang "Lịch sử điểm danh"
+    await act(async () => {
+      filterSelect.value = 'attendance';
+      filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(host.textContent).toContain('Có mặt');
+    expect(host.textContent).toContain('Vắng mặt');
+    expect(host.textContent).toContain('Tỷ lệ chuyên cần');
+
+    // Chuyển sang "Đánh giá học viên"
+    await act(async () => {
+      filterSelect.value = 'evaluation';
+      filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(host.textContent).toContain('Điểm trung bình');
+    expect(host.textContent).toContain('Đã đánh giá');
   });
 });

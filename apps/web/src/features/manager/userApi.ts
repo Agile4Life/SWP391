@@ -11,6 +11,8 @@ export interface UserAccount {
   status: 'ACTIVE' | 'LOCKED';
   deleted_at: string | null;
   created_at: string;
+  last_login_at?: string | null;
+  is_frozen?: boolean;
 }
 
 export interface Permission {
@@ -36,6 +38,8 @@ interface UserDto {
   phone: string | null;
   status: string;
   createdAt: string;
+  lastLoginAt?: string | null;
+  subscriptionFrozen?: boolean;
 }
 
 interface RoleDto {
@@ -59,6 +63,8 @@ const toAccount = (u: UserDto): UserAccount => ({
   status: u.status === 'active' ? 'ACTIVE' : 'LOCKED',
   deleted_at: null,
   created_at: u.createdAt?.split('T')[0] ?? '',
+  last_login_at: u.lastLoginAt ? u.lastLoginAt.replace('T', ' ').slice(0, 16) : null,
+  is_frozen: Boolean(u.subscriptionFrozen),
 });
 
 const roleIds = async (): Promise<Record<string, number>> =>
@@ -138,5 +144,22 @@ export const userApi = {
     const roleId = (await roleIds())[role];
     const granted = (await apiFetch<PermissionDto[]>(`/roles/${roleId}/permissions`)).some((p) => String(p.id) === permId);
     await apiFetch(`/roles/${roleId}/permissions/${permId}`, { method: granted ? 'DELETE' : 'PUT' });
+  },
+
+  // Xóa mềm tài khoản người dùng
+  async deleteUser(userId: string): Promise<void> {
+    await apiFetch(`/users/${userId}`, { method: 'DELETE' });
+  },
+
+  // Quét và tự động xóa tài khoản không hoạt động > 6 tháng (ngoại trừ hội viên đang bảo lưu tập)
+  async cleanupInactiveUsers(): Promise<{ deletedCount: number }> {
+    try {
+      const res = await apiFetch<{ deletedCount: number }>('/users/cleanup-inactive', {
+        method: 'POST',
+      });
+      return res;
+    } catch {
+      return { deletedCount: 0 };
+    }
   },
 };

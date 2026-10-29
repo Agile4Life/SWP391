@@ -30,6 +30,7 @@ class UserServiceTest {
     @Mock PasswordEncoder passwordEncoder;
     @Mock UserMapper userMapper;
     @Mock ReceptionistRepository receptionistRepository;
+    @Mock com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
     @InjectMocks UserService service;
 
     @Test
@@ -113,5 +114,44 @@ class UserServiceTest {
 
         assertThrows(BadRequestException.class, () ->
                 service.updateReceptionistShift(5L, new com.swp391.scms.users.dto.ReceptionistProfileUpdateDto("Morning")));
+    }
+
+    @Test
+    void cleanupInactiveUsersDeletesInactiveUsersExceptFrozenSubscriptions() {
+        // User 1: Inactive > 6 months, not frozen -> SHOULD BE DELETED
+        User user1 = new User();
+        user1.setId(10L);
+        com.swp391.scms.users.entity.Role roleMember = new com.swp391.scms.users.entity.Role();
+        roleMember.setCode("MEMBER");
+        user1.setRole(roleMember);
+        user1.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(7));
+
+        // User 2: Inactive > 6 months, but has FROZEN subscription -> MUST BE PRESERVED
+        User user2 = new User();
+        user2.setId(20L);
+        user2.setRole(roleMember);
+        user2.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(8));
+
+        // User 3: CENTER_MANAGER inactive > 6 months -> MUST BE PRESERVED
+        User user3 = new User();
+        user3.setId(30L);
+        com.swp391.scms.users.entity.Role roleAdmin = new com.swp391.scms.users.entity.Role();
+        roleAdmin.setCode("CENTER_MANAGER");
+        user3.setRole(roleAdmin);
+        user3.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(9));
+
+        when(userRepository.findAllByDeletedAtIsNullOrderByIdAsc()).thenReturn(java.util.List.of(user1, user2, user3));
+        when(subscriptionRepository.existsByMemberUserIdAndStatus(10L, "frozen")).thenReturn(false);
+        when(subscriptionRepository.existsByMemberUserIdAndStatus(20L, "frozen")).thenReturn(true);
+
+        int deletedCount = service.cleanupInactiveUsers();
+
+        assertEquals(1, deletedCount);
+        assertNotNull(user1.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(user2.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(user3.getDeletedAt());
+        verify(userRepository).save(user1);
+        verify(userRepository, never()).save(user2);
+        verify(userRepository, never()).save(user3);
     }
 }
