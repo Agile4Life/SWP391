@@ -2,13 +2,17 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { StaffReceptionPage } from './StaffReceptionPage';
+import { getCurrentUser } from '../../shared/api/client';
+import { checkinApi } from './checkinApi';
 
 const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), getPendingHoldRequests: vi.fn(),
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
-vi.mock('../../shared/api/client', () => ({ getCurrentUser: () => ({ role: 'STAFF' }) }));
+vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
+vi.mock('./checkinApi', () => ({ checkinApi: { gateQr: vi.fn() } }));
+vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async () => 'data:image/png;base64,gate-qr') } }));
 vi.mock('../../shared/ui/toast', () => ({ toast: vi.fn() }));
 vi.mock('./PaymentInvoice', () => ({ PaymentInvoice: () => <div>Hóa đơn thực</div> }));
 
@@ -19,6 +23,9 @@ const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.resetAllMocks();
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role: 'STAFF' });
+  vi.mocked(checkinApi.gateQr).mockResolvedValue({ qrCode: 'SOL:GATE:1:A1:signed', gateId: 'A1', gate: 'Turnstile A1 - Sảnh Chính',
+    generatedAt: '2026-10-29T00:00:00Z', expiresAt: '2026-10-29T00:01:00Z', expiresInSeconds: 60 });
   api.lookupMembers.mockResolvedValue([member]);
   api.getPendingSubscriptions.mockResolvedValue([]);
   api.getPendingHoldRequests.mockResolvedValue([]);
@@ -28,6 +35,22 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+
+it.each(['STAFF', 'MANAGER'] as const)('shows a scannable gate QR on reception before member lookup for %s', async (role) => {
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role });
+  await act(async () => root.render(<StaffReceptionPage />));
+  const image = host.querySelector<HTMLImageElement>('img[alt="Mã QR cổng check-in"]');
+  expect(image?.src).toBe('data:image/png;base64,gate-qr');
+  expect(image!.compareDocumentPosition(host.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+it('keeps the gate QR hidden from members on reception', async () => {
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', name: 'Hội viên', identifier: 'member', role: 'MEMBER' });
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.querySelector('[data-testid="reception-forbidden-guard"]')).not.toBeNull();
+  expect(host.querySelector('img[alt="Mã QR cổng check-in"]')).toBeNull();
+  expect(checkinApi.gateQr).not.toHaveBeenCalled();
+});
 
 async function selectMember() {
   await act(async () => root.render(<StaffReceptionPage />));

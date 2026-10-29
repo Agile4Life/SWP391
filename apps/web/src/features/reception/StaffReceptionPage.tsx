@@ -3,6 +3,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { PaymentInvoice } from './PaymentInvoice';
+import { GateQrPanel } from './GateQrPanel';
 import { toast } from '../../shared/ui/toast';
 import {
   maskCitizenId,
@@ -313,6 +314,10 @@ export function StaffReceptionPage() {
         eyebrow="Lễ tân &amp; Thu ngân"
         title="Quầy lễ tân"
       />
+
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <GateQrPanel gateId="A1" />
+      </div>
 
       {/* Thanh tra cứu hội viên (BR-01, BR-05) */}
       <div className="portal-card" style={{ marginBottom: '24px' }}>
