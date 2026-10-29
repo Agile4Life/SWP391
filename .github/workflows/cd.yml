@@ -1,16 +1,18 @@
 name: Sport Center Project (CD included) | © 2026 by Agile4Life
 
 on:
+  # Tự chạy khi CI trên main kết thúc; job release chỉ cho đi tiếp nếu CI thành công.
   workflow_run:
     workflows: ["Sport Center Project (CI included) | © 2026 by Agile4Life"]
     types: [completed]
     branches: [main]
+  # Chạy thủ công cũng phải có CI thành công của đúng SHA, không bỏ qua kiểm tra.
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Do not cancel a deployment that has already started on either platform.
+# Không hủy deployment đang chạy khi có yêu cầu mới; dùng chung một nhóm production.
 concurrency:
   group: production-deployment
   cancel-in-progress: false
@@ -18,17 +20,22 @@ concurrency:
 jobs:
   release:
     name: Check tested production commit
+    # Chỉ nhận CI push/thủ công từ chính repo; CD thủ công chỉ chạy từ nhánh main.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository &&
        (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
+    # Quyền đọc Actions chỉ cấp cho job kiểm tra lịch sử CI, không cần quyền ghi.
+    permissions:
+      contents: read
+      actions: read
     outputs:
       current: ${{ steps.commit.outputs.current }}
     steps:
-      # A slower, older CI run must not roll production back after a newer push.
+      # SHA là mã định danh commit. Bỏ qua SHA cũ để tránh CI chậm đẩy lùi production.
       - name: Skip commits superseded on main
         id: commit
         env:
@@ -42,10 +49,30 @@ jobs:
             echo 'current=false' >> "$GITHUB_OUTPUT"
             echo 'Skipping deployment: main has a newer commit.' >> "$GITHUB_STEP_SUMMARY"
           fi
+      - uses: actions/checkout@v4
+        if: steps.commit.outputs.current == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      # Kiểm tra CI mới nhất của đúng SHA: phải completed/success trên main.
+      # Không lấy riêng các run success, vì như vậy có thể bỏ qua lần CI mới hơn bị lỗi.
+      - name: Verify latest CI for this exact commit
+        if: steps.commit.outputs.current == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          gh api --method GET --paginate --slurp \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+            -f branch=main -f head_sha="$TESTED_SHA" -f per_page=100 \
+            | python3 scripts/verify_production_ci.py
 
   frontend:
     name: Deploy frontend to Vercel
-    needs: release
+    # Chỉ deploy frontend sau khi backend deploy VÀ kiểm tra health thành công.
+    # Backend lỗi thì frontend bị bỏ qua, giảm nguy cơ frontend gọi API chưa sẵn sàng.
+    needs: [release, backend]
     if: needs.release.outputs.current == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -60,6 +87,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Validate Vercel configuration
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -73,7 +103,7 @@ jobs:
         env:
           VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION }}
         run: npm install --global "vercel@$VERCEL_CLI_VERSION"
-      # Run from the repository root: the linked Vercel project has Root Directory apps/web.
+      # Chạy từ gốc repo; Root Directory của project Vercel phải được đặt là apps/web.
       - name: Pull production settings
         run: vercel pull --yes --environment=production
         env:
@@ -81,9 +111,21 @@ jobs:
       - name: Build production frontend
         run: vercel build --prod
       - name: Deploy production frontend
-        run: vercel deploy --prebuilt --prod
+        id: deploy
+        shell: bash
+        run: |
+          deployment_url=$(vercel deploy --prebuilt --prod)
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # FRONTEND_URL (Variable, tùy chọn): tên miền production công khai cần kiểm tra.
+      # Nếu không đặt, dùng URL deployment vừa tạo. URL được bảo vệ sẽ làm check thất bại.
+      # Check yêu cầu HTTP 200 và HTML ứng dụng React; retry tối đa 12 lần, cách nhau 5 giây.
+      - name: Verify deployed frontend responds
+        timeout-minutes: 5
+        env:
+          FRONTEND_URL: ${{ vars.FRONTEND_URL || steps.deploy.outputs.url }}
+        run: python scripts/check_deployment.py frontend "$FRONTEND_URL"
 
   backend:
     name: Deploy backend to Render
@@ -107,3 +149,18 @@ jobs:
           DEPLOY_COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      # Render báo live chưa đủ: gọi health thật và yêu cầu status=UP, service=scms-api.
+      # Lấy URL từ service Render hiện có; token chỉ gửi tới Render API, không gửi tới app.
+      - name: Verify deployed backend is healthy
+        timeout-minutes: 5
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          backend_url=$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID" \
+            | jq -er '.serviceDetails.url')
+          python scripts/check_deployment.py backend "${backend_url%/}/api/v1/health"
+      # Luồng này không rollback tự động; API mới vẫn cần tương thích với frontend cũ.
