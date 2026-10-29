@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "@vitejs/plugin-react": "latest",
     "html2canvas": "^1.4.1",
     "qrcode": "^1.5.4",

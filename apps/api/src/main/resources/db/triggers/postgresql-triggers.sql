@@ -187,3 +187,32 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- SCRUM-86: Supabase Broadcast carries no payment/member/amount/status data.
+-- The opaque capability is returned only to its authenticated owner by the API.
+-- The send participates in the transaction, so rolled-back payments emit no event.
+CREATE OR REPLACE FUNCTION scms_membership_realtime_invalidation()
+RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
+DECLARE channel_id uuid;
+BEGIN
+    IF to_regprocedure('realtime.send(jsonb,text,text,boolean)') IS NULL THEN
+        RETURN NEW;
+    END IF;
+    SELECT payment_realtime_topic INTO channel_id FROM members WHERE user_id = NEW.member_id;
+    IF channel_id IS NOT NULL THEN
+        PERFORM realtime.send('{}'::jsonb, 'changed', 'membership:' || channel_id::text, false);
+    END IF;
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- A notification outage must never roll back a valid payment.
+    RAISE WARNING 'Membership invalidation unavailable (SQLSTATE %)', SQLSTATE;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_payments_realtime ON payments;
+CREATE TRIGGER trg_payments_realtime AFTER INSERT OR UPDATE ON payments
+FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
+DROP TRIGGER IF EXISTS trg_subscriptions_realtime ON membership_subscriptions;
+CREATE TRIGGER trg_subscriptions_realtime AFTER INSERT OR UPDATE ON membership_subscriptions
+FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();

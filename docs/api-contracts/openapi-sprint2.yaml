@@ -1140,9 +1140,6 @@ paths:
         '200': {description: Đã từ chối yêu cầu}
         '403': {description: Chỉ Center Manager có quyền từ chối}
         '409': {description: Yêu cầu đã được xử lý}
-
-        '409':
-          description: Payment đang chờ hoặc đã thành công; chưa thể hủy yêu cầu
   /memberships/subscriptions/{id}/resume:
     post:
       summary: Mở lại gói bảo lưu miễn phí (MEMBER, SCRUM-71)
@@ -2085,3 +2082,82 @@ paths:
         '403':
           description: Không có quyền truy cập (FORBIDDEN - Yêu cầu CENTER_MANAGER)
 
+
+  /memberships/subscriptions/realtime-session:
+    post:
+      tags: [Membership Subscriptions]
+      summary: Open the current member's data-free Supabase Broadcast channel (SCRUM-86)
+      description: >
+        MEMBER only. Creates or reuses an opaque UUID capability for the authenticated owner.
+        No member ID is accepted. Cache-Control is no-store. Public Broadcast payloads contain
+        no payment/member/amount/status data (Supabase may add its delivery UUID).
+        Every signal requires a fresh authorized REST read; it is never payment confirmation.
+        Does not grant Data API access or relax application-table RLS.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session configuration; enabled is false if Supabase is not configured
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [enabled]
+                        properties:
+                          enabled: { type: boolean }
+                          url: { type: string, format: uri }
+                          publishableKey: { type: string, description: Public sb_publishable_ key only }
+                          topic: { type: string, description: Opaque membership UUID capability; keep in memory only }
+        '401':
+          description: Missing, invalid or expired application JWT
+        '403':
+          description: Requires an active, nondeleted MEMBER account
+        '404':
+          description: Authenticated member record does not exist
+
+  /memberships/subscriptions/pending:
+    get:
+      tags: [Membership Subscriptions]
+      summary: Cashier pending membership checkout queue
+      description: >
+        CENTER_MANAGER or RECEPTIONIST only. Each item includes packagePrice: the authoritative
+        amount of the single existing pending payment for that subscription and owner, otherwise
+        the current catalog price. Catalog repricing does not change a previously stored payment.
+        Cashier submits this amount to the existing process-payment endpoint; backend revalidates
+        ownership, pending status and amount under the member lock. Ambiguous payment rows still
+        fail backend settlement checks.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: ApiResponse containing pending subscription DTOs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer, format: int64 }
+                            memberId: { type: integer, format: int64 }
+                            packageId: { type: integer, format: int64 }
+                            packageName: { type: string }
+                            packagePrice: { type: number, description: Authoritative payable amount; may differ from current catalog price }
+                            status: { type: string, enum: [pending_payment] }
+        '401':
+          description: Authentication required
+        '403':
+          description: Requires cashier or manager role

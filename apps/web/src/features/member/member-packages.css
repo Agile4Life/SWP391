@@ -1,0 +1,45 @@
+/* Local to SCRUM-86; shared portal and theme tokens remain authoritative. */
+.member-packages :is(.portal-skeleton, .portal-skeleton-line) {
+  animation: none;
+  background: var(--portal-raised);
+}
+.member-packages .grid-3 > article { min-width: 0; }
+.member-packages .grid-3 .portal-card-title { min-height: 2.6em; }
+.member-packages .grid-3 article > div:first-child > p { min-height: 3.2em; }
+.member-packages .package-benefit-list { min-height: 156px; }
+.member-packages .grid-3 .btn-primary:disabled {
+  opacity: 1;
+  background: var(--portal-raised);
+  color: var(--portal-muted);
+  border-color: var(--portal-border-strong);
+}
+.member-packages .portal-dialog:has(.package-result) {
+  width: min(440px, calc(100vw - 32px));
+  margin: auto;
+}
+.member-packages .portal-dialog:has(.package-result) .portal-dialog__header {
+  align-items: flex-start;
+  gap: 12px;
+}
+.package-result { display: grid; justify-items: center; gap: 16px; text-align: center; padding-top: 16px; }
+.package-result h3, .package-result p { margin: 0; overflow-wrap: anywhere; }
+.package-result__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
+  font-size: 28px;
+}
+.package-result__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+@media (max-width: 600px) {
+  .member-packages .grid-3 .portal-card-title,
+  .member-packages .grid-3 article > div:first-child > p,
+  .member-packages .package-benefit-list { min-height: 0; }
+  .package-result__actions > button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .member-packages .portal-dialog { animation: none; }
+}

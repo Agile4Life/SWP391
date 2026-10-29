@@ -4,6 +4,8 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
+Member Packages — SCRUM-86 (29/10/2026, quyết định mới nhất): giữ nguyên phong cách, bố cục, token Light/Dark, thẻ và popup của contributor. Giá ba gói thấp → cao là **299.000đ / 499.000đ / 999.000đ**, do catalog backend quản lý; FE chỉ hiển thị dữ liệu API, không ghi đè giá/thời hạn/quyền lợi. Thanh toán cập nhật qua **Supabase Realtime Broadcast**, không polling định kỳ: trigger sau thay đổi gửi tín hiệu không chứa dữ liệu tài chính vào kênh UUID của hội viên, FE đọc lại API đã xác thực. Đồng bộ bổ sung khi focus/online/quay lại tab. Nút mua/gia hạn/nâng cấp vẫn bấm được khi chưa đủ điều kiện nghiệp vụ, bấm mới mở popup giải thích; chỉ tạm disable lúc đang tải/gửi. Skeleton tĩnh. Native dialog giữ focus/Escape; chỉ báo thanh toán thành công từ API, phân biệt kích hoạt và kỳ tương lai. Xem [kiểm chứng cập nhật](docs/qa/SCRUM-86-realtime-prices.md).
+
 | Khu vực | Quy chuẩn hiện hành | Nguồn triển khai |
 | --- | --- | --- |
 | Landing `/`, đăng nhập `/login`, đăng ký `/register`, OTP và trang công khai mới | **SÖL Fitness: charcoal–salmon, full width, animation xuất hiện từng component** | `features/landing/fitness-public.css`, `components/PublicLayout.tsx`, `components/FitnessLanding.tsx` |

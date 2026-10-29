@@ -68,6 +68,7 @@ export const coachingApi = {
   },
 
   getSessionStudents: async (sessionId: number, _classId?: number): Promise<EnrolledStudent[]> => {
+    void _classId; // Preserve the existing optional argument for callers.
     const res = await apiFetch<EnrolledStudent[]>(
       `/classes/sessions/${sessionId}/students`
     );

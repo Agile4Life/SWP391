@@ -26,6 +26,7 @@ public class CatalogSeeder implements ApplicationRunner {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
         if (disciplines.list().isEmpty()) {
             disciplines.create(new DisciplineRequest("Reformer Pilates", "Core strength and spine recovery on Reformer machines"));
@@ -42,9 +43,27 @@ public class CatalogSeeder implements ApplicationRunner {
             rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available"));
         }
         if (packages.list().isEmpty()) {
-            packages.create(new PackageRequest("The Essential", "8 classes per month", new BigDecimal("2800000"), 30, 8, "active"));
-            packages.create(new PackageRequest("The Sanctuary VIP", "Unlimited classes", new BigDecimal("7500000"), 90, null, "active"));
-            packages.create(new PackageRequest("The Sovereign Annual", "Unlimited classes + 24 PT sessions", new BigDecimal("26000000"), 365, null, "active"));
+            packages.create(new PackageRequest("The Essential", "8 classes per month", new BigDecimal("299000"), 30, 8, "active"));
+            packages.create(new PackageRequest("The Sanctuary VIP", "Unlimited classes", new BigDecimal("499000"), 90, null, "active"));
+            packages.create(new PackageRequest("The Sovereign Annual", "Unlimited classes + 24 PT sessions", new BigDecimal("999000"), 365, null, "active"));
+        } else {
+            // One-time correction of the original catalog only. Manager edits are never overwritten.
+            for (var pkg : packages.list()) {
+                String original = switch (pkg.name()) {
+                    case "The Essential" -> "2800000";
+                    case "The Sanctuary VIP" -> "7500000";
+                    case "The Sovereign Annual" -> "26000000";
+                    default -> null;
+                };
+                if (original == null || pkg.price().compareTo(new BigDecimal(original)) != 0) continue;
+                String revised = switch (original) {
+                    case "2800000" -> "299000";
+                    case "7500000" -> "499000";
+                    default -> "999000";
+                };
+                packages.update(pkg.id(), new PackageRequest(pkg.name(), pkg.description(), new BigDecimal(revised),
+                        pkg.durationDays(), pkg.classCreditLimit(), pkg.status()));
+            }
         }
     }
 }

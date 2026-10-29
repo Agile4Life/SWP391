@@ -59,6 +59,9 @@ springdoc:
     filter: true
 
 app:
+  supabase:
+    url: ${SUPABASE_URL:}
+    publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}
   jwt:
     secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000

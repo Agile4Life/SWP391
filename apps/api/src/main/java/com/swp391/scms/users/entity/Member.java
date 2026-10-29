@@ -38,6 +38,13 @@ public class Member {
     @Column(name = "emergency_contact_phone", length = 20)
     private String emergencyContactPhone;
 
+    // Capability for data-free Realtime invalidations; never serialized in member DTOs.
+    @Column(name = "payment_realtime_topic")
+    private java.util.UUID paymentRealtimeTopic;
+
+    public java.util.UUID getPaymentRealtimeTopic() { return paymentRealtimeTopic; }
+    public void setPaymentRealtimeTopic(java.util.UUID topic) { paymentRealtimeTopic = topic; }
+
     // Getters and Setters
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }

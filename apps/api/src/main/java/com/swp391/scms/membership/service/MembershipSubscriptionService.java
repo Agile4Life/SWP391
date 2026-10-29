@@ -914,6 +914,15 @@ public class MembershipSubscriptionService {
         Member m = s.getMember();
         com.swp391.scms.users.entity.User u = m != null ? m.getUser() : null;
         MembershipPackage pkg = s.getMembershipPackage();
+        BigDecimal payablePrice = pkg != null ? pkg.getPrice() : null;
+        if (paymentRepository != null) {
+            var pendingPayments = paymentRepository.findAllBySubscriptionId(s.getId()).stream()
+                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus())
+                            && payment.getMember() != null && m != null
+                            && m.getUserId().equals(payment.getMember().getUserId()))
+                    .toList();
+            if (pendingPayments.size() == 1) payablePrice = pendingPayments.getFirst().getAmount();
+        }
         return new com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto(
                 s.getId(),
                 m != null ? m.getUserId() : null,
@@ -924,7 +933,7 @@ public class MembershipSubscriptionService {
                 pkg != null ? pkg.getId() : null,
                 pkg != null ? pkg.getName() : null,
                 pkg != null ? pkg.getDurationDays() : null,
-                pkg != null ? pkg.getPrice() : null,
+                payablePrice,
                 s.getStartDate(),
                 s.getEndDate(),
                 s.getStatus(),

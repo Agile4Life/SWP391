@@ -1,0 +1,21 @@
+{
+  "jira": "SCRUM-86",
+  "execution": "REVIEW_ONLY_DO_NOT_APPLY",
+  "currency": "VND",
+  "priceBasis": "whole_package",
+  "activationGate": "Preserve historical terms and enforce the 30-day booking cycle before activation. Discipline access requires backend verification.",
+  "proposals": [
+    {
+      "tier": "Basic",
+      "payload": { "name": "Basic — The Essential", "description": "Gym không giới hạn khi hợp lệ. 2 lượt lớp nhóm mỗi chu kỳ 30 ngày từ kích hoạt, không cộng dồn. Bộ môn cơ bản do backend xác nhận.", "price": 900000, "durationDays": 30, "classCreditLimit": 2, "status": "inactive" }
+    },
+    {
+      "tier": "Standard",
+      "payload": { "name": "Standard — The Sanctuary", "description": "Gym không giới hạn khi hợp lệ. 4 lượt lớp nhóm mỗi chu kỳ 30 ngày từ kích hoạt, không cộng dồn. Bơi/cầu lông chỉ bổ sung khi backend hỗ trợ.", "price": 2400000, "durationDays": 90, "classCreditLimit": 4, "status": "inactive" }
+    },
+    {
+      "tier": "Premium",
+      "payload": { "name": "Premium — The Sovereign", "description": "Gym không giới hạn khi hợp lệ. 6 lượt lớp nhóm mỗi chu kỳ 30 ngày từ kích hoạt, không cộng dồn. Tennis/bóng rổ chỉ bổ sung khi catalog và backend hỗ trợ.", "price": 3900000, "durationDays": 180, "classCreditLimit": 6, "status": "inactive" }
+    }
+  ]
+}
