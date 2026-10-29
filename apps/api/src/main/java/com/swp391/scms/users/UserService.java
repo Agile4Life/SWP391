@@ -8,6 +8,7 @@ import com.swp391.scms.users.dto.UserCreateDto;
 import com.swp391.scms.users.dto.UserDto;
 import com.swp391.scms.users.dto.UserUpdateDto;
 import com.swp391.scms.users.mapper.UserMapper;
+import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
@@ -94,6 +95,13 @@ public class UserService {
             member.setFitnessLevel("beginner");
             saved.setMember(member);
             userRepository.save(saved);
+        } else if ("COACH".equalsIgnoreCase(role.getCode())) {
+            Coach coach = new Coach();
+            coach.setUser(saved);
+            coach.setHireDate(LocalDate.now(clock));
+            coach.setEmploymentStatus("active");
+            saved.setCoach(coach);
+            userRepository.save(saved);
         }
         return userMapper.toDto(saved);
     }
@@ -125,6 +133,12 @@ public class UserService {
                 member.setJoinDate(LocalDate.now(clock));
                 member.setFitnessLevel("beginner");
                 user.setMember(member);
+            } else if ("COACH".equalsIgnoreCase(newRole.getCode()) && user.getCoach() == null) {
+                Coach coach = new Coach();
+                coach.setUser(user);
+                coach.setHireDate(LocalDate.now(clock));
+                coach.setEmploymentStatus("active");
+                user.setCoach(coach);
             }
         }
         user.setUpdatedAt(LocalDateTime.now(clock));
