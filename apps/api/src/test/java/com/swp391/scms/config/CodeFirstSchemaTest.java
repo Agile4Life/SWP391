@@ -98,6 +98,18 @@ class CodeFirstSchemaTest {
     }
 
     @Test
+    void authenticationProjectionCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var method = com.swp391.scms.users.UserRepository.class.getMethod("findAuthenticationById", Long.class);
+        String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                session.createQuery(jpql, com.swp391.scms.users.dto.AuthenticationUser.class)
+                        .setParameter("id", 10L);
+            }
+        });
+    }
+
+    @Test
     void paymentsReferenceSubscriptionsAndEnrollments() throws Exception {
         String ddl = generateDdl();
         assertTrue(ddl.contains("foreign key (subscription_id) references membership_subscriptions"));
