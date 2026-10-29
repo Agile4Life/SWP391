@@ -110,9 +110,7 @@ export function RegisterPage() {
       savePendingRegistration(null);
       setSuccess(true);
       toast('Tài khoản đã được kích hoạt thành công!', 'success');
-      window.setTimeout(() => {
-        navigate(purchaseAuthPath('/login', search), { replace: true, viewTransition: true });
-      }, 800);
+      navigate(purchaseAuthPath('/login', search), { replace: true, viewTransition: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xác thực OTP thất bại.');
     } finally {

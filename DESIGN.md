@@ -87,6 +87,7 @@ Responsive bộ môn (26/10/2026): từ 1024px trở xuống bỏ rail và khung
 
 ## Luồng mua gói và xác thực — 26/10/2026
 
+- Hiệu năng xác thực (29/10/2026): khi API xác nhận đăng nhập thường/Google hoặc OTP thành công, điều hướng ngay tới trang đúng role/bước đăng nhập tiếp theo. Giữ ý định mua gói và view transition hiện có; animation không được thêm thời gian chờ trước điều hướng.
 - Gói đã chọn ở landing được giữ qua đăng ký, OTP, đăng nhập thường/Google và đăng nhập lại khi hết phiên. Sau xác thực, hội viên quay về danh mục và thấy gói được đánh dấu; không tự tạo yêu cầu mua. Đường quay lại chỉ cho phép trang gói hội viên và ID gói hợp lệ, không mở redirect ra ngoài hoặc sang màn hình của vai trò khác.
 - Form auth dùng Zod để kiểm tra và chuẩn hóa dữ liệu: trim tên đăng nhập/email, bỏ khoảng trắng định dạng số điện thoại, giữ nguyên mật khẩu. Lỗi có nội dung ngay cạnh trường, liên kết trợ năng và focus trường lỗi đầu tiên. Nút auth giữ chữ charcoal cả khi hover ở hai theme.
 - Khi tài khoản đã tạo, lỗi gửi OTP hoặc refresh tiếp tục ở bước xác thực; gửi lại mã không đăng ký tài khoản lần nữa. Browser chỉ lưu username, email và mốc thời gian phục hồi trong sessionStorage, không lưu mật khẩu/OTP. Thông tin tài khoản pending hiển thị rõ thay vì giả vờ chỉnh sửa tài khoản đã tạo; có lựa chọn bắt đầu tài khoản khác nếu email nhập sai, giải thích rằng tài khoản cũ vẫn còn trên hệ thống.

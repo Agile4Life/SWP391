@@ -82,7 +82,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     setSuccess(true);
     if (onSuccess) onSuccess();
     toast('Đăng nhập thành công!', 'success');
-    window.setTimeout(() => navigate(authDestination(user.role, search), { viewTransition: true }), 700);
+    navigate(authDestination(user.role, search), { viewTransition: true });
   }, [navigate, onSuccess, search]);
 
   const processGoogleOAuthCallback = useCallback(async (payload: GoogleOAuthCallbackInput) => {
@@ -275,7 +275,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       if (onSuccess) onSuccess();
 
       setSuccess(true);
-      window.setTimeout(() => navigate(authDestination(res.user.role, search), { viewTransition: true }), 700);
+      navigate(authDestination(res.user.role, search), { viewTransition: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Đăng nhập không thành công.';
       fail(msg);

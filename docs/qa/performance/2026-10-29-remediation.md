@@ -15,6 +15,8 @@ Commit: `578b7c0`.
 
 ## 2. Catalog
 
+Commit: `2f84bf4`.
+
 - Thay N truy vấn count theo từng buổi bằng một JPQL `GROUP BY` trên tập class ID duy nhất. Không có buổi học thì không truy vấn count.
 - Các buổi cùng lớp dùng chung số đếm; lớp không có đăng ký trả 0. Giữ nguyên thứ tự buổi và response DTO.
 - Regression test đã thất bại trước khi đổi service; sau sửa kiểm tra số đếm `[3, 3, 0]`, thứ tự buổi và chỉ một truy vấn nhóm.
@@ -22,7 +24,9 @@ Commit: `578b7c0`.
 
 ## 3. Điều hướng sau xác thực
 
-Chờ thực hiện: bỏ delay 700–800 ms sau login/OTP thành công và kiểm tra bằng router thực trong test.
+- Điều hướng ngay sau khi API xác nhận đăng nhập thường, Google và OTP thành công, loại bỏ timer 700–800 ms. Giữ trang đích theo role và ý định mua gói.
+- Sáu kiểm tra điều hướng đã thất bại trên code cũ; sau sửa chạy bằng MemoryRouter và fake timer, không tua thời gian để làm test qua.
+- Frontend: **378 test qua**, lint và production build qua. `DESIGN.md` ghi nhận điều hướng ngay sau xác thực.
 
 ## 4. Tải frontend
 
