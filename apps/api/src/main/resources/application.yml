@@ -62,6 +62,7 @@ app:
   supabase:
     url: ${SUPABASE_URL:}
     publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}
+    chat-jwt-secret: ${SUPABASE_CHAT_JWT_SECRET:}
   jwt:
     secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000
