@@ -6,6 +6,8 @@ Frontend may use a local mock matching the contract, but must remove the mock be
 
 `openapi-public.yaml` defines the anonymous, read-only landing catalog. It shares package, coach and session data with the authenticated portal; fixture data in browser verification scripts is never used by the application.
 
+[`openapi-pwa-checkin.yaml`](openapi-pwa-checkin.yaml) defines signed gate QR generation and authenticated Member self check-in for the Android/iOS portal PWA (SCRUM-75/83/87 extension).
+
 ## Sprint 3 Contract Files
 - `openapi-sprint3-operations.yaml`: Session attendance, waitlist 24h promotion, and class session cancellation (`SCRUM-111` to `SCRUM-115`).
 - `openapi-sprint3-coaching-analytics.yaml`: Training plans, AI workout recommendations, session evaluations, and class utilization reports (`SCRUM-116`, `SCRUM-117`, `SCRUM-119`, `SCRUM-120`).

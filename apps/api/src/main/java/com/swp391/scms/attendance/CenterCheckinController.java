@@ -43,6 +43,24 @@ public class CenterCheckinController {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    @GetMapping("/gate-qr")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<com.swp391.scms.attendance.dto.CheckinResponses.GateQrDto>> gateQr(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal, @RequestParam(defaultValue = "A1") String gate) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(ApiResponse.ok(msg("attendance.gate_qr.success"), service.gateQr(principal, gate)));
+    }
+
+    @PostMapping("/self")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<ApiResponse<CheckinDto>> selfScan(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody CheckinRequests.SelfScan request) {
+        CheckinDto dto = service.selfScan(principal, request);
+        return ResponseEntity.status(HttpStatus.CREATED).cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(ApiResponse.created(msg("GRANTED".equals(dto.status()) ? "attendance.checkin.granted" : "attendance.checkin.denied"), dto));
+    }
+
     @Operation(summary = "Scan a membership QR code at center gate (Staff only)")
     @PostMapping("/scan")
     @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")

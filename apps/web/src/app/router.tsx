@@ -13,6 +13,7 @@ import { MemberDashboardPage } from '../features/member/MemberDashboardPage';
 import { MemberProfilePage } from '../features/member/MemberProfilePage';
 import { MemberClassesPage } from '../features/member/MemberClassesPage';
 import { MemberCardPage } from '../features/member/MemberCardPage';
+import { MemberCheckInPage } from '../features/member/MemberCheckInPage';
 import { MemberPackagesPage } from '../features/member/MemberPackagesPage';
 import { MemberNotificationsPage } from '../features/member/MemberNotificationsPage';
 import { MemberInvoicesPage } from '../features/member/MemberInvoicesPage';
@@ -70,6 +71,10 @@ export const router = createBrowserRouter([
           {
             path: '/member/card',
             element: <MemberCardPage />,
+          },
+          {
+            path: '/member/check-in',
+            element: <MemberCheckInPage />,
           },
           {
             path: '/member/invoices',

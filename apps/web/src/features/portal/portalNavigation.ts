@@ -10,6 +10,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/member/packages', label: 'Gói tập', icon: 'package', roles: ['MEMBER'] },
   { to: '/member/classes', label: 'Lịch học & Đặt chỗ', icon: 'calendar', roles: ['MEMBER'] },
   { to: '/member/card', label: 'Thẻ hội viên', icon: 'card', roles: ['MEMBER'] },
+  { to: '/member/check-in', label: 'Quét QR cổng', icon: 'scan', roles: ['MEMBER'] },
   { to: '/member/invoices', label: 'Giao dịch & Hóa đơn', icon: 'receipt', roles: ['MEMBER'] },
   { to: '/member/progress', label: 'Tiến độ & Giáo án', icon: 'chart', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER'] },
@@ -28,3 +29,27 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'board', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER'] },
 ];
+
+/** Short labels for the three frequent tasks; permissions still come from PORTAL_NAV. */
+export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label: string }[]> = {
+  MEMBER: [
+    { to: '/member/dashboard', label: 'Tổng quan' },
+    { to: '/member/classes', label: 'Lịch học' },
+    { to: '/member/check-in', label: 'Quét QR' },
+  ],
+  STAFF: [
+    { to: '/staff/reception', label: 'Lễ tân' },
+    { to: '/staff/classes', label: 'Lớp học' },
+    { to: '/staff/check-in', label: 'Check-in' },
+  ],
+  COACH: [
+    { to: '/coach/classes', label: 'Lịch dạy' },
+    { to: '/staff/attendance', label: 'Điểm danh' },
+    { to: '/coach/training-plans', label: 'Giáo án' },
+  ],
+  MANAGER: [
+    { to: '/staff/reception', label: 'Lễ tân' },
+    { to: '/manager/reports', label: 'Báo cáo' },
+    { to: '/manager/users', label: 'Tài khoản' },
+  ],
+};

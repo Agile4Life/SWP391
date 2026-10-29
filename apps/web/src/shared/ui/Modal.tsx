@@ -37,8 +37,9 @@ export function Modal({ title, onClose, children, busy = false, returnFocusRef }
       onKeyDown={event => {
         if (event.key !== 'Tab') return;
         const dialog = event.currentTarget;
+        if (event.target instanceof Element && event.target.closest('dialog') !== dialog) return;
         const controls = [...dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
-          .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
+          .filter(element => element.closest('dialog') === dialog && element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
         const first = controls[0];
         const last = controls.at(-1);
         if (!first) { event.preventDefault(); dialog.focus(); }
@@ -47,6 +48,7 @@ export function Modal({ title, onClose, children, busy = false, returnFocusRef }
       }}
       tabIndex={-1}
       onCancel={(e) => {
+        e.stopPropagation();
         e.preventDefault();
         if (!busy) onClose();
       }}
