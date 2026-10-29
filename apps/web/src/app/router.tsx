@@ -18,6 +18,7 @@ import { MemberNotificationsPage } from '../features/member/MemberNotificationsP
 import { MemberInvoicesPage } from '../features/member/MemberInvoicesPage';
 import { MemberSupportPage } from '../features/member/MemberSupportPage';
 import { MemberProgressPage } from '../features/member/MemberProgressPage';
+import { ChatPage } from '../features/chat/ChatPage';
 
 import { StaffReceptionPage } from '../features/reception/StaffReceptionPage';
 import { StaffCheckInPage } from '../features/reception/StaffCheckInPage';
@@ -49,6 +50,10 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { path: '/portal', element: <PortalHome /> },
+      {
+        element: <RoleGuard allowedRoles={['MEMBER', 'STAFF', 'COACH']} />,
+        children: [{ path: '/messages', element: <ChatPage /> }],
+      },
 
       // Member-only Routes
       {

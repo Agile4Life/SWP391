@@ -17,7 +17,9 @@ public interface ChatContactRepository extends Repository<User, Long> {
     @Query("select u from User u where u.id = :id")
     Optional<User> lockUser(@Param("id") Long id);
 
-    @Query("select u from User u join u.role r where u.deletedAt is null and u.status = 'active' "
-            + "and r.code in ('RECEPTIONIST', 'COACH') and lower(u.fullName) like lower(concat('%', :query, '%')) order by u.fullName, u.id")
+    @Query(value = "select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' "
+            + "and r.code in ('RECEPTIONIST', 'COACH') and lower(u.fullName) like lower(concat('%', :query, '%')) order by u.fullName, u.id",
+            countQuery = "select count(u) from User u join u.role r where u.deletedAt is null and u.status = 'active' "
+            + "and r.code in ('RECEPTIONIST', 'COACH') and lower(u.fullName) like lower(concat('%', :query, '%'))")
     Page<User> search(@Param("query") String query, Pageable page);
 }
