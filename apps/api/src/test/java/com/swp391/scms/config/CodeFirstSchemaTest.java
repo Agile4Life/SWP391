@@ -110,6 +110,20 @@ class CodeFirstSchemaTest {
     }
 
     @Test
+    void groupedEnrollmentCountsCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
+        var method = com.swp391.scms.scheduling.repository.ClassEnrollmentRepository.class.getMethod(
+                "countByClassIdsAndStatus", java.util.List.class, String.class);
+        String jpql = method.getAnnotation(org.springframework.data.jpa.repository.Query.class).value();
+        generateDdl(factory -> {
+            try (var session = factory.openSession()) {
+                session.createQuery(jpql, com.swp391.scms.scheduling.dto.ClassBookingCount.class)
+                        .setParameter("classIds", java.util.List.of(11L, 12L))
+                        .setParameter("status", "booked");
+            }
+        });
+    }
+
+    @Test
     void paymentsReferenceSubscriptionsAndEnrollments() throws Exception {
         String ddl = generateDdl();
         assertTrue(ddl.contains("foreign key (subscription_id) references membership_subscriptions"));

@@ -4,6 +4,8 @@ Phạm vi đã được người dùng yêu cầu: xử lý lần lượt các v
 
 ## 1. Xác thực mỗi request
 
+Commit: `578b7c0`.
+
 - Thay việc tải entity User và hồ sơ liên quan bằng JPQL constructor projection chỉ gồm ID, username, status và role.
 - Mỗi request vẫn đọc trạng thái hiện tại từ database, loại user đã xóa mềm và từ chối tài khoản inactive/locked. Không cache quyền hoặc tin role cũ trong JWT.
 - Test hồi quy đã thất bại trước khi đổi filter, sau sửa đã qua. Bao gồm role hiện tại, tài khoản bị khóa giữa hai request và JWT ký bằng secret khác.
@@ -13,7 +15,10 @@ Phạm vi đã được người dùng yêu cầu: xử lý lần lượt các v
 
 ## 2. Catalog
 
-Chờ thực hiện: gộp số đăng ký theo class ID bằng một truy vấn, giữ nguyên dữ liệu trả về.
+- Thay N truy vấn count theo từng buổi bằng một JPQL `GROUP BY` trên tập class ID duy nhất. Không có buổi học thì không truy vấn count.
+- Các buổi cùng lớp dùng chung số đếm; lớp không có đăng ký trả 0. Giữ nguyên thứ tự buổi và response DTO.
+- Regression test đã thất bại trước khi đổi service; sau sửa kiểm tra số đếm `[3, 3, 0]`, thứ tự buổi và chỉ một truy vấn nhóm.
+- Hibernate xác minh cú pháp và kiểu kết quả của JPQL mà không truy cập DB. Bộ backend: **687 test, 0 failure/error, 20 skipped**.
 
 ## 3. Điều hướng sau xác thực
 
