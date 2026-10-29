@@ -1,59 +1,27 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { LandingPage } from '../features/landing/LandingPage';
-import { TrainerStoryPage } from '../features/landing/TrainerStoryPage';
-import { SportPage } from '../features/landing/SportPage';
-import { LoginPage } from '../features/auth/LoginPage';
-import { RegisterPage } from '../features/auth/RegisterPage';
-import { AppLayout } from '../shared/ui/AppLayout';
 import { RoleGuard } from '../shared/ui/RoleGuard';
 import { PortalHome } from '../shared/ui/PortalHome';
-
-// Member Feature Pages
-import { MemberDashboardPage } from '../features/member/MemberDashboardPage';
-import { MemberProfilePage } from '../features/member/MemberProfilePage';
-import { MemberClassesPage } from '../features/member/MemberClassesPage';
-import { MemberCardPage } from '../features/member/MemberCardPage';
-import { MemberCheckInPage } from '../features/member/MemberCheckInPage';
-import { MemberPackagesPage } from '../features/member/MemberPackagesPage';
-import { MemberNotificationsPage } from '../features/member/MemberNotificationsPage';
-import { MemberInvoicesPage } from '../features/member/MemberInvoicesPage';
-import { MemberSupportPage } from '../features/member/MemberSupportPage';
-import { MemberProgressPage } from '../features/member/MemberProgressPage';
-import { ChatPage } from '../features/chat/ChatPage';
-
-import { StaffReceptionPage } from '../features/reception/StaffReceptionPage';
-import { StaffCheckInPage } from '../features/reception/StaffCheckInPage';
-import { StaffClassesPage } from '../features/classes/StaffClassesPage';
-import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
-import { CoachClassesPage } from '../features/coaching/CoachClassesPage';
-import { CoachTrainingPlanPage } from '../features/coaching/CoachTrainingPlanPage';
-
-// Manager Feature Pages
-import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
-import { UserManagerPage } from '../features/manager/UserManagerPage';
-import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
-import { ManagerCancellationPage } from '../features/manager/ManagerCancellationPage';
-import { ManagerAuditLogsPage } from '../features/manager/ManagerAuditLogsPage';
+import { RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
 
 export const router = createBrowserRouter([
   // Public Routes
-  { path: '/', element: <LandingPage /> },
-  { path: '/swimming', element: <SportPage forcedSport="swimming" /> },
-  { path: '/tennis', element: <SportPage forcedSport="tennis" /> },
-  { path: '/sports/:sportId', element: <SportPage /> },
-  { path: '/trainers', element: <TrainerStoryPage /> },
-  { path: '/trainers/:trainerId', element: <TrainerStoryPage /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  { path: '/', lazy: async () => ({ Component: (await import('../features/landing/LandingPage')).LandingPage }) },
+  { path: '/swimming', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/tennis', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/sports/:sportId', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/trainers', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
+  { path: '/trainers/:trainerId', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
+  { path: '/login', lazy: async () => ({ Component: (await import('../features/auth/LoginPage')).LoginPage }) },
+  { path: '/register', lazy: async () => ({ Component: (await import('../features/auth/RegisterPage')).RegisterPage }) },
 
   // Protected Portal App Shell
   {
-    element: <AppLayout />,
+    lazy: async () => ({ Component: (await import('../shared/ui/AppLayout')).AppLayout }),
     children: [
       { path: '/portal', element: <PortalHome /> },
       {
         element: <RoleGuard allowedRoles={['MEMBER', 'STAFF', 'COACH']} />,
-        children: [{ path: '/messages', element: <ChatPage /> }],
+        children: [{ path: '/messages', lazy: async () => ({ Component: (await import('../features/chat/ChatPage')).ChatPage }) }],
       },
 
       // Member-only Routes
@@ -62,35 +30,35 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/member/dashboard',
-            element: <MemberDashboardPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberDashboardPage')).MemberDashboardPage }),
           },
           {
             path: '/member/packages',
-            element: <MemberPackagesPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberPackagesPage')).MemberPackagesPage }),
           },
           {
             path: '/member/card',
-            element: <MemberCardPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberCardPage')).MemberCardPage }),
           },
           {
             path: '/member/check-in',
-            element: <MemberCheckInPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberCheckInPage')).MemberCheckInPage }),
           },
           {
             path: '/member/invoices',
-            element: <MemberInvoicesPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberInvoicesPage')).MemberInvoicesPage }),
           },
           {
             path: '/member/progress',
-            element: <MemberProgressPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberProgressPage')).MemberProgressPage }),
           },
           {
             path: '/member/notifications',
-            element: <MemberNotificationsPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberNotificationsPage')).MemberNotificationsPage }),
           },
           {
             path: '/member/support',
-            element: <MemberSupportPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberSupportPage')).MemberSupportPage }),
           },
         ],
       },
@@ -105,7 +73,7 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/member/classes',
-            element: <MemberClassesPage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberClassesPage')).MemberClassesPage }),
           },
         ],
       },
@@ -127,7 +95,7 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/member/profile',
-            element: <MemberProfilePage />,
+            lazy: async () => ({ Component: (await import('../features/member/MemberProfilePage')).MemberProfilePage }),
           },
         ],
       },
@@ -148,31 +116,31 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/staff/reception',
-            element: <StaffReceptionPage />,
+            lazy: async () => ({ Component: (await import('../features/reception/StaffReceptionPage')).StaffReceptionPage }),
           },
           {
             path: '/staff/check-in',
-            element: <StaffCheckInPage />,
+            lazy: async () => ({ Component: (await import('../features/reception/StaffCheckInPage')).StaffCheckInPage }),
           },
           {
             path: '/staff/classes',
-            element: <StaffClassesPage />,
+            lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),
           },
           {
             path: '/staff/attendance',
-            element: <CoachAttendancePage />,
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
           },
           {
             path: '/coach/classes',
-            element: <CoachClassesPage />,
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachClassesPage')).CoachClassesPage }),
           },
           {
             path: '/coach/training-plans',
-            element: <CoachTrainingPlanPage />,
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachTrainingPlanPage')).CoachTrainingPlanPage }),
           },
           {
             path: '/staff/coach-classes',
-            element: <CoachClassesPage />,
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachClassesPage')).CoachClassesPage }),
           },
         ],
       },
@@ -185,23 +153,23 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/manager/catalogs',
-            element: <ManagerCatalogsPage />,
+            lazy: async () => ({ Component: (await import('../features/manager/ManagerCatalogsPage')).ManagerCatalogsPage }),
           },
           {
             path: '/manager/users',
-            element: <UserManagerPage />,
+            lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }),
           },
           {
             path: '/manager/reports',
-            element: <ManagerReportsPage />,
+            lazy: async () => ({ Component: (await import('../features/manager/ManagerReportsPage')).ManagerReportsPage }),
           },
           {
             path: '/manager/cancellations',
-            element: <ManagerCancellationPage />,
+            lazy: async () => ({ Component: (await import('../features/manager/ManagerCancellationPage')).ManagerCancellationPage }),
           },
           {
             path: '/manager/audit-logs',
-            element: <ManagerAuditLogsPage />,
+            lazy: async () => ({ Component: (await import('../features/manager/ManagerAuditLogsPage')).ManagerAuditLogsPage }),
           },
         ],
       },
@@ -213,4 +181,4 @@ export const router = createBrowserRouter([
     path: '*',
     element: <Navigate to="/" replace />,
   },
-]);
+].map(route => ({ ...route, HydrateFallback: RouteLoading, ErrorBoundary: RouteLoadError })));

@@ -10,7 +10,18 @@ export default defineConfig({
     enforce: 'post',
     generateBundle(_options, bundle) {
       const assets = Object.keys(bundle).filter(path => path.startsWith('assets/') && !path.endsWith('.map')).map(path => '/' + path);
-      this.emitFile({ type: 'asset', fileName: 'sw.js', source: createWorkerSource(Date.now().toString(36), assets) });
+      const precache = new Set<string>();
+      const addChunk = (name: string) => {
+        const chunk = bundle[name];
+        if (chunk?.type !== 'chunk' || precache.has('/' + name)) return;
+        precache.add('/' + name);
+        chunk.imports.forEach(addChunk);
+      };
+      for (const file of Object.values(bundle)) {
+        if (file.type === 'chunk' && file.isEntry) addChunk(file.fileName);
+        if (file.fileName.endsWith('.css')) precache.add('/' + file.fileName);
+      }
+      this.emitFile({ type: 'asset', fileName: 'sw.js', source: createWorkerSource(Date.now().toString(36), assets, [...precache]) });
     },
   }],
   test: {

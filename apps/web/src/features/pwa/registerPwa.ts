@@ -50,6 +50,20 @@ export async function registerPwa() {
   registrationStarted = true;
   try {
     const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+    // Initial route chunks may finish before the first worker controls this page.
+    const syncAssets = (entries: PerformanceEntry[]) => {
+      const paths = entries.flatMap(entry => {
+        const url = new URL(entry.name, window.location.href);
+        return url.origin === window.location.origin && url.pathname.startsWith('/assets/') && !url.search ? [url.pathname] : [];
+      });
+      if (paths.length) navigator.serviceWorker.controller?.postMessage({ type: 'CACHE_VISITED_ASSETS', paths: [...new Set(paths)] });
+    };
+    const syncLoadedAssets = () => syncAssets(performance.getEntriesByType('resource'));
+    navigator.serviceWorker.addEventListener('controllerchange', syncLoadedAssets);
+    if (typeof PerformanceObserver !== 'undefined') {
+      new PerformanceObserver(list => syncAssets(list.getEntries())).observe({ entryTypes: ['resource'] });
+    }
+    syncLoadedAssets();
     const announceUpdate = () => {
       if (!registration.waiting || !navigator.serviceWorker.controller) return;
       waitingRegistration = registration;
