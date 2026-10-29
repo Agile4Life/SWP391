@@ -30,6 +30,8 @@ public class ChatRealtimeService {
             throw new IllegalArgumentException("SUPABASE_URL must be an HTTPS origin");
         if (!publishableKey.isBlank() && !publishableKey.startsWith("sb_publishable_"))
             throw new IllegalArgumentException("SUPABASE_PUBLISHABLE_KEY must be a publishable key");
+        if (!secret.isBlank() && secret.getBytes(StandardCharsets.UTF_8).length < 32)
+            throw new IllegalArgumentException("SUPABASE_CHAT_JWT_SECRET must contain at least 32 bytes");
         this.signingKey = secret.isBlank() ? null : Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 

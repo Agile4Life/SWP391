@@ -61,7 +61,7 @@ public class ChatService {
         User actor = requireActor(principal);
         ChatConversation c = conversations.findById(id).orElseThrow(() -> missing(id));
         participant(c, actor);
-        if ((before != null && after != null) || (before != null && before <= 0) || (after != null && after <= 0))
+        if ((before != null && after != null) || (before != null && before <= 0) || (after != null && after < 0))
             throw invalid("validation.chat.cursor");
         List<ChatMessage> rows = after == null ? messages.older(id, before, PageRequest.of(0, 51))
                 : messages.newer(id, after, PageRequest.of(0, 51));

@@ -151,8 +151,15 @@ class ChatServiceTest {
         assertThatThrownBy(() -> service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), "a".repeat(2001)))).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.history(member, 7L, 5L, 6L)).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.history(member, 7L, 0L, null)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.history(member, 7L, null, -1L)).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.list(member, -1)).isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> service.contacts(member, "x".repeat(81), 0)).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test void emptyConversationCanCatchUpFromZeroWithoutSkippingTheFirstMessage() {
+        var first = new ChatMessage(conversation, coach, UUID.randomUUID(), "First", Instant.now()); first.setId(1L);
+        when(messages.newer(eq(7L), eq(0L), any())).thenReturn(List.of(first));
+        assertThat(service.history(member, 7L, null, 0L).items().getFirst().id()).isEqualTo(1L);
     }
 
     @Test void pagesOlderAndNewerWithoutDroppingThe51stMessage() {

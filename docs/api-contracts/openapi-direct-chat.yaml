@@ -77,10 +77,10 @@ paths:
       - {name: id, in: path, required: true, schema: {type: integer, format: int64, minimum: 1}}
     get:
       summary: Participants read chronological message history, up to 50 items
-      description: Omit cursors for the latest 50 messages. beforeId gets older messages; afterId gets the earliest next 50 messages. Never combine cursors. hasMore indicates more in that direction. For catch-up, repeat afterId with the latest returned ID until hasMore is false.
+      description: Omit cursors for the latest 50 messages. beforeId gets older messages; afterId gets the earliest next 50 messages. Use afterId=0 to catch up from an initially empty conversation. Never combine cursors. hasMore indicates more in that direction. For catch-up, repeat afterId with the latest returned ID until hasMore is false.
       parameters:
         - {name: beforeId, in: query, schema: {type: integer, format: int64, minimum: 1}}
-        - {name: afterId, in: query, schema: {type: integer, format: int64, minimum: 1}}
+        - {name: afterId, in: query, schema: {type: integer, format: int64, minimum: 0}}
       responses:
         '200':
           description: Only participants; inactive peer's historical messages remain readable
@@ -187,7 +187,7 @@ components:
       properties:
         id: {type: integer, format: int64}
         name: {type: string}
-        role: {type: string, enum: [MEMBER, RECEPTIONIST, COACH]}
+        role: {type: string, description: Current role; directory contains RECEPTIONIST/COACH only. A historical peer may have changed role and is then unavailable.}
         available: {type: boolean}
     Conversation:
       type: object
