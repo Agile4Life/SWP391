@@ -72,4 +72,6 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findScheduledSessionsBetweenDates(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    void deleteByGymClassId(Long classId);
 }

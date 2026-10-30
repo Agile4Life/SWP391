@@ -112,7 +112,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 
-                    // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74)
+                    // Scheduling, Enrollments & Waitlists (SCRUM-72, 73, 74, 131)
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
@@ -121,6 +121,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/waitlists/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/cancel").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
                     // Users, Roles, Member Lookup & Facilities Catalog

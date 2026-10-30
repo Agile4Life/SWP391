@@ -1,20 +1,22 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { getCurrentUser } from '../../shared/api/client';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
-import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { TimePicker } from '../../shared/ui/TimePicker';
+import { Select } from '../../shared/ui/Select';
 import { toast } from '../../shared/ui/toast';
+import { apiFetch, getCurrentUser } from '../../shared/api/client';
 import {
   classesApi,
   type ClassItem,
-  type ClassSessionDto,
-  type CoachUser,
+  type ClassSessionDto as ClassSessionItem,
 } from './classesApi';
-import type { Discipline, Room } from '../manager/catalogApi';
 
-interface ClassFormData {
+type DisciplineOption = Awaited<ReturnType<typeof classesApi.getDisciplines>>[number];
+type RoomOption = Awaited<ReturnType<typeof classesApi.getAvailableRooms>>[number];
+type CoachOption = Awaited<ReturnType<typeof classesApi.getActiveCoaches>>[number];
+
+interface FormState {
   name: string;
   disciplineId: string;
   coachId: string;
@@ -27,14 +29,38 @@ interface ClassFormData {
   endTime: string;
 }
 
-const getTodayString = () => new Date().toISOString().split('T')[0];
+interface EditClassFormState {
+  name: string;
+  disciplineId: string;
+  coachId: string;
+  roomId: string;
+  capacity: number;
+  level: string;
+  description: string;
+  status: string;
+}
 
-const defaultFormData = (): ClassFormData => ({
+interface RescheduleFormState {
+  sessionId: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+}
+
+const getTodayString = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const defaultFormData = (): FormState => ({
   name: '',
   disciplineId: '',
   coachId: '',
   roomId: '',
-  capacity: 15,
+  capacity: 20,
   level: 'all',
   description: '',
   sessionDate: getTodayString(),
@@ -45,57 +71,86 @@ const defaultFormData = (): ClassFormData => ({
 export function StaffClassesPage() {
   const currentUser = getCurrentUser();
 
-  // BR-01: Chỉ CENTER_MANAGER, STAFF và COACH được cấp quyền thấy màn hình
-  const hasAccess = useMemo(() => {
-    if (!currentUser) return false;
-    return (
-      currentUser.role === 'MANAGER' ||
-      currentUser.role === 'STAFF' ||
-      currentUser.role === 'COACH'
-    );
-  }, [currentUser]);
-
+  // State dữ liệu
   const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
-  const [disciplines, setDisciplines] = useState<Discipline[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [coaches, setCoaches] = useState<CoachUser[]>([]);
+  const [sessions, setSessions] = useState<ClassSessionItem[]>([]);
+  const [disciplines, setDisciplines] = useState<DisciplineOption[]>([]);
+  const [rooms, setRooms] = useState<RoomOption[]>([]);
+  const [coaches, setCoaches] = useState<CoachOption[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  // State giao diện: Loading / Empty / Error retry
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [showModal, setShowModal] = useState(false);
+  // State Modal Tạo lớp & Form
+  const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<ClassFormData>(defaultFormData());
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormState>(defaultFormData);
   const [pendingClassId, setPendingClassId] = useState<number | null>(null);
   const [pendingClassSignature, setPendingClassSignature] = useState<string | null>(null);
 
-  // BR-04: Kiểm tra trùng tên lớp học ngay lập tức sau khi nhập (realtime validation)
-  const isDuplicateClassName = useMemo(() => {
-    const trimmed = formData.name.trim().toLowerCase();
-    if (!trimmed) return false;
-    return classes.some((c) => c.name.trim().toLowerCase() === trimmed);
-  }, [formData.name, classes]);
+  // SCRUM-131: State Modal Sửa thông tin lớp
+  const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
+  const [editFormData, setEditFormData] = useState<EditClassFormState>({
+    name: '',
+    disciplineId: '',
+    coachId: '',
+    roomId: '',
+    capacity: 20,
+    level: 'all',
+    description: '',
+    status: 'active',
+  });
+  const [editModalError, setEditModalError] = useState<string | null>(null);
 
-  // Tải dữ liệu các danh mục phụ trợ (Phòng available, HLV active, Bộ môn)
+  // SCRUM-131: State Modal Đổi lịch học
+  const [reschedulingClass, setReschedulingClass] = useState<ClassItem | null>(null);
+  const [rescheduleFormData, setRescheduleFormData] = useState<RescheduleFormState>({
+    sessionId: '',
+    sessionDate: getTodayString(),
+    startTime: '08:00',
+    endTime: '09:30',
+  });
+  const [rescheduleModalError, setRescheduleModalError] = useState<string | null>(null);
+
+  // SCRUM-131: State Modal Xóa lớp học an toàn 2 lần (Double Confirm)
+  const [deletingClass, setDeletingClass] = useState<ClassItem | null>(null);
+  const [deleteConfirmStep, setDeleteConfirmStep] = useState<1 | 2>(1);
+  const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
+
+  // Kiểm tra trùng tên lớp học theo thời gian thực (không phân biệt hoa thường)
+  const normalizedInputName = formData.name.trim().toLowerCase();
+  const isDuplicateClassName =
+    normalizedInputName.length > 0 &&
+    classes.some((cls) => cls.name.trim().toLowerCase() === normalizedInputName);
+
+  const normalizedEditName = editFormData.name.trim().toLowerCase();
+  const isDuplicateEditClassName =
+    editingClass !== null &&
+    normalizedEditName.length > 0 &&
+    classes.some(
+      (cls) => cls.id !== editingClass.id && cls.name.trim().toLowerCase() === normalizedEditName,
+    );
+
+  // BR-01 & SCRUM-131: Phân quyền truy cập và khóa quyền chỉnh sửa trên UI Lễ tân
+  // Lễ tân (STAFF) và HLV (COACH) chỉ được XEM lịch học; chỉ CENTER_MANAGER (MANAGER) mới được Tạo/Sửa/Đổi lịch/Xóa
+  const allowedRoles = ['MANAGER', 'STAFF', 'COACH'];
+  const hasAccess = currentUser && allowedRoles.includes(currentUser.role);
+  const isManager = currentUser?.role === 'MANAGER';
+
   const loadCatalogs = useCallback(async () => {
-    try {
-      const [discList, roomList, coachList] = await Promise.all([
-        classesApi.getDisciplines().catch(() => []),
-        classesApi.getAvailableRooms().catch(() => []),
-        classesApi.getActiveCoaches().catch(() => []),
-      ]);
-      setDisciplines(discList);
-      setRooms(roomList);
-      setCoaches(coachList);
-    } catch {
-      // Bỏ qua lỗi phụ trợ, màn hình chính vẫn xử lý được
-    }
+    const [discList, roomList, coachList] = await Promise.all([
+      classesApi.getDisciplines(),
+      classesApi.getAvailableRooms(),
+      classesApi.getActiveCoaches(),
+    ]);
+    setDisciplines(discList);
+    setRooms(roomList);
+    setCoaches(coachList);
   }, []);
 
-  // Tải danh sách lớp học và các buổi học
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -134,7 +189,7 @@ export function StaffClassesPage() {
               403 - Quyền truy cập bị từ chối
             </h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và quản lý lớp học.
+              Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và xem lịch lớp học.
             </p>
             <a href="/portal" className="btn-secondary">
               Về trang chủ Portal
@@ -146,10 +201,10 @@ export function StaffClassesPage() {
   }
 
   const handleOpenModal = () => {
+    if (!isManager) return;
     setModalError(null);
     setPendingClassId(null);
     setPendingClassSignature(null);
-    // Đặt mặc định nếu chưa chọn
     setFormData((prev) => ({
       ...prev,
       disciplineId: prev.disciplineId || (disciplines[0] ? String(disciplines[0].id) : ''),
@@ -172,10 +227,8 @@ export function StaffClassesPage() {
     e.preventDefault();
     setModalError(null);
 
-    // BR-05: Chặn bấm đúp
-    if (isSubmitting) return;
+    if (isSubmitting || !isManager) return;
 
-    // BR-03: Validate phía Frontend trước khi gửi
     if (!formData.name.trim()) {
       const msg = 'Vui lòng nhập tên lớp học.';
       setModalError(msg);
@@ -286,8 +339,6 @@ export function StaffClassesPage() {
       setPendingClassSignature(null);
       await loadData();
     } catch (err: unknown) {
-      // BR-04: Bắt lỗi trùng lịch phòng/HLV (P3, error.scheduling.session_conflict)
-      // GIỮ NGUYÊN dữ liệu đã nhập trong form (không reset form, không đóng modal)
       const apiErr = err as { code?: string; message?: string; status?: number };
       const isConflict =
         apiErr?.code === 'error.scheduling.session_conflict' ||
@@ -303,6 +354,216 @@ export function StaffClassesPage() {
         : apiErr?.message || 'Có lỗi xảy ra khi tạo lớp học.';
 
       setModalError(errMessage);
+      toast(errMessage, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // SCRUM-131: Mở Modal Sửa lớp học
+  const handleOpenEditModal = (cls: ClassItem) => {
+    if (!isManager) return;
+    setEditModalError(null);
+    setEditingClass(cls);
+    setEditFormData({
+      name: cls.name || '',
+      disciplineId: String(cls.disciplineId || ''),
+      coachId: String(cls.coachId || ''),
+      roomId: String(cls.roomId || ''),
+      capacity: cls.capacity || 20,
+      level: cls.level || 'all',
+      description: cls.description || '',
+      status: (cls.status || 'active').toLowerCase(),
+    });
+  };
+
+  const handleCloseEditModal = () => {
+    if (isSubmitting) return;
+    setEditModalError(null);
+    setEditingClass(null);
+  };
+
+  const handleUpdateClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClass || isSubmitting || !isManager) return;
+    setEditModalError(null);
+
+    if (!editFormData.name.trim()) {
+      const msg = 'Vui lòng nhập tên lớp học.';
+      setEditModalError(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    if (isDuplicateEditClassName) {
+      const msg = `Tên lớp học "${editFormData.name.trim()}" đã tồn tại trong hệ thống.`;
+      setEditModalError(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    const capacityNum = Number(editFormData.capacity);
+    if (isNaN(capacityNum) || capacityNum <= 0) {
+      const msg = 'Sức chứa tối đa phải lớn hơn 0.';
+      setEditModalError(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await apiFetch<ClassItem>(`/classes/${editingClass.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: editFormData.name.trim(),
+          disciplineId: Number(editFormData.disciplineId),
+          coachId: Number(editFormData.coachId),
+          roomId: Number(editFormData.roomId),
+          capacity: capacityNum,
+          level: editFormData.level,
+          description: editFormData.description.trim() || undefined,
+          status: editFormData.status,
+        }),
+      });
+      toast('Đã cập nhật thông tin lớp học thành công!', 'success');
+      setEditingClass(null);
+      await loadData();
+    } catch (err: unknown) {
+      const apiErr = err as { code?: string; message?: string; status?: number };
+      const isConflict =
+        apiErr?.code === 'error.scheduling.session_conflict' ||
+        apiErr?.code === 'SCHEDULE_CONFLICT' ||
+        apiErr?.status === 409;
+      const errMessage = isConflict
+        ? 'Trùng lịch: Huấn luyện viên hoặc phòng tập mới đã có lịch dạy trùng với buổi học của lớp này.'
+        : apiErr?.message || 'Không thể cập nhật thông tin lớp học.';
+      setEditModalError(errMessage);
+      toast(errMessage, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // SCRUM-131: Mở Modal Đổi lịch học
+  const handleOpenRescheduleModal = (cls: ClassItem, preferredSession?: ClassSessionItem) => {
+    if (!isManager) return;
+    setRescheduleModalError(null);
+    setReschedulingClass(cls);
+    const classScheduledSessions = sessions.filter(
+      (s) => s.classId === cls.id && s.status !== 'cancelled',
+    );
+    const targetSession = preferredSession || classScheduledSessions[0];
+    setRescheduleFormData({
+      sessionId: targetSession ? String(targetSession.id) : 'NEW',
+      sessionDate: targetSession ? targetSession.sessionDate : getTodayString(),
+      startTime: targetSession ? targetSession.startTime.slice(0, 5) : '08:00',
+      endTime: targetSession ? targetSession.endTime.slice(0, 5) : '09:30',
+    });
+  };
+
+  const handleCloseRescheduleModal = () => {
+    if (isSubmitting) return;
+    setRescheduleModalError(null);
+    setReschedulingClass(null);
+  };
+
+  const handleRescheduleSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reschedulingClass || isSubmitting || !isManager) return;
+    setRescheduleModalError(null);
+
+    const today = getTodayString();
+    if (rescheduleFormData.sessionDate < today) {
+      const msg = 'Ngày học mới không được ở trong quá khứ.';
+      setRescheduleModalError(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    if (rescheduleFormData.endTime <= rescheduleFormData.startTime) {
+      const msg = 'Giờ kết thúc phải sau giờ bắt đầu.';
+      setRescheduleModalError(msg);
+      toast(msg, 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (!rescheduleFormData.sessionId || rescheduleFormData.sessionId === 'NEW') {
+        await classesApi.createSession({
+          classId: reschedulingClass.id,
+          sessionDate: rescheduleFormData.sessionDate,
+          startTime: rescheduleFormData.startTime,
+          endTime: rescheduleFormData.endTime,
+        });
+        toast('Đã xếp lịch buổi học mới thành công!', 'success');
+      } else {
+        await apiFetch<ClassSessionItem>(
+          `/classes/${reschedulingClass.id}/sessions/${rescheduleFormData.sessionId}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({
+              sessionDate: rescheduleFormData.sessionDate,
+              startTime: rescheduleFormData.startTime,
+              endTime: rescheduleFormData.endTime,
+            }),
+          },
+        );
+        toast('Đã đổi lịch buổi học thành công!', 'success');
+      }
+      setReschedulingClass(null);
+      await loadData();
+    } catch (err: unknown) {
+      const apiErr = err as { code?: string; message?: string; status?: number };
+      const isConflict =
+        apiErr?.code === 'error.scheduling.session_conflict' ||
+        apiErr?.code === 'SCHEDULE_CONFLICT' ||
+        apiErr?.status === 409 ||
+        (typeof apiErr?.message === 'string' && apiErr.message.includes('trùng lịch'));
+      const errMessage = isConflict
+        ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn giờ khác.'
+        : apiErr?.message || 'Không thể đổi lịch buổi học.';
+      setRescheduleModalError(errMessage);
+      toast(errMessage, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // SCRUM-131: Mở Modal Xóa lớp học (Double Confirm 2 bước)
+  const handleOpenDeleteModal = (cls: ClassItem) => {
+    if (!isManager) return;
+    setDeleteModalError(null);
+    setDeleteConfirmStep(1);
+    setDeletingClass(cls);
+  };
+
+  const handleCloseDeleteModal = () => {
+    if (isSubmitting) return;
+    setDeleteModalError(null);
+    setDeleteConfirmStep(1);
+    setDeletingClass(null);
+  };
+
+  const handleConfirmDeleteClass = async () => {
+    if (!deletingClass || isSubmitting || !isManager) return;
+    setDeleteModalError(null);
+    setIsSubmitting(true);
+    try {
+      await apiFetch<void>(`/classes/${deletingClass.id}`, {
+        method: 'DELETE',
+      });
+      toast(`Đã xóa lớp học "${deletingClass.name}" thành công!`, 'success');
+      setDeletingClass(null);
+      setDeleteConfirmStep(1);
+      if (selectedClassDetail?.id === deletingClass.id) {
+        setSelectedClassDetail(null);
+      }
+      await loadData();
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string };
+      const errMessage = apiErr?.message || 'Không thể xóa lớp học này.';
+      setDeleteModalError(errMessage);
       toast(errMessage, 'error');
     } finally {
       setIsSubmitting(false);
@@ -330,10 +591,10 @@ export function StaffClassesPage() {
 
   const getClassSchedule = (cls: ClassItem) => {
     if (cls.schedule) return cls.schedule;
-    const classSessions = sessions.filter((s) => s.classId === cls.id);
+    const classSessions = sessions.filter((s) => s.classId === cls.id && s.status !== 'cancelled');
     if (classSessions.length > 0) {
       const first = classSessions[0];
-      return `${first.sessionDate} (${first.startTime} - ${first.endTime})`;
+      return `${first.sessionDate} (${first.startTime.slice(0, 5)} - ${first.endTime.slice(0, 5)})`;
     }
     return 'Chưa có lịch';
   };
@@ -342,16 +603,27 @@ export function StaffClassesPage() {
     <div className="portal-container">
       <PageHeader
         eyebrow="Huấn luyện"
-        title="Quản lý lớp học & xếp lịch"
+        title={isManager ? 'Quản lý lớp học & xếp lịch' : 'Lịch học trung tâm'}
+        subtitle={
+          !isManager
+            ? 'Chế độ xem lịch học dành cho Lễ tân & Huấn luyện viên (Chỉ Quản lý trung tâm mới được tạo, sửa, đổi lịch hoặc xóa lớp học).'
+            : undefined
+        }
         actions={
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleOpenModal}
-            data-testid="create-class-button"
-          >
-            + Tạo lớp học &amp; xếp lịch
-          </button>
+          isManager ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleOpenModal}
+              data-testid="create-class-button"
+            >
+              + Tạo lớp học &amp; xếp lịch
+            </button>
+          ) : (
+            <span className="badge badge-neutral" data-testid="read-only-schedule-badge">
+              Chế độ chỉ xem lịch học
+            </span>
+          )
         }
       />
 
@@ -424,11 +696,15 @@ export function StaffClassesPage() {
               Chưa có lớp học nào
             </h3>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: 460, margin: '0 auto 16px auto' }}>
-              Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.
+              {isManager
+                ? 'Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.'
+                : 'Hiện chưa có lớp học nào được xếp lịch trong hệ thống.'}
             </p>
-            <button type="button" className="btn-primary" onClick={handleOpenModal}>
-              + Tạo lớp học đầu tiên
-            </button>
+            {isManager && (
+              <button type="button" className="btn-primary" onClick={handleOpenModal}>
+                + Tạo lớp học đầu tiên
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -472,13 +748,48 @@ export function StaffClassesPage() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => setSelectedClassDetail(cls)}
-                      >
-                        Danh sách
-                      </button>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={() => setSelectedClassDetail(cls)}
+                          data-testid={`view-class-${cls.id}`}
+                        >
+                          Xem lịch
+                        </button>
+                        {isManager && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              onClick={() => handleOpenEditModal(cls)}
+                              data-testid={`edit-class-${cls.id}`}
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              onClick={() => handleOpenRescheduleModal(cls)}
+                              data-testid={`reschedule-class-${cls.id}`}
+                            >
+                              Đổi lịch
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              style={{
+                                color: 'var(--portal-danger, #fca5a5)',
+                                borderColor: 'rgba(252, 165, 165, 0.35)',
+                              }}
+                              onClick={() => handleOpenDeleteModal(cls)}
+                              data-testid={`delete-class-${cls.id}`}
+                            >
+                              Xóa
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -488,6 +799,7 @@ export function StaffClassesPage() {
         </div>
       )}
 
+      {/* Modal: Chi tiết lớp học & lịch các buổi học */}
       {selectedClassDetail && (
         <Modal title={`Chi tiết lớp học: ${selectedClassDetail.name}`} onClose={() => setSelectedClassDetail(null)}>
           <div style={{ display: 'grid', gap: 14 }}>
@@ -508,23 +820,469 @@ export function StaffClassesPage() {
                     <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
                       <div>
                         <strong>{s.sessionDate}</strong>
-                        <span className="muted" style={{ marginLeft: 8 }}>{s.startTime} – {s.endTime}</span>
+                        <span className="muted" style={{ marginLeft: 8 }}>{s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)}</span>
                       </div>
-                      <span className="badge badge-neutral">{s.status === 'scheduled' ? 'Sắp diễn ra' : s.status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="badge badge-neutral">
+                          {s.status === 'scheduled' ? 'Sắp diễn ra' : s.status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy'}
+                        </span>
+                        {isManager && s.status === 'scheduled' && (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            onClick={() => {
+                              const cls = selectedClassDetail;
+                              setSelectedClassDetail(null);
+                              handleOpenRescheduleModal(cls, s);
+                            }}
+                          >
+                            Đổi lịch
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+              {isManager ? (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => {
+                      const cls = selectedClassDetail;
+                      setSelectedClassDetail(null);
+                      handleOpenEditModal(cls);
+                    }}
+                  >
+                    Sửa thông tin lớp
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    style={{ color: 'var(--portal-danger, #fca5a5)' }}
+                    onClick={() => {
+                      const cls = selectedClassDetail;
+                      setSelectedClassDetail(null);
+                      handleOpenDeleteModal(cls);
+                    }}
+                  >
+                    Xóa lớp học
+                  </button>
+                </div>
+              ) : (
+                <div />
+              )}
               <button type="button" className="btn-secondary" onClick={() => setSelectedClassDetail(null)}>Đóng</button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Modal: Tạo lớp học và xếp lịch */}
-      {showModal && (
+      {/* SCRUM-131 Modal: Chỉnh sửa thông tin lớp học (Manager Only) */}
+      {isManager && editingClass && (
+        <Modal title={`Chỉnh sửa lớp học: ${editingClass.name}`} onClose={handleCloseEditModal}>
+          <form onSubmit={handleUpdateClass} style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="edit-class-name">
+                Tên lớp học *
+              </label>
+              <input
+                id="edit-class-name"
+                type="text"
+                required
+                className="portal-input"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                disabled={isSubmitting}
+              />
+              {isDuplicateEditClassName && (
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem', marginTop: 4 }}>
+                  Tên lớp học này đã tồn tại trong hệ thống.
+                </div>
+              )}
+            </div>
+
+            <div className="grid-2">
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="edit-class-discipline">
+                  Bộ môn *
+                </label>
+                <Select
+                  id="edit-class-discipline"
+                  className="portal-select"
+                  value={editFormData.disciplineId}
+                  onChange={(e) => setEditFormData({ ...editFormData, disciplineId: e.target.value })}
+                  disabled={isSubmitting}
+                >
+                  {disciplines.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="edit-class-capacity">
+                  Sức chứa tối đa *
+                </label>
+                <input
+                  id="edit-class-capacity"
+                  type="number"
+                  min={1}
+                  max={100}
+                  required
+                  className="portal-input"
+                  value={editFormData.capacity}
+                  onChange={(e) => setEditFormData({ ...editFormData, capacity: Number(e.target.value) })}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="edit-class-coach">
+                Huấn luyện viên phụ trách *
+              </label>
+              <Select
+                id="edit-class-coach"
+                className="portal-select"
+                value={editFormData.coachId}
+                onChange={(e) => setEditFormData({ ...editFormData, coachId: e.target.value })}
+                disabled={isSubmitting}
+              >
+                {coaches.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName} ({c.email})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="edit-class-room">
+                Phòng tập *
+              </label>
+              <Select
+                id="edit-class-room"
+                className="portal-select"
+                value={editFormData.roomId}
+                onChange={(e) => setEditFormData({ ...editFormData, roomId: e.target.value })}
+                disabled={isSubmitting}
+              >
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} - Sức chứa: {r.capacity} ({r.location || 'Khu trung tâm'})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="grid-2">
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="edit-class-level">
+                  Cấp độ
+                </label>
+                <Select
+                  id="edit-class-level"
+                  className="portal-select"
+                  value={editFormData.level}
+                  onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
+                  disabled={isSubmitting}
+                >
+                  <option value="all">Mọi cấp độ (All levels)</option>
+                  <option value="beginner">Người mới bắt đầu (Beginner)</option>
+                  <option value="intermediate">Trung cấp (Intermediate)</option>
+                  <option value="advanced">Nâng cao (Advanced)</option>
+                </Select>
+              </div>
+
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="edit-class-status">
+                  Trạng thái lớp
+                </label>
+                <Select
+                  id="edit-class-status"
+                  className="portal-select"
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  disabled={isSubmitting}
+                >
+                  <option value="active">Đang hoạt động (Active)</option>
+                  <option value="cancelled">Tạm ngưng / Đã hủy (Cancelled)</option>
+                  <option value="archived">Lưu trữ (Archived)</option>
+                </Select>
+              </div>
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="edit-class-desc">
+                Mô tả / Ghi chú
+              </label>
+              <textarea
+                id="edit-class-desc"
+                rows={2}
+                className="portal-textarea"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {editModalError && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: 'var(--portal-raised)',
+                  border: '1px solid var(--portal-danger, #fca5a5)',
+                  borderRadius: '6px',
+                  color: 'var(--portal-danger, #fca5a5)',
+                  fontSize: '0.88rem',
+                }}
+              >
+                {editModalError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <button type="button" className="btn-secondary" onClick={handleCloseEditModal} disabled={isSubmitting}>
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isSubmitting || isDuplicateEditClassName}
+                data-testid="submit-edit-class-button"
+              >
+                {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* SCRUM-131 Modal: Đổi lịch buổi học (Manager Only) */}
+      {isManager && reschedulingClass && (
+        <Modal title={`Đổi lịch học: ${reschedulingClass.name}`} onClose={handleCloseRescheduleModal}>
+          <form onSubmit={handleRescheduleSession} style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="reschedule-session-select">
+                Chọn buổi học cần đổi lịch
+              </label>
+              <Select
+                id="reschedule-session-select"
+                className="portal-select"
+                value={rescheduleFormData.sessionId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const found = sessions.find((s) => String(s.id) === val);
+                  setRescheduleFormData({
+                    sessionId: val,
+                    sessionDate: found ? found.sessionDate : getTodayString(),
+                    startTime: found ? found.startTime.slice(0, 5) : '08:00',
+                    endTime: found ? found.endTime.slice(0, 5) : '09:30',
+                  });
+                }}
+                disabled={isSubmitting}
+              >
+                {sessions
+                  .filter((s) => s.classId === reschedulingClass.id && s.status !== 'cancelled')
+                  .map((s) => (
+                    <option key={s.id} value={String(s.id)}>
+                      Buổi #{s.id}: {s.sessionDate} ({s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)})
+                    </option>
+                  ))}
+                <option value="NEW">+ Xếp thêm buổi học mới cho lớp này</option>
+              </Select>
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="reschedule-date">
+                Ngày học mới *
+              </label>
+              <DatePicker
+                id="reschedule-date"
+                required
+                min={getTodayString()}
+                value={rescheduleFormData.sessionDate}
+                onChange={(e) => setRescheduleFormData({ ...rescheduleFormData, sessionDate: e.target.value })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="grid-2">
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="reschedule-start">
+                  Giờ bắt đầu mới *
+                </label>
+                <TimePicker
+                  id="reschedule-start"
+                  required
+                  value={rescheduleFormData.startTime}
+                  onChange={(e) => setRescheduleFormData({ ...rescheduleFormData, startTime: e.target.value })}
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="portal-form-group">
+                <label className="portal-label" htmlFor="reschedule-end">
+                  Giờ kết thúc mới *
+                </label>
+                <TimePicker
+                  id="reschedule-end"
+                  required
+                  value={rescheduleFormData.endTime}
+                  onChange={(e) => setRescheduleFormData({ ...rescheduleFormData, endTime: e.target.value })}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            {rescheduleModalError && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: 'var(--portal-raised)',
+                  border: '1px solid var(--portal-danger, #fca5a5)',
+                  borderRadius: '6px',
+                  color: 'var(--portal-danger, #fca5a5)',
+                  fontSize: '0.88rem',
+                }}
+              >
+                {rescheduleModalError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <button type="button" className="btn-secondary" onClick={handleCloseRescheduleModal} disabled={isSubmitting}>
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isSubmitting}
+                data-testid="submit-reschedule-button"
+              >
+                {isSubmitting ? 'Đang cập nhật...' : 'Xác nhận đổi lịch'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* SCRUM-131 Modal: Xác nhận xóa lớp học 2 lần (Double Confirm) */}
+      {isManager && deletingClass && (
+        <Modal
+          title={
+            deleteConfirmStep === 1
+              ? 'Xác nhận xóa lớp học (Bước 1/2)'
+              : 'Xác nhận xóa vĩnh viễn (Bước 2/2)'
+          }
+          onClose={handleCloseDeleteModal}
+        >
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div className="kv-list">
+              <div className="kv-row"><span>Tên lớp học</span><strong>{deletingClass.name}</strong></div>
+              <div className="kv-row"><span>Mã lớp</span><strong>CLS-{deletingClass.id}</strong></div>
+              <div className="kv-row"><span>Bộ môn</span><strong>{getDisciplineName(deletingClass)}</strong></div>
+              <div className="kv-row"><span>Huấn luyện viên</span><strong>{getCoachName(deletingClass)}</strong></div>
+              <div className="kv-row">
+                <span>Số buổi học liên quan</span>
+                <strong>{sessions.filter((s) => s.classId === deletingClass.id).length} buổi</strong>
+              </div>
+            </div>
+
+            {deleteConfirmStep === 1 ? (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 8,
+                  backgroundColor: 'var(--portal-raised)',
+                  border: '1px solid var(--portal-border)',
+                  lineHeight: 1.5,
+                }}
+                data-testid="delete-step-1-box"
+              >
+                Bạn đang yêu cầu xóa lớp học <strong>{deletingClass.name}</strong>. Nếu đây là lớp học tạo nhầm và bạn muốn xóa khỏi hệ thống, vui lòng bấm <strong>&quot;Tiếp tục xác nhận lần 2&quot;</strong> để chuyển sang bước xác nhận cuối cùng.
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 8,
+                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid var(--portal-danger, #fca5a5)',
+                  color: 'var(--portal-danger, #fca5a5)',
+                  lineHeight: 1.5,
+                  fontWeight: 500,
+                }}
+                data-testid="delete-step-2-box"
+              >
+                <strong>CẢNH BÁO XÁC NHẬN LẦN 2 (DOUBLE CONFIRM):</strong>
+                <div style={{ marginTop: 6 }}>
+                  Thao tác này sẽ xóa vĩnh viễn lớp học <strong>{deletingClass.name}</strong> cùng toàn bộ các buổi học và danh sách đăng ký/chờ liên quan. Hành động này <strong>không thể hoàn tác</strong>. Bạn có chắc chắn đồng ý xóa?
+                </div>
+              </div>
+            )}
+
+            {deleteModalError && (
+              <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+                {deleteModalError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              {deleteConfirmStep === 1 ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleCloseDeleteModal}
+                    disabled={isSubmitting}
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setDeleteConfirmStep(2)}
+                    data-testid="delete-confirm-step1-btn"
+                  >
+                    Tiếp tục xác nhận lần 2
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setDeleteConfirmStep(1)}
+                    disabled={isSubmitting}
+                  >
+                    Quay lại bước 1
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+                    onClick={handleConfirmDeleteClass}
+                    disabled={isSubmitting}
+                    data-testid="delete-confirm-step2-btn"
+                  >
+                    {isSubmitting ? 'Đang xóa...' : 'Xác nhận xóa vĩnh viễn'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Tạo lớp học và xếp lịch (Manager Only) */}
+      {isManager && showModal && (
         <Modal title="Tạo lớp học & xếp lịch" onClose={handleCloseModal}>
           <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">

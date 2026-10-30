@@ -24,7 +24,11 @@ export function PortalShell() {
   const mainRef = useRef<HTMLElement>(null);
   const isMember = user?.role === 'MEMBER';
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
-  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => item.to === '/member/profile' ? { ...item, label: profileLabel } : item);
+  const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => {
+    if (item.to === '/member/profile') return { ...item, label: profileLabel };
+    if (item.to === '/staff/classes' && user?.role === 'STAFF') return { ...item, label: 'Xem lịch học trung tâm' };
+    return item;
+  });
   const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? 'Không gian của bạn';
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
 

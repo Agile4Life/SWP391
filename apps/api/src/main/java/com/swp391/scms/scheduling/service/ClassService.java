@@ -1,5 +1,6 @@
 package com.swp391.scms.scheduling.service;
 
+import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.facilities.entity.Discipline;
@@ -8,6 +9,8 @@ import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.facilities.repository.RoomRepository;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
@@ -18,11 +21,13 @@ import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
+import com.swp391.scms.scheduling.repository.ClassWaitlistRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,10 +35,11 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
- * SCRUM-72: class and class-session management.
+ * SCRUM-72 & SCRUM-131: class and class-session management.
  *
  * <p>Schedule-conflict (Trigger P3) is enforced by the database; violations surface as
  * {@link org.springframework.dao.DataIntegrityViolationException} and are translated to
@@ -51,6 +57,7 @@ public class ClassService {
     private final GymClassRepository gymClasses;
     private final ClassSessionRepository sessions;
     private final ClassEnrollmentRepository enrollments;
+    private final ClassWaitlistRepository waitlists;
     private final DisciplineRepository disciplines;
     private final CoachRepository coaches;
     private final RoomRepository rooms;
@@ -65,9 +72,23 @@ public class ClassService {
                         RoomRepository rooms,
                         SchedulingMapper mapper,
                         Clock clock) {
+        this(gymClasses, sessions, enrollments, null, disciplines, coaches, rooms, mapper, clock);
+    }
+
+    @Autowired
+    public ClassService(GymClassRepository gymClasses,
+                        ClassSessionRepository sessions,
+                        ClassEnrollmentRepository enrollments,
+                        ClassWaitlistRepository waitlists,
+                        DisciplineRepository disciplines,
+                        CoachRepository coaches,
+                        RoomRepository rooms,
+                        SchedulingMapper mapper,
+                        Clock clock) {
         this.gymClasses = gymClasses;
         this.sessions = sessions;
         this.enrollments = enrollments;
+        this.waitlists = waitlists;
         this.disciplines = disciplines;
         this.coaches = coaches;
         this.rooms = rooms;
@@ -81,6 +102,7 @@ public class ClassService {
      * If sessionDate, startTime, and endTime are provided, schedules the first session atomically.
      */
     @Transactional
+    @Audited(action = "CLASS_CREATE", entity = "classes")
     public GymClassDto createClass(CreateClassRequest request) {
         Discipline discipline = disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
@@ -140,7 +162,99 @@ public class ClassService {
             sessions.saveAndFlush(initialSession);
         }
 
-        return mapper.toDto(savedClass);
+        return mapper.toDto(savedClass != null ? savedClass : gymClass);
+    }
+
+    /**
+     * SCRUM-131 AC: Manager updates an existing class (name, discipline, coach, room, capacity, level, description, status).
+     */
+    @Transactional
+    @Audited(action = "CLASS_UPDATE", entity = "classes")
+    public GymClassDto updateClass(Long classId, UpdateClassRequest request) {
+        GymClass gymClass = gymClasses.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+
+        Discipline discipline = disciplines.findById(request.disciplineId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
+
+        Coach coach = coaches.findById(request.coachId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
+        if (!COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_COACH_INACTIVE",
+                    "error.scheduling.coach_inactive",
+                    null,
+                    "Coach is not active");
+        }
+
+        Room room = rooms.findById(request.roomId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.room", request.roomId()));
+        if (!ROOM_AVAILABLE.equalsIgnoreCase(room.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_ROOM_UNAVAILABLE",
+                    "error.scheduling.room_unavailable",
+                    null,
+                    "Room is not available for scheduling");
+        }
+
+        long bookedCount = enrollments.countByGymClassIdAndStatus(classId, ENROLLMENT_BOOKED);
+        if (request.capacity() < bookedCount) {
+            throw new BadRequestException(
+                    "SCHEDULING_CAPACITY_BELOW_BOOKED",
+                    "error.scheduling.capacity_below_booked",
+                    new Object[]{bookedCount},
+                    "Capacity cannot be less than current booked students (" + bookedCount + ")");
+        }
+
+        Long oldCoachId = gymClass.getCoach() != null ? gymClass.getCoach().getUserId() : null;
+        Long oldRoomId = gymClass.getRoom() != null ? gymClass.getRoom().getId() : null;
+
+        gymClass.setName(request.name().trim());
+        gymClass.setDiscipline(discipline);
+        gymClass.setCoach(coach);
+        gymClass.setRoom(room);
+        gymClass.setCapacity(request.capacity());
+        gymClass.setLevel(request.level() != null ? request.level() : "all");
+        gymClass.setDescription(request.description());
+        if (request.status() != null && !request.status().isBlank()) {
+            gymClass.setStatus(request.status());
+        }
+        gymClass.setUpdatedAt(LocalDateTime.now(clock));
+
+        GymClass savedClass = gymClasses.saveAndFlush(gymClass);
+
+        // If coach or room changed, re-validate scheduled sessions via DB trigger P3
+        if (!Objects.equals(oldCoachId, coach.getUserId()) || !Objects.equals(oldRoomId, room.getId())) {
+            List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId);
+            if (classSessions != null) {
+                for (ClassSession s : classSessions) {
+                    if (SESSION_SCHEDULED.equalsIgnoreCase(s.getStatus())) {
+                        s.setUpdatedAt(LocalDateTime.now(clock));
+                        sessions.saveAndFlush(s);
+                    }
+                }
+            }
+        }
+
+        return mapper.toDto(savedClass != null ? savedClass : gymClass);
+    }
+
+    /**
+     * SCRUM-131 AC: Manager deletes a class (after double confirmation on UI).
+     */
+    @Transactional
+    @Audited(action = "CLASS_DELETE", entity = "classes")
+    public void deleteClass(Long classId) {
+        GymClass gymClass = gymClasses.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+
+        if (waitlists != null) {
+            waitlists.deleteByGymClassId(classId);
+        }
+        enrollments.deleteByGymClassId(classId);
+        sessions.deleteByGymClassId(classId);
+        gymClasses.delete(gymClass);
+        gymClasses.flush();
     }
 
     /**
@@ -148,6 +262,7 @@ public class ClassService {
      * session may not be placed in the past. Trigger P3 rejects overlaps at the database.
      */
     @Transactional
+    @Audited(action = "SESSION_CREATE", entity = "class_sessions")
     public ClassSessionDto createSession(Long classId, CreateSessionRequest request) {
         GymClass gymClass = gymClasses.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
@@ -196,6 +311,58 @@ public class ClassService {
 
         ClassSession saved = sessions.saveAndFlush(session);
         return mapper.toDto(saved, countBooked(saved));
+    }
+
+    /**
+     * SCRUM-131 AC: Manager reschedules an existing class session.
+     * Trigger P3 rejects coach/room overlaps at the database.
+     */
+    @Transactional
+    @Audited(action = "SESSION_RESCHEDULE", entity = "class_sessions")
+    public ClassSessionDto rescheduleSession(Long classId, Long sessionId, RescheduleSessionRequest request) {
+        GymClass gymClass = gymClasses.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+
+        ClassSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
+
+        if (session.getGymClass() == null || !classId.equals(session.getGymClass().getId())) {
+            throw new ResourceNotFoundException("resource.class_session", sessionId);
+        }
+
+        if ("cancelled".equalsIgnoreCase(session.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_SESSION_CANCELLED",
+                    "error.scheduling.session_cancelled",
+                    null,
+                    "This session has been cancelled");
+        }
+
+        if (gymClass.getStatus() != null && !CLASS_ACTIVE.equalsIgnoreCase(gymClass.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_CLASS_INACTIVE",
+                    "error.scheduling.class_inactive",
+                    null,
+                    "Class is currently inactive");
+        }
+
+        if (!request.endTime().isAfter(request.startTime())) {
+            throw new BadRequestException(
+                    "SCHEDULING_INVALID_TIME_RANGE",
+                    "error.scheduling.invalid_time_range",
+                    null,
+                    "End time must be after start time");
+        }
+
+        SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
+
+        session.setSessionDate(request.sessionDate());
+        session.setStartTime(request.startTime());
+        session.setEndTime(request.endTime());
+        session.setUpdatedAt(LocalDateTime.now(clock));
+
+        ClassSession saved = sessions.saveAndFlush(session);
+        return mapper.toDto(saved != null ? saved : session, countBooked(saved != null ? saved : session));
     }
 
     /**
