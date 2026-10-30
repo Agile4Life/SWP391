@@ -125,6 +125,14 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
+                    // 1:1 Coach Bookings & Favorite Disciplines (SCRUM-133)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coaches").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/available-slots").authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/coach-bookings/*").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
+                    .requestMatchers("/api/v1/members/me/favorite-disciplines/**", "/api/v1/members/me/favorite-disciplines").hasRole("MEMBER")
+
                     // Users, Roles, Member Lookup & Facilities Catalog
                     .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").hasRole("CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/members/lookup").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
