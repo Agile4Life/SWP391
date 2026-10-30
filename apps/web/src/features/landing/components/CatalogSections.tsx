@@ -19,16 +19,17 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
 
   const packages = catalog.packages.filter(pkg => {
     if (pkg.status !== 'active') return false;
-    if (!longTerm) return true;
-    if (pkg.durationDays < 90) return false;
+    // Trang đầu: chỉ hiển thị 3 gói 1 tháng (Bạc, Vàng, Platinum)
+    if (!longTerm) return pkg.durationDays < 90;
+    // Phần đồng hành dài hạn: mục 6 tháng có 3 gói, mục 12 tháng có 3 gói
     if (termFilter === '6m') return pkg.durationDays >= 90 && pkg.durationDays <= 200;
     if (termFilter === '12m') return pkg.durationDays > 200;
-    return true;
+    return false;
   });
 
   return <>
     <div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập">
-      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>Tất cả gói tập</button>
+      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>Gói 1 tháng</button>
       <button type="button" aria-pressed={longTerm} onClick={() => { setLongTerm(true); setTermFilter('6m'); }}>Đồng hành dài hạn</button>
     </div>
     {longTerm && (
