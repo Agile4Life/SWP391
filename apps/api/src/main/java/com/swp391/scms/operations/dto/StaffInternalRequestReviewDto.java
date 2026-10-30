@@ -8,3 +8,4 @@ public record StaffInternalRequestReviewDto(
 
         String managerNotes
 ) {}
+

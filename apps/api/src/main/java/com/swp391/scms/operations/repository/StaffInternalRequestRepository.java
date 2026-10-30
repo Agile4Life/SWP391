@@ -24,3 +24,4 @@ public interface StaffInternalRequestRepository extends JpaRepository<StaffInter
     List<StaffInternalRequest> findWithFilters(@Param("status") String status,
                                               @Param("requestType") String requestType);
 }
+

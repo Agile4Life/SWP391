@@ -85,8 +85,8 @@ public class StaffInternalRequestService {
                         mgr.getId(),
                         "Đơn từ nội bộ mới cần duyệt",
                         String.format("%s (%s) đã gửi đơn %s: %s", user.getFullName(), roleCode, type, saved.getTitle()),
-                        "INTERNAL_REQUEST",
-                        "INTERNAL_REQUEST",
+                        "system",
+                        null,
                         saved.getId()
                 );
             }
@@ -175,8 +175,8 @@ public class StaffInternalRequestService {
                     saved.getUser().getId(),
                     title,
                     message,
-                    "INTERNAL_REQUEST",
-                    "INTERNAL_REQUEST",
+                    "system",
+                    null,
                     saved.getId()
             );
         }

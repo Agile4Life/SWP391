@@ -103,8 +103,8 @@ class StaffInternalRequestServiceTest {
                 eq(1L),
                 contains("cần duyệt"),
                 anyString(),
-                eq("INTERNAL_REQUEST"),
-                eq("INTERNAL_REQUEST"),
+                eq("system"),
+                isNull(),
                 eq(100L)
         );
     }
@@ -196,8 +196,8 @@ class StaffInternalRequestServiceTest {
                 eq(10L),
                 contains("đã được duyệt"),
                 contains("CHẤP THUẬN"),
-                eq("INTERNAL_REQUEST"),
-                eq("INTERNAL_REQUEST"),
+                eq("system"),
+                isNull(),
                 eq(200L)
         );
     }

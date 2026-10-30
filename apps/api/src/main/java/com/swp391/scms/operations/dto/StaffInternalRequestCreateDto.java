@@ -18,3 +18,4 @@ public record StaffInternalRequestCreateDto(
         String targetShift,
         Long replacementUserId
 ) {}
+

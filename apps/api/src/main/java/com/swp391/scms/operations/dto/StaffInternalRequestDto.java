@@ -25,3 +25,4 @@ public record StaffInternalRequestDto(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}
+
