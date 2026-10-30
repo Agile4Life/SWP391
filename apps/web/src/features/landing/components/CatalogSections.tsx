@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
 import { sessionDate } from '../publicCatalog';
@@ -73,7 +73,7 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
           <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
           <Link
             className="fit-pill"
-            style={isFeatured ? { background: '#202020', color: '#faf9f6' } : undefined}
+            style={isFeatured ? { background: '#ffffff', color: '#202020' } : undefined}
             to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}
           >
             <span>Chọn gói tập</span>

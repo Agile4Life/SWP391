@@ -438,9 +438,9 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-plan-featured { background: var(--fit-salmon); color: #32211b; }
 .fit-plan-featured > p { color: #493127; }
 .fit-plan-featured li > span { color: #604237; }
-.fit-plan-featured .fit-pill { background: #202020 !important; color: #faf9f6 !important; }
-.fit-plan-featured .fit-pill:hover { background: #353535 !important; color: #ffffff !important; }
-.fit-plan-featured .fit-round-arrow { background: #faf9f6 !important; color: #202020 !important; }
+.fit-plan-featured .fit-pill { background: #ffffff !important; color: #202020 !important; }
+.fit-plan-featured .fit-pill:hover { background: #f2eee9 !important; color: #202020 !important; }
+.fit-plan-featured .fit-round-arrow { background: #202020 !important; color: #ffffff !important; }
 .fit-plan-featured .fit-plan-period { background: #202020; color: #faf9f6; }
 .fit-final-cta { position: relative; margin: 110px auto 0; padding: 70px 8.5%; background: var(--fit-salmon); color: var(--fit-ink); overflow: hidden; }
 .fit-final-cta .fit-kicker { color: #5c3b31; }

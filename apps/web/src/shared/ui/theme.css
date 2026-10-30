@@ -71,9 +71,9 @@
 :root[data-theme='light'] .fit-site :is(.fit-hero-action > span, .fit-hero-index) { color: #68645f; }
 :root[data-theme='light'] .fit-menu { color: #202020; border-color: #ccc8c2; }
 :root[data-theme='light'] .fit-pill { background: #ce9180; color: #202020; }
-:root[data-theme='light'] .fit-plan-featured .fit-pill { background: #202020 !important; color: #faf9f6 !important; }
-:root[data-theme='light'] .fit-plan-featured .fit-pill:hover { background: #353535 !important; color: #ffffff !important; }
-:root[data-theme='light'] .fit-plan-featured .fit-round-arrow { background: #faf9f6 !important; color: #202020 !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-pill { background: #ffffff !important; color: #202020 !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-pill:hover { background: #f2eee9 !important; color: #202020 !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-round-arrow { background: #202020 !important; color: #ffffff !important; }
 :root[data-theme='light'] .fit-plan-featured .fit-plan-period { background: #202020; color: #faf9f6; }
 :root[data-theme='light'] .fit-pill:hover { background: #e1aa98; }
 :root[data-theme='light'] .fit-round-arrow { color: #202020; }
