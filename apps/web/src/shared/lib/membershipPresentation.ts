@@ -28,8 +28,17 @@ export function getPackageDetails(pkg: MembershipPackage) {
     'Thanh toán và kích hoạt tại quầy lễ tân',
   ];
 
+  let tierBadge = `Gói tập • ${pkg.durationDays} ngày`;
+  if (pkg.durationDays >= 360) {
+    tierBadge = `Gói 12 tháng • 365 ngày (Tiết kiệm 25%)`;
+  } else if (pkg.durationDays >= 170) {
+    tierBadge = `Gói 6 tháng • 180 ngày (Tiết kiệm ~17%)`;
+  } else if (pkg.durationDays === 30) {
+    tierBadge = `Gói tháng • 30 ngày`;
+  }
+
   return {
-    tierBadge: `Gói tập • ${pkg.durationDays} ngày`,
+    tierBadge,
     summary: summary || `Gói tập có thời hạn ${pkg.durationDays} ngày.`,
     benefits: bulletPerks.length > 0 ? bulletPerks : defaultBenefits,
   };

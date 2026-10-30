@@ -15,18 +15,40 @@ export function CatalogStatus({ loading, retry }: { loading: boolean; retry: () 
 
 export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog; joinPath: string }) {
   const [longTerm, setLongTerm] = useState(false);
-  const packages = catalog.packages.filter(pkg => pkg.status === 'active' && (!longTerm || pkg.durationDays >= 90));
+  const [termFilter, setTermFilter] = useState<'all' | '6m' | '12m'>('all');
+
+  const packages = catalog.packages.filter(pkg => {
+    if (pkg.status !== 'active') return false;
+    if (!longTerm) return true;
+    if (pkg.durationDays < 90) return false;
+    if (termFilter === '6m') return pkg.durationDays >= 90 && pkg.durationDays <= 200;
+    if (termFilter === '12m') return pkg.durationDays > 200;
+    return true;
+  });
+
   return <>
     <div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập">
-      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>Tất cả gói tập</button>
+      <button type="button" aria-pressed={!longTerm} onClick={() => { setLongTerm(false); setTermFilter('all'); }}>Tất cả gói tập</button>
       <button type="button" aria-pressed={longTerm} onClick={() => setLongTerm(true)}>Đồng hành dài hạn</button>
     </div>
+    {longTerm && (
+      <div className="fit-pricing-switch fit-schedule-switch" style={{ margin: '0 auto 28px', maxWidth: '560px' }} aria-label="Lọc thời hạn dài hạn">
+        <button type="button" aria-pressed={termFilter === 'all'} onClick={() => setTermFilter('all')}>Tất cả dài hạn</button>
+        <button type="button" aria-pressed={termFilter === '6m'} onClick={() => setTermFilter('6m')}>Gói 6 tháng (Tiết kiệm ~17%)</button>
+        <button type="button" aria-pressed={termFilter === '12m'} onClick={() => setTermFilter('12m')}>Gói 12 tháng (Tiết kiệm 25%)</button>
+      </div>
+    )}
     {packages.length === 0 && <p className="fit-catalog-state" role="status">Chưa có gói tập phù hợp.</p>}
-    <div className="fit-pricing-grid" key={String(longTerm)}>
+    <div className="fit-pricing-grid" key={`${String(longTerm)}-${termFilter}`}>
       {packages.map((pkg, index) => {
         const details = getPackageDetails(pkg);
         return <article key={pkg.id} className={`fit-plan ${index === 1 ? 'fit-plan-featured' : ''}`} data-reveal="lift">
-          <span className="fit-plan-period">{pkg.durationDays} ngày</span><h3>{pkg.name}</h3>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
+            <span className="fit-plan-period">{pkg.durationDays} ngày</span>
+            {pkg.durationDays >= 360 && <span className="fit-plan-period" style={{ background: 'var(--fit-salmon, #e07a5f)', color: '#281b17', fontWeight: 600 }}>Tặng 3 tháng (Tiết kiệm 25%)</span>}
+            {pkg.durationDays >= 170 && pkg.durationDays < 360 && <span className="fit-plan-period" style={{ background: '#eeeae5', color: '#67524b', fontWeight: 600 }}>Tiết kiệm ~17%</span>}
+          </div>
+          <h3>{pkg.name}</h3>
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} ngày</span></div>
           <p className="fit-plan-summary">{details.summary}</p>
           <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
