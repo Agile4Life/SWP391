@@ -97,6 +97,14 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
+                    // Coach Reviews & Monthly Leaderboard (SCRUM-134)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coaching/reviews").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/reviews/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/reviews/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/leaderboard").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
+                    .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",

@@ -13,6 +13,13 @@ import {
   type CoachBookingDto,
   type CoachQuotaStatusDto,
 } from '../coachBookingApi';
+import {
+  createCoachReview,
+  getMyCoachReviews,
+  getCoachLeaderboard,
+  type CoachReviewDto,
+  type CoachLeaderboardItemDto,
+} from '../../coaching/coachReviewApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 
@@ -50,6 +57,8 @@ export function MemberCoachBookingView({
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
+  const [leaderboard, setLeaderboard] = useState<CoachLeaderboardItemDto[]>([]);
+  const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -66,28 +75,39 @@ export function MemberCoachBookingView({
   // Payment Checkout Modal State
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
 
+  // Review Modal State (SCRUM-134)
+  const [reviewTargetBooking, setReviewTargetBooking] = useState<CoachBookingDto | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>('');
+  const [reviewAnonymous, setReviewAnonymous] = useState<boolean>(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
+
   // Cancel Modal State
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const daysList = nextDays(10);
 
-  // Load coaches, member bookings and quota status
+  // Load coaches, member bookings, reviews and leaderboard
   useEffect(() => {
     let active = true;
     async function init() {
       setLoadingCoaches(true);
       setError('');
       try {
-        const [coachList, bookingsList, quota] = await Promise.all([
+        const [coachList, bookingsList, quota, board, reviews] = await Promise.all([
           getCoaches(),
           getMyCoachBookings(),
           getMemberQuotaStatus().catch(() => null),
+          getCoachLeaderboard().catch(() => []),
+          getMyCoachReviews().catch(() => []),
         ]);
         if (!active) return;
         setCoaches(coachList);
         setMyBookings(bookingsList);
         if (quota) setQuotaStatus(quota);
+        setLeaderboard(board);
+        setMyReviews(reviews);
         if (coachList.length > 0 && selectedCoachId === null) {
           setSelectedCoachId(coachList[0].id);
         }
@@ -126,7 +146,6 @@ export function MemberCoachBookingView({
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
     setModalSlot(slot);
     setError('');
-    // Automatically set default payment method based on available quota
     if (hasRemainingQuota) {
       setPaymentMethod('package_quota');
     } else {
@@ -152,7 +171,6 @@ export function MemberCoachBookingView({
       setModalSlot(null);
       setNotes('');
 
-      // Refresh slots, bookings, and quota status
       const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
         getAvailableSlots(selectedCoach.id, selectedDate),
         getMyCoachBookings(),
@@ -164,7 +182,6 @@ export function MemberCoachBookingView({
       onBookingSuccess?.();
 
       if (paymentMethod === 'hourly_pay') {
-        // Open payment modal
         setPaymentModalBooking(created);
       } else {
         setNotice(
@@ -178,6 +195,36 @@ export function MemberCoachBookingView({
     }
   }
 
+  async function handleConfirmReview() {
+    if (!reviewTargetBooking) return;
+    setReviewSubmitting(true);
+    setError('');
+    try {
+      await createCoachReview({
+        coachId: reviewTargetBooking.coachId,
+        bookingId: reviewTargetBooking.id,
+        rating: reviewRating,
+        comment: reviewComment.trim() || undefined,
+        isAnonymous: reviewAnonymous,
+      });
+
+      const [updatedReviews, updatedLeaderboard] = await Promise.all([
+        getMyCoachReviews().catch(() => []),
+        getCoachLeaderboard().catch(() => []),
+      ]);
+      setMyReviews(updatedReviews);
+      setLeaderboard(updatedLeaderboard);
+
+      setNotice(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${reviewTargetBooking.coachName} thành công.`);
+      setReviewTargetBooking(null);
+      setReviewComment('');
+    } catch (err: any) {
+      setError(err.message || 'Không thể gửi đánh giá.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
   async function handleConfirmCancel() {
     if (!cancelTarget) return;
     setCancelling(true);
@@ -186,7 +233,6 @@ export function MemberCoachBookingView({
       setNotice(`Đã hủy lịch tập 1:1 với HLV ${cancelTarget.coachName} thành công.`);
       setCancelTarget(null);
 
-      // Refresh slots, bookings, and quota
       if (selectedCoachId) {
         const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
           getAvailableSlots(selectedCoachId, selectedDate),
@@ -261,6 +307,79 @@ export function MemberCoachBookingView({
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Top Coach Honor Ribbon (SCRUM-134) */}
+      {leaderboard.length > 0 && (
+        <div
+          className="portal-card"
+          style={{
+            padding: '16px 20px',
+            background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12) 0%, rgba(206, 145, 128, 0.04) 100%)',
+            borderColor: 'rgba(234, 179, 8, 0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ margin: 0, fontSize: 15, fontWeight: 750, color: 'var(--portal-paper, #202020)' }}>
+              🏆 Bảng Vinh Danh Top Huấn Luyện Viên Xuất Sắc Tháng Này
+            </h4>
+            <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+              Dựa trên đánh giá và mức độ hài lòng của hội viên
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 12,
+            }}
+          >
+            {leaderboard.slice(0, 3).map((item) => (
+              <div
+                key={item.coachId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'var(--portal-surface, #ffffff)',
+                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: item.rankPosition === 1 ? '#eab308' : item.rankPosition === 2 ? '#94a3b8' : '#d97706',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    flexShrink: 0,
+                  }}
+                >
+                  #{item.rankPosition}
+                </div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 750, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {item.coachName}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#eab308', fontWeight: 700 }}>
+                    ⭐ {item.averageRating?.toFixed(1) || '5.0'} / 5.0 • {item.badge || 'Top Coach'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -518,7 +637,6 @@ export function MemberCoachBookingView({
                 );
               }
 
-              // Disabled Slots (Too soon or busy)
               let badgeText = 'Đã kín lịch';
               let badgeColor = 'var(--portal-muted, #71717a)';
               if (slot.reason === 'too_soon') {
@@ -579,6 +697,8 @@ export function MemberCoachBookingView({
           <div style={{ display: 'grid', gap: 10 }}>
             {myBookings.map((b) => {
               const isConfirmed = b.status === 'confirmed';
+              const existingReview = myReviews.find((r) => r.bookingId === b.id);
+
               return (
                 <div
                   key={b.id}
@@ -621,6 +741,11 @@ export function MemberCoachBookingView({
                         >
                           {isConfirmed ? 'Đã xác nhận' : 'Đã hủy'}
                         </span>
+                        {existingReview && (
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#eab308' }}>
+                            ⭐ Đã đánh giá ({existingReview.rating} sao)
+                          </span>
+                        )}
                       </div>
                       <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
                         📅 Ngày <strong>{b.bookingDate}</strong> • ⏰ <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? '🎁 Quyền lợi gói tập' : `💳 Trả phí: ${formatPrice(b.hourlyRate)}`}
@@ -634,7 +759,28 @@ export function MemberCoachBookingView({
                   </div>
 
                   {isConfirmed && (
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                      {/* Button Đánh giá HLV (SCRUM-134) */}
+                      {!existingReview ? (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          style={{ color: '#d97706', borderColor: '#fcd34d' }}
+                          onClick={() => {
+                            setReviewTargetBooking(b);
+                            setReviewRating(5);
+                            setReviewComment('');
+                            setReviewAnonymous(false);
+                          }}
+                        >
+                          ⭐ Đánh giá HLV
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                          ✓ Đã gửi review
+                        </span>
+                      )}
+
                       {b.paymentMethod !== 'package_quota' && (
                         <button
                           type="button"
@@ -644,6 +790,7 @@ export function MemberCoachBookingView({
                           Xem thông tin thanh toán
                         </button>
                       )}
+
                       <button
                         type="button"
                         className="btn-secondary btn-sm"
@@ -660,6 +807,106 @@ export function MemberCoachBookingView({
           </div>
         )}
       </section>
+
+      {/* Modal Đánh giá Huấn luyện viên (SCRUM-134) */}
+      {reviewTargetBooking && (
+        <Modal
+          title={`Đánh giá Huấn luyện viên: ${reviewTargetBooking.coachName}`}
+          onClose={() => setReviewTargetBooking(null)}
+        >
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div
+              style={{
+                padding: 12,
+                borderRadius: 10,
+                background: 'var(--portal-raised, #f4f4f5)',
+                fontSize: 13,
+              }}
+            >
+              Buổi tập 1:1 ngày <strong>{reviewTargetBooking.bookingDate}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                Mức độ hài lòng của bạn:
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    style={{
+                      border: '1px solid',
+                      borderColor: star <= reviewRating ? '#eab308' : 'var(--portal-border, #e4e2de)',
+                      background: star <= reviewRating ? 'rgba(234, 179, 8, 0.15)' : 'transparent',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                    }}
+                  >
+                    {star <= reviewRating ? '⭐' : '☆'}
+                  </button>
+                ))}
+                <span style={{ alignSelf: 'center', fontWeight: 700, fontSize: 14, color: '#eab308', marginLeft: 8 }}>
+                  {reviewRating === 5
+                    ? 'Xuất sắc (5 sao)'
+                    : reviewRating === 4
+                    ? 'Rất tốt (4 sao)'
+                    : reviewRating === 3
+                    ? 'Bình thường (3 sao)'
+                    : reviewRating === 2
+                    ? 'Chưa hài lòng (2 sao)'
+                    : 'Rất thất vọng (1 sao)'}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                Nhận xét chi tiết (Gửi tới Quản lý và Huấn luyện viên):
+              </label>
+              <textarea
+                rows={4}
+                className="portal-input"
+                style={{ width: '100%', resize: 'vertical' }}
+                placeholder="Chia sẻ về tác phong, chuyên môn, sự nhiệt tình hoặc điểm cần cải thiện của HLV..."
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+              />
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={reviewAnonymous}
+                onChange={(e) => setReviewAnonymous(e.target.checked)}
+              />
+              <span>Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)</span>
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={reviewSubmitting}
+                onClick={() => setReviewTargetBooking(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={reviewSubmitting}
+                onClick={() => void handleConfirmReview()}
+              >
+                {reviewSubmitting ? 'Đang gửi…' : 'Gửi đánh giá'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal Xác nhận Đặt lịch */}
       {modalSlot && selectedCoach && (

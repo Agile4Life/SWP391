@@ -81,5 +81,11 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             """)
     List<ClassSession> findActiveByCoachAndDate(@Param("coachId") Long coachId, @Param("date") LocalDate date);
 
+    @Query("""
+            select s from ClassSession s
+            where s.gymClass.coach.userId = :coachId
+            """)
+    List<ClassSession> findByCoachId(@Param("coachId") Long coachId);
+
     void deleteByGymClassId(Long classId);
 }

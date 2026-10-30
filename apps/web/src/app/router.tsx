@@ -33,6 +33,7 @@ import { UserManagerPage } from '../features/manager/UserManagerPage';
 import { ManagerReportsPage } from '../features/manager/ManagerReportsPage';
 import { ManagerCancellationPage } from '../features/manager/ManagerCancellationPage';
 import { ManagerAuditLogsPage } from '../features/manager/ManagerAuditLogsPage';
+import { ManagerCoachReviewsPage } from '../features/manager/ManagerCoachReviewsPage';
 
 export const router = createBrowserRouter([
   // Public Routes
@@ -204,6 +205,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/audit-logs',
             element: <ManagerAuditLogsPage />,
+          },
+          {
+            path: '/manager/coach-reviews',
+            element: <ManagerCoachReviewsPage />,
           },
         ],
       },
