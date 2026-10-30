@@ -75,7 +75,7 @@ export function MemberCoachBookingView({
   // Payment Checkout Modal State
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
 
-  // Review Modal State (SCRUM-134)
+  // Review Modal State
   const [reviewTargetBooking, setReviewTargetBooking] = useState<CoachBookingDto | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
@@ -310,7 +310,7 @@ export function MemberCoachBookingView({
         </div>
       )}
 
-      {/* Top Coach Honor Ribbon (SCRUM-134) */}
+      {/* Top Coach Honor Ribbon */}
       {leaderboard.length > 0 && (
         <div
           className="portal-card"
@@ -760,7 +760,7 @@ export function MemberCoachBookingView({
 
                   {isConfirmed && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {/* Button Đánh giá HLV (SCRUM-134) */}
+                      {/* Button Đánh giá HLV */}
                       {!existingReview ? (
                         <button
                           type="button"
@@ -808,7 +808,7 @@ export function MemberCoachBookingView({
         )}
       </section>
 
-      {/* Modal Đánh giá Huấn luyện viên (SCRUM-134) */}
+      {/* Modal Đánh giá Huấn luyện viên */}
       {reviewTargetBooking && (
         <Modal
           title={`Đánh giá Huấn luyện viên: ${reviewTargetBooking.coachName}`}

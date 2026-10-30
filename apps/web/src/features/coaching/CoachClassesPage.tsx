@@ -54,7 +54,7 @@ export function CoachClassesPage() {
   // Main Tab State: 'schedule' vs 'ranking'
   const [activeMainTab, setActiveMainTab] = useState<'schedule' | 'ranking'>('schedule');
 
-  // Ranking & Reviews Tab State (SCRUM-134)
+  // Ranking & Reviews Tab State
   const now = new Date();
   const [reviewYear, setReviewYear] = useState<number>(now.getFullYear());
   const [reviewMonth, setReviewMonth] = useState<number>(now.getMonth() + 1);
@@ -291,7 +291,7 @@ export function CoachClassesPage() {
             transition: 'all 0.2s ease',
           }}
         >
-          🏆 Đánh Giá & Bảng Xếp Hạng Tháng (SCRUM-134)
+          🏆 Đánh Giá & Bảng Xếp Hạng Tháng
         </button>
       </div>
 
@@ -558,7 +558,7 @@ export function CoachClassesPage() {
         </>
       )}
 
-      {/* Tab 2: Ranking & Reviews View (SCRUM-134) */}
+      {/* Tab 2: Ranking & Reviews View */}
       {activeMainTab === 'ranking' && (
         <div style={{ display: 'grid', gap: 28 }}>
           {/* Period selector */}

@@ -121,3 +121,4 @@ export async function getMyMonthlyReviews(): Promise<CoachMonthlyReviewDto[]> {
   const res = await apiFetch<CoachMonthlyReviewDto[]>('/coaching/monthly-reviews/my');
   return res ?? [];
 }
+
