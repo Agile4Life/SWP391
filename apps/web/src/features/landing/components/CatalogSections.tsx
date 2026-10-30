@@ -45,24 +45,14 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
         const isFeatured = index === 1;
         return <article key={pkg.id} className={`fit-plan ${isFeatured ? 'fit-plan-featured' : ''}`} data-reveal="lift">
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <span className="fit-plan-period" style={isFeatured ? { background: '#202020', color: '#faf9f6' } : undefined}>{pkg.durationDays} ngày</span>
+            <span className="fit-plan-period">{pkg.durationDays} ngày</span>
             {pkg.durationDays >= 360 && (
-              <span
-                className="fit-plan-period"
-                style={isFeatured
-                  ? { background: '#202020', color: '#faf9f6', fontWeight: 600 }
-                  : { background: 'var(--fit-salmon, #ce9180)', color: '#281b17', fontWeight: 600 }}
-              >
+              <span className="fit-plan-period fit-plan-period--highlight">
                 Tặng 3 tháng (Tiết kiệm 25%)
               </span>
             )}
             {pkg.durationDays >= 170 && pkg.durationDays < 360 && (
-              <span
-                className="fit-plan-period"
-                style={isFeatured
-                  ? { background: '#202020', color: '#faf9f6', fontWeight: 600 }
-                  : { background: '#eeeae5', color: '#67524b', fontWeight: 600 }}
-              >
+              <span className="fit-plan-period fit-plan-period--highlight">
                 Tiết kiệm ~17%
               </span>
             )}
@@ -73,7 +63,6 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
           <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
           <Link
             className="fit-pill"
-            style={isFeatured ? { background: '#ffffff', color: '#202020' } : undefined}
             to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}
           >
             <span>Chọn gói tập</span>

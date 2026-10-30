@@ -71,10 +71,23 @@
 :root[data-theme='light'] .fit-site :is(.fit-hero-action > span, .fit-hero-index) { color: #68645f; }
 :root[data-theme='light'] .fit-menu { color: #202020; border-color: #ccc8c2; }
 :root[data-theme='light'] .fit-pill { background: #ce9180; color: #202020; }
-:root[data-theme='light'] .fit-plan-featured .fit-pill { background: #ffffff !important; color: #202020 !important; }
-:root[data-theme='light'] .fit-plan-featured .fit-pill:hover { background: #f2eee9 !important; color: #202020 !important; }
+:root[data-theme='light'] .fit-plan-featured {
+  background: #202020 !important;
+  color: #faf9f6 !important;
+  border: 1.5px solid rgba(206, 145, 128, 0.45) !important;
+  box-shadow: 0 16px 36px rgba(32, 32, 32, 0.18) !important;
+}
+:root[data-theme='light'] .fit-plan-featured h3 { color: #ffffff !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-plan-price { color: #ce9180 !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-plan-price > span { color: #a8a29d !important; }
+:root[data-theme='light'] .fit-plan-featured > p { color: #c5bfb9 !important; }
+:root[data-theme='light'] .fit-plan-featured li { color: #ebe5df !important; }
+:root[data-theme='light'] .fit-plan-featured li > span { color: #ce9180 !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-plan-period { background: #2e2e2e !important; color: #e4dfda !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-plan-period--highlight { background: rgba(206, 145, 128, 0.22) !important; color: #f6d4c8 !important; border-color: rgba(206, 145, 128, 0.45) !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-pill { background: #ffffff !important; color: #202020 !important; font-weight: 650; }
+:root[data-theme='light'] .fit-plan-featured .fit-pill:hover { background: #f2eee9 !important; color: #1a1a1a !important; }
 :root[data-theme='light'] .fit-plan-featured .fit-round-arrow { background: #202020 !important; color: #ffffff !important; }
-:root[data-theme='light'] .fit-plan-featured .fit-plan-period { background: #202020; color: #faf9f6; }
 :root[data-theme='light'] .fit-pill:hover { background: #e1aa98; }
 :root[data-theme='light'] .fit-round-arrow { color: #202020; }
 :root[data-theme='light'] .fit-skip { background: #202020; color: #faf9f6; }
