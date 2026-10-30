@@ -240,4 +240,80 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).toContain('Đang chờ chỗ');
     expect(mocks.waitlists).toHaveBeenCalledTimes(2);
   });
+
+  it('SCRUM-132: groups sessions chronologically by day and blocks overlapping bookings for the member', async () => {
+    const bookedSession = {
+      ...session,
+      id: 8,
+      classId: 3,
+      className: 'Yoga Flow',
+      sessionDate: '2099-10-19',
+      startTime: '08:00:00',
+      endTime: '09:30:00',
+      bookedCount: 5,
+    };
+    const overlappingSession = {
+      ...session,
+      id: 9,
+      classId: 4,
+      className: 'Pilates Core',
+      disciplineName: 'Pilates',
+      sessionDate: '2099-10-19',
+      startTime: '08:30:00',
+      endTime: '10:00:00',
+      bookedCount: 2,
+    };
+    const nonOverlappingLaterSession = {
+      ...session,
+      id: 10,
+      classId: 5,
+      className: 'Boxing Burn',
+      disciplineName: 'Boxing',
+      sessionDate: '2099-10-19',
+      startTime: '10:00:00',
+      endTime: '11:00:00',
+      bookedCount: 4,
+    };
+
+    // Provide unsorted sessions to verify chronological sorting
+    mocks.sessions.mockResolvedValue([nonOverlappingLaterSession, overlappingSession, bookedSession]);
+    mocks.enrollments.mockResolvedValue([
+      {
+        id: 41,
+        classId: 3,
+        className: 'Yoga Flow',
+        memberId: 9,
+        sessionId: 8,
+        sessionDate: '2099-10-19',
+        startTime: '08:00:00',
+        endTime: '09:30:00',
+        status: 'booked',
+        enrolledAt: '2099-10-01T08:00:00',
+        cancelledAt: null,
+        cancelReason: null,
+      },
+    ]);
+
+    await render();
+
+    // Grouped under day-group-2099-10-19
+    expect(host.querySelector('[data-testid="day-group-2099-10-19"]')).not.toBeNull();
+
+    // Verify chronological card titles order: Yoga Flow (08:00), Pilates Core (08:30), Boxing Burn (10:00)
+    const titles = [...host.querySelectorAll('h3.row-card__title')].map((el) => el.textContent);
+    expect(titles).toEqual(['Yoga Flow', 'Pilates Core', 'Boxing Burn']);
+
+    // Overlapping session #9 (08:30-10:00) is marked and disabled
+    expect(host.querySelector('[data-testid="overlap-badge-9"]')).not.toBeNull();
+    const overlapBtn = host.querySelector('[data-testid="overlap-btn-9"]') as HTMLButtonElement;
+    expect(overlapBtn).not.toBeNull();
+    expect(overlapBtn.disabled).toBe(true);
+    expect(overlapBtn.textContent).toBe('Trùng giờ đã đặt');
+
+    // Non-overlapping adjacent session #10 (10:00-11:00) remains bookable
+    expect(host.querySelector('[data-testid="overlap-badge-10"]')).toBeNull();
+    const bookBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Đặt chỗ ngay') as HTMLButtonElement;
+    expect(bookBtn).not.toBeUndefined();
+    expect(bookBtn.disabled).toBe(false);
+  });
 });

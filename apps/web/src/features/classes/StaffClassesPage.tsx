@@ -134,6 +134,106 @@ export function StaffClassesPage() {
       (cls) => cls.id !== editingClass.id && cls.name.trim().toLowerCase() === normalizedEditName,
     );
 
+  // SCRUM-132: Phát hiện trùng lịch phòng tập hoặc HLV theo thời gian thực ngay trên form
+  const detectRoomOrCoachConflict = useCallback(
+    (
+      coachIdStr: string,
+      roomIdStr: string,
+      sessionDate: string,
+      startTime: string,
+      endTime: string,
+      excludeSessionId?: number | null,
+    ): string | null => {
+      if (!sessionDate || !startTime || !endTime || endTime <= startTime) return null;
+      const targetCoachId = coachIdStr ? Number(coachIdStr) : null;
+      const targetRoomId = roomIdStr ? Number(roomIdStr) : null;
+      const normStart = startTime.slice(0, 5);
+      const normEnd = endTime.slice(0, 5);
+
+      for (const s of sessions) {
+        if (s.status === 'cancelled') continue;
+        if (excludeSessionId && s.id === excludeSessionId) continue;
+        if (s.sessionDate !== sessionDate) continue;
+        const existStart = s.startTime.slice(0, 5);
+        const existEnd = s.endTime.slice(0, 5);
+        const overlaps = normStart < existEnd && normEnd > existStart;
+        if (!overlaps) continue;
+
+        const sExt = s as ClassSessionItem & {
+          roomId?: number;
+          roomName?: string;
+          coachId?: number;
+          coachName?: string;
+          className?: string;
+        };
+        const parentClass = classes.find((c) => c.id === s.classId);
+        const sRoomId = sExt.roomId ?? parentClass?.roomId;
+        const sCoachId = sExt.coachId ?? parentClass?.coachId;
+        const sClassName = sExt.className || parentClass?.name || `Lớp #${s.classId}`;
+        const sRoomName =
+          sExt.roomName ||
+          parentClass?.roomName ||
+          rooms.find((r) => r.id === sRoomId)?.name ||
+          `#${sRoomId}`;
+        const sCoachName =
+          sExt.coachName ||
+          parentClass?.coachName ||
+          coaches.find((c) => c.id === sCoachId)?.fullName ||
+          `#${sCoachId}`;
+
+        if (targetRoomId && sRoomId === targetRoomId) {
+          return `Trùng lịch phòng tập: Phòng "${sRoomName}" đã có lớp "${sClassName}" hoạt động trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`;
+        }
+        if (targetCoachId && sCoachId === targetCoachId) {
+          return `Trùng lịch Huấn luyện viên: HLV "${sCoachName}" đã có lịch dạy lớp "${sClassName}" trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`;
+        }
+      }
+      return null;
+    },
+    [sessions, classes, rooms, coaches],
+  );
+
+  const createScheduleConflictWarning = detectRoomOrCoachConflict(
+    formData.coachId,
+    formData.roomId,
+    formData.sessionDate,
+    formData.startTime,
+    formData.endTime,
+    null,
+  );
+
+  const rescheduleConflictWarning = reschedulingClass
+    ? detectRoomOrCoachConflict(
+        String(reschedulingClass.coachId || ''),
+        String(reschedulingClass.roomId || ''),
+        rescheduleFormData.sessionDate,
+        rescheduleFormData.startTime,
+        rescheduleFormData.endTime,
+        rescheduleFormData.sessionId && rescheduleFormData.sessionId !== 'NEW'
+          ? Number(rescheduleFormData.sessionId)
+          : null,
+      )
+    : null;
+
+  const editConflictWarning = (() => {
+    if (!editingClass) return null;
+    const classSessions = sessions.filter(
+      (s) => s.classId === editingClass.id && s.status !== 'cancelled',
+    );
+    for (const cs of classSessions) {
+      const conflict = detectRoomOrCoachConflict(
+        editFormData.coachId,
+        editFormData.roomId,
+        cs.sessionDate,
+        cs.startTime.slice(0, 5),
+        cs.endTime.slice(0, 5),
+        cs.id,
+      );
+      if (conflict) return conflict;
+    }
+    return null;
+  })();
+
   // BR-01 & SCRUM-131: Phân quyền truy cập và khóa quyền chỉnh sửa trên UI Lễ tân
   // Lễ tân (STAFF) và HLV (COACH) chỉ được XEM lịch học; chỉ CENTER_MANAGER (MANAGER) mới được Tạo/Sửa/Đổi lịch/Xóa
   const allowedRoles = ['MANAGER', 'STAFF', 'COACH'];
@@ -287,6 +387,12 @@ export function StaffClassesPage() {
       return;
     }
 
+    if (createScheduleConflictWarning) {
+      setModalError(createScheduleConflictWarning);
+      toast(createScheduleConflictWarning, 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const currentClassSignature = JSON.stringify({
@@ -349,9 +455,18 @@ export function StaffClassesPage() {
             apiErr.message.includes('session_conflict') ||
             apiErr.message.includes('khung giờ')));
 
-      const errMessage = isConflict
-        ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.'
-        : apiErr?.message || 'Có lỗi xảy ra khi tạo lớp học.';
+      const hasSpecificConflictMsg =
+        typeof apiErr?.message === 'string' &&
+        (apiErr.message.includes('Trùng lịch phòng tập') ||
+          apiErr.message.includes('Trùng lịch Huấn luyện viên') ||
+          apiErr.message.includes('Room schedule conflict') ||
+          apiErr.message.includes('Coach schedule conflict'));
+
+      const errMessage = hasSpecificConflictMsg
+        ? apiErr.message!
+        : isConflict
+          ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.'
+          : apiErr?.message || 'Có lỗi xảy ra khi tạo lớp học.';
 
       setModalError(errMessage);
       toast(errMessage, 'error');
@@ -410,6 +525,12 @@ export function StaffClassesPage() {
       return;
     }
 
+    if (editConflictWarning) {
+      setEditModalError(editConflictWarning);
+      toast(editConflictWarning, 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await apiFetch<ClassItem>(`/classes/${editingClass.id}`, {
@@ -430,13 +551,21 @@ export function StaffClassesPage() {
       await loadData();
     } catch (err: unknown) {
       const apiErr = err as { code?: string; message?: string; status?: number };
+      const hasSpecificConflictMsg =
+        typeof apiErr?.message === 'string' &&
+        (apiErr.message.includes('Trùng lịch phòng tập') ||
+          apiErr.message.includes('Trùng lịch Huấn luyện viên') ||
+          apiErr.message.includes('Room schedule conflict') ||
+          apiErr.message.includes('Coach schedule conflict'));
       const isConflict =
         apiErr?.code === 'error.scheduling.session_conflict' ||
         apiErr?.code === 'SCHEDULE_CONFLICT' ||
         apiErr?.status === 409;
-      const errMessage = isConflict
-        ? 'Trùng lịch: Huấn luyện viên hoặc phòng tập mới đã có lịch dạy trùng với buổi học của lớp này.'
-        : apiErr?.message || 'Không thể cập nhật thông tin lớp học.';
+      const errMessage = hasSpecificConflictMsg
+        ? apiErr.message!
+        : isConflict
+          ? 'Trùng lịch: Huấn luyện viên hoặc phòng tập mới đã có lịch dạy trùng với buổi học của lớp này.'
+          : apiErr?.message || 'Không thể cập nhật thông tin lớp học.';
       setEditModalError(errMessage);
       toast(errMessage, 'error');
     } finally {
@@ -487,6 +616,12 @@ export function StaffClassesPage() {
       return;
     }
 
+    if (rescheduleConflictWarning) {
+      setRescheduleModalError(rescheduleConflictWarning);
+      toast(rescheduleConflictWarning, 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       if (!rescheduleFormData.sessionId || rescheduleFormData.sessionId === 'NEW') {
@@ -515,14 +650,22 @@ export function StaffClassesPage() {
       await loadData();
     } catch (err: unknown) {
       const apiErr = err as { code?: string; message?: string; status?: number };
+      const hasSpecificConflictMsg =
+        typeof apiErr?.message === 'string' &&
+        (apiErr.message.includes('Trùng lịch phòng tập') ||
+          apiErr.message.includes('Trùng lịch Huấn luyện viên') ||
+          apiErr.message.includes('Room schedule conflict') ||
+          apiErr.message.includes('Coach schedule conflict'));
       const isConflict =
         apiErr?.code === 'error.scheduling.session_conflict' ||
         apiErr?.code === 'SCHEDULE_CONFLICT' ||
         apiErr?.status === 409 ||
         (typeof apiErr?.message === 'string' && apiErr.message.includes('trùng lịch'));
-      const errMessage = isConflict
-        ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn giờ khác.'
-        : apiErr?.message || 'Không thể đổi lịch buổi học.';
+      const errMessage = hasSpecificConflictMsg
+        ? apiErr.message!
+        : isConflict
+          ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn giờ khác.'
+          : apiErr?.message || 'Không thể đổi lịch buổi học.';
       setRescheduleModalError(errMessage);
       toast(errMessage, 'error');
     } finally {
@@ -1032,7 +1175,7 @@ export function StaffClassesPage() {
               />
             </div>
 
-            {editModalError && (
+            {(editModalError || editConflictWarning) && (
               <div
                 style={{
                   padding: '12px 16px',
@@ -1042,8 +1185,10 @@ export function StaffClassesPage() {
                   color: 'var(--portal-danger, #fca5a5)',
                   fontSize: '0.88rem',
                 }}
+                role="alert"
+                data-testid="edit-schedule-conflict-warning"
               >
-                {editModalError}
+                {editModalError || editConflictWarning}
               </div>
             )}
 
@@ -1054,7 +1199,7 @@ export function StaffClassesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting || isDuplicateEditClassName}
+                disabled={isSubmitting || isDuplicateEditClassName || Boolean(editConflictWarning)}
                 data-testid="submit-edit-class-button"
               >
                 {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
@@ -1141,7 +1286,7 @@ export function StaffClassesPage() {
               </div>
             </div>
 
-            {rescheduleModalError && (
+            {(rescheduleModalError || rescheduleConflictWarning) && (
               <div
                 style={{
                   padding: '12px 16px',
@@ -1151,8 +1296,10 @@ export function StaffClassesPage() {
                   color: 'var(--portal-danger, #fca5a5)',
                   fontSize: '0.88rem',
                 }}
+                role="alert"
+                data-testid="reschedule-conflict-warning"
               >
-                {rescheduleModalError}
+                {rescheduleModalError || rescheduleConflictWarning}
               </div>
             )}
 
@@ -1163,7 +1310,7 @@ export function StaffClassesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting}
+                disabled={isSubmitting || Boolean(rescheduleConflictWarning)}
                 data-testid="submit-reschedule-button"
               >
                 {isSubmitting ? 'Đang cập nhật...' : 'Xác nhận đổi lịch'}
@@ -1495,8 +1642,8 @@ export function StaffClassesPage() {
               />
             </div>
 
-            {/* Hiển thị lỗi form trực tiếp trong Modal */}
-            {modalError && (
+            {/* Hiển thị lỗi form hoặc cảnh báo trùng lịch trực tiếp trong Modal */}
+            {(modalError || createScheduleConflictWarning) && (
               <div
                 style={{
                   padding: '12px 16px',
@@ -1511,13 +1658,15 @@ export function StaffClassesPage() {
                   gap: '10px',
                   marginTop: '4px',
                 }}
+                role="alert"
+                data-testid="schedule-conflict-warning"
               >
                 <span style={{ fontWeight: 700 }}>!</span>
-                <span>{modalError}</span>
+                <span>{modalError || createScheduleConflictWarning}</span>
               </div>
             )}
 
-            {/* BR-05: Chặn bấm đúp (disable nút khi đang gửi hoặc khi tên bị trùng) */}
+            {/* BR-05: Chặn bấm đúp (disable nút khi đang gửi hoặc khi tên/lịch bị trùng) */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
               <button
                 type="button"
@@ -1530,7 +1679,7 @@ export function StaffClassesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting || isDuplicateClassName}
+                disabled={isSubmitting || isDuplicateClassName || Boolean(createScheduleConflictWarning)}
                 data-testid="submit-class-button"
               >
                 {isSubmitting ? (

@@ -1,6 +1,7 @@
 package com.swp391.scms.scheduling;
 
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -272,5 +273,99 @@ class ClassServiceTest {
         verify(sessions).deleteByGymClassId(1L);
         verify(gymClasses).delete(gymClass);
         verify(gymClasses).flush();
+    }
+
+    @Test
+    @DisplayName("SCRUM-132: createSession rejects when another class overlaps in the same room")
+    void createSession_rejectsRoomConflictWhenOverlapping() throws Exception {
+        Room sharedRoom = new Room();
+        sharedRoom.setName("Studio A");
+        var roomIdField = Room.class.getDeclaredField("id");
+        roomIdField.setAccessible(true);
+        roomIdField.set(sharedRoom, 5L);
+
+        Coach coach1 = new Coach();
+        coach1.setUserId(10L);
+        Coach coach2 = new Coach();
+        coach2.setUserId(20L);
+
+        gymClass.setRoom(sharedRoom);
+        gymClass.setCoach(coach1);
+
+        GymClass otherClass = new GymClass();
+        otherClass.setName("Pilates Core");
+        otherClass.setRoom(sharedRoom);
+        otherClass.setCoach(coach2);
+
+        ClassSession existingSession = new ClassSession();
+        existingSession.setGymClass(otherClass);
+        existingSession.setSessionDate(LocalDate.of(2026, 10, 18));
+        existingSession.setStartTime(LocalTime.of(8, 0));
+        existingSession.setEndTime(LocalTime.of(9, 30));
+        existingSession.setStatus("scheduled");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(sessions.searchSessions(LocalDate.of(2026, 10, 18), LocalDate.of(2026, 10, 18), null, null))
+                .thenReturn(java.util.List.of(existingSession));
+
+        CreateSessionRequest overlappingReq = new CreateSessionRequest(
+                LocalDate.of(2026, 10, 18),
+                LocalTime.of(9, 0),
+                LocalTime.of(10, 0)
+        );
+
+        assertThatThrownBy(() -> service.createSession(1L, overlappingReq))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Schedule conflict: Room Studio A")
+                .extracting("errorCode")
+                .isEqualTo("SCHEDULING_ROOM_CONFLICT");
+    }
+
+    @Test
+    @DisplayName("SCRUM-132: createSession rejects when the same coach is assigned to two overlapping classes")
+    void createSession_rejectsCoachConflictWhenOverlapping() throws Exception {
+        Room room1 = new Room();
+        room1.setName("Studio A");
+        var roomIdField = Room.class.getDeclaredField("id");
+        roomIdField.setAccessible(true);
+        roomIdField.set(room1, 5L);
+
+        Room room2 = new Room();
+        room2.setName("Studio B");
+        roomIdField.set(room2, 6L);
+
+        Coach sharedCoach = new Coach();
+        sharedCoach.setUserId(10L);
+
+        gymClass.setRoom(room1);
+        gymClass.setCoach(sharedCoach);
+
+        GymClass otherClass = new GymClass();
+        otherClass.setName("Boxing Burn");
+        otherClass.setRoom(room2);
+        otherClass.setCoach(sharedCoach);
+
+        ClassSession existingSession = new ClassSession();
+        existingSession.setGymClass(otherClass);
+        existingSession.setSessionDate(LocalDate.of(2026, 10, 18));
+        existingSession.setStartTime(LocalTime.of(18, 0));
+        existingSession.setEndTime(LocalTime.of(19, 30));
+        existingSession.setStatus("scheduled");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(sessions.searchSessions(LocalDate.of(2026, 10, 18), LocalDate.of(2026, 10, 18), null, null))
+                .thenReturn(java.util.List.of(existingSession));
+
+        CreateSessionRequest overlappingReq = new CreateSessionRequest(
+                LocalDate.of(2026, 10, 18),
+                LocalTime.of(18, 30),
+                LocalTime.of(20, 0)
+        );
+
+        assertThatThrownBy(() -> service.createSession(1L, overlappingReq))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Schedule conflict: Coach")
+                .extracting("errorCode")
+                .isEqualTo("SCHEDULING_COACH_CONFLICT");
     }
 }

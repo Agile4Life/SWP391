@@ -31,6 +31,8 @@ function errorMessage(error: unknown): string {
       return 'Lớp đã đầy. Bạn có thể tham gia hàng chờ để được tự động đôn lên khi có chỗ trống.';
     if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED', 'SCHEDULING_NO_ACTIVE_SUBSCRIPTION'].includes(error.code ?? ''))
       return 'Gói tập chưa hoạt động hoặc đã hết hạn. Vui lòng kích hoạt gói tập trước khi đặt lịch.';
+    if (error.code === 'SCHEDULING_MEMBER_TIME_OVERLAP')
+      return error.message || 'Trùng giờ học: Bạn đã có lịch học hoặc hàng chờ trùng khung giờ này.';
     return error.message;
   }
   return 'Không thể tải lịch học. Vui lòng thử lại.';
@@ -44,6 +46,61 @@ function localToday(): string {
 function formatShortDate(iso: string): string {
   const [y, m, d] = iso.split('-');
   return d && m && y ? `${d}/${m}/${y}` : iso;
+}
+
+const DAY_NAMES_VI: Record<number, string> = {
+  0: 'Chủ nhật',
+  1: 'Thứ Hai',
+  2: 'Thứ Ba',
+  3: 'Thứ Tư',
+  4: 'Thứ Năm',
+  5: 'Thứ Sáu',
+  6: 'Thứ Bảy',
+};
+
+function formatDayGroupLabel(iso: string): string {
+  const parsed = new Date(`${iso}T00:00:00`);
+  const dayLabel = Number.isNaN(parsed.getTime()) ? '' : DAY_NAMES_VI[parsed.getDay()] ?? '';
+  return dayLabel ? `${dayLabel} • ${formatShortDate(iso)}` : formatShortDate(iso);
+}
+
+function findOverlappingEnrollment(
+  targetSession: ClassSessionDto,
+  activeEnrollments: EnrollmentDto[],
+  allSessions: ClassSessionDto[],
+): { className: string; startTime: string; endTime: string } | null {
+  const targetStart = targetSession.startTime.slice(0, 5);
+  const targetEnd = targetSession.endTime.slice(0, 5);
+  for (const enrollment of activeEnrollments) {
+    if (enrollment.sessionId === targetSession.id || enrollment.classId === targetSession.classId) {
+      continue;
+    }
+    const matchedSession =
+      enrollment.sessionDate && enrollment.startTime && enrollment.endTime
+        ? {
+            sessionDate: enrollment.sessionDate,
+            startTime: enrollment.startTime,
+            endTime: enrollment.endTime,
+          }
+        : allSessions.find(
+            (s) =>
+              s.id === enrollment.sessionId ||
+              (enrollment.sessionId === null && s.classId === enrollment.classId && s.sessionDate === targetSession.sessionDate),
+          );
+    if (!matchedSession || matchedSession.sessionDate !== targetSession.sessionDate) {
+      continue;
+    }
+    const otherStart = matchedSession.startTime.slice(0, 5);
+    const otherEnd = matchedSession.endTime.slice(0, 5);
+    if (targetStart < otherEnd && targetEnd > otherStart) {
+      return {
+        className: enrollment.className,
+        startTime: otherStart,
+        endTime: otherEnd,
+      };
+    }
+  }
+  return null;
 }
 
 export function MemberClassesPage() {
@@ -119,6 +176,18 @@ export function MemberClassesPage() {
   async function handleEnroll(session: ClassSessionDto) {
     const key = `session-${session.id}`;
     if (busyRef.current) return;
+    const overlap = findOverlappingEnrollment(
+      session,
+      enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled'),
+      sessions,
+    );
+    if (overlap) {
+      setNotice('');
+      setActionError(
+        `Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể đặt hai lớp học chồng chéo thời gian.`,
+      );
+      return;
+    }
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -145,6 +214,18 @@ export function MemberClassesPage() {
   async function handleJoinWaitlist(session: ClassSessionDto) {
     const key = `session-${session.id}`;
     if (busyRef.current) return;
+    const overlap = findOverlappingEnrollment(
+      session,
+      enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled'),
+      sessions,
+    );
+    if (overlap) {
+      setNotice('');
+      setActionError(
+        `Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể tham gia hàng chờ lớp trùng giờ.`,
+      );
+      return;
+    }
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
@@ -222,8 +303,31 @@ export function MemberClassesPage() {
 
   const weekRange = currentWeek(weekOffset);
   const disciplines = [...new Set(['Gym', 'Yoga', 'Pilates', 'Boxing', ...sessions.map((item) => item.disciplineName).filter(Boolean)])];
-  const visible = filterSessions(sessions, discipline, day);
-  const activeEnrollments = enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled');
+  const visible = [...filterSessions(sessions, discipline, day)].sort((a, b) => {
+    const dateCompare = a.sessionDate.localeCompare(b.sessionDate);
+    if (dateCompare !== 0) return dateCompare;
+    const startCompare = a.startTime.localeCompare(b.startTime);
+    if (startCompare !== 0) return startCompare;
+    return a.endTime.localeCompare(b.endTime);
+  });
+
+  const groupedByDate = visible.reduce<Array<{ sessionDate: string; items: ClassSessionDto[] }>>((groups, item) => {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && lastGroup.sessionDate === item.sessionDate) {
+      lastGroup.items.push(item);
+    } else {
+      groups.push({ sessionDate: item.sessionDate, items: [item] });
+    }
+    return groups;
+  }, []);
+
+  const activeEnrollments = enrollments
+    .filter((item) => item.status === 'booked' || item.status === 'enrolled')
+    .sort((a, b) => {
+      const dateCompare = (a.sessionDate ?? '').localeCompare(b.sessionDate ?? '');
+      if (dateCompare !== 0) return dateCompare;
+      return (a.startTime ?? '').localeCompare(b.startTime ?? '');
+    });
   const activeWaitlists = waitlists.filter((item) => item.status === 'waiting' || item.status === 'notified');
 
   return (
@@ -395,94 +499,150 @@ export function MemberClassesPage() {
                 <p>Hãy thử bộ lọc khác.</p>
               </div>
             ) : (
-              visible.map((item) => {
-                const [year, month, date] = item.sessionDate.split('-');
-                const now = new Date();
-                const past =
-                  item.sessionDate < localToday() ||
-                  (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= now.toTimeString().slice(0, 5));
-                const unavailable = past || item.status !== 'scheduled';
-                const myEnrollment = activeEnrollments.find(
-                  (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
-                );
-                const myWaitlist = activeWaitlists.find((w) => w.classId === item.classId);
-                const isBusy = busyKey === `session-${item.id}` ||
-                  (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false) ||
-                  (myWaitlist ? busyKey === `waitlist-${myWaitlist.id}` : false);
-
-                return (
-                  <div key={item.id} className="portal-card portal-card--list">
-                    <div>
-                      <div className="row-card__meta row-card__meta--inline">
-                        <span className="badge badge-info">{item.disciplineName}</span>
-                        <span><PortalIcon name="calendar" size={14} />{date}/{month}/{year}</span>
-                        {myEnrollment && (
-                          <span className="badge badge-success">Đã đặt chỗ</span>
-                        )}
-                        {!myEnrollment && myWaitlist && (
-                          <span className="badge badge-warning">Đang chờ chỗ</span>
-                        )}
-                      </div>
-                      <h3 className="row-card__title">{item.className}</h3>
-                      <div className="row-card__meta row-card__meta--inline">
-                        <span><strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                        <span><PortalIcon name="building" size={14} />{item.roomName}</span>
-                        <span><PortalIcon name="profile" size={14} />{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
-                      </div>
-                      <div className="row-card__meta">
-                        Trạng thái: {past ? 'Đã qua giờ mở lớp' : item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="meta-label">SĨ SỐ HIỆN TẠI</div>
-                      <strong>{item.bookedCount} / {item.capacity} học viên</strong>
-                      <div style={{ marginTop: 10 }}>
-                        {myEnrollment ? (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy || past}
-                            onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: myEnrollment.id, className: item.className }); }}
-                          >
-                            {isBusy ? 'Đang xử lý...' : 'Hủy đặt chỗ'}
-                          </button>
-                        ) : myWaitlist ? (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy}
-                            onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
-                          >
-                            {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
-                          </button>
-                        ) : unavailable ? (
-                          <button type="button" className="btn-secondary btn-sm" disabled>
-                            Không thể đặt
-                          </button>
-                        ) : item.bookedCount < item.capacity ? (
-                          <button
-                            type="button"
-                            className="btn-primary btn-sm"
-                            disabled={isBusy}
-                            onClick={() => void handleEnroll(item)}
-                          >
-                            {isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy}
-                            onClick={() => void handleJoinWaitlist(item)}
-                          >
-                            {isBusy ? 'Đang đăng ký...' : 'Tham gia hàng chờ'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
+              groupedByDate.map((dayGroup) => (
+                <div
+                  key={dayGroup.sessionDate}
+                  data-testid={`day-group-${dayGroup.sessionDate}`}
+                  style={{ display: 'grid', gap: 12 }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      backgroundColor: 'var(--portal-raised)',
+                      border: '1px solid var(--portal-border)',
+                    }}
+                  >
+                    <strong style={{ fontSize: '0.92rem' }}>
+                      <PortalIcon name="calendar" size={14} /> {formatDayGroupLabel(dayGroup.sessionDate)}
+                    </strong>
+                    <span className="badge badge-neutral">{dayGroup.items.length} ca học</span>
                   </div>
-                );
-              })
+
+                  {dayGroup.items.map((item) => {
+                    const [year, month, date] = item.sessionDate.split('-');
+                    const now = new Date();
+                    const past =
+                      item.sessionDate < localToday() ||
+                      (item.sessionDate === localToday() && item.startTime.slice(0, 5) <= now.toTimeString().slice(0, 5));
+                    const unavailable = past || item.status !== 'scheduled';
+                    const myEnrollment = activeEnrollments.find(
+                      (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
+                    );
+                    const myWaitlist = activeWaitlists.find((w) => w.classId === item.classId);
+                    const overlappingBooking =
+                      !myEnrollment && !myWaitlist
+                        ? findOverlappingEnrollment(item, activeEnrollments, sessions)
+                        : null;
+                    const isBusy = busyKey === `session-${item.id}` ||
+                      (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false) ||
+                      (myWaitlist ? busyKey === `waitlist-${myWaitlist.id}` : false);
+
+                    return (
+                      <div key={item.id} className="portal-card portal-card--list">
+                        <div>
+                          <div className="row-card__meta row-card__meta--inline">
+                            <span className="badge badge-info">{item.disciplineName}</span>
+                            <span><PortalIcon name="calendar" size={14} />{date}/{month}/{year}</span>
+                            {myEnrollment && (
+                              <span className="badge badge-success">Đã đặt chỗ</span>
+                            )}
+                            {!myEnrollment && myWaitlist && (
+                              <span className="badge badge-warning">Đang chờ chỗ</span>
+                            )}
+                            {overlappingBooking && (
+                              <span
+                                className="badge badge-warning"
+                                data-testid={`overlap-badge-${item.id}`}
+                              >
+                                Trùng giờ lớp đã đặt
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="row-card__title">{item.className}</h3>
+                          <div className="row-card__meta row-card__meta--inline">
+                            <span><strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
+                            <span><PortalIcon name="building" size={14} />{item.roomName}</span>
+                            <span><PortalIcon name="profile" size={14} />{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
+                          </div>
+                          <div className="row-card__meta">
+                            Trạng thái: {past ? 'Đã qua giờ mở lớp' : item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
+                          </div>
+                          {overlappingBooking && (
+                            <div
+                              className="row-card__meta"
+                              style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 4 }}
+                              data-testid={`overlap-note-${item.id}`}
+                            >
+                              Trùng khung giờ với lớp &quot;{overlappingBooking.className}&quot; ({overlappingBooking.startTime}–{overlappingBooking.endTime}) bạn đã đặt chỗ.
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="meta-label">SĨ SỐ HIỆN TẠI</div>
+                          <strong>{item.bookedCount} / {item.capacity} học viên</strong>
+                          <div style={{ marginTop: 10 }}>
+                            {myEnrollment ? (
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                disabled={isBusy || past}
+                                onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: myEnrollment.id, className: item.className }); }}
+                              >
+                                {isBusy ? 'Đang xử lý...' : 'Hủy đặt chỗ'}
+                              </button>
+                            ) : myWaitlist ? (
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                disabled={isBusy}
+                                onClick={() => void handleLeaveWaitlist(myWaitlist.id, item.className)}
+                              >
+                                {isBusy ? 'Đang xử lý...' : 'Rút khỏi hàng chờ'}
+                              </button>
+                            ) : unavailable ? (
+                              <button type="button" className="btn-secondary btn-sm" disabled>
+                                Không thể đặt
+                              </button>
+                            ) : overlappingBooking ? (
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                disabled
+                                data-testid={`overlap-btn-${item.id}`}
+                                title={`Trùng giờ với lớp ${overlappingBooking.className} (${overlappingBooking.startTime}–${overlappingBooking.endTime})`}
+                              >
+                                Trùng giờ đã đặt
+                              </button>
+                            ) : item.bookedCount < item.capacity ? (
+                              <button
+                                type="button"
+                                className="btn-primary btn-sm"
+                                disabled={isBusy}
+                                onClick={() => void handleEnroll(item)}
+                              >
+                                {isBusy ? 'Đang đặt chỗ...' : 'Đặt chỗ ngay'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                disabled={isBusy}
+                                onClick={() => void handleJoinWaitlist(item)}
+                              >
+                                {isBusy ? 'Đang đăng ký...' : 'Tham gia hàng chờ'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
         )
