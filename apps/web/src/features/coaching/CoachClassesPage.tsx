@@ -8,6 +8,10 @@ import {
   type CoachSession,
   type EnrolledStudent,
 } from './coachingApi';
+import {
+  getCoachSchedule,
+  type CoachBookingDto,
+} from '../member/coachBookingApi';
 import './coach-classes.css';
 
 function getWeekMonday(date: Date): Date {
@@ -34,10 +38,11 @@ export function CoachClassesPage() {
   const [currentMonday, setCurrentMonday] = useState<Date>(() => getWeekMonday(new Date()));
   const [selectedDayOffset, setSelectedDayOffset] = useState<number>(0);
   const [sessions, setSessions] = useState<CoachSession[]>([]);
+  const [coach1on1Bookings, setCoach1on1Bookings] = useState<CoachBookingDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal xem danh sách học viên
+  // Modal xem danh sách học viên lớp nhóm
   const [activeSession, setActiveSession] = useState<CoachSession | null>(null);
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState<boolean>(false);
@@ -66,8 +71,12 @@ export function CoachClassesPage() {
     setError(null);
     try {
       const mondayStr = formatYmd(currentMonday);
-      const res = await coachingApi.getCoachWeeklySchedule(mondayStr);
-      setSessions(res);
+      const [classSessions, ptBookings] = await Promise.all([
+        coachingApi.getCoachWeeklySchedule(mondayStr),
+        getCoachSchedule().catch(() => []),
+      ]);
+      setSessions(classSessions);
+      setCoach1on1Bookings(ptBookings);
     } catch {
       setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
     } finally {
@@ -106,6 +115,12 @@ export function CoachClassesPage() {
   const dailySessions = useMemo(() => {
     return sessions.filter((s) => s.sessionDate === selectedDateStr);
   }, [sessions, selectedDateStr]);
+
+  const daily1on1Bookings = useMemo(() => {
+    return coach1on1Bookings.filter(
+      (b) => b.bookingDate === selectedDateStr && b.status === 'confirmed'
+    );
+  }, [coach1on1Bookings, selectedDateStr]);
 
   const handleOpenStudentsModal = async (session: CoachSession) => {
     setActiveSession(session);
@@ -152,7 +167,7 @@ export function CoachClassesPage() {
       <PageHeader
         eyebrow="Huấn luyện viên"
         title="Thời Khóa Biểu & Học Viên Phụ Trách"
-        subtitle={`HLV: ${currentUser?.name || 'Huấn luyện viên'} | Theo dõi lịch đứng lớp và quản lý sức khỏe, mục tiêu học viên.`}
+        subtitle={`HLV: ${currentUser?.name || 'Huấn luyện viên'} | Theo dõi lịch đứng lớp nhóm và các buổi kèm riêng 1:1 của học viên.`}
       />
 
       <div className="coach-week-bar">
@@ -187,7 +202,11 @@ export function CoachClassesPage() {
 
         <div className="coach-day-strip">
           {daysOfWeek.map((day) => {
-            const countForDay = sessions.filter((s) => s.sessionDate === day.dateStr).length;
+            const classCount = sessions.filter((s) => s.sessionDate === day.dateStr).length;
+            const ptCount = coach1on1Bookings.filter(
+              (b) => b.bookingDate === day.dateStr && b.status === 'confirmed'
+            ).length;
+            const totalCount = classCount + ptCount;
             const isActive = day.idx === selectedDayOffset;
             return (
               <button
@@ -198,8 +217,12 @@ export function CoachClassesPage() {
               >
                 <span className="coach-day-name">{day.name}</span>
                 <span className="coach-day-date">{day.displayDate}</span>
-                {countForDay > 0 && (
-                  <span className="coach-day-badge">{countForDay} lớp</span>
+                {totalCount > 0 && (
+                  <span className="coach-day-badge">
+                    {classCount > 0 && `${classCount} lớp`}
+                    {classCount > 0 && ptCount > 0 && ' • '}
+                    {ptCount > 0 && `${ptCount} PT 1:1`}
+                  </span>
                 )}
               </button>
             );
@@ -224,75 +247,168 @@ export function CoachClassesPage() {
       )}
 
       {!loading && !error && (
-        <div className="coach-session-section">
-          <div className="coach-section-header">
-            <h3>
-              Lịch đứng lớp ngày {daysOfWeek[selectedDayOffset]?.name} (
-              {daysOfWeek[selectedDayOffset]?.displayDate})
-            </h3>
-            <span className="session-count-tag">{dailySessions.length} buổi học</span>
+        <div className="coach-session-section" style={{ display: 'grid', gap: 24 }}>
+          {/* Section 1: Lịch Kèm Riêng PT 1:1 */}
+          <div>
+            <div className="coach-section-header">
+              <h3>
+                Lịch kèm riêng PT 1:1 ngày {daysOfWeek[selectedDayOffset]?.name} (
+                {daysOfWeek[selectedDayOffset]?.displayDate})
+              </h3>
+              <span
+                className="session-count-tag"
+                style={{
+                  background: daily1on1Bookings.length > 0 ? 'var(--portal-salmon, #ce9180)' : undefined,
+                  color: daily1on1Bookings.length > 0 ? '#fff' : undefined,
+                }}
+              >
+                {daily1on1Bookings.length} buổi kèm 1:1
+              </span>
+            </div>
+
+            {daily1on1Bookings.length === 0 ? (
+              <div className="coach-empty-box" style={{ padding: '18px 24px' }}>
+                <p style={{ margin: 0 }}>Chưa có lịch đặt kèm 1:1 nào trong ngày này.</p>
+              </div>
+            ) : (
+              <div className="coach-session-grid">
+                {daily1on1Bookings.map((b) => (
+                  <div
+                    key={b.id}
+                    className="coach-session-card"
+                    style={{
+                      borderColor: 'rgba(206, 145, 128, 0.45)',
+                      background: 'linear-gradient(135deg, rgba(206, 145, 128, 0.08) 0%, rgba(206, 145, 128, 0.02) 100%)',
+                    }}
+                  >
+                    <div className="coach-session-top">
+                      <div className="coach-session-time">
+                        <span className="time-icon" aria-hidden="true" />
+                        <span className="time-text">
+                          {b.startTime.slice(0, 5)} - {b.endTime.slice(0, 5)}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 750,
+                          padding: '3px 8px',
+                          borderRadius: 99,
+                          background: 'var(--portal-salmon, #ce9180)',
+                          color: '#fff',
+                        }}
+                      >
+                        PT 1:1 Riêng
+                      </span>
+                    </div>
+
+                    <h4 className="coach-class-title" style={{ fontSize: 16 }}>
+                      Học viên: {b.memberName}
+                    </h4>
+                    <p className="coach-discipline-tag">
+                      {b.disciplineName || 'Huấn luyện cá nhân'}
+                    </p>
+
+                    <div className="coach-session-info">
+                      <div className="info-row">
+                        <span className="info-label">Hình thức:</span>
+                        <span className="info-value">
+                          {b.paymentMethod === 'package_quota'
+                            ? '🎁 Quyền lợi gói tập'
+                            : '💳 Hội viên trả phí'}
+                        </span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">Trạng thái:</span>
+                        <span className="info-value" style={{ color: 'var(--portal-success, #226442)', fontWeight: 650 }}>
+                          ✓ Đã xác nhận
+                        </span>
+                      </div>
+                      {b.notes && (
+                        <div className="info-row" style={{ gridColumn: '1 / -1', marginTop: 4 }}>
+                          <span className="info-label">Ghi chú học viên:</span>
+                          <span className="info-value" style={{ fontStyle: 'italic' }}>
+                            {b.notes}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {dailySessions.length === 0 ? (
-            <div className="coach-empty-box">
-              <p>Không có buổi dạy nào trong ngày này.</p>
-              <span>HLV có thể nghỉ ngơi hoặc chuẩn bị giáo án cho các buổi tiếp theo.</span>
+          {/* Section 2: Lịch Đứng Lớp Nhóm (Group Fitness) */}
+          <div>
+            <div className="coach-section-header">
+              <h3>
+                Lớp nhóm (Group Fitness) ngày {daysOfWeek[selectedDayOffset]?.name} (
+                {daysOfWeek[selectedDayOffset]?.displayDate})
+              </h3>
+              <span className="session-count-tag">{dailySessions.length} lớp học</span>
             </div>
-          ) : (
-            <div className="coach-session-grid">
-              {dailySessions.map((session) => (
-                <div key={session.id} className="coach-session-card">
-                  <div className="coach-session-top">
-                    <div className="coach-session-time">
-                      <span className="time-icon" aria-hidden="true" />
-                      <span className="time-text">
-                        {session.startTime} - {session.endTime}
-                      </span>
-                    </div>
-                    <span className={`status-pill status-${session.status}`}>
-                      {session.status === 'scheduled'
-                        ? 'Sắp diễn ra'
-                        : session.status === 'completed'
-                        ? 'Đã xong'
-                        : 'Hủy'}
-                    </span>
-                  </div>
 
-                  <h4 className="coach-class-title">{session.className}</h4>
-                  <p className="coach-discipline-tag">{session.disciplineName || 'Fitness'}</p>
-
-                  <div className="coach-session-info">
-                    <div className="info-row">
-                      <span className="info-label">Phòng:</span>
-                      <span className="info-value">{session.roomName || 'Studio chính'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Sĩ số:</span>
-                      <span className="info-value">
-                        {session.bookedCount} / {session.capacity} học viên
-                      </span>
-                    </div>
-                    {session.level && (
-                      <div className="info-row">
-                        <span className="info-label">Trình độ:</span>
-                        <span className="info-value">{session.level}</span>
+            {dailySessions.length === 0 ? (
+              <div className="coach-empty-box" style={{ padding: '18px 24px' }}>
+                <p style={{ margin: 0 }}>Không có lớp nhóm nào trong ngày này.</p>
+              </div>
+            ) : (
+              <div className="coach-session-grid">
+                {dailySessions.map((session) => (
+                  <div key={session.id} className="coach-session-card">
+                    <div className="coach-session-top">
+                      <div className="coach-session-time">
+                        <span className="time-icon" aria-hidden="true" />
+                        <span className="time-text">
+                          {session.startTime} - {session.endTime}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                      <span className={`status-pill status-${session.status}`}>
+                        {session.status === 'scheduled'
+                          ? 'Sắp diễn ra'
+                          : session.status === 'completed'
+                          ? 'Đã xong'
+                          : 'Hủy'}
+                      </span>
+                    </div>
 
-                  <div className="coach-card-actions">
-                    <button
-                      type="button"
-                      className="btn-view-students"
-                      onClick={() => handleOpenStudentsModal(session)}
-                    >
-                      Xem danh sách học viên ({session.bookedCount})
-                    </button>
+                    <h4 className="coach-class-title">{session.className}</h4>
+                    <p className="coach-discipline-tag">{session.disciplineName || 'Fitness'}</p>
+
+                    <div className="coach-session-info">
+                      <div className="info-row">
+                        <span className="info-label">Phòng:</span>
+                        <span className="info-value">{session.roomName || 'Studio chính'}</span>
+                      </div>
+                      <div className="info-row">
+                        <span className="info-label">Sĩ số:</span>
+                        <span className="info-value">
+                          {session.bookedCount} / {session.capacity} học viên
+                        </span>
+                      </div>
+                      {session.level && (
+                        <div className="info-row">
+                          <span className="info-label">Trình độ:</span>
+                          <span className="info-value">{session.level}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="coach-card-actions">
+                      <button
+                        type="button"
+                        className="btn-view-students"
+                        onClick={() => handleOpenStudentsModal(session)}
+                      >
+                        Xem danh sách học viên ({session.bookedCount})
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

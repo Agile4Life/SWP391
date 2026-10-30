@@ -11,6 +11,7 @@ import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
@@ -20,6 +21,7 @@ import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,7 @@ public class CoachBookingService {
     private final ClassEnrollmentRepository classEnrollmentRepository;
     private final MembershipSubscriptionRepository subscriptionRepository;
     private final DisciplineRepository disciplineRepository;
+    private final NotificationService notificationService;
     private final Clock clock;
     private final MessageService messageService;
 
@@ -57,6 +60,22 @@ public class CoachBookingService {
             DisciplineRepository disciplineRepository,
             Clock clock,
             MessageService messageService) {
+        this(coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository, null, clock, messageService);
+    }
+
+    @Autowired
+    public CoachBookingService(
+            CoachBookingRepository coachBookingRepository,
+            CoachRepository coachRepository,
+            MemberRepository memberRepository,
+            ClassSessionRepository classSessionRepository,
+            ClassEnrollmentRepository classEnrollmentRepository,
+            MembershipSubscriptionRepository subscriptionRepository,
+            DisciplineRepository disciplineRepository,
+            @Autowired(required = false) NotificationService notificationService,
+            Clock clock,
+            MessageService messageService) {
         this.coachBookingRepository = coachBookingRepository;
         this.coachRepository = coachRepository;
         this.memberRepository = memberRepository;
@@ -64,6 +83,7 @@ public class CoachBookingService {
         this.classEnrollmentRepository = classEnrollmentRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.disciplineRepository = disciplineRepository;
+        this.notificationService = notificationService;
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
         this.messageService = messageService;
     }
@@ -99,45 +119,64 @@ public class CoachBookingService {
         LocalDateTime now = LocalDateTime.now(clock);
         List<CoachAvailableSlotDto> slots = new ArrayList<>();
 
-        int[] hours = {6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20};
-        for (int h : hours) {
-            LocalTime start = LocalTime.of(h, 0);
-            LocalTime end = LocalTime.of(h + 1, 0);
+        for (int hour = 6; hour <= 20; hour++) {
+            LocalTime start = LocalTime.of(hour, 0);
+            LocalTime end = LocalTime.of(hour + 1, 0);
+
             LocalDateTime slotStartDateTime = LocalDateTime.of(date, start);
 
             boolean isTooSoon = slotStartDateTime.isBefore(now.plusMinutes(ADVANCE_MINUTES_REQUIRED));
-            if (isTooSoon) {
-                slots.add(new CoachAvailableSlotDto(start, end, false, "too_soon"));
-                continue;
+
+            boolean coachBusy = coachClasses.stream().anyMatch(cs ->
+                    start.isBefore(cs.getEndTime()) && end.isAfter(cs.getStartTime()))
+                    || coachBookings.stream().anyMatch(cb ->
+                    start.isBefore(cb.getEndTime()) && end.isAfter(cb.getStartTime()));
+
+            boolean memberBusy = memberBookings.stream().anyMatch(mb ->
+                    start.isBefore(mb.getEndTime()) && end.isAfter(mb.getStartTime()));
+
+            boolean available = !isTooSoon && !coachBusy && !memberBusy;
+            String reason = null;
+            if (!available) {
+                if (isTooSoon) {
+                    reason = "too_soon";
+                } else if (coachBusy) {
+                    reason = "coach_busy";
+                } else {
+                    reason = "member_busy";
+                }
             }
 
-            boolean coachBusy = coachClasses.stream().anyMatch(cs -> start.isBefore(cs.getEndTime()) && end.isAfter(cs.getStartTime()))
-                    || coachBookings.stream().anyMatch(cb -> start.isBefore(cb.getEndTime()) && end.isAfter(cb.getStartTime()));
-            if (coachBusy) {
-                slots.add(new CoachAvailableSlotDto(start, end, false, "coach_busy"));
-                continue;
-            }
-
-            boolean memberBusy = false;
-            if (currentMemberId != null) {
-                memberBusy = memberBookings.stream().anyMatch(cb -> start.isBefore(cb.getEndTime()) && end.isAfter(cb.getStartTime()))
-                        || memberEnrollments.stream()
-                        .filter(e -> "booked".equalsIgnoreCase(e.getStatus()))
-                        .filter(e -> e.getGymClass() != null)
-                        .anyMatch(e -> classSessionRepository.findAll().stream()
-                                .filter(s -> s.getGymClass().getId().equals(e.getGymClass().getId()) && date.equals(s.getSessionDate()) && "scheduled".equalsIgnoreCase(s.getStatus()))
-                                .anyMatch(s -> start.isBefore(s.getEndTime()) && end.isAfter(s.getStartTime())));
-            }
-
-            if (memberBusy) {
-                slots.add(new CoachAvailableSlotDto(start, end, false, "member_busy"));
-                continue;
-            }
-
-            slots.add(new CoachAvailableSlotDto(start, end, true, null));
+            slots.add(new CoachAvailableSlotDto(start, end, available, reason));
         }
 
         return slots;
+    }
+
+    @Transactional(readOnly = true)
+    public CoachQuotaStatusDto getMemberQuotaStatus(Long memberUserId) {
+        List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(memberUserId, "active");
+        if (activeSubs.isEmpty()) {
+            return new CoachQuotaStatusDto(null, 0, 0, 0);
+        }
+        MembershipSubscription sub = activeSubs.get(0);
+        String pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
+                ? sub.getMembershipPackage().getName().toUpperCase() : "";
+
+        int monthlyQuota = 0;
+        if (pkgName.contains("PLATINUM")) {
+            monthlyQuota = 6;
+        } else if (pkgName.contains("GOLD")) {
+            monthlyQuota = 3;
+        }
+
+        LocalDate now = LocalDate.now(clock);
+        LocalDate startMonth = now.withDayOfMonth(1);
+        LocalDate endMonth = now.withDayOfMonth(now.lengthOfMonth());
+        long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
+
+        int remaining = Math.max(0, monthlyQuota - (int) usedQuota);
+        return new CoachQuotaStatusDto(pkgName, monthlyQuota, (int) usedQuota, remaining);
     }
 
     @Transactional
@@ -270,12 +309,38 @@ public class CoachBookingService {
         booking.setNotes(request.notes());
 
         CoachBooking saved = coachBookingRepository.save(booking);
+
+        // Notify the coach about the new 1:1 private booking
+        if (coach.getUser() != null && notificationService != null) {
+            String memberName = member.getUser() != null ? member.getUser().getFullName() : "Hội viên";
+            String title = "Lịch dạy PT 1:1 mới";
+            String message = String.format("Hội viên %s đã đặt lịch tập 1:1 vào ngày %s (%s - %s).",
+                    memberName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
+            notificationService.send(coach.getUser().getId(), title, message, "COACH_BOOKING", "COACH_BOOKING", saved.getId());
+        }
+
+        // Notify the member about successful booking
+        if (member.getUser() != null && notificationService != null) {
+            String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "Huấn luyện viên";
+            String title = "Đặt lịch HLV 1:1 thành công";
+            String message = String.format("Bạn đã đặt lịch tập 1:1 với HLV %s vào ngày %s (%s - %s).",
+                    coachName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
+            notificationService.send(member.getUserId(), title, message, "COACH_BOOKING", "COACH_BOOKING", saved.getId());
+        }
+
         return mapToDto(saved);
     }
 
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getMemberBookings(Long memberId) {
         return coachBookingRepository.findByMemberId(memberId).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CoachBookingDto> getCoachSchedule(Long coachUserId) {
+        return coachBookingRepository.findByCoachId(coachUserId).stream()
                 .map(this::mapToDto)
                 .toList();
     }
@@ -296,6 +361,15 @@ public class CoachBookingService {
         booking.setStatus("cancelled");
         booking.setCancelledAt(LocalDateTime.now(clock));
         booking.setCancelReason(reason != null ? reason : "Hội viên yêu cầu hủy");
+
+        // Notify the coach about cancellation
+        if (booking.getCoach() != null && booking.getCoach().getUser() != null && notificationService != null) {
+            String memberName = booking.getMember().getUser() != null ? booking.getMember().getUser().getFullName() : "Hội viên";
+            String title = "Hủy lịch dạy PT 1:1";
+            String message = String.format("Hội viên %s đã hủy lịch tập 1:1 ngày %s (%s - %s).",
+                    memberName, booking.getBookingDate(), booking.getStartTime().toString().substring(0, 5), booking.getEndTime().toString().substring(0, 5));
+            notificationService.send(booking.getCoach().getUser().getId(), title, message, "COACH_BOOKING_CANCELLED", "COACH_BOOKING", booking.getId());
+        }
 
         return mapToDto(booking);
     }

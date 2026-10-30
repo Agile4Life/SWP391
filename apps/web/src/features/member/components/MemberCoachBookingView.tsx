@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import {
   getCoaches,
@@ -6,9 +7,11 @@ import {
   createCoachBooking,
   getMyCoachBookings,
   cancelCoachBooking,
+  getMemberQuotaStatus,
   type CoachPublicDto,
   type CoachAvailableSlotDto,
   type CoachBookingDto,
+  type CoachQuotaStatusDto,
 } from '../coachBookingApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
@@ -40,11 +43,13 @@ export function MemberCoachBookingView({
 }: {
   onBookingSuccess?: () => void;
 }) {
+  const navigate = useNavigate();
   const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(localToday());
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
+  const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -58,26 +63,31 @@ export function MemberCoachBookingView({
   const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
   const [notes, setNotes] = useState('');
 
+  // Payment Checkout Modal State
+  const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
+
   // Cancel Modal State
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const daysList = nextDays(10);
 
-  // Load coaches and member bookings
+  // Load coaches, member bookings and quota status
   useEffect(() => {
     let active = true;
     async function init() {
       setLoadingCoaches(true);
       setError('');
       try {
-        const [coachList, bookingsList] = await Promise.all([
+        const [coachList, bookingsList, quota] = await Promise.all([
           getCoaches(),
           getMyCoachBookings(),
+          getMemberQuotaStatus().catch(() => null),
         ]);
         if (!active) return;
         setCoaches(coachList);
         setMyBookings(bookingsList);
+        if (quota) setQuotaStatus(quota);
         if (coachList.length > 0 && selectedCoachId === null) {
           setSelectedCoachId(coachList[0].id);
         }
@@ -111,6 +121,18 @@ export function MemberCoachBookingView({
   }, [selectedCoachId, selectedDate]);
 
   const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
+  const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
+
+  function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
+    setModalSlot(slot);
+    setError('');
+    // Automatically set default payment method based on available quota
+    if (hasRemainingQuota) {
+      setPaymentMethod('package_quota');
+    } else {
+      setPaymentMethod('hourly_pay');
+    }
+  }
 
   async function handleConfirmBooking() {
     if (!selectedCoach || !modalSlot) return;
@@ -127,20 +149,28 @@ export function MemberCoachBookingView({
         notes: notes.trim() || undefined,
       });
 
-      setNotice(
-        `Đặt lịch tập 1:1 với HLV ${created.coachName} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công!`
-      );
       setModalSlot(null);
       setNotes('');
 
-      // Refresh slots and bookings
-      const [updatedSlots, updatedBookings] = await Promise.all([
+      // Refresh slots, bookings, and quota status
+      const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
         getAvailableSlots(selectedCoach.id, selectedDate),
         getMyCoachBookings(),
+        getMemberQuotaStatus().catch(() => null),
       ]);
       setSlots(updatedSlots);
       setMyBookings(updatedBookings);
+      if (updatedQuota) setQuotaStatus(updatedQuota);
       onBookingSuccess?.();
+
+      if (paymentMethod === 'hourly_pay') {
+        // Open payment modal
+        setPaymentModalBooking(created);
+      } else {
+        setNotice(
+          `Đặt lịch tập 1:1 với HLV ${created.coachName} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`
+        );
+      }
     } catch (err: any) {
       setError(err.message || 'Không thể đặt lịch. Vui lòng thử lại.');
     } finally {
@@ -156,14 +186,16 @@ export function MemberCoachBookingView({
       setNotice(`Đã hủy lịch tập 1:1 với HLV ${cancelTarget.coachName} thành công.`);
       setCancelTarget(null);
 
-      // Refresh slots and bookings
+      // Refresh slots, bookings, and quota
       if (selectedCoachId) {
-        const [updatedSlots, updatedBookings] = await Promise.all([
+        const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
           getAvailableSlots(selectedCoachId, selectedDate),
           getMyCoachBookings(),
+          getMemberQuotaStatus().catch(() => null),
         ]);
         setSlots(updatedSlots);
         setMyBookings(updatedBookings);
+        if (updatedQuota) setQuotaStatus(updatedQuota);
       }
     } catch (err: any) {
       setError(err.message || 'Không thể hủy lịch.');
@@ -231,6 +263,80 @@ export function MemberCoachBookingView({
           </button>
         </div>
       )}
+
+      {/* Quota Info Banner */}
+      <div
+        className="portal-card"
+        style={{
+          padding: '16px 20px',
+          background: 'linear-gradient(135deg, rgba(206, 145, 128, 0.12) 0%, rgba(206, 145, 128, 0.03) 100%)',
+          borderColor: 'rgba(206, 145, 128, 0.35)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 750,
+                textTransform: 'uppercase',
+                padding: '3px 10px',
+                borderRadius: 99,
+                background: 'var(--portal-salmon, #ce9180)',
+                color: '#fff',
+              }}
+            >
+              Gói: {quotaStatus?.packageName || 'Chưa có gói'}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>
+              Chính sách Huấn luyện viên cá nhân (PT 1:1)
+            </span>
+          </div>
+
+          <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--portal-muted, #71717a)' }}>
+            {quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
+              <>
+                Gói {quotaStatus.packageName} được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>.
+                Tháng này bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
+                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon, #ce9180)' : '#dc2626' }}>
+                  {quotaStatus.remainingQuota} lượt
+                </strong>
+                ).
+                {quotaStatus.remainingQuota <= 0 && ' Khi hết lượt miễn phí, phí đăng ký thêm là 200.000 đ / giờ.'}
+              </>
+            ) : (
+              <>
+                Gói {quotaStatus?.packageName || 'Silver'} không bao gồm lượt tập PT 1:1 miễn phí. Phí đặt lịch HLV kèm riêng là{' '}
+                <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>200.000 đ / giờ</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
+              </>
+            )}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => navigate('/member/packages')}
+            style={{ fontSize: 12 }}
+          >
+            Nâng cấp gói tập
+          </button>
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => navigate('/member/invoices')}
+            style={{ fontSize: 12 }}
+          >
+            Lịch sử hóa đơn
+          </button>
+        </div>
+      </div>
 
       {/* Bước 1: Chọn Huấn Luyện Viên */}
       <section>
@@ -380,10 +486,7 @@ export function MemberCoachBookingView({
                   <button
                     key={slot.startTime}
                     type="button"
-                    onClick={() => {
-                      setModalSlot(slot);
-                      setError('');
-                    }}
+                    onClick={() => handleOpenBookingModal(slot)}
                     className="portal-card"
                     style={{
                       padding: '12px 14px',
@@ -531,14 +634,25 @@ export function MemberCoachBookingView({
                   </div>
 
                   {isConfirmed && (
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      style={{ color: '#dc2626', borderColor: '#fca5a5' }}
-                      onClick={() => setCancelTarget(b)}
-                    >
-                      Hủy lịch hẹn
-                    </button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {b.paymentMethod !== 'package_quota' && (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={() => setPaymentModalBooking(b)}
+                        >
+                          Xem thông tin thanh toán
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                        onClick={() => setCancelTarget(b)}
+                      >
+                        Hủy lịch hẹn
+                      </button>
+                    </div>
                   )}
                 </div>
               );
@@ -587,20 +701,35 @@ export function MemberCoachBookingView({
                     padding: '10px 14px',
                     borderRadius: 10,
                     border: '1px solid var(--portal-border, #e4e2de)',
-                    cursor: 'pointer',
+                    cursor: hasRemainingQuota ? 'pointer' : 'not-allowed',
+                    opacity: hasRemainingQuota ? 1 : 0.6,
                     background: paymentMethod === 'package_quota' ? 'rgba(206, 145, 128, 0.1)' : 'transparent',
                   }}
                 >
                   <input
                     type="radio"
                     name="paymentMethod"
+                    disabled={!hasRemainingQuota}
                     checked={paymentMethod === 'package_quota'}
                     onChange={() => setPaymentMethod('package_quota')}
                   />
                   <div>
-                    <strong>Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <strong>Sử dụng quyền lợi PT trong gói tập (Gold / Platinum)</strong>
+                      {hasRemainingQuota ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-success, #226442)' }}>
+                          (Còn {quotaStatus?.remainingQuota} lượt miễn phí)
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>
+                          (Hết lượt hoặc không áp dụng)
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
-                      Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn.
+                      {hasRemainingQuota
+                        ? 'Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ).'
+                        : 'Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí 200.000 đ.'}
                     </div>
                   </div>
                 </label>
@@ -624,9 +753,16 @@ export function MemberCoachBookingView({
                     onChange={() => setPaymentMethod('hourly_pay')}
                   />
                   <div>
-                    <strong>Thanh toán theo giờ (200.000 đ)</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <strong>Đăng ký trả phí theo giờ (200.000 đ / giờ)</strong>
+                      {!hasRemainingQuota && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon, #ce9180)' }}>
+                          (Khuyến nghị cho gói của bạn)
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: 11, color: 'var(--portal-muted, #71717a)' }}>
-                      Áp dụng cho gói Silver hoặc khi bạn đã dùng hết lượt tập miễn phí.
+                      Thanh toán chuyển khoản ngân hàng (VietQR) hoặc thanh toán trực tiếp tại quầy lễ tân.
                     </div>
                   </div>
                 </label>
@@ -662,7 +798,97 @@ export function MemberCoachBookingView({
                 disabled={submitting}
                 onClick={() => void handleConfirmBooking()}
               >
-                {submitting ? 'Đang xử lý…' : 'Xác nhận Đặt lịch'}
+                {submitting ? 'Đang xử lý…' : paymentMethod === 'hourly_pay' ? 'Xác nhận & Đến thanh toán' : 'Xác nhận Đặt lịch (0 đ)'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal Hướng dẫn Thanh toán / VietQR */}
+      {paymentModalBooking && (
+        <Modal
+          title="Thanh toán Buổi tập PT 1:1"
+          onClose={() => setPaymentModalBooking(null)}
+        >
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: 'rgba(46, 107, 79, 0.08)',
+                border: '1px solid rgba(46, 107, 79, 0.35)',
+              }}
+            >
+              <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success, #226442)', fontSize: 15, fontWeight: 750 }}>
+                ✓ Lịch tập 1:1 đã được ghi nhận thành công!
+              </h4>
+              <p style={{ margin: 0, fontSize: 13 }}>
+                HLV: <strong>{paymentModalBooking.coachName}</strong> • Thời gian:{' '}
+                <strong>{paymentModalBooking.bookingDate} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: 16,
+                alignItems: 'center',
+                padding: 16,
+                borderRadius: 12,
+                background: 'var(--portal-raised, #f4f4f5)',
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700 }}>
+                  Quét mã VietQR chuyển khoản nhanh:
+                </p>
+                <img
+                  src={`https://img.vietqr.io/image/970422-090123456789-compact2.png?amount=200000&addInfo=PT${paymentModalBooking.id}%20SOL&accountName=SOL%20FITNESS`}
+                  alt="Mã QR chuyển khoản"
+                  style={{
+                    width: 220,
+                    height: 220,
+                    margin: '0 auto',
+                    display: 'block',
+                    borderRadius: 10,
+                    border: '1px solid #ddd',
+                    background: '#fff',
+                    padding: 6,
+                  }}
+                />
+              </div>
+
+              <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
+                <div>Ngân hàng: <strong>Quân Đội (MB Bank)</strong></div>
+                <div>Số tài khoản: <strong style={{ letterSpacing: 1 }}>090123456789</strong></div>
+                <div>Chủ tài khoản: <strong>SÖL WELLNESS SANCTUARY</strong></div>
+                <div>Số tiền cần thanh toán: <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontSize: 16 }}>{formatPrice(200000)}</strong></div>
+                <div>Nội dung chuyển khoản: <strong style={{ color: 'var(--portal-salmon, #ce9180)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>
+                  * Bạn cũng có thể thanh toán trực tiếp bằng tiền mặt hoặc thẻ tại quầy Lễ tân trước giờ tập.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setPaymentModalBooking(null)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  setPaymentModalBooking(null);
+                  navigate('/member/invoices');
+                }}
+              >
+                Xem Hóa đơn & Lịch sử thanh toán →
               </button>
             </div>
           </div>

@@ -55,6 +55,17 @@ export const router = createBrowserRouter([
         children: [{ path: '/messages', element: <ChatPage /> }],
       },
 
+      // Notifications (Shared between Member & Coach)
+      {
+        element: <RoleGuard allowedRoles={['MEMBER', 'COACH']} />,
+        children: [
+          {
+            path: '/member/notifications',
+            element: <MemberNotificationsPage />,
+          },
+        ],
+      },
+
       // Member-only Routes
       {
         element: <RoleGuard allowedRoles={['MEMBER']} />,
@@ -78,10 +89,6 @@ export const router = createBrowserRouter([
           {
             path: '/member/progress',
             element: <MemberProgressPage />,
-          },
-          {
-            path: '/member/notifications',
-            element: <MemberNotificationsPage />,
           },
           {
             path: '/member/support',

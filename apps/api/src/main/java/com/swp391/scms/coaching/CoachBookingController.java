@@ -52,6 +52,16 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, slots));
     }
 
+    @GetMapping("/quota-status")
+    public ResponseEntity<ApiResponse<CoachQuotaStatusDto>> getQuotaStatus(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        CoachQuotaStatusDto status = coachBookingService.getMemberQuotaStatus(principal.id());
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.quota_success", "Lấy trạng thái hạn mức PT thành công")
+                : "Lấy trạng thái hạn mức PT thành công";
+        return ResponseEntity.ok(ApiResponse.ok(msg, status));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<CoachBookingDto>> createBooking(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -71,6 +81,16 @@ public class CoachBookingController {
                 ? messageService.getMessage("message.coach_booking.my_list_success", "Lấy danh sách lịch 1:1 thành công")
                 : "Lấy danh sách lịch 1:1 thành công";
         return ResponseEntity.ok(ApiResponse.ok(msg, bookings));
+    }
+
+    @GetMapping("/coach-schedule")
+    public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getCoachSchedule(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        List<CoachBookingDto> schedule = coachBookingService.getCoachSchedule(principal.id());
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.coach_schedule_success", "Lấy danh sách lịch dạy kèm 1:1 thành công")
+                : "Lấy danh sách lịch dạy kèm 1:1 thành công";
+        return ResponseEntity.ok(ApiResponse.ok(msg, schedule));
     }
 
     @DeleteMapping("/{id}")

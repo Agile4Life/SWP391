@@ -52,6 +52,13 @@ export interface CoachBookingCreatePayload {
   notes?: string;
 }
 
+export interface CoachQuotaStatusDto {
+  packageName: string | null;
+  monthlyQuota: number;
+  usedThisMonth: number;
+  remainingQuota: number;
+}
+
 export async function getCoaches(): Promise<CoachPublicDto[]> {
   const res = await apiFetch<CoachPublicDto[]>('/coach-bookings/coaches');
   return res ?? [];
@@ -81,4 +88,13 @@ export async function cancelCoachBooking(bookingId: number, reason?: string): Pr
   return apiFetch<CoachBookingDto>(url, {
     method: 'DELETE',
   });
+}
+
+export async function getMemberQuotaStatus(): Promise<CoachQuotaStatusDto> {
+  return apiFetch<CoachQuotaStatusDto>('/coach-bookings/quota-status');
+}
+
+export async function getCoachSchedule(): Promise<CoachBookingDto[]> {
+  const res = await apiFetch<CoachBookingDto[]>('/coach-bookings/coach-schedule');
+  return res ?? [];
 }

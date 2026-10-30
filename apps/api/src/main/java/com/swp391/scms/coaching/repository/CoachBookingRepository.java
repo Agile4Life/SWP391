@@ -25,6 +25,16 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
 
     @Query("""
             select cb from CoachBooking cb
+            join fetch cb.member m
+            join fetch m.user mu
+            left join fetch cb.discipline d
+            where cb.coach.userId = :coachId
+            order by cb.bookingDate desc, cb.startTime desc
+            """)
+    List<CoachBooking> findByCoachId(@Param("coachId") Long coachId);
+
+    @Query("""
+            select cb from CoachBooking cb
             where cb.coach.userId = :coachId
               and cb.bookingDate = :date
               and cb.status = 'confirmed'

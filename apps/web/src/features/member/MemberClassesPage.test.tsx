@@ -45,6 +45,8 @@ vi.mock('./coachBookingApi', () => ({
   getMyCoachBookings: mocks.myCoachBookings,
   createCoachBooking: vi.fn(),
   cancelCoachBooking: vi.fn(),
+  getMemberQuotaStatus: vi.fn().mockResolvedValue({ packageName: 'GOLD', monthlyQuota: 3, usedThisMonth: 1, remainingQuota: 2 }),
+  getCoachSchedule: vi.fn().mockResolvedValue([]),
 }));
 
 const session = {

@@ -23,6 +23,8 @@ export function PortalShell() {
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
   const isMember = user?.role === 'MEMBER';
+  const isCoach = user?.role === 'COACH';
+  const canReceiveNotifications = isMember || isCoach;
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
   const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
@@ -33,7 +35,7 @@ export function PortalShell() {
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
 
   useEffect(() => {
-    if (!isMember) return;
+    if (!canReceiveNotifications) return;
     let active = true;
     const refresh = () => {
       void getUnreadCount().then((count) => {
@@ -50,7 +52,7 @@ export function PortalShell() {
       window.removeEventListener('member-notifications-changed', refresh);
       window.removeEventListener('focus', refresh);
     };
-  }, [isMember]);
+  }, [canReceiveNotifications]);
 
   useEffect(() => {
     const previousTitle = document.title;
@@ -105,7 +107,7 @@ export function PortalShell() {
           </div>
           <div className="portal-topbar-actions">
             <ThemeToggle />
-            {isMember && <Link to="/member/notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
+            {canReceiveNotifications && <Link to="/member/notifications" className="member-notification-bell" aria-label={notificationError ? 'Thông báo · Không thể cập nhật số chưa đọc' : `Thông báo · ${unreadCount ?? 0} chưa đọc`} title={notificationError ? 'Không thể cập nhật số thông báo' : 'Thông báo'}>
               <PortalIcon name="bell" size={19} />
               {unreadCount !== null && unreadCount > 0 && <span className="member-notification-badge" aria-hidden="true">{unreadCount > 99 ? '99+' : unreadCount}</span>}
             </Link>}
