@@ -15,7 +15,7 @@ export function CatalogStatus({ loading, retry }: { loading: boolean; retry: () 
 
 export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog; joinPath: string }) {
   const [longTerm, setLongTerm] = useState(false);
-  const [termFilter, setTermFilter] = useState<'all' | '6m' | '12m'>('all');
+  const [termFilter, setTermFilter] = useState<'6m' | '12m'>('6m');
 
   const packages = catalog.packages.filter(pkg => {
     if (pkg.status !== 'active') return false;
@@ -28,12 +28,11 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
 
   return <>
     <div className="fit-pricing-switch" data-reveal="soft" aria-label="Lọc thời hạn gói tập">
-      <button type="button" aria-pressed={!longTerm} onClick={() => { setLongTerm(false); setTermFilter('all'); }}>Tất cả gói tập</button>
-      <button type="button" aria-pressed={longTerm} onClick={() => setLongTerm(true)}>Đồng hành dài hạn</button>
+      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>Tất cả gói tập</button>
+      <button type="button" aria-pressed={longTerm} onClick={() => { setLongTerm(true); setTermFilter('6m'); }}>Đồng hành dài hạn</button>
     </div>
     {longTerm && (
-      <div className="fit-pricing-switch fit-schedule-switch" style={{ margin: '0 auto 28px', maxWidth: '560px' }} aria-label="Lọc thời hạn dài hạn">
-        <button type="button" aria-pressed={termFilter === 'all'} onClick={() => setTermFilter('all')}>Tất cả dài hạn</button>
+      <div className="fit-pricing-switch fit-schedule-switch" style={{ margin: '0 auto 28px', maxWidth: '440px' }} aria-label="Lọc thời hạn dài hạn">
         <button type="button" aria-pressed={termFilter === '6m'} onClick={() => setTermFilter('6m')}>Gói 6 tháng (Tiết kiệm ~17%)</button>
         <button type="button" aria-pressed={termFilter === '12m'} onClick={() => setTermFilter('12m')}>Gói 12 tháng (Tiết kiệm 25%)</button>
       </div>
