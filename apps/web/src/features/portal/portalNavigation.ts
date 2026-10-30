@@ -18,6 +18,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH', 'MANAGER'] },
   { to: '/coach/training-plans', label: 'Soạn giáo án & AI Gợi ý', icon: 'profile', roles: ['COACH', 'MANAGER'] },
   { to: '/staff/attendance', label: 'Điểm danh học viên', icon: 'check', roles: ['COACH'] },
+  { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'support', roles: ['STAFF', 'COACH'] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/reception', label: 'Quầy Lễ tân & POS', icon: 'card', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/check-in', label: 'Cổng quét QR Check-in', icon: 'scan', roles: ['STAFF', 'MANAGER'] },
@@ -27,5 +28,6 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
   { to: '/manager/reports', label: 'Báo cáo & Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/audit-logs', label: 'Nhật ký kiểm toán & Lấp đầy', icon: 'board', roles: ['MANAGER'] },
   { to: '/manager/coach-reviews', label: 'Xếp hạng & Đánh giá HLV', icon: 'chart', roles: ['MANAGER'] },
+  { to: '/manager/requests', label: 'Duyệt đơn nội bộ', icon: 'check', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER'] },
 ];

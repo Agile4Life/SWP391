@@ -1,0 +1,235 @@
+package com.swp391.scms.operations;
+
+import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ForbiddenException;
+import com.swp391.scms.notifications.NotificationService;
+import com.swp391.scms.operations.dto.StaffInternalRequestCreateDto;
+import com.swp391.scms.operations.dto.StaffInternalRequestDto;
+import com.swp391.scms.operations.dto.StaffInternalRequestReviewDto;
+import com.swp391.scms.operations.entity.StaffInternalRequest;
+import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
+import com.swp391.scms.operations.service.StaffInternalRequestService;
+import com.swp391.scms.users.UserRepository;
+import com.swp391.scms.users.entity.Role;
+import com.swp391.scms.users.entity.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class StaffInternalRequestServiceTest {
+
+    @Mock
+    private StaffInternalRequestRepository requestRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private NotificationService notificationService;
+
+    private StaffInternalRequestService service;
+
+    private User staffUser;
+    private User managerUser;
+
+    @BeforeEach
+    void setUp() {
+        service = new StaffInternalRequestService(requestRepository, userRepository, notificationService);
+
+        Role staffRole = new Role();
+        staffRole.setCode("STAFF");
+        staffRole.setName("Nhân viên");
+
+        Role managerRole = new Role();
+        managerRole.setCode("MANAGER");
+        managerRole.setName("Quản lý");
+
+        staffUser = new User();
+        staffUser.setId(10L);
+        staffUser.setFullName("Nguyễn Văn Nhân Viên");
+        staffUser.setEmail("staff@solfitness.vn");
+        staffUser.setRole(staffRole);
+
+        managerUser = new User();
+        managerUser.setId(1L);
+        managerUser.setFullName("Trần Quản Lý");
+        managerUser.setEmail("manager@solfitness.vn");
+        managerUser.setRole(managerRole);
+    }
+
+    @Test
+    @DisplayName("Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager")
+    void createRequest_Success() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findAll()).thenReturn(List.of(staffUser, managerUser));
+
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(invocation -> {
+            StaffInternalRequest saved = invocation.getArgument(0);
+            saved.setId(100L);
+            return saved;
+        });
+
+        StaffInternalRequestCreateDto dto = new StaffInternalRequestCreateDto(
+                "LEAVE",
+                "Xin nghỉ phép việc gia đình",
+                "Tôi có việc bận gia đình cần nghỉ 2 ngày",
+                LocalDate.now().plusDays(2),
+                LocalDate.now().plusDays(3),
+                null,
+                null
+        );
+
+        StaffInternalRequestDto result = service.createRequest(10L, dto);
+
+        assertNotNull(result);
+        assertEquals(100L, result.id());
+        assertEquals("LEAVE", result.requestType());
+        assertEquals("PENDING", result.status());
+        assertEquals("Xin nghỉ phép việc gia đình", result.title());
+
+        verify(notificationService).send(
+                eq(1L),
+                contains("cần duyệt"),
+                anyString(),
+                eq("INTERNAL_REQUEST"),
+                eq("INTERNAL_REQUEST"),
+                eq(100L)
+        );
+    }
+
+    @Test
+    @DisplayName("Tạo đơn với loại không hợp lệ ném BadRequestException")
+    void createRequest_InvalidType_ThrowsBadRequest() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+
+        StaffInternalRequestCreateDto dto = new StaffInternalRequestCreateDto(
+                "INVALID_TYPE",
+                "Tiêu đề",
+                "Lý do",
+                null, null, null, null
+        );
+
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Hủy đơn thành công khi đơn còn đang PENDING")
+    void cancelRequest_Success() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(50L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+        req.setTitle("Đổi ca trực");
+
+        when(requestRepository.findById(50L)).thenReturn(Optional.of(req));
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
+
+        StaffInternalRequestDto cancelled = service.cancelRequest(10L, 50L);
+
+        assertEquals("CANCELLED", cancelled.status());
+        verify(requestRepository).save(req);
+    }
+
+    @Test
+    @DisplayName("Người dùng khác hủy đơn của đồng nghiệp bị ForbiddenException")
+    void cancelRequest_Forbidden_WhenNotOwner() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(50L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+
+        when(requestRepository.findById(50L)).thenReturn(Optional.of(req));
+
+        assertThrows(ForbiddenException.class, () -> service.cancelRequest(999L, 50L));
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Hủy đơn đã được duyệt hoặc từ chối ném BadRequestException")
+    void cancelRequest_BadRequest_WhenNotPending() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(50L);
+        req.setUser(staffUser);
+        req.setStatus("APPROVED");
+
+        when(requestRepository.findById(50L)).thenReturn(Optional.of(req));
+
+        assertThrows(BadRequestException.class, () -> service.cancelRequest(10L, 50L));
+    }
+
+    @Test
+    @DisplayName("Quản lý duyệt đơn (APPROVED) thành công và gửi thông báo cho nhân viên")
+    void reviewRequest_Approve_Success() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(200L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+        req.setRequestType("LEAVE");
+        req.setTitle("Xin nghỉ phép");
+
+        when(requestRepository.findById(200L)).thenReturn(Optional.of(req));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(managerUser));
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
+
+        StaffInternalRequestReviewDto dto = new StaffInternalRequestReviewDto("APPROVED", "Đã bố trí nhân sự thay thế, đồng ý.");
+
+        StaffInternalRequestDto reviewed = service.reviewRequest(1L, 200L, dto);
+
+        assertEquals("APPROVED", reviewed.status());
+        assertEquals("Đã bố trí nhân sự thay thế, đồng ý.", reviewed.managerNotes());
+        assertEquals(1L, reviewed.reviewedByUserId());
+
+        verify(notificationService).send(
+                eq(10L),
+                contains("đã được duyệt"),
+                contains("CHẤP THUẬN"),
+                eq("INTERNAL_REQUEST"),
+                eq("INTERNAL_REQUEST"),
+                eq(200L)
+        );
+    }
+
+    @Test
+    @DisplayName("Quản lý từ chối đơn (REJECTED) bắt buộc phải có lý do")
+    void reviewRequest_Reject_MissingReason_ThrowsBadRequest() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(200L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+
+        when(requestRepository.findById(200L)).thenReturn(Optional.of(req));
+
+        StaffInternalRequestReviewDto dto = new StaffInternalRequestReviewDto("REJECTED", "   ");
+
+        assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 200L, dto));
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Duyệt đơn đã xử lý trước đó ném BadRequestException")
+    void reviewRequest_AlreadyReviewed_ThrowsBadRequest() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(200L);
+        req.setUser(staffUser);
+        req.setStatus("REJECTED");
+
+        when(requestRepository.findById(200L)).thenReturn(Optional.of(req));
+
+        StaffInternalRequestReviewDto dto = new StaffInternalRequestReviewDto("APPROVED", "Duyệt lại");
+
+        assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 200L, dto));
+    }
+}

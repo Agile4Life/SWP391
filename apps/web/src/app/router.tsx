@@ -26,6 +26,8 @@ import { StaffClassesPage } from '../features/classes/StaffClassesPage';
 import { CoachAttendancePage } from '../features/coaching/CoachAttendancePage';
 import { CoachClassesPage } from '../features/coaching/CoachClassesPage';
 import { CoachTrainingPlanPage } from '../features/coaching/CoachTrainingPlanPage';
+import { StaffInternalRequestsPage } from '../features/operations/StaffInternalRequestsPage';
+import { ManagerInternalRequestsPage } from '../features/operations/ManagerInternalRequestsPage';
 
 // Manager Feature Pages
 import { ManagerCatalogsPage } from '../features/manager/ManagerCatalogsPage';
@@ -166,6 +168,10 @@ export const router = createBrowserRouter([
             element: <CoachAttendancePage />,
           },
           {
+            path: '/staff/requests',
+            element: <StaffInternalRequestsPage />,
+          },
+          {
             path: '/coach/classes',
             element: <CoachClassesPage />,
           },
@@ -209,6 +215,10 @@ export const router = createBrowserRouter([
           {
             path: '/manager/coach-reviews',
             element: <ManagerCoachReviewsPage />,
+          },
+          {
+            path: '/manager/requests',
+            element: <ManagerInternalRequestsPage />,
           },
         ],
       },
