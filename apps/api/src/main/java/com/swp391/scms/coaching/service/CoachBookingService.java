@@ -316,7 +316,7 @@ public class CoachBookingService {
             String title = "Lịch dạy PT 1:1 mới";
             String message = String.format("Hội viên %s đã đặt lịch tập 1:1 vào ngày %s (%s - %s).",
                     memberName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
-            notificationService.send(coach.getUser().getId(), title, message, "COACH_BOOKING", "COACH_BOOKING", saved.getId());
+            notificationService.send(coach.getUserId(), title, message, "COACH_BOOKING", "COACH_BOOKING", saved.getId());
         }
 
         // Notify the member about successful booking
@@ -368,7 +368,7 @@ public class CoachBookingService {
             String title = "Hủy lịch dạy PT 1:1";
             String message = String.format("Hội viên %s đã hủy lịch tập 1:1 ngày %s (%s - %s).",
                     memberName, booking.getBookingDate(), booking.getStartTime().toString().substring(0, 5), booking.getEndTime().toString().substring(0, 5));
-            notificationService.send(booking.getCoach().getUser().getId(), title, message, "COACH_BOOKING_CANCELLED", "COACH_BOOKING", booking.getId());
+            notificationService.send(booking.getCoach().getUserId(), title, message, "COACH_BOOKING_CANCELLED", "COACH_BOOKING", booking.getId());
         }
 
         return mapToDto(booking);
