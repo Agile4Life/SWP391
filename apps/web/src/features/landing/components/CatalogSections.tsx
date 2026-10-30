@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
 import { sessionDate } from '../publicCatalog';
@@ -42,17 +42,43 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
     <div className="fit-pricing-grid" key={`${String(longTerm)}-${termFilter}`}>
       {packages.map((pkg, index) => {
         const details = getPackageDetails(pkg);
-        return <article key={pkg.id} className={`fit-plan ${index === 1 ? 'fit-plan-featured' : ''}`} data-reveal="lift">
+        const isFeatured = index === 1;
+        return <article key={pkg.id} className={`fit-plan ${isFeatured ? 'fit-plan-featured' : ''}`} data-reveal="lift">
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <span className="fit-plan-period">{pkg.durationDays} ngày</span>
-            {pkg.durationDays >= 360 && <span className="fit-plan-period" style={{ background: 'var(--fit-salmon, #e07a5f)', color: '#281b17', fontWeight: 600 }}>Tặng 3 tháng (Tiết kiệm 25%)</span>}
-            {pkg.durationDays >= 170 && pkg.durationDays < 360 && <span className="fit-plan-period" style={{ background: '#eeeae5', color: '#67524b', fontWeight: 600 }}>Tiết kiệm ~17%</span>}
+            <span className="fit-plan-period" style={isFeatured ? { background: '#202020', color: '#faf9f6' } : undefined}>{pkg.durationDays} ngày</span>
+            {pkg.durationDays >= 360 && (
+              <span
+                className="fit-plan-period"
+                style={isFeatured
+                  ? { background: '#202020', color: '#faf9f6', fontWeight: 600 }
+                  : { background: 'var(--fit-salmon, #ce9180)', color: '#281b17', fontWeight: 600 }}
+              >
+                Tặng 3 tháng (Tiết kiệm 25%)
+              </span>
+            )}
+            {pkg.durationDays >= 170 && pkg.durationDays < 360 && (
+              <span
+                className="fit-plan-period"
+                style={isFeatured
+                  ? { background: '#202020', color: '#faf9f6', fontWeight: 600 }
+                  : { background: '#eeeae5', color: '#67524b', fontWeight: 600 }}
+              >
+                Tiết kiệm ~17%
+              </span>
+            )}
           </div>
           <h3>{pkg.name}</h3>
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} ngày</span></div>
           <p className="fit-plan-summary">{details.summary}</p>
           <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
-          <Link className="fit-pill" to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}>Chọn gói tập<RoundArrow diagonal /></Link>
+          <Link
+            className="fit-pill"
+            style={isFeatured ? { background: '#202020', color: '#faf9f6' } : undefined}
+            to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}
+          >
+            <span>Chọn gói tập</span>
+            <RoundArrow diagonal />
+          </Link>
         </article>;
       })}
     </div>
