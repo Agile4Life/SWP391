@@ -23,6 +23,7 @@ export function StaffSupportPage() {
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const alive = useRef(false), selection = useRef<number | null>(null), listGeneration = useRef(0), detailGeneration = useRef(0), busy = useRef(new Set<number>());
   const listQuery = useRef({ page: 0, filter: '' });
+  const listFocus = useRef<HTMLElement | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null), sendKeys = useRef(new Map<number, { text: string; key: string }>());
   useEffect(() => { alive.current = true; return () => { alive.current = false; selection.current = null; }; }, []);
 
@@ -30,7 +31,18 @@ export function StaffSupportPage() {
     const { page, filter } = listQuery.current;
     const generation = ++listGeneration.current;
     setLoading(true); setListError('');
-    try { const result = await getSupportInbox(page, filter); if (alive.current && generation === listGeneration.current) { setTickets(result.content); setPages(result.totalPages); } }
+    try {
+      const result = await getSupportInbox(page, filter);
+      if (alive.current && generation === listGeneration.current) {
+        const lastPage = Math.max(0, result.totalPages - 1);
+        if (page > lastPage) {
+          listQuery.current = { page: lastPage, filter };
+          setPage(lastPage);
+          return;
+        }
+        setTickets(result.content); setPages(result.totalPages);
+      }
+    }
     catch (error) { if (alive.current && generation === listGeneration.current) setListError(failure(error)); }
     finally { if (alive.current && generation === listGeneration.current) setLoading(false); }
   }, []);
@@ -70,7 +82,10 @@ export function StaffSupportPage() {
     return () => { disposed = true; stop(); clearTimeout(timer); };
   }, [selected, loadDetail]);
 
-  function close() { selection.current = null; detailGeneration.current++; setSelected(null); setTicket(null); }
+  function close() {
+    returnFocus.current = listFocus.current?.querySelector<HTMLElement>(`[data-support-ticket="${selection.current}"]`) ?? listFocus.current;
+    selection.current = null; detailGeneration.current++; setSelected(null); setTicket(null);
+  }
   function changeQuery(nextPage: number, nextFilter: string) {
     // Invalidate old responses immediately; pending mutations use this latest query.
     listQuery.current = { page: nextPage, filter: nextFilter };
@@ -105,9 +120,9 @@ export function StaffSupportPage() {
   return <div className="portal-container member-support staff-support">
     <PageHeader eyebrow="Lễ tân" title="Hộp thư hỗ trợ" subtitle="Tiếp nhận, phản hồi và cập nhật yêu cầu của hội viên." />
     <p role="status" className="member-support-context">{connections[connection]}</p>
-    <section className="portal-card">
+    <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">Trạng thái</label><select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">Tất cả</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button className="member-support-link" disabled={loading} onClick={() => void loadList()}>Làm mới</button></div>
-      {loading ? <p role="status">Đang tải phiếu hỗ trợ…</p> : listError ? <div role="alert"><p>{listError}</p><button className="member-support-link" onClick={() => void loadList()}>Thử lại</button></div> : !tickets.length ? <p className="portal-empty">Không có phiếu hỗ trợ phù hợp.</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{labels[item.status]}</span></span><span className="member-support-meta">{item.memberName || `Hội viên #${item.memberId}`} · {new Date(item.createdAt).toLocaleString('vi-VN')} · {item.assignedToName || 'Chưa phân công'}</span></button>)}</div>}
+      {loading ? <p role="status">Đang tải phiếu hỗ trợ…</p> : listError ? <div role="alert"><p>{listError}</p><button className="member-support-link" onClick={() => void loadList()}>Thử lại</button></div> : !tickets.length ? <p className="portal-empty">Không có phiếu hỗ trợ phù hợp.</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} data-support-ticket={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{labels[item.status]}</span></span><span className="member-support-meta">{item.memberName || `Hội viên #${item.memberId}`} · {new Date(item.createdAt).toLocaleString('vi-VN')} · {item.assignedToName || 'Chưa phân công'}</span></button>)}</div>}
       {!loading && !listError && pages > 1 && <div className="member-support-pages"><button disabled={!page} onClick={() => changeQuery(page - 1, filter)}>Trước</button><span>{page + 1}/{pages}</span><button disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>Sau</button></div>}
     </section>
     {selected !== null && <Modal title={`Hỗ trợ · Phiếu #${selected}`} onClose={close} returnFocusRef={returnFocus}><div className="member-support-conversation">

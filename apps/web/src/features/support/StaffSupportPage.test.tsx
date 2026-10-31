@@ -41,6 +41,36 @@ async function submit() {
   await act(async () => host.querySelector('.member-support-compose')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 }
 
+it('returns to a valid filtered page when replying removes the last ticket on the final page', async () => {
+  let replied = false;
+  const remaining = { ...ticket, id: 8, subject: 'Remaining open ticket' };
+  vi.mocked(api.getSupportInbox).mockImplementation(async (page, filter) => {
+    if (filter === 'open' && replied) return { content: page === 0 ? [remaining] : [], totalPages: 1 };
+    return { content: [ticket], totalPages: 2 };
+  });
+  vi.mocked(api.sendSupportMessage).mockImplementation(async () => { replied = true; return reply; });
+  await render(); await change('#staff-support-filter', 'open');
+  await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Sau')!.click());
+  await open(); await type('Reply'); await submit(); await close();
+  expect(host.textContent).toContain('Remaining open ticket');
+  expect(api.getSupportInbox).toHaveBeenLastCalledWith(0, 'open');
+});
+
+it.each([false, true])('restores focus after a reply refresh replaces the opener (ticket removed: %s)', async removed => {
+  vi.mocked(api.sendSupportMessage).mockResolvedValue(reply);
+  await render();
+  const opener = host.querySelector<HTMLButtonElement>('.member-support-ticket')!;
+  opener.focus();
+  await open(); await type('Reply');
+  const refreshed = deferred<{ content: api.SupportTicket[]; totalPages: number }>();
+  vi.mocked(api.getSupportInbox).mockReturnValueOnce(refreshed.promise);
+  await submit();
+  expect(opener.isConnected).toBe(false);
+  await act(async () => refreshed.resolve({ content: removed ? [] : [ticket], totalPages: removed ? 0 : 1 }));
+  await close();
+  expect(document.activeElement).toBe(removed ? host.querySelector('section.portal-card') : host.querySelector('.member-support-ticket'));
+});
+
 it.each(['send', 'status'] as const)('refreshes the current filter/page after pending %s and rejects an older query response', async kind => {
   const sending = deferred<api.SupportMessage>(), updating = deferred<api.SupportTicket>();
   vi.mocked(api.sendSupportMessage).mockReturnValue(sending.promise);
