@@ -29,6 +29,9 @@ export function Modal({ title, onClose, children, busy = false, className, retur
   return (
     <dialog
       ref={ref}
+      role="dialog"
+      aria-modal="true"
+      aria-busy={busy}
       className={`portal-dialog ${className || ''}`.trim()}
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby={titleId}
