@@ -4,8 +4,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemberSupportPage } from './MemberSupportPage';
 import * as supportApi from './memberSupportApi';
 import { ApiError } from '../../shared/api/client';
+import { subscribeSupport } from './supportRealtime';
 
-vi.mock('./memberSupportApi', () => ({ getMySupportTickets: vi.fn(), createSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn() }));
+vi.mock('./supportRealtime', () => ({ subscribeSupport: vi.fn(() => () => {}) }));
+vi.mock('./memberSupportApi', () => ({ getMySupportTickets: vi.fn(), getSupportTicket: vi.fn(), createSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn() }));
 const ticket = { id: 7, memberId: 10, subject: '[Thiết bị] Máy chạy', description: 'Máy không bật', status: 'open', createdAt: '2026-10-25T08:00:00', assignedToName: null } as supportApi.SupportTicket;
 let host: HTMLDivElement;
 let root: Root;
@@ -17,6 +19,8 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
   vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 1 });
   vi.mocked(supportApi.getSupportMessages).mockResolvedValue([]);
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(ticket);
+  vi.mocked(subscribeSupport).mockImplementation(() => () => {});
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.resetAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 async function render() { await act(async () => root.render(<MemberSupportPage />)); }
@@ -41,6 +45,55 @@ function deferred<T>() {
 }
 const otherTicket = { ...ticket, id: 8, subject: '[Khác] Phiếu B' };
 const message = (id: number, text: string): supportApi.SupportMessage => ({ id, senderId: 10, senderName: 'Bạn', senderRole: 'MEMBER', message: text, createdAt: ticket.createdAt });
+
+it('refetches authoritative messages and closed status on realtime invalidation without duplicates', async () => {
+  await render(); await chooseTicket(7);
+  const changed = vi.mocked(subscribeSupport).mock.calls.at(-1)![0];
+  vi.mocked(supportApi.getSupportMessages).mockResolvedValue([message(21, 'Nhân viên phản hồi'), message(21, 'Nhân viên phản hồi')]);
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue({ ...ticket, status: 'closed' });
+  await act(async () => { changed(); changed(); await new Promise(resolve => setTimeout(resolve, 120)); });
+  expect(host.querySelectorAll('.member-support-messages li')).toHaveLength(1);
+  expect(host.textContent).toContain('Nhân viên phản hồi');
+  expect(host.querySelector('.member-support-compose')).toBeNull();
+  expect(supportApi.sendSupportMessage).not.toHaveBeenCalled();
+});
+
+it('cleans up ticket subscription and ignores late invalidation after changing ticket', async () => {
+  const cleanup = vi.fn();
+  vi.mocked(subscribeSupport).mockReturnValue(cleanup);
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket, otherTicket], totalPages: 1 });
+  await render(); await chooseTicket(7);
+  const stale = vi.mocked(subscribeSupport).mock.calls.at(-1)![0];
+  await chooseTicket(8);
+  expect(cleanup).toHaveBeenCalled();
+  const calls = vi.mocked(supportApi.getSupportMessages).mock.calls.length;
+  await act(async () => { stale(); await new Promise(resolve => setTimeout(resolve, 120)); });
+  expect(supportApi.getSupportMessages).toHaveBeenCalledTimes(calls);
+  expect(host.querySelector('dialog')?.textContent).toContain('Phiếu #8');
+});
+
+it('does not overwrite a newer closed state with delayed realtime ticket metadata', async () => {
+  await render(); await chooseTicket(7);
+  const detail = deferred<supportApi.SupportTicket>();
+  vi.mocked(supportApi.getSupportTicket).mockReturnValueOnce(detail.promise);
+  const changed = vi.mocked(subscribeSupport).mock.calls.at(-1)![0];
+  await act(async () => { changed(); await new Promise(resolve => setTimeout(resolve, 120)); });
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValueOnce({ content: [{ ...ticket, status: 'closed' }], totalPages: 1 });
+  await click([...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Làm mới hội thoại')!);
+  expect(host.querySelector('.member-support-compose')).toBeNull();
+  await act(async () => detail.resolve(ticket));
+  expect(host.querySelector('.member-support-compose')).toBeNull();
+});
+
+it('keeps the same idempotency key for a manual retry after an ambiguous POST failure', async () => {
+  vi.mocked(supportApi.sendSupportMessage).mockRejectedValueOnce(new Error('network')).mockResolvedValue(message(1, 'Xin chào'));
+  await render(); await chooseTicket(7); await type('#support-message', 'Xin chào');
+  await submit('.member-support-compose'); await submit('.member-support-compose');
+  const calls = vi.mocked(supportApi.sendSupportMessage).mock.calls;
+  expect(calls).toHaveLength(2);
+  expect(calls[0][2]).toMatch(/^[0-9a-f-]{36}$/);
+  expect(calls[1][2]).toBe(calls[0][2]);
+});
 
 it('lists member tickets, maps status and opens an empty conversation', async () => {
   await render();
@@ -68,7 +121,7 @@ it('sends a message once and reloads the conversation', async () => {
   await render(); await click(host.querySelector('.member-support-ticket') as HTMLButtonElement);
   await type('#support-message', 'Xin chào');
   await act(async () => { (host.querySelector('.member-support-compose') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
-  expect(supportApi.sendSupportMessage).toHaveBeenCalledWith(7, 'Xin chào');
+  expect(supportApi.sendSupportMessage).toHaveBeenCalledWith(7, 'Xin chào', expect.any(String));
   expect(supportApi.getSupportMessages).toHaveBeenCalledTimes(2);
 });
 

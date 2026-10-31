@@ -180,7 +180,16 @@ components:
       type: object
       required:
         - message
+      description: >-
+        clientMessageId is an optional UUID idempotency key scoped to ticket and sender.
+        Retry the same key and trimmed content to return the original message without
+        duplicate notification or event, including after closure. Changed content with
+        the same key returns 409 SUPPORT_MESSAGE_KEY_REUSED. New messages to closed
+        tickets return 400 TICKET_CLOSED. Send and status writes share the ticket lock.
       properties:
+        clientMessageId:
+          type: string
+          format: uuid
         message:
           type: string
           maxLength: 2000

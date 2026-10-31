@@ -4,7 +4,7 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
-Support Member — SCRUM-128 giai đoạn 1 (31/10/2026): tạo ticket thành công mở ngay chat bằng ID API trả về; mở lại từ danh sách bằng native `Modal`, có Escape/focus và token portal Light/Dark. Draft và trạng thái gửi tách theo ticket; response cũ bị vô hiệu hóa khi đổi/đóng hội thoại hoặc unmount. Tin nhắn/trạng thái tải lại qua API khi mở hoặc làm mới, không tuyên bố realtime ticket. `/messages` là Direct Messages riêng; Supabase private realtime cho ticket và UI Receptionist thuộc giai đoạn 2.
+Support — SCRUM-128 (31/10/2026): giữ popup tạo ticket, native `Modal`, Escape/focus, draft riêng và bảo vệ response cũ của giai đoạn 1. Giai đoạn 2 dùng chung transport private Broadcast của Direct Messages nhưng có JWT giới hạn theo ticket và inbox nhân viên; sự kiện chỉ kích hoạt tải lại API đã xác thực. `/staff/support` là hộp thư lễ tân/quản lý, tách khỏi POS và `/messages`. Hiển thị trạng thái kết nối/kết nối lại, gửi/đã gửi/lỗi; không tự retry POST. Light/Dark dùng token portal, mobile cuộn native. Reconnect tải bù lịch sử và trạng thái từ API; khi chưa cấu hình realtime vẫn có làm mới thủ công. Code không đồng nghĩa đã kiểm chứng Supabase E2E; schema, trigger và RLS cần được review/triển khai trong môi trường được cấp quyền.
 
 Hiệu năng tải trang (29/10/2026): tải module theo route, có trạng thái tải và lỗi theo theme sáng/tối charcoal–salmon. PWA cache sẵn shell, dependency khởi động và CSS; module của trang đã truy cập được cache khi tải thành công. Trang chưa mở cần mạng cho lần tải đầu. Giữ nguyên phân quyền, tổ chức portal, thứ tự nội dung và thao tác chủ động cập nhật PWA; API và dữ liệu xác thực tiếp tục nằm ngoài cache.
 

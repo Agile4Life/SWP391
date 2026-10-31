@@ -3,7 +3,9 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { ApiError } from '../../shared/api/client';
-import { createSupportTicket, getMySupportTickets, getSupportMessages, sendSupportMessage, type SupportMessage, type SupportTicket } from './memberSupportApi';
+import { createSupportTicket, getMySupportTickets, getSupportTicket, getSupportMessages, sendSupportMessage, type SupportMessage, type SupportTicket } from './memberSupportApi';
+import { subscribeSupport } from './supportRealtime';
+import type { ChatConnection } from '../chat/chatRealtime';
 import './member-support.css';
 
 const categories = ['Gói tập', 'Thiết bị', 'Lịch học', 'Khác'] as const;
@@ -56,6 +58,10 @@ export function MemberSupportPage() {
   const [sendErrors, setSendErrors] = useState<Record<number, string>>({});
   const [historyReady, setHistoryReady] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [connection, setConnection] = useState<ChatConnection>('connecting');
+  const [sentIds, setSentIds] = useState<number[]>([]);
+  const messageKeys = useRef(new Map<number, { text: string; key: string }>());
+  const metadataRevision = useRef(0);
   const draft = selected ? drafts[selected.id] ?? '' : '';
   const sending = selected ? sendingIds.includes(selected.id) : false;
   const sendError = selected ? sendErrors[selected.id] ?? '' : '';
@@ -71,13 +77,15 @@ export function MemberSupportPage() {
 
   const loadTickets = useCallback(async (targetPage: number) => {
     const request = ++listRequest.current;
+    const revision = ++metadataRevision.current;
     const current = () => alive.current && request === listRequest.current;
     setLoading(true); setListError('');
     try {
       const result = await getMySupportTickets(targetPage);
       if (current()) {
-        setTickets(result.content); setTotalPages(result.totalPages); setPage(targetPage);
-        setOpenedTicket(previous => previous ? result.content.find(ticket => ticket.id === previous.id) ?? previous : null);
+        setTickets(previous => result.content.map(ticket => revision !== metadataRevision.current && ticket.id === selection.current ? previous.find(item => item.id === ticket.id) ?? ticket : ticket));
+        setTotalPages(result.totalPages); setPage(targetPage);
+        setOpenedTicket(previous => previous && revision === metadataRevision.current ? result.content.find(ticket => ticket.id === previous.id) ?? previous : previous);
       }
     } catch (error) { if (current()) setListError(failure(error)); }
     finally { if (current()) setLoading(false); }
@@ -109,6 +117,41 @@ export function MemberSupportPage() {
     void loadMessages(selectedId);
     return invalidateMessages;
   }, [selectedId, loadMessages, invalidateMessages]);
+
+  useEffect(() => {
+    if (selectedId == null) return;
+    const id = selectedId;
+    let disposed = false, running = false, dirty = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const current = () => !disposed && alive.current && selection.current === id;
+    async function refresh() {
+      timer = undefined;
+      if (!current() || document.visibilityState === 'hidden') return;
+      if (running) { dirty = true; return; }
+      running = true;
+      const revision = ++metadataRevision.current;
+      const [, detail] = await Promise.all([loadMessages(id), getSupportTicket(id).then(
+        ticket => ({ ticket, error: null }), error => ({ ticket: null, error: error as unknown }),
+      )]);
+      if (current() && revision === metadataRevision.current) {
+        if (detail.ticket) {
+          setOpenedTicket(detail.ticket);
+          setTickets(previous => previous.map(item => item.id === id ? detail.ticket! : item));
+        } else {
+          setMessagesError(failure(detail.error)); setHistoryReady(false);
+          setAccessDenied(detail.error instanceof ApiError && (detail.error.status === 403 || detail.error.status === 404));
+        }
+      }
+      running = false;
+      if (dirty && current()) { dirty = false; schedule(); }
+    }
+    function schedule() {
+      if (!current() || timer) return;
+      timer = setTimeout(() => { void refresh(); }, 80);
+    }
+    const unsubscribe = subscribeSupport(schedule, state => { if (current()) setConnection(state); }, id);
+    return () => { disposed = true; clearTimeout(timer); unsubscribe(); };
+  }, [selectedId, loadMessages]);
 
   function openChat(ticket: SupportTicket, trigger: HTMLElement | null = listFocus.current) {
     messagesRequest.current++;
@@ -151,12 +194,19 @@ export function MemberSupportPage() {
     if (!selected || sendingRef.current.has(selected.id) || !historyReady || messagesLoading || loading || listError || !value || value.length > 2000 || selected.status === 'closed') return;
     const id = selected.id;
     const originalDraft = draft;
+    let attempt = messageKeys.current.get(id);
+    if (!attempt || attempt.text !== value) {
+      attempt = { text: value, key: crypto.randomUUID() };
+      messageKeys.current.set(id, attempt);
+    }
     sendingRef.current.add(id);
     setSendingIds(previous => [...previous, id]);
     setSendErrors(previous => ({ ...previous, [id]: '' }));
     try {
-      await sendSupportMessage(id, value);
+      await sendSupportMessage(id, value, attempt.key);
       if (!alive.current) return;
+      messageKeys.current.delete(id);
+      setSentIds(previous => [...previous.filter(item => item !== id), id]);
       setDrafts(previous => previous[id] === originalDraft ? { ...previous, [id]: '' } : previous);
       if (selection.current === id) await loadMessages(id);
     } catch (error) { if (alive.current) setSendErrors(previous => ({ ...previous, [id]: failure(error) })); }
@@ -201,7 +251,8 @@ export function MemberSupportPage() {
         {loading && <p role="status">Đang kiểm tra trạng thái phiếu…</p>}
         {listError && <p role="alert" className="member-support-error">Không thể kiểm tra trạng thái phiếu. Hãy làm mới hội thoại để thử lại.</p>}
         {selected.description && <p className="member-support-description">{selected.description}</p>}
-        <p className="member-support-context">Làm mới hội thoại để cập nhật tin nhắn và trạng thái phiếu.</p>
+        <p className="member-support-context" role="status">{connection === 'connected' ? 'Đã kết nối trực tiếp' : connection === 'connecting' ? 'Đang kết nối…' : connection === 'reconnecting' ? 'Đang kết nối lại… Hội thoại sẽ được tải bù khi kết nối trở lại.' : 'Kết nối trực tiếp chưa khả dụng. Bạn có thể làm mới hội thoại.'}</p>
+        {sentIds.includes(selected.id) && !sendError && <p role="status" className="member-support-notice">Đã gửi tin nhắn.</p>}
         <button type="button" className="member-support-link" disabled={messagesLoading || loading} onClick={() => { void loadMessages(selected.id); void loadTickets(page); }}>Làm mới hội thoại</button>
         {messagesLoading ? <p role="status">Đang tải hội thoại…</p> : messagesError ? <div role="alert"><p>{messagesError}</p><button type="button" className="member-support-link" onClick={() => void loadMessages(selected.id)}>Thử lại</button></div> : messages.length === 0 ? <p className="portal-empty">Chưa có tin nhắn. Hãy bắt đầu trao đổi.</p> : <ol className="member-support-messages" tabIndex={0} aria-label={`Tin nhắn phiếu #${selected.id}`}>{messages.map((message) => <li key={message.id} className={message.senderRole === 'MEMBER' ? 'is-member' : 'is-staff'}><strong>{message.senderRole === 'MEMBER' ? 'Bạn' : (message.senderName || 'Nhân viên')}</strong><p>{message.message}</p><time dateTime={message.createdAt}>{dateTime(message.createdAt)}</time></li>)}</ol>}
         {selected.status === 'closed' ? <p className="member-support-context">Phiếu đã đóng, không thể gửi thêm tin nhắn.</p> : !accessDenied && <form className="member-support-compose" onSubmit={(event) => void submitMessage(event)}><label className="portal-label" htmlFor="support-message">Tin nhắn</label><textarea id="support-message" className="portal-textarea" value={draft} disabled={sending} onChange={(event) => { const value = event.target.value; setDrafts(previous => ({ ...previous, [selected.id]: value })); }} maxLength={2000} rows={3} required placeholder="Nhập nội dung phản hồi…" />{sendError && <p role="alert" className="member-support-error">{sendError}</p>}<button className="btn-primary" type="submit" disabled={sending || !historyReady || messagesLoading || loading || !!listError || !draft.trim()}>{sending ? 'Đang gửi…' : 'Gửi tin nhắn'}</button></form>}
