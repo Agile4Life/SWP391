@@ -166,25 +166,6 @@ public class WaitlistService {
     }
 
     /**
-     * Scheduled Job: Quét dọn các suất giữ chỗ quá 15 phút mỗi 60 giây.
-     */
-    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000)
-    @Transactional
-    public int scheduledCleanupExpiredReservations() {
-        LocalDateTime now = LocalDateTime.now(clock);
-        List<ClassWaitlist> expiredList = waitlists
-                .findByStatusAndReservationExpiresAtLessThan("notified", now);
-        for (ClassWaitlist expired : expiredList) {
-            expired.setStatus("expired");
-            waitlists.save(expired);
-            if (expired.getGymClass() != null && expired.getGymClass().getId() != null) {
-                enrollmentService.promoteNextWaitlistEntry(expired.getGymClass().getId(), now);
-            }
-        }
-        return expiredList.size();
-    }
-
-    /**
      * SCRUM-74 BR-04/BR-05: the authenticated member's own waitlist, FIFO by requested_at.
      */
     @Transactional(readOnly = true)

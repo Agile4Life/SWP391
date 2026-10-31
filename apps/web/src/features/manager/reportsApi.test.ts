@@ -44,13 +44,15 @@ describe('reportsApi', () => {
     vi.mocked(client.apiFetch)
       .mockResolvedValueOnce(mockDaily)
       .mockResolvedValueOnce(mockPackages)
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ expiredCount: 4, renewedCount: 3, renewalRate: 75 });
 
     const summary = await reportsApi.getSummary('2026-09-01', '2026-10-15');
     expect(summary.periodRevenue).toBe(5000000);
     expect(summary.todayRevenue).toBe(2000000);
     expect(summary.packagesSoldCount).toBe(3);
-    expect(summary.renewalRate).toBeNull();
+    expect(summary.renewalRate).toBe(75);
+    expect(client.apiFetch).toHaveBeenCalledWith('/reports/renewal-rate?startDate=2026-09-01&endDate=2026-10-15');
     expect(summary.dailyRevenue).toHaveLength(2);
   });
   it('uses actual individual payments instead of synthesizing transactions from daily totals', async () => {
@@ -61,7 +63,8 @@ describe('reportsApi', () => {
     vi.mocked(client.apiFetch)
       .mockResolvedValueOnce([{ date: '2026-10-05', revenue: 1000000, transactionCount: 2 }])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(transactions);
+      .mockResolvedValueOnce(transactions)
+      .mockResolvedValueOnce({ expiredCount: 0, renewedCount: 0, renewalRate: null });
 
     const summary = await reportsApi.getSummary('2026-10-01', '2026-10-05');
 
@@ -73,7 +76,8 @@ describe('reportsApi', () => {
     vi.mocked(client.apiFetch)
       .mockResolvedValueOnce([{ date: '2026-10-05', revenue: 1000000, transactionCount: 2 }])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ expiredCount: 0, renewedCount: 0, renewalRate: null });
     expect((await reportsApi.getSummary('2026-10-01', '2026-10-05')).recentTransactions).toEqual([]);
   });
 

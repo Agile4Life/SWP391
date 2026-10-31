@@ -223,7 +223,7 @@ export function MemberProfilePage() {
 
       {error && (
         <div role="alert" className="portal-alert">
-          <span>⚠️ {error}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => setError('')}>
             Đóng
           </button>

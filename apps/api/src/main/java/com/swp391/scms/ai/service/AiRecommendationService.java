@@ -137,10 +137,11 @@ public class AiRecommendationService {
                 ? member.getFitnessGoal()
                 : "Tăng cường thể lực & Tối ưu chuyển hóa";
         String analysis = buildAnalysisSummary(member, height, weight, bmi, request.getAdditionalRequirements());
+        JsonNode parsedAiRoot = tryReadTree(rawAiOutput);
         List<TrainingPlanItemCreateDto> structuredItems = parseOrBuildStructuredItems(
-                rawAiOutput, member, request.getAdditionalRequirements());
-        String resolvedGoal = parseGoalOrDefault(rawAiOutput, defaultGoal);
-        String resolvedAnalysis = parseAnalysisOrDefault(rawAiOutput, analysis);
+                parsedAiRoot, member, request.getAdditionalRequirements());
+        String resolvedGoal = parseGoalOrDefault(parsedAiRoot, defaultGoal);
+        String resolvedAnalysis = parseAnalysisOrDefault(parsedAiRoot, analysis);
 
         Map<String, Object> recommendedContentMap = new LinkedHashMap<>();
         recommendedContentMap.put("goal", resolvedGoal);
@@ -202,14 +203,16 @@ public class AiRecommendationService {
                 ? request.getEndDate()
                 : start.plusWeeks(4);
 
+        JsonNode savedContentRoot = tryReadTree(log.getRecommendedContent());
+
         String goal = (request != null && request.getGoal() != null && !request.getGoal().isBlank())
                 ? request.getGoal()
-                : parseGoalOrDefault(log.getRecommendedContent(),
+                : parseGoalOrDefault(savedContentRoot,
                         log.getMember().getFitnessGoal() != null ? log.getMember().getFitnessGoal() : "Giáo án AI cá nhân hóa");
 
         List<TrainingPlanItemCreateDto> items = (request != null && request.getItems() != null && !request.getItems().isEmpty())
                 ? request.getItems()
-                : parseOrBuildStructuredItems(log.getRecommendedContent(), log.getMember(), null);
+                : parseOrBuildStructuredItems(savedContentRoot, log.getMember(), null);
 
         Long targetCoachId = currentUserId != null ? currentUserId
                 : (log.getCoach() != null ? log.getCoach().getUserId() : null);
@@ -231,8 +234,10 @@ public class AiRecommendationService {
         log.setApplied(true);
         recommendationLogRepository.save(log);
 
-        if (request != null && Boolean.TRUE.equals(request.getActivate()) && created.getId() != null) {
-            return trainingPlanService.activatePlan(created.getId(), currentUserId, currentUserRole);
+        if (request == null || !Boolean.FALSE.equals(request.getActivate())) {
+            if (created.getId() != null && (request != null && Boolean.TRUE.equals(request.getActivate()))) {
+                return trainingPlanService.activatePlan(created.getId(), currentUserId, currentUserRole);
+            }
         }
         return created;
     }
@@ -244,6 +249,7 @@ public class AiRecommendationService {
         }
         return recommendationLogRepository.findByMemberUserId(memberId).stream()
                 .map(log -> {
+                    JsonNode contentRoot = tryReadTree(log.getRecommendedContent());
                     AiWorkoutPlanResponse dto = new AiWorkoutPlanResponse();
                     dto.setId(log.getId());
                     dto.setMemberId(log.getMember().getUserId());
@@ -252,9 +258,9 @@ public class AiRecommendationService {
                     dto.setModelName(log.getModelName());
                     dto.setApplied(log.isApplied());
                     dto.setInputContext(parseMapSafe(log.getInputContext()));
-                    dto.setGoal(parseGoalOrDefault(log.getRecommendedContent(), log.getMember().getFitnessGoal()));
-                    dto.setAnalysis(parseAnalysisOrDefault(log.getRecommendedContent(), ""));
-                    dto.setItems(parseOrBuildStructuredItems(log.getRecommendedContent(), log.getMember(), null));
+                    dto.setGoal(parseGoalOrDefault(contentRoot, log.getMember().getFitnessGoal()));
+                    dto.setAnalysis(parseAnalysisOrDefault(contentRoot, ""));
+                    dto.setItems(parseOrBuildStructuredItems(contentRoot, log.getMember(), null));
                     dto.setCreatedAt(log.getCreatedAt());
                     return dto;
                 })
@@ -299,33 +305,39 @@ public class AiRecommendationService {
         return sb.toString();
     }
 
-    private String parseGoalOrDefault(String json, String defaultGoal) {
+    private JsonNode tryReadTree(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
         try {
-            JsonNode root = objectMapper.readTree(json);
-            if (root.hasNonNull("goal") && !root.get("goal").asText().isBlank()) {
-                return root.get("goal").asText();
-            }
-        } catch (Exception ignored) {}
+            return objectMapper.readTree(json);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String parseGoalOrDefault(JsonNode root, String defaultGoal) {
+        if (root != null && root.hasNonNull("goal") && !root.get("goal").asText().isBlank()) {
+            return root.get("goal").asText();
+        }
         return defaultGoal;
     }
 
-    private String parseAnalysisOrDefault(String json, String defaultAnalysis) {
-        try {
-            JsonNode root = objectMapper.readTree(json);
+    private String parseAnalysisOrDefault(JsonNode root, String defaultAnalysis) {
+        if (root != null) {
             if (root.hasNonNull("analysis") && !root.get("analysis").asText().isBlank()) {
                 return root.get("analysis").asText();
             }
             if (root.hasNonNull("content") && !root.get("content").asText().isBlank() && defaultAnalysis.isBlank()) {
                 return root.get("content").asText();
             }
-        } catch (Exception ignored) {}
+        }
         return defaultAnalysis;
     }
 
-    private List<TrainingPlanItemCreateDto> parseOrBuildStructuredItems(String json, Member member, String extra) {
-        if (json != null && !json.isBlank()) {
+    private List<TrainingPlanItemCreateDto> parseOrBuildStructuredItems(JsonNode root, Member member, String extra) {
+        if (root != null) {
             try {
-                JsonNode root = objectMapper.readTree(json);
                 JsonNode itemsNode = root.get("items");
                 if (itemsNode != null && itemsNode.isArray() && !itemsNode.isEmpty()) {
                     return objectMapper.convertValue(itemsNode, new TypeReference<List<TrainingPlanItemCreateDto>>() {});

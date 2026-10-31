@@ -16,7 +16,9 @@ export const AUTH_STORAGE_KEY = 'fitcenter_auth_session';
 export function getCurrentUser(): UserSession | null {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserSession) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as UserSession;
+    return { ...parsed, role: SESSION_ROLE[parsed.role] ?? parsed.role };
   } catch {
     return null;
   }
@@ -34,6 +36,11 @@ export function clearAuthSession(): void {
 }
 
 export const TOKEN_STORAGE_KEY = 'fitcenter_token';
+
+function expiredLoginPath(): string {
+  const target = window.location.pathname === '/member/packages' ? window.location.pathname + window.location.search : null;
+  return '/login?expired=1' + (target ? `&returnTo=${encodeURIComponent(target)}` : '');
+}
 
 export class ApiError extends Error {
   status: number;
@@ -74,7 +81,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   if (res.status === 401 && token && !path.startsWith('/auth/')) {
     // Phiên đăng nhập hết hạn: đưa người dùng về trang đăng nhập kèm lời giải thích
     clearAuthSession();
-    window.location.assign('/login?expired=1');
+    window.location.assign(expiredLoginPath());
   }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code);
   // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
@@ -97,7 +104,7 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
   }
   if (res.status === 401 && token) {
     clearAuthSession();
-    window.location.assign('/login?expired=1');
+    window.location.assign(expiredLoginPath());
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);

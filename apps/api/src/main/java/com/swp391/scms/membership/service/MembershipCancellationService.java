@@ -125,8 +125,10 @@ public class MembershipCancellationService {
             subscription.setStatus("cancelled");
             subscription.setUpdatedAt(LocalDateTime.now(clock));
             subscriptions.saveAndFlush(subscription);
-            enrollments.cancelFutureEnrollmentsForMember(memberId,
-                    messages.getMessage("scheduling.enrollment.cancelled_by_membership"));
+            String cancelReason = messages != null
+                    ? messages.getMessage("scheduling.enrollment.cancelled_by_membership")
+                    : "Gói tập đã được quản lý duyệt hủy.";
+            enrollments.cancelFutureEnrollmentsForMember(memberId, cancelReason);
         }
         User manager = users.findByIdAndDeletedAtIsNull(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.manager", principal.id()));

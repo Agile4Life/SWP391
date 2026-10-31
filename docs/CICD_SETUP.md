@@ -5,8 +5,16 @@ Repo có hai workflow trong tab **Actions**:
 - **CI** (`ci.yml`): test/lint/build frontend, kiểm tra cấu hình database và test backend.
 - **CD** (`cd.yml`): sau khi CI thành công trên `main`, deploy đúng commit đó lên Vercel và Render. PR và `develop` chỉ chạy CI. Commit đã bị thay thế trên `main` được bỏ qua.
 
-CD đợi Vercel deploy xong và Render báo `live`; lỗi deploy làm job đỏ.
-Hai job deploy chạy độc lập: một nền tảng lỗi không tự rollback nền tảng còn lại.
+CD triển khai theo thứ tự: kiểm tra CI của đúng SHA → deploy Render → kiểm tra
+backend qua HTTPS → deploy Vercel → kiểm tra frontend qua HTTPS. Backend chưa
+vượt qua health check thì frontend không được deploy. Lỗi deploy hoặc health check
+làm job đỏ; workflow không tự rollback bản đã deploy.
+
+Chạy CD thủ công cũng chỉ được thực hiện từ `main`, và bắt buộc lần CI mới nhất
+của đúng SHA trên `main` phải `completed/success`, thuộc chính repo, được kích hoạt
+bởi `push` hoặc `workflow_dispatch`. CI từ PR/fork không được dùng để phát hành.
+Lần CI mới hơn đang chạy hoặc thất bại sẽ chặn deploy, dù trước đó cùng SHA đã có
+một lần CI thành công. Job `release` chỉ cần thêm quyền **Actions: read**.
 
 ## 1. GitHub Secrets và Variables
 
@@ -28,6 +36,11 @@ Trong tab **Variables**, thêm `VERCEL_CLI_VERSION`: phiên bản CLI chính xá
 `x.y.z` đã kiểm tra. Có thể xem bản hiện có bằng `npm view vercel version`, rồi
 lưu số phiên bản đó; không dùng `latest` hoặc range để tránh CLI tự đổi giữa các lần chạy.
 
+Variable `FRONTEND_URL` là tùy chọn: đặt URL HTTPS của tên miền production công khai
+nếu muốn kiểm tra tên miền đó. Nếu không đặt, CD kiểm tra URL deployment Vercel vừa
+tạo. Nếu URL này bật Deployment Protection, check sẽ thất bại; có thể dùng
+`FRONTEND_URL` trỏ tới tên miền production công khai. Không đưa token vào URL.
+
 ## 2. Vercel
 
 - Dùng project frontend hiện tại, liên kết cùng repo này và production branch `main`.
@@ -40,6 +53,8 @@ lưu số phiên bản đó; không dùng `latest` hoặc range để tránh CLI
   auto-deploy của nhánh `main` bằng cấu hình `git.deploymentEnabled` tương ứng.
   Workflow này không tự thay đổi cấu hình cloud.
 - Rewrite API hiện tại nằm trong `apps/web/vercel.json`, trỏ về Render.
+- Sau deploy, check yêu cầu HTTP 200, `Content-Type: text/html`, thẻ root React và
+  script module. Trang đăng nhập bảo vệ deployment không được tính là thành công.
 
 ## 3. Render
 
@@ -50,10 +65,18 @@ lưu số phiên bản đó; không dùng `latest` hoặc range để tránh CLI
   API vẫn dùng profile `supabase`, JDBC PostgreSQL qua TLS; không thay database.
 - CD gọi Render API với `commitId` của CI, rồi kiểm tra trạng thái tối đa 30 phút.
   Timeout hoặc hủy Actions không tự hủy deployment đã gửi lên Render; xem dashboard trước khi chạy lại.
+- Sau khi Render báo `live`, CD lấy `serviceDetails.url` từ Render API và gọi
+  `/api/v1/health`. Phản hồi phải HTTP 200 và JSON có `status: UP`, `service: scms-api`.
+  Không cần thêm variable URL backend; token Render không gửi tới endpoint health.
+- Cả hai HTTP check thử tối đa 12 lần, timeout mỗi request 10 giây, nghỉ 5 giây giữa
+  các lần. Đây là kiểm tra khả năng phản hồi; endpoint health hiện chưa công bố SHA
+  hay kiểm tra database, và check frontend chưa chạy JavaScript trong trình duyệt.
+- Backend mới vẫn cần tương thích với frontend cũ trong thời gian chuyển phiên bản.
 
 ## 4. Đưa workflow lên GitHub
 
-Push/merge `.github/workflows/cd.yml`, `scripts/deploy-render.py` và tài liệu này
+Push/merge `.github/workflows/ci.yml`, `.github/workflows/cd.yml`, các script triển khai
+và kiểm tra trong `scripts/`, cùng tài liệu này
 lên nhánh mặc định `main`. `workflow_run` yêu cầu file CD nằm trên nhánh mặc định.
 Sau đó push/merge thay đổi vào `main`, hoặc mở **Actions → CI → Run workflow → main**.
 CI thành công sẽ kích hoạt CD; bên trái Actions sẽ có **CI** và **CD**.
@@ -61,10 +84,10 @@ CI thành công sẽ kích hoạt CD; bên trái Actions sẽ có **CI** và **C
 Chỉ chạy CI trên `main` sau khi đã thêm Secrets/Variable và kiểm tra đúng project/service.
 Workflow thiếu cấu hình sẽ báo lỗi rõ ràng, không tạo project/service mới.
 
-Kiểm tra script Render offline:
+Kiểm tra các script triển khai, điều kiện CI và HTTP health check offline:
 
 ```sh
-python -m unittest discover -s scripts -p test_deploy_render.py
+python -B -m unittest discover -s scripts -p 'test_*.py'
 ```
 
 Tài liệu chính thức: [Vercel + GitHub Actions](https://vercel.com/kb/guide/how-can-i-use-github-actions-with-vercel),

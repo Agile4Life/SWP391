@@ -44,6 +44,8 @@ export function ManagerCancellationPage() {
       setNote('');
       await refresh();
     } catch (cause) {
+      await refresh();
+      setDecision(null);
       setError(cause instanceof Error ? cause.message : 'Không thể xử lý yêu cầu.');
     } finally { setBusy(false); busyRef.current = false; }
   }
@@ -69,10 +71,10 @@ export function ManagerCancellationPage() {
         </article>)}
       </div>}
     {decision && <div role="presentation" onClick={(e) => e.target === e.currentTarget && !busy && setDecision(null)}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(51, 39, 29, 0.48)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.6)', display: 'grid', placeItems: 'center', padding: 24, zIndex: 1300 }}>
       <section className="portal-card" role="dialog" aria-modal="true" aria-labelledby="manager-cancellation-title"
         onKeyDown={(e) => { if (e.key === 'Escape' && !busy) setDecision(null); }}
-        style={{ width: 'min(520px, 100%)', marginBottom: 0, borderRadius: 22 }}>
+        style={{ width: 'min(520px, 100%)', marginBottom: 0, borderRadius: 22, border: '1px solid var(--portal-border)' }}>
         <h2 className="portal-card-title" id="manager-cancellation-title">
           {decision.action === 'approve' ? 'Duyệt hủy gói tập?' : 'Từ chối yêu cầu hủy?'}
         </h2>

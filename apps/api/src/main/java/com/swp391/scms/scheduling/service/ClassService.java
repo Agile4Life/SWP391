@@ -9,7 +9,10 @@ import com.swp391.scms.facilities.repository.RoomRepository;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
+import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
@@ -18,6 +21,8 @@ import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.entity.Coach;
+import com.swp391.scms.users.entity.Member;
+import com.swp391.scms.users.entity.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +30,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * SCRUM-72: class and class-session management.
@@ -72,6 +78,7 @@ public class ClassService {
     /**
      * SCRUM-72 BR-01..BR-02, BR-05: create a class. Disciplines/coach/room must exist,
      * capacity &gt; 0, the room must be available and the coach must be active.
+     * If sessionDate, startTime, and endTime are provided, schedules the first session atomically.
      */
     @Transactional
     public GymClassDto createClass(CreateClassRequest request) {
@@ -98,6 +105,17 @@ public class ClassService {
                     "Room is not available for scheduling");
         }
 
+        if (request.sessionDate() != null && request.startTime() != null && request.endTime() != null) {
+            if (!request.endTime().isAfter(request.startTime())) {
+                throw new BadRequestException(
+                        "SCHEDULING_INVALID_TIME_RANGE",
+                        "error.scheduling.invalid_time_range",
+                        null,
+                        "End time must be after start time");
+            }
+            SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
+        }
+
         GymClass gymClass = new GymClass();
         gymClass.setName(request.name());
         gymClass.setDiscipline(discipline);
@@ -108,7 +126,21 @@ public class ClassService {
         gymClass.setDescription(request.description());
         gymClass.setStatus(CLASS_ACTIVE);
 
-        return mapper.toDto(gymClasses.save(gymClass));
+        GymClass savedClass = gymClasses.save(gymClass);
+
+        if (request.sessionDate() != null && request.startTime() != null && request.endTime() != null) {
+            ClassSession initialSession = new ClassSession();
+            initialSession.setGymClass(savedClass != null ? savedClass : gymClass);
+            initialSession.setSessionDate(request.sessionDate());
+            initialSession.setStartTime(request.startTime());
+            initialSession.setEndTime(request.endTime());
+            initialSession.setStatus(SESSION_SCHEDULED);
+            initialSession.setCreatedAt(LocalDateTime.now(clock));
+            initialSession.setUpdatedAt(LocalDateTime.now(clock));
+            sessions.saveAndFlush(initialSession);
+        }
+
+        return mapper.toDto(savedClass);
     }
 
     /**
@@ -137,6 +169,21 @@ public class ClassService {
         }
 
         SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
+
+        List<ClassSession> existingOnDate = sessions.searchSessions(request.sessionDate(), request.sessionDate(), null, null);
+        if (existingOnDate != null) {
+            Optional<ClassSession> sameSession = existingOnDate.stream()
+                    .filter(s -> s.getGymClass() != null
+                            && classId.equals(s.getGymClass().getId())
+                            && request.sessionDate().equals(s.getSessionDate())
+                            && request.startTime().equals(s.getStartTime())
+                            && request.endTime().equals(s.getEndTime())
+                            && SESSION_SCHEDULED.equalsIgnoreCase(s.getStatus()))
+                    .findFirst();
+            if (sameSession.isPresent()) {
+                return mapper.toDto(sameSession.get(), countBooked(sameSession.get()));
+            }
+        }
 
         ClassSession session = new ClassSession();
         session.setGymClass(gymClass);
@@ -169,6 +216,61 @@ public class ClassService {
         return gymClasses.findAllByOrderByIdDesc().stream()
                 .map(mapper::toDto)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CoachOptionDto> listActiveCoaches() {
+        return coaches.findAll().stream()
+                .filter(c -> COACH_ACTIVE.equalsIgnoreCase(c.getEmploymentStatus())
+                        && c.getUser() != null
+                        && c.getUser().getDeletedAt() == null
+                        && "active".equalsIgnoreCase(c.getUser().getStatus()))
+                .map(c -> new CoachOptionDto(
+                        c.getUserId(),
+                        c.getUser().getFullName(),
+                        c.getUser().getEmail(),
+                        c.getUser().getPhone(),
+                        c.getEmploymentStatus()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnrolledStudentDto> getClassStudents(Long classId) {
+        if (!gymClasses.existsById(classId)) {
+            throw new ResourceNotFoundException("resource.gym_class", classId);
+        }
+        return enrollments.findByGymClassId(classId).stream()
+                .filter(e -> !"cancelled".equalsIgnoreCase(e.getStatus()))
+                .map(this::toStudentDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnrolledStudentDto> getSessionStudents(Long sessionId) {
+        ClassSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
+        return getClassStudents(session.getGymClass().getId());
+    }
+
+    private EnrolledStudentDto toStudentDto(ClassEnrollment enrollment) {
+        Member member = enrollment.getMember();
+        User user = member != null ? member.getUser() : null;
+        return new EnrolledStudentDto(
+                enrollment.getId(),
+                member != null ? member.getUserId() : null,
+                member != null ? member.getMembershipCode() : null,
+                user != null ? user.getFullName() : null,
+                user != null ? user.getEmail() : null,
+                user != null ? user.getPhone() : null,
+                user != null ? user.getAvatarUrl() : null,
+                member != null && member.getFitnessGoal() != null ? member.getFitnessGoal() : "",
+                member != null && member.getHealthNotes() != null ? member.getHealthNotes() : "",
+                member != null && member.getFitnessLevel() != null ? member.getFitnessLevel() : "beginner",
+                member != null ? member.getEmergencyContactName() : null,
+                member != null ? member.getEmergencyContactPhone() : null,
+                enrollment.getEnrolledAt(),
+                enrollment.getStatus()
+        );
     }
 
     private long countBooked(ClassSession session) {

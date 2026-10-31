@@ -44,18 +44,8 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
             recipientEmail = "member-default@solfitness.local";
         }
 
-        log.info("""
-                [MOCK-EMAIL] ========================================================
-                [MOCK-EMAIL] To: {} (User #{})
-                [MOCK-EMAIL] Subject: [SÖL Fitness] {}
-                [MOCK-EMAIL] Notification Type: {}
-                [MOCK-EMAIL] Related Entity: {} #{}
-                [MOCK-EMAIL] Content: {}
-                [MOCK-EMAIL] Sent At: {}
-                [MOCK-EMAIL] ========================================================""",
-                recipientEmail, payload.userId(), payload.title(), payload.type(),
-                payload.relatedEntityType(), payload.relatedEntityId(), payload.message(),
-                payload.timestamp());
+        log.info("[MOCK-EMAIL] Simulated delivery for user {} (type={}, entity={} #{})",
+                payload.userId(), payload.type(), payload.relatedEntityType(), payload.relatedEntityId());
     }
 }
 

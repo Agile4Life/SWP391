@@ -1,212 +1,140 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
 import './sport-stack.css';
 
 const sports = [
   {
-    id: 'swimming', name: 'Bơi lội', english: 'SWIMMING', image: '/images/fitness/aquatics-pool.jpg',
-    summary: 'Tìm nhịp thở, làm chủ chuyển động và rèn sức bền trong làn nước.',
-    audience: 'Từ người mới làm quen với nước đến người muốn cải thiện kỹ thuật và sức bền.',
-    programs: [
-      ['Làm quen với nước', 'Tập thở, nổi và phối hợp tay chân theo từng bước.'],
-      ['Hoàn thiện kỹ thuật', 'Điều chỉnh tư thế, nhịp thở và chuyển động khi bơi.'],
-      ['Sức bền & thả lỏng', 'Duy trì nhịp bơi phù hợp và thư giãn sau buổi tập.'],
-    ],
-    focus: ['Nhịp thở', 'Phối hợp', 'Sức bền'],
+    id: 'swimming', name: 'Bơi lội', image: '/images/fitness/aquatics-pool.jpg',
+    summary: 'Học bơi cơ bản, sửa kỹ thuật và tập sức bền.',
+    programs: ['Thở và nổi', 'Kỹ thuật bơi', 'Bơi sức bền'],
   },
   {
-    id: 'tennis', name: 'Tennis', english: 'TENNIS', image: '/images/fitness/tennis-court.jpg',
-    summary: 'Bắt nhịp đường bóng, di chuyển chủ động và tự tin trong từng pha đánh.',
-    audience: 'Người mới cầm vợt, người chơi phong trào và người muốn luyện kỹ thuật đánh đơn, đánh đôi.',
-    programs: [
-      ['Nền tảng cầm vợt', 'Làm quen cảm giác bóng, tư thế chuẩn bị và điểm tiếp xúc.'],
-      ['Kỹ thuật đường bóng', 'Luyện thuận tay, trái tay, giao bóng và xử lý trên lưới.'],
-      ['Di chuyển & phối hợp', 'Luyện bộ chân, chọn vị trí và phối hợp khi đánh đôi.'],
-    ],
-    focus: ['Kỹ thuật', 'Bộ chân', 'Chiến thuật'],
+    id: 'tennis', name: 'Tennis', image: '/images/fitness/tennis-court.jpg',
+    summary: 'Tập đánh bóng, giao bóng và di chuyển trên sân.',
+    programs: ['Thuận tay và trái tay', 'Giao bóng và lên lưới', 'Di chuyển và đánh đôi'],
   },
   {
-    id: 'badminton', name: 'Cầu lông', english: 'BADMINTON', image: '/images/fitness/badminton-court.webp',
-    summary: 'Di chuyển linh hoạt, phản xạ nhanh và kiểm soát từng đường cầu.',
-    audience: 'Người bắt đầu chơi cầu lông và người chơi phong trào muốn củng cố kỹ thuật, phối hợp đánh đôi.',
-    programs: [
-      ['Cầm vợt & phát cầu', 'Làm quen cách cầm vợt, tư thế chuẩn bị và phát cầu đúng kỹ thuật.'],
-      ['Kiểm soát đường cầu', 'Luyện phông cầu, bỏ nhỏ và đập cầu theo tình huống.'],
-      ['Bộ chân & đánh đôi', 'Di chuyển về vị trí trung tâm và phối hợp luân chuyển trên sân.'],
-    ],
-    focus: ['Phản xạ', 'Linh hoạt', 'Phối hợp'],
+    id: 'badminton', name: 'Cầu lông', image: '/images/fitness/badminton-court.webp',
+    summary: 'Từ cách cầm vợt đến phối hợp đánh đôi.',
+    programs: ['Cầm vợt và phát cầu', 'Phông cầu, bỏ nhỏ, đập cầu', 'Bộ chân và đánh đôi'],
   },
   {
-    id: 'basketball', name: 'Bóng rổ', english: 'BASKETBALL', image: '/images/fitness/basketball-court.webp',
-    summary: 'Làm chủ trái bóng, kết nối đồng đội và tạo nhịp chơi của riêng bạn.',
-    audience: 'Người mới tập bóng rổ và người chơi muốn rèn kỹ năng cá nhân cùng khả năng phối hợp đội nhóm.',
-    programs: [
-      ['Dẫn bóng & chuyền bóng', 'Luyện kiểm soát bóng, đổi hướng và chuyền bóng chính xác.'],
-      ['Ném rổ & lên rổ', 'Tập tư thế ném, nhịp chân và hoàn thiện động tác lên rổ.'],
-      ['Phòng thủ & phối hợp', 'Luyện di chuyển phòng thủ, chọn vị trí và phối hợp đồng đội.'],
-    ],
-    focus: ['Kiểm soát bóng', 'Sức bật', 'Đồng đội'],
+    id: 'basketball', name: 'Bóng rổ', image: '/images/fitness/basketball-court.webp',
+    summary: 'Tập kỹ năng cá nhân và phối hợp cùng đồng đội.',
+    programs: ['Dẫn bóng và chuyền bóng', 'Ném rổ và lên rổ', 'Phòng thủ và phối hợp'],
   },
 ];
-
+// The existing import remains stable; this section now uses a scrolling story rather than a deck.
 export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
-  const deck = useRef<HTMLDivElement>(null);
-  const track = useRef<HTMLDivElement>(null);
-  const viewport = useRef<HTMLDivElement>(null);
-  const deckFrame = useRef<HTMLDivElement>(null);
+  const story = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const stage = deck.current!;
-    const runway = track.current!;
-    const panel = viewport.current!;
-    const fittedDeck = deckFrame.current!;
-    const header = runway.closest('.fit-site')?.querySelector<HTMLElement>('.fit-header');
-    const cards = [...stage.querySelectorAll<HTMLElement>('.fit-sport-stack-card')];
+    const section = story.current!;
+    const steps = [...section.querySelectorAll<HTMLElement>('.fit-sport-story-step')];
+    const visuals = [...section.querySelectorAll<HTMLElement>('.fit-sport-story-visual')];
+    const dots = [...section.querySelectorAll<HTMLElement>('.fit-sport-story-dots i')];
+    const marker = section.querySelector<HTMLElement>('.fit-sport-story-rail i')!;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let step = 1;
-    let stickyTop = 108;
-    let frame = 0;
-    let origin = 0;
-    let mobile = false;
-    let previousProgress = -1;
-    let previousActive = -1;
-    let previousAccessible = -1;
-    const transforms: string[] = [];
-    const update = () => {
-      const progress = preference.matches ? 0 : Math.max(0, Math.min(sports.length - 1, (window.scrollY - origin) / step));
-      if (progress === previousProgress) return;
-      previousProgress = progress;
-      const active = Math.floor(progress);
-      // Respond immediately in both scroll directions, including at each card boundary.
-      const fraction = progress - active;
-      const accessible = fraction >= .55 ? active + 1 : active;
-      cards.forEach((card, index) => {
-        const depth = (index - active + sports.length) % sports.length;
-        const leaving = !preference.matches && depth === 0 && fraction > 0;
-        if (active !== previousActive) card.dataset.depth = String(depth);
-        // Only transform changes within a phase: no inherited custom properties or animation seeking.
-        const points = mobile
-          ? [[0, 0, 0, 1], [5, -35, 3, 1], [5, -32, 3, .97], [0, 39, 0, .925]]
-          : [[0, 0, 0, 1], [18, -60, 7, 1.02], [20, -54, 7, .97], [0, 39, 0, .925]];
-        let transform: string;
-        if (leaving) {
-          const segment = fraction < .45 ? 0 : fraction < .55 ? 1 : 2;
-          const starts = [0, .45, .55];
-          const ends = [.45, .55, 1];
-          const t = (fraction - starts[segment]) / (ends[segment] - starts[segment]);
-          const [x, y, angle, scale] = points[segment].map((value, i) => value + (points[segment + 1][i] - value) * t);
-          transform = `translate3d(${x.toFixed(3)}%, ${y.toFixed(3)}px, 0) rotate(${angle.toFixed(3)}deg) scale(${scale.toFixed(4)})`;
-        } else {
-          const visualDepth = depth === 0 ? 0 : depth - fraction;
-          transform = `translate3d(0, ${(visualDepth * 13).toFixed(3)}px, 0) scale(${(1 - visualDepth * .025).toFixed(4)})`;
-        }
-        if (transforms[index] !== transform) {
-          card.style.transform = transform;
-          transforms[index] = transform;
-        }
-        const zIndex = String(leaving ? fraction < .55 ? 5 : 0 : 4 - depth);
-        if (card.style.zIndex !== zIndex) card.style.zIndex = zIndex;
-        card.classList.toggle('is-leaving', leaving);
-        card.classList.toggle('is-incoming', !preference.matches && depth === 1 && fraction > 0);
-        if (accessible !== previousAccessible) {
-          card.toggleAttribute('inert', !preference.matches && index !== accessible);
-          card.setAttribute('aria-hidden', String(!preference.matches && index !== accessible));
-        }
+    const header = section.closest('.fit-site')?.querySelector<HTMLElement>('.fit-header');
+    let active = 0;
+    let displayed = 0;
+    let timer = 0;
+    const show = (index: number) => {
+      window.clearTimeout(timer);
+      timer = 0;
+      visuals.forEach((visual, i) => {
+        visual.classList.toggle('is-active', i === index);
+        visual.classList.remove('is-leaving');
       });
-      previousActive = active;
-      previousAccessible = accessible;
+      displayed = index;
+    };
+    const select = (index: number) => {
+      active = index;
+      steps.forEach((step, i) => step.classList.toggle('is-active', i === index));
+      dots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
+      marker.style.top = `${index / (sports.length - 1) * 100}%`;
+      if (preference.matches || index === displayed) {
+        show(index);
+        return;
+      }
+      // Match the reference's exit-before-enter transition; rapid scroll always selects the latest step.
+      visuals[displayed].classList.add('is-leaving');
+      if (!timer) timer = window.setTimeout(() => show(active), 500);
+    };
+    let observer: IntersectionObserver | null = null;
+    const focus = (event: FocusEvent) => {
+      const index = steps.findIndex(step => step.contains(event.target as Node));
+      if (index >= 0) select(index);
     };
     const measure = () => {
-      // Fit the complete natural card uniformly; never create an inner scrolling surface.
-      stickyTop = header ? Math.ceil(header.getBoundingClientRect().height) + 12 : 108;
-      mobile = window.innerWidth <= 760;
-      const designWidth = mobile ? 380 : 1240;
-      runway.style.setProperty('--stack-design-width', `${designWidth}px`);
-      const headingHeight = Math.max(0, panel.offsetHeight - fittedDeck.offsetHeight);
-      const availableHeight = Math.max(100, window.innerHeight - stickyTop - headingHeight - 24);
-      const naturalHeight = stage.offsetHeight;
-      const scale = naturalHeight > 0
-        ? Math.min(1, (fittedDeck.clientWidth || designWidth) / designWidth, availableHeight / naturalHeight) : 1;
-      runway.style.setProperty('--stack-scale', scale.toFixed(6));
-      runway.style.setProperty('--stack-deck-height', `${Math.ceil(naturalHeight * scale)}px`);
-      step = Math.max(420, Math.min(680, window.innerHeight * .65));
-      runway.style.setProperty('--stack-top', `${stickyTop}px`);
-      stage.style.setProperty('--stack-top', `${stickyTop}px`);
-      runway.style.setProperty('--stack-height', `${panel.offsetHeight}px`);
-      runway.style.setProperty('--stack-step', String(step));
-      runway.style.setProperty('--stack-travel', `${step * (sports.length - 1) + 48}px`);
-      origin = runway.getBoundingClientRect().top + window.scrollY - stickyTop;
-      previousProgress = previousActive = previousAccessible = -1;
-      update();
-    };
-    const scroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => { frame = 0; update(); });
-    };
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    observer?.observe(panel);
-    observer?.observe(stage);
-    if (header) observer?.observe(header);
-    const canvas = runway.closest('.fit-canvas');
-    if (canvas) observer?.observe(canvas);
-    const visibility = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries => {
-      const nearby = entries.some(entry => entry.isIntersecting);
-      runway.classList.toggle('is-nearby', nearby);
-      if (nearby) stage.querySelectorAll('img').forEach(image => {
-        image.loading = 'eager';
-        void image.decode().catch(() => { /* Keep the normal image fallback on load failure. */ });
-      });
-    }, { rootMargin: '800px 0px' });
-    visibility?.observe(runway);
-    runway.classList.add('is-enhanced');
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', scroll, { passive: true });
-    preference.addEventListener('change', measure);
-    return () => {
+      const top = header ? Math.ceil(header.getBoundingClientRect().height) + 12 : 90;
+      section.style.setProperty('--sport-story-top', `${top}px`);
       observer?.disconnect();
-      visibility?.disconnect();
-      window.cancelAnimationFrame(frame);
+      if (typeof IntersectionObserver !== 'undefined') {
+        // Vertical percentage root margins resolve against width; use pixels for a true middle 10% band.
+        const inset = Math.round(window.innerHeight * .45);
+        observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) select(steps.indexOf(entry.target as HTMLElement));
+          });
+        }, { rootMargin: `-${inset}px 0px -${inset}px 0px`, threshold: 0 });
+        steps.forEach(step => observer!.observe(step));
+        section.classList.add('is-enhanced');
+      }
+    };
+    const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    if (header) resize?.observe(header);
+    const motion = () => show(active);
+    section.addEventListener('focusin', focus);
+    preference.addEventListener('change', motion);
+    window.addEventListener('resize', measure);
+    measure();
+    return () => {
+      window.clearTimeout(timer);
+      observer?.disconnect();
+      resize?.disconnect();
+      section.removeEventListener('focusin', focus);
+      preference.removeEventListener('change', motion);
       window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', scroll);
-      preference.removeEventListener('change', measure);
+      section.classList.remove('is-enhanced');
     };
   }, []);
 
-  return <div className="fit-sport-stack" role="region" aria-label="Khám phá bốn bộ môn" aria-roledescription="chồng thẻ bộ môn">
-    <div className="fit-sport-stack-track" ref={track}>
-    <div className="fit-sport-stack-stage" ref={viewport}>
+  const illustration = (sport: typeof sports[number], preload = false) => <>
+    <img src={sport.image} alt={`Ảnh minh họa không gian ${sport.name.toLowerCase()}`} loading={preload ? 'eager' : 'lazy'} />
+    <figcaption>Ảnh minh họa · {sport.name}</figcaption>
+  </>;
+
+  return <div className="fit-sport-story" ref={story} role="region" aria-label="Khám phá bốn bộ môn">
     {heading}
-    <p className="fit-sport-stack-hint">Cuộn để khám phá bốn bộ môn <span aria-hidden="true">↓</span></p>
-    <div className="fit-sport-stack-deck-frame" ref={deckFrame}>
-    <div className="fit-sport-stack-deck" ref={deck}>
-      {sports.map((sport, index) => {
-        return <article key={sport.id} className="fit-sport-stack-card"
-          data-sport={sport.id}
-          aria-labelledby={`sport-stack-${sport.id}`} style={{ '--stack-index': index } as CSSProperties}>
-          <div className="fit-sport-stack-photo">
-            <img src={sport.image} alt={`Ảnh minh họa không gian ${sport.name.toLowerCase()}`} loading="lazy" />
-            <span className="fit-sport-stack-caption">Ảnh minh họa</span>
-            <span className="fit-sport-stack-photo-index" aria-hidden="true">0{index + 1}</span>
+    <p className="fit-sport-story-hint">Cuộn xem các bộ môn <span aria-hidden="true">↓</span></p>
+    <div className="fit-sport-story-layout">
+      <div className="fit-sport-story-steps">
+        <div className="fit-sport-story-rail" aria-hidden="true"><i style={{ top: '0%' }} /></div>
+        {sports.map((sport, index) => <article key={sport.id}
+          className={`fit-sport-story-step${index === 0 ? ' is-active' : ''}`}
+          data-sport={sport.id} aria-labelledby={`sport-story-${sport.id}`}>
+          <span className="fit-sport-story-number" aria-hidden="true">0{index + 1}</span>
+          <h3 id={`sport-story-${sport.id}`}>{sport.name}</h3>
+          <p className="fit-sport-story-summary">{sport.summary}</p>
+          <ul className="fit-sport-story-programs">{sport.programs.map(program => <li key={program}>{program}</li>)}</ul>
+          <div className="fit-sport-story-footer">
+            <Link className="fit-pill" to={classPath}>Xem lịch học<RoundArrow diagonal /></Link>
           </div>
-          <div className="fit-sport-stack-content">
-            <span className="fit-sport-stack-kicker">SÖL SPORTS CLUB · {sport.english}</span>
-            <h3 id={`sport-stack-${sport.id}`}>{sport.name}</h3>
-            <p className="fit-sport-stack-summary">{sport.summary}</p>
-            <div className="fit-sport-stack-focus">{sport.focus.map(item => <span key={item}>{item}</span>)}</div>
-            <h4>Nội dung luyện tập</h4>
-            <ol className="fit-sport-stack-programs">{sport.programs.map(([title, description], i) => <li key={title}>
-              <span aria-hidden="true">0{i + 1}</span><div><h5>{title}</h5><p>{description}</p></div>
-            </li>)}</ol>
-            <p className="fit-sport-stack-audience"><strong>Dành cho</strong>{sport.audience}</p>
-            <div className="fit-sport-stack-footer"><Link className="fit-pill" to={classPath}>Xem lịch học<RoundArrow diagonal /></Link><span>Lịch lớp và quyền lợi theo gói được cập nhật trong portal.</span></div>
-          </div>
-        </article>;
-      })}
-    </div>
-    </div>
-    </div>
+          <figure className="fit-sport-story-inline" data-reveal="image">{illustration(sport)}</figure>
+        </article>)}
+      </div>
+      <div className="fit-sport-story-sticky" aria-hidden="true">
+        <div className="fit-sport-story-panel">
+          {sports.map((sport, index) => <figure key={sport.id} data-sport={sport.id}
+            className={`fit-sport-story-visual${index === 0 ? ' is-active' : ''}`}>
+            {illustration(sport, true)}
+          </figure>)}
+          <div className="fit-sport-story-dots">{sports.map((sport, index) =>
+            <i key={sport.id} className={index === 0 ? 'is-active' : ''} />)}</div>
+        </div>
+      </div>
     </div>
   </div>;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
@@ -26,9 +27,9 @@ const days = [
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
+    if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED', 'SCHEDULING_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
       return 'Lớp đã đầy. Bạn có thể tham gia hàng chờ để được tự động đôn lên khi có chỗ trống.';
-    if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED'].includes(error.code ?? ''))
+    if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED', 'SCHEDULING_NO_ACTIVE_SUBSCRIPTION'].includes(error.code ?? ''))
       return 'Gói tập chưa hoạt động hoặc đã hết hạn. Vui lòng kích hoạt gói tập trước khi đặt lịch.';
     return error.message;
   }
@@ -62,6 +63,8 @@ export function MemberClassesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [actionError, setActionError] = useState('');
+  const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string } | null>(null);
+  const cancelFocusRef = useRef<HTMLButtonElement | null>(null);
   const busyRef = useRef<string | null>(null);
   const actionGenRef = useRef(0);
 
@@ -131,6 +134,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -156,6 +160,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -181,6 +186,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -206,6 +212,7 @@ export function MemberClassesPage() {
     } catch (cause) {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
+        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setWaitlistsRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -295,7 +302,7 @@ export function MemberClassesPage() {
 
       {notice && (
         <div className="portal-card" role="status" style={{ marginBottom: 16, borderColor: 'rgba(46, 107, 79, 0.35)', background: 'rgba(46, 107, 79, 0.06)' }}>
-          <strong style={{ color: '#86efac' }}>{notice}</strong>
+          <strong style={{ color: 'var(--portal-success, #86efac)' }}>{notice}</strong>
         </div>
       )}
 
@@ -435,7 +442,7 @@ export function MemberClassesPage() {
                             type="button"
                             className="btn-secondary btn-sm"
                             disabled={isBusy || past}
-                            onClick={() => void handleCancelEnrollment(myEnrollment.id, item.className)}
+                            onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: myEnrollment.id, className: item.className }); }}
                           >
                             {isBusy ? 'Đang xử lý...' : 'Hủy đặt chỗ'}
                           </button>
@@ -544,7 +551,7 @@ export function MemberClassesPage() {
                           type="button"
                           className="btn-secondary btn-sm"
                           disabled={busyKey === `enroll-${item.id}`}
-                          onClick={() => void handleCancelEnrollment(item.id, item.className)}
+                          onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: item.id, className: item.className }); }}
                         >
                           {busyKey === `enroll-${item.id}` ? 'Đang hủy...' : 'Hủy đặt chỗ'}
                         </button>
@@ -588,6 +595,15 @@ export function MemberClassesPage() {
             </>
           )}
         </div>
+      )}
+      {cancelTarget && (
+        <Modal title="Hủy đặt chỗ?" onClose={() => setCancelTarget(null)} returnFocusRef={cancelFocusRef}>
+          <p className="row-card__meta">Bạn có chắc muốn hủy đặt chỗ lớp {cancelTarget.className}?</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+            <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>Giữ đặt chỗ</button>
+            <button type="button" className="btn-primary" onClick={() => { const target = cancelTarget; setCancelTarget(null); void handleCancelEnrollment(target.id, target.className); }}>Xác nhận hủy</button>
+          </div>
+        </Modal>
       )}
     </div>
   );

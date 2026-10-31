@@ -15,6 +15,21 @@ import static org.mockito.Mockito.*;
 
 class RateLimitingFilterTest {
 
+    @Test
+    void authRequestsAreLimitedAndUseApiResponseShape() throws Exception {
+        MockHttpServletResponse response = null;
+        for (int i = 0; i < 61; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/login");
+            request.setRemoteAddr("10.0.0.10");
+            response = new MockHttpServletResponse();
+            filter.doFilterInternal(request, response, filterChain);
+        }
+        assertEquals(429, response.getStatus());
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.getContentAsString());
+        assertEquals(false, json.get("success").asBoolean());
+        assertEquals(429, json.get("status").asInt());
+    }
+
     private RateLimitingFilter filter;
     private FilterChain filterChain;
 

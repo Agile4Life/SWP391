@@ -8,6 +8,7 @@ import com.swp391.scms.attendance.service.CenterCheckinService;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -97,6 +98,60 @@ class CenterCheckinServiceTest {
     }
 
     @Test
+    void selfScanUsesPrincipalMembershipAndSignedGateAndPreventsPassback() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        Member member = mockMember(10L, "Member");
+        LocalDate today = LocalDate.now(clock);
+        var sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(5));
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        String code = gateQr.generate("A2", clock.millis()).qrCode();
+        var result = selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan(code));
+        assertEquals("GRANTED", result.status());
+        assertEquals(10L, result.memberId());
+        assertEquals("Turnstile A2 - Sảnh Chính", result.gate());
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(true);
+        assertEquals("DENIED", selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan(code)).status());
+        verify(subscriptions, never()).findByQrCode(any());
+    }
+
+    @Test
+    void selfScanRejectsStaffAndGateIssuanceRejectsMember() {
+        assertThrows(ForbiddenException.class, () -> service.selfScan(receptionist, new CheckinRequests.SelfScan("anything")));
+        assertThrows(ForbiddenException.class, () -> service.gateQr(memberPrincipal, "A1"));
+        verifyNoInteractions(subscriptions, checkins);
+    }
+
+    @Test
+    void selfScanWithoutCurrentSubscriptionAuditsDenial() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        mockMember(10L, "Member");
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var result = selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode()));
+        assertEquals("DENIED", result.status());
+        assertEquals(10L, result.memberId());
+        verify(subscriptions).findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", LocalDate.now(clock), LocalDate.now(clock));
+    }
+
+    @Test
+    void selfScanRechecksDeletedAccountEvenWithCurrentSubscription() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        Member member = mockMember(10L, "Deleted Member");
+        member.getUser().setDeletedAt(LocalDateTime.now(clock));
+        LocalDate today = LocalDate.now(clock);
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(mockSubscription(member, "active", today, today.plusDays(5))));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        assertEquals("DENIED", selfService.selfScan(memberPrincipal,
+                new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode())).status());
+    }
+
+    @Test
     @DisplayName("BR-01: Member tự gọi API scan phải bị chặn 403 Forbidden")
     void br01_memberCallingScan_throwsForbidden() {
         CheckinRequests.Scan request = new CheckinRequests.Scan("QR-CODE-123", "Gate 1");
@@ -141,6 +196,9 @@ class CenterCheckinServiceTest {
 
         assertEquals("DENIED", result.status());
         assertEquals(10L, result.memberId());
+        assertNull(result.avatarUrl());
+        assertNull(result.packageName());
+        assertNull(result.remainingDays());
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("DENIED", captor.getValue().getStatus());
@@ -172,6 +230,11 @@ class CenterCheckinServiceTest {
         LocalDate today = LocalDate.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
 
+        member.getUser().setAvatarUrl("https://example.test/avatar.jpg");
+        MembershipPackage membershipPackage = new MembershipPackage();
+        membershipPackage.setName("Gói tập 30 ngày");
+        sub.setMembershipPackage(membershipPackage);
+
         when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(true);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -179,9 +242,27 @@ class CenterCheckinServiceTest {
         CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
 
         assertEquals("DENIED", result.status());
+        assertNull(result.avatarUrl());
+        assertNull(result.packageName());
+        assertNull(result.remainingDays());
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("DENIED", captor.getValue().getStatus());
+    }
+
+    @Test
+    void scanOnExpiryDateReportsZeroRemainingDaysWithoutInventingPhoto() {
+        Member member = mockMember(10L, "Hội viên");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today);
+        when(subscriptions.findByQrCode("QR-LAST-DAY")).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-LAST-DAY", "Gate A"));
+        assertEquals("GRANTED", result.status());
+        assertEquals(0L, result.remainingDays());
+        assertNull(result.avatarUrl());
+        assertNull(result.packageName());
     }
 
     @Test
@@ -190,6 +271,10 @@ class CenterCheckinServiceTest {
         Member member = mockMember(10L, "Nguyễn Văn E");
         LocalDate today = LocalDate.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+        member.getUser().setAvatarUrl("https://example.test/avatar.jpg");
+        MembershipPackage membershipPackage = new MembershipPackage();
+        membershipPackage.setName("Gói tập 30 ngày");
+        sub.setMembershipPackage(membershipPackage);
 
         when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
@@ -201,6 +286,9 @@ class CenterCheckinServiceTest {
         assertNull(result.denialReason());
         assertEquals(10L, result.memberId());
         assertEquals("Nguyễn Văn E", result.memberName());
+        assertEquals("https://example.test/avatar.jpg", result.avatarUrl());
+        assertEquals("Gói tập 30 ngày", result.packageName());
+        assertEquals(30L, result.remainingDays());
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("GRANTED", captor.getValue().getStatus());

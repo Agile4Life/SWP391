@@ -92,7 +92,7 @@ export function MemberProgressPage() {
   const points = metrics.kind === 'ready' ? weeklyMeasurements(metrics.data) : [];
   const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
   return <div className="portal-container member-progress">
-    <PageHeader eyebrow="MEMBER WELLNESS" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
+    <PageHeader eyebrow="Hội viên" title="Tiến độ thể lực" subtitle="Số đo đã ghi nhận và bài tập từ huấn luyện viên." />
     <section className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">Thay đổi qua các tuần</h2></div>
       {metrics.kind === 'loading' ? <p role="status">Đang tải số đo…</p> : metrics.kind === 'error' ? <div role="alert">Không thể tải số đo. <button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>Thử lại</button></div> : points.length === 0 ? <p className="portal-empty">Chưa có số đo cân nặng hoặc BMI.</p> : <div className="member-progress-charts">

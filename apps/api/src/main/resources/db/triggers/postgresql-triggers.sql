@@ -187,3 +187,83 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- SCRUM-86: Supabase Broadcast carries no payment/member/amount/status data.
+-- The opaque capability is returned only to its authenticated owner by the API.
+-- The send participates in the transaction, so rolled-back payments emit no event.
+CREATE OR REPLACE FUNCTION scms_membership_realtime_invalidation()
+RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
+DECLARE channel_id uuid;
+BEGIN
+    IF to_regprocedure('realtime.send(jsonb,text,text,boolean)') IS NULL THEN
+        RETURN NEW;
+    END IF;
+    SELECT payment_realtime_topic INTO channel_id FROM members WHERE user_id = NEW.member_id;
+    IF channel_id IS NOT NULL THEN
+        PERFORM realtime.send('{}'::jsonb, 'changed', 'membership:' || channel_id::text, false);
+    END IF;
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- A notification outage must never roll back a valid payment.
+    RAISE WARNING 'Membership invalidation unavailable (SQLSTATE %)', SQLSTATE;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_payments_realtime ON payments;
+CREATE TRIGGER trg_payments_realtime AFTER INSERT OR UPDATE ON payments
+FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
+
+-- SCRUM-106: private chat invalidation; message text never leaves the authenticated API.
+CREATE OR REPLACE FUNCTION scms_chat_realtime_invalidation()
+RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
+DECLARE member_id bigint; staff_id bigint;
+BEGIN
+    IF to_regprocedure('realtime.send(jsonb,text,text,boolean)') IS NULL THEN
+        RETURN NEW;
+    END IF;
+    SELECT member_user_id, staff_user_id INTO member_id, staff_id
+    FROM chat_conversations WHERE id = NEW.conversation_id;
+    PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:chat:' || member_id::text, true);
+    PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:chat:' || staff_id::text, true);
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Persist messages even during a Realtime outage; reconnect/focus fetches missed data.
+    RAISE WARNING 'Chat invalidation unavailable (SQLSTATE %)', SQLSTATE;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_chat_message_realtime ON chat_messages;
+CREATE TRIGGER trg_chat_message_realtime AFTER INSERT ON chat_messages
+FOR EACH ROW EXECUTE FUNCTION scms_chat_realtime_invalidation();
+
+-- Only the public application installation owns these named global policies.
+-- Isolated integration-test schemas must never change realtime.messages policies.
+-- RLS is already enabled on Supabase's table; do not ALTER it.
+DO $$
+BEGIN
+    IF current_schema() = 'public' AND to_regclass('realtime.messages') IS NOT NULL THEN
+        DROP POLICY IF EXISTS scms_chat_receive ON realtime.messages;
+        CREATE POLICY scms_chat_receive ON realtime.messages FOR SELECT TO authenticated
+        USING (extension = 'broadcast'
+            AND (auth.jwt() ->> 'scms_chat_scope') = 'receive'
+            AND realtime.topic() = 'scms:chat:' || (auth.jwt() ->> 'scms_chat_user_id'));
+
+        -- PostgreSQL ORs permissive policies: also constrain chat topics restrictively
+        -- so an existing broad receive policy cannot expose another user's inbox.
+        DROP POLICY IF EXISTS scms_chat_receive_guard ON realtime.messages;
+        CREATE POLICY scms_chat_receive_guard ON realtime.messages AS RESTRICTIVE FOR SELECT TO authenticated
+        USING (realtime.topic() NOT LIKE 'scms:chat:%' OR (
+            extension = 'broadcast' AND (auth.jwt() ->> 'scms_chat_scope') = 'receive'
+            AND realtime.topic() = 'scms:chat:' || (auth.jwt() ->> 'scms_chat_user_id')));
+
+        DROP POLICY IF EXISTS scms_chat_send_guard ON realtime.messages;
+        CREATE POLICY scms_chat_send_guard ON realtime.messages AS RESTRICTIVE FOR INSERT TO authenticated
+        WITH CHECK (realtime.topic() NOT LIKE 'scms:chat:%');
+    END IF;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_subscriptions_realtime ON membership_subscriptions;
+CREATE TRIGGER trg_subscriptions_realtime AFTER INSERT OR UPDATE ON membership_subscriptions
+FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();

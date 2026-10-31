@@ -3,6 +3,7 @@ package com.swp391.scms.catalog;
 import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
+import com.swp391.scms.scheduling.dto.ClassBookingCount;
 import com.swp391.scms.scheduling.mapper.SchedulingMapper;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
@@ -11,6 +12,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,8 +50,13 @@ public class PublicCatalogService {
         var publicCoaches = coaches.findPublicCoaches().stream().map(c -> new CoachDto(c.getUserId(),
                 c.getUser().getFullName(), c.getSpecialization(), c.getBio(), c.getCertification(),
                 c.getUser().getAvatarUrl())).toList();
-        var publicSessions = sessions.findPublicSessions(today, today.plusDays(6), LocalTime.now(clock)).stream()
-                .map(s -> mapper.toDto(s, enrollments.countByGymClassIdAndStatus(s.getGymClass().getId(), "booked"))).toList();
+        var visibleSessions = sessions.findPublicSessions(today, today.plusDays(6), LocalTime.now(clock));
+        var classIds = visibleSessions.stream().map(s -> s.getGymClass().getId()).distinct().toList();
+        var bookedCounts = classIds.isEmpty() ? Map.<Long, Long>of()
+                : enrollments.countByClassIdsAndStatus(classIds, "booked").stream()
+                        .collect(Collectors.toMap(ClassBookingCount::classId, ClassBookingCount::bookedCount));
+        var publicSessions = visibleSessions.stream()
+                .map(s -> mapper.toDto(s, bookedCounts.getOrDefault(s.getGymClass().getId(), 0L))).toList();
         return new CatalogDto(publicPackages, publicCoaches, publicSessions);
     }
 }

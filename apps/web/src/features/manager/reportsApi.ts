@@ -53,10 +53,11 @@ export const reportsApi = {
 
   getSummary: async (startDate: string, endDate: string): Promise<ReportSummary> => {
     const params = new URLSearchParams({ startDate, endDate });
-    const [daily, packages, recentTransactions] = await Promise.all([
+    const [daily, packages, recentTransactions, renewal] = await Promise.all([
       reportsApi.getDailyRevenue(startDate, endDate),
       reportsApi.getPackageRevenue(startDate, endDate),
       apiFetch<RecentTransaction[]>(`/reports/transactions/recent?${params.toString()}`),
+      apiFetch<{ renewalRate: number | null }>(`/reports/renewal-rate?${params.toString()}`),
     ]);
 
     // BR-02: Doanh thu thuần = thanh toán thành công trừ hoàn tiền
@@ -67,9 +68,7 @@ export const reportsApi = {
     const todayItem = daily.find((d) => d.date === todayStr);
     const todayRevenue = todayItem ? Number(todayItem.revenue) || 0 : 0;
 
-    // The revenue endpoints do not provide expired/renewed subscription counts.
-    // Keep this unavailable rather than inventing a renewal rate from package sales.
-    const renewalRate = null;
+    const renewalRate = renewal.renewalRate;
 
     return {
       periodRevenue,

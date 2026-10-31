@@ -5,6 +5,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.RecentTransactionDto;
+import com.swp391.scms.reports.dto.RenewalRateDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
@@ -70,6 +71,15 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(ApiResponse.ok(msg("reports.transactions.recent"),
                 reportService.getRecentTransactions(startDate, endDate)));
+    }
+
+    @Operation(summary = "Tỷ lệ gia hạn của các gói đã hết hạn trong kỳ")
+    @GetMapping("/renewal-rate")
+    public ResponseEntity<ApiResponse<RenewalRateDto>> getRenewalRate(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(ApiResponse.ok(msg("reports.renewal_rate"),
+                reportService.getRenewalRate(startDate, endDate)));
     }
 
     @Operation(summary = "Báo cáo công suất sử dụng và tỷ lệ lấp đầy lớp học (SCRUM-120)")

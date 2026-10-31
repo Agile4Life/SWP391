@@ -531,6 +531,20 @@ components:
         denialReason:
           type: string
           nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+          description: Ảnh hội viên, chỉ có trong kết quả quét GRANTED khi hồ sơ có ảnh.
+        packageName:
+          type: string
+          nullable: true
+          description: Tên gói được quét, chỉ có trong kết quả quét GRANTED.
+        remainingDays:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+          description: Số ngày từ ngày quét đến ngày hết hạn; bằng 0 vào ngày hết hạn. Chỉ có trong kết quả quét GRANTED.
 
     CheckinScanRequest:
       type: object
@@ -938,6 +952,39 @@ paths:
         '409':
           description: Đã có gói tập đang hoạt động hoặc đang chờ thanh toán
 
+  /memberships/subscriptions/members/{memberId}/renewal-candidates:
+    get:
+      summary: Danh sách kỳ đã thanh toán của hội viên để gia hạn tại quầy
+      tags: [Membership]
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '200': {description: Danh sách SubscriptionDto của hội viên}
+        '403': {description: Chỉ CENTER_MANAGER hoặc RECEPTIONIST}
+        '404': {description: Không tìm thấy hội viên}
+
+  /memberships/subscriptions/members/{memberId}/renew/{id}:
+    post:
+      summary: Tạo yêu cầu gia hạn tại quầy cho hội viên
+      description: Tạo kỳ pending_payment liên kết kỳ đã thanh toán; dùng cùng quy tắc và khóa với gia hạn của hội viên.
+      tags: [Membership]
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, format: int64}
+      responses:
+        '201': {description: Đã tạo yêu cầu gia hạn chờ thanh toán}
+        '403': {description: Không đủ quyền hoặc gói không thuộc hội viên}
+        '409': {description: Xung đột kỳ hạn hoặc yêu cầu đang chờ}
+
   /memberships/subscriptions/{id}/renew:
     post:
       summary: Gia hạn gói tập chờ thanh toán (SCRUM-71)
@@ -1093,9 +1140,6 @@ paths:
         '200': {description: Đã từ chối yêu cầu}
         '403': {description: Chỉ Center Manager có quyền từ chối}
         '409': {description: Yêu cầu đã được xử lý}
-
-        '409':
-          description: Payment đang chờ hoặc đã thành công; chưa thể hủy yêu cầu
   /memberships/subscriptions/{id}/resume:
     post:
       summary: Mở lại gói bảo lưu miễn phí (MEMBER, SCRUM-71)
@@ -1863,6 +1907,40 @@ paths:
         '200': {description: Thành công}
         '403': {description: Chỉ CENTER_MANAGER được truy cập}
 
+  /reports/renewal-rate:
+    get:
+      summary: Tỷ lệ gia hạn các gói hết hạn trong kỳ (CENTER_MANAGER)
+      description: >-
+        Mẫu số gồm các gói đã thanh toán thành công, trạng thái active hoặc expired, có endDate
+        trong khoảng ngày lọc và trước hôm nay. Tử số là số gói trong mẫu có ít nhất một gói
+        tiếp nối qua previousSubscription đã thanh toán thành công và chưa bị hủy, kể cả nâng cấp.
+        Tính theo trạng thái hiện tại, nên kết quả kỳ cũ có thể thay đổi khi có gia hạn sau đó.
+        Nếu mẫu số bằng 0, renewalRate là null. Mặc định từ 30 ngày trước đến hôm nay.
+      tags: [Reports]
+      parameters:
+        - name: startDate
+          in: query
+          schema: {type: string, format: date}
+        - name: endDate
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Counts and renewal rate in ApiResponse.data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      expiredCount: {type: integer, format: int64}
+                      renewedCount: {type: integer, format: int64}
+                      renewalRate: {type: number, format: double, nullable: true, description: Percentage}
+        '400': {description: Ngày bắt đầu sau ngày kết thúc}
+        '403': {description: Chỉ CENTER_MANAGER được truy cập}
+
   /reports/transactions/recent:
     get:
       summary: Mười thanh toán thành công gần nhất trong kỳ (CENTER_MANAGER)
@@ -2004,3 +2082,82 @@ paths:
         '403':
           description: Không có quyền truy cập (FORBIDDEN - Yêu cầu CENTER_MANAGER)
 
+
+  /memberships/subscriptions/realtime-session:
+    post:
+      tags: [Membership Subscriptions]
+      summary: Open the current member's data-free Supabase Broadcast channel (SCRUM-86)
+      description: >
+        MEMBER only. Creates or reuses an opaque UUID capability for the authenticated owner.
+        No member ID is accepted. Cache-Control is no-store. Public Broadcast payloads contain
+        no payment/member/amount/status data (Supabase may add its delivery UUID).
+        Every signal requires a fresh authorized REST read; it is never payment confirmation.
+        Does not grant Data API access or relax application-table RLS.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Session configuration; enabled is false if Supabase is not configured
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [enabled]
+                        properties:
+                          enabled: { type: boolean }
+                          url: { type: string, format: uri }
+                          publishableKey: { type: string, description: Public sb_publishable_ key only }
+                          topic: { type: string, description: Opaque membership UUID capability; keep in memory only }
+        '401':
+          description: Missing, invalid or expired application JWT
+        '403':
+          description: Requires an active, nondeleted MEMBER account
+        '404':
+          description: Authenticated member record does not exist
+
+  /memberships/subscriptions/pending:
+    get:
+      tags: [Membership Subscriptions]
+      summary: Cashier pending membership checkout queue
+      description: >
+        CENTER_MANAGER or RECEPTIONIST only. Each item includes packagePrice: the authoritative
+        amount of the single existing pending payment for that subscription and owner, otherwise
+        the current catalog price. Catalog repricing does not change a previously stored payment.
+        Cashier submits this amount to the existing process-payment endpoint; backend revalidates
+        ownership, pending status and amount under the member lock. Ambiguous payment rows still
+        fail backend settlement checks.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: ApiResponse containing pending subscription DTOs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: integer, format: int64 }
+                            memberId: { type: integer, format: int64 }
+                            packageId: { type: integer, format: int64 }
+                            packageName: { type: string }
+                            packagePrice: { type: number, description: Authoritative payable amount; may differ from current catalog price }
+                            status: { type: string, enum: [pending_payment] }
+        '401':
+          description: Authentication required
+        '403':
+          description: Requires cashier or manager role

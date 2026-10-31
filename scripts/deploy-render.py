@@ -8,11 +8,12 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-def request(path, token, body=None):
+def request(path, token, body=None, method=None):
     payload = None if body is None else json.dumps(body).encode()
     req = Request(
         f"https://api.render.com/v1/{path}",
         data=payload,
+        method=method,
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
     )
     try:
@@ -25,13 +26,18 @@ def request(path, token, body=None):
         raise RuntimeError("Unable to reach the Render API") from None
 
 
-def deploy(service, token, commit):
+def deploy(service, token, commit, supabase_url="", supabase_publishable_key=""):
     if not re.fullmatch(r"srv-[a-zA-Z0-9-]+", service):
         raise ValueError("Set RENDER_SERVICE_ID to your existing srv-... service ID")
     if not token:
         raise ValueError("Set the RENDER_API_KEY secret")
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("DEPLOY_COMMIT must be the full tested Git commit SHA")
+    if supabase_url or supabase_publishable_key:
+        if not re.fullmatch(r"https://[a-z0-9]{20}\.supabase\.co", supabase_url) or not supabase_publishable_key.startswith("sb_publishable_"):
+            raise ValueError("Set both SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY; never use a secret key")
+        for key, value in (("SUPABASE_URL", supabase_url), ("SUPABASE_PUBLISHABLE_KEY", supabase_publishable_key)):
+            request(f"services/{service}/env-vars/{key}", token, {"value": value}, method="PUT")
     path = f"services/{service}/deploys"
     deployment = request(path, token, {"commitId": commit})
     deploy_id = deployment["id"]
@@ -54,6 +60,8 @@ if __name__ == "__main__":
             os.environ.get("RENDER_SERVICE_ID", ""),
             os.environ.get("RENDER_API_KEY", ""),
             os.environ.get("DEPLOY_COMMIT", ""),
+            os.environ.get("SUPABASE_URL", ""),
+            os.environ.get("SUPABASE_PUBLISHABLE_KEY", ""),
         )
     except (RuntimeError, ValueError, TimeoutError, KeyError) as error:
         print(f"Deployment failed: {error}", file=sys.stderr)

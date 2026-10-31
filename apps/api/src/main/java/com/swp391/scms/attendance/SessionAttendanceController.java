@@ -52,7 +52,7 @@ public class SessionAttendanceController {
 
     @Operation(summary = "Batch record attendance for session members")
     @PostMapping("/sessions/{id}/batch")
-    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
     public ApiResponse<List<MemberAttendanceItem>> recordBatchAttendance(
             @PathVariable Long id,
             @Valid @RequestBody BatchAttendanceRequest request,

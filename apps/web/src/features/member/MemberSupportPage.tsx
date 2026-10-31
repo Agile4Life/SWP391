@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { Select } from '../../shared/ui/Select';
 import { ApiError } from '../../shared/api/client';
 import { createSupportTicket, getMySupportTickets, getSupportMessages, sendSupportMessage, type SupportMessage, type SupportTicket } from './memberSupportApi';
 import './member-support.css';
@@ -99,15 +100,15 @@ export function MemberSupportPage() {
   }
 
   return <div className="portal-container member-support">
-    <PageHeader eyebrow="MEMBER SERVICES" title="Hỗ trợ & khiếu nại" subtitle="Kết nối trực tiếp với đội ngũ SÖL qua từng phiếu hỗ trợ." />
+    <PageHeader eyebrow="Hội viên" title="Hỗ trợ & khiếu nại" subtitle="Kết nối trực tiếp với đội ngũ SÖL qua từng phiếu hỗ trợ." />
     <div className="member-support-grid">
       <section className="portal-card" aria-labelledby="support-create-title">
         <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">Gửi yêu cầu</h2></div>
         <form onSubmit={(event) => void submitTicket(event)} className="member-support-form">
           <label className="portal-label" htmlFor="support-category">Loại yêu cầu</label>
-          <select id="support-category" className="portal-select" value={category} onChange={(event) => setCategory(event.target.value as Category)}>
+          <Select id="support-category" className="portal-select" value={category} onChange={(event) => setCategory(event.target.value as Category)}>
             {categories.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          </Select>
           <label className="portal-label" htmlFor="support-subject">Tiêu đề</label>
           <input id="support-subject" className="portal-input" value={subject} onChange={(event) => setSubject(event.target.value)} required maxLength={138} placeholder="Tóm tắt vấn đề" />
           <label className="portal-label" htmlFor="support-description">Nội dung</label>

@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,6 +38,7 @@ public class NotificationScheduler {
     private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
+    private final Clock clock;
 
     @Autowired
     public NotificationScheduler(
@@ -45,7 +47,8 @@ public class NotificationScheduler {
             ClassEnrollmentRepository enrollmentRepository,
             NotificationRepository notificationRepository,
             NotificationService notificationService,
-            @Autowired(required = false) MessageService messageService
+            @Autowired(required = false) MessageService messageService,
+            @Autowired(required = false) Clock clock
     ) {
         this.subscriptionRepository = subscriptionRepository;
         this.sessionRepository = sessionRepository;
@@ -53,6 +56,18 @@ public class NotificationScheduler {
         this.notificationRepository = notificationRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
+        this.clock = clock != null ? clock : Clock.systemDefaultZone();
+    }
+
+    public NotificationScheduler(
+            MembershipSubscriptionRepository subscriptionRepository,
+            ClassSessionRepository sessionRepository,
+            ClassEnrollmentRepository enrollmentRepository,
+            NotificationRepository notificationRepository,
+            NotificationService notificationService,
+            MessageService messageService
+    ) {
+        this(subscriptionRepository, sessionRepository, enrollmentRepository, notificationRepository, notificationService, messageService, null);
     }
 
     public NotificationScheduler(
@@ -62,7 +77,7 @@ public class NotificationScheduler {
             NotificationRepository notificationRepository,
             NotificationService notificationService
     ) {
-        this(subscriptionRepository, sessionRepository, enrollmentRepository, notificationRepository, notificationService, null);
+        this(subscriptionRepository, sessionRepository, enrollmentRepository, notificationRepository, notificationService, null, null);
     }
 
     /**
@@ -72,7 +87,7 @@ public class NotificationScheduler {
     @Scheduled(cron = "${app.scheduler.package-expiry.cron:0 0 8 * * ?}")
     public void schedulePackageExpiryJob() {
         log.info("[NotificationScheduler] Running daily package expiry reminder job...");
-        LocalDate targetDate = LocalDate.now().plusDays(7);
+        LocalDate targetDate = LocalDate.now(clock).plusDays(7);
         int sentCount = scanAndNotifyExpiringSubscriptions(targetDate);
         log.info("[NotificationScheduler] Finished package expiry job. Sent {} notification(s).", sentCount);
     }
@@ -86,7 +101,7 @@ public class NotificationScheduler {
     @Transactional
     public int scanAndNotifyExpiringSubscriptions(LocalDate targetDate) {
         if (targetDate == null) {
-            targetDate = LocalDate.now().plusDays(7);
+            targetDate = LocalDate.now(clock).plusDays(7);
         }
 
         List<MembershipSubscription> expiringSubscriptions =
@@ -144,7 +159,7 @@ public class NotificationScheduler {
     @Scheduled(cron = "${app.scheduler.class-reminder.cron:0 */30 * * * ?}")
     public void scheduleClassReminderJob() {
         log.info("[NotificationScheduler] Running class reminder job...");
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         int sentCount = scanAndNotifyUpcomingClasses(now);
         log.info("[NotificationScheduler] Finished class reminder job. Sent {} notification(s).", sentCount);
     }
@@ -158,7 +173,7 @@ public class NotificationScheduler {
     @Transactional
     public int scanAndNotifyUpcomingClasses(LocalDateTime referenceTime) {
         if (referenceTime == null) {
-            referenceTime = LocalDateTime.now();
+            referenceTime = LocalDateTime.now(clock);
         }
 
         LocalDateTime twoHoursLater = referenceTime.plusHours(2);

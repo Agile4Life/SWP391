@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -52,6 +53,7 @@ public class CenterCheckinService {
     private final Clock clock;
     private final MessageService messageService;
     private final DynamicQrService dynamicQrService;
+    private final GateQrService gateQrService;
 
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
@@ -70,7 +72,6 @@ public class CenterCheckinService {
         this(checkins, subscriptions, users, members, clock, messageService, new DynamicQrService());
     }
 
-    @Autowired
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
@@ -78,6 +79,16 @@ public class CenterCheckinService {
                                 Clock clock,
                                 MessageService messageService,
                                 @Autowired(required = false) DynamicQrService dynamicQrService) {
+        this(checkins, subscriptions, users, members, clock, messageService, dynamicQrService,
+                new GateQrService(java.util.UUID.randomUUID().toString()));
+    }
+
+    @Autowired
+    public CenterCheckinService(CenterCheckinRepository checkins,
+                                MembershipSubscriptionRepository subscriptions,
+                                UserRepository users, MemberRepository members, Clock clock,
+                                MessageService messageService, DynamicQrService dynamicQrService,
+                                GateQrService gateQrService) {
         this.checkins = checkins;
         this.subscriptions = subscriptions;
         this.users = users;
@@ -85,6 +96,33 @@ public class CenterCheckinService {
         this.clock = clock;
         this.messageService = messageService;
         this.dynamicQrService = dynamicQrService != null ? dynamicQrService : new DynamicQrService();
+        this.gateQrService = gateQrService;
+    }
+
+    @Transactional(readOnly = true)
+    public com.swp391.scms.attendance.dto.CheckinResponses.GateQrDto gateQr(AuthenticatedPrincipal principal, String gateId) {
+        ensureStaff(principal);
+        return gateQrService.generate(gateId, clock.millis());
+    }
+
+    @Transactional
+    public CheckinDto selfScan(AuthenticatedPrincipal principal, CheckinRequests.SelfScan request) {
+        if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
+            throw new ForbiddenException("CHECKIN_MEMBER_REQUIRED", "error.forbidden", null, "error.forbidden");
+        }
+        String gateId = gateQrService.verify(request.gateQr(), clock.millis());
+        String gate = gateQrService.gateName(gateId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
+        User recorder = users.findById(principal.id()).orElse(null);
+        Optional<MembershipSubscription> subscription = subscriptions
+                .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                        principal.id(), STATUS_ACTIVE, today, today);
+        if (subscription.isEmpty()) {
+            Member member = members.findByUserIdForUpdate(principal.id()).orElse(null);
+            return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_not_active");
+        }
+        return recordEntry(subscription.get(), now, gate, recorder);
     }
 
     private String resolveMessage(String key) {
@@ -133,35 +171,39 @@ public class CenterCheckinService {
             return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid");
         }
 
-        MembershipSubscription sub = subOpt.get();
+        return recordEntry(subOpt.get(), now, request.gate(), recorder);
+    }
+
+    private CheckinDto recordEntry(MembershipSubscription sub, LocalDateTime now, String gate, User recorder) {
+        LocalDate today = now.toLocalDate();
         Member member = sub.getMember();
 
         // Trường hợp 2: Không tìm thấy hội viên liên kết
         if (member == null) {
-            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found");
+            return saveDeniedRecord(null, now, gate, recorder, "error.attendance.member_not_found");
         }
 
         // Serialize every QR belonging to the same member before checking for an open visit.
         member = members.findByUserIdForUpdate(member.getUserId()).orElse(null);
         if (member == null) {
-            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.member_not_found");
+            return saveDeniedRecord(null, now, gate, recorder, "error.attendance.member_not_found");
         }
         User memberUser = member.getUser();
         if (memberUser == null || memberUser.getDeletedAt() != null || !"active".equals(memberUser.getStatus())) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.member_inactive");
+            return saveDeniedRecord(member, now, gate, recorder, "error.attendance.member_inactive");
         }
 
         // Trường hợp 3: Gói tập chưa active (vd: pending_payment, cancelled)
         if (!STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus())) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
+            return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_not_active");
         }
 
         // Trường hợp 4: Gói tập chưa đến ngày hoặc đã hết hạn
         if (sub.getStartDate() != null && sub.getStartDate().isAfter(today)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_not_active");
+            return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_not_active");
         }
         if (sub.getEndDate() != null && sub.getEndDate().isBefore(today)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.subscription_expired");
+            return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_expired");
         }
 
         // Tự động đóng các lượt check-in GRANTED bị treo quá 12 tiếng của hội viên (giải phóng bẫy anti-passback)
@@ -169,7 +211,7 @@ public class CenterCheckinService {
 
         // Trường hợp 5 (BR-04 Anti-passback): Hội viên đang ở trong phòng tập chưa checkout
         if (checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(member.getUserId(), RESULT_GRANTED)) {
-            return saveDeniedRecord(member, now, request.gate(), recorder, "error.attendance.already_checked_in");
+            return saveDeniedRecord(member, now, gate, recorder, "error.attendance.already_checked_in");
         }
 
         // Hợp lệ -> GRANTED
@@ -177,12 +219,16 @@ public class CenterCheckinService {
         checkin.setMember(member);
         checkin.setCheckInTime(now);
         checkin.setMethod("qr");
-        checkin.setGate(request.gate());
+        checkin.setGate(gate);
         checkin.setRecordedBy(recorder);
         checkin.setStatus(RESULT_GRANTED);
         checkin.setDenialReason(null);
 
-        return toDto(checkins.saveAndFlush(checkin));
+        CheckinDto result = toDto(checkins.saveAndFlush(checkin));
+        return new CheckinDto(result.id(), result.memberId(), result.memberName(), result.checkInTime(),
+                result.checkOutTime(), result.method(), result.gate(), result.status(), result.denialReason(),
+                memberUser.getAvatarUrl(), sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null,
+                sub.getEndDate() != null ? ChronoUnit.DAYS.between(today, sub.getEndDate()) : null);
     }
 
     /**
@@ -195,12 +241,7 @@ public class CenterCheckinService {
         List<CenterCheckin> staleVisits = checkins
                 .findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
                         memberUserId, RESULT_GRANTED, cutoff);
-        for (CenterCheckin stale : staleVisits) {
-            stale.setCheckOutTime(stale.getCheckInTime().plusHours(4).isBefore(now)
-                    ? stale.getCheckInTime().plusHours(4) : now);
-            stale.setNotes(AUTO_CHECKOUT_NOTE);
-            checkins.save(stale);
-        }
+        closeStaleVisits(staleVisits, now);
     }
 
     /**
@@ -214,9 +255,13 @@ public class CenterCheckinService {
         LocalDateTime cutoff = now.minusHours(ANTI_PASSBACK_TIMEOUT_HOURS);
         List<CenterCheckin> staleVisits = checkins
                 .findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(RESULT_GRANTED, cutoff);
+        return closeStaleVisits(staleVisits, now);
+    }
+
+    private int closeStaleVisits(List<CenterCheckin> staleVisits, LocalDateTime now) {
         for (CenterCheckin stale : staleVisits) {
-            stale.setCheckOutTime(stale.getCheckInTime().plusHours(4).isBefore(now)
-                    ? stale.getCheckInTime().plusHours(4) : now);
+            LocalDateTime defaultEnd = stale.getCheckInTime().plusHours(4);
+            stale.setCheckOutTime(defaultEnd.isBefore(now) ? defaultEnd : now);
             stale.setNotes(AUTO_CHECKOUT_NOTE);
             checkins.save(stale);
         }

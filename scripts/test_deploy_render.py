@@ -25,6 +25,24 @@ class RenderDeployTest(unittest.TestCase):
         self.assertEqual(request.call_count, 3)
         self.assertEqual(request.call_args.args[0], "services/srv-test/deploys/dep-test")
 
+    def test_configures_only_public_realtime_keys_before_deploy(self):
+        with patch.object(self.deploy, "request", side_effect=[{}, {}, {"id": "dep-test"}, {"status": "live"}]) as request:
+            self.deploy.deploy("srv-test", "secret", "a" * 40,
+                    "https://abcdefghijklmnopqrst.supabase.co", "sb_publishable_test")
+        self.assertEqual(request.call_args_list[0].args,
+                ("services/srv-test/env-vars/SUPABASE_URL", "secret", {"value": "https://abcdefghijklmnopqrst.supabase.co"}))
+        self.assertEqual(request.call_args_list[0].kwargs, {"method": "PUT"})
+        self.assertEqual(request.call_args_list[1].args[0], "services/srv-test/env-vars/SUPABASE_PUBLISHABLE_KEY")
+        self.assertEqual(request.call_args_list[2].args[0], "services/srv-test/deploys")
+
+    def test_rejects_partial_or_secret_realtime_config_without_writes(self):
+        for url, key in [("https://abcdefghijklmnopqrst.supabase.co", ""), ("", "sb_publishable_test"),
+                         ("https://abcdefghijklmnopqrst.supabase.co", "sb_secret_forbidden")]:
+            with self.subTest(url=url), patch.object(self.deploy, "request") as request:
+                with self.assertRaises(ValueError):
+                    self.deploy.deploy("srv-test", "secret", "a" * 40, url, key)
+                request.assert_not_called()
+
     def test_terminal_failures_fail_the_job(self):
         for status in ("build_failed", "update_failed", "pre_deploy_failed", "canceled", "deactivated"):
             with self.subTest(status=status), patch.object(self.deploy, "request", side_effect=[

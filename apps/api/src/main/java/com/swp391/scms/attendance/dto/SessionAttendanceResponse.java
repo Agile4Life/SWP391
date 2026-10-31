@@ -38,7 +38,26 @@ public record SessionAttendanceResponse(
             LocalDateTime checkedInAt,
             Long recordedByCoachId,
             String recordedByCoachName,
-            String notes
+            String notes,
+            Integer progressScore
     ) {
+        public MemberAttendanceItem(
+                Long memberId,
+                String membershipCode,
+                String fullName,
+                String email,
+                String phone,
+                String avatarUrl,
+                String enrollmentStatus,
+                String attendanceStatus,
+                LocalDateTime checkedInAt,
+                Long recordedByCoachId,
+                String recordedByCoachName,
+                String notes
+        ) {
+            this(memberId, membershipCode, fullName, email, phone, avatarUrl,
+                    enrollmentStatus, attendanceStatus, checkedInAt,
+                    recordedByCoachId, recordedByCoachName, notes, null);
+        }
     }
 }

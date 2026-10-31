@@ -65,6 +65,7 @@ export function StaffClassesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
+  const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ClassFormData>(defaultFormData());
   const [modalError, setModalError] = useState<string | null>(null);
@@ -126,8 +127,8 @@ export function StaffClassesPage() {
       <div className="portal-container" data-testid="forbidden-guard">
         <div className="portal-card">
           <div className="portal-state" style={{ padding: '60px 24px' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
-              🚫
+            <div style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }} role="img" aria-label="Forbidden">
+              403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
@@ -361,8 +362,8 @@ export function StaffClassesPage() {
           style={{
             marginBottom: 20,
             padding: '16px 20px',
-            backgroundColor: '#3d2828',
-            border: '1px solid #F8B4B4',
+            backgroundColor: 'var(--portal-raised)',
+            border: '1px solid var(--portal-danger, #fca5a5)',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
@@ -371,7 +372,7 @@ export function StaffClassesPage() {
           }}
           data-testid="classes-error"
         >
-          <div style={{ color: '#fca5a5' }}>
+          <div style={{ color: 'var(--portal-danger, #fca5a5)' }}>
             <strong>Lỗi tải dữ liệu:</strong> {error}
           </div>
           <button
@@ -418,7 +419,7 @@ export function StaffClassesPage() {
         /* State 2: Empty list */
         <div className="portal-card" data-testid="classes-empty">
           <div className="portal-state" style={{ padding: '48px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📋</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: 12 }}>LỚP HỌC</div>
             <h3 className="portal-state__title" style={{ marginBottom: 6 }}>
               Chưa có lớp học nào
             </h3>
@@ -474,7 +475,7 @@ export function StaffClassesPage() {
                       <button
                         type="button"
                         className="btn-secondary btn-sm"
-                        onClick={() => toast(`Danh sách học viên lớp ${cls.name} chưa được kết nối.`, 'success')}
+                        onClick={() => setSelectedClassDetail(cls)}
                       >
                         Danh sách
                       </button>
@@ -485,6 +486,41 @@ export function StaffClassesPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {selectedClassDetail && (
+        <Modal title={`Chi tiết lớp học: ${selectedClassDetail.name}`} onClose={() => setSelectedClassDetail(null)}>
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div className="kv-list">
+              <div className="kv-row"><span>Mã lớp</span><strong>CLS-{selectedClassDetail.id}</strong></div>
+              <div className="kv-row"><span>Bộ môn</span><strong>{getDisciplineName(selectedClassDetail)}</strong></div>
+              <div className="kv-row"><span>Huấn luyện viên</span><strong>{getCoachName(selectedClassDetail)}</strong></div>
+              <div className="kv-row"><span>Phòng tập</span><strong>{getRoomName(selectedClassDetail)}</strong></div>
+              <div className="kv-row"><span>Sức chứa tối đa</span><strong>{selectedClassDetail.capacity} học viên</strong></div>
+            </div>
+            <div>
+              <h4 style={{ margin: '4px 0 8px', fontSize: '0.88rem' }}>Lịch các buổi học đã xếp</h4>
+              {sessions.filter((s) => s.classId === selectedClassDetail.id).length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>Chưa có buổi học nào được xếp lịch cho lớp này.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {sessions.filter((s) => s.classId === selectedClassDetail.id).map((s) => (
+                    <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
+                      <div>
+                        <strong>{s.sessionDate}</strong>
+                        <span className="muted" style={{ marginLeft: 8 }}>{s.startTime} – {s.endTime}</span>
+                      </div>
+                      <span className="badge badge-neutral">{s.status === 'scheduled' ? 'Sắp diễn ra' : s.status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+              <button type="button" className="btn-secondary" onClick={() => setSelectedClassDetail(null)}>Đóng</button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Modal: Tạo lớp học và xếp lịch */}
@@ -504,7 +540,7 @@ export function StaffClassesPage() {
                 className="portal-input"
                 style={
                   isDuplicateClassName
-                    ? { borderColor: '#fca5a5', backgroundColor: '#3d2828' }
+                    ? { borderColor: 'var(--portal-danger, #fca5a5)', backgroundColor: 'var(--portal-raised)' }
                     : undefined
                 }
                 value={formData.name}
@@ -521,14 +557,14 @@ export function StaffClassesPage() {
                     alignItems: 'center',
                     gap: '6px',
                     marginTop: '5px',
-                    color: '#fca5a5',
+                    color: 'var(--portal-danger, #fca5a5)',
                     fontSize: '0.84rem',
                     fontWeight: 600,
                   }}
                   role="alert"
                   data-testid="duplicate-class-warning"
                 >
-                  <span style={{ fontSize: '1rem' }}>⚠️</span>
+                  <span style={{ fontWeight: 700 }}>!</span>
                   <span>
                     Tên lớp &quot;{formData.name.trim()}&quot; đã tồn tại trong hệ thống. Vui lòng đặt tên khác!
                   </span>
@@ -706,10 +742,10 @@ export function StaffClassesPage() {
               <div
                 style={{
                   padding: '12px 16px',
-                  backgroundColor: '#3d2828',
-                  border: '1px solid #F8B4B4',
+                  backgroundColor: 'var(--portal-raised)',
+                  border: '1px solid var(--portal-danger, #fca5a5)',
                   borderRadius: '6px',
-                  color: '#fca5a5',
+                  color: 'var(--portal-danger, #fca5a5)',
                   fontSize: '0.88rem',
                   fontWeight: 500,
                   display: 'flex',
@@ -718,7 +754,7 @@ export function StaffClassesPage() {
                   marginTop: '4px',
                 }}
               >
-                <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+                <span style={{ fontWeight: 700 }}>!</span>
                 <span>{modalError}</span>
               </div>
             )}

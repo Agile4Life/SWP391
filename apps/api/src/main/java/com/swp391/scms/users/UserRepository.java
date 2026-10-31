@@ -1,6 +1,7 @@
 package com.swp391.scms.users;
 
 import com.swp391.scms.users.entity.User;
+import com.swp391.scms.users.dto.AuthenticationUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,8 +14,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findAllByDeletedAtIsNullOrderByIdAsc();
     Optional<User> findByIdAndDeletedAtIsNull(Long id);
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "role")
-    Optional<User> findWithRoleByIdAndDeletedAtIsNull(Long id);
+    @Query("select new com.swp391.scms.users.dto.AuthenticationUser(u.id, u.username, u.status, r.code) "
+            + "from User u join u.role r where u.id = :id and u.deletedAt is null")
+    Optional<AuthenticationUser> findAuthenticationById(@Param("id") Long id);
     Optional<User> findByUsernameIgnoreCase(String username);
     Optional<User> findByUsernameIgnoreCaseAndDeletedAtIsNull(String username);
     @Query("select u from User u where u.deletedAt is null and (lower(u.username) = lower(:identifier) or lower(u.email) = lower(:identifier))")

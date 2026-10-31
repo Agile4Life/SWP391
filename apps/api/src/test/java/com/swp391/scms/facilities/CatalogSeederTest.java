@@ -39,6 +39,10 @@ class CatalogSeederTest {
         verify(disciplines, times(5)).create(any());
         verify(rooms, times(5)).create(any());
         verify(packages, times(3)).create(any());
+        var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
+        verify(packages, times(3)).create(requests.capture());
+        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
+                .containsExactly(299000, 499000, 999000);
     }
 
     @Test
@@ -53,4 +57,23 @@ class CatalogSeederTest {
         verify(rooms, never()).create(any());
         verify(packages, never()).create(any());
     }
+    @Test
+    void correctsOriginalCatalogPricesWithoutChangingTermsOrManagerPrices() {
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(packages.list()).thenReturn(List.of(
+                new PackageDto(1L, "The Essential", "8 classes", new BigDecimal("2800000"), 30, 8, "active"),
+                new PackageDto(2L, "The Sanctuary VIP", "Unlimited", new BigDecimal("7500000"), 90, null, "active"),
+                new PackageDto(3L, "The Sovereign Annual", "Annual", new BigDecimal("26000000"), 365, null, "active"),
+                new PackageDto(4L, "Manager package", null, new BigDecimal("450000"), 45, 3, "active")));
+        seeder.run(null);
+        var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
+        verify(packages, times(3)).update(any(), requests.capture());
+        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
+                .containsExactly(299000, 499000, 999000);
+        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.durationDays()).toList())
+                .containsExactly(30, 90, 365);
+        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().classCreditLimit()).isEqualTo(8);
+    }
+
 }

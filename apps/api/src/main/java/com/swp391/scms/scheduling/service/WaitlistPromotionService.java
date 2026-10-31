@@ -15,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * SCRUM-112: Waitlist promotion service for expiring overdue notified waitlists
@@ -29,7 +29,7 @@ public class WaitlistPromotionService {
 
     private static final Logger log = LoggerFactory.getLogger(WaitlistPromotionService.class);
     private static final int CHUNK_SIZE = 50;
-    private static final int PROMOTION_WINDOW_HOURS = 24;
+    private static final int PROMOTION_WINDOW_HOURS = EnrollmentService.WAITLIST_RESERVATION_HOURS;
 
     private final ClassWaitlistRepository waitlistRepository;
     private final NotificationService notificationService;
@@ -71,7 +71,7 @@ public class WaitlistPromotionService {
     public int processExpiredWaitlists() {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime cutoff24h = now.minusHours(PROMOTION_WINDOW_HOURS);
-        Set<Long> affectedClassIds = new HashSet<>();
+        List<Long> expiredClassSlots = new ArrayList<>();
         int totalExpired = 0;
 
         // Process chunk by chunk using PageRequest(0, CHUNK_SIZE)
@@ -95,7 +95,7 @@ public class WaitlistPromotionService {
                 totalExpired++;
 
                 if (item.getGymClass() != null && item.getGymClass().getId() != null) {
-                    affectedClassIds.add(item.getGymClass().getId());
+                    expiredClassSlots.add(item.getGymClass().getId());
                 }
 
                 if (item.getMember() != null && item.getMember().getUserId() != null) {
@@ -118,14 +118,14 @@ public class WaitlistPromotionService {
             }
         }
 
-        // Promote next in line for each affected gym class
+        // Promote next in line for each expired slot
         int totalPromoted = 0;
-        for (Long classId : affectedClassIds) {
+        for (Long classId : expiredClassSlots) {
             totalPromoted += promoteNextCandidate(classId, now);
         }
 
-        log.info("Waitlist promotion job finished. Expired: {}, Promoted: {} across {} classes.",
-                totalExpired, totalPromoted, affectedClassIds.size());
+        log.info("Waitlist promotion job finished. Expired: {}, Promoted: {} across {} expired slots.",
+                totalExpired, totalPromoted, expiredClassSlots.size());
         return totalExpired;
     }
 

@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,16 +36,26 @@ public class SessionEvaluationService {
     private final MemberRepository memberRepository;
     private final CoachRepository coachRepository;
     private final ClassSessionRepository classSessionRepository;
+    private final Clock clock;
+
+    public SessionEvaluationService(SessionEvaluationRepository evaluationRepository,
+                                    MemberRepository memberRepository,
+                                    CoachRepository coachRepository,
+                                    ClassSessionRepository classSessionRepository) {
+        this(evaluationRepository, memberRepository, coachRepository, classSessionRepository, Clock.systemDefaultZone());
+    }
 
     @Autowired
     public SessionEvaluationService(SessionEvaluationRepository evaluationRepository,
                                     MemberRepository memberRepository,
                                     CoachRepository coachRepository,
-                                    @Autowired(required = false) ClassSessionRepository classSessionRepository) {
+                                    @Autowired(required = false) ClassSessionRepository classSessionRepository,
+                                    @Autowired(required = false) Clock clock) {
         this.evaluationRepository = evaluationRepository;
         this.memberRepository = memberRepository;
         this.coachRepository = coachRepository;
         this.classSessionRepository = classSessionRepository;
+        this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
     public SessionEvaluationDto createEvaluation(SessionEvaluationCreateDto request,
@@ -71,6 +82,7 @@ public class SessionEvaluationService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.session", request.sessionId()));
         }
 
+        LocalDateTime now = LocalDateTime.now(clock);
         SessionEvaluation evaluation = new SessionEvaluation();
         evaluation.setSession(session);
         evaluation.setMember(member);
@@ -78,8 +90,8 @@ public class SessionEvaluationService {
         evaluation.setProgressScore(request.progressScore());
         evaluation.setPerformanceNotes(request.performanceNotes());
         evaluation.setFeedback(request.feedback());
-        evaluation.setEvaluatedAt(request.evaluatedAt() != null ? request.evaluatedAt() : LocalDateTime.now());
-        evaluation.setCreatedAt(LocalDateTime.now());
+        evaluation.setEvaluatedAt(request.evaluatedAt() != null ? request.evaluatedAt() : now);
+        evaluation.setCreatedAt(now);
 
         SessionEvaluation saved = evaluationRepository.save(evaluation);
         return toDto(saved);

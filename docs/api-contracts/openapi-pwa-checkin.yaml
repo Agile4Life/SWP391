@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: SÖL Portal PWA gate check-in (SCRUM-75/83/87 extension)
+  version: 1.0.0
+  description: Member scans a short-lived gate challenge displayed by reception. Existing staff scan and checkout contracts remain unchanged. QR challenges do not establish physical proximity or control barrier hardware.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /check-in/gate-qr:
+    get:
+      summary: Create a 60-second signed gate challenge
+      description: RECEPTIONIST, CENTER_MANAGER or ADMIN only. Never cache. A challenge may be used by multiple members; existing member anti-passback prevents a second granted entry until checkout.
+      parameters:
+        - in: query
+          name: gate
+          schema: { type: string, enum: [A1, A2, B1], default: A1 }
+      responses:
+        '200':
+          description: Challenge ready
+          headers:
+            Cache-Control: { schema: { type: string, example: no-store } }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data: { $ref: '#/components/schemas/GateQr' }
+        '400': { description: Unknown gate }
+        '401': { description: Authentication required }
+        '403': { description: Staff role required }
+  /check-in/self:
+    post:
+      summary: Member records own entry using a signed gate QR
+      description: MEMBER only. Identity comes from the authenticated principal. The server checks gate signature/lifetime, account status, current active subscription, anti-passback and database membership trigger. No offline queue. Invalid/expired challenges return 400; business denials return 201 with status DENIED and an audit entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateQr]
+              properties:
+                gateQr: { type: string, minLength: 1, maxLength: 256 }
+      responses:
+        '201':
+          description: Audited result, GRANTED or DENIED; same CheckinDto as existing staff scan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: integer, format: int64 }
+                      memberId: { type: integer, format: int64, nullable: true }
+                      memberName: { type: string, nullable: true }
+                      checkInTime: { type: string, format: date-time }
+                      checkOutTime: { type: string, format: date-time, nullable: true }
+                      method: { type: string, example: qr }
+                      gate: { type: string }
+                      status: { type: string, enum: [GRANTED, DENIED] }
+                      denialReason: { type: string, nullable: true, description: Localized using Accept-Language (vi default or en) }
+                      avatarUrl: { type: string, nullable: true }
+                      packageName: { type: string, nullable: true }
+                      remainingDays: { type: integer, nullable: true }
+        '400': { description: Validation error, GATE_QR_INVALID or GATE_QR_EXPIRED }
+        '401': { description: Authentication required }
+        '403': { description: Member role required }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    GateQr:
+      type: object
+      required: [qrCode, gateId, gate, generatedAt, expiresAt, expiresInSeconds]
+      properties:
+        qrCode: { type: string, description: 'SOL:GATE:1:<gateId>:<issuedMillis>:<HMAC-SHA256 hex>; signed by the server' }
+        gateId: { type: string, enum: [A1, A2, B1] }
+        gate: { type: string }
+        generatedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        expiresInSeconds: { type: integer, example: 60 }

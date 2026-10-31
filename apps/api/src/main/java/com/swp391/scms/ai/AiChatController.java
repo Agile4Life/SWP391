@@ -70,6 +70,19 @@ public class AiChatController {
         return ResponseEntity.ok(ApiResponse.ok(msg("success.ai.chat.session.created"), sessions));
     }
 
+    @Operation(summary = "Gửi tin nhắn trực tiếp (tự tạo phiên nếu chưa truyền sessionId)")
+    @PostMapping({"/message", "/messages"})
+    @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    public ResponseEntity<ApiResponse<AiChatReplyDto>> sendQuickMessage(
+            @Valid @RequestBody AiChatMessageCreateDto request,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        Long userId = principal != null ? principal.id() : null;
+        String role = principal != null ? principal.role() : "MEMBER";
+        AiChatReplyDto reply = aiChatService.sendQuickMessage(request, userId, role);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(msg("success.ai.chat.message.sent"), reply));
+    }
+
     @Operation(summary = "Gửi tin nhắn và nhận phản hồi từ AI Chatbot")
     @PostMapping("/sessions/{id}/messages")
     @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")

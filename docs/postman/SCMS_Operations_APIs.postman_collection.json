@@ -223,12 +223,12 @@
         {
           "name": "Cancel Pending Subscription",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions/{{subscriptionId}}",
+              "raw": "{{baseUrl}}/api/v1/memberships/subscriptions/{{subscriptionId}}/cancel",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "memberships", "subscriptions", "{{subscriptionId}}"]
+              "path": ["api", "v1", "memberships", "subscriptions", "{{subscriptionId}}", "cancel"]
             }
           }
         }
@@ -336,7 +336,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Coach is attending professional certification symposium; credit refunded to all students\"\n}"
+              "raw": "{\n  \"reason\": \"Coach is attending professional certification symposium\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/classes/sessions/{{sessionId}}/cancel",

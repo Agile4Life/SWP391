@@ -72,6 +72,70 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
+    @Autowired com.swp391.scms.membership.service.MembershipRealtimeService realtime;
+
+    @Test
+    @EnabledIfEnvironmentVariable(named = "SUPABASE_PUBLISHABLE_KEY", matches = "sb_publishable_.+")
+    void supabaseBroadcastIsDataFreeAndOnlyDeliveredAfterCommit() throws Exception {
+        long owner = member();
+        var session = realtime.open(new com.swp391.scms.security.AuthenticatedPrincipal(owner, "fixture", "MEMBER"));
+        assertEquals(session.topic(), "membership:" + jdbc.queryForObject("select payment_realtime_topic from members where user_id = ?", String.class, owner));
+        assertTrue(session.enabled(), "Configure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY for live Realtime QA");
+        var joined = new CountDownLatch(1);
+        var events = new LinkedBlockingQueue<com.fasterxml.jackson.databind.JsonNode>();
+        var buffer = new StringBuilder();
+        var uri = java.net.URI.create(session.url().replace("https://", "wss://")
+                + "/realtime/v1/websocket?apikey=" + session.publishableKey() + "&vsn=1.0.0");
+        var socket = java.net.http.HttpClient.newHttpClient().newWebSocketBuilder()
+                .buildAsync(uri, new java.net.http.WebSocket.Listener() {
+                    @Override public void onOpen(java.net.http.WebSocket ws) { ws.request(1); }
+                    @Override public java.util.concurrent.CompletionStage<?> onText(java.net.http.WebSocket ws, CharSequence text, boolean last) {
+                        buffer.append(text);
+                        if (last) {
+                            try {
+                                var frame = json.readTree(buffer.toString());
+                                if ("phx_reply".equals(frame.path("event").asText())
+                                        && "ok".equals(frame.path("payload").path("status").asText())) joined.countDown();
+                                if ("broadcast".equals(frame.path("event").asText())) events.add(frame.path("payload"));
+                            } catch (Exception e) { throw new RuntimeException(e); }
+                            buffer.setLength(0);
+                        }
+                        ws.request(1);
+                        return null;
+                    }
+                }).get(20, TimeUnit.SECONDS);
+        try {
+            socket.sendText(json.writeValueAsString(java.util.Map.of("topic", "realtime:" + session.topic(),
+                    "event", "phx_join", "payload", java.util.Map.of("config", java.util.Map.of(
+                        "broadcast", java.util.Map.of("ack", false, "self", false),
+                        "presence", java.util.Map.of("enabled", false), "postgres_changes", java.util.List.of(), "private", false)), "ref", "1")), true).join();
+            assertTrue(joined.await(15, TimeUnit.SECONDS), "Supabase channel must subscribe");
+            try (var connection = dataSource.getConnection()) {
+                connection.setAutoCommit(false);
+                try (var insert = connection.prepareStatement("insert into payments (member_id,amount,method,status,created_at) values (?,299000,'cash','pending',now())")) {
+                    insert.setLong(1, owner); insert.executeUpdate();
+                    var warning = insert.getWarnings();
+                    assertNull(warning, "Realtime SQL warning: " + String.valueOf(warning));
+                    assertNull(events.poll(800, TimeUnit.MILLISECONDS), "Uncommitted data must not emit");
+                    connection.commit();
+                    var event = events.poll(15, TimeUnit.SECONDS);
+                    assertNotNull(event, "Committed payment must emit through Supabase Realtime");
+                    assertEquals("changed", event.path("event").asText());
+                    assertTrue(event.path("payload").isObject());
+                    assertTrue(event.path("payload").size() <= 1, "Only Supabase-generated delivery ID is allowed");
+                    assertTrue(!event.path("payload").has("id") || event.path("payload").path("id").asText().matches("[a-f0-9-]{36}"));
+                    insert.executeUpdate();
+                    connection.rollback();
+                    assertNull(events.poll(1200, TimeUnit.MILLISECONDS), "Rollback must not emit");
+                } finally { connection.rollback(); connection.setAutoCommit(true); }
+            }
+            // Changing another member's payment must not reach this capability channel.
+            long other = member();
+            jdbc.update("insert into payments (member_id,amount,method,status,created_at) values (?,499000,'cash','pending',now())", other);
+            assertNull(events.poll(800, TimeUnit.MILLISECONDS));
+        } finally { socket.sendClose(1000, "done").join(); }
+    }
+
     private long user(String role) {
         return jdbc.queryForObject("""
                 insert into users (role_id, full_name, email, password_hash, status, created_at, updated_at)

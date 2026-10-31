@@ -11,6 +11,7 @@ public class AiWorkoutPlanResponse {
     private Long id;
     private Long memberId;
     private String memberCode;
+    private String memberName;
     private Long coachId;
     private String modelName;
     private boolean applied;
@@ -28,6 +29,8 @@ public class AiWorkoutPlanResponse {
     public void setMemberId(Long memberId) { this.memberId = memberId; }
     public String getMemberCode() { return memberCode; }
     public void setMemberCode(String memberCode) { this.memberCode = memberCode; }
+    public String getMemberName() { return memberName; }
+    public void setMemberName(String memberName) { this.memberName = memberName; }
     public Long getCoachId() { return coachId; }
     public void setCoachId(Long coachId) { this.coachId = coachId; }
     public String getModelName() { return modelName; }

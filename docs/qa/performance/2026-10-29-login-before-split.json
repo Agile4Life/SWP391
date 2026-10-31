@@ -1,0 +1,31 @@
+{
+  "method": "Cold production preview, 390x844, SW disabled, external requests blocked; throttled case 1.6 Mbps / 150ms; no CPU throttling",
+  "results": [
+    {
+      "throttled": false,
+      "fcpMs": 332,
+      "encodedJsBytes": 349455,
+      "decodedJsBytes": 1303271,
+      "scripts": [
+        {
+          "path": "/assets/index-CqMX9GX1.js",
+          "encodedBytes": 349455,
+          "decodedBytes": 1303271
+        }
+      ]
+    },
+    {
+      "throttled": true,
+      "fcpMs": 2572,
+      "encodedJsBytes": 349455,
+      "decodedJsBytes": 1303271,
+      "scripts": [
+        {
+          "path": "/assets/index-CqMX9GX1.js",
+          "encodedBytes": 349455,
+          "decodedBytes": 1303271
+        }
+      ]
+    }
+  ]
+}

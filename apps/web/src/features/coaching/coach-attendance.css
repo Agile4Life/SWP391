@@ -320,13 +320,13 @@
   border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
-.radio-status-label.is-late {
+.radio-status-label.is-late.is-active {
   background: rgba(245, 158, 11, 0.15);
   color: #d97706;
   border: 1px solid rgba(245, 158, 11, 0.5);
 }
 
-.radio-status-label.is-excused {
+.radio-status-label.is-excused.is-active {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
   border-radius: 12px;

@@ -1,5 +1,8 @@
 scms:
   ai:
+    provider: ${SCMS_AI_PROVIDER:mock}
+    api-key: ${SCMS_AI_API_KEY:}
+    model: ${SCMS_AI_MODEL:}
     chat:
       provider: ${SCMS_AI_CHAT_PROVIDER:${SCMS_AI_PROVIDER:disabled}}
       api-key: ${SCMS_AI_CHAT_API_KEY:${SCMS_AI_API_KEY:}}
@@ -56,6 +59,10 @@ springdoc:
     filter: true
 
 app:
+  supabase:
+    url: ${SUPABASE_URL:}
+    publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}
+    chat-jwt-secret: ${SUPABASE_CHAT_JWT_SECRET:}
   jwt:
     secret: ${APP_JWT_SECRET}
     expiration-ms: 86400000

@@ -84,7 +84,7 @@ export const classesApi = {
   },
 
   /**
-   * Tạo lớp học mới
+   * Tạo lớp học mới (hỗ trợ tạo luôn buổi học đầu tiên trong 1 bước nếu truyền kèm sessionDate/startTime/endTime)
    */
   createClass: async (payload: CreateClassPayload): Promise<ClassItem> => {
     return apiFetch<ClassItem>('/classes', {
@@ -116,8 +116,18 @@ export const classesApi = {
 
   /**
    * BR-02: Lấy danh sách huấn luyện viên chỉ bao gồm HLV role 'COACH' và status 'active'
+   * Ưu tiên endpoint chuyên biệt /classes/coaches (cho phép cả RECEPTIONIST và CENTER_MANAGER),
+   * fallback sang /users nếu cần.
    */
   getActiveCoaches: async (): Promise<CoachUser[]> => {
+    try {
+      const coaches = await apiFetch<CoachUser[]>('/classes/coaches');
+      if (Array.isArray(coaches)) {
+        return coaches.filter((u) => (!('roleCode' in u) || (u as unknown as UserDto).roleCode === 'COACH') && u.status === 'active').map((u) => ({ id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, status: u.status }));
+      }
+    } catch {
+      // Fallback sang /users cho môi trường cũ
+    }
     const users = await apiFetch<UserDto[]>('/users');
     return users
       .filter((u) => u.roleCode === 'COACH' && u.status === 'active')

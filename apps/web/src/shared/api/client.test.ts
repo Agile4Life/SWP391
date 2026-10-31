@@ -42,6 +42,16 @@ describe('client.ts (API client & Auth session)', () => {
     expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBeNull();
   });
 
+  it('retains the chosen package when an expired session requires login again', async () => {
+    window.history.replaceState({}, '', '/member/packages?packageId=2');
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'expired-token');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ message: 'Expired' }) }));
+    await expect(apiFetch('/memberships/subscriptions/my')).rejects.toThrow('Expired');
+    expect(assign).toHaveBeenCalledWith('/login?expired=1&returnTo=' + encodeURIComponent('/member/packages?packageId=2'));
+    window.history.replaceState({}, '', '/');
+  });
+
   it('apiFetch makes request with headers, token and unrolls data', async () => {
     localStorage.setItem(TOKEN_STORAGE_KEY, 'bearer-token-123');
 

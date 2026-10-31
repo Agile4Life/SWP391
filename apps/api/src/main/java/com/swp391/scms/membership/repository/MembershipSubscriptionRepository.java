@@ -36,6 +36,23 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
 
     boolean existsByPreviousSubscriptionIdAndStatusIn(Long previousId, java.util.Collection<String> statuses);
 
+    @Query("""
+            select count(s) from MembershipSubscription s
+            where s.endDate between :start and :end and s.status in ('active', 'expired')
+              and exists (select p.id from Payment p where p.subscriptionId = s.id and p.status = 'success')
+            """)
+    long countExpiredPaidPeriods(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    @Query("""
+            select count(s) from MembershipSubscription s
+            where s.endDate between :start and :end and s.status in ('active', 'expired')
+              and exists (select p.id from Payment p where p.subscriptionId = s.id and p.status = 'success')
+              and exists (select next.id from MembershipSubscription next
+                  where next.previousSubscription = s and next.status in ('active', 'expired', 'frozen')
+                    and exists (select p2.id from Payment p2 where p2.subscriptionId = next.id and p2.status = 'success'))
+            """)
+    long countRenewedExpiredPaidPeriods(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
     boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
 
     boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(

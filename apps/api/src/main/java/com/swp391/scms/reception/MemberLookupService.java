@@ -3,15 +3,10 @@ package com.swp391.scms.reception;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.users.MemberRepository;
 import java.util.List;
-import com.swp391.scms.users.MemberRepository;
 import java.util.Locale;
-import com.swp391.scms.users.MemberRepository;
 import org.springframework.data.domain.PageRequest;
-import com.swp391.scms.users.MemberRepository;
 import org.springframework.stereotype.Service;
-import com.swp391.scms.users.MemberRepository;
 import org.springframework.transaction.annotation.Transactional;
-import com.swp391.scms.users.MemberRepository;
 
 /** Quick member lookup for the receptionist by membership code, name, email or phone. */
 @Service

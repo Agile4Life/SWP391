@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
@@ -34,7 +34,8 @@ export function CoachTrainingPlanPage() {
     return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
   }, [currentUser]);
 
-  // Thông tin tổng quan giáo án
+  // Danh sách học viên và thông tin tổng quan giáo án
+  const [members, setMembers] = useState<MemberOption[]>(SAMPLE_MEMBERS);
   const [selectedMemberId, setSelectedMemberId] = useState<number>(SAMPLE_MEMBERS[0].id);
   const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
   const [planGoal, setPlanGoal] = useState(SAMPLE_MEMBERS[0].fitnessGoal || 'Tăng cường sức mạnh và cải thiện tư thế');
@@ -125,16 +126,30 @@ export function CoachTrainingPlanPage() {
   );
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiResult, setAiResult] = useState<AiWorkoutPlanResult | null>(null);
+  const [appliedRecommendationId, setAppliedRecommendationId] = useState<number | undefined>();
+
+  useEffect(() => {
+    let active = true;
+    void aiApi.getCoachMembers().then((loaded) => {
+      if (!active || loaded.length === 0) return;
+      setMembers(loaded);
+      setSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
+      setAiSelectedMemberId((prev) => (loaded.some((m) => m.id === prev) ? prev : loaded[0].id));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Học viên đang chọn trong form
   const selectedMember: MemberOption = useMemo(() => {
-    return SAMPLE_MEMBERS.find((m) => m.id === selectedMemberId) || SAMPLE_MEMBERS[0];
-  }, [selectedMemberId]);
+    return members.find((m) => m.id === selectedMemberId) || members[0] || SAMPLE_MEMBERS[0];
+  }, [members, selectedMemberId]);
 
   // Học viên đang chọn trong AI Modal
   const aiSelectedMember: MemberOption = useMemo(() => {
-    return SAMPLE_MEMBERS.find((m) => m.id === aiSelectedMemberId) || SAMPLE_MEMBERS[0];
-  }, [aiSelectedMemberId]);
+    return members.find((m) => m.id === aiSelectedMemberId) || members[0] || SAMPLE_MEMBERS[0];
+  }, [members, aiSelectedMemberId]);
 
   // Thêm bài tập thủ công vào ngày đang chọn
   const handleAddExercise = (e: React.FormEvent) => {
@@ -205,6 +220,7 @@ export function CoachTrainingPlanPage() {
 
     // Cập nhật thông tin hội viên & mục tiêu theo kết quả AI
     setSelectedMemberId(aiResult.memberId);
+    setAppliedRecommendationId(aiResult.id);
     setPlanGoal(aiResult.goal);
     setPlanTitle(`Giáo án Cá nhân hóa: ${aiResult.memberName || 'Hội viên'}`);
 
@@ -222,7 +238,7 @@ export function CoachTrainingPlanPage() {
     }
 
     setIsAiModalOpen(false);
-    toast('✨ Đã áp dụng giáo án từ AI! HLV có thể tinh chỉnh các thông số trước khi lưu.', 'success');
+    toast('Đã áp dụng giáo án từ AI! HLV có thể tinh chỉnh các thông số trước khi lưu.', 'success');
   };
 
   // Thông báo nổi bật chính giữa màn hình (Center Notification Toast)
@@ -278,7 +294,8 @@ export function CoachTrainingPlanPage() {
           endDate,
           items: exercises,
           status: 'active',
-          isAiGenerated: !!aiResult,
+          isAiGenerated: appliedRecommendationId !== undefined,
+          aiRecommendationLogId: appliedRecommendationId,
         },
         true
       );
@@ -354,7 +371,7 @@ export function CoachTrainingPlanPage() {
                 setIsAiModalOpen(true);
               }}
             >
-              <span>✨</span>
+              <span aria-hidden="true">↗</span>
               <span>Gợi ý giáo án bằng AI</span>
             </button>
 
@@ -414,11 +431,12 @@ export function CoachTrainingPlanPage() {
               onChange={(e) => {
                 const id = Number(e.target.value);
                 setSelectedMemberId(id);
-                const m = SAMPLE_MEMBERS.find((item) => item.id === id);
+                setAppliedRecommendationId(undefined);
+                const m = members.find((item) => item.id === id);
                 if (m?.fitnessGoal) setPlanGoal(m.fitnessGoal);
               }}
             >
-              {SAMPLE_MEMBERS.map((m) => (
+              {members.map((m) => (
                 <option key={m.id} value={String(m.id)}>
                   {m.fullName} ({m.memberCode})
                 </option>
@@ -457,9 +475,9 @@ export function CoachTrainingPlanPage() {
           style={{
             marginTop: '16px',
             padding: '12px 16px',
-            background: 'rgba(255, 255, 255, 0.02)',
+            background: 'var(--portal-raised)',
             borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
+            border: '1px solid var(--portal-border)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -472,8 +490,8 @@ export function CoachTrainingPlanPage() {
             <span>Mục tiêu thể lực: </span>
             <strong style={{ color: 'var(--fit-salmon, #ce9180)' }}>{planGoal}</strong>
           </div>
-          <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? '#fca5a5' : 'var(--color-text-muted)' }}>
-            ⚠️ Lưu ý sức khỏe: <strong>{selectedMember.healthNotes || 'Bình thường'}</strong>
+          <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
+            Lưu ý sức khỏe: <strong>{selectedMember.healthNotes || 'Bình thường'}</strong>
           </div>
         </div>
       </div>
@@ -622,10 +640,10 @@ export function CoachTrainingPlanPage() {
                 color: 'var(--portal-muted)',
               }}
             >
-              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🏋️‍♂️</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '8px' }}>GIÁO ÁN NGÀY</div>
               <div style={{ fontWeight: 600 }}>Chưa có bài tập nào cho ngày này</div>
               <p style={{ margin: '4px 0 14px 0', fontSize: '0.84rem' }}>
-                Thêm bài tập bằng form ở trên hoặc bấm nút <strong>"✨ Gợi ý giáo án bằng AI"</strong> để tự động điền.
+                Thêm bài tập bằng form ở trên hoặc bấm nút <strong>"Gợi ý giáo án bằng AI"</strong> để tự động điền.
               </p>
             </div>
           ) : (
@@ -694,7 +712,7 @@ export function CoachTrainingPlanPage() {
 
       {/* AC: Modal Tương Tác AI Gợi Ý Giáo Án */}
       {isAiModalOpen && (
-        <Modal title="✨ Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa" onClose={() => setIsAiModalOpen(false)}>
+        <Modal title="Trợ Lý AI: Gợi Ý Giáo Án Huấn Luyện Cá Nhân Hóa" onClose={() => setIsAiModalOpen(false)}>
           <div className="ai-modal-container">
             <div>
               <label className="portal-label" htmlFor="ai-member-select">
@@ -707,7 +725,7 @@ export function CoachTrainingPlanPage() {
                 onChange={(e) => setAiSelectedMemberId(Number(e.target.value))}
                 disabled={isGeneratingAi}
               >
-                {SAMPLE_MEMBERS.map((m) => (
+                {members.map((m) => (
                   <option key={m.id} value={String(m.id)}>
                     {m.fullName} ({m.memberCode}) — Mục tiêu: {m.fitnessGoal?.slice(0, 40)}...
                   </option>
@@ -720,12 +738,12 @@ export function CoachTrainingPlanPage() {
               <div>
                 <div className="ai-member-stat-label">Chiều cao / Cân nặng</div>
                 <div className="ai-member-stat-val">
-                  {aiSelectedMember.heightCm} cm / {aiSelectedMember.weightKg} kg
+                  {aiSelectedMember.heightCm ?? '—'} cm / {aiSelectedMember.weightKg ?? '—'} kg
                 </div>
               </div>
               <div>
                 <div className="ai-member-stat-label">Chỉ số BMI</div>
-                <div className="ai-member-stat-val">{aiSelectedMember.bmi} (Bình thường)</div>
+                <div className="ai-member-stat-val">{aiSelectedMember.bmi ?? '—'}</div>
               </div>
               <div>
                 <div className="ai-member-stat-label">Trình độ luyện tập</div>
@@ -738,7 +756,7 @@ export function CoachTrainingPlanPage() {
             {/* Lưu ý y tế & Tiền sử chấn thương */}
             {aiSelectedMember.healthNotes && (
               <div className="ai-caution-box">
-                <strong>⚠️ Tiền sử sức khỏe &amp; chấn thương: </strong>
+                <strong>Tiền sử sức khỏe &amp; chấn thương: </strong>
                 {aiSelectedMember.healthNotes}
               </div>
             )}
@@ -765,7 +783,7 @@ export function CoachTrainingPlanPage() {
                 onClick={() => void handleGenerateAiPlan()}
                 disabled={isGeneratingAi}
               >
-                <span>✨</span>
+                <span aria-hidden="true">↗</span>
                 <span>{isGeneratingAi ? 'Đang phân tích...' : 'Phân tích & Sinh giáo án bằng AI'}</span>
               </button>
             </div>
