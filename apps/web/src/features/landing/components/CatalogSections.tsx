@@ -30,7 +30,7 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} ngày</span></div>
           <p className="fit-plan-summary">{details.summary}</p>
           <ul>{details.benefits.map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
-          <Link className="fit-pill" to={joinPath}>Chọn gói tập<RoundArrow diagonal /></Link>
+          <Link className="fit-pill" to={joinPath === '/register' || joinPath === '/login' ? `${joinPath}?returnTo=${encodeURIComponent(`/member/packages?packageId=${pkg.id}`)}` : joinPath === '/member/packages' ? `${joinPath}?packageId=${pkg.id}` : joinPath}>Chọn gói tập<RoundArrow diagonal /></Link>
         </article>;
       })}
     </div>

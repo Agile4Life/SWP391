@@ -63,6 +63,24 @@ public class MembershipSubscriptionController {
                 .body(ApiResponse.created(msg("membership.subscription.renewed"), service.renew(principal, id)));
     }
 
+    @Operation(summary = "List a member's paid subscriptions for renewal at reception")
+    @GetMapping("/members/{memberId}/renewal-candidates")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<List<SubscriptionDto>> renewalCandidates(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal, @PathVariable Long memberId) {
+        return ApiResponse.ok(msg("membership.subscription.list"), service.renewalCandidatesForStaff(principal, memberId));
+    }
+
+    @Operation(summary = "Create a pending membership renewal at reception")
+    @PostMapping("/members/{memberId}/renew/{id}")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ResponseEntity<ApiResponse<SubscriptionDto>> renewForMember(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal, @PathVariable Long memberId,
+            @PathVariable Long id) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(msg("membership.subscription.renewed"), service.renewForMember(principal, memberId, id)));
+    }
+
     @Operation(summary = "Upgrade an active membership subscription to a higher package")
     @PostMapping("/{id}/upgrade")
     public ResponseEntity<ApiResponse<SubscriptionDto>> upgrade(

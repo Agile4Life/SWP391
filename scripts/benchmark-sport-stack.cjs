@@ -13,11 +13,11 @@ const { chromium } = require('playwright-core');
   for(const [width,height] of [[1440,900],[390,844]]) {
    await page.setViewportSize({width,height});
    await page.goto(process.env.PUBLIC_UI_URL||'http://127.0.0.1:5173');
-   await page.locator('.fit-sport-stack-track.is-enhanced').waitFor();
-   await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll('.fit-sport-stack img')].map(img=>{img.loading='eager';return img.decode();}));});
-   const layout=await page.locator('.fit-sport-stack-track').evaluate(el=>({
-    start:el.getBoundingClientRect().top+scrollY-parseFloat(el.style.getPropertyValue('--stack-top')),
-    step:Number(el.style.getPropertyValue('--stack-step'))
+   await page.locator('.fit-sport-story.is-enhanced').waitFor();
+   await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll('.fit-sport-story img')].map(img=>{img.loading='eager';return img.decode();}));});
+   const layout=await page.locator('.fit-sport-story-layout').evaluate(el=>({
+    start:el.getBoundingClientRect().top+scrollY-100,
+    step:(el.offsetHeight-innerHeight)/3
    }));
    await page.evaluate(y=>scrollTo({top:y,behavior:'instant'}),layout.start);
    await page.waitForTimeout(800);
@@ -26,7 +26,7 @@ const { chromium } = require('playwright-core');
     const intervals=[];
     let mutations=0,longTasks=0;
     const observer=new MutationObserver(records=>mutations+=records.length);
-    observer.observe(document.querySelector('.fit-sport-stack'),{attributes:true,subtree:true});
+    observer.observe(document.querySelector('.fit-sport-story'),{attributes:true,subtree:true});
     const tasks=new PerformanceObserver(list=>longTasks+=list.getEntries().length);
     tasks.observe({type:'longtask'});
     await new Promise(resolve=>{

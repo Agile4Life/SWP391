@@ -21,6 +21,9 @@ public class TrainingPlanCreateDto {
     private Long classId;
 
     @Size(max = 255, message = "{validation.coaching.goal.size}")
+    private String title;
+
+    @Size(max = 255, message = "{validation.coaching.goal.size}")
     private String goal;
 
     @JsonAlias("start_date")
@@ -31,10 +34,14 @@ public class TrainingPlanCreateDto {
     @NotNull(message = "{validation.coaching.end_date.not_null}")
     private LocalDate endDate;
 
+    private String status;
+
+    private Boolean activate;
+
     @JsonAlias({"is_ai_generated", "isAiGenerated"})
     private Boolean aiGenerated;
 
-    @JsonAlias("ai_recommendation_id")
+    @JsonAlias({"ai_recommendation_id", "ai_recommendation_log_id", "aiRecommendationLogId"})
     private Long aiRecommendationId;
 
     @Valid
@@ -48,12 +55,18 @@ public class TrainingPlanCreateDto {
     public void setCoachId(Long coachId) { this.coachId = coachId; }
     public Long getClassId() { return classId; }
     public void setClassId(Long classId) { this.classId = classId; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
     public String getGoal() { return goal; }
     public void setGoal(String goal) { this.goal = goal; }
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public Boolean getActivate() { return activate; }
+    public void setActivate(Boolean activate) { this.activate = activate; }
     public Boolean getAiGenerated() { return aiGenerated; }
     public void setAiGenerated(Boolean aiGenerated) { this.aiGenerated = aiGenerated; }
     public Long getAiRecommendationId() { return aiRecommendationId; }

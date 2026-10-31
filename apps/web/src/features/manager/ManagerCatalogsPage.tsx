@@ -145,7 +145,7 @@ export function ManagerCatalogsPage() {
 
       {error && (
         <div className="portal-alert" role="alert">
-          <span>⚠️ {error}</span>
+          <span>{error}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>
             Thử lại
           </button>
@@ -433,7 +433,7 @@ export function ManagerCatalogsPage() {
                           <strong>{p.name}</strong>
                           {p.description && <div className="muted">{p.description}</div>}
                         </td>
-                        <td style={{ fontWeight: 600, color: 'var(--color-text-luxury)' }}>{vnd(p.price)}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--portal-salmon)' }}>{vnd(p.price)}</td>
                         <td>{p.durationDays} ngày</td>
                         <td>{p.classCreditLimit ?? 'Không giới hạn'}</td>
                         <td>

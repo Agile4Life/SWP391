@@ -687,4 +687,36 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void posSettlesOriginalPendingAmountAfterCatalogPriceReduction(boolean explicitSubscription) {
+        Member member = new Member(); member.setUserId(2L);
+        MembershipPackage pack = new MembershipPackage(); pack.setId(5L);
+        pack.setPrice(new BigDecimal("299000")); pack.setDurationDays(30);
+        MembershipSubscription subscription = new MembershipSubscription();
+        subscription.setId(10L); subscription.setMember(member); subscription.setMembershipPackage(pack);
+        subscription.setStatus("pending_payment");
+        Payment pendingPayment = new Payment(); pendingPayment.setId(11L);
+        pendingPayment.setMember(member); pendingPayment.setSubscriptionId(10L);
+        pendingPayment.setStatus("pending"); pendingPayment.setAmount(new BigDecimal("2800000"));
+        var dto = new PaymentProcessDto(2L, explicitSubscription ? 10L : null, null, pendingPayment.getAmount(), "cash", null, null);
+        if (!explicitSubscription) {
+            dto.setPackageId(5L);
+            var catalog = mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
+            org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "membershipPackageRepository", catalog);
+            when(catalog.findById(5L)).thenReturn(Optional.of(pack));
+            when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(subscription));
+        }
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        if (explicitSubscription) when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(subscription));
+        when(paymentRepository.findAllBySubscriptionId(10L)).thenReturn(List.of(pendingPayment));
+        when(paymentRepository.save(pendingPayment)).thenReturn(pendingPayment);
+        when(paymentMapper.toDto(pendingPayment)).thenReturn(new PaymentDto());
+        paymentService.processPayment(dto);
+        assertEquals("success", pendingPayment.getStatus());
+        assertEquals(new BigDecimal("2800000"), pendingPayment.getAmount());
+        assertEquals("active", subscription.getStatus());
+        verify(paymentRepository).save(pendingPayment);
+    }
+
 }

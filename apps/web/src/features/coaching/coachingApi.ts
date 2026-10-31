@@ -1,4 +1,5 @@
-import { apiFetch, getCurrentUser } from '../../shared/api/client';
+import { apiFetch } from '../../shared/api/client';
+import { getProfile } from '../member/profileApi';
 
 export interface CoachSession {
   id: number;
@@ -142,217 +143,32 @@ export const coachingApi = {
     if (fromDate) params.set('fromDate', fromDate);
     if (toDate) params.set('toDate', toDate);
 
-    try {
-      const url = `/classes/sessions${params.toString() ? `?${params.toString()}` : ''}`;
-      const sessions = await apiFetch<CoachSession[]>(url);
-      if (Array.isArray(sessions) && sessions.length > 0) {
-        return sessions;
-      }
-    } catch {
-      // Backend offline or fallback
+    const url = `/classes/sessions${params.toString() ? `?${params.toString()}` : ''}`;
+    const sessions = await apiFetch<CoachSession[]>(url);
+    if (Array.isArray(sessions)) {
+      return sessions;
     }
-
-    const currentUser = getCurrentUser();
-    const coachName = currentUser?.name || 'HLV Marcus Vance';
-    const cId = Number(currentUser?.id) || 3;
-
-    const baseDate = fromDate ? new Date(fromDate) : new Date();
-    const monday = new Date(baseDate);
-    const day = monday.getDay();
-    const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
-    monday.setDate(diff);
-
-    const formatYmd = (d: Date) => d.toISOString().split('T')[0];
-
-    const dMon = new Date(monday);
-    const dTue = new Date(monday); dTue.setDate(monday.getDate() + 1);
-    const dWed = new Date(monday); dWed.setDate(monday.getDate() + 2);
-    const dThu = new Date(monday); dThu.setDate(monday.getDate() + 3);
-    const dFri = new Date(monday); dFri.setDate(monday.getDate() + 4);
-    const dSat = new Date(monday); dSat.setDate(monday.getDate() + 5);
-
-    return [
-      {
-        id: 201,
-        classId: 1,
-        className: 'Reformer Core & Flexibility',
-        disciplineId: 1,
-        disciplineName: 'Pilates Reformer',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 101,
-        roomName: 'Studio 01 (Tầng 2)',
-        sessionDate: formatYmd(dMon),
-        startTime: '08:00',
-        endTime: '09:30',
-        status: 'scheduled',
-        capacity: 12,
-        bookedCount: 10,
-        level: 'Mọi cấp độ',
-        description: 'Tập trung cơ lõi, thắt lưng và tăng tính linh hoạt các nhóm cơ gập hông.',
-      },
-      {
-        id: 202,
-        classId: 2,
-        className: 'Metabolic Conditioning (HIIT)',
-        disciplineId: 2,
-        disciplineName: 'Functional Training',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 102,
-        roomName: 'Khu vực Functional (Tầng 1)',
-        sessionDate: formatYmd(dMon),
-        startTime: '17:30',
-        endTime: '18:45',
-        status: 'scheduled',
-        capacity: 15,
-        bookedCount: 14,
-        level: 'Trung cấp',
-        description: 'Đốt mỡ tăng cường nhịp tim, rèn luyện sức bền tốc độ và phối hợp vận động.',
-      },
-      {
-        id: 203,
-        classId: 3,
-        className: 'Barbell Strength & Form Mastery',
-        disciplineId: 3,
-        disciplineName: 'Strength Training',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 103,
-        roomName: 'Phòng Tạ Chuyên Sâu (Tầng 1)',
-        sessionDate: formatYmd(dTue),
-        startTime: '09:00',
-        endTime: '10:30',
-        status: 'scheduled',
-        capacity: 10,
-        bookedCount: 8,
-        level: 'Nâng cao',
-        description: 'Kỹ thuật Squat, Bench Press và Deadlift an toàn dưới sự giám sát chuyên môn.',
-      },
-      {
-        id: 204,
-        classId: 1,
-        className: 'Reformer Core & Alignment',
-        disciplineId: 1,
-        disciplineName: 'Pilates Reformer',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 101,
-        roomName: 'Studio 01 (Tầng 2)',
-        sessionDate: formatYmd(dWed),
-        startTime: '08:00',
-        endTime: '09:30',
-        status: 'scheduled',
-        capacity: 12,
-        bookedCount: 12,
-        level: 'Mọi cấp độ',
-        description: 'Buổi học full sĩ số - kiểm soát cột sống và cân bằng cơ thể.',
-      },
-      {
-        id: 205,
-        classId: 4,
-        className: 'Power Yoga & Breathwork',
-        disciplineId: 4,
-        disciplineName: 'Yoga Sanctuary',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 104,
-        roomName: 'Phòng Thiền & Yoga (Tầng 3)',
-        sessionDate: formatYmd(dThu),
-        startTime: '18:00',
-        endTime: '19:15',
-        status: 'scheduled',
-        capacity: 16,
-        bookedCount: 11,
-        level: 'Cơ bản - Trung cấp',
-        description: 'Điều hòa hơi thở, kéo giãn các nhóm cơ sau tuần làm việc căng thẳng.',
-      },
-      {
-        id: 206,
-        classId: 2,
-        className: 'Endurance Circuit & Agility',
-        disciplineId: 2,
-        disciplineName: 'Functional Training',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 102,
-        roomName: 'Khu vực Functional (Tầng 1)',
-        sessionDate: formatYmd(dFri),
-        startTime: '17:30',
-        endTime: '18:45',
-        status: 'scheduled',
-        capacity: 15,
-        bookedCount: 13,
-        level: 'Trung cấp',
-        description: 'Vòng tập liên hoàn với tạ chuông Kettlebell, bóng tạ Slam Ball và dây kéo kháng lực.',
-      },
-      {
-        id: 207,
-        classId: 5,
-        className: 'Weekend Athletic Recovery',
-        disciplineId: 5,
-        disciplineName: 'Recovery & Mobility',
-        coachId: cId,
-        coachName: coachName,
-        roomId: 101,
-        roomName: 'Studio 01 (Tầng 2)',
-        sessionDate: formatYmd(dSat),
-        startTime: '08:30',
-        endTime: '10:00',
-        status: 'scheduled',
-        capacity: 12,
-        bookedCount: 9,
-        level: 'Mọi cấp độ',
-        description: 'Giải phóng màng cơ (Myofascial Release) bằng con lăn Foam Roller và bài tập dẻo dai.',
-      },
-    ];
+    throw new Error('Dữ liệu lịch dạy không hợp lệ');
   },
 
   getCoachWeeklySchedule: async (
-    coachId?: string | number,
-    mondayStr?: string
+    mondayStr: string
   ): Promise<CoachSession[]> => {
-    return coachingApi.getCoachSchedule(coachId, mondayStr);
+    const profile = await getProfile();
+    const sunday = new Date(`${mondayStr}T00:00:00Z`);
+    sunday.setUTCDate(sunday.getUTCDate() + 6);
+    return coachingApi.getCoachSchedule(profile.userId, mondayStr, sunday.toISOString().slice(0, 10));
   },
 
-  getSessionStudents: async (sessionId: number, classId?: number): Promise<EnrolledStudent[]> => {
-    try {
-      const res = await apiFetch<EnrolledStudent[]>(
-        `/classes/sessions/${sessionId}/students`
-      );
-      if (Array.isArray(res) && res.length > 0) {
-        return res;
-      }
-    } catch {
-      // Backend fallback
+  getSessionStudents: async (sessionId: number, _classId?: number): Promise<EnrolledStudent[]> => {
+    void _classId; // Preserve the existing optional argument for callers.
+    const res = await apiFetch<EnrolledStudent[]>(
+      `/classes/sessions/${sessionId}/students`
+    );
+    if (Array.isArray(res)) {
+      return res;
     }
-
-    try {
-      if (classId) {
-        const res = await apiFetch<EnrolledStudent[]>(
-          `/classes/${classId}/students`
-        );
-        if (Array.isArray(res) && res.length > 0) {
-          return res;
-        }
-      }
-    } catch {
-      // Ignore
-    }
-
-    const count = 4 + (sessionId % 3);
-    const startIdx = (sessionId * 2) % DEFAULT_STUDENTS_POOL.length;
-    const result: EnrolledStudent[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const student = DEFAULT_STUDENTS_POOL[(startIdx + i) % DEFAULT_STUDENTS_POOL.length];
-      result.push({
-        ...student,
-        id: sessionId * 100 + i + 1,
-      });
-    }
-
-    return result;
+    throw new Error('Dữ liệu học viên không hợp lệ');
   },
 
   getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {

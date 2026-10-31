@@ -605,7 +605,7 @@ export function FitnessLanding() {
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
       <SportStack classPath={classPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
         <span className="fit-kicker">SÖL SPORTS CLUB</span>
-        <SplitHeading id="multisport-title" lines={['Bốn bộ môn.', 'Một nhịp sống năng động.']} />
+        <SplitHeading id="multisport-title" lines={['Các bộ môn']} />
       </div>} />
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">

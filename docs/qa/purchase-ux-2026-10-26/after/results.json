@@ -1,0 +1,1989 @@
+{
+  "base": "http://localhost:5173",
+  "api": "http://localhost:8080",
+  "commit": "0e858c8",
+  "liveCatalog": [
+    {
+      "id": 1,
+      "name": "The Essential",
+      "description": "Gói cơ bản 30 ngày: Tập Gym tự do toàn khung giờ, tặng 8 buổi lớp HLV nhóm (Yoga, Pilates, Boxing), miễn phí tủ đồ & phòng tắm nóng lạnh.",
+      "price": 2800000,
+      "durationDays": 30,
+      "classCreditLimit": 8,
+      "status": "active"
+    },
+    {
+      "id": 2,
+      "name": "The Sanctuary VIP",
+      "description": "Gói cao cấp 90 ngày: Không giới hạn tất cả lớp HLV (Reformer Pilates, Mindful Yoga, Boxing, Olympic Strength), hồ bơi khoáng ấm & Sauna phục hồi.",
+      "price": 7500000,
+      "durationDays": 90,
+      "classCreditLimit": null,
+      "status": "active"
+    },
+    {
+      "id": 3,
+      "name": "The Sovereign Annual",
+      "description": "Gói thượng hạng 365 ngày: Không giới hạn mọi lớp học & khu vực VIP, kèm 24 buổi PT 1-kèm-1 cá nhân hóa, đo InBody định kỳ & tủ đồ riêng.",
+      "price": 26000000,
+      "durationDays": 365,
+      "classCreditLimit": null,
+      "status": "active"
+    }
+  ],
+  "results": [
+    {
+      "id": "live-catalog",
+      "title": "Real public catalog availability",
+      "status": "SKIP",
+      "detail": "Local API stopped; fixtures use the previously captured catalog.",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": []
+    },
+    {
+      "id": "journey-1440",
+      "title": "New buyer: landing → register → OTP → login → package request",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "selectedPackage": "The Sanctuary VIP",
+          "registrationURL": "http://localhost:5173/register?returnTo=%2Fmember%2Fpackages%3FpackageId%3D2"
+        },
+        {
+          "afterLogin": "http://localhost:5173/member/packages?packageId=2",
+          "selectedPackageRetained": true
+        },
+        {
+          "dialog": "Đăng ký gói tập\nYêu cầu đã được tạo\nGói tập\nThe Sanctuary VIP\nSố tiền\n7.500.000 ₫\nMã yêu cầu\n#9001\n\nVui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.\n\nYêu cầu đã được đồng bộ tới Quầy Lễ Tân. Gói tập sẽ được kích hoạt ngay sau khi nhân viên xác nhận thanh toán.\n\nHủy yêu cầu đăng ký\nĐóng",
+          "geometry": {
+            "x": 460,
+            "y": 170.671875,
+            "width": 520,
+            "height": 558.65625
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "activeElementInsideDialog": true
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/verify-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/login"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "journey-390",
+      "title": "New buyer: landing → register → OTP → login → package request",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "selectedPackage": "The Sanctuary VIP",
+          "registrationURL": "http://localhost:5173/register?returnTo=%2Fmember%2Fpackages%3FpackageId%3D2"
+        },
+        {
+          "afterLogin": "http://localhost:5173/member/packages?packageId=2",
+          "selectedPackageRetained": true
+        },
+        {
+          "dialog": "Đăng ký gói tập\nYêu cầu đã được tạo\nGói tập\nThe Sanctuary VIP\nSố tiền\n7.500.000 ₫\nMã yêu cầu\n#9001\n\nVui lòng thanh toán trực tiếp tại Quầy Lễ Tân để nhân viên xác nhận và kích hoạt gói tập.\n\nYêu cầu đã được đồng bộ tới Quầy Lễ Tân. Gói tập sẽ được kích hoạt ngay sau khi nhân viên xác nhận thanh toán.\n\nHủy yêu cầu đăng ký\nĐóng",
+          "geometry": {
+            "x": 17,
+            "y": 138.46875,
+            "width": 356,
+            "height": 567.046875
+          },
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "activeElementInsideDialog": true
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/verify-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/login"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "selection-continuity",
+      "title": "Selected package and purchase intent survive authentication",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "finalURL": "http://localhost:5173/member/packages?packageId=2"
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/login"
+        }
+      ]
+    },
+    {
+      "id": "phone-placeholder",
+      "title": "Registration accepts the phone format shown in its placeholder",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        }
+      ]
+    },
+    {
+      "id": "validation",
+      "title": "Short username/password and invalid phone are blocked without API writes",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": []
+    },
+    {
+      "id": "otp-retry",
+      "title": "Wrong OTP keeps the form; cooldown blocks resending; correct OTP recovers",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/verify-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/verify-otp"
+        }
+      ]
+    },
+    {
+      "id": "otp-send-recovery",
+      "title": "A failed OTP delivery after account creation can be retried",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        "OTP resent without repeating registration."
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        }
+      ]
+    },
+    {
+      "id": "otp-refresh",
+      "title": "Refreshing the OTP screen preserves the email and verification step",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        }
+      ]
+    },
+    {
+      "id": "double-submit",
+      "title": "Rapid double-click creates only one pending request",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "purchase-500-retry",
+      "title": "Server failure shows a message and allows retry",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "lost-response",
+      "title": "Lost response after server acceptance does not allow a duplicate purchase",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "read-error-packages",
+      "title": "Read failure /packages: clear retry and no purchase while status unknown",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        }
+      ]
+    },
+    {
+      "id": "read-error-history",
+      "title": "Read failure /memberships/subscriptions/history: clear retry and no purchase while status unknown",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "read-error-my",
+      "title": "Read failure /payments/my: clear retry and no purchase while status unknown",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        }
+      ]
+    },
+    {
+      "id": "empty-packages",
+      "title": "Empty or inactive catalog gives an explicit empty state",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        }
+      ]
+    },
+    {
+      "id": "loading-status",
+      "title": "Slow membership status shows loading and blocks purchasing",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        }
+      ]
+    },
+    {
+      "id": "pending-reload-cancel",
+      "title": "Pending request survives reload, cancellation confirms, then a different package can be selected",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions/9001/cancel"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        }
+      ]
+    },
+    {
+      "id": "dialog-keyboard",
+      "title": "Purchase dialog captures focus, traps Tab, and closes with Escape",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "focusInside": true,
+          "stillOpenAfterEscape": 0,
+          "tabFocusInsideDialog": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ]
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "mobile-dialog-390",
+      "title": "Request summary and close/cancel controls fit the mobile viewport",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "dialog": {
+            "x": 17,
+            "y": 138.46875,
+            "width": 356,
+            "height": 567.046875
+          },
+          "close": {
+            "x": 282.375,
+            "y": 642.515625,
+            "width": 69.625,
+            "height": 42
+          },
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "overflow": false
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "mobile-dialog-375",
+      "title": "Request summary and close/cancel controls fit the mobile viewport",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "dialog": {
+            "x": 17,
+            "y": 49.96875,
+            "width": 341,
+            "height": 567.046875
+          },
+          "close": {
+            "x": 268.984375,
+            "y": 554.015625,
+            "width": 68.015625,
+            "height": 42
+          },
+          "viewport": {
+            "width": 375,
+            "height": 667
+          },
+          "overflow": false
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "mobile-dialog-320",
+      "title": "Request summary and close/cancel controls fit the mobile viewport",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "dialog": {
+            "x": 17,
+            "y": 24,
+            "width": 286,
+            "height": 520
+          },
+          "close": {
+            "x": 213.703125,
+            "y": 502.046875,
+            "width": 68.296875,
+            "height": 42
+          },
+          "viewport": {
+            "width": 320,
+            "height": 568
+          },
+          "overflow": false
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "mobile-dialog-844",
+      "title": "Request summary and close/cancel controls fit the mobile viewport",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "dialog": {
+            "x": 162,
+            "y": 24,
+            "width": 520,
+            "height": 342
+          },
+          "close": {
+            "x": 586.984375,
+            "y": 296.65625,
+            "width": 68.015625,
+            "height": 42
+          },
+          "viewport": {
+            "width": 844,
+            "height": 390
+          },
+          "overflow": false
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        }
+      ]
+    },
+    {
+      "id": "cancel-error-visible",
+      "title": "Cancellation conflict is explained inside the open confirmation dialog",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "alertInDialog": 1,
+          "dialogsOpen": 1
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/memberships/subscriptions/9001/cancel"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        }
+      ]
+    },
+    {
+      "id": "manual-activation",
+      "title": "After reception confirms payment, refresh shows active membership",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        }
+      ]
+    },
+    {
+      "id": "expired-session",
+      "title": "Expired session explains expiry and resumes the selected package after login",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/login"
+        }
+      ]
+    },
+    {
+      "id": "login-error-retry",
+      "title": "Incorrect credentials keep input; retry succeeds without registering again",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/login"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/login"
+        }
+      ]
+    },
+    {
+      "id": "otp-back-edit",
+      "title": "Pending account details do not send the buyer back into duplicate registration",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        }
+      ]
+    },
+    {
+      "id": "otp-another-account",
+      "title": "An inaccessible pending mailbox has an explicit new-account exit",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/register"
+        },
+        {
+          "method": "POST",
+          "endpoint": "/auth/send-otp"
+        }
+      ]
+    },
+    {
+      "id": "google-purchase-continuity",
+      "title": "A Google redirect callback returns to the selected package",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "POST",
+          "endpoint": "/auth/google/handoff"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        }
+      ]
+    },
+    {
+      "id": "registration-error-a11y",
+      "title": "Invalid phone is associated with its input for keyboard/screen-reader users",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "invalid": "true",
+          "describedBy": "reg-phone-error",
+          "activeId": "reg-phone"
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": []
+    },
+    {
+      "id": "pending-payment-guard",
+      "title": "An existing payment-pending request blocks another purchase and cancellation",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/packages"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/subscriptions/history"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/payments/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/memberships/cancellations/my"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/notifications/unread-count"
+        }
+      ]
+    },
+    {
+      "id": "catalog-failure-retry",
+      "title": "Landing handles catalog unavailability without showing invented prices",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        }
+      ]
+    },
+    {
+      "id": "landing-normal-motion",
+      "title": "A mobile guest can find pricing through the menu with animation enabled",
+      "status": "PASS",
+      "detail": "",
+      "notes": [],
+      "runtimeErrors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        },
+        {
+          "method": "GET",
+          "endpoint": "/public/catalog"
+        }
+      ]
+    },
+    {
+      "id": "auth-button-contrast-light",
+      "title": "Registration submit text has readable contrast",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "color": "rgb(43, 32, 27)",
+          "background": "rgb(206, 145, 128)",
+          "hover": false,
+          "ratio": 6.026659819077483
+        },
+        {
+          "color": "rgb(43, 32, 27)",
+          "background": "rgb(225, 170, 152)",
+          "hover": true,
+          "ratio": 7.851794238492627
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": []
+    },
+    {
+      "id": "auth-button-contrast-dark",
+      "title": "Registration submit text has readable contrast",
+      "status": "PASS",
+      "detail": "",
+      "notes": [
+        {
+          "color": "rgb(43, 32, 27)",
+          "background": "rgb(206, 145, 128)",
+          "hover": false,
+          "ratio": 6.026659819077483
+        },
+        {
+          "color": "rgb(43, 32, 27)",
+          "background": "rgb(225, 170, 152)",
+          "hover": true,
+          "ratio": 7.851794238492627
+        }
+      ],
+      "runtimeErrors": [],
+      "requests": []
+    }
+  ]
+}

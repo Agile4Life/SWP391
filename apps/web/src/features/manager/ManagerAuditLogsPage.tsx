@@ -153,7 +153,7 @@ export function ManagerAuditLogsPage() {
           className={`audit-tab-btn ${activeTab === 'audit' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          📋 Nhật ký kiểm toán (Audit Trail)
+          Nhật ký kiểm toán (Audit Trail)
         </button>
         <button
           type="button"
@@ -162,7 +162,7 @@ export function ManagerAuditLogsPage() {
           className={`audit-tab-btn ${activeTab === 'occupancy' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('occupancy')}
         >
-          📊 Tỷ lệ lấp đầy phòng học theo bộ môn
+          Tỷ lệ lấp đầy phòng học theo bộ môn
         </button>
       </div>
 
@@ -264,7 +264,7 @@ export function ManagerAuditLogsPage() {
                         </span>
                       </td>
                       <td>
-                        <code style={{ fontSize: '0.82rem', color: '#ce9180' }}>
+                        <code style={{ fontSize: '0.82rem', color: 'var(--portal-salmon)' }}>
                           {log.entityType}
                         </code>
                       </td>
@@ -278,7 +278,7 @@ export function ManagerAuditLogsPage() {
                           onClick={() => setDiffLog(log)}
                           aria-label={`Xem diff bản ghi #${log.id}`}
                         >
-                          🔍 Xem Diff
+                          Xem Diff
                         </button>
                       </td>
                     </tr>
@@ -417,7 +417,7 @@ export function ManagerAuditLogsPage() {
             <div className="diff-grid-comparison">
               <div className="diff-box is-old">
                 <div className="diff-box-title">
-                  <span>🔴 Giá trị cũ (old_value)</span>
+                  <span>Giá trị cũ (old_value)</span>
                 </div>
                 <pre className="diff-code-content">
                   {diffLog.oldValue ? formatJsonPretty(diffLog.oldValue) : '(Không có giá trị cũ - Bản ghi tạo mới)'}
@@ -426,7 +426,7 @@ export function ManagerAuditLogsPage() {
 
               <div className="diff-box is-new">
                 <div className="diff-box-title">
-                  <span>🟢 Giá trị mới (new_value)</span>
+                  <span>Giá trị mới (new_value)</span>
                 </div>
                 <pre className="diff-code-content">
                   {diffLog.newValue ? formatJsonPretty(diffLog.newValue) : '(Không có giá trị mới - Bản ghi bị xóa)'}
@@ -437,7 +437,7 @@ export function ManagerAuditLogsPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
               <button
                 type="button"
-                className="portal-btn portal-btn--ghost"
+                className="btn-secondary"
                 onClick={() => setDiffLog(null)}
               >
                 Đóng

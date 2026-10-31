@@ -1,0 +1,56 @@
+﻿[
+    {
+        "endpoint":  "health",
+        "status":  200,
+        "dnsSeconds":  0.120858,
+        "connectSeconds":  0.120875,
+        "tlsSeconds":  0.18052,
+        "ttfbSeconds":  0.387143,
+        "totalSeconds":  0.387197
+    },
+    {
+        "endpoint":  "public/catalog",
+        "status":  200,
+        "dnsSeconds":  0.015209,
+        "connectSeconds":  0.079528,
+        "tlsSeconds":  0.157217,
+        "ttfbSeconds":  1.319176,
+        "totalSeconds":  1.319233
+    },
+    {
+        "endpoint":  "health",
+        "status":  200,
+        "dnsSeconds":  0.020542,
+        "connectSeconds":  0.076203,
+        "tlsSeconds":  0.132199,
+        "ttfbSeconds":  0.314894,
+        "totalSeconds":  0.314972
+    },
+    {
+        "endpoint":  "public/catalog",
+        "status":  200,
+        "dnsSeconds":  0.013965,
+        "connectSeconds":  0.062661,
+        "tlsSeconds":  0.123584,
+        "ttfbSeconds":  1.354786,
+        "totalSeconds":  1.354974
+    },
+    {
+        "endpoint":  "health",
+        "status":  200,
+        "dnsSeconds":  0.021471,
+        "connectSeconds":  0.06944,
+        "tlsSeconds":  0.133961,
+        "ttfbSeconds":  0.240693,
+        "totalSeconds":  0.240755
+    },
+    {
+        "endpoint":  "public/catalog",
+        "status":  200,
+        "dnsSeconds":  0.019666,
+        "connectSeconds":  0.070849,
+        "tlsSeconds":  0.150321,
+        "ttfbSeconds":  1.333243,
+        "totalSeconds":  1.3333
+    }
+]

@@ -131,7 +131,9 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.textContent).toContain('Không thể tải thông tin gói tập');
     expect(host.textContent).toContain('Yoga');
     expect(host.textContent).toContain('Xem lịch lớp để kiểm tra buổi học.');
-    expect(host.textContent).not.toContain('2026-10-17');
+    expect(host.textContent).toContain('17/10/2026');
+    expect(host.textContent).toContain('08:00–09:00');
+    expect(host.textContent).toContain('A');
   });
 
   it('excludes cancelled enrollments and not-yet-started memberships', async () => {

@@ -66,15 +66,8 @@ public class HealthMetricService {
 
     @Transactional
     public HealthMetricDto addMetric(Long memberId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
-        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
-            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
-                    "You do not have permission to modify this health metric");
-        }
-        String metricName = request.metricName().toLowerCase(Locale.ROOT);
-        if (!ALLOWED_METRICS.contains(metricName)) {
-            throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null,
-                    "Invalid health metric name");
-        }
+        ensureCanModify(memberId, currentUserId, currentUserRole);
+        String metricName = validateAndNormalizeMetricName(request.metricName());
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
@@ -92,24 +85,11 @@ public class HealthMetricService {
 
     @Transactional
     public HealthMetricDto updateMetric(Long memberId, Long metricId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
-        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
-            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
-                    "You do not have permission to modify this health metric");
-        }
-        MemberProgressLog log = progressLogRepository.findById(metricId)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
-        if (!log.getMember().getUserId().equals(memberId)) {
-            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null,
-                    "Health metric does not belong to this member");
-        }
+        ensureCanModify(memberId, currentUserId, currentUserRole);
+        MemberProgressLog log = findOwnedMetric(memberId, metricId);
 
         if (request.metricName() != null && !request.metricName().isBlank()) {
-            String metricName = request.metricName().toLowerCase(Locale.ROOT);
-            if (!ALLOWED_METRICS.contains(metricName)) {
-                throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null,
-                        "Invalid health metric name");
-            }
-            log.setMetricName(metricName);
+            log.setMetricName(validateAndNormalizeMetricName(request.metricName()));
         }
         if (request.metricValue() != null) {
             log.setMetricValue(request.metricValue());
@@ -122,16 +102,8 @@ public class HealthMetricService {
 
     @Transactional
     public void deleteMetric(Long memberId, Long metricId, Long currentUserId, String currentUserRole) {
-        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
-            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
-                    "You do not have permission to modify this health metric");
-        }
-        MemberProgressLog log = progressLogRepository.findById(metricId)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
-        if (!log.getMember().getUserId().equals(memberId)) {
-            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null,
-                    "Health metric does not belong to this member");
-        }
+        ensureCanModify(memberId, currentUserId, currentUserRole);
+        MemberProgressLog log = findOwnedMetric(memberId, metricId);
         progressLogRepository.delete(log);
     }
 
@@ -144,16 +116,48 @@ public class HealthMetricService {
         return addMetric(targetMemberId, dto, currentUserId, currentUserRole);
     }
 
+    private void ensureCanModify(Long memberId, Long currentUserId, String currentUserRole) {
+        if (!memberId.equals(currentUserId) && !isCoach(currentUserRole) && !isManager(currentUserRole)) {
+            throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
+                    "You do not have permission to modify this health metric");
+        }
+    }
+
+    private String validateAndNormalizeMetricName(String rawName) {
+        String metricName = rawName == null ? "" : rawName.toLowerCase(Locale.ROOT);
+        if (!ALLOWED_METRICS.contains(metricName)) {
+            throw new BadRequestException("INVALID_METRIC", "health.metrics.invalid_metric", null,
+                    "Invalid health metric name");
+        }
+        return metricName;
+    }
+
+    private MemberProgressLog findOwnedMetric(Long memberId, Long metricId) {
+        MemberProgressLog log = progressLogRepository.findById(metricId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
+        if (log.getMember() == null || !memberId.equals(log.getMember().getUserId())) {
+            throw new BadRequestException("INVALID_MEMBER_METRIC", "health.metrics.invalid_member", null,
+                    "Health metric does not belong to this member");
+        }
+        return log;
+    }
+
     private HealthMetricDto toDto(MemberProgressLog log) {
-        return new HealthMetricDto(log.getId(), log.getMetricName(), log.getMetricValue(), log.getUnit(),
-                log.getRecordedBy().getId(), log.getRecordedAt());
+        return new HealthMetricDto(
+                log.getId(),
+                log.getMetricName(),
+                log.getMetricValue(),
+                log.getUnit(),
+                log.getRecordedBy() != null ? log.getRecordedBy().getId() : null,
+                log.getRecordedAt()
+        );
     }
 
     private boolean isManager(String role) {
-        return "CENTER_MANAGER".equalsIgnoreCase(role) || "Manager".equalsIgnoreCase(role);
+        return "CENTER_MANAGER".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role);
     }
 
     private boolean isCoach(String role) {
-        return "COACH".equalsIgnoreCase(role) || "Coach".equalsIgnoreCase(role);
+        return "COACH".equalsIgnoreCase(role);
     }
 }

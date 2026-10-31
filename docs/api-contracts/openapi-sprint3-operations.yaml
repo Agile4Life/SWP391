@@ -6,7 +6,7 @@ info:
     API contracts for Sprint 3 Operations subsystem:
     - SCRUM-111: Session Attendance Roster and Batch Attendance API
     - SCRUM-112: Smart Waitlist Automatic 24h Expiry & Promotion Background Scheduler
-    - SCRUM-113: Class Session Cancellation with Reason, Auto-refund & In-App Notification
+    - SCRUM-113: Class Session Cancellation with Reason & In-App Notification
     All endpoints require Bearer JWT authentication and enforce strict RBAC via @PreAuthorize.
 servers:
   - url: /api/v1
@@ -56,6 +56,11 @@ components:
         notes:
           type: string
           maxLength: 255
+        progressScore:
+          type: integer
+          minimum: 1
+          maximum: 100
+          nullable: true
 
     SessionAttendanceResponse:
       type: object
@@ -143,7 +148,7 @@ components:
         reason:
           type: string
           maxLength: 255
-          example: "Coach attending medical emergency; class credit auto-refunded"
+          example: "Coach attending medical emergency"
 
     ClassSessionDto:
       type: object
@@ -253,7 +258,7 @@ paths:
 
   /classes/sessions/{id}/cancel:
     post:
-      summary: Cancel class session with reason, auto-refund bookings & notify members (SCRUM-113)
+      summary: Cancel one class session with reason and notify enrolled members (SCRUM-113)
       tags: [Classes & Sessions]
       parameters:
         - name: id
@@ -270,7 +275,7 @@ paths:
               $ref: '#/components/schemas/CancelSessionRequest'
       responses:
         '200':
-          description: Class session cancelled and affected bookings refunded
+          description: Class session cancelled; class enrollments remain active for other sessions
           content:
             application/json:
               schema:

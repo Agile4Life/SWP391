@@ -31,6 +31,17 @@ export interface PendingSubscriptionItem {
   createdAt: string;
 }
 
+export interface RenewalCandidate {
+  id: number;
+  memberId: number;
+  packageId: number;
+  packageName: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface HoldRequestItem {
   id: number;
   memberId: number;
@@ -145,6 +156,12 @@ export const receptionApi = {
     return all.filter((p) => p.status === 'active');
   },
 
+  getRenewalCandidates: (memberId: number): Promise<RenewalCandidate[]> =>
+    apiFetch(`/memberships/subscriptions/members/${memberId}/renewal-candidates`),
+
+  createRenewal: (memberId: number, subscriptionId: number): Promise<RenewalCandidate> =>
+    apiFetch(`/memberships/subscriptions/members/${memberId}/renew/${subscriptionId}`, { method: 'POST' }),
+
   /**
    * Lấy danh sách yêu cầu đăng ký/gia hạn/nâng cấp gói tập đang chờ thanh toán (pending_payment)
    */
@@ -202,15 +219,6 @@ export const receptionApi = {
       }),
     });
 
-    if (!res.invoiceNumber && res.id) {
-      try {
-        const inv = await apiFetch<InvoiceDto>(`/invoices/auto-issue/${res.id}`, { method: 'POST' });
-        res.invoiceNumber = inv.invoiceNumber;
-      } catch {
-        const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        res.invoiceNumber = `INV-${today}-${String(res.id).padStart(4, '0')}`;
-      }
-    }
     return res;
   },
 };

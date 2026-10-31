@@ -6,6 +6,7 @@ import { Select } from '../../shared/ui/Select';
 import { toast } from '../../shared/ui/toast';
 import { checkinApi, type CheckinDto } from './checkinApi';
 import './staff-check-in.css';
+import { GateQrPanel } from './GateQrPanel';
 
 const formatTime = (iso?: string | null): string => {
   if (!iso) return '—';
@@ -66,8 +67,8 @@ export function StaffCheckInPage() {
       <div className="portal-container" data-testid="checkin-forbidden-guard">
         <div className="portal-card">
           <div className="portal-state" style={{ padding: '60px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }} role="img" aria-label="Forbidden">
-              🚫
+            <div style={{ fontSize: '2.25rem', fontWeight: 700, color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }} role="img" aria-label="Forbidden">
+              403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               403 - Quyền truy cập bị từ chối
@@ -217,13 +218,15 @@ export function StaffCheckInPage() {
                   type="submit"
                   className="btn-primary"
                   disabled={isScanning || !scanCode.trim()}
-                  data-testid="scan-submit-button"
+                  data-testid="scan-submit-button" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                 >
                   {isScanning ? 'Đang quét...' : 'Check-in'}
                 </button>
               </div>
             </div>
           </form>
+
+          <GateQrPanel gateId={selectedGate.includes('A2') ? 'A2' : selectedGate.includes('B1') ? 'B1' : 'A1'} />
 
           {/* Visual Door Gate Feedback */}
           {currentResult && (
@@ -236,18 +239,23 @@ export function StaffCheckInPage() {
                 borderRadius: '6px',
                 padding: '24px',
                 textAlign: 'center',
-                backgroundColor: isGranted ? '#20372b' : '#3d2828',
-                border: `2px solid ${isGranted ? '#86EFAC' : '#FCA5A5'}`,
+                backgroundColor: isGranted ? undefined : undefined,
+                border: undefined,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
                 <StatusMark type={isGranted ? 'success' : 'error'} size={64} />
               </div>
 
+              {isGranted && currentResult.avatarUrl && (
+                <img src={currentResult.avatarUrl} alt={`Ảnh hội viên ${currentResult.memberName || ''}`}
+                  referrerPolicy="no-referrer" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', marginBottom: 12 }} />
+              )}
+
               <h3
                 style={{
                   margin: '0 0 8px 0',
-                  color: isGranted ? '#86efac' : '#fca5a5',
+                  color: isGranted ? 'var(--portal-success, #86efac)' : 'var(--portal-danger, #fca5a5)',
                 }}
               >
                 {isGranted ? 'CỬA MỞ: XÁC THỰC HỢP LỆ' : 'CỬA KHÓA: TỪ CHỐI CHECK-IN'}
@@ -257,13 +265,16 @@ export function StaffCheckInPage() {
                 {currentResult.memberName || 'Mã QR không xác định'} {currentResult.memberId ? `(HV #${currentResult.memberId})` : ''}
               </div>
 
+              {isGranted && currentResult.packageName && <div>Gói tập: {currentResult.packageName}</div>}
+              {isGranted && currentResult.remainingDays != null && <div>Còn {currentResult.remainingDays} ngày</div>}
+
               <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
                 {currentResult.gate || selectedGate} — {formatTime(currentResult.checkInTime)}
               </div>
 
               {currentResult.denialReason && (
-                <div style={{ marginTop: '10px', color: '#fca5a5', fontWeight: 600, fontSize: '0.85rem' }}>
-                  ⚠️ {currentResult.denialReason}
+                <div style={{ marginTop: '10px', color: 'var(--portal-danger, #fca5a5)', fontWeight: 600, fontSize: '0.85rem' }}>
+                  {currentResult.denialReason}
                 </div>
               )}
             </div>
@@ -292,8 +303,8 @@ export function StaffCheckInPage() {
               style={{
                 marginBottom: 16,
                 padding: '12px 16px',
-                backgroundColor: '#3d2828',
-                border: '1px solid #F8B4B4',
+                backgroundColor: 'var(--portal-raised)',
+                border: '1px solid var(--portal-danger, #fca5a5)',
                 borderRadius: 6,
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -302,7 +313,7 @@ export function StaffCheckInPage() {
               }}
               data-testid="checkin-history-error"
             >
-              <span style={{ color: '#fca5a5', fontSize: '0.88rem' }}>{historyError}</span>
+              <span style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>{historyError}</span>
               <button
                 type="button"
                 className="btn-secondary btn-sm"

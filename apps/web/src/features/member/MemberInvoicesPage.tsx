@@ -74,10 +74,10 @@ export function MemberInvoicesPage() {
 
   return (
     <div className="portal-container member-invoices">
-      <PageHeader eyebrow="TÀI CHÍNH CÁ NHÂN" title="Giao dịch & hóa đơn" subtitle="Các khoản thanh toán đã hoàn tất của bạn." />
+      <PageHeader eyebrow="Hội viên" title="Giao dịch & hóa đơn" subtitle="Các khoản thanh toán đã hoàn tất của bạn." />
       <section className="portal-card member-invoices__card" aria-label="Lịch sử giao dịch">
         {loading ? <p role="status">Đang tải giao dịch…</p> : error ? (
-          <div role="alert"><p>Không tải được giao dịch. Vui lòng thử lại.</p><button type="button" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>Thử lại</button></div>
+          <div role="alert"><p>Không tải được giao dịch. Vui lòng thử lại.</p><button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>Thử lại</button></div>
         ) : payments.length === 0 ? <p>Chưa có giao dịch thanh toán thành công.</p> : (
           <div className="member-invoices__scroll">
             <table className="member-invoices__table">

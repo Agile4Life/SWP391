@@ -1,5 +1,6 @@
 package com.swp391.scms.users;
 
+import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -37,6 +38,7 @@ public class ProfileService {
     }
 
     @Transactional
+    @Audited(action = "PROFILE_UPDATE", entity = "users")
     public ProfileDto updateProfile(Long userId, ProfileDto request) {
         User user = findActiveUser(userId);
         user.setFullName(request.fullName());
@@ -69,6 +71,7 @@ public class ProfileService {
     }
 
     @Transactional
+    @Audited(action = "COACH_PROFILE_UPDATE", entity = "coaches")
     public void updateCoachProfile(Long currentUserId, String currentUserRole, CoachProfileUpdateDto request) {
         if (!"COACH".equals(currentUserRole)) {
             throw new ForbiddenException("FORBIDDEN", "users.forbidden.not_coach", null, null);
@@ -88,6 +91,7 @@ public class ProfileService {
     }
 
     @Transactional
+    @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistProfile(Long currentUserId, String currentUserRole, ReceptionistProfileUpdateDto request) {
         if (!"RECEPTIONIST".equals(currentUserRole)) {
             throw new ForbiddenException("FORBIDDEN", "users.forbidden.invalid_role", null, null);

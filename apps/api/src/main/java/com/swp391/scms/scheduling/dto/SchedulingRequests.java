@@ -15,7 +15,8 @@ public final class SchedulingRequests {
     }
 
     /**
-     * SCRUM-72 AC: Manager creates a class (discipline, coach, room, capacity, level).
+     * SCRUM-72 AC: Manager creates a class (discipline, coach, room, capacity, level),
+     * optionally scheduling the first session in the same request.
      */
     public record CreateClassRequest(
             @NotBlank(message = "{validation.scheduling.class_name.not_blank}")
@@ -38,8 +39,21 @@ public final class SchedulingRequests {
             @Pattern(regexp = "beginner|intermediate|advanced|all", message = "{validation.scheduling.level.pattern}")
             String level,
 
-            String description
+            String description,
+
+            java.time.LocalDate sessionDate,
+            java.time.LocalTime startTime,
+            java.time.LocalTime endTime
     ) {
+        public CreateClassRequest(String name,
+                                  Long disciplineId,
+                                  Long coachId,
+                                  Long roomId,
+                                  Integer capacity,
+                                  String level,
+                                  String description) {
+            this(name, disciplineId, coachId, roomId, capacity, level, description, null, null, null);
+        }
     }
 
     /**

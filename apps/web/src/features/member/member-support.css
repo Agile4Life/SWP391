@@ -28,5 +28,5 @@
 .member-support-messages time { color: var(--portal-muted); font-size: 11px; }
 .member-support-error { color: var(--portal-danger, #e99090); }
 .member-support-notice { color: var(--portal-success, var(--member-support-success)); }
-.member-support :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+.member-support button:not(.ui-select__trigger):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 @media (max-width: 760px) { .member-support-grid { grid-template-columns: minmax(0, 1fr); } .member-support-messages li { max-width: 90%; } }

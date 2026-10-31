@@ -10,11 +10,23 @@ export interface CheckinDto {
   gate?: string | null;
   status: 'GRANTED' | 'DENIED' | 'success' | 'denied' | string;
   denialReason?: string | null;
+  avatarUrl?: string | null;
+  packageName?: string | null;
+  remainingDays?: number | null;
 }
 
 export interface ScanCheckinPayload {
   qrCode: string;
   gate?: string;
+}
+
+export interface GateQrDto {
+  qrCode: string;
+  gateId: string;
+  gate: string;
+  generatedAt: string;
+  expiresAt: string;
+  expiresInSeconds: number;
 }
 
 export interface CheckinHistoryFilter {
@@ -24,6 +36,7 @@ export interface CheckinHistoryFilter {
 }
 
 export const checkinApi = {
+  gateQr: (gateId: string, signal?: AbortSignal) => apiFetch<GateQrDto>(`/check-in/gate-qr?gate=${encodeURIComponent(gateId)}`, { cache: 'no-store', signal }),
   /**
    * Quét mã QR hội viên tại cổng/lễ tân (POST /api/v1/check-in/scan)
    */

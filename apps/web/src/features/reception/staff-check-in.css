@@ -9,13 +9,43 @@
   left: 0;
   z-index: 1;
   min-width: 140px;
-  background: #fff;
+  background: var(--portal-surface);
+}
+
+.checkin-page .portal-table tr:hover td.checkin-actions {
+  background: var(--portal-raised);
 }
 
 .checkin-page .portal-table th.checkin-actions {
-  background: #f7f3ee;
+  background: var(--portal-raised);
 }
 
 .checkin-actions button {
   min-height: 44px;
+}
+
+.gate-result {
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+}
+
+.gate-result--granted {
+  background: #20372b;
+  border: 1.5px solid #86efac66;
+}
+
+.gate-result--denied {
+  background: #3d2828;
+  border: 1.5px solid #fca5a566;
+}
+
+:root[data-theme='light'] .gate-result--granted {
+  background: #eef9f2;
+  border-color: #bde4cb;
+}
+
+:root[data-theme='light'] .gate-result--denied {
+  background: #fdf0ef;
+  border-color: #f3c4bf;
 }

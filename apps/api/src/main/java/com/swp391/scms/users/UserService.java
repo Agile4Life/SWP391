@@ -11,6 +11,7 @@ import com.swp391.scms.users.mapper.UserMapper;
 import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -138,7 +139,16 @@ public class UserService {
             user.setPhone(phone);
         }
         if (dto.getRoleId() != null) {
-            user.setRole(findRole(dto.getRoleId()));
+            Role newRole = findRole(dto.getRoleId());
+            user.setRole(newRole);
+            if ("MEMBER".equalsIgnoreCase(newRole.getCode()) && user.getMember() == null) {
+                Member member = new Member();
+                member.setUser(user);
+                member.setMembershipCode("MEM-" + user.getId());
+                member.setJoinDate(LocalDate.now(clock));
+                member.setFitnessLevel("beginner");
+                user.setMember(member);
+            }
         }
         user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
@@ -177,6 +187,7 @@ public class UserService {
     }
 
     @Transactional
+    @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistShift(Long userId, com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
         User user = findActiveUser(userId);
         if (!"RECEPTIONIST".equalsIgnoreCase(user.getRole().getCode())) {

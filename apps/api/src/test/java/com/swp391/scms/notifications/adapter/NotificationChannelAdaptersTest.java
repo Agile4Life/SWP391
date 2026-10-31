@@ -6,6 +6,10 @@ import com.swp391.scms.notifications.port.NotificationChannel;
 import com.swp391.scms.notifications.port.NotificationPayload;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +25,43 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationChannelAdaptersTest {
+
+    @Test
+    void simulatedChannelsDoNotLogAddressesOrNotificationContents() {
+        Logger emailLogger = (Logger) LoggerFactory.getLogger(MockEmailNotificationChannelAdapter.class);
+        Logger pushLogger = (Logger) LoggerFactory.getLogger(MockPushNotificationChannelAdapter.class);
+        Logger webhookLogger = (Logger) LoggerFactory.getLogger(MockWebhookNotificationChannelAdapter.class);
+        ListAppender<ILoggingEvent> emailLogs = new ListAppender<>();
+        ListAppender<ILoggingEvent> pushLogs = new ListAppender<>();
+        ListAppender<ILoggingEvent> webhookLogs = new ListAppender<>();
+        emailLogs.start();
+        pushLogs.start();
+        webhookLogs.start();
+        emailLogger.addAppender(emailLogs);
+        pushLogger.addAppender(pushLogs);
+        webhookLogger.addAppender(webhookLogs);
+        try {
+            NotificationPayload payload = NotificationPayload.builder().userId(101L)
+                    .recipientEmail("private@example.com").title("private-title")
+                    .message("private-health-note").type("support_reply").build();
+            new MockEmailNotificationChannelAdapter(userRepository).send(payload);
+            new MockPushNotificationChannelAdapter().send(payload);
+            new MockWebhookNotificationChannelAdapter().send(payload);
+            for (ListAppender<ILoggingEvent> logs : java.util.List.of(emailLogs, pushLogs, webhookLogs)) {
+                assertThat(logs.list).isNotEmpty();
+                String output = logs.list.stream().map(ILoggingEvent::getFormattedMessage)
+                        .collect(java.util.stream.Collectors.joining("\n"));
+                assertThat(output).doesNotContain("private@example.com", "private-title", "private-health-note");
+            }
+        } finally {
+            emailLogger.detachAppender(emailLogs);
+            pushLogger.detachAppender(pushLogs);
+            webhookLogger.detachAppender(webhookLogs);
+            emailLogs.stop();
+            pushLogs.stop();
+            webhookLogs.stop();
+        }
+    }
 
     @Mock
     private NotificationRepository notificationRepository;

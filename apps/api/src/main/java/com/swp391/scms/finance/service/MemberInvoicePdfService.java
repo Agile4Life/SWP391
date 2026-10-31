@@ -1,12 +1,14 @@
 package com.swp391.scms.finance.service;
 
 import com.swp391.scms.common.exception.ServiceUnavailableException;
+import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.finance.dto.InvoiceDto;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -17,9 +19,17 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class MemberInvoicePdfService {
     private final InvoiceService invoiceService;
+    private final MessageService messageService;
 
     public MemberInvoicePdfService(InvoiceService invoiceService) {
+        this(invoiceService, null);
+    }
+
+    @Autowired
+    public MemberInvoicePdfService(InvoiceService invoiceService,
+                                   @Autowired(required = false) MessageService messageService) {
         this.invoiceService = invoiceService;
+        this.messageService = messageService;
     }
 
     public byte[] download(Long paymentId, Long userId) {
@@ -42,21 +52,45 @@ public class MemberInvoicePdfService {
             document.addPage(page);
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
                 float y = 760;
-                y = line(content, font, 16, y, "SÖL — BẢN SAO THÔNG TIN HÓA ĐƠN");
-                y = line(content, font, 10, y - 8, "Tài liệu xuất từ dữ liệu hệ thống; không thay thế hóa đơn thuế ký số.");
-                y = line(content, font, 12, y - 24, "Mã hóa đơn: " + invoice.getInvoiceNumber());
-                y = line(content, font, 12, y, "Giao dịch: #" + invoice.getPaymentId());
-                y = line(content, font, 12, y, "Ngày phát hành: " + invoice.getIssuedAt()
-                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-                y = line(content, font, 12, y - 20, "Trước thuế: " + invoice.getSubtotalAmount().toPlainString() + " VND");
-                y = line(content, font, 12, y, "VAT: " + invoice.getTaxAmount().toPlainString() + " VND");
-                line(content, font, 14, y, "Tổng tiền (đã lưu): " + invoice.getTotalAmount().toPlainString() + " VND");
+                y = line(content, font, 16, y, msg("finance.invoice.pdf.title",
+                        "SÖL — BẢN SAO THÔNG TIN HÓA ĐƠN"));
+                y = line(content, font, 10, y - 8, msg("finance.invoice.pdf.disclaimer",
+                        "Tài liệu xuất từ dữ liệu hệ thống; không thay thế hóa đơn thuế ký số."));
+                y = line(content, font, 12, y - 24, msg("finance.invoice.pdf.invoice_number",
+                        "Mã hóa đơn: " + invoice.getInvoiceNumber(), invoice.getInvoiceNumber()));
+                y = line(content, font, 12, y, msg("finance.invoice.pdf.payment_id",
+                        "Giao dịch: #" + invoice.getPaymentId(), invoice.getPaymentId()));
+                String issuedAtFormatted = invoice.getIssuedAt()
+                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                y = line(content, font, 12, y, msg("finance.invoice.pdf.issued_at",
+                        "Ngày phát hành: " + issuedAtFormatted, issuedAtFormatted));
+                y = line(content, font, 12, y - 20, msg("finance.invoice.pdf.subtotal",
+                        "Trước thuế: " + invoice.getSubtotalAmount().toPlainString() + " VND",
+                        invoice.getSubtotalAmount().toPlainString()));
+                y = line(content, font, 12, y, msg("finance.invoice.pdf.tax",
+                        "VAT: " + invoice.getTaxAmount().toPlainString() + " VND",
+                        invoice.getTaxAmount().toPlainString()));
+                line(content, font, 14, y, msg("finance.invoice.pdf.total",
+                        "Tổng tiền (đã lưu): " + invoice.getTotalAmount().toPlainString() + " VND",
+                        invoice.getTotalAmount().toPlainString()));
             }
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             document.save(output);
             return output.toByteArray();
         } catch (IOException | IllegalArgumentException e) {
             throw unavailable();
+        }
+    }
+
+    private String msg(String key, String fallback, Object... args) {
+        if (messageService == null) {
+            return fallback;
+        }
+        try {
+            String resolved = messageService.getMessage(key, args);
+            return (resolved == null || resolved.isBlank() || key.equals(resolved)) ? fallback : resolved;
+        } catch (Exception e) {
+            return fallback;
         }
     }
 

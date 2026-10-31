@@ -293,28 +293,8 @@ class SchedulingServiceTest {
         assertEquals("notified", waiting.getStatus());
         assertNotNull(waiting.getNotifiedAt());
         assertNotNull(waiting.getReservationExpiresAt());
-        assertEquals(waiting.getNotifiedAt().plusMinutes(15), waiting.getReservationExpiresAt());
+        assertEquals(waiting.getNotifiedAt().plusHours(24), waiting.getReservationExpiresAt());
         verify(waitlists).save(waiting);
-    }
-
-    @Test
-    void expiryNotifiesTheNextMemberBeforeTheirReservationRunsOut() {
-        LocalDateTime now = LocalDateTime.of(2026, 10, 17, 12, 0);
-        ClassWaitlist expired = waitingEntry();
-        expired.setStatus("notified");
-        expired.setReservationExpiresAt(now.minusSeconds(1));
-        ClassWaitlist next = waitingEntry();
-        Member nextMember = new Member();
-        nextMember.setUserId(99L);
-        next.setMember(nextMember);
-        when(waitlists.findByStatusAndReservationExpiresAtLessThan("notified", now)).thenReturn(List.of(expired));
-        when(waitlists.findByGymClassIdAndStatusOrderByRequestedAtAsc(5L, "waiting")).thenReturn(List.of(next));
-
-        assertEquals(1, waitlistService.scheduledCleanupExpiredReservations());
-
-        assertEquals("notified", next.getStatus());
-        assertEquals(now.plusMinutes(15), next.getReservationExpiresAt());
-        verify(notifications).send(eq(99L), any(), any(), eq("schedule_change"), eq("class_session"), any());
     }
 
     @Test

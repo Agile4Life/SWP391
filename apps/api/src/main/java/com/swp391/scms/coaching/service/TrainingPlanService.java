@@ -85,10 +85,15 @@ public class TrainingPlanService {
         TrainingPlan plan = new TrainingPlan();
         plan.setMember(member);
         plan.setCoach(coach);
-        plan.setGoal(dto.getGoal());
+        String resolvedGoal = (dto.getGoal() != null && !dto.getGoal().isBlank())
+                ? dto.getGoal().trim()
+                : (dto.getTitle() != null && !dto.getTitle().isBlank() ? dto.getTitle().trim() : null);
+        plan.setGoal(resolvedGoal);
         plan.setStartDate(dto.getStartDate());
         plan.setEndDate(dto.getEndDate());
-        plan.setStatus("draft");
+        boolean activateImmediately = Boolean.TRUE.equals(dto.getActivate())
+                || "active".equalsIgnoreCase(dto.getStatus());
+        plan.setStatus(activateImmediately ? "active" : "draft");
         plan.setAiGenerated(Boolean.TRUE.equals(dto.getAiGenerated()));
 
         if (dto.getClassId() != null && gymClassRepository != null) {

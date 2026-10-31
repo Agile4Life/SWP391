@@ -1,5 +1,9 @@
 package com.swp391.scms.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swp391.scms.common.ApiResponse;
+import com.swp391.scms.common.i18n.MessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,8 +15,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Rate Limiting Filter tại Gateway API để ngăn chặn hành vi quét cạn (brute-force scan)
@@ -23,11 +29,26 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private static final int SCAN_LIMIT_PER_MINUTE = 60;
     private static final int DYNAMIC_QR_LIMIT_PER_MINUTE = 30;
+    private static final int AUTH_LIMIT_PER_MINUTE = 60;
 
     private static final String SCAN_PATH = "/api/v1/check-in/scan";
     private static final String DYNAMIC_QR_PATH = "/api/v1/memberships/subscriptions/my/dynamic-qr";
+    private static final String AUTH_PATH = "/api/v1/auth/";
 
     private final Map<String, WindowCounter> requestCounts = new ConcurrentHashMap<>();
+    private final AtomicLong lastCleanupMinute = new AtomicLong(-1);
+    private final ObjectMapper objectMapper;
+    private final MessageService messageService;
+
+    public RateLimitingFilter() {
+        this(new ObjectMapper().findAndRegisterModules(), null);
+    }
+
+    @Autowired
+    public RateLimitingFilter(ObjectMapper objectMapper, MessageService messageService) {
+        this.objectMapper = objectMapper;
+        this.messageService = messageService;
+    }
 
     private static class WindowCounter {
         long windowStartMinute;
@@ -48,8 +69,12 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         if (limit > 0) {
             String clientIp = getClientIp(request);
-            String key = uri + ":" + clientIp;
+            String key = (uri.startsWith(AUTH_PATH) ? AUTH_PATH : uri) + ":" + clientIp;
             long currentMinute = System.currentTimeMillis() / 60000L;
+            long previousCleanup = lastCleanupMinute.get();
+            if (previousCleanup != currentMinute && lastCleanupMinute.compareAndSet(previousCleanup, currentMinute)) {
+                requestCounts.entrySet().removeIf(entry -> entry.getValue().windowStartMinute < currentMinute);
+            }
 
             WindowCounter counter = requestCounts.compute(key, (k, existing) -> {
                 if (existing == null || existing.windowStartMinute != currentMinute) {
@@ -64,13 +89,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                 response.setHeader("Retry-After", "60");
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 response.setCharacterEncoding("UTF-8");
-                response.getWriter().write("""
-                        {
-                          "status": "error",
-                          "code": "RATE_LIMIT_EXCEEDED",
-                          "message": "Too many requests. Please slow down and try again later."
-                        }
-                        """);
+                Locale locale = request.getHeader("Accept-Language") == null
+                        ? Locale.forLanguageTag("vi") : request.getLocale();
+                String message = messageService == null ? "security.rate_limit.exceeded"
+                        : messageService.getMessage("security.rate_limit.exceeded", locale);
+                objectMapper.writeValue(response.getWriter(), ApiResponse.error(429, "RATE_LIMIT_EXCEEDED", message));
                 return;
             }
         }
@@ -79,6 +102,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private int getRateLimitForUri(String uri) {
+        if (uri.startsWith(AUTH_PATH)) {
+            return AUTH_LIMIT_PER_MINUTE;
+        }
         if (uri.endsWith(SCAN_PATH)) {
             return SCAN_LIMIT_PER_MINUTE;
         }
@@ -89,10 +115,6 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader == null || xfHeader.isBlank()) {
-            return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
-        }
-        return xfHeader.split(",")[0].trim();
+        return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
     }
 }

@@ -1,0 +1,38 @@
+{
+  "browser": "156.0.8078.47",
+  "durationSeconds": 5,
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "frames": 298,
+      "fps": 59.43358595931393,
+      "p95FrameMs": 16.800000000000182,
+      "framesOver25ms": 3,
+      "mutations": 77,
+      "longTasks": 0,
+      "LayoutCount": 204,
+      "RecalcStyleCount": 598,
+      "LayoutDuration": 0.0534,
+      "RecalcStyleDuration": 0.2068,
+      "ScriptDuration": 0.1396,
+      "TaskDuration": 1.4514
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "frames": 301,
+      "fps": 60.02951617406565,
+      "p95FrameMs": 16.899999999999636,
+      "framesOver25ms": 0,
+      "mutations": 107,
+      "longTasks": 0,
+      "LayoutCount": 1,
+      "RecalcStyleCount": 605,
+      "LayoutDuration": 0.0005,
+      "RecalcStyleDuration": 0.1715,
+      "ScriptDuration": 0.1348,
+      "TaskDuration": 1.0031
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.RecentTransactionDto;
+import com.swp391.scms.reports.dto.RenewalRateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.service.RevenueReportService;
@@ -76,6 +77,17 @@ class ReportControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data[0].packageName").value("Gold"));
+    }
+
+    @Test
+    void getsRenewalRateForRequestedPeriod() throws Exception {
+        when(reportService.getRenewalRate(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5)))
+                .thenReturn(new RenewalRateDto(4, 3, 75.0));
+        mockMvc.perform(get("/api/v1/reports/renewal-rate?startDate=2026-10-01&endDate=2026-10-05"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.expiredCount").value(4))
+                .andExpect(jsonPath("$.data.renewedCount").value(3))
+                .andExpect(jsonPath("$.data.renewalRate").value(75.0));
     }
 
     @Test

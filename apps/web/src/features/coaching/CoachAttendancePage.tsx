@@ -177,7 +177,7 @@ export function CoachAttendancePage() {
         if (mounted) {
           setSessions(data);
           if (data.length > 0) {
-            setSelectedSessionId((prev) => (prev === null ? data[0].id : prev));
+            const preferred = data.find((s) => (s.bookedCount ?? 0) > 0) ?? data[0]; setSelectedSessionId((prev) => (prev === null ? preferred.id : prev));
           }
         }
       } catch {

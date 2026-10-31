@@ -12,7 +12,7 @@ COPY src ./src
 RUN mvn -B -DskipTests package
 
 # Giai đoạn 2: tạo image chạy với Java Runtime 21, không mang theo Maven và source.
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 # Đặt thư mục làm việc của ứng dụng là /app.
 WORKDIR /app
 

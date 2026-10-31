@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 
 interface ModalProps {
   title: string;
@@ -6,17 +6,25 @@ interface ModalProps {
   children: ReactNode;
   busy?: boolean;
   className?: string;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Hộp thoại dựa trên <dialog> gốc: có sẵn focus trap, phím Esc và backdrop. */
-export function Modal({ title, onClose, children, busy = false, className }: ModalProps) {
+export function Modal({ title, onClose, children, busy = false, className, returnFocusRef }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
-  }, []);
+    return () => {
+      if (dialog?.open) dialog.close();
+      // Successful cancellation replaces the pending panel with the catalog before cleanup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const returnTarget = returnFocusRef?.current;
+      if (returnTarget?.isConnected) returnTarget.focus({ preventScroll: true });
+    };
+  }, [returnFocusRef]);
 
   return (
     <dialog
@@ -24,10 +32,10 @@ export function Modal({ title, onClose, children, busy = false, className }: Mod
       className={`portal-dialog ${className || ''}`.trim()}
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby={titleId}
-      onKeyDown={(event) => {
+      onKeyDown={event => {
         if (event.key !== 'Tab') return;
-        const dialog = ref.current;
-        if (!dialog) return;
+        const dialog = event.currentTarget;
+        if (event.target instanceof Element && event.target.closest('dialog') !== dialog) return;
         const controls = [...dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
           .filter(element => element.closest('dialog') === dialog && element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
         const first = controls[0];

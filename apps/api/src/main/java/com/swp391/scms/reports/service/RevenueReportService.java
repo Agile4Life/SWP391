@@ -15,6 +15,7 @@ import com.swp391.scms.reports.dto.ClassUtilizationDto;
 import com.swp391.scms.reports.dto.DailyRevenueDto;
 import com.swp391.scms.reports.dto.PackageRevenueDto;
 import com.swp391.scms.reports.dto.RecentTransactionDto;
+import com.swp391.scms.reports.dto.RenewalRateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotCreateDto;
 import com.swp391.scms.reports.dto.ReportSnapshotDto;
 import com.swp391.scms.reports.entity.ReportSnapshot;
@@ -43,6 +44,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class RevenueReportService {
+
+    private record DateRange(LocalDate start, LocalDate end) {}
 
     private final PaymentRepository paymentRepository;
     private final MembershipSubscriptionRepository subscriptionRepository;
@@ -89,27 +92,40 @@ public class RevenueReportService {
         this.sessionAttendanceReportRepository = sessionAttendanceReportRepository;
     }
 
-    @Transactional(readOnly = true)
-    public List<RecentTransactionDto> getRecentTransactions(LocalDate startDate, LocalDate endDate) {
+    private DateRange resolveValidatedDateRange(LocalDate startDate, LocalDate endDate) {
         LocalDate start = startDate != null ? startDate : LocalDate.now(clock).minusDays(30);
         LocalDate end = endDate != null ? endDate : LocalDate.now(clock);
         if (start.isAfter(end)) {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
                     "Start date cannot be after end date");
         }
+        return new DateRange(start, end);
+    }
+
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public RenewalRateDto getRenewalRate(LocalDate startDate, LocalDate endDate) {
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
+        LocalDate yesterday = LocalDate.now(clock).minusDays(1);
+        LocalDate lastExpired = range.end().isBefore(yesterday) ? range.end() : yesterday;
+        if (range.start().isAfter(lastExpired)) return new RenewalRateDto(0, 0, null);
+
+        long expired = subscriptionRepository.countExpiredPaidPeriods(range.start(), lastExpired);
+        long renewed = expired == 0 ? 0 : subscriptionRepository.countRenewedExpiredPaidPeriods(range.start(), lastExpired);
+        return new RenewalRateDto(expired, renewed, expired == 0 ? null : 100.0 * renewed / expired);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecentTransactionDto> getRecentTransactions(LocalDate startDate, LocalDate endDate) {
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
         return transactionReportRepository.findRecentTransactions(
-                start.atStartOfDay(), end.plusDays(1).atStartOfDay(), PageRequest.of(0, 10));
+                range.start().atStartOfDay(), range.end().plusDays(1).atStartOfDay(), PageRequest.of(0, 10));
     }
 
     @Transactional(readOnly = true)
     public List<DailyRevenueDto> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
-        LocalDate start = (startDate != null) ? startDate : LocalDate.now(clock).minusDays(30);
-        LocalDate end = (endDate != null) ? endDate : LocalDate.now(clock);
-
-        if (start.isAfter(end)) {
-            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
-                    "Start date cannot be after end date");
-        }
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
+        LocalDate start = range.start();
+        LocalDate end = range.end();
 
         List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
                 start.atStartOfDay(), end.atTime(23, 59, 59));
@@ -135,16 +151,10 @@ public class RevenueReportService {
 
     @Transactional(readOnly = true)
     public List<PackageRevenueDto> getRevenueByPackage(LocalDate startDate, LocalDate endDate) {
-        LocalDate start = (startDate != null) ? startDate : LocalDate.now(clock).minusDays(30);
-        LocalDate end = (endDate != null) ? endDate : LocalDate.now(clock);
-
-        if (start.isAfter(end)) {
-            throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
-                    "Start date cannot be after end date");
-        }
+        DateRange range = resolveValidatedDateRange(startDate, endDate);
 
         List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
-                start.atStartOfDay(), end.atTime(23, 59, 59));
+                range.start().atStartOfDay(), range.end().atTime(23, 59, 59));
 
         Map<Long, BigDecimal> revenueMap = new HashMap<>();
         Map<Long, Integer> countMap = new HashMap<>();

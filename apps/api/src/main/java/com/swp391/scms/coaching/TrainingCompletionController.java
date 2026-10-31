@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -25,40 +26,60 @@ public class TrainingCompletionController {
     private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final TrainingCompletionService service;
     private final MessageService messageService;
+    private final Clock clock;
 
-    public TrainingCompletionController(TrainingCompletionService service) { this(service, null); }
+    public TrainingCompletionController(TrainingCompletionService service) {
+        this(service, null, Clock.system(CENTER_ZONE));
+    }
+
+    public TrainingCompletionController(TrainingCompletionService service, MessageService messageService) {
+        this(service, messageService, Clock.system(CENTER_ZONE));
+    }
 
     @Autowired
-    public TrainingCompletionController(TrainingCompletionService service, MessageService messageService) {
+    public TrainingCompletionController(TrainingCompletionService service,
+                                        MessageService messageService,
+                                        @Autowired(required = false) Clock clock) {
         this.service = service;
         this.messageService = messageService;
+        this.clock = clock != null ? clock : Clock.system(CENTER_ZONE);
     }
 
     private String msg(String key) { return messageService != null ? messageService.getMessage(key) : key; }
 
+    private LocalDate today() {
+        return LocalDate.now(clock);
+    }
+
     @Operation(summary = "Đọc bài tập đã hoàn thành của MEMBER trong ngày")
     @GetMapping
     public ApiResponse<List<Long>> list(@AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate exerciseDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate exerciseDate) {
+        LocalDate currentToday = today();
+        LocalDate targetDate = exerciseDate != null ? exerciseDate : currentToday;
         return ApiResponse.ok(msg("coaching.completion.list.success"),
-                service.getCompletedItemIds(principal.id(), exerciseDate, LocalDate.now(CENTER_ZONE)));
+                service.getCompletedItemIds(principal.id(), targetDate, currentToday));
     }
 
     @Operation(summary = "Đánh dấu hoàn thành bài tập trong ngày")
     @PutMapping("/{itemId}")
     public ApiResponse<TrainingCompletionDto> mark(@AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long itemId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate exerciseDate) {
-        service.setCompleted(principal.id(), itemId, exerciseDate, true, LocalDate.now(CENTER_ZONE));
-        return ApiResponse.ok(msg("coaching.completion.saved"), new TrainingCompletionDto(itemId, exerciseDate, true));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate exerciseDate) {
+        LocalDate currentToday = today();
+        LocalDate targetDate = exerciseDate != null ? exerciseDate : currentToday;
+        service.setCompleted(principal.id(), itemId, targetDate, true, currentToday);
+        return ApiResponse.ok(msg("coaching.completion.saved"), new TrainingCompletionDto(itemId, targetDate, true));
     }
 
     @Operation(summary = "Bỏ đánh dấu hoàn thành bài tập trong ngày")
     @DeleteMapping("/{itemId}")
     public ApiResponse<TrainingCompletionDto> unmark(@AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long itemId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate exerciseDate) {
-        service.setCompleted(principal.id(), itemId, exerciseDate, false, LocalDate.now(CENTER_ZONE));
-        return ApiResponse.ok(msg("coaching.completion.saved"), new TrainingCompletionDto(itemId, exerciseDate, false));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate exerciseDate) {
+        LocalDate currentToday = today();
+        LocalDate targetDate = exerciseDate != null ? exerciseDate : currentToday;
+        service.setCompleted(principal.id(), itemId, targetDate, false, currentToday);
+        return ApiResponse.ok(msg("coaching.completion.saved"), new TrainingCompletionDto(itemId, targetDate, false));
     }
 }

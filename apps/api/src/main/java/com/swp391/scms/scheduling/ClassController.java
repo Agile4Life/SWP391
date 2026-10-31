@@ -5,6 +5,8 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
 import com.swp391.scms.scheduling.service.ClassService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,10 +53,17 @@ public class ClassController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("scheduling.class.created"), service.createClass(request)));
     }
+
     @Operation(summary = "List classes")
     @GetMapping
     public ApiResponse<List<GymClassDto>> listClasses() {
         return ApiResponse.ok(msg("scheduling.class.list"), service.listClasses());
+    }
+
+    @Operation(summary = "List active coaches for class scheduling and filtering")
+    @GetMapping("/coaches")
+    public ApiResponse<List<CoachOptionDto>> listActiveCoaches() {
+        return ApiResponse.ok(msg("scheduling.class.list"), service.listActiveCoaches());
     }
 
     @Operation(summary = "Schedule a session for a class (CENTER_MANAGER only)")
@@ -66,14 +75,32 @@ public class ClassController {
                 .body(ApiResponse.created(msg("scheduling.session.created"), service.createSession(id, request)));
     }
 
-    @Operation(summary = "List class sessions with optional filters (date range, discipline, coach)")
+    @Operation(summary = "List class sessions with optional filters (date range, discipline, coach, classId)")
     @GetMapping("/sessions")
     public ApiResponse<List<ClassSessionDto>> listSessions(
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
             @RequestParam(required = false) Long disciplineId,
-            @RequestParam(required = false) Long coachId) {
-        return ApiResponse.ok(msg("scheduling.session.list"),
-                service.searchSessions(fromDate, toDate, disciplineId, coachId));
+            @RequestParam(required = false) Long coachId,
+            @RequestParam(required = false) Long classId) {
+        List<ClassSessionDto> result = service.searchSessions(fromDate, toDate, disciplineId, coachId);
+        if (classId != null) {
+            result = result.stream().filter(s -> classId.equals(s.classId())).toList();
+        }
+        return ApiResponse.ok(msg("scheduling.session.list"), result);
+    }
+
+    @Operation(summary = "Get enrolled students and health notes for a class")
+    @GetMapping("/{id}/students")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
+    public ApiResponse<List<EnrolledStudentDto>> getClassStudents(@PathVariable Long id) {
+        return ApiResponse.ok(msg("scheduling.class.list"), service.getClassStudents(id));
+    }
+
+    @Operation(summary = "Get enrolled students and health notes for a class session")
+    @GetMapping("/sessions/{sessionId}/students")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
+    public ApiResponse<List<EnrolledStudentDto>> getSessionStudents(@PathVariable Long sessionId) {
+        return ApiResponse.ok(msg("scheduling.session.list"), service.getSessionStudents(sessionId));
     }
 }

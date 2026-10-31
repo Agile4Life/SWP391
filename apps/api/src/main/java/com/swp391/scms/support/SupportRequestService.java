@@ -1,5 +1,6 @@
 package com.swp391.scms.support;
 
+import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -41,12 +43,13 @@ public class SupportRequestService {
     private final SupportRequestMessageRepository supportRequestMessageRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
+    private final Clock clock;
 
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
                                  UserRepository userRepository) {
-        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, null, null);
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, null, null, null);
     }
 
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
@@ -54,7 +57,7 @@ public class SupportRequestService {
                                  MemberRepository memberRepository,
                                  UserRepository userRepository,
                                  SupportRequestMessageRepository supportRequestMessageRepository) {
-        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, supportRequestMessageRepository, null, null);
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, supportRequestMessageRepository, null, null, null);
     }
 
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
@@ -63,7 +66,17 @@ public class SupportRequestService {
                                  UserRepository userRepository,
                                  NotificationService notificationService,
                                  MessageService messageService) {
-        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, notificationService, messageService);
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, notificationService, messageService, null);
+    }
+
+    public SupportRequestService(SupportRequestRepository supportRequestRepository,
+                                 SupportRequestMapper supportRequestMapper,
+                                 MemberRepository memberRepository,
+                                 UserRepository userRepository,
+                                 SupportRequestMessageRepository supportRequestMessageRepository,
+                                 NotificationService notificationService,
+                                 MessageService messageService) {
+        this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, supportRequestMessageRepository, notificationService, messageService, null);
     }
 
     @Autowired
@@ -73,7 +86,8 @@ public class SupportRequestService {
                                  UserRepository userRepository,
                                  SupportRequestMessageRepository supportRequestMessageRepository,
                                  NotificationService notificationService,
-                                 MessageService messageService) {
+                                 MessageService messageService,
+                                 @Autowired(required = false) Clock clock) {
         this.supportRequestRepository = supportRequestRepository;
         this.supportRequestMapper = supportRequestMapper;
         this.memberRepository = memberRepository;
@@ -81,6 +95,7 @@ public class SupportRequestService {
         this.supportRequestMessageRepository = supportRequestMessageRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
+        this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
     @Transactional
@@ -112,6 +127,7 @@ public class SupportRequestService {
     }
 
     @Transactional
+    @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
     public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto) {
         SupportRequest request = supportRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
@@ -141,7 +157,7 @@ public class SupportRequestService {
             request.setStatus(targetStatus);
             if ("resolved".equals(targetStatus) || "closed".equals(targetStatus)) {
                 if (request.getResolvedAt() == null) {
-                    request.setResolvedAt(LocalDateTime.now());
+                    request.setResolvedAt(LocalDateTime.now(clock));
                 }
             } else {
                 request.setResolvedAt(null);
@@ -210,6 +226,23 @@ public class SupportRequestService {
 
         User sender = userRepository.findByIdAndDeletedAtIsNull(senderUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", senderUserId));
+
+        // 1-step convenience: when staff replies to an open ticket, auto-transition to in_progress
+        // and auto-assign if unassigned so staff don't have to make a separate status PATCH first.
+        if (staff) {
+            boolean updatedTicket = false;
+            if ("open".equalsIgnoreCase(request.getStatus())) {
+                request.setStatus("in_progress");
+                updatedTicket = true;
+            }
+            if (request.getAssignedTo() == null) {
+                request.setAssignedTo(sender);
+                updatedTicket = true;
+            }
+            if (updatedTicket) {
+                supportRequestRepository.save(request);
+            }
+        }
 
         SupportRequestMessage message = new SupportRequestMessage(request, sender, dto.message().trim());
         SupportRequestMessage saved = supportRequestMessageRepository != null
@@ -294,9 +327,9 @@ public class SupportRequestService {
             return;
         }
         boolean valid = switch (currentStatus == null ? "" : currentStatus.toLowerCase()) {
-            case "open" -> "in_progress".equalsIgnoreCase(targetStatus);
-            case "in_progress" -> "open".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus);
-            case "resolved" -> "closed".equalsIgnoreCase(targetStatus);
+            case "open" -> "in_progress".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus);
+            case "in_progress" -> "open".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus) || "closed".equalsIgnoreCase(targetStatus);
+            case "resolved" -> "in_progress".equalsIgnoreCase(targetStatus) || "closed".equalsIgnoreCase(targetStatus);
             default -> false;
         };
         if (!valid) {

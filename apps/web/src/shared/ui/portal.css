@@ -1030,6 +1030,8 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .portal-dialog {
+  overflow-y: auto;
+  overscroll-behavior: contain;
   width: min(520px, calc(100vw - 32px));
   max-height: calc(100dvh - 48px);
   padding: 0;

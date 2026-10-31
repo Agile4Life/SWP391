@@ -1,6 +1,7 @@
 package com.swp391.scms.scheduling.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
@@ -44,6 +45,33 @@ public final class SchedulingResponses {
             String cancelReason,
             int capacity,
             long bookedCount
+    ) {
+    }
+
+    public record EnrolledStudentDto(
+            Long id,
+            Long memberId,
+            String membershipCode,
+            String fullName,
+            String email,
+            String phone,
+            String avatarUrl,
+            String fitnessGoal,
+            String healthNotes,
+            String fitnessLevel,
+            String emergencyContactName,
+            String emergencyContactPhone,
+            LocalDateTime enrolledAt,
+            String status
+    ) {
+    }
+
+    public record CoachOptionDto(
+            Long id,
+            String fullName,
+            String email,
+            String phone,
+            String status
     ) {
     }
 }

@@ -114,6 +114,46 @@ class RevenueReportServiceTest {
     }
 
     @Test
+    void renewalRateCountsOnlyExpiredPaidPeriodsInSelectedCohort() {
+        LocalDate start = LocalDate.of(2026, 10, 1);
+        LocalDate lastExpired = LocalDate.of(2026, 10, 4);
+        when(subscriptionRepository.countExpiredPaidPeriods(start, lastExpired)).thenReturn(4L);
+        when(subscriptionRepository.countRenewedExpiredPaidPeriods(start, lastExpired)).thenReturn(3L);
+
+        var result = service.getRenewalRate(start, LocalDate.of(2026, 10, 31));
+
+        assertEquals(4L, result.expiredCount());
+        assertEquals(3L, result.renewedCount());
+        assertEquals(75.0, result.renewalRate());
+    }
+
+    @Test
+    void renewalRateIsUnavailableForAnEmptyCohort() {
+        var result = service.getRenewalRate(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 10));
+
+        assertEquals(0L, result.expiredCount());
+        assertNull(result.renewalRate());
+        verifyNoInteractions(subscriptionRepository);
+    }
+
+    @Test
+    void renewalRateIsUnavailableWhenNoPaidPeriodsExpired() {
+        LocalDate start = LocalDate.of(2026, 10, 1);
+        LocalDate end = LocalDate.of(2026, 10, 4);
+        when(subscriptionRepository.countExpiredPaidPeriods(start, end)).thenReturn(0L);
+
+        assertNull(service.getRenewalRate(start, end).renewalRate());
+        verify(subscriptionRepository, never()).countRenewedExpiredPaidPeriods(any(), any());
+    }
+
+    @Test
+    void renewalRateRejectsReversedDateRange() {
+        assertThrows(BadRequestException.class, () -> service.getRenewalRate(
+                LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 1)));
+        verifyNoInteractions(subscriptionRepository);
+    }
+
+    @Test
     @DisplayName("Should calculate daily revenue correctly for date range")
     void shouldCalculateDailyRevenueCorrectly() {
         LocalDate start = LocalDate.of(2026, 10, 1);

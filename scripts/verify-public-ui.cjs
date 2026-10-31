@@ -6,7 +6,7 @@ const path = require('node:path');
 const { chromium } = require('playwright-core');
 
 const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';
-const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
+const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI_OUTPUT) : path.resolve(__dirname, '../docs/ui-review/fitness-reference');
 
 (async () => {
   fs.mkdirSync(output, { recursive: true });
@@ -47,7 +47,9 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     assert.equal(await page.locator('.fit-site--landing').count(),1);
     assert.equal(await page.locator('h1,h2').evaluateAll(elements=>elements.every(element=>{
       const style=getComputedStyle(element);
-      return style.fontFamily.includes('Plus Jakarta Sans') && style.fontWeight==='900' && style.textTransform==='uppercase';
+      // DESIGN.md: the sport-story heading has its own 800-weight reference scale.
+      const weight = element.matches('#multisport h2') ? '800' : '900';
+      return style.fontFamily.includes('Plus Jakarta Sans') && style.fontWeight===weight && style.textTransform==='uppercase';
     })),true,'landing display typography matches the membership-benefits reference');
     await page.locator('.fit-hero-athlete').evaluate((image) => image.decode());
     assert.equal(await page.locator('h1').count(), 1);
@@ -170,7 +172,7 @@ const output = path.resolve(__dirname, '../docs/ui-review/fitness-reference');
     assert.equal(await page.locator('.fit-hero-action a').getAttribute('href'), '/member/packages');
     await page.locator('.fit-muscle-zone[data-muscle="chest"] path').first().hover({ force: true });
     assert.equal(await page.locator('.fit-muscle-cta').getAttribute('href'), '/member/packages');
-    assert.equal(await page.locator('.fit-plan a').first().getAttribute('href'), '/member/packages');
+    assert.equal(await page.locator('.fit-plan a').first().getAttribute('href'), '/member/packages?packageId=1');
     assert.equal(await page.locator('.fit-header-cta').getAttribute('href'), '/member/dashboard');
     await page.evaluate(() => localStorage.removeItem('fitcenter_auth_session'));
     check('signed-in member CTAs lead to existing portal routes');
