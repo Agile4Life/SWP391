@@ -4,6 +4,8 @@ Cập nhật: **22/10/2026**, theo các quyết định trực tiếp của ngư
 
 ## Phạm vi
 
+Support Member — SCRUM-128 giai đoạn 1 (31/10/2026): tạo ticket thành công mở ngay chat bằng ID API trả về; mở lại từ danh sách bằng native `Modal`, có Escape/focus và token portal Light/Dark. Draft và trạng thái gửi tách theo ticket; response cũ bị vô hiệu hóa khi đổi/đóng hội thoại hoặc unmount. Tin nhắn/trạng thái tải lại qua API khi mở hoặc làm mới, không tuyên bố realtime ticket. `/messages` là Direct Messages riêng; Supabase private realtime cho ticket và UI Receptionist thuộc giai đoạn 2.
+
 Hiệu năng tải trang (29/10/2026): tải module theo route, có trạng thái tải và lỗi theo theme sáng/tối charcoal–salmon. PWA cache sẵn shell, dependency khởi động và CSS; module của trang đã truy cập được cache khi tải thành công. Trang chưa mở cần mạng cho lần tải đầu. Giữ nguyên phân quyền, tổ chức portal, thứ tự nội dung và thao tác chủ động cập nhật PWA; API và dữ liệu xác thực tiếp tục nằm ngoài cache.
 
 Portal PWA Android/iOS (29/10/2026, người dùng đã duyệt): cài lên màn hình chính và mở thẳng `/portal`, chuyển đúng role sau xác thực. Desktop giữ sidebar icon, dashboard và tổ chức nội dung hiện hành. Mobile <=767px có thanh điều hướng dưới gồm ba tác vụ theo role và “Thêm”: Member Tổng quan/Lịch học/Quét QR; Staff Lễ tân/Lớp học/Check-in; Coach Lịch dạy/Điểm danh/Giáo án; Manager Lễ tân/Báo cáo/Tài khoản. “Thêm” mở toàn bộ màn hình được phép, hồ sơ và đăng xuất. Chừa safe-area cho iOS và khoảng đáy cho nội dung/chatbot, vùng chạm tối thiểu 44px, input mobile 16px. Dialog giữ focus/Escape và cuộn được khi bàn phím mở; bảng chỉ cuộn trong vùng riêng. Giữ theme sáng/tối, charcoal–salmon, thứ tự card và cuộn native.
