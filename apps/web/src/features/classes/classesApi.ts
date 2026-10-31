@@ -34,6 +34,7 @@ export interface CoachUser {
   email: string;
   phone?: string | null;
   status: string;
+  gender?: string | null;
 }
 
 export interface CreateClassPayload {
@@ -62,6 +63,7 @@ interface UserDto {
   fullName: string;
   email: string;
   phone: string | null;
+  gender?: string | null;
   status: string;
 }
 
@@ -123,7 +125,16 @@ export const classesApi = {
     try {
       const coaches = await apiFetch<CoachUser[]>('/classes/coaches');
       if (Array.isArray(coaches)) {
-        return coaches.filter((u) => (!('roleCode' in u) || (u as unknown as UserDto).roleCode === 'COACH') && u.status === 'active').map((u) => ({ id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, status: u.status }));
+        return coaches
+          .filter((u) => (!('roleCode' in u) || (u as unknown as UserDto).roleCode === 'COACH') && u.status === 'active')
+          .map((u) => ({
+            id: u.id,
+            fullName: u.fullName,
+            email: u.email,
+            phone: u.phone,
+            status: u.status,
+            gender: u.gender ?? null,
+          }));
       }
     } catch {
       // Fallback sang /users cho môi trường cũ
@@ -137,6 +148,7 @@ export const classesApi = {
         email: u.email,
         phone: u.phone,
         status: u.status,
+        gender: u.gender ?? null,
       }));
   },
 

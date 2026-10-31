@@ -230,7 +230,8 @@ public class ClassService {
                         c.getUser().getFullName(),
                         c.getUser().getEmail(),
                         c.getUser().getPhone(),
-                        c.getEmploymentStatus()))
+                        c.getEmploymentStatus(),
+                        c.getUser().getGender()))
                 .toList();
     }
 

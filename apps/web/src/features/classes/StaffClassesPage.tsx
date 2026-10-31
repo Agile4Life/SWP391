@@ -55,6 +55,12 @@ export function StaffClassesPage() {
     );
   }, [currentUser]);
 
+  // BR-01b: Lễ tân (STAFF) CHỈ ĐƯỢC XEM lịch học - ẩn các nút tạo / sửa lớp
+  const canManageClasses = useMemo(() => {
+    if (!currentUser) return false;
+    return currentUser.role === 'MANAGER';
+  }, [currentUser]);
+
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
@@ -146,6 +152,7 @@ export function StaffClassesPage() {
   }
 
   const handleOpenModal = () => {
+    if (!canManageClasses) return;
     setModalError(null);
     setPendingClassId(null);
     setPendingClassSignature(null);
@@ -341,17 +348,19 @@ export function StaffClassesPage() {
   return (
     <div className="portal-container">
       <PageHeader
-        eyebrow="Huấn luyện"
-        title="Quản lý lớp học & xếp lịch"
+        eyebrow={currentUser?.role === 'STAFF' ? 'Lễ tân' : 'Huấn luyện'}
+        title={currentUser?.role === 'STAFF' ? 'Lịch học & danh sách lớp' : 'Quản lý lớp học & xếp lịch'}
         actions={
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleOpenModal}
-            data-testid="create-class-button"
-          >
-            + Tạo lớp học &amp; xếp lịch
-          </button>
+          canManageClasses ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleOpenModal}
+              data-testid="create-class-button"
+            >
+              + Tạo lớp học &amp; xếp lịch
+            </button>
+          ) : undefined
         }
       />
 
@@ -426,9 +435,11 @@ export function StaffClassesPage() {
             <p style={{ color: 'var(--color-text-muted)', maxWidth: 460, margin: '0 auto 16px auto' }}>
               Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.
             </p>
-            <button type="button" className="btn-primary" onClick={handleOpenModal}>
-              + Tạo lớp học đầu tiên
-            </button>
+            {canManageClasses && (
+              <button type="button" className="btn-primary" onClick={handleOpenModal}>
+                + Tạo lớp học đầu tiên
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -624,11 +635,21 @@ export function StaffClassesPage() {
                 disabled={isSubmitting}
               >
                 <option value="">-- Chọn huấn luyện viên --</option>
-                {coaches.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName} ({c.email})
-                  </option>
-                ))}
+                {coaches.map((c) => {
+                  const genderLabel =
+                    c.gender === 'female'
+                      ? 'Nữ'
+                      : c.gender === 'male'
+                      ? 'Nam'
+                      : c.gender === 'other'
+                      ? 'Khác'
+                      : null;
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {c.fullName} {genderLabel ? `(${genderLabel})` : ''} - {c.email}
+                    </option>
+                  );
+                })}
               </Select>
             </div>
 

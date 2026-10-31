@@ -77,4 +77,12 @@ export const coachingApi = {
     }
     throw new Error('Dữ liệu học viên không hợp lệ');
   },
+
+  getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {
+    const id = coachId ?? (await getProfile()).userId;
+    const sessions = await coachingApi.getCoachSchedule(id);
+    const classSessions = [...new Map(sessions.map(session => [session.classId, session])).values()];
+    const rosters = await Promise.all(classSessions.map(session => coachingApi.getSessionStudents(session.id)));
+    return [...new Map(rosters.flat().map(student => [student.memberId, student])).values()];
+  },
 };

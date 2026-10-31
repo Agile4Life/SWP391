@@ -93,6 +93,7 @@ class UserControllerTest {
         createDto.setEmail("anh@fit.vn");
         createDto.setPhone("0987654321");
         createDto.setPassword("Pass@1234");
+        createDto.setGender("female");
 
         when(userService.createUser(any())).thenReturn(sampleUser(3L, "COACH", "active"));
 
@@ -155,5 +156,18 @@ class UserControllerTest {
         mockMvc.perform(delete("/api/v1/users/4"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/users/cleanup-inactive calls cleanupInactiveUsers and returns deletedCount")
+    void cleanupInactiveUsersSuccess() throws Exception {
+        when(userService.cleanupInactiveUsers()).thenReturn(3);
+
+        mockMvc.perform(post("/api/v1/users/cleanup-inactive"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deletedCount").value(3));
+
+        verify(userService).cleanupInactiveUsers();
     }
 }

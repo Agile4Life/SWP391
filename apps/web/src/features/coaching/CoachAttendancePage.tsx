@@ -1,33 +1,131 @@
+import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
+import { Modal } from '../../shared/ui/Modal';
 import { toast } from '../../shared/ui/toast';
 import {
   attendanceApi,
   type AttendanceStudent,
-  type AttendanceStatus,
   type CoachClassSession,
 } from './attendanceApi';
 import './coach-attendance.css';
 
+// Chỉ giữ lại 2 trạng thái điểm danh: Có mặt và Vắng mặt (đã bỏ Đi muộn & Có phép)
 const STATUS_CONFIG: {
-  value: AttendanceStatus;
+  value: 'present' | 'absent';
   label: string;
   className: string;
   indicatorColor: string;
 }[] = [
   { value: 'present', label: 'Có mặt', className: 'is-present', indicatorColor: '#4ade80' },
   { value: 'absent', label: 'Vắng mặt', className: 'is-absent', indicatorColor: '#f87171' },
-  { value: 'late', label: 'Đi muộn', className: 'is-late', indicatorColor: '#fbbf24' },
-  { value: 'excused', label: 'Có phép', className: 'is-excused', indicatorColor: '#9ca3af' },
 ];
 
+export interface AttendanceHistoryRecord {
+  id: string;
+  sessionId: number;
+  className: string;
+  roomName: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  savedAt: string;
+  presentCount: number;
+  absentCount: number;
+  totalStudents: number;
+  students: AttendanceStudent[];
+}
+
+export interface EvaluationHistoryRecord {
+  id: string;
+  sessionId: number;
+  className: string;
+  roomName: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  savedAt: string;
+  averageScore: number;
+  totalStudents: number;
+  students: AttendanceStudent[];
+}
+
+
 export function CoachAttendancePage() {
+  const STORAGE_KEY_HISTORY = coachHistoryStorageKey('attendance');
+  const STORAGE_KEY_EVAL_HISTORY = coachHistoryStorageKey('evaluation');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'evaluation' | 'attendance-history' | 'eval-history'>('attendance');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
+  const [rosterError, setRosterError] = useState<string | null>(null);
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [savingEvaluation, setSavingEvaluation] = useState<boolean>(false);
+
+  // Modal sửa điểm danh giữa màn hình (ở lại tab Lịch sử)
+  const [editingAttendanceRecord, setEditingAttendanceRecord] = useState<AttendanceHistoryRecord | null>(null);
+
+  // Modal sửa đánh giá giữa màn hình (ở lại tab Lịch sử)
+  const [editingEvalRecord, setEditingEvalRecord] = useState<EvaluationHistoryRecord | null>(null);
+
+  // Thông báo nổi bật giữa màn hình theo yêu cầu
+  const [centerNotification, setCenterNotification] = useState<string | null>(null);
+
+  const showCenterNotification = (msg: string = 'Cập nhật thành công') => {
+    setCenterNotification(msg);
+    setTimeout(() => {
+      setCenterNotification(null);
+    }, 2800);
+  };
+
+  // Lịch sử điểm danh (hỗ trợ lưu, sửa trong popup, xoá)
+  const [history, setHistory] = useState<AttendanceHistoryRecord[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_HISTORY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // Fallback
+    }
+    return [];
+  });
+
+  // Lịch sử đánh giá học viên (hỗ trợ lưu, sửa trong popup, xoá)
+  const [evalHistory, setEvalHistory] = useState<EvaluationHistoryRecord[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_EVAL_HISTORY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // Fallback
+    }
+    return [];
+  });
+
+  // Đồng bộ lịch sử điểm danh vào localStorage
+  const saveHistoryToStorage = (updated: AttendanceHistoryRecord[]) => {
+    setHistory(updated);
+    try {
+      localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  };
+
+  // Đồng bộ lịch sử đánh giá vào localStorage
+  const saveEvalHistoryToStorage = (updated: EvaluationHistoryRecord[]) => {
+    setEvalHistory(updated);
+    try {
+      localStorage.setItem(STORAGE_KEY_EVAL_HISTORY, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  };
 
   // Load danh sách buổi học của HLV
   useEffect(() => {
@@ -64,13 +162,25 @@ export function CoachAttendancePage() {
     let mounted = true;
     const fetchStudents = async () => {
       setLoading(true);
+      setStudents([]);
+      setLoadedSessionId(null);
+      setRosterError(null);
       try {
         const list = await attendanceApi.getSessionStudents(selectedSessionId);
         if (mounted) {
-          setStudents(list);
+          // Chuẩn hóa trạng thái: chỉ giữ 'present' hoặc 'absent'
+          const normalized = list.map((item) => ({
+            ...item,
+            status: (item.status === 'present' ? 'present' : 'absent') as 'present' | 'absent',
+            progressScore: item.progressScore || 80,
+            notes: item.notes || '',
+          }));
+          setStudents(normalized);
+          setLoadedSessionId(selectedSessionId);
         }
       } catch {
         if (mounted) {
+          setRosterError('Không thể tải danh sách học viên của buổi học. Vui lòng chọn lại buổi học.');
           toast.error('Không thể tải danh sách học viên của buổi học.');
         }
       } finally {
@@ -84,25 +194,32 @@ export function CoachAttendancePage() {
     };
   }, [selectedSessionId]);
 
+  const rosterReady = selectedSessionId !== null && loadedSessionId === selectedSessionId && !loading && !rosterError;
+
   const activeSession = useMemo(() => {
-    return sessions.find((s) => s.id === selectedSessionId) || sessions[0];
+    return sessions.find((s) => s.id === selectedSessionId) ;
   }, [sessions, selectedSessionId]);
 
-  // Cập nhật trạng thái điểm danh cho 1 học viên
-  const handleUpdateStatus = (studentId: number, status: AttendanceStatus) => {
+  // Kiểm tra buổi hiện tại đã được lưu hay chưa
+  const currentSavedRecord = useMemo(() => {
+    return history.find((h) => h.sessionId === selectedSessionId);
+  }, [history, selectedSessionId]);
+
+  // Cập nhật trạng thái điểm danh cho 1 học viên (chỉ có Có mặt hoặc Vắng mặt)
+  const handleUpdateStatus = (studentId: number, status: 'present' | 'absent') => {
     setStudents((prev) =>
       prev.map((s) => (s.id === studentId ? { ...s, status } : s))
     );
   };
 
-  // Cập nhật điểm tiến bộ (slider 1-100)
+  // Cập nhật thang điểm tiến bộ (tab Đánh giá)
   const handleUpdateScore = (studentId: number, score: number) => {
     setStudents((prev) =>
       prev.map((s) => (s.id === studentId ? { ...s, progressScore: score } : s))
     );
   };
 
-  // Cập nhật nhận xét kỹ thuật
+  // Cập nhật nhận xét kỹ thuật (tab Đánh giá)
   const handleUpdateNotes = (studentId: number, notes: string) => {
     setStudents((prev) =>
       prev.map((s) => (s.id === studentId ? { ...s, notes } : s))
@@ -115,9 +232,9 @@ export function CoachAttendancePage() {
     toast.success('Đã chọn nhanh trạng thái Có mặt cho toàn bộ học viên.');
   };
 
-  // Lưu điểm danh & Đánh giá hàng loạt (Batch Save)
-  const handleSaveBatchAttendance = async () => {
-    if (!selectedSessionId) {
+  // Lưu hoặc Cập nhật điểm danh (Tab Điểm danh)
+  const handleSaveAttendance = async () => {
+    if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
       toast.error('Vui lòng chọn buổi học cần lưu điểm danh.');
       return;
     }
@@ -131,8 +248,42 @@ export function CoachAttendancePage() {
         notes: s.notes.trim(),
       }));
 
-      const res = await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
-      toast.success(res.message || 'Lưu điểm danh & đánh giá thành công!');
+      await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
+
+      const presentCount = students.filter((s) => s.status === 'present').length;
+      const absentCount = students.filter((s) => s.status === 'absent').length;
+      const nowFormatted = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+
+      const updatedHistoryItem: AttendanceHistoryRecord = {
+        id: `hist-${selectedSessionId}-${Date.now()}`,
+        sessionId: selectedSessionId,
+        className: activeSession.className,
+        roomName: activeSession.roomName,
+        sessionDate: activeSession.sessionDate,
+        startTime: activeSession.startTime,
+        endTime: activeSession.endTime,
+        savedAt: nowFormatted,
+        presentCount,
+        absentCount,
+        totalStudents: students.length,
+        students: [...students],
+      };
+
+      const filtered = history.filter((h) => h.sessionId !== selectedSessionId);
+      const newHistory = [updatedHistoryItem, ...filtered];
+      saveHistoryToStorage(newHistory);
+
+      showCenterNotification(
+        currentSavedRecord
+          ? 'Đã cập nhật lại điểm danh thành công!'
+          : 'Lưu điểm danh thành công!'
+      );
     } catch {
       toast.error('Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.');
     } finally {
@@ -140,203 +291,996 @@ export function CoachAttendancePage() {
     }
   };
 
-  // Thống kê nhanh trạng thái
+  // Lưu Đánh giá học viên (Tab Đánh giá riêng)
+  const handleSaveEvaluations = async () => {
+    if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
+      toast.error('Vui lòng chọn buổi học cần lưu đánh giá.');
+      return;
+    }
+
+    setSavingEvaluation(true);
+    try {
+      const payload = students.map((s) => ({
+        memberId: s.memberId,
+        status: s.status,
+        progressScore: s.progressScore,
+        notes: s.notes.trim(),
+      }));
+
+      await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
+
+      const totalScore = students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
+      const averageScore = students.length > 0 ? Math.round(totalScore / students.length) : 0;
+      const nowFormatted = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+
+      const updatedEvalItem: EvaluationHistoryRecord = {
+        id: `eval-${selectedSessionId}-${Date.now()}`,
+        sessionId: selectedSessionId,
+        className: activeSession.className,
+        roomName: activeSession.roomName,
+        sessionDate: activeSession.sessionDate,
+        startTime: activeSession.startTime,
+        endTime: activeSession.endTime,
+        savedAt: nowFormatted,
+        averageScore,
+        totalStudents: students.length,
+        students: [...students],
+      };
+
+      const filtered = evalHistory.filter((h) => h.sessionId !== selectedSessionId);
+      const newEvalHistory = [updatedEvalItem, ...filtered];
+      saveEvalHistoryToStorage(newEvalHistory);
+
+      showCenterNotification('Đã lưu đánh giá tiến bộ học viên vào Lịch sử đánh giá!');
+    } catch {
+      toast.error('Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.');
+    } finally {
+      setSavingEvaluation(false);
+    }
+  };
+
+  // Xoá điểm danh buổi hiện tại
+  const handleDeleteCurrentAttendance = () => {
+    if (!selectedSessionId) return;
+    const confirmDelete = window.confirm(
+      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.'
+    );
+    if (!confirmDelete) return;
+
+    const filtered = history.filter((h) => h.sessionId !== selectedSessionId);
+    saveHistoryToStorage(filtered);
+
+    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
+  };
+
+  // Mở modal sửa điểm danh trực tiếp giữa màn hình (Không chuyển tab)
+  const handleOpenEditAttendanceModal = (record: AttendanceHistoryRecord) => {
+    setEditingAttendanceRecord({
+      ...record,
+      students: record.students.map((s) => ({ ...s })),
+    });
+  };
+
+  // Thay đổi trạng thái học viên trong Modal sửa điểm danh
+  const handleUpdateModalAttendanceStatus = (studentId: number, status: 'present' | 'absent') => {
+    if (!editingAttendanceRecord) return;
+    setEditingAttendanceRecord({
+      ...editingAttendanceRecord,
+      students: editingAttendanceRecord.students.map((s) =>
+        s.id === studentId ? { ...s, status } : s
+      ),
+    });
+  };
+
+  // Lưu cập nhật từ Modal sửa điểm danh
+  const handleSaveModalAttendance = async () => {
+    if (!editingAttendanceRecord) return;
+    setSaving(true);
+    try {
+      const latest = await attendanceApi.getSessionStudents(editingAttendanceRecord.sessionId);
+      const latestByMember = new Map(latest.map(student => [student.memberId, student]));
+      const updatedStudents = editingAttendanceRecord.students.map(student => {
+        const current = latestByMember.get(student.memberId);
+        return {
+          ...student,
+          progressScore: current?.progressScore ?? student.progressScore,
+          notes: current?.notes ?? student.notes,
+        };
+      });
+      await attendanceApi.saveBatchAttendance(editingAttendanceRecord.sessionId, updatedStudents.map(student => ({
+        memberId: student.memberId,
+        status: student.status,
+        progressScore: student.progressScore,
+        notes: student.notes.trim(),
+      })));
+
+      const presentCount = editingAttendanceRecord.students.filter((s) => s.status === 'present').length;
+      const absentCount = editingAttendanceRecord.students.filter((s) => s.status === 'absent').length;
+      const nowFormatted = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+
+      const updatedRecord: AttendanceHistoryRecord = {
+        ...editingAttendanceRecord,
+        students: updatedStudents,
+        presentCount,
+        absentCount,
+        savedAt: nowFormatted,
+      };
+
+      const newHistory = history.map((h) =>
+        h.id === updatedRecord.id ? updatedRecord : h
+      );
+      saveHistoryToStorage(newHistory);
+
+      if (selectedSessionId === updatedRecord.sessionId) {
+        setStudents(updatedRecord.students);
+      }
+
+      setEditingAttendanceRecord(null);
+      setTimeout(() => {
+        showCenterNotification('Cập nhật thành công');
+      }, 50);
+    } catch {
+      toast.error('Không thể lưu cập nhật. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Mở modal sửa đánh giá trực tiếp giữa màn hình (Không chuyển tab)
+  const handleOpenEditEvalModal = (record: EvaluationHistoryRecord) => {
+    setEditingEvalRecord({
+      ...record,
+      students: record.students.map((s) => ({ ...s })),
+    });
+  };
+
+  // Cập nhật điểm trong Modal sửa đánh giá
+  const handleUpdateModalEvalScore = (studentId: number, score: number) => {
+    if (!editingEvalRecord) return;
+    setEditingEvalRecord({
+      ...editingEvalRecord,
+      students: editingEvalRecord.students.map((s) =>
+        s.id === studentId ? { ...s, progressScore: score } : s
+      ),
+    });
+  };
+
+  // Cập nhật nhận xét trong Modal sửa đánh giá
+  const handleUpdateModalEvalNotes = (studentId: number, notes: string) => {
+    if (!editingEvalRecord) return;
+    setEditingEvalRecord({
+      ...editingEvalRecord,
+      students: editingEvalRecord.students.map((s) =>
+        s.id === studentId ? { ...s, notes } : s
+      ),
+    });
+  };
+
+  // Lưu cập nhật từ Modal sửa đánh giá
+  const handleSaveModalEval = async () => {
+    if (!editingEvalRecord) return;
+    setSaving(true);
+    try {
+      const latest = await attendanceApi.getSessionStudents(editingEvalRecord.sessionId);
+      const latestByMember = new Map(latest.map(student => [student.memberId, student]));
+      const updatedStudents = editingEvalRecord.students.map(student => {
+        const current = latestByMember.get(student.memberId);
+        return { ...student, status: current?.status ?? student.status };
+      });
+      await attendanceApi.saveBatchAttendance(editingEvalRecord.sessionId, updatedStudents.map(student => ({
+        memberId: student.memberId,
+        status: student.status,
+        progressScore: student.progressScore,
+        notes: student.notes.trim(),
+      })));
+
+      const totalScore = editingEvalRecord.students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
+      const averageScore =
+        editingEvalRecord.students.length > 0
+          ? Math.round(totalScore / editingEvalRecord.students.length)
+          : 0;
+      const nowFormatted = new Date().toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+
+      const updatedRecord: EvaluationHistoryRecord = {
+        ...editingEvalRecord,
+        students: updatedStudents,
+        averageScore,
+        savedAt: nowFormatted,
+      };
+
+      const newEvalHistory = evalHistory.map((h) =>
+        h.id === updatedRecord.id ? updatedRecord : h
+      );
+      saveEvalHistoryToStorage(newEvalHistory);
+
+      if (selectedSessionId === updatedRecord.sessionId) {
+        setStudents(updatedRecord.students);
+      }
+
+      setEditingEvalRecord(null);
+      setTimeout(() => {
+        showCenterNotification('Cập nhật thành công');
+      }, 50);
+    } catch {
+      toast.error('Không thể lưu cập nhật. Vui lòng thử lại.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Xoá bản ghi trong Lịch sử điểm danh
+  const handleDeleteFromHistory = (recordId: string) => {
+    const confirmDelete = window.confirm(
+      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu trên hệ thống vẫn được giữ nguyên.'
+    );
+    if (!confirmDelete) return;
+
+    const updated = history.filter((h) => h.id !== recordId);
+    saveHistoryToStorage(updated);
+    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
+  };
+
+  // Xoá bản ghi trong Lịch sử đánh giá
+  const handleDeleteFromEvalHistory = (recordId: string) => {
+    const confirmDelete = window.confirm(
+      'Ẩn bản ghi này trên trình duyệt này? Dữ liệu trên hệ thống vẫn được giữ nguyên.'
+    );
+    if (!confirmDelete) return;
+
+    const updated = evalHistory.filter((h) => h.id !== recordId);
+    saveEvalHistoryToStorage(updated);
+    toast.success('Đã ẩn bản ghi trên trình duyệt này. Dữ liệu trên hệ thống vẫn được giữ nguyên.');
+  };
+
+  // Thống kê nhanh trạng thái (chỉ Có mặt và Vắng mặt)
   const summaryCounts = useMemo(() => {
-    return {
-      present: students.filter((s) => s.status === 'present').length,
-      absent: students.filter((s) => s.status === 'absent').length,
-      late: students.filter((s) => s.status === 'late').length,
-      excused: students.filter((s) => s.status === 'excused').length,
-    };
+    const present = students.filter((s) => s.status === 'present').length;
+    const absent = students.filter((s) => s.status === 'absent').length;
+    const total = students.length;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+    return { present, absent, total, rate };
   }, [students]);
 
   return (
     <div className="coach-attendance-page portal-container">
       <PageHeader
-        eyebrow="Huấn luyện"
-        title="Điểm Danh Buổi Học & Đánh Giá"
-        subtitle="Quản lý chuyên biệt cho HLV: Ghi nhận chuyên cần và chấm điểm tiến bộ kỹ thuật học viên."
+        eyebrow="Huấn luyện viên"
+        title={
+          activeTab === 'evaluation'
+            ? 'Đánh Giá Tiến Bộ Học Viên'
+            : activeTab === 'attendance-history'
+            ? 'Lịch Sử Điểm Danh Lớp Học'
+            : activeTab === 'eval-history'
+            ? 'Lịch Sử Đánh Giá Học Viên'
+            : 'Điểm Danh Buổi Học'
+        }
+        subtitle={
+          activeTab === 'evaluation'
+            ? 'Khu vực đánh giá chuyên biệt: Chấm thang điểm tiến bộ và nhận xét kỹ thuật, bài tập cho từng học viên.'
+            : activeTab === 'attendance-history'
+            ? 'Lịch sử điểm danh của tài khoản này đã lưu trên trình duyệt này. Cập nhật được lưu lên hệ thống; ẩn bản ghi chỉ áp dụng trên trình duyệt.'
+            : activeTab === 'eval-history'
+            ? 'Lịch sử đánh giá của tài khoản này đã lưu trên trình duyệt này. Chỉnh sửa được lưu lên hệ thống.'
+            : 'Ghi nhận chuyên cần nhanh chóng cho học viên tham gia buổi học với 2 trạng thái: Có mặt hoặc Vắng mặt.'
+        }
       />
 
-      {/* Header Selector & Session Info */}
-      <div className="attendance-header-card">
-        <div className="attendance-session-meta">
-          <h3 className="session-name-title">
-            {activeSession?.className || 'Buổi tập Huấn luyện viên'}
-          </h3>
-          <div className="session-details-row">
-            <span>
-              Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
-            </span>
-            <span>
-              Giờ: <strong>{activeSession?.startTime} - {activeSession?.endTime}</strong>
-            </span>
-            <span>
-              Đã book: <strong>{students.length} học viên</strong>
-            </span>
-            {activeSession?.disciplineName && (
-              <span>Bộ môn: <strong>{activeSession.disciplineName}</strong></span>
-            )}
-          </div>
-        </div>
-
-        <div className="attendance-session-selector">
-          <Select
-            className="portal-select"
-            value={String(selectedSessionId || '')}
-            onChange={(e) => setSelectedSessionId(Number(e.target.value))}
-            aria-label="Chọn buổi học cần điểm danh"
-          >
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.className} ({s.startTime} - {s.endTime})
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
-
-      {/* Summary Pills */}
-      <div className="attendance-quick-summary">
-        <div className="summary-pill-card is-present">
-          <span className="pill-label">Có mặt</span>
-          <span className="pill-value">{summaryCounts.present}</span>
-        </div>
-        <div className="summary-pill-card is-absent">
-          <span className="pill-label">Vắng mặt</span>
-          <span className="pill-value">{summaryCounts.absent}</span>
-        </div>
-        <div className="summary-pill-card is-late">
-          <span className="pill-label">Đi muộn</span>
-          <span className="pill-value">{summaryCounts.late}</span>
-        </div>
-        <div className="summary-pill-card is-excused">
-          <span className="pill-label">Có phép</span>
-          <span className="pill-value">{summaryCounts.excused}</span>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="attendance-toolbar">
-        <span style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-          Danh sách <strong>{students.length}</strong> học viên đã ghi danh:
-        </span>
+      {/* Tabs chuyển đổi giữa 4 mục: Điểm danh, Đánh giá, Lịch sử điểm danh, Lịch sử đánh giá */}
+      <div className="attendance-nav-tabs">
         <button
           type="button"
-          className="btn-quick-present"
-          onClick={handleMarkAllPresent}
-          disabled={loading || students.length === 0}
+          className={`attendance-tab-btn ${activeTab === 'attendance' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('attendance')}
         >
-          ✓ Điểm danh nhanh tất cả Có mặt
+          Điểm danh buổi học
+        </button>
+        <button
+          type="button"
+          className={`attendance-tab-btn ${activeTab === 'evaluation' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('evaluation')}
+        >
+          Đánh giá học viên
+        </button>
+        <button
+          type="button"
+          className={`attendance-tab-btn ${activeTab === 'attendance-history' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('attendance-history')}
+        >
+          Lịch sử điểm danh ({history.length})
+        </button>
+        <button
+          type="button"
+          className={`attendance-tab-btn ${activeTab === 'eval-history' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('eval-history')}
+        >
+          Lịch sử đánh giá ({evalHistory.length})
         </button>
       </div>
 
-      {/* Students Attendance List */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
-          <p>Đang tải danh sách học viên buổi học...</p>
-        </div>
-      ) : students.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <p>Chưa có học viên nào book buổi học này.</p>
-        </div>
-      ) : (
-        <div className="attendance-students-list">
-          {students.map((student) => {
-            return (
-              <div key={student.id} className="attendance-student-card">
-                <div className="student-card-top-row">
-                  <div className="student-identity-group">
-                    <div className="student-avatar-circle">
-                      {student.fullName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="student-meta-text">
-                      <h4 className="student-full-name">{student.fullName}</h4>
-                      <span className="student-code-badge">{student.membershipCode}</span>
-                    </div>
-                  </div>
+      {/* Header Selector & Session Info (Dùng cho tab Điểm danh & Đánh giá) */}
+      {(activeTab === 'attendance' || activeTab === 'evaluation') && (
+        <div className="attendance-header-card">
+          <div className="attendance-session-meta">
+            <div className="session-title-wrap">
+              <h3 className="session-name-title">
+                {activeSession?.className || 'Buổi tập Huấn luyện viên'}
+              </h3>
+              {currentSavedRecord ? (
+                <span className="session-status-badge is-saved">
+                  Đã lưu điểm danh lúc {currentSavedRecord.savedAt}
+                </span>
+              ) : (
+                <span className="session-status-badge is-pending">
+                  Chưa lưu điểm danh
+                </span>
+              )}
+            </div>
+            <div className="session-details-row">
+              <span>
+                Phòng: <strong>{activeSession?.roomName || 'Studio chính'}</strong>
+              </span>
+              <span>
+                Giờ: <strong>{activeSession?.startTime} - {activeSession?.endTime}</strong>
+              </span>
+              <span>
+                Đã đăng ký: <strong>{students.length} học viên</strong>
+              </span>
+              {activeSession?.disciplineName && (
+                <span>
+                  Bộ môn: <strong>{activeSession.disciplineName}</strong>
+                </span>
+              )}
+            </div>
+          </div>
 
-                  {/* Radio button chọn nhanh 4 trạng thái */}
-                  <div
-                    className="attendance-radio-group"
-                    role="radiogroup"
-                    aria-label={`Trạng thái điểm danh của ${student.fullName}`}
-                  >
-                    {STATUS_CONFIG.map((cfg) => {
-                      const isSelected = student.status === cfg.value;
-                      return (
-                        <label
-                          key={cfg.value}
-                          className={`radio-status-label ${cfg.className} ${isSelected ? 'is-active' : ''}`}
-                        >
-                          <input
-                            type="radio"
-                            name={`attendance-status-${student.id}`}
-                            value={cfg.value}
-                            checked={isSelected}
-                            onChange={() => handleUpdateStatus(student.id, cfg.value)}
-                          />
-                          <span
-                            style={{
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: cfg.indicatorColor,
-                              display: 'inline-block',
-                            }}
-                          />
-                          {cfg.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Form con đánh giá nhanh từng học viên */}
-                <div className="student-eval-subform">
-                  <div className="slider-container">
-                    <div className="slider-header">
-                      <span>Thang điểm tiến bộ (Progress Score):</span>
-                      <span className="score-badge">{student.progressScore}/100</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="100"
-                      className="eval-score-slider"
-                      value={student.progressScore}
-                      onChange={(e) => handleUpdateScore(student.id, Number(e.target.value))}
-                      aria-label={`Điểm tiến bộ của ${student.fullName}`}
-                    />
-                  </div>
-
-                  <input
-                    type="text"
-                    className="eval-comment-input"
-                    placeholder="Nhận xét kỹ thuật, tư thế động tác và lưu ý sức khỏe buổi tập..."
-                    value={student.notes}
-                    onChange={(e) => handleUpdateNotes(student.id, e.target.value)}
-                    aria-label={`Nhận xét kỹ thuật của ${student.fullName}`}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          <div className="attendance-session-selector">
+            <Select
+              className="portal-select"
+              value={String(selectedSessionId || '')}
+              disabled={saving || savingEvaluation}
+              onChange={(e) => setSelectedSessionId(Number(e.target.value))}
+              aria-label="Chọn buổi học cần quản lý"
+            >
+              {sessions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.className} ({s.startTime} - {s.endTime})
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       )}
 
-      {/* Bottom Batch Save Action */}
-      <div className="attendance-bottom-actions">
-        <button
-          type="button"
-          className="btn-batch-save"
-          onClick={handleSaveBatchAttendance}
-          disabled={saving || loading || students.length === 0}
+      {rosterError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+        <div className="coach-error-box" role="alert">{rosterError}</div>
+      )}
+
+      {/* =========================================================================
+          TAB 1: ĐIỂM DANH BUỔI HỌC (Thuần túy điểm danh Có mặt / Vắng mặt)
+          ========================================================================= */}
+      {activeTab === 'attendance' && (
+        <>
+          {/* Quick Summary: Chỉ giữ Có mặt và Vắng mặt */}
+          <div className="attendance-quick-summary">
+            <div className="summary-pill-card is-present">
+              <span className="pill-label">Có mặt (Xanh)</span>
+              <span className="pill-value">{summaryCounts.present}</span>
+            </div>
+            <div className="summary-pill-card is-absent">
+              <span className="pill-label">Vắng mặt (Đỏ)</span>
+              <span className="pill-value">{summaryCounts.absent}</span>
+            </div>
+            <div className="summary-pill-card">
+              <span className="pill-label">Tổng học viên</span>
+              <span className="pill-value">{summaryCounts.total}</span>
+            </div>
+            <div className="summary-pill-card">
+              <span className="pill-label">Tỷ lệ chuyên cần</span>
+              <span className="pill-value" style={{ color: 'var(--portal-salmon)' }}>
+                {summaryCounts.rate}%
+              </span>
+            </div>
+          </div>
+
+          {/* Toolbar */}
+          <div className="attendance-toolbar">
+            <span style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
+              Danh sách <strong>{students.length}</strong> học viên đã ghi danh:
+            </span>
+            <div className="toolbar-btn-group">
+              <button
+                type="button"
+                className="btn-quick-present"
+                onClick={handleMarkAllPresent}
+                disabled={!rosterReady || saving || savingEvaluation || students.length === 0}
+              >
+                Điểm danh nhanh tất cả Có mặt
+              </button>
+              {currentSavedRecord && (
+                <button
+                  type="button"
+                  className="btn-delete-attendance"
+                  onClick={handleDeleteCurrentAttendance}
+                  title="Ẩn bản ghi trên trình duyệt này"
+                >
+                  Ẩn trên trình duyệt này
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Danh sách học viên ĐIỂM DANH */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
+              <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
+              <p>Đang tải danh sách học viên buổi học...</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+              <p>Chưa có học viên nào book buổi học này.</p>
+            </div>
+          ) : (
+            <div className="attendance-students-list">
+              {students.map((student) => {
+                return (
+                  <div key={student.id} className="attendance-student-card">
+                    <div className="student-card-top-row">
+                      <div className="student-identity-group">
+                        <div className="student-avatar-circle">
+                          {student.fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="student-meta-text">
+                          <h4 className="student-full-name">{student.fullName}</h4>
+                          <span className="student-code-badge">{student.membershipCode}</span>
+                        </div>
+                      </div>
+
+                      {/* Chỉ có Radio chọn Có mặt / Vắng mặt */}
+                      <div
+                        className="attendance-radio-group"
+                        role="radiogroup"
+                        aria-label={`Trạng thái điểm danh của ${student.fullName}`}
+                      >
+                        {STATUS_CONFIG.map((cfg) => {
+                          const isSelected = student.status === cfg.value;
+                          return (
+                            <label
+                              key={cfg.value}
+                              className={`radio-status-label ${cfg.className} ${isSelected ? 'is-active' : ''}`}
+                            >
+                              <input
+                                type="radio"
+                                name={`attendance-status-${student.id}`}
+                                value={cfg.value}
+                                checked={isSelected}
+                                onChange={() => handleUpdateStatus(student.id, cfg.value)}
+                              />
+                              <span
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: cfg.indicatorColor,
+                                  display: 'inline-block',
+                                }}
+                              />
+                              {cfg.label}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Bottom Save Action */}
+          <div className="attendance-bottom-actions">
+            <button
+              type="button"
+              className="btn-switch-tab-link"
+              onClick={() => setActiveTab('evaluation')}
+            >
+              Chuyển sang Đánh giá học viên →
+            </button>
+            <button
+              type="button"
+              className="btn-batch-save"
+              onClick={handleSaveAttendance}
+              disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
+            >
+              {saving
+                ? 'Đang lưu...'
+                : currentSavedRecord
+                ? 'Cập nhật điểm danh'
+                : 'Lưu điểm danh'}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* =========================================================================
+          TAB 2: ĐÁNH GIÁ HỌC VIÊN TÁCH RIÊNG (Chuyên biệt cho Chấm điểm & Nhận xét)
+          ========================================================================= */}
+      {activeTab === 'evaluation' && (
+        <div className="attendance-evaluation-section">
+          <div className="evaluation-section-header">
+            <div>
+              <h3 className="section-title">Đánh giá tiến bộ kỹ thuật học viên</h3>
+              <p className="section-desc">
+                Chấm điểm theo thang điểm 1-100 và ghi nhận xét tư thế, kỹ năng động tác cho từng học viên.
+              </p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
+              <div className="portal-spinner" style={{ margin: '0 auto 12px' }} />
+              <p>Đang tải danh sách học viên...</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="attendance-empty-state">
+              <p>Chưa có học viên nào trong buổi học này để đánh giá.</p>
+            </div>
+          ) : (
+            <div className="evaluation-cards-list">
+              {students.map((student) => {
+                return (
+                  <div key={student.id} className="evaluation-card">
+                    <div className="evaluation-card-header">
+                      <div className="student-identity-group">
+                        <div className="student-avatar-circle">
+                          {student.fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="student-meta-text">
+                          <h4 className="student-full-name">{student.fullName}</h4>
+                          <span className="student-code-badge">{student.membershipCode}</span>
+                        </div>
+                      </div>
+
+                      <div className="evaluation-status-tag">
+                        <span className={`status-pill ${student.status === 'present' ? 'is-present' : 'is-absent'}`}>
+                          {student.status === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="evaluation-card-body">
+                      {/* Thang điểm tiến bộ */}
+                      <div className="eval-form-row">
+                        <div className="eval-slider-header">
+                          <span className="eval-label">Thang điểm tiến bộ (Progress Score):</span>
+                          <span className="score-badge">{student.progressScore || 80}/100</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="100"
+                          className="eval-score-slider"
+                          value={student.progressScore || 80}
+                          onChange={(e) => handleUpdateScore(student.id, Number(e.target.value))}
+                          aria-label={`Điểm tiến bộ của ${student.fullName}`}
+                        />
+                      </div>
+
+                      {/* Ô nhận xét kỹ thuật */}
+                      <div className="eval-form-row">
+                        <label className="eval-label" htmlFor={`notes-${student.id}`}>
+                          Nhận xét kỹ thuật, động tác và lưu ý sức khỏe:
+                        </label>
+                        <textarea
+                          id={`notes-${student.id}`}
+                          className="eval-comment-textarea"
+                          rows={2}
+                          placeholder="Ví dụ: Kiểm soát cơ lõi tốt, giữ thẳng lưng khi thực hiện động tác kéo cáp..."
+                          value={student.notes}
+                          onChange={(e) => handleUpdateNotes(student.id, e.target.value)}
+                          aria-label={`Nhận xét kỹ thuật của ${student.fullName}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Bottom Save Evaluations Action */}
+          <div className="attendance-bottom-actions">
+            <button
+              type="button"
+              className="btn-batch-save"
+              onClick={handleSaveEvaluations}
+              disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
+            >
+              {savingEvaluation ? 'Đang lưu đánh giá...' : 'Lưu tất cả đánh giá'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB 3: LỊCH SỬ ĐIỂM DANH (Sửa trực tiếp bằng khung giữa màn hình, không nhảy tab)
+          ========================================================================= */}
+      {activeTab === 'attendance-history' && (
+        <div className="attendance-history-section">
+          <div className="history-header-bar">
+            <div>
+              <h3 className="section-title">Lịch sử các buổi đã điểm danh</h3>
+              <p className="section-desc">
+                Xem lại danh sách, tỷ lệ chuyên cần và bấm "Sửa điểm danh" để chỉnh sửa trực tiếp trong khung giữa màn hình.
+              </p>
+            </div>
+          </div>
+
+          {history.length === 0 ? (
+            <div className="attendance-empty-state">
+              <p>Chưa có lịch sử điểm danh nào được lưu.</p>
+            </div>
+          ) : (
+            <div className="history-cards-grid">
+              {history.map((record) => {
+                const rate =
+                  record.totalStudents > 0
+                    ? Math.round((record.presentCount / record.totalStudents) * 100)
+                    : 0;
+
+                return (
+                  <div key={record.id} className="history-record-card">
+                    <div className="history-card-header">
+                      <div>
+                        <h4 className="history-class-name">{record.className}</h4>
+                        <div className="history-meta-sub">
+                          <span>Phòng: {record.roomName}</span>
+                          <span>•</span>
+                          <span>
+                            {record.startTime} - {record.endTime}
+                          </span>
+                          <span>•</span>
+                          <span>Ngày: {record.sessionDate}</span>
+                        </div>
+                      </div>
+                      <span className="history-saved-badge">Đã lưu: {record.savedAt}</span>
+                    </div>
+
+                    <div className="history-stat-row">
+                      <div className="stat-pill is-present">
+                        <span className="stat-label">Có mặt:</span>
+                        <span className="stat-num">{record.presentCount}</span>
+                      </div>
+                      <div className="stat-pill is-absent">
+                        <span className="stat-label">Vắng mặt:</span>
+                        <span className="stat-num">{record.absentCount}</span>
+                      </div>
+                      <div className="stat-pill is-total">
+                        <span className="stat-label">Tổng học viên:</span>
+                        <span className="stat-num">{record.totalStudents}</span>
+                      </div>
+                      <div className="stat-pill is-rate">
+                        <span className="stat-label">Tỷ lệ:</span>
+                        <span className="stat-num">{rate}%</span>
+                      </div>
+                    </div>
+
+                    <div className="history-actions-row">
+                      <button
+                        type="button"
+                        className="btn-history-edit"
+                        onClick={() => handleOpenEditAttendanceModal(record)}
+                      >
+                        Sửa điểm danh
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-history-delete"
+                        onClick={() => handleDeleteFromHistory(record.id)}
+                      >
+                  Ẩn trên trình duyệt này
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB 4: LỊCH SỬ ĐÁNH GIÁ (Mới bổ sung theo yêu cầu)
+          ========================================================================= */}
+      {activeTab === 'eval-history' && (
+        <div className="attendance-history-section">
+          <div className="history-header-bar">
+            <div>
+              <h3 className="section-title">Lịch sử đánh giá tiến bộ học viên</h3>
+              <p className="section-desc">
+                Xem lại thang điểm kỹ thuật và nhận xét từng buổi tập, bấm "Sửa đánh giá" để chỉnh sửa trong khung giữa màn hình.
+              </p>
+            </div>
+          </div>
+
+          {evalHistory.length === 0 ? (
+            <div className="attendance-empty-state">
+              <p>Chưa có lịch sử đánh giá nào được lưu.</p>
+            </div>
+          ) : (
+            <div className="history-cards-grid">
+              {evalHistory.map((record) => {
+                return (
+                  <div key={record.id} className="history-record-card">
+                    <div className="history-card-header">
+                      <div>
+                        <h4 className="history-class-name">{record.className}</h4>
+                        <div className="history-meta-sub">
+                          <span>Phòng: {record.roomName}</span>
+                          <span>•</span>
+                          <span>
+                            {record.startTime} - {record.endTime}
+                          </span>
+                          <span>•</span>
+                          <span>Ngày: {record.sessionDate}</span>
+                        </div>
+                      </div>
+                      <span className="history-saved-badge">Đã đánh giá: {record.savedAt}</span>
+                    </div>
+
+                    <div className="history-stat-row">
+                      <div className="stat-pill is-rate">
+                        <span className="stat-label">Điểm trung bình lớp:</span>
+                        <span className="stat-num">{record.averageScore}/100</span>
+                      </div>
+                      <div className="stat-pill is-total">
+                        <span className="stat-label">Đã đánh giá:</span>
+                        <span className="stat-num">{record.totalStudents} học viên</span>
+                      </div>
+                    </div>
+
+                    <div className="history-actions-row">
+                      <button
+                        type="button"
+                        className="btn-history-edit"
+                        onClick={() => handleOpenEditEvalModal(record)}
+                      >
+                        Sửa đánh giá
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-history-delete"
+                        onClick={() => handleDeleteFromEvalHistory(record.id)}
+                      >
+                  Ẩn trên trình duyệt này
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL SỬA ĐIỂM DANH NGAY GIỮA MÀN HÌNH (Không chuyển tab)
+          ========================================================================= */}
+      {editingAttendanceRecord && (
+        <Modal
+          title={`Sửa điểm danh: ${editingAttendanceRecord.className}`}
+          busy={saving}
+          onClose={() => setEditingAttendanceRecord(null)}
         >
-          {saving ? 'Đang lưu...' : 'Lưu điểm danh & Đánh giá'}
-        </button>
-      </div>
+          <div className="modal-edit-container">
+            <div className="modal-record-meta-bar">
+              <span>Phòng: <strong>{editingAttendanceRecord.roomName}</strong></span>
+              <span>Giờ: <strong>{editingAttendanceRecord.startTime} - {editingAttendanceRecord.endTime}</strong></span>
+              <span>Ngày: <strong>{editingAttendanceRecord.sessionDate}</strong></span>
+            </div>
+
+            <div className="modal-students-edit-list">
+              {editingAttendanceRecord.students.map((student) => {
+                return (
+                  <div key={student.id} className="modal-student-edit-item">
+                    <div className="student-identity-group">
+                      <div className="student-avatar-circle">
+                        {student.fullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="student-meta-text">
+                        <h4 className="student-full-name">{student.fullName}</h4>
+                        <span className="student-code-badge">{student.membershipCode}</span>
+                      </div>
+                    </div>
+
+                    {/* Radio 2 trạng thái: Có mặt / Vắng mặt */}
+                    <div className="attendance-radio-group">
+                      {STATUS_CONFIG.map((cfg) => {
+                        const isSelected = student.status === cfg.value;
+                        return (
+                          <label
+                            key={cfg.value}
+                            className={`radio-status-label ${cfg.className} ${isSelected ? 'is-active' : ''}`}
+                          >
+                            <input
+                              type="radio"
+                              name={`modal-status-${student.id}`}
+                              value={cfg.value}
+                              checked={isSelected}
+                              onChange={() => handleUpdateModalAttendanceStatus(student.id, cfg.value)}
+                            />
+                            <span
+                              style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: cfg.indicatorColor,
+                                display: 'inline-block',
+                              }}
+                            />
+                            {cfg.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                disabled={saving}
+                onClick={() => setEditingAttendanceRecord(null)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="btn-modal-save"
+                disabled={saving}
+                onClick={handleSaveModalAttendance}
+              >
+                Lưu cập nhật
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* =========================================================================
+          MODAL SỬA ĐÁNH GIÁ NGAY GIỮA MÀN HÌNH (Không chuyển tab)
+          ========================================================================= */}
+      {editingEvalRecord && (
+        <Modal
+          title={`Sửa đánh giá tiến bộ: ${editingEvalRecord.className}`}
+          busy={saving}
+          onClose={() => setEditingEvalRecord(null)}
+        >
+          <div className="modal-edit-container">
+            <div className="modal-record-meta-bar">
+              <span>Phòng: <strong>{editingEvalRecord.roomName}</strong></span>
+              <span>Giờ: <strong>{editingEvalRecord.startTime} - {editingEvalRecord.endTime}</strong></span>
+              <span>Ngày: <strong>{editingEvalRecord.sessionDate}</strong></span>
+            </div>
+
+            <div className="modal-students-edit-list">
+              {editingEvalRecord.students.map((student) => {
+                return (
+                  <div key={student.id} className="modal-eval-student-item">
+                    <div className="evaluation-card-header">
+                      <div className="student-identity-group">
+                        <div className="student-avatar-circle">
+                          {student.fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="student-meta-text">
+                          <h4 className="student-full-name">{student.fullName}</h4>
+                          <span className="student-code-badge">{student.membershipCode}</span>
+                        </div>
+                      </div>
+                      <span className={`status-pill ${student.status === 'present' ? 'is-present' : 'is-absent'}`}>
+                        {student.status === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                      </span>
+                    </div>
+
+                    <div className="eval-form-row" style={{ marginTop: '10px' }}>
+                      <div className="eval-slider-header">
+                        <span className="eval-label">Thang điểm tiến bộ:</span>
+                        <span className="score-badge">{student.progressScore || 80}/100</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="100"
+                        className="eval-score-slider"
+                        value={student.progressScore || 80}
+                        onChange={(e) => handleUpdateModalEvalScore(student.id, Number(e.target.value))}
+                        aria-label={`Điểm tiến bộ của ${student.fullName}`}
+                      />
+                    </div>
+
+                    <div className="eval-form-row">
+                      <label className="eval-label" htmlFor={`modal-notes-${student.id}`}>
+                        Nhận xét kỹ thuật:
+                      </label>
+                      <textarea
+                        id={`modal-notes-${student.id}`}
+                        className="eval-comment-textarea"
+                        rows={2}
+                        value={student.notes}
+                        onChange={(e) => handleUpdateModalEvalNotes(student.id, e.target.value)}
+                        aria-label={`Nhận xét kỹ thuật của ${student.fullName}`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                disabled={saving}
+                onClick={() => setEditingEvalRecord(null)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="btn-modal-save"
+                disabled={saving}
+                onClick={handleSaveModalEval}
+              >
+                Lưu cập nhật
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* THÔNG BÁO THÀNH CÔNG NỔI BẬT CHÍNH GIỮA MÀN HÌNH */}
+      {centerNotification && (
+        <div className="center-toast-overlay" onClick={() => setCenterNotification(null)}>
+          <div className="center-toast-card" role="alert" aria-live="assertive">
+            <div className="center-toast-icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div className="center-toast-body">
+              <h4 className="center-toast-title">{centerNotification}</h4>
+            </div>
+            <button
+              type="button"
+              className="center-toast-close"
+              aria-label="Đóng thông báo"
+              onClick={() => setCenterNotification(null)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

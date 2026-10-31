@@ -5,11 +5,12 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   busy?: boolean;
+  className?: string;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Hộp thoại dựa trên <dialog> gốc: có sẵn focus trap, phím Esc và backdrop. */
-export function Modal({ title, onClose, children, busy = false, returnFocusRef }: ModalProps) {
+export function Modal({ title, onClose, children, busy = false, className, returnFocusRef }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -31,7 +32,7 @@ export function Modal({ title, onClose, children, busy = false, returnFocusRef }
       role="dialog"
       aria-modal="true"
       aria-busy={busy}
-      className="portal-dialog"
+      className={`portal-dialog ${className || ''}`.trim()}
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby={titleId}
       onKeyDown={event => {

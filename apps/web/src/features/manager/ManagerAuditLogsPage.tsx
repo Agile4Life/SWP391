@@ -129,11 +129,46 @@ export function ManagerAuditLogsPage() {
 
   const getActionBadgeClass = (act: string) => {
     const a = act.toUpperCase();
-    if (a === 'CREATE' || a === 'GRANTED') return 'is-create';
-    if (a === 'UPDATE') return 'is-update';
-    if (a === 'DELETE' || a === 'CANCEL' || a === 'DENIED') return 'is-delete';
+    if (a === 'CREATE' || a === 'GRANTED' || a === 'USER_CREATE') return 'is-create';
+    if (a === 'UPDATE' || a === 'USER_UPDATE' || a === 'RECEPTIONIST_PROFILE_UPDATE') return 'is-update';
+    if (a === 'DELETE' || a === 'CANCEL' || a === 'DENIED' || a === 'USER_DELETE' || a === 'USER_CLEANUP_INACTIVE') return 'is-delete';
     if (a === 'SCAN') return 'is-scan';
     return '';
+  };
+
+  const getActionLabel = (act: string) => {
+    const a = act.toUpperCase();
+    switch (a) {
+      case 'CREATE': return 'Tạo mới';
+      case 'UPDATE': return 'Cập nhật';
+      case 'DELETE': return 'Xóa';
+      case 'CANCEL': return 'Hủy gói';
+      case 'SCAN': return 'Quét QR';
+      case 'USER_CREATE': return 'Tạo tài khoản';
+      case 'USER_UPDATE': return 'Sửa tài khoản';
+      case 'USER_DELETE': return 'Xóa tài khoản';
+      case 'USER_STATUS_CHANGE': return 'Đổi trạng thái';
+      case 'USER_CLEANUP_INACTIVE': return 'Dọn dẹp tự động';
+      case 'RECEPTIONIST_PROFILE_UPDATE': return 'Đổi ca trực';
+      case 'GRANTED': return 'Cấp quyền';
+      case 'DENIED': return 'Thu hồi quyền';
+      default: return act;
+    }
+  };
+
+  const getEntityLabel = (type: string) => {
+    switch (type) {
+      case 'membership_subscriptions': return 'Gói tập';
+      case 'payments': return 'Thanh toán';
+      case 'session_attendance': return 'Điểm danh';
+      case 'center_checkins': return 'Lượt ra vào';
+      case 'cancellation_requests': return 'Yêu cầu hủy';
+      case 'users': return 'Tài khoản';
+      case 'receptionists': return 'Lễ tân';
+      case 'classes': return 'Lớp học';
+      case 'class_sessions': return 'Buổi học';
+      default: return type;
+    }
   };
 
   return (
@@ -194,11 +229,14 @@ export function ManagerAuditLogsPage() {
                 aria-label="Lọc theo hành động"
               >
                 <option value="ALL">Tất cả hành động</option>
-                <option value="CREATE">CREATE (Tạo mới)</option>
-                <option value="UPDATE">UPDATE (Cập nhật)</option>
-                <option value="DELETE">DELETE (Xóa)</option>
-                <option value="CANCEL">CANCEL (Hủy gói)</option>
-                <option value="SCAN">SCAN (Quét mã)</option>
+                <option value="CREATE">Tạo mới (CREATE)</option>
+                <option value="UPDATE">Cập nhật (UPDATE)</option>
+                <option value="DELETE">Xóa (DELETE)</option>
+                <option value="CANCEL">Hủy gói (CANCEL)</option>
+                <option value="SCAN">Quét mã (SCAN)</option>
+                <option value="USER_CREATE">Tạo người dùng (USER_CREATE)</option>
+                <option value="USER_UPDATE">Sửa người dùng (USER_UPDATE)</option>
+                <option value="USER_CLEANUP_INACTIVE">Dọn dẹp tự động (USER_CLEANUP)</option>
               </Select>
             </div>
 
@@ -219,6 +257,8 @@ export function ManagerAuditLogsPage() {
                 <option value="session_attendance">Điểm danh (attendance)</option>
                 <option value="center_checkins">Lượt ra vào (check-ins)</option>
                 <option value="cancellation_requests">Yêu cầu hủy (cancellations)</option>
+                <option value="users">Tài khoản (users)</option>
+                <option value="receptionists">Ca trực lễ tân (receptionists)</option>
               </Select>
             </div>
           </div>
@@ -260,11 +300,17 @@ export function ManagerAuditLogsPage() {
                       </td>
                       <td>
                         <span className={`action-badge ${getActionBadgeClass(log.action)}`}>
-                          {log.action}
+                          {getActionLabel(log.action)}
                         </span>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--portal-muted)', marginTop: 2, fontFamily: 'monospace' }}>
+                          {log.action}
+                        </div>
                       </td>
                       <td>
-                        <code style={{ fontSize: '0.82rem', color: 'var(--portal-salmon)' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--portal-paper)' }}>
+                          {getEntityLabel(log.entityType)}
+                        </div>
+                        <code style={{ fontSize: '0.75rem', color: 'var(--portal-salmon)' }}>
                           {log.entityType}
                         </code>
                       </td>

@@ -2,6 +2,9 @@
   padding-bottom: 60px;
 }
 
+/* ==========================================================================
+   WEEK NAVIGATION BAR
+   ========================================================================== */
 .coach-week-bar {
   display: flex;
   justify-content: space-between;
@@ -66,6 +69,9 @@
   color: var(--portal-ink);
 }
 
+/* ==========================================================================
+   DAY SELECTOR STRIP
+   ========================================================================== */
 .coach-day-strip {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -121,6 +127,7 @@
   letter-spacing: 0.05em;
 }
 
+.coach-day-date,
 .coach-day-num {
   font-size: 1.15rem;
   font-weight: 700;
@@ -128,6 +135,7 @@
   color: inherit;
 }
 
+.coach-day-badge,
 .coach-day-count {
   font-size: 0.7rem;
   background: var(--portal-raised);
@@ -137,12 +145,16 @@
   margin-top: 2px;
 }
 
+.coach-day-tab.is-active .coach-day-badge,
 .coach-day-tab.is-active .coach-day-count {
   background: var(--portal-salmon);
   color: var(--portal-ink);
   font-weight: 600;
 }
 
+/* ==========================================================================
+   METRICS GRID
+   ========================================================================== */
 .coach-metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -189,6 +201,10 @@
   color: var(--portal-muted);
 }
 
+/* ==========================================================================
+   SESSIONS SECTION & CARDS
+   ========================================================================== */
+.coach-session-section,
 .coach-sessions-section {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
@@ -196,6 +212,7 @@
   padding: 24px;
 }
 
+.coach-section-header,
 .coach-sessions-header {
   display: flex;
   justify-content: space-between;
@@ -205,6 +222,7 @@
   gap: 12px;
 }
 
+.coach-section-header h3,
 .coach-sessions-title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -212,6 +230,17 @@
   margin: 0;
 }
 
+.session-count-tag {
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--portal-border);
+}
+
+.coach-session-grid,
 .coach-sessions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -221,11 +250,12 @@
 .coach-session-card {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 12px;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
 }
@@ -233,14 +263,15 @@
 .coach-session-card:hover {
   transform: translateY(-2px);
   border-color: var(--portal-salmon);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
+.coach-session-top,
 .coach-session-card-top {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   gap: 10px;
 }
 
@@ -260,6 +291,7 @@
   margin-top: 2px;
 }
 
+.status-pill,
 .coach-session-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -269,126 +301,530 @@
   letter-spacing: 0.05em;
 }
 
+.status-pill.status-scheduled,
 .coach-session-badge.status-scheduled {
   background: rgba(34, 197, 94, 0.15);
   color: light-dark(#226442, #4ade80);
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
+.status-pill.status-completed,
 .coach-session-badge.status-completed {
   background: var(--portal-raised);
   color: var(--portal-muted);
   border: 1px solid var(--portal-border);
 }
 
+.status-pill.status-cancelled,
 .coach-session-badge.status-cancelled {
   background: rgba(239, 68, 68, 0.15);
   color: light-dark(#a33030, #fca5a5);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.coach-class-title,
 .coach-session-name {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--portal-paper);
-  margin: 0 0 6px 0;
+  margin: 0;
   line-height: 1.3;
 }
 
+.coach-discipline-tag {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--portal-salmon);
+  margin: 0;
+}
+
+.coach-session-info,
 .coach-session-meta {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: var(--portal-muted);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 14px;
+  gap: 6px;
+  background: var(--portal-raised);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--portal-border);
 }
 
+.info-row,
 .coach-session-meta-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 6px;
 }
 
-.coach-capacity-box {
-  background: var(--portal-raised);
-  border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 16px;
-}
-
-.coach-capacity-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.78rem;
-  margin-bottom: 6px;
-}
-
-.coach-capacity-label {
+.info-label {
   color: var(--portal-muted);
-  font-weight: 500;
 }
 
-.coach-capacity-numbers {
-  font-weight: 700;
+.info-value {
+  font-weight: 600;
   color: var(--portal-paper);
 }
 
-.coach-capacity-bar-track {
-  width: 100%;
-  height: 6px;
-  background: var(--portal-border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.coach-capacity-bar-fill {
-  height: 100%;
-  background: var(--portal-salmon);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.coach-capacity-bar-fill.is-full {
-  background: #ef4444;
-}
-
+/* ==========================================================================
+   BUTTON: VIEW STUDENTS (THEME-ALIGNED BUTTON)
+   ========================================================================== */
+.coach-card-actions,
 .coach-session-actions {
   display: flex;
   gap: 8px;
   margin-top: auto;
 }
 
+.btn-view-students,
 .btn-session-students {
+  width: 100%;
   flex: 1;
   background: var(--portal-tint);
   border: 1px solid var(--portal-salmon);
   color: var(--portal-salmon);
-  padding: 9px 12px;
-  border-radius: 8px;
-  font-size: 0.84rem;
-  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
+.btn-view-students:hover,
 .btn-session-students:hover {
   background: var(--portal-salmon);
   color: var(--portal-ink);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(206, 145, 128, 0.3);
 }
 
-.roster-header-summary {
+.btn-view-students:active,
+.btn-session-students:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   MODAL: ENROLLED STUDENTS LIST & HEALTH NOTES (Rộng rãi & dễ đọc)
+   ========================================================================== */
+dialog.portal-dialog.coach-students-modal-dialog {
+  width: min(980px, calc(100vw - 40px)) !important;
+  max-width: 980px !important;
+  max-height: min(88vh, 880px) !important;
+  box-sizing: border-box !important;
+  border-radius: 18px !important;
+  margin: auto !important;
+  overflow: hidden !important;
+  border: 1px solid var(--portal-border) !important;
+  background: var(--portal-surface) !important;
+}
+
+dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 24px 28px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: min(88vh, 880px) !important;
+  overflow: hidden !important;
+}
+
+.students-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 100%;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.students-modal-filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.student-search-input {
+  flex: 1;
+  min-width: 260px;
+}
+
+.student-level-filter {
+  min-width: 200px;
+}
+
+.students-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 56vh;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-top: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--portal-salmon) var(--portal-raised);
+}
+
+.students-list-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+
+.students-list-wrap::-webkit-scrollbar-track {
+  background: var(--portal-raised);
+  border-radius: 4px;
+}
+
+.students-list-wrap::-webkit-scrollbar-thumb {
+  background: var(--portal-salmon);
+  border-radius: 4px;
+}
+
+.student-card-item {
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.student-card-item:hover {
+  border-color: var(--portal-salmon);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.student-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.student-avatar-col {
+  flex-shrink: 0;
+}
+
+.student-avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--portal-surface);
+  color: var(--portal-salmon);
+  border: 1.5px solid var(--portal-salmon);
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-main-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.student-code-tag {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--portal-muted);
+  background: var(--portal-surface);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--portal-border);
+}
+
+.fitness-level-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.fitness-level-pill.level-beginner {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.fitness-level-pill.level-intermediate {
+  background: rgba(56, 189, 248, 0.15);
+  color: #0284c7;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.fitness-level-pill.level-advanced {
+  background: rgba(168, 85, 247, 0.15);
+  color: #9333ea;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.students-cards-list,
+.roster-students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.student-profile-card,
+.roster-student-card {
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.2s ease;
+}
+
+.student-profile-card:hover,
+.roster-student-card:hover {
+  border-color: var(--portal-salmon);
+}
+
+.student-profile-top,
+.roster-student-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-avatar-circle,
+.roster-student-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--portal-surface);
+  color: var(--portal-salmon);
+  border: 1.5px solid var(--portal-salmon);
+  font-weight: 800;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-info-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.student-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.student-name,
+.roster-student-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+
+.student-code,
+.roster-student-code {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--portal-muted);
+}
+
+.fitness-level-badge,
+.roster-level-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.fitness-level-badge.level-beginner,
+.roster-level-beginner {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.fitness-level-badge.level-intermediate,
+.roster-level-intermediate {
+  background: rgba(56, 189, 248, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.fitness-level-badge.level-advanced,
+.roster-level-advanced {
+  background: rgba(168, 85, 247, 0.12);
+  color: #9333ea;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.student-contact-row,
+.roster-contact-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.8rem;
+  color: var(--portal-muted);
+  flex-wrap: wrap;
+}
+
+.emergency-tag {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.student-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.student-detail-box,
+.roster-goal-box {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-bottom: 18px;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.box-title,
+.roster-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--portal-salmon);
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
+}
+
+.box-content {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--portal-paper);
+  line-height: 1.5;
+}
+
+.student-detail-box.health-box,
+.roster-health-box {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-left: 3px solid #ef4444;
+}
+
+.health-box .box-title,
+.health-box .warning-text {
+  color: #ef4444;
+}
+
+.students-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--portal-border);
+  margin-top: 8px;
+}
+
+.footer-count {
+  font-size: 0.85rem;
+  color: var(--portal-muted);
+}
+
+/* ==========================================================================
+   LỊCH SỬ ĐIỂM DANH & ĐÁNH GIÁ (Trong Modal Lịch sử)
+   ========================================================================== */
+.history-summary-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  margin-bottom: 2px;
+}
+
+.history-stat-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-stat-badge.is-present {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.history-stat-badge.is-absent {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.history-stat-badge.is-rate,
+.history-stat-badge.is-score {
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
+  border: 1px solid var(--portal-border);
+}
+
+.history-timestamp {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--portal-muted);
+}
+
+.history-record-card {
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.history-record-card:hover {
+  border-color: var(--portal-salmon);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.history-record-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -396,180 +832,71 @@
   gap: 12px;
 }
 
-.roster-class-info h3 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-  margin: 0 0 4px 0;
-}
-
-.roster-class-info p {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--portal-muted);
-}
-
-.roster-search-bar {
-  margin-bottom: 18px;
-}
-
-.roster-search-input {
-  width: 100%;
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border-strong);
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: var(--portal-paper);
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-
-.roster-search-input:focus {
-  border-color: var(--portal-salmon);
-}
-
-.roster-students-list {
-  display: grid;
-  gap: 14px;
-  max-height: 520px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.roster-student-card {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 10px;
-  padding: 16px;
-  transition: border-color 0.2s ease;
-}
-
-.roster-student-card:hover {
-  border-color: var(--portal-salmon);
-}
-
-.roster-student-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.roster-student-identity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.roster-student-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--portal-raised);
-  color: var(--portal-salmon);
-  font-weight: 700;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--portal-salmon);
-  flex-shrink: 0;
-}
-
-.roster-student-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-  margin: 0;
-}
-
-.roster-student-code {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.78rem;
-  color: var(--portal-muted);
-}
-
-.roster-level-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 4px;
-  text-transform: capitalize;
-}
-
-.roster-level-beginner {
-  background: rgba(34, 197, 94, 0.12);
-  color: light-dark(#226442, #4ade80);
-  border: 1px solid rgba(34, 197, 94, 0.25);
-}
-
-.roster-level-intermediate {
-  background: rgba(56, 189, 248, 0.12);
-  color: light-dark(#0369a1, #38bdf8);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-}
-
-.roster-level-advanced {
-  background: rgba(168, 85, 247, 0.12);
-  color: light-dark(#6b21a8, #c084fc);
-  border: 1px solid rgba(168, 85, 247, 0.25);
-}
-
-.roster-detail-row {
-  margin-bottom: 10px;
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.roster-detail-label {
-  font-weight: 700;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.roster-goal-box {
-  background: var(--portal-raised);
-  border: 1px solid var(--portal-border);
+.status-pill {
+  padding: 4px 12px;
   border-radius: 6px;
   padding: 8px 12px;
-  color: var(--portal-paper);
-}
-
-.roster-goal-box .roster-detail-label {
-  color: var(--portal-salmon);
-}
-
-.roster-health-box {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-left: 4px solid #ef4444;
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: light-dark(#a33030, #fca5a5);
+  color: #dc2626;
 }
 
 .roster-health-box .roster-detail-label {
-  color: light-dark(#a33030, #fca5a5);
+  color: #ef4444;
 }
 
-.roster-contact-bar {
+.score-badge {
+  background: var(--portal-tint);
+  color: var(--portal-salmon);
+  border: 1px solid var(--portal-border);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.history-score-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 0.78rem;
-  color: var(--portal-muted);
-  border-top: 1px dashed var(--portal-border);
-  padding-top: 8px;
-  margin-top: 8px;
+  gap: 14px;
 }
 
+.history-score-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--portal-surface);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--portal-border);
+}
+
+.history-score-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, var(--portal-salmon));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.history-notes-box {
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  color: var(--portal-paper);
+  line-height: 1.45;
+}
+
+.history-notes-label {
+  font-weight: 700;
+  color: var(--portal-salmon);
+  margin-right: 6px;
+}
+
+/* ==========================================================================
+   EMPTY / LOADING STATES
+   ========================================================================== */
+.coach-loading-box,
+.coach-error-box,
+.coach-empty-box,
 .coach-empty-state {
   text-align: center;
   padding: 48px 20px;
@@ -589,6 +916,20 @@
   margin-bottom: 6px;
 }
 
+.btn-retry {
+  margin-top: 12px;
+  background: var(--portal-salmon);
+  color: var(--portal-ink);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
 @media (max-width: 1100px) {
   .coach-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -599,365 +940,147 @@
   .coach-metrics-grid {
     grid-template-columns: 1fr;
   }
+
   .coach-day-strip {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  .coach-session-grid,
   .coach-sessions-grid {
     grid-template-columns: 1fr;
   }
+
   .coach-week-bar {
     flex-direction: column;
     align-items: flex-start;
   }
+
+  .student-details-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-
-/* Synchronized class selectors used by CoachClassesPage.tsx */
-.coach-day-date {
-  font-size: 0.78rem;
-  color: var(--portal-muted);
-  font-weight: 500;
-}
-
-.coach-day-tab.is-active .coach-day-date {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.coach-day-badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--portal-raised);
-  color: var(--portal-paper);
-  margin-top: 2px;
-}
-
-.coach-day-tab.is-active .coach-day-badge {
-  background: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
-}
-
-.coach-loading-box,
-.coach-error-box,
-.coach-empty-box {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 12px;
-  padding: 36px 24px;
-  text-align: center;
-  color: var(--portal-muted);
+/* ==========================================================================
+   NAVIGATION TABS (Thời khóa biểu vs Học viên phụ trách)
+   ========================================================================== */
+.coach-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 24px;
+  border-bottom: 1px solid var(--portal-border);
+  padding-bottom: 12px;
+  overflow-x: auto;
 }
 
-.coach-error-box {
-  border-color: var(--portal-danger, #fca5a5);
-  color: var(--portal-danger, #fca5a5);
-}
-
-.btn-retry {
-  margin-top: 12px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--portal-border-strong);
-  background: var(--portal-raised);
-  color: var(--portal-paper);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.coach-session-section {
+.coach-tab-btn {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.coach-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.coach-section-header h3 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-}
-
-.session-count-tag {
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--portal-raised);
-  border: 1px solid var(--portal-border);
-  color: var(--portal-muted);
-}
-
-.coach-session-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 16px;
-}
-
-.coach-session-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.status-pill {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 4px 9px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.status-pill.status-scheduled {
-  background: rgba(34, 197, 94, 0.14);
-  color: var(--portal-success, #86efac);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.status-pill.status-completed {
-  background: var(--portal-raised);
-  color: var(--portal-muted);
-  border: 1px solid var(--portal-border);
-}
-
-.status-pill.status-cancelled {
-  background: rgba(239, 68, 68, 0.14);
-  color: var(--portal-danger, #fca5a5);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.coach-class-title {
-  margin: 0 0 4px 0;
-  font-size: 1.08rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-}
-
-.coach-discipline-tag {
-  margin: 0 0 12px 0;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--portal-salmon);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.coach-session-info {
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
   border-radius: 8px;
-  background: var(--portal-ink);
-  border: 1px solid var(--portal-border);
-  margin-bottom: 14px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.82rem;
-}
-
-.info-label {
+  padding: 10px 22px;
+  font-size: 0.94rem;
+  font-weight: 600;
   color: var(--portal-muted);
-}
-
-.info-value {
-  color: var(--portal-paper);
-  font-weight: 600;
-}
-
-.coach-card-actions {
-  margin-top: auto;
-}
-
-.btn-view-students {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--portal-salmon);
-  background: var(--portal-tint);
-  color: var(--portal-paper);
-  font-size: 0.85rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.btn-view-students:hover {
-  background: var(--portal-salmon);
-  color: #202020;
-}
-
-.students-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.students-modal-filter-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr);
-  gap: 10px;
-}
-
-.students-loading-state,
-.students-empty-state {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--portal-muted);
-}
-
-.students-list-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 440px;
-  overflow-y: auto;
-}
-
-.student-card-item {
+.coach-tab-btn:hover {
   background: var(--portal-raised);
+  color: var(--portal-paper);
+  border-color: var(--portal-salmon);
+}
+
+.coach-tab-btn.is-active {
+  background: var(--portal-salmon);
+  color: #1e293b;
+  border-color: var(--portal-salmon);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(206, 145, 128, 0.3);
+}
+
+/* ==========================================================================
+   STUDENTS SECTION IN TAB
+   ========================================================================== */
+.coach-students-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.coach-students-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.coach-students-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+
+.coach-students-count {
+  font-size: 0.85rem;
+  color: var(--portal-salmon);
+  background: var(--portal-tint);
+  border: 1px solid var(--portal-border);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 600;
+}
+
+.coach-students-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: var(--portal-surface);
   border: 1px solid var(--portal-border);
   border-radius: 10px;
-  padding: 14px;
+  padding: 14px 18px;
 }
 
-.student-card-header {
+.coach-students-grid {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.student-avatar-fallback {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--portal-salmon);
-  color: #202020;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.student-main-col {
-  flex: 1;
-  min-width: 0;
-}
-
-.student-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.student-name {
-  margin: 0;
-  font-size: 0.96rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-}
-
-.student-code-tag {
-  font-size: 0.74rem;
-  font-family: monospace;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  color: var(--portal-muted);
-}
-
-.fitness-level-pill {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  color: var(--portal-paper);
-}
-
-.student-contact-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 0.78rem;
-  color: var(--portal-muted);
-}
-
-.emergency-tag {
-  color: var(--portal-danger, #fca5a5);
-  font-weight: 600;
-}
-
-.student-details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.student-detail-box {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.student-detail-box.health-box {
-  border-color: rgba(239, 68, 68, 0.35);
-}
-
-.box-title {
-  display: block;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--portal-muted);
-  margin-bottom: 4px;
-}
-
-.box-content {
-  margin: 0;
-  font-size: 0.84rem;
-  color: var(--portal-paper);
-  line-height: 1.45;
-}
-
-.box-content.warning-text {
-  color: var(--portal-danger, #fca5a5);
-  font-weight: 500;
-}
-
-.students-modal-footer {
+.student-card-item-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 12px;
   border-top: 1px solid var(--portal-border);
-}
-
-.footer-count {
+  padding-top: 12px;
+  margin-top: 14px;
   font-size: 0.82rem;
   color: var(--portal-muted);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-plan-for-student {
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  color: var(--portal-salmon);
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.84rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-plan-for-student:hover {
+  background: var(--portal-salmon);
+  color: #1e293b;
+  border-color: var(--portal-salmon);
 }

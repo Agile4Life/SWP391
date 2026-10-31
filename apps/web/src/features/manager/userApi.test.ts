@@ -44,9 +44,12 @@ describe('userApi.ts (User Management & RBAC)', () => {
       email: 'admin@test.com',
       phone: '0901234567',
       role: 'CENTER_MANAGER',
+      gender: 'other',
       status: 'ACTIVE',
       deleted_at: null,
       created_at: '2026-09-20',
+      last_login_at: null,
+      is_frozen: false,
     });
     expect(users[1].status).toBe('LOCKED');
     expect(users[1].phone).toBe('');
@@ -229,4 +232,58 @@ describe('userApi.ts (User Management & RBAC)', () => {
       expect.objectContaining({ method: 'DELETE' }),
     );
   });
+
+  it('deleteUser calls DELETE /api/v1/users/{id}', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: null }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await userApi.deleteUser('12');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/users/12',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('cleanupInactiveUsers propagates server failures instead of reporting zero deletions', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ success: false, message: 'Access denied', code: 'FORBIDDEN' }),
+    }));
+
+    await expect(userApi.cleanupInactiveUsers()).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+
+  it('cleanupInactiveUsers propagates a network failure', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+    await expect(userApi.cleanupInactiveUsers()).rejects.toMatchObject({ status: 0 });
+  });
+
+  it('cleanupInactiveUsers calls POST /api/v1/users/cleanup-inactive', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { deletedCount: 5, cutoffDate: '2026-04-20T10:00:00' },
+        message: 'Đã dọn dẹp 5 tài khoản',
+      }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await userApi.cleanupInactiveUsers();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/users/cleanup-inactive',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(result.deletedCount).toBe(5);
+  });
 });
+
