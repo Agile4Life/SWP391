@@ -5,9 +5,14 @@ import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotific
 import './notifications.css';
 
 const category: Record<string, { icon: string; label: string }> = {
-  schedule_change: { icon: '◷', label: 'Lịch học' }, class_reminder: { icon: '◷', label: 'Lịch học' },
-  payment: { icon: '₫', label: 'Thanh toán' }, package_expiry: { icon: '₫', label: 'Thanh toán' },
-  support_reply: { icon: '✉', label: 'Hỗ trợ' }, system: { icon: '✦', label: 'Hệ thống' },
+  schedule_change: { icon: '◷', label: 'Lịch học' },
+  class_reminder: { icon: '◷', label: 'Nhắc lịch học' },
+  booking: { icon: '✓', label: 'Đăng ký lớp' },
+  waitlist: { icon: '⏳', label: 'Hàng chờ' },
+  payment: { icon: '₫', label: 'Thanh toán' },
+  package_expiry: { icon: '₫', label: 'Hạn gói tập' },
+  support_reply: { icon: '✉', label: 'Hỗ trợ' },
+  system: { icon: '✦', label: 'Hệ thống' },
 };
 
 function errorMessage(error: unknown): string {

@@ -1,6 +1,7 @@
 import { apiFetch } from '../../shared/api/client';
 
 export type SystemRole = 'CENTER_MANAGER' | 'COACH' | 'RECEPTIONIST' | 'MEMBER';
+export type UserGender = 'male' | 'female' | 'other';
 
 export interface UserAccount {
   id: string;
@@ -8,6 +9,7 @@ export interface UserAccount {
   email: string;
   phone: string;
   role: SystemRole;
+  gender: UserGender;
   status: 'ACTIVE' | 'LOCKED';
   deleted_at: string | null;
   created_at: string;
@@ -36,6 +38,7 @@ interface UserDto {
   fullName: string;
   email: string;
   phone: string | null;
+  gender?: string | null;
   status: string;
   createdAt: string;
   lastLoginAt?: string | null;
@@ -54,12 +57,18 @@ interface PermissionDto {
   module: string;
 }
 
+const normalizeGender = (g?: string | null): UserGender => {
+  if (g === 'male' || g === 'female' || g === 'other') return g;
+  return 'other';
+};
+
 const toAccount = (u: UserDto): UserAccount => ({
   id: String(u.id),
   name: u.fullName,
   email: u.email,
   phone: u.phone ?? '',
   role: u.roleCode,
+  gender: normalizeGender(u.gender),
   status: u.status === 'active' ? 'ACTIVE' : 'LOCKED',
   deleted_at: null,
   created_at: u.createdAt?.split('T')[0] ?? '',
@@ -76,12 +85,14 @@ export interface CreateUserPayload {
   phone: string;
   password: string;
   role: SystemRole;
+  gender?: UserGender;
 }
 
 export interface UpdateUserPayload {
   name: string;
   phone?: string;
   role?: SystemRole;
+  gender?: UserGender;
 }
 
 export const userApi = {
@@ -91,28 +102,36 @@ export const userApi = {
 
   async createUser(payload: CreateUserPayload): Promise<UserAccount> {
     const roleId = (await roleIds())[payload.role];
+    const body: Record<string, unknown> = {
+      fullName: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+      password: payload.password,
+      roleId,
+    };
+    if (payload.gender) {
+      body.gender = payload.gender;
+    }
     const created = await apiFetch<UserDto>('/users', {
       method: 'POST',
-      body: JSON.stringify({
-        fullName: payload.name,
-        email: payload.email,
-        phone: payload.phone,
-        password: payload.password,
-        roleId,
-      }),
+      body: JSON.stringify(body),
     });
     return toAccount(created);
   },
 
   async updateUser(userId: string, payload: UpdateUserPayload): Promise<UserAccount> {
     const roleId = payload.role ? (await roleIds())[payload.role] : undefined;
+    const body: Record<string, unknown> = {
+      fullName: payload.name,
+      phone: payload.phone,
+      roleId,
+    };
+    if (payload.gender) {
+      body.gender = payload.gender;
+    }
     const updated = await apiFetch<UserDto>(`/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        fullName: payload.name,
-        phone: payload.phone,
-        roleId,
-      }),
+      body: JSON.stringify(body),
     });
     return toAccount(updated);
   },

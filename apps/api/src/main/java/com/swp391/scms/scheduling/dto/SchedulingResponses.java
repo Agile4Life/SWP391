@@ -71,7 +71,11 @@ public final class SchedulingResponses {
             String fullName,
             String email,
             String phone,
-            String status
+            String status,
+            String gender
     ) {
+        public CoachOptionDto(Long id, String fullName, String email, String phone, String status) {
+            this(id, fullName, email, phone, status, null);
+        }
     }
 }

@@ -4,6 +4,7 @@ import {
   userApi,
   UserAccount,
   SystemRole,
+  UserGender,
   CORE_ROLES,
   Permission,
 } from './userApi';
@@ -30,6 +31,7 @@ export function UserManagerPage() {
     phone: '',
     password: '',
     role: 'COACH' as SystemRole,
+    gender: 'female' as UserGender,
   });
 
   const [fieldErrors, setFieldErrors] = useState<{
@@ -37,6 +39,7 @@ export function UserManagerPage() {
     email?: string;
     phone?: string;
     password?: string;
+    gender?: string;
   }>({});
 
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
@@ -45,6 +48,7 @@ export function UserManagerPage() {
     name: '',
     phone: '',
     role: 'COACH' as SystemRole,
+    gender: 'female' as UserGender,
   });
   const [editFieldErrors, setEditFieldErrors] = useState<{
     name?: string;
@@ -157,7 +161,7 @@ export function UserManagerPage() {
     const cleanEmail = formData.email.trim();
     const cleanPhone = formData.phone.trim();
 
-    const errors: { name?: string; email?: string; phone?: string; password?: string } = {};
+    const errors: { name?: string; email?: string; phone?: string; password?: string; gender?: string } = {};
 
     if (!cleanName) {
       errors.name = 'Vui lòng nhập họ và tên.';
@@ -185,6 +189,10 @@ export function UserManagerPage() {
       errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự.';
     }
 
+    if (!formData.gender) {
+      errors.gender = 'Vui lòng chọn giới tính.';
+    }
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -200,10 +208,11 @@ export function UserManagerPage() {
         phone: cleanPhone,
         password: formData.password,
         role: formData.role,
+        gender: formData.gender,
       });
       setUsers((prev) => [created, ...prev]);
       setIsModalOpen(false);
-      setFormData({ name: '', email: '', phone: '', password: '', role: 'COACH' });
+      setFormData({ name: '', email: '', phone: '', password: '', role: 'COACH', gender: 'female' });
       toast(`Đã tạo tài khoản "${created.name}" thành công!`, 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể tạo người dùng.';
@@ -219,6 +228,7 @@ export function UserManagerPage() {
       name: user.name,
       phone: user.phone || '',
       role: user.role,
+      gender: user.gender || 'other',
     });
     setEditFieldErrors({});
   }
@@ -256,6 +266,7 @@ export function UserManagerPage() {
         name: cleanName,
         phone: cleanPhone || undefined,
         role: editFormData.role,
+        gender: editFormData.gender,
       });
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       setEditingUser(null);
@@ -447,6 +458,7 @@ export function UserManagerPage() {
                   <thead>
                     <tr>
                       <th>Họ và tên</th>
+                      <th>Giới tính</th>
                       <th>Liên hệ</th>
                       <th>Vai trò</th>
                       <th>Trạng thái</th>
@@ -460,6 +472,15 @@ export function UserManagerPage() {
                         <td>
                           <strong>{u.name}</strong>
                           <div className="muted">ID: {u.id}</div>
+                        </td>
+                        <td>
+                          {u.gender === 'male' ? (
+                            <span className="badge badge-neutral">Nam</span>
+                          ) : u.gender === 'female' ? (
+                            <span className="badge badge-neutral" style={{ color: 'var(--portal-salmon)' }}>Nữ</span>
+                          ) : (
+                            <span className="badge badge-neutral">Khác</span>
+                          )}
                         </td>
                         <td>
                           <div>{u.email}</div>
@@ -705,6 +726,28 @@ export function UserManagerPage() {
             </div>
 
             <div className="portal-form-group">
+              <label className="portal-label" htmlFor="user-gender">Giới tính *</label>
+              <Select
+                id="user-gender"
+                className="portal-select"
+                value={formData.gender}
+                onChange={(e) => {
+                  setFormData({ ...formData, gender: e.target.value as UserGender });
+                  if (fieldErrors.gender) setFieldErrors((prev) => ({ ...prev, gender: undefined }));
+                }}
+              >
+                <option value="male">Nam (Male)</option>
+                <option value="female">Nữ (Female)</option>
+                <option value="other">Khác (Other)</option>
+              </Select>
+              {fieldErrors.gender && (
+                <div style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.78rem', marginTop: 4 }}>
+                  {fieldErrors.gender}
+                </div>
+              )}
+            </div>
+
+            <div className="portal-form-group">
               <label className="portal-label" htmlFor="user-role">Vai trò *</label>
               <Select
                 id="user-role"
@@ -812,6 +855,22 @@ export function UserManagerPage() {
                   {editFieldErrors.phone}
                 </div>
               )}
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="edit-user-gender">Giới tính *</label>
+              <Select
+                id="edit-user-gender"
+                className="portal-select"
+                value={editFormData.gender}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, gender: e.target.value as UserGender })
+                }
+              >
+                <option value="male">Nam (Male)</option>
+                <option value="female">Nữ (Female)</option>
+                <option value="other">Khác (Other)</option>
+              </Select>
             </div>
 
             <div className="portal-form-group">

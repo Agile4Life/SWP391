@@ -44,6 +44,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
       email: 'admin@test.com',
       phone: '0901234567',
       role: 'CENTER_MANAGER',
+      gender: 'other',
       status: 'ACTIVE',
       deleted_at: null,
       created_at: '2026-09-20',

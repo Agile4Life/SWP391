@@ -104,6 +104,9 @@ public class UserService {
         user.setEmail(dto.getEmail().trim().toLowerCase(Locale.ROOT));
         user.setPhone(dto.getPhone() == null || dto.getPhone().isBlank() ? null : dto.getPhone().trim());
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+        user.setGender(dto.getGender() != null && !dto.getGender().isBlank()
+                ? dto.getGender().trim().toLowerCase(Locale.ROOT)
+                : null);
         user.setStatus("active");
         user.setCreatedAt(LocalDateTime.now(clock));
         user.setUpdatedAt(LocalDateTime.now(clock));
@@ -137,6 +140,9 @@ public class UserService {
                         .ifPresent(existing -> { throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null); });
             }
             user.setPhone(phone);
+        }
+        if (dto.getGender() != null && !dto.getGender().isBlank()) {
+            user.setGender(dto.getGender().trim().toLowerCase(Locale.ROOT));
         }
         if (dto.getRoleId() != null) {
             Role newRole = findRole(dto.getRoleId());
@@ -186,7 +192,6 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", id));
     }
 
-    @Transactional
     @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistShift(Long userId, com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
         User user = findActiveUser(userId);
