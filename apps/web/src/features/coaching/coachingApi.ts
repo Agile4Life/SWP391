@@ -171,7 +171,7 @@ export const coachingApi = {
     throw new Error('Dữ liệu học viên không hợp lệ');
   },
 
-  getAllAssignedStudents: async (_coachId?: string | number): Promise<EnrolledStudent[]> => {
+  getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {
     try {
       const endpoint = coachId ? `/coaching/students?coachId=${coachId}` : '/coaching/students';
       const res = await apiFetch<EnrolledStudent[]>(endpoint);
