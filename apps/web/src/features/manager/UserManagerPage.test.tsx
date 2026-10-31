@@ -82,7 +82,6 @@ describe('UserManagerPage', () => {
     vi.mocked(userApi.deleteUser).mockResolvedValue(undefined as unknown as void);
     vi.mocked(userApi.cleanupInactiveUsers).mockResolvedValue({
       deletedCount: 1,
-      cutoffDate: '2026-04-29T00:00:00',
       message: 'Đã dọn dẹp 1 tài khoản không hoạt động.',
     });
   });

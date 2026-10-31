@@ -60,7 +60,7 @@ export function UserManagerPage() {
 
   const [isCleaning, setIsCleaning] = useState(false);
   const [showCleanupModal, setShowCleanupModal] = useState(false);
-  const [cleanupResult, setCleanupResult] = useState<{ deletedCount: number; message: string } | null>(null);
+  const [cleanupResult, setCleanupResult] = useState<{ deletedCount: number; message?: string } | null>(null);
 
   useEffect(() => {
     void loadData();

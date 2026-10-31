@@ -4,13 +4,49 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
-import { toast } from '../../shared/ui/toast';
 import {
   coachingApi,
   type CoachSession,
   type EnrolledStudent,
 } from './coachingApi';
 import './coach-classes.css';
+
+interface StoredAttendanceStudent {
+  id: number | string;
+  memberId: number;
+  fullName: string;
+  membershipCode: string;
+  status: 'present' | 'absent';
+  notes: string;
+}
+
+interface StoredAttendanceSession {
+  sessionId: number | string;
+  savedAt: string;
+  presentCount: number;
+  absentCount: number;
+  totalStudents: number;
+  rate: number;
+  students: StoredAttendanceStudent[];
+}
+
+interface StoredEvaluationStudent {
+  id: number | string;
+  memberId: number;
+  fullName: string;
+  membershipCode: string;
+  progressScore: number;
+  notes: string;
+}
+
+interface StoredEvaluationSession {
+  sessionId: number | string;
+  savedAt: string;
+  averageScore: number;
+  totalStudents: number;
+  students: StoredEvaluationStudent[];
+}
+
 
 function getWeekMonday(date: Date): Date {
   const d = new Date(date);
@@ -64,7 +100,7 @@ export function CoachClassesPage() {
       const stored = localStorage.getItem('sol_coach_attendance_history');
       if (stored) {
         const historyList = JSON.parse(stored);
-        const found = historyList.find((h: any) => h.sessionId === activeSession.id);
+        const found = historyList.find((h: StoredAttendanceSession) => h.sessionId === activeSession.id);
         if (found) return found;
       }
     } catch {
@@ -98,7 +134,7 @@ export function CoachClassesPage() {
       const stored = localStorage.getItem('sol_coach_evaluation_history');
       if (stored) {
         const historyList = JSON.parse(stored);
-        const found = historyList.find((h: any) => h.sessionId === activeSession.id);
+        const found = historyList.find((h: StoredEvaluationSession) => h.sessionId === activeSession.id);
         if (found) return found;
       }
     } catch {
@@ -140,7 +176,7 @@ export function CoachClassesPage() {
 
   const filteredAttendanceStudents = useMemo(() => {
     if (!sessionAttendanceData) return [];
-    return sessionAttendanceData.students.filter((st: any) => {
+    return sessionAttendanceData.students.filter((st: StoredAttendanceStudent) => {
       const q = studentSearch.trim().toLowerCase();
       return (
         !q ||
@@ -153,7 +189,7 @@ export function CoachClassesPage() {
 
   const filteredEvalStudents = useMemo(() => {
     if (!sessionEvaluationData) return [];
-    return sessionEvaluationData.students.filter((st: any) => {
+    return sessionEvaluationData.students.filter((st: StoredEvaluationStudent) => {
       const q = studentSearch.trim().toLowerCase();
       return (
         !q ||
@@ -659,7 +695,7 @@ export function CoachClassesPage() {
                     <p>Không tìm thấy bản ghi điểm danh nào phù hợp.</p>
                   </div>
                 ) : (
-                  filteredAttendanceStudents.map((st: any) => (
+                  filteredAttendanceStudents.map((st: StoredAttendanceStudent) => (
                     <div key={st.id} className="history-record-card">
                       <div className="history-record-header">
                         <div className="student-card-header">
@@ -709,7 +745,7 @@ export function CoachClassesPage() {
                     <p>Không tìm thấy bản ghi đánh giá nào phù hợp.</p>
                   </div>
                 ) : (
-                  filteredEvalStudents.map((st: any) => (
+                  filteredEvalStudents.map((st: StoredEvaluationStudent) => (
                     <div key={st.id} className="history-record-card">
                       <div className="history-record-header">
                         <div className="student-card-header">

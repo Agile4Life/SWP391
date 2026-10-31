@@ -16,11 +16,10 @@ import com.swp391.scms.users.entity.User;
 import com.swp391.scms.users.mapper.UserMapper;
 import java.time.Clock;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -33,8 +32,14 @@ class UserServiceTest {
     @Mock UserMapper userMapper;
     @Mock ReceptionistRepository receptionistRepository;
     @Mock com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
-    @Spy Clock clock = Clock.systemDefaultZone();
-    @InjectMocks UserService service;
+
+    private Clock clock = Clock.systemUTC();
+    private UserService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new UserService(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, subscriptionRepository, clock);
+    }
 
     @Test
     void createUserRejectsDuplicateEmail() {

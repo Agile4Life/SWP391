@@ -152,7 +152,7 @@ export const userApi = {
   },
 
   // Quét và tự động xóa tài khoản không hoạt động > 6 tháng (ngoại trừ hội viên đang bảo lưu tập)
-  async cleanupInactiveUsers(): Promise<{ deletedCount: number }> {
+  async cleanupInactiveUsers(): Promise<{ deletedCount: number; message?: string }> {
     try {
       const res = await apiFetch<{ deletedCount: number }>('/users/cleanup-inactive', {
         method: 'POST',
