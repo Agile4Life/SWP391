@@ -224,8 +224,8 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   it('enforces that endDate min constraint is set to startDate', async () => {
     await renderComponent();
 
-    const startInput = host.querySelector('input#plan-start-date') as HTMLInputElement;
-    const endInput = host.querySelector('input#plan-end-date') as HTMLInputElement;
+    const startInput = host.querySelector('input[name="plan-start-date"]') as HTMLInputElement;
+    const endInput = host.querySelector('input[name="plan-end-date"]') as HTMLInputElement;
 
     expect(startInput).not.toBeNull();
     expect(endInput).not.toBeNull();

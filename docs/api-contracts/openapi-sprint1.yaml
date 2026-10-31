@@ -233,6 +233,29 @@ paths:
   /users:
     get: { summary: List users (non deleted), responses: { '200': { description: OK } } }
     post: { summary: Create user, responses: { '201': { description: Created }, '409': { description: EMAIL_EXISTS / PHONE_EXISTS } } }
+  /users/cleanup-inactive:
+    post:
+      summary: Soft-delete users inactive for more than six calendar months (CENTER_MANAGER)
+      description: >-
+        Uses lastLoginAt, or createdAt if the user has never logged in.
+        Excludes CENTER_MANAGER accounts and users with a frozen subscription.
+        The same policy runs daily at 02:00 in the scheduler's configured time zone.
+        User list/detail responses include subscriptionFrozen for members (boolean; omitted or null for other roles).
+      responses:
+        '200':
+          description: Cleanup completed; ApiResponse.data.deletedCount is the number of soft-deleted accounts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [deletedCount]
+                    properties:
+                      deletedCount: { type: integer, minimum: 0 }
+        '401': { description: Authentication required }
+        '403': { description: CENTER_MANAGER role required }
   /users/{id}:
     parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
     get: { summary: User detail, responses: { '200': { description: OK }, '404': { description: NOT_FOUND } } }
