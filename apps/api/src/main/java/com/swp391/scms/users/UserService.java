@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,11 +30,19 @@ public class UserService {
     private final UserMapper userMapper;
     private final ReceptionistRepository receptionistRepository;
     private final com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
+    private final Clock clock;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository) {
-        this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, null);
+        this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, null, Clock.systemDefaultZone());
+    }
+
+    public UserService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, UserMapper userMapper,
+                       ReceptionistRepository receptionistRepository,
+                       com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository) {
+        this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, subscriptionRepository, Clock.systemDefaultZone());
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -41,13 +50,16 @@ public class UserService {
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository,
                        @org.springframework.beans.factory.annotation.Autowired(required = false)
-                       com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository) {
+                       com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false)
+                       Clock clock) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.receptionistRepository = receptionistRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
     @Transactional(readOnly = true)
@@ -92,15 +104,15 @@ public class UserService {
         user.setPhone(dto.getPhone() == null || dto.getPhone().isBlank() ? null : dto.getPhone().trim());
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         user.setStatus("active");
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setCreatedAt(LocalDateTime.now(clock));
+        user.setUpdatedAt(LocalDateTime.now(clock));
 
         User saved = userRepository.saveAndFlush(user);
         if ("MEMBER".equalsIgnoreCase(role.getCode())) {
             Member member = new Member();
             member.setUser(saved);
             member.setMembershipCode("MEM-" + saved.getId());
-            member.setJoinDate(LocalDate.now());
+            member.setJoinDate(LocalDate.now(clock));
             member.setFitnessLevel("beginner");
             saved.setMember(member);
             userRepository.save(saved);
@@ -128,7 +140,7 @@ public class UserService {
         if (dto.getRoleId() != null) {
             user.setRole(findRole(dto.getRoleId()));
         }
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
     }
 
@@ -136,7 +148,7 @@ public class UserService {
     @Audited(action = "USER_DELETE", entity = "users")
     public void deleteUser(Long id) {
         User user = findActiveUser(id);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         user.setDeletedAt(now);
         user.setUpdatedAt(now);
         userRepository.save(user);
@@ -150,7 +162,7 @@ public class UserService {
         }
         User user = findActiveUser(id);
         user.setStatus(status);
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
     }
 
@@ -186,7 +198,7 @@ public class UserService {
     @Transactional
     @Audited(action = "USER_CLEANUP_INACTIVE", entity = "users")
     public int cleanupInactiveUsers() {
-        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+        LocalDateTime sixMonthsAgo = LocalDateTime.now(clock).minusMonths(6);
         List<User> users = userRepository.findAllByDeletedAtIsNullOrderByIdAsc();
         int count = 0;
         for (User user : users) {
@@ -204,7 +216,7 @@ public class UserService {
 
                 // Nếu không đang trong thời gian bảo lưu tập -> tự động xóa mềm
                 if (!isFrozen) {
-                    LocalDateTime now = LocalDateTime.now();
+                    LocalDateTime now = LocalDateTime.now(clock);
                     user.setDeletedAt(now);
                     user.setUpdatedAt(now);
                     userRepository.save(user);

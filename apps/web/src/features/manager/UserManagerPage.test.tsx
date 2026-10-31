@@ -120,7 +120,7 @@ describe('UserManagerPage', () => {
     expect(deleteButtons.length).toBe(3);
 
     // First button is for CENTER_MANAGER, should be disabled
-    expect(deleteButtons[0]).toBeDisabled();
+    expect((deleteButtons[0] as HTMLButtonElement).disabled).toBe(true);
 
     // Click delete on Inactive Coach (3rd delete button)
     await act(async () => {
@@ -155,7 +155,7 @@ describe('UserManagerPage', () => {
     });
 
     expect(host.textContent).toContain('Quét & dọn dẹp tài khoản quá 6 tháng');
-    expect(host.textContent).toContain('Bảo lưu tập (frozen)');
+    expect(host.textContent).toContain('bảo lưu tập (frozen)');
 
     const startBtn = button(host, 'Bắt đầu quét & dọn dẹp');
     expect(startBtn).toBeTruthy();

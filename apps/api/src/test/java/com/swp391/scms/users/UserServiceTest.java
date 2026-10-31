@@ -14,11 +14,13 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.users.dto.UserCreateDto;
 import com.swp391.scms.users.entity.User;
 import com.swp391.scms.users.mapper.UserMapper;
+import java.time.Clock;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -31,6 +33,7 @@ class UserServiceTest {
     @Mock UserMapper userMapper;
     @Mock ReceptionistRepository receptionistRepository;
     @Mock com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
+    @Spy Clock clock = Clock.systemDefaultZone();
     @InjectMocks UserService service;
 
     @Test
@@ -89,7 +92,14 @@ class UserServiceTest {
     }
 
     @Test
-    void updateReceptionistShiftSavesShiftForReceptionist() {
+    void findActiveUserThrowsWhenMissing() {
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.setStatus(99L, "locked"));
+    }
+
+    @Test
+    void updateReceptionistShiftUpdatesShiftForReceptionist() {
         User user = new User();
         user.setId(5L);
         com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
