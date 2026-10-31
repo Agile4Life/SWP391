@@ -86,6 +86,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       root.unmount();
     });
     host.remove();
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     localStorage.clear();
@@ -139,9 +140,12 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     const saveEvalBtn = host.querySelector('.btn-batch-save') as HTMLButtonElement;
     expect(saveEvalBtn.textContent).toContain('Lưu tất cả đánh giá');
 
+    vi.useFakeTimers();
     await act(async () => {
       saveEvalBtn.click();
-      await new Promise((r) => setTimeout(r, 60));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
     });
 
     expect(host.querySelector('.center-toast-card')).not.toBeNull();
@@ -181,9 +185,12 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-modal-save') as HTMLButtonElement;
     expect(modalSaveBtn).not.toBeNull();
 
+    vi.useFakeTimers();
     await act(async () => {
       modalSaveBtn.click();
-      await new Promise((r) => setTimeout(r, 60));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
     });
 
     // Không hiện toast dưới góc
@@ -222,9 +229,12 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
     // Save modal
     const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-modal-save') as HTMLButtonElement;
+    vi.useFakeTimers();
     await act(async () => {
       modalSaveBtn.click();
-      await new Promise((r) => setTimeout(r, 60));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
     });
 
     // Không hiện toast dưới góc
