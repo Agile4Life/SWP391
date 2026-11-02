@@ -22,7 +22,7 @@ describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
       roomName: 'Studio A',
       capacity: 15,
       level: 'all',
-      status: 'active',
+      status: 'ACTIVE' as const,
     },
   ];
 
@@ -43,7 +43,7 @@ describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
       capacity: 15,
       bookedCount: 3,
       availableSeats: 12,
-      status: 'scheduled',
+      status: 'scheduled' as const,
     },
   ];
 
@@ -70,7 +70,7 @@ describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
     vi.spyOn(classesApi, 'getSessions').mockResolvedValue(sampleSessions);
     vi.spyOn(classesApi, 'getDisciplines').mockResolvedValue([{ id: 1, name: 'Mindful Yoga', description: '' }]);
     vi.spyOn(classesApi, 'getAvailableRooms').mockResolvedValue([
-      { id: 2, name: 'Studio A', capacity: 20, status: 'available' },
+      { id: 2, name: 'Studio A', capacity: 20, status: 'available', location: 'Tầng 1' },
     ]);
     vi.spyOn(classesApi, 'getActiveCoaches').mockResolvedValue([
       { id: 10, fullName: 'HLV Nguyễn Minh Quân', email: 'coach@scms.local', status: 'active' },
@@ -88,11 +88,10 @@ describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
 
   const openForm = async () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
-      id: 1,
+      id: '1',
+      identifier: 'manager01',
       name: 'Quản lý Trung tâm',
-      email: 'manager@scms.local',
       role: 'MANAGER',
-      token: 'fake-jwt',
     });
     await act(async () => {
       root.render(<StaffClassesPage />);
@@ -104,11 +103,10 @@ describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
 
   it('hides create, edit, reschedule, and delete buttons for Receptionist (STAFF role)', async () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
-      id: 2,
+      id: '2',
+      identifier: 'reception01',
       name: 'Lễ tân Lan',
-      email: 'reception@scms.local',
       role: 'STAFF',
-      token: 'fake-jwt',
     });
 
     await act(async () => {
@@ -126,11 +124,10 @@ describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
 
   it('shows edit, reschedule, and 2-step double confirm delete for Manager (MANAGER role)', async () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
-      id: 1,
+      id: '1',
+      identifier: 'manager01',
       name: 'Quản lý Trung tâm',
-      email: 'manager@scms.local',
       role: 'MANAGER',
-      token: 'fake-jwt',
     });
     const apiFetchSpy = vi.spyOn(clientModule, 'apiFetch').mockResolvedValue(undefined);
 
