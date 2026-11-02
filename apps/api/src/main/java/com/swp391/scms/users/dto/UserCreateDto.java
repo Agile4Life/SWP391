@@ -3,6 +3,7 @@ package com.swp391.scms.users.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class UserCreateDto {
@@ -25,6 +26,10 @@ public class UserCreateDto {
     @NotNull(message = "{validation.users.role_id.not_null}")
     private Long roleId;
 
+    @NotBlank(message = "{validation.users.gender.not_blank}")
+    @Pattern(regexp = "^(male|female|other)$", message = "{validation.users.gender.invalid}")
+    private String gender;
+
     // Getters and Setters
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
@@ -36,4 +41,6 @@ public class UserCreateDto {
     public void setPassword(String password) { this.password = password; }
     public Long getRoleId() { return roleId; }
     public void setRoleId(Long roleId) { this.roleId = roleId; }
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
 }

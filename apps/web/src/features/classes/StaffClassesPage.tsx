@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { TimePicker } from '../../shared/ui/TimePicker';
@@ -80,6 +81,8 @@ export function StaffClassesPage() {
 
   // State giao diện: Loading / Empty / Error retry
   const [loading, setLoading] = useState<boolean>(true);
+  const [catalogsLoading, setCatalogsLoading] = useState<boolean>(true);
+  const [catalogsError, setCatalogsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // State Modal Tạo lớp & Form
@@ -141,14 +144,22 @@ export function StaffClassesPage() {
   const isManager = currentUser?.role === 'MANAGER';
 
   const loadCatalogs = useCallback(async () => {
-    const [discList, roomList, coachList] = await Promise.all([
-      classesApi.getDisciplines(),
-      classesApi.getAvailableRooms(),
-      classesApi.getActiveCoaches(),
-    ]);
-    setDisciplines(discList);
-    setRooms(roomList);
-    setCoaches(coachList);
+    setCatalogsLoading(true);
+    setCatalogsError(null);
+    try {
+      const [discList, roomList, coachList] = await Promise.all([
+        classesApi.getDisciplines(),
+        classesApi.getAvailableRooms(),
+        classesApi.getActiveCoaches(),
+      ]);
+      setDisciplines(discList);
+      setRooms(roomList);
+      setCoaches(coachList);
+    } catch (cause) {
+      setCatalogsError(cause instanceof Error ? cause.message : 'Không thể tải danh mục tạo lớp học.');
+    } finally {
+      setCatalogsLoading(false);
+    }
   }, []);
 
   const loadData = useCallback(async () => {
@@ -602,7 +613,7 @@ export function StaffClassesPage() {
   return (
     <div className="portal-container">
       <PageHeader
-        eyebrow="Huấn luyện"
+        eyebrow={currentUser?.role === 'STAFF' ? 'Lễ tân' : 'Huấn luyện'}
         title={isManager ? 'Quản lý lớp học & xếp lịch' : 'Lịch học trung tâm'}
         subtitle={
           !isManager
@@ -1284,7 +1295,9 @@ export function StaffClassesPage() {
       {/* Modal: Tạo lớp học và xếp lịch (Manager Only) */}
       {isManager && showModal && (
         <Modal title="Tạo lớp học & xếp lịch" onClose={handleCloseModal}>
-          <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
+          {catalogsLoading ? <LoadingSkeleton label="Đang tải bộ môn, phòng tập và huấn luyện viên…" count={4} />
+            : catalogsError ? <div role="alert"><p>{catalogsError}</p><button type="button" className="btn-secondary" onClick={() => void loadCatalogs()}>Thử lại</button></div>
+            : <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 11 }}>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="class-name">
                 Tên lớp học *
@@ -1382,11 +1395,21 @@ export function StaffClassesPage() {
                 disabled={isSubmitting}
               >
                 <option value="">-- Chọn huấn luyện viên --</option>
-                {coaches.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName} ({c.email})
-                  </option>
-                ))}
+                {coaches.map((c) => {
+                  const genderLabel =
+                    c.gender === 'female'
+                      ? 'Nữ'
+                      : c.gender === 'male'
+                      ? 'Nam'
+                      : c.gender === 'other'
+                      ? 'Khác'
+                      : null;
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {c.fullName} {genderLabel ? `(${genderLabel})` : ''} - {c.email}
+                    </option>
+                  );
+                })}
               </Select>
             </div>
 
@@ -1543,7 +1566,7 @@ export function StaffClassesPage() {
                 )}
               </button>
             </div>
-          </form>
+          </form>}
         </Modal>
       )}
     </div>

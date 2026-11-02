@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { getCurrentUser } from '../../shared/api/client';
 import { LuxuryLoginForm } from './LuxuryLoginForm';
@@ -45,9 +45,34 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 
-async function renderForm() {
-  await act(async () => root.render(<MemoryRouter><LuxuryLoginForm /></MemoryRouter>));
+function CurrentLocation() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="auth-location">{pathname}{search}</output>;
 }
+
+async function renderForm() {
+  await act(async () => root.render(<MemoryRouter initialEntries={['/login']}><LuxuryLoginForm /><CurrentLocation /></MemoryRouter>));
+}
+
+it.each([
+  ['MEMBER', '/member/dashboard'], ['RECEPTIONIST', '/staff/reception'],
+  ['COACH', '/staff/attendance'], ['CENTER_MANAGER', '/manager/users'],
+])('navigates %s immediately after password authentication without advancing timers', async (role, destination) => {
+  vi.useFakeTimers();
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true,
+    data: { token: 'test-jwt', username: 'staff', role },
+  }))));
+  await renderForm();
+  for (const [id, value] of [['login-identifier', 'staff'], ['login-password', 'Password123!']]) {
+    const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(host.querySelector('[data-testid="auth-location"]')?.textContent).toBe(destination);
+});
 
 it('shows exactly one Google sign-in button with the requested label', async () => {
   await renderForm();
@@ -159,6 +184,7 @@ it('signs in an existing active Google member immediately without showing OTP', 
   await act(async () => oauthCallback!({ access_token: 'google-access-token' }));
   expect(getCurrentUser()?.identifier).toBe('returning-member');
   expect(localStorage.getItem('fitcenter_token')).toBe('returning-jwt');
+  expect(host.querySelector('[data-testid="auth-location"]')?.textContent).toBe('/member/dashboard');
   expect(host.querySelector('#google-otp-code')).toBeNull();
   vi.clearAllTimers();
   vi.useRealTimers();

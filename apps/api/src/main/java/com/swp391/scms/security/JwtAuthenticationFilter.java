@@ -1,7 +1,7 @@
 package com.swp391.scms.security;
 
 import com.swp391.scms.users.UserRepository;
-import com.swp391.scms.users.entity.User;
+import com.swp391.scms.users.dto.AuthenticationUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -46,11 +46,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Object rawUserId = claims.get("userId");
             if (!(rawUserId instanceof Number userId)) return;
 
-            User user = userRepository.findWithRoleByIdAndDeletedAtIsNull(userId.longValue()).orElse(null);
-            if (user == null || !"active".equalsIgnoreCase(user.getStatus())) return;
+            AuthenticationUser user = userRepository.findAuthenticationById(userId.longValue()).orElse(null);
+            if (user == null || !"active".equalsIgnoreCase(user.status())) return;
 
-            String role = user.getRole().getCode();
-            AuthenticatedPrincipal principal = new AuthenticatedPrincipal(user.getId(), user.getUsername(), role);
+            String role = user.roleCode();
+            AuthenticatedPrincipal principal = new AuthenticatedPrincipal(user.id(), user.username(), role);
             var authentication = new UsernamePasswordAuthenticationToken(
                     principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase())));
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

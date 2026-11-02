@@ -1,0 +1,89 @@
+{
+  "method": "Local production preview; cold browser cache; service workers disabled; external requests blocked; throttled scenario 1.6 Mbps and 150ms latency; no CPU throttle; measured encoded JS 349466 bytes, production file on disk 1303354 bytes; not a production CWV measurement",
+  "results": [
+    {
+      "navigation": [
+        {
+          "ttfb": 10.699999999254942,
+          "domContentLoaded": 174.89999999850988,
+          "load": 175.09999999776483
+        }
+      ],
+      "paints": [
+        {
+          "name": "first-paint",
+          "ms": 168
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 360
+        }
+      ],
+      "assets": [
+        {
+          "name": "/assets/index-BRsYbmmv.js",
+          "bytes": 349466,
+          "duration": 54.69999999925494
+        },
+        {
+          "name": "/assets/index-CqXNcPQN.css",
+          "bytes": 44968,
+          "duration": 25.900000002235174
+        },
+        {
+          "name": "/images/fitness/strength-session.jpg",
+          "bytes": 89604,
+          "duration": 8
+        },
+        {
+          "name": "/icons/icon-192.png",
+          "bytes": 2180,
+          "duration": 6
+        }
+      ],
+      "throttled": false
+    },
+    {
+      "navigation": [
+        {
+          "ttfb": 8.5,
+          "domContentLoaded": 2477.60000000149,
+          "load": 2477.800000000745
+        }
+      ],
+      "paints": [
+        {
+          "name": "first-paint",
+          "ms": 844
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 2584
+        }
+      ],
+      "assets": [
+        {
+          "name": "/assets/index-BRsYbmmv.js",
+          "bytes": 349466,
+          "duration": 2188.2000000029802
+        },
+        {
+          "name": "/assets/index-CqXNcPQN.css",
+          "bytes": 44968,
+          "duration": 646.6999999992549
+        },
+        {
+          "name": "/images/fitness/strength-session.jpg",
+          "bytes": 89604,
+          "duration": 638.4000000022352
+        },
+        {
+          "name": "/icons/icon-192.png",
+          "bytes": 2180,
+          "duration": 201.19999999925494
+        }
+      ],
+      "throttled": true
+    }
+  ]
+}

@@ -90,5 +90,13 @@ public class UserController {
         userService.updateReceptionistShift(id, request);
         return ApiResponse.ok(msg("users.profile.receptionist.update.success"), null);
     }
+
+    @Operation(summary = "Tự động dọn dẹp tài khoản không hoạt động > 6 tháng",
+               description = "Xóa mềm các tài khoản không đăng nhập quá 6 tháng (ngoại trừ hội viên đang bảo lưu tập)")
+    @PostMapping("/cleanup-inactive")
+    public ApiResponse<java.util.Map<String, Object>> cleanupInactiveUsers() {
+        int count = userService.cleanupInactiveUsers();
+        return ApiResponse.ok(msg("users.cleanup.success"), java.util.Map.of("deletedCount", count));
+    }
 }
 

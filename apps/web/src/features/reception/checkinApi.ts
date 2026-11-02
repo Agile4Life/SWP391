@@ -20,6 +20,15 @@ export interface ScanCheckinPayload {
   gate?: string;
 }
 
+export interface GateQrDto {
+  qrCode: string;
+  gateId: string;
+  gate: string;
+  generatedAt: string;
+  expiresAt: string;
+  expiresInSeconds: number;
+}
+
 export interface CheckinHistoryFilter {
   memberId?: number;
   fromDate?: string;
@@ -27,6 +36,7 @@ export interface CheckinHistoryFilter {
 }
 
 export const checkinApi = {
+  gateQr: (gateId: string, signal?: AbortSignal) => apiFetch<GateQrDto>(`/check-in/gate-qr?gate=${encodeURIComponent(gateId)}`, { cache: 'no-store', signal }),
   /**
    * Quét mã QR hội viên tại cổng/lễ tân (POST /api/v1/check-in/scan)
    */

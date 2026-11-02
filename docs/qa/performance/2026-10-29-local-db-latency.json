@@ -1,0 +1,7 @@
+{
+  "method": "Read-only diagnostic using local runner .env connection configuration and cached PostgreSQL JDBC 42.7.8; TLS sslmode=require as configured by application-supabase.yml; one connection, six sequential SELECT 1 statements, rollback; no account data read or database writes",
+  "connectMs": 1507.8815,
+  "selectOneMs": [121.3926, 104.9032, 101.5481, 103.6904, 104.8265, 103.7018],
+  "readOnly": true,
+  "localApiMeasurement": "No response on 127.0.0.1:8080 during audit; local health/catalog timings were not collected"
+}

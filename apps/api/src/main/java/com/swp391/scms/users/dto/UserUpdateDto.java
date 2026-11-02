@@ -1,5 +1,6 @@
 package com.swp391.scms.users.dto;
 
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class UserUpdateDto {
@@ -11,6 +12,9 @@ public class UserUpdateDto {
 
     private Long roleId;
 
+    @Pattern(regexp = "^(male|female|other)$", message = "{validation.users.gender.invalid}")
+    private String gender;
+
     // Getters and Setters
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
@@ -18,4 +22,6 @@ public class UserUpdateDto {
     public void setPhone(String phone) { this.phone = phone; }
     public Long getRoleId() { return roleId; }
     public void setRoleId(Long roleId) { this.roleId = roleId; }
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
 }

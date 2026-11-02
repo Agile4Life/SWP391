@@ -5,11 +5,12 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   busy?: boolean;
+  className?: string;
   returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Hộp thoại dựa trên <dialog> gốc: có sẵn focus trap, phím Esc và backdrop. */
-export function Modal({ title, onClose, children, busy = false, returnFocusRef }: ModalProps) {
+export function Modal({ title, onClose, children, busy = false, className, returnFocusRef }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -31,14 +32,15 @@ export function Modal({ title, onClose, children, busy = false, returnFocusRef }
       role="dialog"
       aria-modal="true"
       aria-busy={busy}
-      className="portal-dialog"
+      className={`portal-dialog ${className || ''}`.trim()}
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby={titleId}
       onKeyDown={event => {
         if (event.key !== 'Tab') return;
         const dialog = event.currentTarget;
+        if (event.target instanceof Element && event.target.closest('dialog') !== dialog) return;
         const controls = [...dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
-          .filter(element => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
+          .filter(element => element.closest('dialog') === dialog && element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
         const first = controls[0];
         const last = controls.at(-1);
         if (!first) { event.preventDefault(); dialog.focus(); }
@@ -47,6 +49,7 @@ export function Modal({ title, onClose, children, busy = false, returnFocusRef }
       }}
       tabIndex={-1}
       onCancel={(e) => {
+        e.stopPropagation();
         e.preventDefault();
         if (!busy) onClose();
       }}

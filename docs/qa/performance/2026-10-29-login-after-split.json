@@ -1,0 +1,93 @@
+{
+  "method": "Cold production preview, 390x844, SW disabled, external requests blocked; throttled case 1.6 Mbps / 150ms; no CPU throttling",
+  "results": [
+    {
+      "throttled": false,
+      "fcpMs": 192,
+      "formReadyMs": 280.19999999925494,
+      "encodedJsBytes": 139206,
+      "decodedJsBytes": 445522,
+      "scripts": [
+        {
+          "path": "/assets/rolldown-runtime-WkwZ5CU-.js",
+          "encodedBytes": 599,
+          "decodedBytes": 599
+        },
+        {
+          "path": "/assets/index-B9ILfnHM.js",
+          "encodedBytes": 127299,
+          "decodedBytes": 416239
+        },
+        {
+          "path": "/assets/LoginPage-B90GaoOG.js",
+          "encodedBytes": 5195,
+          "decodedBytes": 15123
+        },
+        {
+          "path": "/assets/StatusMark-CjeSOutc.js",
+          "encodedBytes": 654,
+          "decodedBytes": 654
+        },
+        {
+          "path": "/assets/toast-D7Gf3bfd.js",
+          "encodedBytes": 557,
+          "decodedBytes": 557
+        },
+        {
+          "path": "/assets/authApi-CCMvHnPM.js",
+          "encodedBytes": 963,
+          "decodedBytes": 1901
+        },
+        {
+          "path": "/assets/PublicLayout-CDMWNwV4.js",
+          "encodedBytes": 3939,
+          "decodedBytes": 10449
+        }
+      ]
+    },
+    {
+      "throttled": true,
+      "fcpMs": 1144,
+      "formReadyMs": 1525.1000000014901,
+      "encodedJsBytes": 139206,
+      "decodedJsBytes": 445522,
+      "scripts": [
+        {
+          "path": "/assets/index-B9ILfnHM.js",
+          "encodedBytes": 127299,
+          "decodedBytes": 416239
+        },
+        {
+          "path": "/assets/rolldown-runtime-WkwZ5CU-.js",
+          "encodedBytes": 599,
+          "decodedBytes": 599
+        },
+        {
+          "path": "/assets/LoginPage-B90GaoOG.js",
+          "encodedBytes": 5195,
+          "decodedBytes": 15123
+        },
+        {
+          "path": "/assets/StatusMark-CjeSOutc.js",
+          "encodedBytes": 654,
+          "decodedBytes": 654
+        },
+        {
+          "path": "/assets/toast-D7Gf3bfd.js",
+          "encodedBytes": 557,
+          "decodedBytes": 557
+        },
+        {
+          "path": "/assets/authApi-CCMvHnPM.js",
+          "encodedBytes": 963,
+          "decodedBytes": 1901
+        },
+        {
+          "path": "/assets/PublicLayout-CDMWNwV4.js",
+          "encodedBytes": 3939,
+          "decodedBytes": 10449
+        }
+      ]
+    }
+  ]
+}

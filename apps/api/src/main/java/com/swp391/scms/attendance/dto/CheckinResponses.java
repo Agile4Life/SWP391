@@ -6,6 +6,9 @@ public final class CheckinResponses {
 
     private CheckinResponses() {}
 
+    public record GateQrDto(String qrCode, String gateId, String gate, java.time.Instant generatedAt,
+                            java.time.Instant expiresAt, long expiresInSeconds) {}
+
     public record CheckinDto(
             Long id,
             Long memberId,

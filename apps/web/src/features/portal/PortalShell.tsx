@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigation } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser } from '../../shared/api/client';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
-import { PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
+import { MOBILE_PRIMARY_NAV, PORTAL_NAV, ROLE_LABELS } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
 import { LiquidGlassChatbot } from '../../shared/liquid-glass/LiquidGlassChatbot';
+import { PwaStatus } from '../pwa/PwaStatus';
 
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -16,12 +18,15 @@ export function PortalShell() {
   const user = getCurrentUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const navigation = useNavigation();
+  const navigating = navigation.state !== 'idle';
   const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | null>(null);
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState<number | null>(null);
   const [notificationError, setNotificationError] = useState(false);
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
   const isMember = user?.role === 'MEMBER';
   const profileLabel = isMember ? 'Hồ sơ & Sức khỏe' : 'Hồ sơ cá nhân';
   const navItems = PORTAL_NAV.filter((item) => user && item.roles.includes(user.role)).map((item) => {
@@ -31,6 +36,11 @@ export function PortalShell() {
   });
   const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? 'Không gian của bạn';
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
+  const mobileItems = user ? MOBILE_PRIMARY_NAV[user.role].flatMap(item => {
+    const authorizedItem = navItems.find(candidate => candidate.to === item.to);
+    return authorizedItem ? [{ ...authorizedItem, label: item.label }] : [];
+  }) : [];
+  const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
   useEffect(() => {
     if (!isMember) return;
@@ -80,7 +90,7 @@ export function PortalShell() {
         <Link to="/" className="portal-logo" aria-label="SÖL · Về trang chủ"><span>S</span><i /></Link>
         <nav className="portal-rail-nav" aria-label="Điều hướng portal">
           {navItems.filter((item) => item.to !== '/member/profile').map((item) => <NavLink
-            key={item.to} to={item.to} className="portal-rail-link" aria-label={item.label}>
+            key={item.to} to={item.to} className="portal-rail-link" aria-label={item.label} title={item.label}>
             <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
           </NavLink>)}
         </nav>
@@ -116,16 +126,26 @@ export function PortalShell() {
               <span className="portal-avatar">{initials}</span>
               <span className="portal-account-name">{user.name}<small>{ROLE_LABELS[user.role]}</small></span>
             </Link>
-            <button type="button" className="portal-icon-button portal-mobile-logout" aria-label="Đăng xuất" onClick={() => setDialog('logout')}><PortalIcon name="logout" size={18} /></button>
           </div>
         </header>
-        <main ref={mainRef} id="portal-main" tabIndex={-1}>
-          <div key={location.pathname} className="route-fade"><Outlet /></div>
+        <PwaStatus mode="status" />
+        <main ref={mainRef} id="portal-main" tabIndex={-1} aria-busy={navigating || undefined}>
+          {navigating && <LoadingSkeleton label="Đang tải trang…" variant="cards" count={3} className="portal-route-loading" />}
+          <div key={location.pathname} className="route-fade" hidden={navigating}><Outlet /></div>
         </main>
         <footer className="portal-workspace-footer"><span>SÖL · Không gian của bạn</span><span>Chuyển động mỗi ngày. Cân bằng mỗi khoảnh khắc.</span></footer>
       </div>
 
-      {isMember && <LiquidGlassChatbot />}
+      <nav className="portal-mobile-nav" aria-label="Điều hướng nhanh">
+        {mobileItems.map(item => <NavLink key={item.to} to={item.to} className="portal-mobile-nav__item">
+          <PortalIcon name={item.icon} size={21} /><span>{item.label}</span>
+        </NavLink>)}
+        <button ref={moreRef} type="button" className={`portal-mobile-nav__item${secondaryScreen ? ' active' : ''}`} aria-label="Thêm màn hình" aria-haspopup="dialog" aria-expanded={dialog === 'menu'} aria-current={secondaryScreen ? 'true' : undefined} onClick={() => openNavigation('menu')}>
+          <PortalIcon name="menu" size={21} /><span>Thêm</span>
+        </button>
+      </nav>
+
+      {isMember && location.pathname !== '/member/check-in' && <LiquidGlassChatbot />}
       {dialog === 'logout' && <Modal title="Đăng xuất khỏi SÖL?" onClose={() => setDialog(null)}>
         <p className="portal-subtitle">Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.</p>
         <div className="form-actions" style={{ marginTop: 24 }}>
@@ -133,7 +153,7 @@ export function PortalShell() {
           <button type="button" className="btn-primary" onClick={() => { clearAuthSession(); navigate('/login', { replace: true }); }}>Đăng xuất</button>
         </div>
       </Modal>}
-      {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? 'Không gian của bạn' : 'Tìm màn hình'} onClose={() => setDialog(null)}>
+      {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? 'Không gian của bạn' : 'Tìm màn hình'} onClose={() => setDialog(null)} returnFocusRef={dialog === 'menu' ? moreRef : undefined}>
         <label className="portal-label" htmlFor="portal-screen-search">Tên màn hình</label>
         <input id="portal-screen-search" className="portal-input" type="search" placeholder="Ví dụ: lịch học, gói tập…" value={query} onChange={(event) => setQuery(event.target.value)} />
         <nav className="portal-screen-results" aria-label="Các màn hình của bạn">
@@ -142,7 +162,11 @@ export function PortalShell() {
           </NavLink>)}
           {results.length === 0 && <p className="portal-search-empty" role="status">Không tìm thấy màn hình. Hãy thử từ khóa khác.</p>}
         </nav>
-        {dialog === 'menu' && <Link className="portal-menu-home" to="/" onClick={() => setDialog(null)}><PortalIcon name="home" size={16} />Về trang chủ SÖL</Link>}
+        {dialog === 'menu' && <div className="portal-menu-settings">
+          <PwaStatus mode="install" />
+          <Link className="portal-menu-home" to="/" onClick={() => setDialog(null)}><PortalIcon name="home" size={16} />Về trang chủ SÖL</Link>
+          <button type="button" className="portal-menu-logout" aria-label="Đăng xuất" onClick={() => setDialog('logout')}><PortalIcon name="logout" size={18} />Đăng xuất</button>
+        </div>}
       </Modal>}
     </div>
   </div>;

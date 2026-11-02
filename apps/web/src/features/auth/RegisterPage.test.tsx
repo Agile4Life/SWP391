@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RegisterPage } from './RegisterPage';
 
@@ -18,7 +18,13 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); vi.useRealTimers(); });
-async function render() { await act(async () => root.render(<MemoryRouter><RegisterPage /></MemoryRouter>)); }
+function CurrentLocation() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="auth-location">{pathname}{search}</output>;
+}
+async function render(path = '/register') {
+  await act(async () => root.render(<MemoryRouter initialEntries={[path]}><RegisterPage /><CurrentLocation /></MemoryRouter>));
+}
 async function fill(id: string, value: string) {
   const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
   await act(async () => {
@@ -31,6 +37,15 @@ async function validForm(phone = '') {
   await fill('reg-phone', phone); await fill('reg-password', 'Buyer123!');
 }
 async function submit() { await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
+
+it('returns to login immediately after OTP confirmation and keeps the selected package', async () => {
+  vi.useFakeTimers();
+  await render('/register?returnTo=%2Fmember%2Fpackages%3FpackageId%3D2');
+  await validForm(); await submit();
+  await fill('otp-code', '123456'); await submit();
+  expect(host.querySelector('[data-testid="auth-location"]')?.textContent)
+    .toBe('/login?returnTo=%2Fmember%2Fpackages%3FpackageId%3D2');
+});
 
 it('normalizes the phone example before sending the validated registration', async () => {
   await render(); await validForm('0912 345 678'); await submit();

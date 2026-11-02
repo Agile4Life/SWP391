@@ -1,3 +1,4 @@
+import { LoadingImage } from '../../shared/ui/LoadingImage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
@@ -6,6 +7,7 @@ import { Select } from '../../shared/ui/Select';
 import { toast } from '../../shared/ui/toast';
 import { checkinApi, type CheckinDto } from './checkinApi';
 import './staff-check-in.css';
+import { GateQrPanel } from './GateQrPanel';
 
 const formatTime = (iso?: string | null): string => {
   if (!iso) return '—';
@@ -217,13 +219,15 @@ export function StaffCheckInPage() {
                   type="submit"
                   className="btn-primary"
                   disabled={isScanning || !scanCode.trim()}
-                  data-testid="scan-submit-button"
+                  data-testid="scan-submit-button" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                 >
                   {isScanning ? 'Đang quét...' : 'Check-in'}
                 </button>
               </div>
             </div>
           </form>
+
+          <GateQrPanel gateId={selectedGate.includes('A2') ? 'A2' : selectedGate.includes('B1') ? 'B1' : 'A1'} />
 
           {/* Visual Door Gate Feedback */}
           {currentResult && (
@@ -245,7 +249,7 @@ export function StaffCheckInPage() {
               </div>
 
               {isGranted && currentResult.avatarUrl && (
-                <img src={currentResult.avatarUrl} alt={`Ảnh hội viên ${currentResult.memberName || ''}`}
+                <LoadingImage src={currentResult.avatarUrl} alt={`Ảnh hội viên ${currentResult.memberName || ''}`}
                   referrerPolicy="no-referrer" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '50%', marginBottom: 12 }} />
               )}
 

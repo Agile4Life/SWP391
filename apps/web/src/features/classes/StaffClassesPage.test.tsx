@@ -4,8 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffClassesPage } from './StaffClassesPage';
 import * as clientModule from '../../shared/api/client';
 import { classesApi } from './classesApi';
+import type { Discipline } from '../manager/catalogApi';
 
-describe('StaffClassesPage (SCRUM-131: Quản lý Lớp học, Đổi lịch, Xóa 2 bước & Khóa quyền Lễ tân)', () => {
+describe('StaffClassesPage (SCRUM-131 & Catalog Resilience)', () => {
   let host: HTMLDivElement;
   let root: Root;
 
@@ -48,13 +49,26 @@ describe('StaffClassesPage (SCRUM-131: Quản lý Lớp học, Đổi lịch, X�
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.setAttribute('open', '');
+      },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute('open');
+      },
+    });
+
     host = document.createElement('div');
     document.body.append(host);
     root = createRoot(host);
 
     vi.spyOn(classesApi, 'getClasses').mockResolvedValue(sampleClasses);
     vi.spyOn(classesApi, 'getSessions').mockResolvedValue(sampleSessions);
-    vi.spyOn(classesApi, 'getDisciplines').mockResolvedValue([{ id: 1, name: 'Mindful Yoga' }]);
+    vi.spyOn(classesApi, 'getDisciplines').mockResolvedValue([{ id: 1, name: 'Mindful Yoga', description: '' }]);
     vi.spyOn(classesApi, 'getAvailableRooms').mockResolvedValue([
       { id: 2, name: 'Studio A', capacity: 20, status: 'available' },
     ]);
@@ -71,6 +85,22 @@ describe('StaffClassesPage (SCRUM-131: Quản lý Lớp học, Đổi lịch, X�
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
+
+  const openForm = async () => {
+    vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
+      id: 1,
+      name: 'Quản lý Trung tâm',
+      email: 'manager@scms.local',
+      role: 'MANAGER',
+      token: 'fake-jwt',
+    });
+    await act(async () => {
+      root.render(<StaffClassesPage />);
+    });
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="create-class-button"]')!.click();
+    });
+  };
 
   it('hides create, edit, reschedule, and delete buttons for Receptionist (STAFF role)', async () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
@@ -116,7 +146,7 @@ describe('StaffClassesPage (SCRUM-131: Quản lý Lớp học, Đổi lịch, X�
     const deleteBtn = host.querySelector('[data-testid="delete-class-101"]') as HTMLButtonElement;
     expect(deleteBtn).not.toBeNull();
 
-    // Click Delete -> opens Step 1 of Double Confirm (in document.body via Modal portal or host)
+    // Click Delete -> opens Step 1 of Double Confirm
     await act(async () => {
       deleteBtn.click();
     });
@@ -139,5 +169,38 @@ describe('StaffClassesPage (SCRUM-131: Quản lý Lớp học, Đổi lịch, X�
       step2Btn.click();
     });
     expect(apiFetchSpy).toHaveBeenCalledWith('/classes/101', { method: 'DELETE' });
+  });
+
+  it('keeps catalog fields pending until their request resolves and then reveals the form immediately', async () => {
+    let resolveDisciplines!: (value: Discipline[]) => void;
+    vi.spyOn(classesApi, 'getDisciplines').mockReturnValue(
+      new Promise((resolve) => {
+        resolveDisciplines = resolve;
+      }),
+    );
+    await openForm();
+    expect(host.querySelector('dialog [aria-busy="true"]')).not.toBeNull();
+    expect(host.querySelector('#class-discipline')).toBeNull();
+
+    await act(async () => resolveDisciplines([{ id: 7, name: 'Yoga đã tải', description: '' }]));
+    expect(host.querySelector('dialog [aria-busy="true"]')).toBeNull();
+    expect(host.querySelector('#class-discipline')?.parentElement?.querySelector('select')?.textContent).toContain(
+      'Yoga đã tải',
+    );
+  });
+
+  it('shows catalog failure with retry instead of an apparently empty creation form', async () => {
+    vi.spyOn(classesApi, 'getDisciplines').mockRejectedValueOnce(new Error('Mất kết nối danh mục'));
+    await openForm();
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối danh mục');
+    expect(host.querySelector('#class-discipline')).toBeNull();
+
+    const retry = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+      (button) => button.textContent === 'Thử lại',
+    )!;
+    await act(async () => retry.click());
+    expect(host.querySelector('#class-discipline')?.parentElement?.querySelector('select')?.textContent).toContain(
+      'Mindful Yoga',
+    );
   });
 });

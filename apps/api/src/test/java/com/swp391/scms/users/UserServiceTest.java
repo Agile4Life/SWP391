@@ -14,10 +14,11 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.users.dto.UserCreateDto;
 import com.swp391.scms.users.entity.User;
 import com.swp391.scms.users.mapper.UserMapper;
+import java.time.Clock;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,7 +31,15 @@ class UserServiceTest {
     @Mock PasswordEncoder passwordEncoder;
     @Mock UserMapper userMapper;
     @Mock ReceptionistRepository receptionistRepository;
-    @InjectMocks UserService service;
+    @Mock com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
+
+    private Clock clock = Clock.systemUTC();
+    private UserService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new UserService(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, subscriptionRepository, clock);
+    }
 
     @Test
     void createUserRejectsDuplicateEmail() {
@@ -88,7 +97,14 @@ class UserServiceTest {
     }
 
     @Test
-    void updateReceptionistShiftSavesShiftForReceptionist() {
+    void findActiveUserThrowsWhenMissing() {
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.setStatus(99L, "locked"));
+    }
+
+    @Test
+    void updateReceptionistShiftUpdatesShiftForReceptionist() {
         User user = new User();
         user.setId(5L);
         com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
@@ -113,5 +129,44 @@ class UserServiceTest {
 
         assertThrows(BadRequestException.class, () ->
                 service.updateReceptionistShift(5L, new com.swp391.scms.users.dto.ReceptionistProfileUpdateDto("Morning")));
+    }
+
+    @Test
+    void cleanupInactiveUsersDeletesInactiveUsersExceptFrozenSubscriptions() {
+        // User 1: Inactive > 6 months, not frozen -> SHOULD BE DELETED
+        User user1 = new User();
+        user1.setId(10L);
+        com.swp391.scms.users.entity.Role roleMember = new com.swp391.scms.users.entity.Role();
+        roleMember.setCode("MEMBER");
+        user1.setRole(roleMember);
+        user1.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(7));
+
+        // User 2: Inactive > 6 months, but has FROZEN subscription -> MUST BE PRESERVED
+        User user2 = new User();
+        user2.setId(20L);
+        user2.setRole(roleMember);
+        user2.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(8));
+
+        // User 3: CENTER_MANAGER inactive > 6 months -> MUST BE PRESERVED
+        User user3 = new User();
+        user3.setId(30L);
+        com.swp391.scms.users.entity.Role roleAdmin = new com.swp391.scms.users.entity.Role();
+        roleAdmin.setCode("CENTER_MANAGER");
+        user3.setRole(roleAdmin);
+        user3.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(9));
+
+        when(userRepository.findAllByDeletedAtIsNullOrderByIdAsc()).thenReturn(java.util.List.of(user1, user2, user3));
+        when(subscriptionRepository.existsByMemberUserIdAndStatus(10L, "frozen")).thenReturn(false);
+        when(subscriptionRepository.existsByMemberUserIdAndStatus(20L, "frozen")).thenReturn(true);
+
+        int deletedCount = service.cleanupInactiveUsers();
+
+        assertEquals(1, deletedCount);
+        assertNotNull(user1.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(user2.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertNull(user3.getDeletedAt());
+        verify(userRepository).save(user1);
+        verify(userRepository, never()).save(user2);
+        verify(userRepository, never()).save(user3);
     }
 }

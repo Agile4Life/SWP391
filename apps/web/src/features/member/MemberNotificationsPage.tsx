@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
 
 const category: Record<string, { icon: string; label: string }> = {
-  schedule_change: { icon: '◷', label: 'Lịch học' }, class_reminder: { icon: '◷', label: 'Lịch học' },
-  payment: { icon: '₫', label: 'Thanh toán' }, package_expiry: { icon: '₫', label: 'Thanh toán' },
-  support_reply: { icon: '✉', label: 'Hỗ trợ' }, system: { icon: '✦', label: 'Hệ thống' },
+  schedule_change: { icon: '◷', label: 'Lịch học' },
+  class_reminder: { icon: '◷', label: 'Nhắc lịch học' },
+  booking: { icon: '✓', label: 'Đăng ký lớp' },
+  waitlist: { icon: '⏳', label: 'Hàng chờ' },
+  payment: { icon: '₫', label: 'Thanh toán' },
+  package_expiry: { icon: '₫', label: 'Hạn gói tập' },
+  support_reply: { icon: '✉', label: 'Hỗ trợ' },
+  system: { icon: '✦', label: 'Hệ thống' },
 };
 
 function errorMessage(error: unknown): string {
@@ -68,7 +74,7 @@ export function MemberNotificationsPage() {
     <PageHeader eyebrow="Hội viên" title="Thông báo" subtitle="Cập nhật về lịch học, gói tập và dịch vụ của bạn."
       actions={<button className="notification-action" type="button" disabled={busy || !hasUnread} onClick={() => void readAll()}>Đánh dấu tất cả đã đọc</button>} />
     {error && <div className="portal-alert notification-error" role="alert">{error} <button type="button" onClick={() => void load()}>Thử lại</button></div>}
-    {loading ? <div className="portal-state" role="status">Đang tải thông báo…</div> : !data?.content.length && !error ?
+    {loading ? <LoadingSkeleton label="Đang tải thông báo…" count={5} /> : !data?.content.length && !error ?
       <div className="portal-empty"><h3>Chưa có thông báo</h3><p>Thông báo mới sẽ xuất hiện tại đây.</p></div> :
       <div className="notification-list" aria-label="Danh sách thông báo">
         {data?.content.map((item) => <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
