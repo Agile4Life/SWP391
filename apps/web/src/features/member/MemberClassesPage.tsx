@@ -3,9 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
-import { PortalIcon } from '../portal/PortalIcon';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
+import { MemberTimetable } from './components/MemberTimetable';
 import { getFavoriteDisciplines, toggleFavoriteDiscipline } from './favoriteDisciplinesApi';
 import { getMySubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
@@ -140,12 +140,14 @@ function disciplineFromQuery(value: string | null): string {
 export function MemberClassesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
-  const [tab, setTab] = useState<'schedule' | 'coach_booking' | 'my'>(
+  const [tab, setTab] = useState<'timetable' | 'schedule' | 'coach_booking' | 'my'>(
     initialTab === 'coach' || initialTab === 'pt' || initialTab === 'coach_booking'
       ? 'coach_booking'
       : initialTab === 'my'
       ? 'my'
-      : 'schedule',
+      : initialTab === 'list'
+      ? 'schedule'
+      : 'timetable',
   );
   const [weekOffset, setWeekOffset] = useState<0 | 1 | 'month'>(0);
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
@@ -184,7 +186,7 @@ export function MemberClassesPage() {
     
   }
 
-  function handleSelectTab(nextTab: 'schedule' | 'coach_booking' | 'my') {
+  function handleSelectTab(nextTab: 'timetable' | 'schedule' | 'coach_booking' | 'my') {
     clearActionFeedback();
     setTab(nextTab);
     const params = new URLSearchParams(searchParams);
@@ -192,6 +194,8 @@ export function MemberClassesPage() {
       params.set('tab', 'pt');
     } else if (nextTab === 'my') {
       params.set('tab', 'my');
+    } else if (nextTab === 'schedule') {
+      params.set('tab', 'list');
     } else {
       params.delete('tab');
     }
@@ -459,6 +463,15 @@ export function MemberClassesPage() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === 'timetable'}
+          className={`portal-tab ${tab === 'timetable' ? 'active' : ''}`}
+          onClick={() => handleSelectTab('timetable')}
+        >
+          Thời khóa biểu
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === 'schedule'}
           className={`portal-tab ${tab === 'schedule' ? 'active' : ''}`}
           onClick={() => {
@@ -500,7 +513,29 @@ export function MemberClassesPage() {
         </div>
       )}
 
-      {tab === 'coach_booking' ? (
+      {tab === 'timetable' ? (
+        <div className="stack">
+          <div className="filter-chips tt-chips" role="group" aria-label="Lọc theo bộ môn">
+            {['ALL', ...disciplines].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
+                aria-pressed={discipline === value}
+                onClick={() => setDiscipline(value)}
+              >
+                {value === 'ALL' ? 'Tất cả bộ môn' : value}
+              </button>
+            ))}
+          </div>
+          {hasActivePackage === false && (
+            <p className="row-card__meta" style={{ margin: 0 }}>
+              Cần gói tập đang hoạt động để đặt chỗ. <Link className="member-classes-package-link" to="/member/packages">Xem gói tập</Link>
+            </p>
+          )}
+          <MemberTimetable discipline={discipline} onBookingChange={() => { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }} />
+        </div>
+      ) : tab === 'coach_booking' ? (
         <MemberCoachBookingView onBookingSuccess={() => { setRetry(v => v + 1); setMyScheduleRetry(v => v + 1); }} />
       ) : tab === 'schedule' ? (
         <div>
@@ -526,7 +561,7 @@ export function MemberClassesPage() {
           >
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <p className="row-card__meta" style={{ margin: 0 }}>
-                📅 Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> ({weekOffset === 'month' ? '30 ngày tới' : 'Thứ 2–Chủ nhật'})
+                Lịch học từ <strong>{formatShortDate(weekRange.fromDate)}</strong> đến <strong>{formatShortDate(weekRange.toDate)}</strong> ({weekOffset === 'month' ? '30 ngày tới' : 'Thứ 2–Chủ nhật'})
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -573,7 +608,7 @@ export function MemberClassesPage() {
                   setDiscipline('ALL');
                 }}
               >
-                ⭐ Bộ môn yêu thích {favoriteDisciplineIds.length > 0 ? `(${favoriteDisciplineIds.length})` : ''}
+                Bộ môn yêu thích {favoriteDisciplineIds.length > 0 ? `(${favoriteDisciplineIds.length})` : ''}
               </button>
               {['ALL', ...disciplines].map((value) => {
                 const discId = disciplineNameToId[value];
@@ -770,7 +805,7 @@ export function MemberClassesPage() {
                       <div className="row-card__meta row-card__meta--inline">
                         <span className="badge badge-info">{item.disciplineName}</span>
                         {overlap && <span className="badge badge-warning" data-testid={`overlap-badge-${item.id}`}>Trùng giờ đã đặt</span>}
-                        <span><PortalIcon name="calendar" size={14} />{date}/{month}/{year}</span>
+                        <span>{date}/{month}/{year}</span>
                         {(myEnrollment || myBooking) && (
                           <span className="badge badge-success">Đã đặt chỗ</span>
                         )}
@@ -778,8 +813,8 @@ export function MemberClassesPage() {
                       <h3 className="row-card__title">{item.className}</h3>
                       <div className="row-card__meta row-card__meta--inline">
                         <span><strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                        <span><PortalIcon name="building" size={14} />{item.roomName}</span>
-                        <span><PortalIcon name="profile" size={14} />{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
+                        <span>{item.roomName}</span>
+                        <span>{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
                       </div>
                       <div className="row-card__meta">
                         Trạng thái: {past ? 'Đã qua giờ mở lớp' : item.status === 'scheduled' ? 'Đã lên lịch' : item.status === 'cancelled' ? 'Đã hủy' : item.status}
@@ -940,12 +975,12 @@ export function MemberClassesPage() {
                         <div>
                           <div className="row-card__meta row-card__meta--inline">
                             <span className="badge badge-success">Đã xác nhận chỗ</span>
-                            <span><PortalIcon name="calendar" size={14} />Ngày học: {formatShortDate(item.sessionDate)}</span>
+                            <span>Ngày học: {formatShortDate(item.sessionDate)}</span>
                           </div>
                           <h3 className="row-card__title">{item.className}</h3>
                           <div className="row-card__meta row-card__meta--inline">
                             <span>Khung giờ: <strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                            {item.roomName && <span><PortalIcon name="building" size={14} />{item.roomName}</span>}
+                            {item.roomName && <span>{item.roomName}</span>}
                           </div>
                         </div>
                       </div>
@@ -972,7 +1007,7 @@ export function MemberClassesPage() {
                       <div>
                         <div className="row-card__meta row-card__meta--inline">
                           <span className="badge badge-success">Đã xác nhận chỗ</span>
-                          {item.sessionDate && <span><PortalIcon name="calendar" size={14} />Ngày học: {formatShortDate(item.sessionDate)}</span>}
+                          {item.sessionDate && <span>Ngày học: {formatShortDate(item.sessionDate)}</span>}
                         </div>
                         <h3 className="row-card__title">{item.className}</h3>
                         <div className="row-card__meta row-card__meta--inline">
