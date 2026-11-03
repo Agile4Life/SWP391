@@ -26,8 +26,9 @@ class VnpayPaymentServiceTest {
     final InvoiceService invoices = mock(InvoiceService.class);
     final VnpayGateway gateway = new VnpayGateway(new VnpayProperties(true, "TEST1234", "test-secret",
             "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "https://example.test/member/payments/vnpay/return", 15));
+    final com.swp391.scms.notifications.NotificationService notifications = mock(com.swp391.scms.notifications.NotificationService.class);
     final Clock clock = Clock.fixed(Instant.parse("2026-11-03T05:00:00Z"), ZoneOffset.UTC);
-    final VnpayPaymentService service = new VnpayPaymentService(transactions, payments, members, subscriptions, settlement, invoices, gateway, clock, mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class), mock(com.swp391.scms.courts.repository.CourtBookingRepository.class),mock(com.swp391.scms.notifications.NotificationService.class),mock(com.swp391.scms.common.i18n.MessageService.class));
+    final VnpayPaymentService service = new VnpayPaymentService(transactions, payments, members, subscriptions, settlement, invoices, gateway, clock, mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class), mock(com.swp391.scms.courts.repository.CourtBookingRepository.class),notifications,mock(com.swp391.scms.common.i18n.MessageService.class));
     final AuthenticatedPrincipal owner = new AuthenticatedPrincipal(7L, "member", "MEMBER");
     Payment payment;
     VnpayTransaction transaction;
@@ -52,10 +53,11 @@ class VnpayPaymentServiceTest {
         assertEquals("success",transaction.getStatus());
         assertEquals("02",service.ipn(fields));
         verify(settlement,times(1)).updatePaymentStatus(9L,"success");
+        verify(notifications, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("payment"), eq(9L));
     }
     @Test void invalidSignatureNeverLooksUpOrSettlesAnOrder() {
         var fields=callback("00","00","65000000"); fields.put("vnp_Amount","1");
-        assertEquals("97",service.ipn(fields)); verifyNoInteractions(settlement,invoices); verify(transactions,never()).findById(any());
+        assertEquals("97",service.ipn(fields)); verifyNoInteractions(settlement,invoices,notifications); verify(transactions,never()).findById(any());
     }
     @Test void signedAmountMismatchIsRejected() {
         assertEquals("04",service.ipn(callback("00","00","1"))); verifyNoInteractions(settlement,invoices);

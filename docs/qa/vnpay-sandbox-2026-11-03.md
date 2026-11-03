@@ -12,3 +12,7 @@ Phạm vi: SCRUM-76 mở rộng theo yêu cầu người dùng sang gói tập, 
 - Knowledge graph chưa cập nhật: interpreter lưu trong `graphify-out/.graphify_python` là đường dẫn Windows không tồn tại trên máy này và Python hiện tại chưa có module `graphify`. Không sửa graph bằng dữ liệu suy đoán.
 
 Không gộp/commit các thay đổi giao diện hoặc lịch đang có từ tác vụ khác trong workspace.
+
+## Xác minh bản ghép lên main
+
+Checkout riêng trên `origin/main` đã có lịch tuần, bổ sung commit tính phí sân cần cho VNPay và các thay đổi portal/giáo án của chat này. Build/lint frontend exit 0; 664 test frontend qua. Backend: 964 test, 0 lỗi/thất bại, 34 skipped vì thiếu môi trường DB thật. `.env` và merchant HashSecret không được đưa vào checkout/commit.
