@@ -36,6 +36,22 @@ public class Payment {
     @JoinColumn(name = "subscription_id", insertable = false, updatable = false)
     private MembershipSubscription subscription;
 
+    @Column(name = "coach_booking_id")
+    private Long coachBookingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coach_booking_id", insertable = false, updatable = false)
+    private com.swp391.scms.coaching.entity.CoachBooking coachBooking;
+    @Column(name = "court_booking_id")
+    private Long courtBookingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "court_booking_id", insertable = false, updatable = false)
+    private com.swp391.scms.courts.entity.CourtBooking courtBooking;
+
+    public Long getCoachBookingId() { return coachBookingId; }
+    public void setCoachBookingId(Long id) { coachBookingId = id; }
+    public Long getCourtBookingId() { return courtBookingId; }
+    public void setCourtBookingId(Long id) { courtBookingId = id; }
+
     @Column(name = "class_enrollment_id")
     private Long classEnrollmentId;
 
@@ -66,6 +82,10 @@ public class Payment {
 
     @Column(length = 255)
     private String note;
+
+    /** Receipt photo (data URL) a member attaches to a cash payment for the receptionist to verify. */
+    @Column(name = "receipt_image", columnDefinition = "text")
+    private String receiptImage;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -153,6 +173,14 @@ public class Payment {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getReceiptImage() {
+        return receiptImage;
+    }
+
+    public void setReceiptImage(String receiptImage) {
+        this.receiptImage = receiptImage;
     }
 
     public LocalDateTime getCreatedAt() {
