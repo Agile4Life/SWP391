@@ -1,0 +1,275 @@
+/* eslint-disable react-refresh/only-export-components */
+import { context as r3fContext, useFrame, useThree } from '@react-three/fiber';
+import {
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import * as THREE from 'three';
+import { useI18n } from '../../../shared/i18n';
+import type { HotspotNode, LevelCode, SceneDoc, Vec3 } from '../scene/schema';
+import { allHotspots, hotspotsOfLevel, levelOf, zoneOf } from '../scene/selectors';
+import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
+import { useExploreStore, type LevelMode } from '../state/exploreStore';
+
+export const MAX_ACTIVE_HOTSPOTS = 18;
+
+export interface HotspotsProps {
+  scene?: SceneDoc;
+}
+
+export function computeHotspotWorldPosition(
+  scene: SceneDoc,
+  hotspot: HotspotNode,
+  levelMode: LevelMode,
+): Vec3 {
+  const level = levelOf(scene, hotspot.id);
+  const extraY = level && levelMode === 'exploded' ? level.explodedOffset : 0;
+  return [hotspot.position[0], hotspot.position[1] + extraY, hotspot.position[2]];
+}
+
+const STACKED_OVERVIEW_HOTSPOT_IDS = new Set([
+  'hs-rf-yoga',
+  'hs-l2-inbody',
+  'hs-l1-badminton',
+  'hs-l1-concierge',
+  'hs-l1-supplement',
+  'hs-out-tennis',
+]);
+
+export function getVisibleHotspots(
+  scene: SceneDoc,
+  focusLevel: LevelCode | 'ALL',
+  selectedId: string | null,
+  hoveredId: string | null,
+): HotspotNode[] {
+  if (focusLevel !== 'ALL') {
+    return hotspotsOfLevel(scene, focusLevel).slice(0, MAX_ACTIVE_HOTSPOTS);
+  }
+
+  const selectedZoneId = zoneOf(scene, selectedId)?.id ?? null;
+  const hoveredZoneId = zoneOf(scene, hoveredId)?.id ?? null;
+
+  const all = allHotspots(scene);
+  if (!selectedId && !hoveredId) {
+    return all.filter(hs => STACKED_OVERVIEW_HOTSPOT_IDS.has(hs.id));
+  }
+
+  const prioritized: HotspotNode[] = [];
+  const primaryRest: HotspotNode[] = [];
+
+  for (const hs of all) {
+    const isDirectMatch = hs.id === selectedId || hs.id === hoveredId;
+    const isZoneMatch =
+      (selectedZoneId !== null && hs.parentId === selectedZoneId) ||
+      (hoveredZoneId !== null && hs.parentId === hoveredZoneId);
+
+    if (isDirectMatch || isZoneMatch) {
+      prioritized.push(hs);
+    } else if (hs.priority === 'primary') {
+      primaryRest.push(hs);
+    }
+  }
+
+  return [...prioritized, ...primaryRest].slice(0, MAX_ACTIVE_HOTSPOTS);
+}
+
+function ProjectedHotspot({
+  position,
+  children,
+}: {
+  position: Vec3;
+  children: ReactNode;
+}) {
+  const gl = useThree(s => s.gl);
+  const camera = useThree(s => s.camera);
+  const size = useThree(s => s.size);
+  const elRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<Root | null>(null);
+  const projVec = useMemo(() => new THREE.Vector3(), []);
+
+  const updateTransform = useCallback(() => {
+    const el = elRef.current;
+    if (!el) return;
+    projVec.set(position[0], position[1], position[2]).project(camera);
+    if (projVec.z > 1 || projVec.z < -1) {
+      el.style.display = 'none';
+      return;
+    }
+    const x = (projVec.x * 0.5 + 0.5) * size.width;
+    const y = (-(projVec.y * 0.5) + 0.5) * size.height;
+    el.style.display = 'block';
+    el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%)`;
+  }, [camera, position, projVec, size.height, size.width]);
+
+  useLayoutEffect(() => {
+    const target = gl.domElement.parentElement;
+    if (!target) return;
+    const el = document.createElement('div');
+    el.style.cssText =
+      'position:absolute;top:0;left:0;z-index:10;pointer-events:none;will-change:transform;';
+    target.appendChild(el);
+    elRef.current = el;
+    const root = createRoot(el);
+    rootRef.current = root;
+    return () => {
+      elRef.current = null;
+      rootRef.current = null;
+      el.remove();
+      queueMicrotask(() => {
+        root.unmount();
+      });
+    };
+  }, [gl.domElement]);
+
+  useLayoutEffect(() => {
+    rootRef.current?.render(<>{children}</>);
+    updateTransform();
+  });
+
+  useFrame(() => {
+    updateTransform();
+  });
+
+  return null;
+}
+
+export function Hotspots({ scene = SOL_CENTER_SCENE }: HotspotsProps) {
+  const { t } = useI18n();
+  const r3fStore = useContext(r3fContext);
+
+  const focusLevel = useExploreStore(s => s.focusLevel);
+  const levelMode = useExploreStore(s => s.levelMode);
+  const selectedId = useExploreStore(s => s.selectedId);
+  const hoveredId = useExploreStore(s => s.hoveredId);
+
+  const visibleHotspots = useMemo(
+    () => getVisibleHotspots(scene, focusLevel, selectedId, hoveredId),
+    [scene, focusLevel, selectedId, hoveredId],
+  );
+
+  const handleHotspotClick = (hotspot: HotspotNode) => {
+    const state = useExploreStore.getState();
+    if (hotspot.action.type === 'focus-level') {
+      state.setFocusLevel(hotspot.action.level);
+    } else {
+      state.selectNode(hotspot.id);
+    }
+    r3fStore?.getState().invalidate();
+  };
+
+  const handlePointerEnter = (hotspotId: string) => {
+    const state = useExploreStore.getState();
+    if (state.hoveredId !== hotspotId) {
+      state.setHoveredId(hotspotId);
+      r3fStore?.getState().invalidate();
+    }
+  };
+
+  const handlePointerLeave = (hotspotId: string) => {
+    const state = useExploreStore.getState();
+    if (state.hoveredId === hotspotId) {
+      state.setHoveredId(null);
+      r3fStore?.getState().invalidate();
+    }
+  };
+
+  return (
+    <group name="sol-hotspots">
+      {visibleHotspots.map(hotspot => {
+        const position = computeHotspotWorldPosition(scene, hotspot, levelMode);
+        const isSelected = selectedId === hotspot.id;
+        const isHovered = hoveredId === hotspot.id;
+        const titleText = t(hotspot.title);
+        const ctaText = t(hotspot.action.ctaLabel);
+
+        const pinButton = (
+          <button
+            type="button"
+            className={`explore3d-hotspot-pin${isSelected ? ' is-selected' : ''}${isHovered ? ' is-hovered' : ''}`}
+            data-testid={`explore3d-hotspot-${hotspot.id}`}
+            data-hotspot-id={hotspot.id}
+            aria-label={`${titleText} — ${ctaText}`}
+            aria-pressed={isSelected}
+            onClick={e => {
+              e.stopPropagation();
+              handleHotspotClick(hotspot);
+            }}
+            onMouseEnter={() => handlePointerEnter(hotspot.id)}
+            onMouseLeave={() => handlePointerLeave(hotspot.id)}
+            style={{
+              minHeight: '36px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.35rem 0.75rem',
+              borderRadius: '999px',
+              border: isSelected
+                ? '1.5px solid #e1aa98'
+                : '1px solid rgba(206, 145, 128, 0.55)',
+              background: isSelected
+                ? 'rgba(206, 145, 128, 0.94)'
+                : 'var(--explore-surface, rgba(32, 32, 32, 0.88))',
+              color: isSelected ? '#202020' : 'var(--explore-ink, #faf9f6)',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              boxShadow: '0 6px 18px rgba(0, 0, 0, 0.38)',
+              backdropFilter: 'blur(8px)',
+              pointerEvents: 'auto',
+            }}
+          >
+            <span
+              className="explore3d-hotspot-dot"
+              aria-hidden="true"
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '999px',
+                background: isSelected ? '#202020' : '#ce9180',
+                flexShrink: 0,
+              }}
+            />
+            {hotspot.badge && (
+              <span
+                className="explore3d-hotspot-badge"
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  color: isSelected ? '#202020' : '#ce9180',
+                }}
+              >
+                {hotspot.badge}
+              </span>
+            )}
+            <span className="explore3d-hotspot-title">{titleText}</span>
+          </button>
+        );
+
+        const hasR3fStore = Boolean(r3fStore as unknown);
+        if (hasR3fStore) {
+          return (
+            <group key={hotspot.id} position={position} name={`hotspot-${hotspot.id}`}>
+              <ProjectedHotspot position={position}>{pinButton}</ProjectedHotspot>
+            </group>
+          );
+        }
+
+        return (
+          <group key={hotspot.id} position={position} name={`hotspot-${hotspot.id}`}>
+            {pinButton}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+export default Hotspots;
