@@ -2,15 +2,22 @@ import { describe, expect, it } from 'vitest';
 import {
   CAMERA_LIMITS,
   OVERVIEW_VIEWPOINT,
+  WALK_COLLIDER_RADIUS_M,
   WALK_EYE_HEIGHT_M,
+  WALK_MAX_PITCH_RAD,
   clampTargetToBounds,
+  clampWalkPitch,
   computeBestViewpoint,
   computeFitViewpoint,
   computeInitialWalkPose,
   getSolidWallSegments2D,
+  getWalkObstaclesForLevel,
   needsTwoHopFlight,
+  poseToViewpoint,
   prefersReducedMotion,
   resolveWalkCollision2D,
+  rotateWalkPose,
+  segmentsIntersect2D,
   stepWalkPose,
 } from '../camera/cameraMath';
 import {
@@ -172,5 +179,60 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     const stepped = stepWalkPose(pose, { forward: 1, strafe: 0, turn: 0 }, 0.2, l1Walls);
     expect(Number.isFinite(stepped.position[0])).toBe(true);
     expect(Number.isFinite(stepped.position[2])).toBe(true);
+  });
+
+  it('supports 360° yaw and clamped vertical pitch look-around without moving eye position', () => {
+    const initial = computeInitialWalkPose(SOL_CENTER_SCENE, 'zone-l1-gym', 'L1');
+    expect(initial.pitch ?? 0).toBe(0);
+
+    // Rotate 90° right and 30° up
+    const lookedUpRight = rotateWalkPose(initial, Math.PI / 2, Math.PI / 6);
+    expect(lookedUpRight.position).toEqual(initial.position);
+    expect(lookedUpRight.yaw).toBeCloseTo(initial.yaw + Math.PI / 2, 4);
+    expect(lookedUpRight.pitch).toBeCloseTo(Math.PI / 6, 4);
+
+    const vp = poseToViewpoint(lookedUpRight);
+    expect(vp.target[1]).toBeGreaterThan(vp.position[1]);
+    expect(vp.fov).toBe(60);
+
+    // Pitch clamps at ±WALK_MAX_PITCH_RAD
+    expect(clampWalkPitch(Math.PI)).toBeCloseTo(WALK_MAX_PITCH_RAD, 5);
+    expect(clampWalkPitch(-Math.PI)).toBeCloseTo(-WALK_MAX_PITCH_RAD, 5);
+  });
+
+  it('prevents walking through walls at corners, long strides, equipment obstacles, and B1 pool basin', () => {
+    const l1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'L1');
+    const allL1Segments = l1Walls.flatMap(w => getSolidWallSegments2D(w));
+
+    // Attempt a long 8m diagonal dash directly into the NW exterior corner [-22, -16] from [-18, -12]
+    const fromCorner: [number, number] = [-18, -12];
+    const intoCorner: [number, number] = [-25, -20];
+    const resolvedCorner = resolveWalkCollision2D(
+      fromCorner,
+      intoCorner,
+      l1Walls,
+      WALK_COLLIDER_RADIUS_M,
+    );
+
+    // Must remain strictly inside the [-22, -16] exterior walls with clearance
+    expect(resolvedCorner[0]).toBeGreaterThan(-22 + WALK_COLLIDER_RADIUS_M);
+    expect(resolvedCorner[1]).toBeGreaterThan(-16 + WALK_COLLIDER_RADIUS_M);
+    for (const seg of allL1Segments) {
+      expect(segmentsIntersect2D(fromCorner, resolvedCorner, seg.a, seg.b)).toBe(false);
+    }
+
+    // B1 pool basin obstacle blocks walking from poolside (x=6, z=-5) into deep water (x=0, z=-5)
+    const b1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'B1');
+    const b1Obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, 'B1');
+    expect(b1Obstacles.length).toBeGreaterThan(0);
+
+    const stoppedAtPoolEdge = resolveWalkCollision2D(
+      [6, -5],
+      [0, -5],
+      b1Walls,
+      WALK_COLLIDER_RADIUS_M,
+      b1Obstacles,
+    );
+    expect(stoppedAtPoolEdge[0]).toBeGreaterThan(5.1);
   });
 });

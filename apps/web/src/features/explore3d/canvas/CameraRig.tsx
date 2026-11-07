@@ -53,6 +53,7 @@ export function CameraRig() {
   const lastCommandSeqRef = useRef<number>(0);
   const lastLevelRef = useRef<LevelCode | 'ALL' | null>('ALL');
   const flightTokenRef = useRef<number>(0);
+  const prevWalkModeRef = useRef<boolean>(false);
 
   const invalidate = useThree(state => state.invalidate);
   const cameraCommand = useExploreStore(state => state.cameraCommand);
@@ -70,6 +71,15 @@ export function CameraRig() {
       const token = ++flightTokenRef.current;
       const enableTransition = !forceImmediate && !prefersReducedMotion();
       const clampedTarget = clampTargetToBounds(vp.target);
+
+      const ctrlCam = (controls as unknown as { camera?: THREE.PerspectiveCamera }).camera;
+      if (ctrlCam && 'fov' in ctrlCam && typeof ctrlCam.updateProjectionMatrix === 'function') {
+        const nextFov = vp.fov ?? 38;
+        if (Math.abs(ctrlCam.fov - nextFov) > 0.1) {
+          ctrlCam.fov = nextFov;
+          ctrlCam.updateProjectionMatrix();
+        }
+      }
 
       if (enableTransition && needsTwoHopFlight(fromLevel, toLevel)) {
         controls.getPosition(_currPosition);
@@ -111,6 +121,25 @@ export function CameraRig() {
     },
     [invalidate],
   );
+
+  // Restore isometric viewpoint when exiting walkMode
+  useEffect(() => {
+    const wasWalking = prevWalkModeRef.current;
+    prevWalkModeRef.current = walkMode;
+    if (!wasWalking || walkMode) return;
+
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const { selectedId, focusLevel, levelMode: currLevelMode } = useExploreStore.getState();
+    const fallbackNodeId =
+      selectedId ??
+      (focusLevel !== 'ALL' ? `lvl-${focusLevel.toLowerCase()}` : null);
+    const vp = fallbackNodeId
+      ? computeBestViewpoint(SOL_CENTER_SCENE, fallbackNodeId, currLevelMode)
+      : OVERVIEW_VIEWPOINT;
+    void applyViewpoint(controls, vp, lastLevelRef.current, lastLevelRef.current);
+  }, [applyViewpoint, walkMode]);
 
   // Configure boundary and initial camera pose on mount
   useEffect(() => {
@@ -426,6 +455,7 @@ export function CameraRig() {
     <CameraControls
       ref={controlsRef}
       makeDefault
+      enabled={!walkMode}
       dollyToCursor={!walkMode}
       smoothTime={0.28}
       draggingSmoothTime={0.12}

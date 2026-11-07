@@ -372,6 +372,16 @@ async function waitFor3DReady(page) {
     await page.screenshot({ path: path.join(outDir, '04-level1-gym-cutaway-1440.png') });
     console.log('Captured 04-level1-gym-cutaway-1440.png');
 
+    // Verify first-person Walk Mode multi-angle navigation & wall collision in live WebGL
+    await page.locator('[data-testid="explore3d-btn-walk"]').click();
+    await page.locator('[data-testid="explore3d-walk-hud"]').waitFor({ state: 'visible', timeout: 5000 });
+    await page.locator('[data-testid="walk-turn-right"]').click();
+    await page.locator('[data-testid="walk-look-up"]').click();
+    await page.locator('[data-testid="walk-step-forward"]').click();
+    await page.waitForTimeout(350);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(350);
+
     // 5. Level 2 VIP Gym / InBody 770 + Platinum Upgrade CTA (1440x900)
     await page.locator('[data-testid="explore3d-level-L2"]').click();
     await page.locator('[data-testid="directory-zone-zone-l2-vip-gym"]').click();

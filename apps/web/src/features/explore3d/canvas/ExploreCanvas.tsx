@@ -30,7 +30,7 @@ const GL_CONFIG = {
 const INITIAL_CAMERA_CONFIG = {
   position: [46, 36, 48] as [number, number, number],
   fov: 38,
-  near: 0.25,
+  near: 0.1,
   far: 260,
 };
 

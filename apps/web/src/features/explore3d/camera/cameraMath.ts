@@ -11,6 +11,7 @@ import {
   getLevelByCode,
   getLevelWorldY,
   getNode,
+  itemsOfLevel,
   levelOf,
   wallsOfLevel,
   worldBox,
@@ -49,6 +50,65 @@ export interface SolidWallSegment2D {
   a: Vec2;
   b: Vec2;
   thickness: number;
+}
+
+export interface ObstacleBox2D {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+const WALKABLE_SURFACE_ITEM_KINDS = new Set<string>([
+  'yoga-mat',
+  'badminton-court',
+  'pickleball-court',
+  'tennis-court',
+  'swimming-lane',
+  'wall-mirror',
+]);
+
+/**
+ * Collects 2D axis-aligned obstacle boxes for solid floor-standing equipment and the B1 deep pool basin
+ * so first-person walkers cannot pass through machines, counters, lockers, or deep water.
+ */
+export function getWalkObstaclesForLevel(
+  doc: SceneDoc,
+  levelCode: LevelCode,
+): ObstacleBox2D[] {
+  const obstacles: ObstacleBox2D[] = [];
+
+  if (levelCode === 'B1') {
+    // Deep water basin of Oasis 25m Lap Pool (leaves east deck x>=5.5 and south deck z>=0.8 walkable)
+    obstacles.push({
+      minX: -18.4,
+      maxX: 5.1,
+      minZ: -11.4,
+      maxZ: 0.35,
+    });
+  }
+
+  for (const item of itemsOfLevel(doc, levelCode)) {
+    if (WALKABLE_SURFACE_ITEM_KINDS.has(item.kind)) continue;
+    // Skip ceiling or high wall-mounted items
+    if (item.position[1] > 1.2) continue;
+
+    const [x, , z] = item.position;
+    const [w, , d] = item.dimensions;
+    const cos = Math.abs(Math.cos(item.rotationY));
+    const sin = Math.abs(Math.sin(item.rotationY));
+    const halfW = Math.max(0.18, (w * cos + d * sin) * 0.5 - 0.08);
+    const halfD = Math.max(0.18, (w * sin + d * cos) * 0.5 - 0.08);
+
+    obstacles.push({
+      minX: x - halfW,
+      maxX: x + halfW,
+      minZ: z - halfD,
+      maxZ: z + halfD,
+    });
+  }
+
+  return obstacles;
 }
 
 export function clampTargetToBounds(target: Vec3): Vec3 {
@@ -161,65 +221,160 @@ export function closestPointOnSegment2D(p: Vec2, a: Vec2, b: Vec2): Vec2 {
   return [a[0] + abx * t, a[1] + abz * t];
 }
 
+function pushCircleOutOfBox2D(
+  p: Vec2,
+  box: ObstacleBox2D,
+  radius: number,
+): Vec2 {
+  const expandedMinX = box.minX - radius;
+  const expandedMaxX = box.maxX + radius;
+  const expandedMinZ = box.minZ - radius;
+  const expandedMaxZ = box.maxZ + radius;
+
+  if (
+    p[0] <= expandedMinX ||
+    p[0] >= expandedMaxX ||
+    p[1] <= expandedMinZ ||
+    p[1] >= expandedMaxZ
+  ) {
+    return p;
+  }
+
+  // Clamp to inner box to find nearest point on box surface
+  const cx = Math.min(box.maxX, Math.max(box.minX, p[0]));
+  const cz = Math.min(box.maxZ, Math.max(box.minZ, p[1]));
+  const dx = p[0] - cx;
+  const dz = p[1] - cz;
+  const dist = Math.hypot(dx, dz);
+
+  if (dist > 1e-5 && dist < radius) {
+    const push = (radius - dist + 1e-3) / dist;
+    return [p[0] + dx * push, p[1] + dz * push];
+  }
+
+  // Center is inside the box: push out through the nearest face
+  const dLeft = Math.abs(p[0] - expandedMinX);
+  const dRight = Math.abs(expandedMaxX - p[0]);
+  const dTop = Math.abs(p[1] - expandedMinZ);
+  const dBottom = Math.abs(expandedMaxZ - p[1]);
+  const minPen = Math.min(dLeft, dRight, dTop, dBottom);
+
+  if (minPen === dLeft) return [expandedMinX - 1e-3, p[1]];
+  if (minPen === dRight) return [expandedMaxX + 1e-3, p[1]];
+  if (minPen === dTop) return [p[0], expandedMinZ - 1e-3];
+  return [p[0], expandedMaxZ + 1e-3];
+}
+
 /**
- * Resolves 2D movement from `from` to `to` with a circle collider against solid wall segments.
- * Allows passing through doors/arches (`sillHeight === 0`) and slides smoothly along walls.
+ * Resolves 2D movement from `from` to `to` with a circle collider against solid wall segments
+ * and optional equipment/pool obstacles.
+ * Uses micro-substepping (0.16m), 4-iteration corner depenetration, and a hard topological guard
+ * so the walker can slide smoothly along walls and through doorways (`sillHeight === 0`) without
+ * ever clipping or passing through a wall.
  */
 export function resolveWalkCollision2D(
   from: Vec2,
   to: Vec2,
   walls: WallNode[],
-  colliderRadius = 0.36,
+  colliderRadius = 0.42,
+  obstacles: ObstacleBox2D[] = [],
 ): Vec2 {
   const solidSegments: SolidWallSegment2D[] = [];
   for (const wall of walls) {
     solidSegments.push(...getSolidWallSegments2D(wall));
   }
 
-  let candidate: Vec2 = [to[0], to[1]];
+  const totalDx = to[0] - from[0];
+  const totalDz = to[1] - from[1];
+  const totalDist = Math.hypot(totalDx, totalDz);
+  const maxSubstepM = 0.16;
+  const steps = Math.max(1, Math.min(48, Math.ceil(totalDist / maxSubstepM)));
 
-  for (const seg of solidSegments) {
-    const minClearance = colliderRadius + seg.thickness * 0.5;
+  let curr: Vec2 = [from[0], from[1]];
 
-    if (segmentsIntersect2D(from, candidate, seg.a, seg.b)) {
-      // Blocked by direct crossing: project along the wall segment to slide
-      const cpFrom = closestPointOnSegment2D(from, seg.a, seg.b);
-      let nx = from[0] - cpFrom[0];
-      let nz = from[1] - cpFrom[1];
-      const nLen = Math.hypot(nx, nz);
-      if (nLen > 1e-5) {
-        nx /= nLen;
-        nz /= nLen;
-        const cpTo = closestPointOnSegment2D(candidate, seg.a, seg.b);
-        candidate = [cpTo[0] + nx * (minClearance + 0.02), cpTo[1] + nz * (minClearance + 0.02)];
-      } else {
-        return from;
+  for (let stepIdx = 1; stepIdx <= steps; stepIdx++) {
+    const t = stepIdx / steps;
+    let candidate: Vec2 = [from[0] + totalDx * t, from[1] + totalDz * t];
+
+    // 1. Direct segment sweep: if sub-step crosses a wall centerline, project onto wall face to slide
+    for (const seg of solidSegments) {
+      const minClearance = colliderRadius + seg.thickness * 0.5;
+      if (segmentsIntersect2D(curr, candidate, seg.a, seg.b)) {
+        const cpFrom = closestPointOnSegment2D(curr, seg.a, seg.b);
+        let nx = curr[0] - cpFrom[0];
+        let nz = curr[1] - cpFrom[1];
+        const nLen = Math.hypot(nx, nz);
+        if (nLen > 1e-5) {
+          nx /= nLen;
+          nz /= nLen;
+          const cpTo = closestPointOnSegment2D(candidate, seg.a, seg.b);
+          candidate = [
+            cpTo[0] + nx * (minClearance + 0.015),
+            cpTo[1] + nz * (minClearance + 0.015),
+          ];
+        } else {
+          candidate = [curr[0], curr[1]];
+        }
       }
     }
 
-    const cp = closestPointOnSegment2D(candidate, seg.a, seg.b);
-    const dx = candidate[0] - cp[0];
-    const dz = candidate[1] - cp[1];
-    const dist = Math.hypot(dx, dz);
+    // 2. Multi-pass capsule depenetration (handles 90° wall corners & equipment obstacles)
+    let blockedInPass = false;
+    for (let iter = 0; iter < 4; iter++) {
+      for (const seg of solidSegments) {
+        const minClearance = colliderRadius + seg.thickness * 0.5;
+        const cp = closestPointOnSegment2D(candidate, seg.a, seg.b);
+        const dx = candidate[0] - cp[0];
+        const dz = candidate[1] - cp[1];
+        const dist = Math.hypot(dx, dz);
 
-    if (dist < minClearance) {
-      if (dist > 1e-5) {
-        const push = (minClearance - dist) / dist;
-        candidate = [candidate[0] + dx * push, candidate[1] + dz * push];
-      } else {
-        return from;
+        if (dist < minClearance) {
+          if (dist > 1e-5) {
+            const push = (minClearance - dist + 1e-3) / dist;
+            candidate = [candidate[0] + dx * push, candidate[1] + dz * push];
+          } else {
+            blockedInPass = true;
+            break;
+          }
+        }
+      }
+      if (blockedInPass) break;
+
+      if (obstacles.length > 0) {
+        const eqRadius = colliderRadius * 0.72;
+        for (const box of obstacles) {
+          candidate = pushCircleOutOfBox2D(candidate, box, eqRadius);
+        }
       }
     }
-  }
 
-  // Final safety check that our adjusted position did not cross another wall
-  for (const seg of solidSegments) {
-    if (segmentsIntersect2D(from, candidate, seg.a, seg.b)) {
-      return from;
+    if (blockedInPass) {
+      break;
     }
+
+    // 3. Hard topological safety guard: never allow any sub-step to cross a solid wall or violate clearance
+    let crossedAnyWall = false;
+    for (const seg of solidSegments) {
+      if (segmentsIntersect2D(curr, candidate, seg.a, seg.b)) {
+        crossedAnyWall = true;
+        break;
+      }
+      const minClearance = colliderRadius + seg.thickness * 0.5;
+      const cp = closestPointOnSegment2D(candidate, seg.a, seg.b);
+      if (Math.hypot(candidate[0] - cp[0], candidate[1] - cp[1]) < minClearance - 2e-3) {
+        crossedAnyWall = true;
+        break;
+      }
+    }
+
+    if (crossedAnyWall) {
+      break;
+    }
+
+    curr = candidate;
   }
 
-  return candidate;
+  return curr;
 }
 
 function countInteriorWallCrossings(from: Vec2, to: Vec2, walls: WallNode[]): number {
@@ -420,26 +575,56 @@ export function computeFitViewpoint(
 }
 
 export const WALK_EYE_HEIGHT_M = 1.65;
-export const WALK_SPEED_MPS = 3.5;
+export const WALK_SPEED_MPS = 3.6;
 export const WALK_TURN_RAD_PER_SEC = 1.85;
+export const WALK_PITCH_RAD_PER_SEC = 1.35;
 export const WALK_LOOK_AHEAD_M = 4.5;
+export const WALK_FOV_DEG = 60;
+export const WALK_COLLIDER_RADIUS_M = 0.42;
+export const WALK_MAX_PITCH_RAD = (62 * Math.PI) / 180;
 
 export interface WalkPose {
   levelCode: LevelCode;
   position: [number, number, number];
   yaw: number; // radians in XZ plane: 0 looks towards -Z, +PI/2 towards +X
+  pitch?: number; // radians vertical look: positive looks up, negative looks down
 }
 
 export interface WalkStepInput {
   forward: number; // -1..1
   strafe: number;  // -1..1
   turn: number;    // -1..1
+  pitchDelta?: number; // -1..1
+}
+
+export function clampWalkPitch(pitchRad: number): number {
+  if (!Number.isFinite(pitchRad)) return 0;
+  return Math.min(WALK_MAX_PITCH_RAD, Math.max(-WALK_MAX_PITCH_RAD, pitchRad));
+}
+
+export function rotateWalkPose(
+  pose: WalkPose,
+  deltaYawRad: number,
+  deltaPitchRad = 0,
+): WalkPose {
+  const nextYaw = pose.yaw + (Number.isFinite(deltaYawRad) ? deltaYawRad : 0);
+  const nextPitch = clampWalkPitch(
+    (pose.pitch ?? 0) + (Number.isFinite(deltaPitchRad) ? deltaPitchRad : 0),
+  );
+  return {
+    ...pose,
+    yaw: nextYaw,
+    pitch: nextPitch,
+  };
 }
 
 export function poseToViewpoint(pose: WalkPose): Viewpoint {
   const [x, y, z] = pose.position;
-  const lookX = x + Math.sin(pose.yaw) * WALK_LOOK_AHEAD_M;
-  const lookZ = z - Math.cos(pose.yaw) * WALK_LOOK_AHEAD_M;
+  const pitch = clampWalkPitch(pose.pitch ?? 0);
+  const horizDist = Math.cos(pitch) * WALK_LOOK_AHEAD_M;
+  const lookX = x + Math.sin(pose.yaw) * horizDist;
+  const lookY = y + Math.sin(pitch) * WALK_LOOK_AHEAD_M;
+  const lookZ = z - Math.cos(pose.yaw) * horizDist;
   return {
     id: `vp-walk-${pose.levelCode.toLowerCase()}`,
     kind: 'eye',
@@ -450,10 +635,10 @@ export function poseToViewpoint(pose: WalkPose): Viewpoint {
     ],
     target: [
       Number(lookX.toFixed(3)),
-      Number(y.toFixed(3)),
+      Number(lookY.toFixed(3)),
       Number(lookZ.toFixed(3)),
     ],
-    fov: 52,
+    fov: WALK_FOV_DEG,
   };
 }
 
@@ -489,6 +674,7 @@ export function computeInitialWalkPose(
       levelCode: levelNode.code,
       position: [eyeVp.position[0], eyeY, eyeVp.position[2]],
       yaw: Number.isFinite(yaw) ? yaw : 0,
+      pitch: 0,
     };
   }
 
@@ -499,6 +685,7 @@ export function computeInitialWalkPose(
         levelCode: levelNode.code,
         position: [box.center[0], eyeY, box.center[2]],
         yaw: 0,
+        pitch: 0,
       };
     }
   }
@@ -512,6 +699,7 @@ export function computeInitialWalkPose(
       (slabBounds.minZ + slabBounds.maxZ) * 0.5,
     ],
     yaw: 0,
+    pitch: 0,
   };
 }
 
@@ -521,9 +709,13 @@ export function stepWalkPose(
   dtSec: number,
   walls: WallNode[],
   slabBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
+  obstacles: ObstacleBox2D[] = [],
 ): WalkPose {
   const safeDt = Math.min(0.1, Math.max(0.001, dtSec));
   const nextYaw = pose.yaw + input.turn * WALK_TURN_RAD_PER_SEC * safeDt;
+  const nextPitch = clampWalkPitch(
+    (pose.pitch ?? 0) + (input.pitchDelta ?? 0) * WALK_PITCH_RAD_PER_SEC * safeDt,
+  );
 
   const forwardX = Math.sin(nextYaw);
   const forwardZ = -Math.cos(nextYaw);
@@ -542,19 +734,26 @@ export function stepWalkPose(
   let targetXZ: Vec2 = [fromXZ[0] + moveX, fromXZ[1] + moveZ];
 
   if (slabBounds) {
-    const margin = 0.45;
+    const margin = 0.52;
     targetXZ = [
       Math.min(slabBounds.maxX - margin, Math.max(slabBounds.minX + margin, targetXZ[0])),
       Math.min(slabBounds.maxZ - margin, Math.max(slabBounds.minZ + margin, targetXZ[1])),
     ];
   }
 
-  const resolvedXZ = resolveWalkCollision2D(fromXZ, targetXZ, walls, 0.36);
+  const resolvedXZ = resolveWalkCollision2D(
+    fromXZ,
+    targetXZ,
+    walls,
+    WALK_COLLIDER_RADIUS_M,
+    obstacles,
+  );
 
   return {
     levelCode: pose.levelCode,
     position: [resolvedXZ[0], pose.position[1], resolvedXZ[1]],
     yaw: nextYaw,
+    pitch: nextPitch,
   };
 }
 

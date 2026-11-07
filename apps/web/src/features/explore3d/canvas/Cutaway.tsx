@@ -139,6 +139,7 @@ export interface CutawayProps {
  */
 export function Cutaway({ walls }: CutawayProps) {
   const wallMode = useExploreStore(s => s.wallMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const camera = useThree(s => s.camera);
   const invalidate = useThree(s => s.invalidate);
 
@@ -147,22 +148,26 @@ export function Cutaway({ walls }: CutawayProps) {
     [walls],
   );
 
-  // Sync immediately when wallMode changes
+  // Sync immediately when wallMode or walkMode changes
   useEffect(() => {
+    const effectiveWallMode: WallMode =
+      walkMode && wallMode === 'cutaway' ? 'up' : wallMode;
     const camXZ: [number, number] = [camera.position.x, camera.position.z];
-    const nextIds = computeCutawayWallIds(descriptors, camXZ, wallMode);
+    const nextIds = computeCutawayWallIds(descriptors, camXZ, effectiveWallMode);
     const nextSig = serializeWallIdSet(nextIds);
     const currentSig = useCutawayStore.getState().signature;
     if (nextSig !== currentSig) {
       useCutawayStore.getState().setCutawayWalls(nextIds, nextSig);
       invalidate();
     }
-  }, [wallMode, descriptors, camera, invalidate]);
+  }, [wallMode, walkMode, descriptors, camera, invalidate]);
 
   useFrame(({ camera: frameCamera, invalidate: frameInvalidate }) => {
-    const currentWallMode = useExploreStore.getState().wallMode;
+    const state = useExploreStore.getState();
+    const effectiveWallMode: WallMode =
+      state.walkMode && state.wallMode === 'cutaway' ? 'up' : state.wallMode;
     const camXZ: [number, number] = [frameCamera.position.x, frameCamera.position.z];
-    const nextIds = computeCutawayWallIds(descriptors, camXZ, currentWallMode);
+    const nextIds = computeCutawayWallIds(descriptors, camXZ, effectiveWallMode);
     const nextSig = serializeWallIdSet(nextIds);
     const currentSig = useCutawayStore.getState().signature;
     if (nextSig !== currentSig) {
