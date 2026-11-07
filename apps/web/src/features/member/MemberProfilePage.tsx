@@ -79,14 +79,14 @@ export function MemberProfilePage() {
   const isCoach = currentUser?.role === 'COACH';
   const isStaff = currentUser?.role === 'STAFF';
   const roleName = isCoach
-    ? 'Huấn luyện viên'
+    ? memberText('Huấn luyện viên')
     : isStaff
-    ? 'Lễ tân'
+    ? memberText('Lễ tân')
     : currentUser?.role === 'MANAGER'
-    ? 'Quản lý trung tâm'
+    ? memberText('Quản lý trung tâm')
     : currentUser?.role === 'ADMIN'
-    ? 'Quản trị hệ thống'
-    : 'Hội viên';
+    ? memberText('Quản trị hệ thống')
+    : memberText('Hội viên');
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);

@@ -330,6 +330,7 @@ public class AuthService {
             if ((linkedSub == null || linkedSub.isBlank()) && !googleManagedEmail) {
                 throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
             }
+            ensureGoogleOtpAccountAllowed(user);
             user.setGoogleSub(googleSub);
             if (googleUser.picture() != null && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
                 user.setAvatarUrl(googleUser.picture());

@@ -22,7 +22,7 @@ interface LuxuryLoginFormProps {
 
 const ROLE_NAMES: Record<UserSession['role'], string> = {
   get ADMIN() { return sourceText('Quản trị hệ thống'); },
-  MEMBER: 'Hội viên',
+  get MEMBER() { return sourceText('Hội viên'); },
   get STAFF() { return sourceText('Lễ tân / Thu ngân'); },
   get COACH() { return sourceText('Huấn luyện viên'); },
   get MANAGER() { return sourceText('Quản lý trung tâm'); },
@@ -397,7 +397,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           {sourceText("Phiên đăng nhập đang hoạt động")}</h2>
 
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '24px' }}>
-          {sourceText("Đang đăng nhập với tài khoản ")}<strong>{currentUser.name}</strong> ({sourceText(ROLE_NAMES[currentUser.role])})
+          {sourceText("Đang đăng nhập với tài khoản ")}<strong>{currentUser.name}</strong> ({ROLE_NAMES[currentUser.role]})
         </p>
 
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -406,7 +406,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             className="btn-primary"
             onClick={() => navigate(authDestination(currentUser.role, search), { viewTransition: true })}
           >
-            {sourceText("Tiếp tục vào Portal (")}{sourceText(ROLE_NAMES[currentUser.role])}) →
+            {sourceText("Tiếp tục vào Portal (")}{ROLE_NAMES[currentUser.role]}) →
           </button>
 
           <button

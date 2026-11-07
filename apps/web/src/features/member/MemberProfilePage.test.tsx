@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberProfilePage } from './MemberProfilePage';
 import type { Profile, HealthMetric } from './profileApi';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
+import { setLanguage } from '../../shared/i18n';
 
 const mockApi = vi.hoisted(() => ({
   getProfile: vi.fn(),
@@ -87,6 +88,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await act(async () => root.unmount());
     host.remove();
     localStorage.clear();
+    setLanguage('vi');
     vi.unstubAllGlobals();
   });
 
@@ -277,5 +279,62 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
     expect(host.textContent).toContain(label);
+  });
+
+  it('rejects images smaller than 100x100 px and falls back to default avatar on broken image URL', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
+    mockApi.getProfile.mockResolvedValue({ ...sampleProfile, avatarUrl: 'https://broken.example.test/avatar.png' });
+
+    const OrigFileReader = globalThis.FileReader;
+    class MockFileReader {
+      result: string | null = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      readAsDataURL() {
+        if (this.onload) this.onload();
+      }
+    }
+    vi.stubGlobal('FileReader', MockFileReader as unknown as typeof FileReader);
+
+    class MockTinyImage {
+      naturalWidth = 50;
+      naturalHeight = 50;
+      width = 50;
+      height = 50;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_val: string) {
+        if (this.onload) this.onload();
+      }
+    }
+    vi.stubGlobal('Image', MockTinyImage as unknown as typeof Image);
+
+    await renderPage();
+
+    const img = host.querySelector<HTMLImageElement>('img[alt="Ảnh đại diện hiện tại"]')!;
+    expect(img.getAttribute('src')).toBe('https://broken.example.test/avatar.png');
+    await act(async () => {
+      img.dispatchEvent(new Event('error'));
+    });
+    expect(img.getAttribute('src')).toBe('/images/default-avatar.png');
+
+    const input = host.querySelector<HTMLInputElement>('#avatar-file-input')!;
+    const tinyFile = new File([new Uint8Array([1, 2, 3, 4])], 'tiny.png', { type: 'image/png' });
+    await act(async () => {
+      Object.defineProperty(input, 'files', { value: [tinyFile], configurable: true });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('100x100 đến 4096x4096 pixel');
+    expect(mockApi.uploadAvatar).not.toHaveBeenCalled();
+
+    vi.stubGlobal('FileReader', OrigFileReader);
+  });
+
+  it('translates account role badge when switched to English', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '20', name: 'Coach Test', identifier: 'coach1', role: 'COACH' }));
+    setLanguage('en');
+    await renderPage();
+    expect(host.textContent).toContain('Account role');
+    expect(host.textContent).toContain('Coach');
   });
 });

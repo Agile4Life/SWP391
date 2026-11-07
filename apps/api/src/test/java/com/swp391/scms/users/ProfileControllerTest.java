@@ -222,6 +222,42 @@ class ProfileControllerTest {
                         .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(oversizedDataUrl))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("AVATAR_TOO_LARGE"));
+
+        java.awt.image.BufferedImage tinyImg = new java.awt.image.BufferedImage(10, 10, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.io.ByteArrayOutputStream tinyOut = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(tinyImg, "png", tinyOut);
+        String tinyDataUrl = "data:image/png;base64," + Base64.getEncoder().encodeToString(tinyOut.toByteArray());
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(tinyDataUrl))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_AVATAR_DIMENSIONS"))
+                .andExpect(jsonPath("$.message").value("Avatar image dimensions must be between 100x100 px and 4096x4096 px."));
+
+        java.awt.image.BufferedImage validImg = new java.awt.image.BufferedImage(120, 120, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.io.ByteArrayOutputStream validOut = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(validImg, "png", validOut);
+        String validPngDataUrl = "data:image/png;base64," + Base64.getEncoder().encodeToString(validOut.toByteArray());
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(validPngDataUrl))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.avatarUrl").value(validPngDataUrl));
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/profile preserves existing custom avatar when request avatarUrl is null")
+    void updateMyProfilePreservesExistingCustomAvatarWhenNull() throws Exception {
+        User user = sampleUser();
+        user.setAvatarUrl("https://cdn.example.com/custom-avatar.png");
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+
+        mockMvc.perform(put("/api/v1/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(sampleProfile())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.avatarUrl").value("https://cdn.example.com/custom-avatar.png"));
     }
 
     @Test

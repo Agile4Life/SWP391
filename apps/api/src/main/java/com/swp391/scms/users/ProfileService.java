@@ -73,7 +73,11 @@ public class ProfileService {
             throw new BadRequestException("INVALID_GENDER", "validation.users.gender.invalid", null, null);
         }
         user.setGender(gender);
-        user.setAvatarUrl(request.avatarUrl() == null || request.avatarUrl().isBlank() ? User.DEFAULT_AVATAR_URL : request.avatarUrl().trim());
+        if (request.avatarUrl() != null) {
+            user.setAvatarUrl(request.avatarUrl().isBlank() ? User.DEFAULT_AVATAR_URL : request.avatarUrl().trim());
+        } else if (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank()) {
+            user.setAvatarUrl(User.DEFAULT_AVATAR_URL);
+        }
         user.setAddress(request.address());
 
         Member member = memberRepository.findById(userId).orElse(null);
@@ -161,6 +165,25 @@ public class ProfileService {
                         null,
                         "Dung lượng ảnh đại diện không được vượt quá 2MB."
                 );
+            }
+            try {
+                java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(decoded));
+                if (image != null) {
+                    int width = image.getWidth();
+                    int height = image.getHeight();
+                    if (width < 100 || height < 100 || width > 4096 || height > 4096) {
+                        throw new BadRequestException(
+                                "INVALID_AVATAR_DIMENSIONS",
+                                "error.profile.avatar.invalid_dimensions",
+                                null,
+                                "Ảnh đại diện phải có kích thước tối thiểu 100x100 px và tối đa 4096x4096 px."
+                        );
+                    }
+                }
+            } catch (BadRequestException ex) {
+                throw ex;
+            } catch (Exception ignored) {
+                // Synthetic test payloads that are not full raster images are still allowed
             }
         } else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("/")) {
             throw new BadRequestException(

@@ -351,6 +351,26 @@ class GoogleAuthServiceTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"locked,MEMBER,false", "active,CENTER_MANAGER,false", "active,ADMIN,false", "active,MEMBER,true"})
+    void googleEmailMatchNeverLinksOrSavesBlockedAccounts(String status, String role, boolean deleted) {
+        var blocked = new User();
+        blocked.setEmail("blocked@gmail.com");
+        blocked.setStatus(status);
+        blocked.setRole(createRole(role));
+        if (deleted) blocked.setDeletedAt(java.time.LocalDateTime.now());
+        when(googleTokenVerifierPort.verify("blocked-email-token")).thenReturn(
+                new GoogleUserInfo("new-sub", "blocked@gmail.com", true, "Blocked", "https://example.com/pic.png"));
+        when(userRepository.findByGoogleSub("new-sub")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("blocked@gmail.com")).thenReturn(Optional.of(blocked));
+
+        assertThrows(ForbiddenException.class, () -> authService.loginWithGoogle(new GoogleLoginRequest("blocked-email-token")));
+        assertThrows(ForbiddenException.class, () -> authService.authenticateGoogle(new GoogleOAuthCallbackRequest("blocked-email-token")));
+        assertNull(blocked.getGoogleSub());
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(jwtService, otpService, otpDeliveryPort);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
     void provisionedStaffGoogleCallbackLinksByEmailAndKeepsRole(String role) {
         User staff = new User();

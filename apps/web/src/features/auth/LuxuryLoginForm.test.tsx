@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { getCurrentUser } from '../../shared/api/client';
+import { clearMissingTranslations, getMissingTranslations, setLanguage } from '../../shared/i18n';
 import { LuxuryLoginForm } from './LuxuryLoginForm';
 
 let host: HTMLDivElement;
@@ -220,4 +221,17 @@ it('refuses a redirect handoff without the initiating browser verifier', async (
   expect(mockFetch).not.toHaveBeenCalled();
   expect(getCurrentUser()).toBeNull();
   expect(window.location.hash).toBe('');
+});
+
+it('renders active session role label in English without recording missing translations', async () => {
+  localStorage.setItem('fitcenter_auth_session', JSON.stringify({
+    id: '1', name: 'Admin User', identifier: 'admin', role: 'ADMIN',
+  }));
+  clearMissingTranslations();
+  setLanguage('en');
+  await renderForm();
+  expect(host.textContent).toContain('Active sign-in session');
+  expect(host.textContent).toContain('System administrator');
+  expect(getMissingTranslations()).toEqual([]);
+  setLanguage('vi');
 });
