@@ -14,8 +14,11 @@ import type * as THREE from 'three';
 import { useI18n } from '../../../shared/i18n';
 import {
   WALK_COLLIDER_RADIUS_M,
+  WALK_EYE_HEIGHT_M,
   WALK_FOV_DEG,
   computeInitialWalkPose,
+  computeStairElevationOffset,
+  evaluateStairOrElevatorPortal,
   getWalkObstaclesForLevel,
   poseToViewpoint,
   resolveWalkCollision2D,
@@ -240,9 +243,23 @@ export function WalkController() {
         bounds,
         obstacles,
       );
+      const portalLevel = evaluateStairOrElevatorPortal(
+        SOL_CENTER_SCENE,
+        activePose,
+        nextPose,
+      );
+      if (portalLevel && portalLevel !== activePose.levelCode) {
+        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
+        if (SOL_CENTER_SCENE.nodes[stairId]) {
+          useExploreStore.getState().selectNode(stairId);
+        } else {
+          switchWalkFloor(portalLevel);
+        }
+        return;
+      }
       commitWalkPose(nextPose);
     },
-    [commitWalkPose],
+    [commitWalkPose, switchWalkFloor],
   );
 
   // Initialize walk pose when entering walkMode or switching level
@@ -317,6 +334,20 @@ export function WalkController() {
         bounds,
         obstacles,
       );
+      const portalLevel = evaluateStairOrElevatorPortal(
+        SOL_CENTER_SCENE,
+        currentPose,
+        nextPose,
+      );
+      if (portalLevel && portalLevel !== currentPose.levelCode) {
+        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
+        if (SOL_CENTER_SCENE.nodes[stairId]) {
+          useExploreStore.getState().selectNode(stairId);
+        } else {
+          switchWalkFloor(portalLevel);
+        }
+        return;
+      }
       commitWalkPose(nextPose);
     };
 
@@ -489,12 +520,39 @@ export function WalkController() {
         WALK_COLLIDER_RADIUS_M,
         obstacles,
       );
+      const baseEyeY = levelNode
+        ? levelNode.elevation + WALK_EYE_HEIGHT_M
+        : currentPose.position[1];
+      const stairState = computeStairElevationOffset(
+        SOL_CENTER_SCENE,
+        currentPose.levelCode,
+        resolvedXZ[0],
+        resolvedXZ[1],
+      );
       const nextPose: WalkPose = {
         levelCode: currentPose.levelCode,
-        position: [resolvedXZ[0], currentPose.position[1], resolvedXZ[1]],
+        position: [
+          resolvedXZ[0],
+          Number((baseEyeY + stairState.elevationOffset).toFixed(3)),
+          resolvedXZ[1],
+        ],
         yaw: targetYaw,
         pitch: currentPose.pitch ?? 0,
       };
+      const portalLevel = evaluateStairOrElevatorPortal(
+        SOL_CENTER_SCENE,
+        currentPose,
+        nextPose,
+      );
+      if (portalLevel && portalLevel !== currentPose.levelCode) {
+        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
+        if (SOL_CENTER_SCENE.nodes[stairId]) {
+          useExploreStore.getState().selectNode(stairId);
+        } else {
+          switchWalkFloor(portalLevel);
+        }
+        return;
+      }
       commitWalkPose(nextPose);
     };
 
@@ -533,10 +591,38 @@ export function WalkController() {
         WALK_COLLIDER_RADIUS_M,
         obstacles,
       );
-      commitWalkPose({
+      const baseEyeY = levelNode
+        ? levelNode.elevation + WALK_EYE_HEIGHT_M
+        : currentPose.position[1];
+      const stairState = computeStairElevationOffset(
+        SOL_CENTER_SCENE,
+        currentPose.levelCode,
+        resolvedXZ[0],
+        resolvedXZ[1],
+      );
+      const nextPose: WalkPose = {
         ...currentPose,
-        position: [resolvedXZ[0], currentPose.position[1], resolvedXZ[1]],
-      });
+        position: [
+          resolvedXZ[0],
+          Number((baseEyeY + stairState.elevationOffset).toFixed(3)),
+          resolvedXZ[1],
+        ],
+      };
+      const portalLevel = evaluateStairOrElevatorPortal(
+        SOL_CENTER_SCENE,
+        currentPose,
+        nextPose,
+      );
+      if (portalLevel && portalLevel !== currentPose.levelCode) {
+        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
+        if (SOL_CENTER_SCENE.nodes[stairId]) {
+          useExploreStore.getState().selectNode(stairId);
+        } else {
+          switchWalkFloor(portalLevel);
+        }
+        return;
+      }
+      commitWalkPose(nextPose);
     };
 
     const handleFloorTeleportEvent = (event: Event) => {

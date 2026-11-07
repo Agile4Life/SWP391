@@ -190,6 +190,14 @@ const zoneB1Thermal: ZoneNode = register({
       target: [14, B1_Y + 1.0, -5],
       fov: 38,
     },
+    {
+      id: 'vp-zone-b1-thermal-eye',
+      label: { vi: 'Đứng trong khu Thermal & Jacuzzi', en: 'Thermal Spa Eye View' },
+      kind: 'eye',
+      position: [10.2, B1_Y + 1.65, 2.5],
+      target: [14.0, B1_Y + 1.1, -6.5],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -216,6 +224,14 @@ const zoneB1Locker: ZoneNode = register({
       target: [-6, B1_Y + 1.2, 9],
       fov: 38,
     },
+    {
+      id: 'vp-zone-b1-locker-eye',
+      label: { vi: 'Góc nhìn Dãy Tủ khóa thông minh', en: 'Locker Aisle Eye View' },
+      kind: 'eye',
+      position: [5.5, B1_Y + 1.65, 12.2],
+      target: [-9.0, B1_Y + 1.2, 9.0],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -241,6 +257,14 @@ const zoneB1Core: ZoneNode = register({
       position: [22, B1_Y + 7.5, 19],
       target: [14, B1_Y + 1.2, 9],
       fov: 38,
+    },
+    {
+      id: 'vp-zone-b1-core-eye',
+      label: { vi: 'Đứng trước Thang bộ & Thang máy B1', en: 'B1 Stair & Elevator Eye View' },
+      kind: 'eye',
+      position: [14.5, B1_Y + 1.65, 13.2],
+      target: [14.5, B1_Y + 1.5, 9.0],
+      fov: 50,
     },
   ],
   children: [],
@@ -339,6 +363,14 @@ const zoneL1Gate: ZoneNode = register({
       target: [0, L1_Y + 1.0, 4],
       fov: 36,
     },
+    {
+      id: 'vp-zone-l1-gate-eye',
+      label: { vi: 'Đứng trước Cổng QR Check-in', en: 'QR Turnstile Eye View' },
+      kind: 'eye',
+      position: [0, L1_Y + 1.65, 6.8],
+      target: [0, L1_Y + 1.2, 1.5],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -365,6 +397,14 @@ const zoneL1Shop: ZoneNode = register({
       position: [22, L1_Y + 7.2, 20],
       target: [15, L1_Y + 1.3, 10.5],
       fov: 38,
+    },
+    {
+      id: 'vp-zone-l1-shop-eye',
+      label: { vi: 'Đứng trước Kệ Thực phẩm bổ sung', en: 'Supplement Shelf Eye View' },
+      kind: 'eye',
+      position: [11.5, L1_Y + 1.65, 12.2],
+      target: [15.5, L1_Y + 1.3, 9.2],
+      fov: 50,
     },
   ],
   children: [],
@@ -438,6 +478,14 @@ const zoneL1Boxing: ZoneNode = register({
       target: [12, L1_Y + 1.2, -9],
       fov: 38,
     },
+    {
+      id: 'vp-zone-l1-boxing-eye',
+      label: { vi: 'Đứng cạnh Võ đài Boxing', en: 'Boxing Ring Eye View' },
+      kind: 'eye',
+      position: [5.8, L1_Y + 1.65, -5.2],
+      target: [11.5, L1_Y + 1.3, -9.2],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -469,6 +517,14 @@ const zoneL1Badminton: ZoneNode = register({
       target: [-13, L1_Y + 0.8, 8.5],
       fov: 38,
     },
+    {
+      id: 'vp-zone-l1-badminton-eye',
+      label: { vi: 'Đứng giữa Nhà thi đấu Cầu lông', en: 'Badminton Hall Eye View' },
+      kind: 'eye',
+      position: [-7.2, L1_Y + 1.65, 8.5],
+      target: [-15.5, L1_Y + 1.1, 8.5],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -494,6 +550,14 @@ const zoneL1Core: ZoneNode = register({
       position: [24, L1_Y + 7.5, 8],
       target: [13, L1_Y + 1.2, 1],
       fov: 38,
+    },
+    {
+      id: 'vp-zone-l1-core-eye',
+      label: { vi: 'Đứng trước Thang bộ & Thang máy L1', en: 'L1 Stair & Elevator Eye View' },
+      kind: 'eye',
+      position: [13.2, L1_Y + 1.65, 4.8],
+      target: [13.2, L1_Y + 1.5, 1.0],
+      fov: 50,
     },
   ],
   children: [],
@@ -597,6 +661,14 @@ const zoneL2Inbody: ZoneNode = register({
       target: [13, L2_Y + 1.2, -8],
       fov: 36,
     },
+    {
+      id: 'vp-zone-l2-inbody-eye',
+      label: { vi: 'Đứng trước Máy đo InBody 770', en: 'InBody 770 Eye View' },
+      kind: 'eye',
+      position: [8.2, L2_Y + 1.65, -5.2],
+      target: [13.5, L2_Y + 1.2, -8.5],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -624,6 +696,14 @@ const zoneL2PtStudio: ZoneNode = register({
       target: [13, L2_Y + 1.2, 6],
       fov: 38,
     },
+    {
+      id: 'vp-zone-l2-pt-studio-eye',
+      label: { vi: 'Đứng trong Studio HLV 1:1 & Thang L2', en: '1:1 PT Studio Eye View' },
+      kind: 'eye',
+      position: [8.2, L2_Y + 1.65, 2.0],
+      target: [14.5, L2_Y + 1.2, 6.0],
+      fov: 50,
+    },
   ],
   children: [],
 });
@@ -649,6 +729,14 @@ const zoneL2Lounge: ZoneNode = register({
       position: [2, L2_Y + 7.5, 22],
       target: [-7, L2_Y + 1.0, 10],
       fov: 38,
+    },
+    {
+      id: 'vp-zone-l2-lounge-eye',
+      label: { vi: 'Góc nhìn Sofa & Quầy Nước Platinum', en: 'Platinum Lounge Eye View' },
+      kind: 'eye',
+      position: [-8.0, L2_Y + 1.65, 7.2],
+      target: [-4.5, L2_Y + 1.0, 11.2],
+      fov: 50,
     },
   ],
   children: [],
@@ -750,6 +838,14 @@ const zoneRfTerrace: ZoneNode = register({
       position: [26, RF_Y + 7.5, 18],
       target: [15, RF_Y + 1.0, 0],
       fov: 38,
+    },
+    {
+      id: 'vp-zone-rf-terrace-eye',
+      label: { vi: 'Đứng trên Sân Thượng Ngắm Cảnh', en: 'Rooftop Sky Deck Eye View' },
+      kind: 'eye',
+      position: [12.2, RF_Y + 1.65, 5.2],
+      target: [15.5, RF_Y + 1.2, -3.5],
+      fov: 50,
     },
   ],
   children: [],
@@ -1439,6 +1535,22 @@ addItem(zoneL2PtStudio, {
   dimensions: [0.8, 0.95, 1.4],
   variant: 'vip',
 });
+addItem(zoneL2PtStudio, {
+  id: 'item-l2-stairs',
+  kind: 'stair-core',
+  name: { vi: 'Cầu thang bộ L1–L2–RF', en: 'Stair Core L1–L2–RF' },
+  position: [10.5, 0, 11.5],
+  rotationY: 0,
+  dimensions: [3.6, 3.8, 4.2],
+});
+addItem(zoneL2PtStudio, {
+  id: 'item-l2-elevator',
+  kind: 'elevator-core',
+  name: { vi: 'Thang máy Kính trung tâm L2', en: 'Panoramic Elevator Core L2' },
+  position: [16.0, 0, 11.5],
+  rotationY: 0,
+  dimensions: [2.6, 3.8, 2.6],
+});
 
 // --- L2 Lounge ---
 for (let i = 0; i < 3; i++) {
@@ -1502,6 +1614,22 @@ addItem(zoneRfTerrace, {
   position: [14.5, 0, 0],
   rotationY: -Math.PI / 2,
   dimensions: [2.6, 0.85, 1.4],
+});
+addItem(zoneRfTerrace, {
+  id: 'item-rf-stairs',
+  kind: 'stair-core',
+  name: { vi: 'Cầu thang bộ L2–RF (Tầng thượng)', en: 'Stair Core L2–RF (Rooftop)' },
+  position: [12.5, 0, 11.5],
+  rotationY: 0,
+  dimensions: [3.4, 3.4, 4.0],
+});
+addItem(zoneRfTerrace, {
+  id: 'item-rf-elevator',
+  kind: 'elevator-core',
+  name: { vi: 'Thang máy Kính Tầng thượng RF', en: 'Rooftop Panoramic Elevator RF' },
+  position: [17.2, 0, 11.5],
+  rotationY: 0,
+  dimensions: [2.4, 3.4, 2.4],
 });
 
 // --- OUT Tennis Courts 01 & 02 ---

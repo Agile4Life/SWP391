@@ -69,6 +69,7 @@ export function Environment() {
   const campusGeometry = useMemo(() => buildCampusGeometry(theme), [theme]);
   const showRooftopSigns =
     levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'RF';
+  const showGroundCampus = !(levelMode === 'solo' && focusLevel === 'B1');
   const rooftopOffsetY = levelMode === 'exploded' ? 12.0 : 0;
 
   const signageGeometry = useMemo(
@@ -148,6 +149,7 @@ export function Environment() {
         {/* Full 3D Exterior Campus: Main Gate, Guard Booth, Car & Motorbike Parking, EV Chargers, Fountain, Canopy, Trees & Streetlamps */}
         <mesh
           name="sol-campus-architecture"
+          visible={showGroundCampus}
           geometry={campusGeometry}
           material={materials.vertexColored}
           receiveShadow
@@ -156,6 +158,7 @@ export function Environment() {
         {/* Illuminated 3D Rooftop Sky-Signs, Gate Sign, Lobby Canopy Sign, Parking & Tennis Signs */}
         <mesh
           name="sol-campus-signage"
+          visible={showGroundCampus}
           geometry={signageGeometry}
           material={signageMaterialBundle.mat}
         />

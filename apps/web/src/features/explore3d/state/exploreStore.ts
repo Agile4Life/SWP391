@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LevelCode, Viewpoint } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { levelOf } from '../scene/selectors';
+import { getNode, levelOf } from '../scene/selectors';
 
 export type LevelMode = 'stacked' | 'exploded' | 'solo';
 export type WallMode = 'up' | 'cutaway' | 'down';
@@ -115,16 +115,18 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       set({ selectedId: null });
       return;
     }
+    const node = getNode(SOL_CENTER_SCENE, id);
     const lvl = levelOf(SOL_CENTER_SCENE, id);
     const current = get();
+    const shouldSync = options?.syncLevel !== false;
     const nextFocusLevel =
-      options?.syncLevel && lvl
+      shouldSync && lvl
         ? lvl.code
         : current.levelMode === 'solo' && lvl
           ? lvl.code
           : current.focusLevel;
     const nextLevelMode =
-      options?.syncLevel &&
+      shouldSync &&
       lvl &&
       lvl.code !== 'RF' &&
       lvl.code !== 'OUT' &&
@@ -133,6 +135,27 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
         : current.levelMode;
 
     if (current.walkMode && lvl) {
+      if (
+        node?.type === 'item' &&
+        (node.kind === 'stair-core' || node.kind === 'elevator-core') &&
+        lvl.code === current.focusLevel
+      ) {
+        const order: LevelCode[] = ['B1', 'L1', 'L2', 'RF'];
+        const idx = order.indexOf(lvl.code);
+        if (idx !== -1) {
+          const nextLvl =
+            lvl.code === 'RF'
+              ? 'L2'
+              : order[Math.min(order.length - 1, idx + 1)]!;
+          const targetItemId = `item-${nextLvl.toLowerCase()}-${node.kind === 'stair-core' ? 'stairs' : 'elevator'}`;
+          set({
+            selectedId: SOL_CENTER_SCENE.nodes[targetItemId] ? targetItemId : id,
+            focusLevel: nextLvl,
+            levelMode: 'solo',
+          });
+          return;
+        }
+      }
       set({
         selectedId: id,
         focusLevel: lvl.code,
@@ -240,6 +263,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
         tourActive: false,
         focusLevel: targetLevel,
         levelMode: 'solo',
+        wallMode: current.wallMode === 'down' ? 'cutaway' : current.wallMode,
       });
     } else {
       set({ walkMode: false });

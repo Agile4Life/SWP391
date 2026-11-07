@@ -18,6 +18,7 @@ import {
   zoneOf,
   zonesOfLevel,
 } from '../scene/selectors';
+import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import type { LevelMode } from '../state/exploreStore';
 
 export const OVERVIEW_VIEWPOINT: Viewpoint = {
@@ -66,8 +67,11 @@ const WALKABLE_SURFACE_ITEM_KINDS = new Set<string>([
   'badminton-court',
   'pickleball-court',
   'tennis-court',
+  'swim-lane',
   'swimming-lane',
   'wall-mirror',
+  'stair-core',
+  'elevator-core',
 ]);
 
 /**
@@ -758,6 +762,102 @@ export function poseToViewpoint(pose: WalkPose): Viewpoint {
   };
 }
 
+export interface StairElevationState {
+  onStairs: boolean;
+  progress: number; // 0 at lower south entry, 1 at upper north landing
+  elevationOffset: number; // 0..2.15m vertical climb along the stair flight
+  stairItemId: string | null;
+}
+
+export function computeStairElevationOffset(
+  doc: SceneDoc,
+  levelCode: LevelCode,
+  x: number,
+  z: number,
+): StairElevationState {
+  for (const item of itemsOfLevel(doc, levelCode)) {
+    if (item.kind !== 'stair-core') continue;
+    const [sx, , sz] = item.position;
+    const [w, , d] = item.dimensions;
+    const halfW = w * 0.5 + 0.35;
+    const halfD = d * 0.5 + 0.35;
+    if (Math.abs(x - sx) <= halfW && Math.abs(z - sz) <= halfD) {
+      const rawProgress = (sz + d * 0.5 - z) / Math.max(0.5, d);
+      const progress = Math.max(0, Math.min(1, rawProgress));
+      const elevationOffset = Number((progress * 2.15).toFixed(3));
+      return {
+        onStairs: true,
+        progress: Number(progress.toFixed(3)),
+        elevationOffset,
+        stairItemId: item.id,
+      };
+    }
+  }
+  return {
+    onStairs: false,
+    progress: 0,
+    elevationOffset: 0,
+    stairItemId: null,
+  };
+}
+
+const VERTICAL_STAIR_FLOORS: readonly LevelCode[] = ['B1', 'L1', 'L2', 'RF'] as const;
+
+/**
+ * Evaluates whether a walk step across a `stair-core` landing triggers a floor transition
+ * up or down between B1 <-> L1 <-> L2 <-> RF.
+ */
+export function evaluateStairOrElevatorPortal(
+  doc: SceneDoc,
+  prevPose: WalkPose,
+  nextPose: WalkPose,
+): LevelCode | null {
+  if (prevPose.levelCode !== nextPose.levelCode) return null;
+  const idx = VERTICAL_STAIR_FLOORS.indexOf(nextPose.levelCode);
+  if (idx === -1) return null;
+
+  const prevStair = computeStairElevationOffset(
+    doc,
+    prevPose.levelCode,
+    prevPose.position[0],
+    prevPose.position[2],
+  );
+  const nextStair = computeStairElevationOffset(
+    doc,
+    nextPose.levelCode,
+    nextPose.position[0],
+    nextPose.position[2],
+  );
+
+  // Walking North (-Z) to the upper landing of the staircase
+  if (
+    nextStair.onStairs &&
+    nextStair.progress >= 0.82 &&
+    nextPose.position[2] < prevPose.position[2] - 0.005
+  ) {
+    if (nextPose.levelCode === 'RF') {
+      return 'L2';
+    }
+    return VERTICAL_STAIR_FLOORS[Math.min(VERTICAL_STAIR_FLOORS.length - 1, idx + 1)]!;
+  }
+
+  // Walking South (+Z) back down to the lower landing after being on the stair flight
+  if (
+    prevStair.onStairs &&
+    prevStair.progress > 0.22 &&
+    nextStair.onStairs &&
+    nextStair.progress <= 0.18 &&
+    nextPose.position[2] > prevPose.position[2] + 0.005
+  ) {
+    if (nextPose.levelCode === 'B1') {
+      return 'L1';
+    }
+    return VERTICAL_STAIR_FLOORS[Math.max(0, idx - 1)]!;
+  }
+
+  return null;
+}
+
 export function computeInitialWalkPose(
   doc: SceneDoc,
   selectedId: string | null,
@@ -772,6 +872,8 @@ export function computeInitialWalkPose(
     getLevelByCode(doc, inferredLevel) ?? getLevelByCode(doc, 'L1')!;
   const eyeY = levelNode.elevation + WALK_EYE_HEIGHT_M;
 
+  const selectedNode = selectedId ? getNode(doc, selectedId) : null;
+  const selectedNodeLevel = selectedId ? levelOf(doc, selectedId) : null;
   const selectedZone = zoneOf(doc, selectedId);
   const candidateZones = zonesOfLevel(doc, levelNode.id);
   const activeZone =
@@ -780,6 +882,147 @@ export function computeInitialWalkPose(
       : candidateZones.find(z => z.viewpoints.some(v => v.kind === 'eye')) ??
         candidateZones[0] ??
         null;
+
+  // When a specific ItemNode or HotspotNode on this level is selected, spawn in front of it facing it directly
+  if (
+    selectedNode &&
+    selectedNodeLevel?.code === levelNode.code &&
+    (selectedNode.type === 'item' || selectedNode.type === 'hotspot')
+  ) {
+    const ix = selectedNode.position[0];
+    const iz = selectedNode.position[2];
+    const walls = wallsOfLevel(doc, levelNode.code);
+    const obstacles = getWalkObstaclesForLevel(doc, levelNode.code);
+    const slabBounds = polygonBounds2D(levelNode.slabPolygon);
+    const zoneBounds = activeZone ? polygonBounds2D(activeZone.polygon) : slabBounds;
+
+    if (
+      selectedNode.type === 'item' &&
+      (selectedNode.kind === 'stair-core' || selectedNode.kind === 'elevator-core')
+    ) {
+      const halfD = selectedNode.dimensions[2] * 0.5;
+      const approachZ = Math.min(slabBounds.maxZ - 0.65, iz + halfD + 1.25);
+      const safeXZ = resolveWalkCollision2D(
+        [ix, approachZ],
+        [ix, approachZ],
+        walls,
+        WALK_COLLIDER_RADIUS_M,
+        obstacles,
+      );
+      const dx = ix - safeXZ[0];
+      const dz = iz - safeXZ[1];
+      const yaw = Math.hypot(dx, dz) > 1e-3 ? Math.atan2(dx, -dz) : 0;
+      return {
+        levelCode: levelNode.code,
+        position: [
+          Number(safeXZ[0].toFixed(3)),
+          eyeY,
+          Number(safeXZ[1].toFixed(3)),
+        ],
+        yaw: Number.isFinite(yaw) ? yaw : 0,
+        pitch: 0,
+      };
+    }
+
+    const itemRadius =
+      selectedNode.type === 'item'
+        ? Math.min(
+            2.4,
+            Math.hypot(selectedNode.dimensions[0], selectedNode.dimensions[2]) * 0.5,
+          )
+        : 0.4;
+    const standOff = Math.max(2.1, Math.min(3.4, itemRadius + 1.45));
+
+    const eyeVp = activeZone?.viewpoints.find(v => v.kind === 'eye');
+    const refX = eyeVp
+      ? eyeVp.position[0]
+      : (zoneBounds.minX + zoneBounds.maxX) * 0.5;
+    const refZ = eyeVp
+      ? eyeVp.position[2]
+      : (zoneBounds.minZ + zoneBounds.maxZ) * 0.5;
+
+    const toRefDx = refX - ix;
+    const toRefDz = refZ - iz;
+    const toRefLen = Math.hypot(toRefDx, toRefDz);
+
+    const candidateDirs: Vec2[] = [];
+    if (toRefLen > 0.25) {
+      candidateDirs.push([toRefDx / toRefLen, toRefDz / toRefLen]);
+    }
+    if (selectedNode.type === 'item') {
+      const rot = selectedNode.rotationY;
+      candidateDirs.push([Math.sin(rot), Math.cos(rot)]);
+      candidateDirs.push([-Math.sin(rot), -Math.cos(rot)]);
+    }
+    candidateDirs.push(
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1 / Math.SQRT2, 1 / Math.SQRT2],
+      [-1 / Math.SQRT2, 1 / Math.SQRT2],
+      [1 / Math.SQRT2, -1 / Math.SQRT2],
+      [-1 / Math.SQRT2, -1 / Math.SQRT2],
+    );
+
+    let bestCandidate: Vec2 = [refX, refZ];
+    let bestScore = -Infinity;
+
+    for (const [ux, uz] of candidateDirs) {
+      const rawCx = ix + ux * standOff;
+      const rawCz = iz + uz * standOff;
+      const cx = Math.min(
+        slabBounds.maxX - 0.6,
+        Math.max(slabBounds.minX + 0.6, rawCx),
+      );
+      const cz = Math.min(
+        slabBounds.maxZ - 0.6,
+        Math.max(slabBounds.minZ + 0.6, rawCz),
+      );
+      const resolved = resolveWalkCollision2D(
+        [cx, cz],
+        [cx, cz],
+        walls,
+        WALK_COLLIDER_RADIUS_M,
+        obstacles,
+      );
+      const distToItem = Math.hypot(resolved[0] - ix, resolved[1] - iz);
+      if (distToItem < 0.75) continue;
+
+      const wallHits = countInteriorWallCrossings([ix, iz], resolved, walls);
+      const inZone =
+        resolved[0] >= zoneBounds.minX + 0.35 &&
+        resolved[0] <= zoneBounds.maxX - 0.35 &&
+        resolved[1] >= zoneBounds.minZ + 0.35 &&
+        resolved[1] <= zoneBounds.maxZ - 0.35;
+      const distToRef = Math.hypot(resolved[0] - refX, resolved[1] - refZ);
+      const score =
+        -wallHits * 25 +
+        (inZone ? 8 : 0) -
+        Math.abs(distToItem - standOff) * 1.5 -
+        distToRef * 0.15;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = resolved;
+      }
+    }
+
+    const dx = ix - bestCandidate[0];
+    const dz = iz - bestCandidate[1];
+    const yaw = Math.hypot(dx, dz) > 1e-3 ? Math.atan2(dx, -dz) : 0;
+
+    return {
+      levelCode: levelNode.code,
+      position: [
+        Number(bestCandidate[0].toFixed(3)),
+        eyeY,
+        Number(bestCandidate[1].toFixed(3)),
+      ],
+      yaw: Number.isFinite(yaw) ? yaw : 0,
+      pitch: -0.08,
+    };
+  }
 
   const eyeVp = activeZone?.viewpoints.find(v => v.kind === 'eye');
   if (eyeVp) {
@@ -826,6 +1069,7 @@ export function stepWalkPose(
   walls: WallNode[],
   slabBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
   obstacles: ObstacleBox2D[] = [],
+  doc: SceneDoc = SOL_CENTER_SCENE,
 ): WalkPose {
   const safeDt = Math.min(0.1, Math.max(0.001, dtSec));
   const nextYaw = pose.yaw + input.turn * WALK_TURN_RAD_PER_SEC * safeDt;
@@ -865,9 +1109,21 @@ export function stepWalkPose(
     obstacles,
   );
 
+  const levelNode = getLevelByCode(doc, pose.levelCode);
+  const baseEyeY = levelNode
+    ? levelNode.elevation + WALK_EYE_HEIGHT_M
+    : pose.position[1];
+  const stairState = computeStairElevationOffset(
+    doc,
+    pose.levelCode,
+    resolvedXZ[0],
+    resolvedXZ[1],
+  );
+  const nextY = Number((baseEyeY + stairState.elevationOffset).toFixed(3));
+
   return {
     levelCode: pose.levelCode,
-    position: [resolvedXZ[0], pose.position[1], resolvedXZ[1]],
+    position: [resolvedXZ[0], nextY, resolvedXZ[1]],
     yaw: nextYaw,
     pitch: nextPitch,
   };

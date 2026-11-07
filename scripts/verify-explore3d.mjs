@@ -483,19 +483,25 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '04-level1-gym-cutaway-1440.png') });
     console.log('Captured 04-level1-gym-cutaway-1440.png');
 
-    // Verify first-person Walk Mode multi-angle navigation, floor up/down (B1..RF), Light Mode HUD unity & zero collision
+    // Verify first-person Walk Mode multi-angle navigation, floor up/down (B1..RF..OUT), Light Mode HUD unity & zero collision
     await page.locator('[data-testid="explore3d-btn-walk"]').click();
     await page.locator('[data-testid="explore3d-walk-hud"]').waitFor({ state: 'visible', timeout: 5000 });
     await page.locator('[data-testid="walk-turn-right"]').click();
     await page.locator('[data-testid="walk-look-up"]').click();
     await page.locator('[data-testid="walk-step-forward"]').click();
-    // Go down to basement B1 from L1
+    // Traverse all floors B1 -> L1 -> L2 -> RF -> OUT in Walk Mode
+    for (const code of ['B1', 'L1', 'L2', 'RF', 'OUT']) {
+      await page.locator(`[data-testid="walk-floor-${code}"]`).click();
+      await page.waitForTimeout(220);
+      await assertSingleScreenAndNoCollisions(page, `04-walk-floor-${code}`);
+    }
+    // Step down and up via HUD arrows
+    await page.locator('[data-testid="walk-floor-L1"]').click();
     await page.locator('[data-testid="walk-floor-down"]').click();
-    await page.waitForTimeout(250);
-    // Go up to L1 and L2
+    await page.waitForTimeout(200);
     await page.locator('[data-testid="walk-floor-up"]').click();
     await page.locator('[data-testid="walk-floor-up"]').click();
-    await page.waitForTimeout(350);
+    await page.waitForTimeout(300);
     await assertSingleScreenAndNoCollisions(page, '04b-walk-dark-1440');
     if (await themeToggle.count()) {
       await themeToggle.click();
@@ -506,6 +512,21 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(350);
+
+    // Verify item-targeted Walk Mode (Sofa Thư giãn Platinum 01 on L2) & B1 Locker isolation
+    await page.goto(`${server.baseUrl}/member/explore?focus=item-l2-sofa-1`);
+    await waitFor3DReady(page);
+    await page.locator('[data-testid="explore3d-btn-walk"]').click();
+    await page.locator('[data-testid="explore3d-walk-hud"]').waitFor({ state: 'visible', timeout: 5000 });
+    await page.waitForTimeout(450);
+    await assertSingleScreenAndNoCollisions(page, '04d-walk-l2-sofa-1440');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+
+    await page.goto(`${server.baseUrl}/member/explore?focus=zone-b1-locker`);
+    await waitFor3DReady(page);
+    await page.waitForTimeout(550);
+    await assertSingleScreenAndNoCollisions(page, '04e-b1-locker-solo-1440');
 
     // 5. Level 2 VIP Gym / InBody 770 + Platinum Upgrade CTA (1440x900)
     await page.locator('[data-testid="explore3d-level-L2"]').click();

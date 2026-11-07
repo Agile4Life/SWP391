@@ -90,6 +90,7 @@ interface LevelGroupProps {
   levelMode: LevelMode;
   focusLevel: LevelCode | 'ALL';
   wallMode: WallMode;
+  walkMode: boolean;
   selectedId: string | null;
   hoveredId: string | null;
   cutawayWallIds: Set<string>;
@@ -103,6 +104,7 @@ function LevelGroup({
   levelMode,
   focusLevel,
   wallMode,
+  walkMode,
   selectedId,
   hoveredId,
   cutawayWallIds,
@@ -117,7 +119,7 @@ function LevelGroup({
 
   useEffect(() => {
     invalidate();
-  }, [targetY, visible, dimmed, wallMode, selectedId, hoveredId, invalidate]);
+  }, [targetY, visible, dimmed, wallMode, walkMode, selectedId, hoveredId, invalidate]);
 
   useFrame((_, delta) => {
     const grp = groupRef.current;
@@ -135,7 +137,7 @@ function LevelGroup({
   });
 
   const interiorWallScaleY =
-    wallMode === 'down'
+    !walkMode && wallMode === 'down'
       ? Math.min(1, CUTAWAY_WALL_HEIGHT / Math.max(0.5, level.height))
       : 1;
 
@@ -225,8 +227,9 @@ function LevelGroup({
       {/* 4. Exterior Walls (scaled down to cutaway height when facing camera) */}
       {built.exteriorWallsByNormal.map(extWall => {
         const isCut =
-          wallMode === 'down' ||
-          (wallMode === 'cutaway' && cutawayWallIds.has(extWall.wallId));
+          !walkMode &&
+          (wallMode === 'down' ||
+            (wallMode === 'cutaway' && cutawayWallIds.has(extWall.wallId)));
         const extScaleY = isCut
           ? Math.min(1, CUTAWAY_WALL_HEIGHT / Math.max(0.5, level.height))
           : 1;
@@ -302,6 +305,7 @@ export function LevelStack({ renderLevelChildren }: LevelStackProps) {
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const wallMode = useExploreStore(s => s.wallMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const selectedId = useExploreStore(s => s.selectedId);
   const hoveredId = useExploreStore(s => s.hoveredId);
 
@@ -352,6 +356,7 @@ export function LevelStack({ renderLevelChildren }: LevelStackProps) {
             levelMode={levelMode}
             focusLevel={focusLevel}
             wallMode={wallMode}
+            walkMode={walkMode}
             selectedId={selectedId}
             hoveredId={hoveredId}
             cutawayWallIds={cutawayWallIds}

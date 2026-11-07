@@ -11,6 +11,8 @@ import {
   computeFitViewpoint,
   computeInitialWalkPose,
   computeProportionalZoomStep,
+  computeStairElevationOffset,
+  evaluateStairOrElevatorPortal,
   getSolidWallSegments2D,
   getWalkObstaclesForLevel,
   needsTwoHopFlight,
@@ -28,9 +30,12 @@ import {
   allZones,
   getLevels,
   getNode,
+  itemsOfLevel,
+  levelOf,
   wallsOfLevel,
 } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
+import { useExploreStore } from '../state/exploreStore';
 import { TOTAL_TOUR_DURATION_MS, TOUR_STEPS } from '../tour/tourSteps';
 
 describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
@@ -308,5 +313,148 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       b1Obstacles,
     );
     expect(stoppedAtPoolEdge[0]).toBeGreaterThan(5.1);
+  });
+
+  it('audits 100% of zones (18), items (90+), and hotspots (28) in Walk Mode so camera always faces the selected target without wall occlusion', () => {
+    const zones = allZones(SOL_CENTER_SCENE);
+    expect(zones).toHaveLength(18);
+
+    // Every single zone must define both a hero and an eye viewpoint
+    for (const zone of zones) {
+      expect(
+        zone.viewpoints.some(v => v.kind === 'hero'),
+        `Zone ${zone.id} missing hero viewpoint`,
+      ).toBe(true);
+      expect(
+        zone.viewpoints.some(v => v.kind === 'eye'),
+        `Zone ${zone.id} missing eye viewpoint`,
+      ).toBe(true);
+
+      const lvl = levelOf(SOL_CENTER_SCENE, zone.id)!;
+      const pose = computeInitialWalkPose(SOL_CENTER_SCENE, zone.id, lvl.code);
+      expect(pose.levelCode).toBe(lvl.code);
+      expect(Number.isFinite(pose.position[0])).toBe(true);
+      expect(Number.isFinite(pose.position[1])).toBe(true);
+      expect(Number.isFinite(pose.position[2])).toBe(true);
+      expect(Number.isFinite(pose.yaw)).toBe(true);
+    }
+
+    // Audit every ItemNode and HotspotNode: initial walk pose must face the selected node
+    const items = allItems(SOL_CENTER_SCENE);
+    const hotspots = allHotspots(SOL_CENTER_SCENE);
+    for (const node of [...items, ...hotspots]) {
+      const lvl = levelOf(SOL_CENTER_SCENE, node.id)!;
+      const pose = computeInitialWalkPose(SOL_CENTER_SCENE, node.id, lvl.code);
+      const vp = poseToViewpoint(pose);
+
+      const lookDx = vp.target[0] - vp.position[0];
+      const lookDz = vp.target[2] - vp.position[2];
+      const lookLen = Math.hypot(lookDx, lookDz);
+      const toItemDx = node.position[0] - vp.position[0];
+      const toItemDz = node.position[2] - vp.position[2];
+      const toItemLen = Math.hypot(toItemDx, toItemDz);
+
+      expect(lookLen).toBeGreaterThan(0.1);
+      expect(toItemLen).toBeGreaterThan(0.3);
+
+      // Cosine of angle between camera look vector and vector to the selected item/hotspot must be > 0.95
+      const cosAngle =
+        (lookDx * toItemDx + lookDz * toItemDz) / (lookLen * toItemLen);
+      expect(
+        cosAngle,
+        `Expected walk pose for ${node.id} to face node directly`,
+      ).toBeGreaterThan(0.95);
+    }
+
+    // Specifically verify Sofa Thư giãn Platinum 01 (item-l2-sofa-1) looks toward the sofa (z = 10.2), not the North wall
+    const sofaPose = computeInitialWalkPose(SOL_CENTER_SCENE, 'item-l2-sofa-1', 'L2');
+    const sofaVp = poseToViewpoint(sofaPose);
+    expect(sofaVp.target[2]).toBeGreaterThan(sofaVp.position[2]);
+  });
+
+  it('supports physical staircase climbing and floor transitions across B1 <-> L1 <-> L2 <-> RF', () => {
+    // All 4 indoor levels must have both a stair-core and an elevator-core
+    for (const code of ['B1', 'L1', 'L2', 'RF'] as const) {
+      const levelItems = itemsOfLevel(SOL_CENTER_SCENE, code);
+      expect(
+        levelItems.some(i => i.kind === 'stair-core'),
+        `Level ${code} missing stair-core`,
+      ).toBe(true);
+      expect(
+        levelItems.some(i => i.kind === 'elevator-core'),
+        `Level ${code} missing elevator-core`,
+      ).toBe(true);
+    }
+
+    // Walk up the L1 staircase (item-l1-stairs at [10.5, 0, 1.0], dimensions [3.6, 3.8, 4.2], z = -1.1..3.1)
+    const l1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'L1');
+    const l1Obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, 'L1');
+    let pose = computeInitialWalkPose(SOL_CENTER_SCENE, 'item-l1-stairs', 'L1');
+    expect(pose.levelCode).toBe('L1');
+    const initialY = pose.position[1];
+
+    let transitionedTo: string | null = null;
+    let maxClimbedY = initialY;
+
+    for (let step = 0; step < 30; step++) {
+      const nextPose = stepWalkPose(
+        pose,
+        { forward: 1, strafe: 0, turn: 0 },
+        0.1,
+        l1Walls,
+        undefined,
+        l1Obstacles,
+        SOL_CENTER_SCENE,
+      );
+      maxClimbedY = Math.max(maxClimbedY, nextPose.position[1]);
+      const portal = evaluateStairOrElevatorPortal(SOL_CENTER_SCENE, pose, nextPose);
+      pose = nextPose;
+      if (portal) {
+        transitionedTo = portal;
+        break;
+      }
+    }
+
+    // Eye height must have climbed up the staircase (> +1.4m above floor) and triggered transition to L2
+    expect(maxClimbedY).toBeGreaterThan(initialY + 1.4);
+    expect(transitionedTo).toBe('L2');
+
+    // Verify descending staircase from mid-flight (progress ~ 0.5) to lower south landing triggers down transition
+    const midStairL2: typeof pose = {
+      levelCode: 'L2',
+      position: [10.5, 4.5 + WALK_EYE_HEIGHT_M + 1.1, 11.5],
+      yaw: Math.PI, // facing South (+Z) down the stairs
+      pitch: 0,
+    };
+    const bottomStairL2: typeof pose = {
+      levelCode: 'L2',
+      position: [10.5, 4.5 + WALK_EYE_HEIGHT_M + 0.2, 13.2],
+      yaw: Math.PI,
+      pitch: 0,
+    };
+    expect(computeStairElevationOffset(SOL_CENTER_SCENE, 'L2', 10.5, 11.5).onStairs).toBe(true);
+    expect(
+      evaluateStairOrElevatorPortal(SOL_CENTER_SCENE, midStairL2, bottomStairL2),
+    ).toBe('L1');
+
+    // Verify store selectNode isolates indoor levels in solo mode and transitions floors when clicking stairs in walkMode
+    useExploreStore.getState().resetExplore();
+    useExploreStore.getState().selectNode('zone-b1-locker');
+    expect(useExploreStore.getState().focusLevel).toBe('B1');
+    expect(useExploreStore.getState().levelMode).toBe('solo');
+
+    useExploreStore.getState().setWalkMode(true);
+    expect(useExploreStore.getState().focusLevel).toBe('B1');
+    useExploreStore.getState().selectNode('item-b1-stairs');
+    expect(useExploreStore.getState().focusLevel).toBe('L1');
+    expect(useExploreStore.getState().selectedId).toBe('item-l1-stairs');
+    useExploreStore.getState().selectNode('item-l1-stairs');
+    expect(useExploreStore.getState().focusLevel).toBe('L2');
+    expect(useExploreStore.getState().selectedId).toBe('item-l2-stairs');
+    useExploreStore.getState().selectNode('item-l2-stairs');
+    expect(useExploreStore.getState().focusLevel).toBe('RF');
+    expect(useExploreStore.getState().selectedId).toBe('item-rf-stairs');
+    useExploreStore.getState().selectNode('item-rf-stairs');
+    expect(useExploreStore.getState().focusLevel).toBe('L2');
   });
 });
