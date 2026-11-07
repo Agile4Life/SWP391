@@ -82,12 +82,12 @@ function WalkSceneOverlay({
 const HUD_BTN_STYLE = {
   minHeight: '28px',
   minWidth: '28px',
-  padding: '0.15rem 0.45rem',
+  padding: '0.15rem 0.42rem',
   borderRadius: '999px',
-  border: '1px solid rgba(206, 145, 128, 0.38)',
-  background: 'rgba(255, 255, 255, 0.06)',
-  color: '#f4f3ef',
-  fontSize: '0.75rem',
+  border: '1px solid var(--explore-border-accent)',
+  background: 'var(--explore-chip-bg)',
+  color: 'var(--explore-ink)',
+  fontSize: '0.74rem',
   fontWeight: 700,
   cursor: 'pointer',
   lineHeight: 1,
@@ -528,25 +528,6 @@ export function WalkController() {
       role="status"
       aria-live="polite"
       style={{
-        position: 'absolute',
-        left: '50%',
-        bottom: '4.75rem',
-        transform: 'translateX(-50%)',
-        zIndex: 24,
-        display: 'inline-flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
-        padding: '0.5rem 0.9rem',
-        borderRadius: '999px',
-        background: 'rgba(26, 26, 30, 0.94)',
-        border: '1px solid rgba(206, 145, 128, 0.48)',
-        color: '#faf9f6',
-        fontSize: '0.8rem',
-        fontWeight: 600,
-        boxShadow: '0 14px 32px rgba(0, 0, 0, 0.48)',
-        backdropFilter: 'blur(12px)',
         pointerEvents: 'auto',
       }}
     >
@@ -556,7 +537,8 @@ export function WalkController() {
           width: '8px',
           height: '8px',
           borderRadius: '999px',
-          background: '#ce9180',
+          background: 'var(--explore-accent, #ce9180)',
+          flexShrink: 0,
         }}
       />
       <span>
@@ -568,10 +550,11 @@ export function WalkController() {
       <div
         role="group"
         aria-label={t('Điều hướng góc nhìn và bước đi', 'Walk and look controls')}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.28rem' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
       >
         <button
           type="button"
+          className="explore3d-walk-hud__btn"
           data-testid="walk-turn-left"
           onClick={() => nudgePoseByInput(0, 0, -28, 0)}
           aria-label={t('Quay trái (Q)', 'Turn left (Q)')}
@@ -582,6 +565,7 @@ export function WalkController() {
         </button>
         <button
           type="button"
+          className="explore3d-walk-hud__btn"
           data-testid="walk-step-forward"
           onClick={() => nudgePoseByInput(1, 0, 0, 0)}
           aria-label={t('Bước tiến (W)', 'Step forward (W)')}
@@ -592,6 +576,7 @@ export function WalkController() {
         </button>
         <button
           type="button"
+          className="explore3d-walk-hud__btn"
           data-testid="walk-step-back"
           onClick={() => nudgePoseByInput(-1, 0, 0, 0)}
           aria-label={t('Bước lùi (S)', 'Step back (S)')}
@@ -602,6 +587,7 @@ export function WalkController() {
         </button>
         <button
           type="button"
+          className="explore3d-walk-hud__btn"
           data-testid="walk-turn-right"
           onClick={() => nudgePoseByInput(0, 0, 28, 0)}
           aria-label={t('Quay phải (E)', 'Turn right (E)')}
@@ -612,6 +598,7 @@ export function WalkController() {
         </button>
         <button
           type="button"
+          className="explore3d-walk-hud__btn"
           data-testid="walk-look-up"
           onClick={() => nudgePoseByInput(0, 0, 0, 14)}
           aria-label={t('Nhìn lên (R)', 'Look up (R)')}
@@ -622,6 +609,7 @@ export function WalkController() {
         </button>
         <button
           type="button"
+          className="explore3d-walk-hud__btn"
           data-testid="walk-look-down"
           onClick={() => nudgePoseByInput(0, 0, 0, -14)}
           aria-label={t('Nhìn xuống (F)', 'Look down (F)')}
@@ -633,19 +621,9 @@ export function WalkController() {
       </div>
       <button
         type="button"
+        className="explore3d-walk-hud__exit"
         onClick={() => setWalkMode(false)}
         aria-label={t('Thoát chế độ đi bộ', 'Exit walk mode')}
-        style={{
-          minHeight: '30px',
-          padding: '0.2rem 0.65rem',
-          borderRadius: '999px',
-          border: '1px solid rgba(206, 145, 128, 0.5)',
-          background: 'rgba(206, 145, 128, 0.18)',
-          color: '#e1aa98',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          cursor: 'pointer',
-        }}
       >
         Esc · {t('Thoát', 'Exit')}
       </button>

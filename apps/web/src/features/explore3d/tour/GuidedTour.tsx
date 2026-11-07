@@ -114,17 +114,22 @@ export function GuidedTour() {
       style={{
         position: 'absolute',
         left: '50%',
-        bottom: '4.75rem',
+        bottom: '3.75rem',
         transform: 'translateX(-50%)',
         zIndex: 25,
-        width: 'min(760px, calc(100% - 2rem))',
-        background: 'rgba(32, 32, 32, 0.94)',
-        border: '1px solid rgba(206, 145, 128, 0.38)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: '0.35rem',
+        width: 'min(660px, calc(100% - 13rem))',
+        background: 'var(--explore-surface-elevated)',
+        border: '1px solid var(--explore-border-accent)',
         borderRadius: '16px',
-        padding: '0.875rem 1.125rem',
-        color: '#faf9f6',
-        boxShadow: '0 18px 42px rgba(0, 0, 0, 0.48)',
-        backdropFilter: 'blur(12px)',
+        padding: '0.65rem 0.95rem',
+        color: 'var(--explore-ink)',
+        boxShadow: 'var(--explore-shadow)',
+        backdropFilter: 'blur(14px)',
+        whiteSpace: 'normal',
       }}
     >
       <div
@@ -133,24 +138,23 @@ export function GuidedTour() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '0.75rem',
-          marginBottom: '0.35rem',
+          gap: '0.6rem',
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span
             className="explore3d-tour-counter"
             data-testid="explore3d-tour-counter"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              padding: '0.18rem 0.6rem',
+              padding: '0.14rem 0.55rem',
               borderRadius: '999px',
               background: 'rgba(206, 145, 128, 0.18)',
-              border: '1px solid rgba(206, 145, 128, 0.45)',
-              color: '#ce9180',
-              fontSize: '0.75rem',
+              border: '1px solid var(--explore-border-accent)',
+              color: 'var(--explore-accent)',
+              fontSize: '0.72rem',
               fontWeight: 700,
               letterSpacing: '0.04em',
             }}
@@ -159,10 +163,10 @@ export function GuidedTour() {
           </span>
           <span
             style={{
-              fontSize: '0.75rem',
+              fontSize: '0.72rem',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'rgba(250, 249, 246, 0.68)',
+              letterSpacing: '0.06em',
+              color: 'var(--explore-ink-muted)',
               fontWeight: 600,
             }}
           >
@@ -173,8 +177,8 @@ export function GuidedTour() {
           {(tourPaused || reducedMotion) && (
             <span
               style={{
-                fontSize: '0.72rem',
-                color: '#e1aa98',
+                fontSize: '0.71rem',
+                color: 'var(--explore-accent)',
                 fontWeight: 600,
               }}
             >
@@ -187,7 +191,7 @@ export function GuidedTour() {
         <div
           role="tablist"
           aria-label={t('Các điểm dừng tham quan', 'Tour stops')}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}
         >
           {TOUR_STEPS.map((step, idx) => {
             const active = idx === safeIndex;
@@ -200,13 +204,13 @@ export function GuidedTour() {
                 aria-label={`${idx + 1}. ${lang === 'en' ? step.title.en : step.title.vi}`}
                 onClick={() => setTourStep(idx)}
                 style={{
-                  width: active ? '20px' : '8px',
-                  height: '8px',
+                  width: active ? '18px' : '7px',
+                  height: '7px',
                   borderRadius: '999px',
                   border: 'none',
                   padding: 0,
                   cursor: 'pointer',
-                  background: active ? '#ce9180' : 'rgba(250, 249, 246, 0.25)',
+                  background: active ? 'var(--explore-accent)' : 'var(--explore-border)',
                   transition: 'width 160ms ease, background 160ms ease',
                 }}
               />
@@ -218,10 +222,10 @@ export function GuidedTour() {
       <h3
         className="explore3d-tour-title"
         style={{
-          margin: '0 0 0.25rem',
-          fontSize: '1rem',
+          margin: 0,
+          fontSize: '0.92rem',
           fontWeight: 700,
-          color: '#faf9f6',
+          color: 'var(--explore-ink)',
         }}
       >
         {titleText}
@@ -229,10 +233,10 @@ export function GuidedTour() {
       <p
         className="explore3d-tour-caption"
         style={{
-          margin: '0 0 0.75rem',
-          fontSize: '0.85rem',
-          lineHeight: 1.45,
-          color: 'rgba(250, 249, 246, 0.82)',
+          margin: '0 0 0.2rem',
+          fontSize: '0.78rem',
+          lineHeight: 1.4,
+          color: 'var(--explore-ink-muted)',
         }}
       >
         {captionText}
@@ -244,23 +248,24 @@ export function GuidedTour() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '0.5rem',
+          gap: '0.45rem',
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handlePrev}
             aria-label={t('Điểm dừng trước', 'Previous tour stop')}
+            className="explore3d-tour-bar__pill-btn"
             style={{
-              minHeight: '38px',
-              padding: '0.4rem 0.8rem',
+              minHeight: '32px',
+              padding: '0.28rem 0.7rem',
               borderRadius: '999px',
-              border: '1px solid rgba(250, 249, 246, 0.22)',
-              background: 'rgba(255, 255, 255, 0.06)',
-              color: '#faf9f6',
-              fontSize: '0.8rem',
+              border: '1px solid var(--explore-border)',
+              background: 'var(--explore-chip-bg)',
+              color: 'var(--explore-ink)',
+              fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -277,14 +282,15 @@ export function GuidedTour() {
                   ? t('Tiếp tục tham quan tự động', 'Resume guided tour')
                   : t('Tạm dừng tham quan tự động', 'Pause guided tour')
               }
+              className="explore3d-tour-bar__pill-btn"
               style={{
-                minHeight: '38px',
-                padding: '0.4rem 0.85rem',
+                minHeight: '32px',
+                padding: '0.28rem 0.75rem',
                 borderRadius: '999px',
-                border: '1px solid rgba(206, 145, 128, 0.45)',
+                border: '1px solid var(--explore-border-accent)',
                 background: 'rgba(206, 145, 128, 0.14)',
-                color: '#e1aa98',
-                fontSize: '0.8rem',
+                color: 'var(--explore-ink)',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -297,14 +303,15 @@ export function GuidedTour() {
             type="button"
             onClick={handleNext}
             aria-label={t('Điểm dừng tiếp theo', 'Next tour stop')}
+            className="explore3d-tour-bar__pill-btn"
             style={{
-              minHeight: '38px',
-              padding: '0.4rem 0.8rem',
+              minHeight: '32px',
+              padding: '0.28rem 0.7rem',
               borderRadius: '999px',
-              border: '1px solid rgba(250, 249, 246, 0.22)',
-              background: 'rgba(255, 255, 255, 0.06)',
-              color: '#faf9f6',
-              fontSize: '0.8rem',
+              border: '1px solid var(--explore-border)',
+              background: 'var(--explore-chip-bg)',
+              color: 'var(--explore-ink)',
+              fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -319,13 +326,13 @@ export function GuidedTour() {
             onClick={stopTour}
             aria-label={t('Thoát chế độ tham quan', 'Exit guided tour')}
             style={{
-              minHeight: '38px',
-              padding: '0.4rem 0.75rem',
+              minHeight: '32px',
+              padding: '0.28rem 0.65rem',
               borderRadius: '999px',
               border: '1px solid transparent',
               background: 'transparent',
-              color: 'rgba(250, 249, 246, 0.72)',
-              fontSize: '0.8rem',
+              color: 'var(--explore-ink-muted)',
+              fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -338,14 +345,15 @@ export function GuidedTour() {
           type="button"
           onClick={handleCtaClick}
           data-testid="explore3d-tour-cta"
+          className="explore3d-tour-bar__pill-btn explore3d-tour-bar__pill-btn--primary"
           style={{
-            minHeight: '38px',
-            padding: '0.45rem 1rem',
+            minHeight: '32px',
+            padding: '0.32rem 0.85rem',
             borderRadius: '999px',
-            border: '1px solid #ce9180',
-            background: '#ce9180',
-            color: '#202020',
-            fontSize: '0.82rem',
+            border: '1px solid var(--explore-accent)',
+            background: 'var(--explore-accent)',
+            color: 'var(--explore-on-accent)',
+            fontSize: '0.76rem',
             fontWeight: 700,
             cursor: 'pointer',
           }}

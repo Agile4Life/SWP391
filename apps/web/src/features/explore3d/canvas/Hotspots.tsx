@@ -91,14 +91,22 @@ function ProjectedHotspot({
   const gl = useThree(s => s.gl);
   const camera = useThree(s => s.camera);
   const size = useThree(s => s.size);
+  const walkMode = useExploreStore(s => s.walkMode);
+  const tourActive = useExploreStore(s => s.tourActive);
   const elRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
   const projVec = useMemo(() => new THREE.Vector3(), []);
+  const worldVec = useMemo(() => new THREE.Vector3(), []);
 
   const updateTransform = useCallback(() => {
     const el = elRef.current;
     if (!el) return;
-    projVec.set(position[0], position[1], position[2]).project(camera);
+    worldVec.set(position[0], position[1], position[2]);
+    if (walkMode && camera.position.distanceTo(worldVec) > 16) {
+      el.style.display = 'none';
+      return;
+    }
+    projVec.copy(worldVec).project(camera);
     if (projVec.z > 1 || projVec.z < -1) {
       el.style.display = 'none';
       return;
@@ -107,7 +115,36 @@ function ProjectedHotspot({
     const y = (-(projVec.y * 0.5) + 0.5) * size.height;
     el.style.display = 'block';
     el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) translate(-50%, -50%)`;
-  }, [camera, position, projVec, size.height, size.width]);
+
+    const pinW = el.offsetWidth || 168;
+    const pinH = el.offsetHeight || 32;
+    const halfW = pinW * 0.5;
+    const halfH = pinH * 0.5;
+    const isDesktop = size.width >= 760;
+    const bottomSafe = isDesktop
+      ? walkMode || tourActive
+        ? 106
+        : 64
+      : walkMode || tourActive
+        ? 136
+        : 98;
+    const hitsTopHud = y - halfH < 52;
+    const hitsBottomHud = y + halfH > size.height - bottomSafe;
+    const hitsLeftHud =
+      isDesktop &&
+      x - halfW < 126 &&
+      y + halfH > 54 &&
+      y - halfH < size.height - 54;
+    const hitsCanvasEdge = x - halfW < 8 || x + halfW > size.width - 8;
+
+    if (hitsTopHud || hitsBottomHud || hitsLeftHud || hitsCanvasEdge) {
+      el.style.opacity = '0';
+      el.style.visibility = 'hidden';
+    } else {
+      el.style.opacity = '1';
+      el.style.visibility = 'visible';
+    }
+  }, [camera, position, projVec, worldVec, size.height, size.width, walkMode, tourActive]);
 
   useLayoutEffect(() => {
     const target = gl.domElement.parentElement;
@@ -205,26 +242,28 @@ export function Hotspots({ scene = SOL_CENTER_SCENE }: HotspotsProps) {
             onMouseEnter={() => handlePointerEnter(hotspot.id)}
             onMouseLeave={() => handlePointerLeave(hotspot.id)}
             style={{
-              minHeight: '36px',
+              minHeight: '32px',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.35rem 0.75rem',
+              gap: '0.4rem',
+              padding: '0.28rem 0.65rem',
               borderRadius: '999px',
               border: isSelected
-                ? '1.5px solid #e1aa98'
-                : '1px solid rgba(206, 145, 128, 0.55)',
+                ? '1.5px solid var(--explore-accent-hover, #e1aa98)'
+                : '1px solid var(--explore-border-accent, rgba(206, 145, 128, 0.55))',
               background: isSelected
-                ? 'rgba(206, 145, 128, 0.94)'
+                ? 'var(--explore-accent, #ce9180)'
                 : 'var(--explore-surface, rgba(32, 32, 32, 0.88))',
-              color: isSelected ? '#202020' : 'var(--explore-ink, #faf9f6)',
-              fontSize: '0.75rem',
+              color: isSelected
+                ? 'var(--explore-on-accent, #202020)'
+                : 'var(--explore-ink, #faf9f6)',
+              fontSize: '0.73rem',
               fontWeight: 600,
               lineHeight: 1.2,
               whiteSpace: 'nowrap',
               cursor: 'pointer',
-              boxShadow: '0 6px 18px rgba(0, 0, 0, 0.38)',
-              backdropFilter: 'blur(8px)',
+              boxShadow: 'var(--explore-shadow, 0 6px 18px rgba(0, 0, 0, 0.28))',
+              backdropFilter: 'blur(10px)',
               pointerEvents: 'auto',
             }}
           >
