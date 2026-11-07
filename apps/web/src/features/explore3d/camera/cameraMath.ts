@@ -28,13 +28,15 @@ export const OVERVIEW_VIEWPOINT: Viewpoint = {
   fov: 38,
 };
 
+export const OVERVIEW_CAMERA = OVERVIEW_VIEWPOINT;
+
 export const CAMERA_LIMITS = {
-  minDistance: 2.2,
-  maxDistance: 95,
-  minPolarAngle: 0.18,
-  maxPolarAngle: Math.PI / 2 - 0.06,
-  boundaryMin: [-36, -6, -28] as Vec3,
-  boundaryMax: [52, 24, 28] as Vec3,
+  minDistance: 0.65,
+  maxDistance: 165,
+  minPolarAngle: 0.08,
+  maxPolarAngle: Math.PI / 2 - 0.03,
+  boundaryMin: [-54, -8, -42] as Vec3,
+  boundaryMax: [68, 36, 42] as Vec3,
 } as const;
 
 const INDOOR_LEVELS = new Set<LevelCode>(['B1', 'L1', 'L2', 'RF']);
@@ -119,6 +121,109 @@ export function clampTargetToBounds(target: Vec3): Vec3 {
     Math.min(maxY, Math.max(minY, target[1])),
     Math.min(maxZ, Math.max(minZ, target[2])),
   ];
+}
+
+export function sanitizeCameraPose(
+  position: Vec3,
+  target: Vec3,
+  minCameraY = -4.2,
+): { position: Vec3; target: Vec3 } {
+  const safeTarget: Vec3 =
+    Array.isArray(target) &&
+    Number.isFinite(target[0]) &&
+    Number.isFinite(target[1]) &&
+    Number.isFinite(target[2])
+      ? target
+      : [...OVERVIEW_VIEWPOINT.target];
+
+  const safePosition: Vec3 =
+    Array.isArray(position) &&
+    Number.isFinite(position[0]) &&
+    Number.isFinite(position[1]) &&
+    Number.isFinite(position[2])
+      ? position
+      : [...OVERVIEW_VIEWPOINT.position];
+
+  const clampedTarget = clampTargetToBounds(safeTarget);
+
+  const ox = safePosition[0] - clampedTarget[0];
+  const oy = safePosition[1] - clampedTarget[1];
+  const oz = safePosition[2] - clampedTarget[2];
+  const rawDist = Math.hypot(ox, oy, oz);
+
+  let ux: number;
+  let uy: number;
+  let uz: number;
+  let clampedDist: number;
+
+  if (rawDist < 1e-4) {
+    const defLen = Math.hypot(0.55, 0.52, 0.65);
+    ux = 0.55 / defLen;
+    uy = 0.52 / defLen;
+    uz = 0.65 / defLen;
+    clampedDist = CAMERA_LIMITS.minDistance;
+  } else {
+    ux = ox / rawDist;
+    uy = oy / rawDist;
+    uz = oz / rawDist;
+    clampedDist = Math.min(
+      CAMERA_LIMITS.maxDistance,
+      Math.max(CAMERA_LIMITS.minDistance, rawDist),
+    );
+  }
+
+  let px = clampedTarget[0] + ux * clampedDist;
+  let py = clampedTarget[1] + uy * clampedDist;
+  let pz = clampedTarget[2] + uz * clampedDist;
+
+  const safeMinY = Number.isFinite(minCameraY) ? minCameraY : -4.2;
+  const floorY = Math.max(safeMinY, clampedTarget[1] - 0.15);
+  if (py < floorY) {
+    py = floorY;
+    const dy = py - clampedTarget[1];
+    const currDist = Math.hypot(px - clampedTarget[0], dy, pz - clampedTarget[2]);
+    if (currDist < CAMERA_LIMITS.minDistance) {
+      const reqHoriz = Math.sqrt(
+        Math.max(0, CAMERA_LIMITS.minDistance ** 2 - dy ** 2),
+      );
+      const hLen = Math.hypot(px - clampedTarget[0], pz - clampedTarget[2]);
+      if (hLen > 1e-4) {
+        const scale = reqHoriz / hLen;
+        px = clampedTarget[0] + (px - clampedTarget[0]) * scale;
+        pz = clampedTarget[2] + (pz - clampedTarget[2]) * scale;
+      } else {
+        px = clampedTarget[0] + reqHoriz * (1 / Math.SQRT2);
+        pz = clampedTarget[2] + reqHoriz * (1 / Math.SQRT2);
+      }
+    }
+  }
+
+  return {
+    position: [
+      Number(px.toFixed(4)),
+      Number(py.toFixed(4)),
+      Number(pz.toFixed(4)),
+    ],
+    target: clampedTarget,
+  };
+}
+
+export function computeProportionalZoomStep(
+  currentDistance: number,
+  direction: 'in' | 'out',
+): number {
+  const safeDist = Number.isFinite(currentDistance)
+    ? Math.max(
+        CAMERA_LIMITS.minDistance,
+        Math.min(CAMERA_LIMITS.maxDistance, currentDistance),
+      )
+    : 24;
+  const baseDelta = Math.max(0.45, Math.min(16, safeDist * 0.24));
+  const rawNext = direction === 'in' ? safeDist - baseDelta : safeDist + baseDelta;
+  return Math.min(
+    CAMERA_LIMITS.maxDistance,
+    Math.max(CAMERA_LIMITS.minDistance, Number(rawNext.toFixed(4))),
+  );
 }
 
 export function prefersReducedMotion(): boolean {
@@ -441,11 +546,19 @@ export function computeBestViewpoint(
 
   const target = clampTargetToBounds(box.center);
   const maxSpan = Math.max(box.size[0], box.size[1], box.size[2]);
+  const radius = Math.max(
+    0.45,
+    Math.hypot(box.size[0], box.size[1], box.size[2]) * 0.5,
+  );
   const rawDistance =
-    node.type === 'hotspot' ? 6.4 : Math.max(4.6, maxSpan * 1.65 + 2.8);
+    node.type === 'hotspot'
+      ? 6.4
+      : node.type === 'item'
+        ? Math.min(16, Math.max(CAMERA_LIMITS.minDistance + 0.35, radius * 2.1))
+        : Math.max(4.6, maxSpan * 1.65 + 2.8);
   const distance = Math.min(
     CAMERA_LIMITS.maxDistance - 5,
-    Math.max(CAMERA_LIMITS.minDistance + 1.4, rawDistance),
+    Math.max(CAMERA_LIMITS.minDistance + 0.35, rawDistance),
   );
 
   // 35° elevation isometric viewpoint
@@ -544,15 +657,16 @@ export function computeFitViewpoint(
     0.45,
     Math.hypot(box.size[0], box.size[1], box.size[2]) * 0.5,
   );
+  const node = getNode(doc, nodeId);
   const padding = 1.35;
-  const minDistance = 2.4;
+  const minDistance = CAMERA_LIMITS.minDistance + 0.35;
   const safeFovDeg = Number.isFinite(fovDeg) && fovDeg > 5 ? fovDeg : 38;
   const halfFovRad = (safeFovDeg * Math.PI) / 360;
   const rawDistance = (radius * padding) / Math.max(0.15, Math.sin(halfFovRad));
-  const distance = Math.min(
-    CAMERA_LIMITS.maxDistance,
-    Math.max(minDistance, rawDistance),
-  );
+  const distance =
+    node?.type === 'item'
+      ? Math.min(16, Math.max(minDistance, radius * 2.1))
+      : Math.min(CAMERA_LIMITS.maxDistance, Math.max(minDistance, rawDistance));
 
   const lvl = levelOf(doc, nodeId);
   const minFloorY = lvl
@@ -573,6 +687,8 @@ export function computeFitViewpoint(
     fov: safeFovDeg,
   };
 }
+
+export const computeFitItemCamera = computeFitViewpoint;
 
 export const WALK_EYE_HEIGHT_M = 1.65;
 export const WALK_SPEED_MPS = 3.6;

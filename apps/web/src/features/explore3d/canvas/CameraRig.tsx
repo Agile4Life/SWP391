@@ -8,8 +8,10 @@ import {
   clampTargetToBounds,
   computeBestViewpoint,
   computeFitViewpoint,
+  computeProportionalZoomStep,
   needsTwoHopFlight,
   prefersReducedMotion,
+  sanitizeCameraPose,
 } from '../camera/cameraMath';
 import { LEVEL_ORDER, type LevelCode, type Viewpoint } from '../scene/schema';
 import { levelOf } from '../scene/selectors';
@@ -54,11 +56,61 @@ export function CameraRig() {
   const lastLevelRef = useRef<LevelCode | 'ALL' | null>('ALL');
   const flightTokenRef = useRef<number>(0);
   const prevWalkModeRef = useRef<boolean>(false);
+  const isSanitizingRef = useRef<boolean>(false);
 
   const invalidate = useThree(state => state.invalidate);
   const cameraCommand = useExploreStore(state => state.cameraCommand);
   const levelMode = useExploreStore(state => state.levelMode);
   const walkMode = useExploreStore(state => state.walkMode);
+
+  const zoomByDirection = useCallback(
+    (direction: 'in' | 'out') => {
+      if (useExploreStore.getState().walkMode) return;
+      const controls = controlsRef.current;
+      const enableTransition = !prefersReducedMotion();
+      if (!controls) {
+        useExploreStore.getState().zoomCamera(direction === 'in' ? 1 : -1);
+        return;
+      }
+
+      controls.getPosition(_currPosition);
+      controls.getTarget(_currTarget);
+      const sanitized = sanitizeCameraPose(
+        [_currPosition.x, _currPosition.y, _currPosition.z],
+        [_currTarget.x, _currTarget.y, _currTarget.z],
+      );
+      const dx = sanitized.position[0] - sanitized.target[0];
+      const dy = sanitized.position[1] - sanitized.target[1];
+      const dz = sanitized.position[2] - sanitized.target[2];
+      const currentDist = Math.hypot(dx, dy, dz);
+      const nextDist = computeProportionalZoomStep(currentDist, direction);
+
+      if (typeof controls.dollyTo === 'function') {
+        void controls.dollyTo(nextDist, enableTransition);
+      } else {
+        const scale = currentDist > 1e-4 ? nextDist / currentDist : 1;
+        const nextPose = sanitizeCameraPose(
+          [
+            sanitized.target[0] + dx * scale,
+            sanitized.target[1] + dy * scale,
+            sanitized.target[2] + dz * scale,
+          ],
+          sanitized.target,
+        );
+        void controls.setLookAt(
+          nextPose.position[0],
+          nextPose.position[1],
+          nextPose.position[2],
+          nextPose.target[0],
+          nextPose.target[1],
+          nextPose.target[2],
+          enableTransition,
+        );
+      }
+      invalidate();
+    },
+    [invalidate],
+  );
 
   const applyViewpoint = useCallback(
     async (
@@ -150,23 +202,26 @@ export function CameraRig() {
     controls.setBoundary(BOUNDARY_BOX);
     controls.smoothTime = 0.28;
     controls.draggingSmoothTime = 0.12;
+    controls.dollySpeed = 1.15;
+    controls.truckSpeed = 1.8;
+    controls.infinityDolly = false;
 
     const currentCmd = useExploreStore.getState().cameraCommand;
     if (currentCmd) return;
 
     const saved = loadExploreSessionView();
-    const initialPos = saved ? saved.position : OVERVIEW_VIEWPOINT.position;
-    const initialTarget = clampTargetToBounds(
+    const sanitized = sanitizeCameraPose(
+      saved ? saved.position : OVERVIEW_VIEWPOINT.position,
       saved ? saved.target : OVERVIEW_VIEWPOINT.target,
     );
 
     void controls.setLookAt(
-      initialPos[0],
-      initialPos[1],
-      initialPos[2],
-      initialTarget[0],
-      initialTarget[1],
-      initialTarget[2],
+      sanitized.position[0],
+      sanitized.position[1],
+      sanitized.position[2],
+      sanitized.target[0],
+      sanitized.target[1],
+      sanitized.target[2],
       false,
     );
     invalidate();
@@ -226,8 +281,7 @@ export function CameraRig() {
 
     if (cameraCommand.kind === 'zoom') {
       const delta = cameraCommand.zoomDelta ?? 1;
-      void controls.dolly(delta * 4.5, enableTransition);
-      invalidate();
+      zoomByDirection(delta >= 0 ? 'in' : 'out');
       return;
     }
 
@@ -236,7 +290,7 @@ export function CameraRig() {
       void controls.truck(dx, dz, enableTransition);
       invalidate();
     }
-  }, [applyViewpoint, cameraCommand, invalidate, levelMode, walkMode]);
+  }, [applyViewpoint, cameraCommand, invalidate, levelMode, walkMode, zoomByDirection]);
 
   // Re-frame camera when levelMode toggles between stacked and exploded
   useEffect(() => {
@@ -265,7 +319,7 @@ export function CameraRig() {
     }
   }, [applyViewpoint, levelMode, walkMode]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts and custom zoom events
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isTypingElement(event.target)) return;
@@ -361,23 +415,13 @@ export function CameraRig() {
 
       if (event.key === '+' || event.key === '=') {
         event.preventDefault();
-        if (controls) {
-          void controls.dolly(4.5, enableTransition);
-          invalidate();
-        } else {
-          state.zoomCamera(1);
-        }
+        zoomByDirection('in');
         return;
       }
 
       if (event.key === '-' || event.key === '_') {
         event.preventDefault();
-        if (controls) {
-          void controls.dolly(-4.5, enableTransition);
-          invalidate();
-        } else {
-          state.zoomCamera(-1);
-        }
+        zoomByDirection('out');
         return;
       }
 
@@ -411,9 +455,21 @@ export function CameraRig() {
       }
     };
 
+    const handleCustomZoom = (event: Event) => {
+      const customEvent = event as CustomEvent<{ direction?: 'in' | 'out' }>;
+      const direction = customEvent.detail?.direction;
+      if (direction === 'in' || direction === 'out') {
+        zoomByDirection(direction);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [invalidate]);
+    window.addEventListener('explore3d:zoom', handleCustomZoom);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('explore3d:zoom', handleCustomZoom);
+    };
+  }, [invalidate, zoomByDirection]);
 
   const handleControlStart = useCallback(() => {
     const state = useExploreStore.getState();
@@ -427,22 +483,125 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
+  const handleChange = useCallback(() => {
+    const controls = controlsRef.current;
+    if (
+      controls &&
+      !useExploreStore.getState().walkMode &&
+      !isSanitizingRef.current
+    ) {
+      controls.getPosition(_currPosition);
+      controls.getTarget(_currTarget);
+
+      const posInvalid =
+        !Number.isFinite(_currPosition.x) ||
+        !Number.isFinite(_currPosition.y) ||
+        !Number.isFinite(_currPosition.z);
+      const targetInvalid =
+        !Number.isFinite(_currTarget.x) ||
+        !Number.isFinite(_currTarget.y) ||
+        !Number.isFinite(_currTarget.z);
+
+      const clampedTarget = clampTargetToBounds([
+        _currTarget.x,
+        _currTarget.y,
+        _currTarget.z,
+      ]);
+      const targetDrifted =
+        Math.abs(clampedTarget[0] - _currTarget.x) > 0.05 ||
+        Math.abs(clampedTarget[1] - _currTarget.y) > 0.05 ||
+        Math.abs(clampedTarget[2] - _currTarget.z) > 0.05;
+
+      const minAllowedY = Math.max(-4.2, clampedTarget[1] - 0.15);
+      const belowFloor = _currPosition.y < minAllowedY - 0.05;
+
+      if (posInvalid || targetInvalid || targetDrifted || belowFloor) {
+        const sanitized = sanitizeCameraPose(
+          [_currPosition.x, _currPosition.y, _currPosition.z],
+          [_currTarget.x, _currTarget.y, _currTarget.z],
+        );
+        isSanitizingRef.current = true;
+        try {
+          void controls.setLookAt(
+            sanitized.position[0],
+            sanitized.position[1],
+            sanitized.position[2],
+            sanitized.target[0],
+            sanitized.target[1],
+            sanitized.target[2],
+            false,
+          );
+        } finally {
+          isSanitizingRef.current = false;
+        }
+      }
+    }
+    invalidate();
+  }, [invalidate]);
+
   const handleRest = useCallback(() => {
     const controls = controlsRef.current;
     if (!controls) return;
     controls.getPosition(_restPosition);
     controls.getTarget(_restTarget);
     const state = useExploreStore.getState();
+
+    let finalPos: [number, number, number] = [
+      _restPosition.x,
+      _restPosition.y,
+      _restPosition.z,
+    ];
+    let finalTarget: [number, number, number] = [
+      _restTarget.x,
+      _restTarget.y,
+      _restTarget.z,
+    ];
+
+    if (!state.walkMode) {
+      const sanitized = sanitizeCameraPose(finalPos, finalTarget);
+      const drifted =
+        Math.hypot(
+          sanitized.position[0] - finalPos[0],
+          sanitized.position[1] - finalPos[1],
+          sanitized.position[2] - finalPos[2],
+        ) > 0.05 ||
+        Math.hypot(
+          sanitized.target[0] - finalTarget[0],
+          sanitized.target[1] - finalTarget[1],
+          sanitized.target[2] - finalTarget[2],
+        ) > 0.05;
+
+      finalPos = sanitized.position;
+      finalTarget = sanitized.target;
+
+      if (drifted && !isSanitizingRef.current) {
+        isSanitizingRef.current = true;
+        try {
+          void controls.setLookAt(
+            finalPos[0],
+            finalPos[1],
+            finalPos[2],
+            finalTarget[0],
+            finalTarget[1],
+            finalTarget[2],
+            false,
+          );
+        } finally {
+          isSanitizingRef.current = false;
+        }
+      }
+    }
+
     saveExploreSessionView({
       position: [
-        Number(_restPosition.x.toFixed(2)),
-        Number(_restPosition.y.toFixed(2)),
-        Number(_restPosition.z.toFixed(2)),
+        Number(finalPos[0].toFixed(2)),
+        Number(finalPos[1].toFixed(2)),
+        Number(finalPos[2].toFixed(2)),
       ],
       target: [
-        Number(_restTarget.x.toFixed(2)),
-        Number(_restTarget.y.toFixed(2)),
-        Number(_restTarget.z.toFixed(2)),
+        Number(finalTarget[0].toFixed(2)),
+        Number(finalTarget[1].toFixed(2)),
+        Number(finalTarget[2].toFixed(2)),
       ],
       focusLevel: state.focusLevel,
       selectedId: state.selectedId,
@@ -457,6 +616,9 @@ export function CameraRig() {
       makeDefault
       enabled={!walkMode}
       dollyToCursor={!walkMode}
+      dollySpeed={1.15}
+      truckSpeed={1.8}
+      infinityDolly={false}
       smoothTime={0.28}
       draggingSmoothTime={0.12}
       minDistance={walkMode ? 0.1 : CAMERA_LIMITS.minDistance}
@@ -467,7 +629,7 @@ export function CameraRig() {
       onControl={handleInvalidate}
       onUpdate={handleInvalidate}
       onTransitionStart={handleInvalidate}
-      onChange={handleInvalidate}
+      onChange={handleChange}
       onRest={handleRest}
     />
   );

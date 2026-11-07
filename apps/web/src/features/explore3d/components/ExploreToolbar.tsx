@@ -42,6 +42,12 @@ export function ExploreToolbar() {
     setViewMode(viewMode === '3d' ? '2d' : '3d');
   };
 
+  const handleZoom = (direction: 'in' | 'out') => {
+    window.dispatchEvent(
+      new CustomEvent('explore3d:zoom', { detail: { direction } }),
+    );
+  };
+
   return (
     <div
       className="explore3d-toolbar"
@@ -57,6 +63,33 @@ export function ExploreToolbar() {
       >
         {t('Toàn cảnh', 'Overview')}
       </button>
+
+      <div
+        className="explore3d-toolbar-segment"
+        role="group"
+        aria-label={t('Phóng to thu nhỏ', 'Zoom controls')}
+      >
+        <button
+          type="button"
+          className="explore3d-toolbar-btn explore3d-toolbar-btn--segment"
+          data-testid="explore3d-btn-zoom-out"
+          aria-label={t('Thu nhỏ góc nhìn', 'Zoom out')}
+          title={t('Thu nhỏ (−)', 'Zoom out (−)')}
+          onClick={() => handleZoom('out')}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="explore3d-toolbar-btn explore3d-toolbar-btn--segment"
+          data-testid="explore3d-btn-zoom-in"
+          aria-label={t('Phóng to góc nhìn', 'Zoom in')}
+          title={t('Phóng to (+)', 'Zoom in (+)')}
+          onClick={() => handleZoom('in')}
+        >
+          +
+        </button>
+      </div>
 
       <div
         className="explore3d-toolbar-segment"

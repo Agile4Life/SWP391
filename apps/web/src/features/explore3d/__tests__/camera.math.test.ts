@@ -10,6 +10,7 @@ import {
   computeBestViewpoint,
   computeFitViewpoint,
   computeInitialWalkPose,
+  computeProportionalZoomStep,
   getSolidWallSegments2D,
   getWalkObstaclesForLevel,
   needsTwoHopFlight,
@@ -17,6 +18,7 @@ import {
   prefersReducedMotion,
   resolveWalkCollision2D,
   rotateWalkPose,
+  sanitizeCameraPose,
   segmentsIntersect2D,
   stepWalkPose,
 } from '../camera/cameraMath';
@@ -120,10 +122,82 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     }
   });
 
-  it('clamps out-of-range target coordinates into [-36..52, -6..24, -28..28]', () => {
-    expect(clampTargetToBounds([-100, -50, -90])).toEqual([-36, -6, -28]);
-    expect(clampTargetToBounds([200, 100, 99])).toEqual([52, 24, 28]);
+  it('clamps out-of-range target coordinates into [-54..68, -8..36, -42..42]', () => {
+    expect(clampTargetToBounds([-100, -50, -90])).toEqual([-54, -8, -42]);
+    expect(clampTargetToBounds([200, 100, 99])).toEqual([68, 36, 42]);
     expect(clampTargetToBounds([4, 2, -5])).toEqual([4, 2, -5]);
+  });
+
+  it('expands CAMERA_LIMITS to support ultra-close inspection (0.65m) and full-campus zoom-out (165m)', () => {
+    expect(CAMERA_LIMITS.minDistance).toBe(0.65);
+    expect(CAMERA_LIMITS.maxDistance).toBe(165);
+    expect(CAMERA_LIMITS.minPolarAngle).toBeCloseTo(0.08, 4);
+    expect(CAMERA_LIMITS.maxPolarAngle).toBeCloseTo(Math.PI / 2 - 0.03, 4);
+    expect(CAMERA_LIMITS.boundaryMin).toEqual([-54, -8, -42]);
+    expect(CAMERA_LIMITS.boundaryMax).toEqual([68, 36, 42]);
+  });
+
+  it('sanitizes camera pose against extreme zoom-in (< 0.65m), extreme zoom-out (> 165m), underground Y, and NaN coordinates', () => {
+    // 1. Extreme zoom-in (< 0.65m) clamps to minDistance (0.65m)
+    const closePose = sanitizeCameraPose([0.1, 2.1, 0.1], [0, 2, 0]);
+    const closeDist = Math.hypot(
+      closePose.position[0] - closePose.target[0],
+      closePose.position[1] - closePose.target[1],
+      closePose.position[2] - closePose.target[2],
+    );
+    expect(closeDist).toBeCloseTo(CAMERA_LIMITS.minDistance, 2);
+
+    // 2. Zero-distance coincidence recovers with default direction at minDistance
+    const zeroPose = sanitizeCameraPose([4, 2, 0], [4, 2, 0]);
+    const zeroDist = Math.hypot(
+      zeroPose.position[0] - zeroPose.target[0],
+      zeroPose.position[1] - zeroPose.target[1],
+      zeroPose.position[2] - zeroPose.target[2],
+    );
+    expect(zeroDist).toBeCloseTo(CAMERA_LIMITS.minDistance, 2);
+
+    // 3. Extreme zoom-out (> 165m) clamps to maxDistance (165m)
+    const farPose = sanitizeCameraPose([240, 180, 240], [0, 2, 0]);
+    const farDist = Math.hypot(
+      farPose.position[0] - farPose.target[0],
+      farPose.position[1] - farPose.target[1],
+      farPose.position[2] - farPose.target[2],
+    );
+    expect(farDist).toBeCloseTo(CAMERA_LIMITS.maxDistance, 2);
+
+    // 4. Underground camera Y is clamped above floor slab
+    const undergroundPose = sanitizeCameraPose([6, -25, 6], [0, 1, 0], -4.2);
+    expect(undergroundPose.position[1]).toBeGreaterThanOrEqual(1 - 0.15);
+
+    // 5. NaN / Infinity recovery falls back safely to finite coordinates
+    const nanPose = sanitizeCameraPose([Number.NaN, 10, Number.POSITIVE_INFINITY], [Number.NaN, 0, 0]);
+    for (const c of [...nanPose.position, ...nanPose.target]) {
+      expect(Number.isFinite(c)).toBe(true);
+    }
+    expect(nanPose.target).toEqual(OVERVIEW_VIEWPOINT.target);
+  });
+
+  it('computes proportional zoom steps smoothly across close (1.2m) and far (90m) distances within [0.65, 165]', () => {
+    const stepCloseIn = computeProportionalZoomStep(1.2, 'in');
+    const stepCloseOut = computeProportionalZoomStep(1.2, 'out');
+    const closeDeltaIn = 1.2 - stepCloseIn;
+    const closeDeltaOut = stepCloseOut - 1.2;
+
+    const stepFarIn = computeProportionalZoomStep(90, 'in');
+    const stepFarOut = computeProportionalZoomStep(90, 'out');
+    const farDeltaIn = 90 - stepFarIn;
+    const farDeltaOut = stepFarOut - 90;
+
+    // Close zoom step is fine-grained (~0.45m), while far zoom step is much faster (16m)
+    expect(closeDeltaIn).toBeCloseTo(0.45, 3);
+    expect(closeDeltaOut).toBeCloseTo(0.45, 3);
+    expect(farDeltaIn).toBeCloseTo(16, 3);
+    expect(farDeltaOut).toBeCloseTo(16, 3);
+    expect(farDeltaIn).toBeGreaterThan(closeDeltaIn * 10);
+
+    // Clamps strictly to [0.65, 165] at boundaries
+    expect(computeProportionalZoomStep(0.7, 'in')).toBe(CAMERA_LIMITS.minDistance);
+    expect(computeProportionalZoomStep(160, 'out')).toBe(CAMERA_LIMITS.maxDistance);
   });
 
   it('evaluates needsTwoHopFlight for indoor cross-level transitions', () => {
