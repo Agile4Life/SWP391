@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { ItemKind, LevelCode, SceneDoc } from '../scene/schema';
@@ -74,14 +74,29 @@ function KindInstancedBatch({
 
   const geometry = useMemo(() => getItemGeometry(kind, detail), [kind, detail]);
 
-  useEffect(() => {
+  const hasVisibleItems = useMemo(() => {
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
+      if (isItemInstanceVisible(entry, levelMode, focusLevel, resolved)) {
+        return true;
+      }
+    }
+    return false;
+  }, [entries, levelMode, focusLevel, resolvedItems]);
+
+  useLayoutEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
 
+    let visibleCount = 0;
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
       const visible = isItemInstanceVisible(entry, levelMode, focusLevel, resolved);
+      if (visible) {
+        visibleCount += 1;
+      }
 
       computeItemInstanceMatrix(entry, levelMode, visible, tempMatrix);
       mesh.setMatrixAt(i, tempMatrix);
@@ -93,12 +108,16 @@ function KindInstancedBatch({
       mesh.setColorAt(i, tempColor);
     }
 
+    mesh.count = entries.length;
+    mesh.visible = visibleCount > 0;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) {
       mesh.instanceColor.needsUpdate = true;
     }
-    mesh.computeBoundingBox();
-    mesh.computeBoundingSphere();
+    if (visibleCount > 0) {
+      mesh.computeBoundingBox();
+      mesh.computeBoundingSphere();
+    }
     invalidate();
   }, [
     entries,
@@ -151,6 +170,7 @@ function KindInstancedBatch({
       ref={meshRef}
       name={`instanced-items-${kind}`}
       args={[geometry, material, entries.length]}
+      visible={hasVisibleItems}
       castShadow={castShadow}
       receiveShadow={receiveShadow}
       onClick={handleClick}

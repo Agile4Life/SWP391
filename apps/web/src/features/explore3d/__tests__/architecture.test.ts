@@ -303,7 +303,8 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(highLight.keyLight.intensity).toBeCloseTo(1.85, 3);
       expect(highLight.keyLight.castShadow).toBe(true);
       expect(highLight.keyLight.shadowMapSize).toEqual([2048, 2048]);
-      expect(highLight.keyLight.shadowBias).toBeCloseTo(-0.0004, 6);
+      expect(highLight.keyLight.shadowBias).toBeCloseTo(-0.00025, 6);
+      expect(highLight.keyLight.shadowNormalBias).toBeCloseTo(0.02, 4);
       expect(highLight.fillLight.position).toEqual([-26, 26, -22]);
       expect(highLight.fillLight.intensity).toBeCloseTo(0.88, 3);
       expect(highLight.fillLight.castShadow).toBe(false);

@@ -50,6 +50,7 @@ export function buildPlazaGridGeometry(
 }
 
 const SHARED_PLAZA_PLANE = new THREE.PlaneGeometry(1, 1);
+const NOOP_RAYCAST = () => null;
 
 export function Environment() {
   const theme = useDocumentTheme();
@@ -69,7 +70,11 @@ export function Environment() {
   const campusGeometry = useMemo(() => buildCampusGeometry(theme), [theme]);
   const showRooftopSigns =
     levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'RF';
-  const showGroundCampus = !(levelMode === 'solo' && focusLevel === 'B1');
+  const showGroundCampus =
+    levelMode !== 'solo' ||
+    focusLevel === 'ALL' ||
+    focusLevel === 'L1' ||
+    focusLevel === 'OUT';
   const rooftopOffsetY = levelMode === 'exploded' ? 12.0 : 0;
 
   const signageGeometry = useMemo(
@@ -137,6 +142,7 @@ export function Environment() {
           geometry={SHARED_PLAZA_PLANE}
           material={materials.plazaGround}
           receiveShadow
+          raycast={NOOP_RAYCAST}
         />
 
         {/* Subtle Architectural Grid Lines */}
@@ -153,6 +159,7 @@ export function Environment() {
           geometry={campusGeometry}
           material={materials.vertexColored}
           receiveShadow
+          raycast={NOOP_RAYCAST}
         />
 
         {/* Illuminated 3D Rooftop Sky-Signs, Gate Sign, Lobby Canopy Sign, Parking & Tennis Signs */}
@@ -161,6 +168,7 @@ export function Environment() {
           visible={showGroundCampus}
           geometry={signageGeometry}
           material={signageMaterialBundle.mat}
+          raycast={NOOP_RAYCAST}
         />
       </group>
     </>

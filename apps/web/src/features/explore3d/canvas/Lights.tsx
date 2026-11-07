@@ -42,6 +42,7 @@ export interface LightingBudgetConfig {
       far: number;
     };
     shadowBias: number;
+    shadowNormalBias: number;
   };
   fillLight: {
     position: [number, number, number];
@@ -81,14 +82,15 @@ export function getLightingBudgetConfig(
       castShadow: tier !== 'low',
       shadowMapSize: [mapResolution, mapResolution],
       shadowBounds: {
-        left: -35,
-        right: 48,
-        top: 35,
-        bottom: -35,
-        near: 1,
-        far: 120,
+        left: -44,
+        right: 44,
+        top: 36,
+        bottom: -36,
+        near: 2,
+        far: 95,
       },
-      shadowBias: -0.0004,
+      shadowBias: -0.00025,
+      shadowNormalBias: 0.02,
     },
     fillLight: {
       position: [-26, 26, -22],
@@ -144,6 +146,7 @@ export function Lights() {
         shadow-camera-near={cfg.keyLight.shadowBounds.near}
         shadow-camera-far={cfg.keyLight.shadowBounds.far}
         shadow-bias={cfg.keyLight.shadowBias}
+        shadow-normalBias={cfg.keyLight.shadowNormalBias}
       />
       <directionalLight
         position={cfg.fillLight.position}

@@ -425,6 +425,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     const origin = new URL(server.baseUrl).origin;
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
+      deviceScaleFactor: 2,
       serviceWorkers: 'block',
     });
     await attachExploreFixtures(context, origin);
@@ -586,12 +587,19 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     const bench = await page.evaluate(() => window.__EXPLORE3D_BENCH__);
     console.log('Benchmark report:', JSON.stringify(bench, null, 2));
 
+    assert.ok(bench.avgFps >= 60, `Expected avgFps >= 60, got ${bench.avgFps}`);
+    assert.ok(bench.p50FrameMs <= 16.7, `Expected p50FrameMs <= 16.7, got ${bench.p50FrameMs}`);
     assert.ok(bench.maxDrawCalls <= 120, `Expected maxDrawCalls <= 120, got ${bench.maxDrawCalls}`);
     assert.ok(
       bench.maxTriangles <= 120000,
       `Expected maxTriangles <= 120000, got ${bench.maxTriangles}`,
     );
     assert.equal(bench.stepsCompleted, 7, 'Expected all 7 benchmark steps to complete');
+    const canvasDprRatio = await page.evaluate(() => {
+      const c = document.querySelector('canvas');
+      return c && c.clientWidth > 0 ? Math.round((c.width / c.clientWidth) * 100) / 100 : 0;
+    });
+    assert.equal(canvasDprRatio, 2, `Expected Retina 2x DPR canvas ratio (2.0), got ${canvasDprRatio}`);
     assert.equal(consoleErrors.length, 0, `Unexpected console/page errors: ${consoleErrors.join('; ')}`);
 
     const reportMd = `# Báo cáo Hiệu năng & Kiểm chứng — Tham quan 3D SÖL (\`/member/explore\`)

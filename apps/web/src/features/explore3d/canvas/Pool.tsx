@@ -18,6 +18,8 @@ const OASIS_POOL_DIMENSIONS = {
   depth: 12.0,
 } as const;
 
+const NOOP_RAYCAST = () => null;
+
 export function createPoolBasinTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([24, 68, 96, 255]);
@@ -411,10 +413,7 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
         geometry={resources.unitPlaneGeom}
         material={resources.basinMat}
         receiveShadow
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        onPointerOver={handlePointerOver}
-        onPointerOut={handlePointerOut}
+        raycast={NOOP_RAYCAST}
       />
 
       {/* Semi-transparent caustic water surface */}
@@ -431,10 +430,10 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
       />
 
       {/* Merged perimeter stone coping deck curb */}
-      <mesh geometry={resources.copingGeom} material={resources.copingMat} />
+      <mesh geometry={resources.copingGeom} material={resources.copingMat} raycast={NOOP_RAYCAST} />
 
       {/* Merged SÖL salmon overflow gutter accent strips */}
-      <mesh geometry={resources.trimGeom} material={resources.accentTrimMat} />
+      <mesh geometry={resources.trimGeom} material={resources.accentTrimMat} raycast={NOOP_RAYCAST} />
     </group>
   );
 }

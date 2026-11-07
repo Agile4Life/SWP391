@@ -20,6 +20,7 @@ import { useCutawayWallIds } from './Cutaway';
 
 const Y_SETTLE_EPSILON = 0.005;
 const LERP_DAMPING = 10;
+const NOOP_RAYCAST = () => null;
 
 // Shared unit box (1x1x1 centered at origin) to minimize WebGL BufferGeometry allocations
 const SHARED_UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -61,11 +62,14 @@ export function isLevelVisibleInMode(
   if (level.code === focusLevel) {
     return true;
   }
+  if (focusLevel !== 'L1') {
+    return false;
+  }
   const focusedNode = getLevelByCode(SOL_CENTER_SCENE, focusLevel);
   if (!focusedNode) {
     return true;
   }
-  // In solo mode, hide levels strictly above focusedOrder (except OUT which sits at ground level)
+  // When focused on ground floor L1 in solo mode, keep ground-level OUT & sub-slab B1 visible while hiding upper floors
   if (level.order > focusedNode.order && level.code !== 'OUT') {
     return false;
   }
@@ -188,6 +192,7 @@ function LevelGroup({
         scale={slabTransform.size}
         material={materials.slabBase}
         receiveShadow
+        raycast={NOOP_RAYCAST}
       />
 
       {/* 2. Dimmed Perimeter Trim Override (normal salmon perimeter trim is merged into interiorDetailsGeometry) */}
@@ -195,6 +200,7 @@ function LevelGroup({
         <mesh
           geometry={built.slabEdgeGeometry}
           material={materials.zoneBorder}
+          raycast={NOOP_RAYCAST}
         />
       )}
 
@@ -218,6 +224,7 @@ function LevelGroup({
               <mesh
                 geometry={zf.borderGeometry}
                 material={materials.zoneSelectedBorder}
+                raycast={NOOP_RAYCAST}
               />
             )}
           </group>
@@ -249,6 +256,7 @@ function LevelGroup({
               scale={[bounds.size[0], scaledHeight, bounds.size[2]]}
               material={mat}
               receiveShadow
+              raycast={NOOP_RAYCAST}
             />
           );
         }
@@ -260,6 +268,7 @@ function LevelGroup({
             material={mat}
             scale={[1, extScaleY, 1]}
             receiveShadow
+            raycast={NOOP_RAYCAST}
           />
         );
       })}
@@ -271,6 +280,7 @@ function LevelGroup({
           material={materials.walls.concrete}
           scale={[1, interiorWallScaleY, 1]}
           receiveShadow
+          raycast={NOOP_RAYCAST}
         />
       )}
 
@@ -280,6 +290,7 @@ function LevelGroup({
           geometry={built.glassWallGeometry}
           material={materials.walls.glass}
           scale={[1, interiorWallScaleY, 1]}
+          raycast={NOOP_RAYCAST}
         />
       )}
 
@@ -289,6 +300,7 @@ function LevelGroup({
           geometry={built.interiorDetailsGeometry}
           material={materials.vertexColored}
           receiveShadow
+          raycast={NOOP_RAYCAST}
         />
       )}
 

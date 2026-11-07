@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { create } from 'zustand';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
@@ -140,38 +140,120 @@ export interface CutawayProps {
 export function Cutaway({ walls }: CutawayProps) {
   const wallMode = useExploreStore(s => s.wallMode);
   const walkMode = useExploreStore(s => s.walkMode);
+  const levelMode = useExploreStore(s => s.levelMode);
   const camera = useThree(s => s.camera);
   const invalidate = useThree(s => s.invalidate);
+
+  const hiddenWallIdsRef = useRef<Set<string>>(useCutawayStore.getState().cutawayWallIds);
+  const lastSampleRef = useRef<{ x: number; z: number; mode: string; levelMode: string }>({
+    x: Number.NaN,
+    z: Number.NaN,
+    mode: '',
+    levelMode: '',
+  });
 
   const descriptors = useMemo(
     () => (walls && walls.length > 0 ? walls : collectSceneExteriorWallDescriptors()),
     [walls],
   );
 
-  // Sync immediately when wallMode or walkMode changes
+  // Sync immediately when wallMode, walkMode, or levelMode changes
   useEffect(() => {
     const effectiveWallMode: WallMode =
       walkMode && wallMode === 'cutaway' ? 'up' : wallMode;
     const camXZ: [number, number] = [camera.position.x, camera.position.z];
-    const nextIds = computeCutawayWallIds(descriptors, camXZ, effectiveWallMode);
-    const nextSig = serializeWallIdSet(nextIds);
-    const currentSig = useCutawayStore.getState().signature;
-    if (nextSig !== currentSig) {
-      useCutawayStore.getState().setCutawayWalls(nextIds, nextSig);
+    const ids = computeCutawayWallIds(descriptors, camXZ, effectiveWallMode);
+    lastSampleRef.current = {
+      x: camera.position.x,
+      z: camera.position.z,
+      mode: effectiveWallMode,
+      levelMode,
+    };
+    const prev = hiddenWallIdsRef.current;
+    const unchanged = ids.size === prev.size && Array.from(ids).every(id => prev.has(id));
+    if (!unchanged) {
+      hiddenWallIdsRef.current = ids;
+      useCutawayStore.getState().setCutawayWalls(ids, serializeWallIdSet(ids));
       invalidate();
     }
-  }, [wallMode, walkMode, descriptors, camera, invalidate]);
+  }, [wallMode, walkMode, levelMode, descriptors, camera, invalidate]);
 
   useFrame(({ camera: frameCamera, invalidate: frameInvalidate }) => {
     const state = useExploreStore.getState();
     const effectiveWallMode: WallMode =
       state.walkMode && state.wallMode === 'cutaway' ? 'up' : state.wallMode;
+    const currentLevelMode = state.levelMode;
+
+    if (effectiveWallMode !== 'cutaway') {
+      if (effectiveWallMode === 'up') {
+        if (hiddenWallIdsRef.current.size > 0) {
+          const cleared = new Set<string>();
+          hiddenWallIdsRef.current = cleared;
+          useCutawayStore.getState().setCutawayWalls(cleared, '');
+          frameInvalidate();
+        }
+        lastSampleRef.current = {
+          x: frameCamera.position.x,
+          z: frameCamera.position.z,
+          mode: effectiveWallMode,
+          levelMode: currentLevelMode,
+        };
+        return;
+      }
+
+      if (
+        lastSampleRef.current.mode === effectiveWallMode &&
+        hiddenWallIdsRef.current.size === descriptors.length
+      ) {
+        return;
+      }
+
+      const downIds = computeCutawayWallIds(
+        descriptors,
+        [frameCamera.position.x, frameCamera.position.z],
+        effectiveWallMode,
+      );
+      lastSampleRef.current = {
+        x: frameCamera.position.x,
+        z: frameCamera.position.z,
+        mode: effectiveWallMode,
+        levelMode: currentLevelMode,
+      };
+      const prevDown = hiddenWallIdsRef.current;
+      const downUnchanged =
+        downIds.size === prevDown.size && Array.from(downIds).every(id => prevDown.has(id));
+      if (!downUnchanged) {
+        hiddenWallIdsRef.current = downIds;
+        useCutawayStore.getState().setCutawayWalls(downIds, serializeWallIdSet(downIds));
+        frameInvalidate();
+      }
+      return;
+    }
+
+    const dx = frameCamera.position.x - lastSampleRef.current.x;
+    const dz = frameCamera.position.z - lastSampleRef.current.z;
+    if (
+      lastSampleRef.current.mode === effectiveWallMode &&
+      lastSampleRef.current.levelMode === currentLevelMode &&
+      dx * dx + dz * dz < 0.01
+    ) {
+      return;
+    }
+
+    lastSampleRef.current = {
+      x: frameCamera.position.x,
+      z: frameCamera.position.z,
+      mode: effectiveWallMode,
+      levelMode: currentLevelMode,
+    };
+
     const camXZ: [number, number] = [frameCamera.position.x, frameCamera.position.z];
-    const nextIds = computeCutawayWallIds(descriptors, camXZ, effectiveWallMode);
-    const nextSig = serializeWallIdSet(nextIds);
-    const currentSig = useCutawayStore.getState().signature;
-    if (nextSig !== currentSig) {
-      useCutawayStore.getState().setCutawayWalls(nextIds, nextSig);
+    const ids = computeCutawayWallIds(descriptors, camXZ, effectiveWallMode);
+    const prev = hiddenWallIdsRef.current;
+    const unchanged = ids.size === prev.size && Array.from(ids).every(id => prev.has(id));
+    if (!unchanged) {
+      hiddenWallIdsRef.current = ids;
+      useCutawayStore.getState().setCutawayWalls(ids, serializeWallIdSet(ids));
       frameInvalidate();
     }
   });

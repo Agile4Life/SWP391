@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { SceneDoc } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
@@ -19,7 +19,8 @@ export interface LiveActivityActorsProps {
   benchEnabled?: boolean;
 }
 
-const TICK_INTERVAL_MS = 33; // ~30 FPS throttled demand-frameloop ticker
+const NOOP_RAYCAST = () => null;
+const HIDDEN_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
 
 const tempMatrix = new THREE.Matrix4();
 const tempPosition = new THREE.Vector3();
@@ -44,14 +45,25 @@ function applyPartsToInstancedMesh(
   parts: readonly EvaluatedPartTransform[],
   writeColors: boolean,
 ): void {
+  let anyVisible = false;
+
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]!;
-    tempPosition.set(part.position[0], part.position[1], part.position[2]);
-    tempEuler.set(part.rotation[0], part.rotation[1], part.rotation[2], 'YXZ');
-    tempQuaternion.setFromEuler(tempEuler);
-    tempScale.set(part.scale[0], part.scale[1], part.scale[2]);
-    tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
-    mesh.setMatrixAt(i, tempMatrix);
+    const sx = part.scale[0];
+    const sy = part.scale[1];
+    const sz = part.scale[2];
+
+    if (sx === 0 && sy === 0 && sz === 0) {
+      mesh.setMatrixAt(i, HIDDEN_MATRIX);
+    } else {
+      anyVisible = true;
+      tempPosition.set(part.position[0], part.position[1], part.position[2]);
+      tempEuler.set(part.rotation[0], part.rotation[1], part.rotation[2], 'YXZ');
+      tempQuaternion.setFromEuler(tempEuler);
+      tempScale.set(sx, sy, sz);
+      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
+      mesh.setMatrixAt(i, tempMatrix);
+    }
 
     if (writeColors) {
       tempColor.set(part.color);
@@ -59,6 +71,7 @@ function applyPartsToInstancedMesh(
     }
   }
 
+  mesh.visible = anyVisible;
   mesh.instanceMatrix.needsUpdate = true;
   if (writeColors && mesh.instanceColor) {
     mesh.instanceColor.needsUpdate = true;
@@ -70,9 +83,11 @@ export function LiveActivityActors({
   benchEnabled = false,
 }: LiveActivityActorsProps) {
   const meshRef = useRef<THREE.InstancedMesh | null>(null);
+  const colorsWrittenRef = useRef(false);
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const viewMode = useExploreStore(s => s.viewMode);
+  const tier = useExploreStore(s => s.tier);
   const invalidate = useThree(s => s.invalidate);
 
   const [reducedMotion, setReducedMotion] = useState<boolean>(() => prefersReducedMotion());
@@ -110,59 +125,41 @@ export function LiveActivityActors({
   }, [sharedMaterial]);
 
   const benchActive = isBenchmarkActive(benchEnabled);
-  const shouldAnimate = !reducedMotion && !benchActive && viewMode === '3d';
+  const shouldAnimate = !reducedMotion && !benchActive && viewMode === '3d' && tier !== 'low';
 
-  // Apply initial / static pose immediately whenever definitions or level visibility changes
-  useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh || totalInstances === 0) return;
+  useLayoutEffect(() => {
+    colorsWrittenRef.current = false;
+  }, [actorDefs, totalInstances]);
 
-    const parts = evaluateActorPartsAtTime(actorDefs, STATIC_POSE_TIME_SEC, {
-      scene,
-      levelMode,
-      focusLevel,
-    });
-    applyPartsToInstancedMesh(mesh, parts, true);
-    invalidate();
-  }, [actorDefs, totalInstances, scene, levelMode, focusLevel, invalidate]);
-
-  // Throttled ~30 FPS demand-frameloop animation ticker
-  useEffect(() => {
-    if (!shouldAnimate || totalInstances === 0) {
-      return;
-    }
-
-    let rafId = 0;
-    let lastTickMs = 0;
-    const startMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-
-    const tick = (nowMs: number) => {
-      rafId = window.requestAnimationFrame(tick);
-      if (nowMs - lastTickMs < TICK_INTERVAL_MS) {
-        return;
-      }
-      lastTickMs = nowMs;
-
+  const applyTransforms = useCallback(
+    (timeSec: number) => {
       const mesh = meshRef.current;
-      if (!mesh) return;
+      if (!mesh || totalInstances === 0) return;
 
-      const elapsedSec = STATIC_POSE_TIME_SEC + (nowMs - startMs) * 0.001;
-      const parts = evaluateActorPartsAtTime(actorDefs, elapsedSec, {
+      const parts = evaluateActorPartsAtTime(actorDefs, timeSec, {
         scene,
         levelMode,
         focusLevel,
       });
-      applyPartsToInstancedMesh(mesh, parts, false);
-      invalidate();
-    };
+      const writeColors = !colorsWrittenRef.current;
+      applyPartsToInstancedMesh(mesh, parts, writeColors);
+      colorsWrittenRef.current = true;
+    },
+    [actorDefs, totalInstances, scene, levelMode, focusLevel],
+  );
 
-    rafId = window.requestAnimationFrame(tick);
-    return () => {
-      if (rafId) {
-        window.cancelAnimationFrame(rafId);
-      }
-    };
-  }, [shouldAnimate, totalInstances, actorDefs, scene, levelMode, focusLevel, invalidate]);
+  // Apply initial / static pose immediately whenever definitions or level visibility changes
+  useLayoutEffect(() => {
+    applyTransforms(STATIC_POSE_TIME_SEC);
+    invalidate();
+  }, [applyTransforms, reducedMotion, shouldAnimate, invalidate]);
+
+  // Smooth 60 FPS animation synchronized natively with R3F's render loop
+  useFrame(({ clock }) => {
+    if (!shouldAnimate || totalInstances === 0) return;
+    applyTransforms(STATIC_POSE_TIME_SEC + clock.getElapsedTime());
+    invalidate();
+  });
 
   if (totalInstances === 0) {
     return null;
@@ -176,6 +173,7 @@ export function LiveActivityActors({
       castShadow={false}
       receiveShadow={false}
       frustumCulled={false}
+      raycast={NOOP_RAYCAST}
     />
   );
 }

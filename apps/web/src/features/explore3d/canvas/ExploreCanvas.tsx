@@ -26,6 +26,9 @@ export interface ExploreCanvasProps {
 
 const GL_CONFIG = {
   antialias: true,
+  alpha: false,
+  stencil: false,
+  depth: true,
   powerPreference: 'high-performance' as const,
 };
 
@@ -56,9 +59,14 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       cleanupListenersRef.current = null;
     }
 
+    if (state.gl.shadowMap) {
+      state.gl.shadowMap.enabled = true;
+      state.gl.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
     if ('toneMapping' in state.gl) {
       state.gl.toneMapping = THREE.ACESFilmicToneMapping;
-      state.gl.toneMappingExposure = 1.08;
+      state.gl.toneMappingExposure = 1.06;
     }
 
     const domElement = state.gl.domElement;

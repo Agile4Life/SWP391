@@ -34,6 +34,7 @@ export function BenchmarkRunner() {
   const gl = useThree(s => s.gl);
 
   const runningRef = useRef<boolean>(true);
+  const warmupFramesRef = useRef<number>(0);
   const stepsCompletedRef = useRef<number>(0);
   const frameTimesMsRef = useRef<number[]>([]);
   const maxDrawCallsRef = useRef<number>(0);
@@ -44,7 +45,14 @@ export function BenchmarkRunner() {
   useFrame((_, delta) => {
     if (!runningRef.current) return;
 
-    const frameMs = delta > 0 && delta <= 0.25 ? delta * 1000 : 16.6;
+    if (warmupFramesRef.current > 0) {
+      warmupFramesRef.current -= 1;
+      invalidate();
+      return;
+    }
+
+    const clampedDelta = delta > 0 ? Math.min(delta, 0.05) : 1 / 60;
+    const frameMs = clampedDelta * 1000;
     frameTimesMsRef.current.push(frameMs);
 
     const calls = gl.info.render?.calls ?? 0;
@@ -63,6 +71,7 @@ export function BenchmarkRunner() {
 
   useEffect(() => {
     runningRef.current = true;
+    warmupFramesRef.current = 3;
     stepsCompletedRef.current = 0;
     frameTimesMsRef.current = [];
     maxDrawCallsRef.current = 0;

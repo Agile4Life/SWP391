@@ -1086,11 +1086,11 @@ function buildStairCore(): THREE.BufferGeometry {
     // Central shear wall divider & mid-level landing
     box(0.24, 3.6, 2.8, P.charcoal, [0, 1.8, -0.2]),
     box(3.52, 0.22, 1.24, P.stone, [0, 1.9, -1.46]),
-    // Glass safety balustrades + salmon top handrails
-    box(0.06, 0.95, 2.7, P.glass, [-1.68, 1.4, 0.4], [-0.52, 0, 0]),
-    box(0.06, 0.95, 2.7, P.glass, [1.68, 2.8, 0.4], [0.52, 0, 0]),
-    box(0.08, 0.06, 2.75, P.salmon, [-1.68, 1.88, 0.4], [-0.52, 0, 0]),
-    box(0.08, 0.06, 2.75, P.salmon, [1.68, 3.28, 0.4], [0.52, 0, 0]),
+    // Glass safety balustrades + salmon top handrails (aligned with flight slopes)
+    box(0.06, 0.95, 2.7, P.glass, [-1.68, 1.4, 0.52], [0.58, 0, 0]),
+    box(0.06, 0.95, 2.7, P.glass, [1.68, 2.8, 0.52], [-0.58, 0, 0]),
+    box(0.08, 0.06, 2.75, P.salmon, [-1.68, 1.88, 0.52], [0.58, 0, 0]),
+    box(0.08, 0.06, 2.75, P.salmon, [1.68, 3.28, 0.52], [-0.58, 0, 0]),
   ];
 
   // Lower flight treads (left side, ascending from front z=+1.8 to landing z=-0.8)
