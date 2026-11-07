@@ -10,6 +10,7 @@ import type {
 } from '../../scene/schema';
 import { polygonBounds2D } from '../../scene/schema';
 import { getLevelByCode, wallsOfLevel, zonesOfLevel } from '../../scene/selectors';
+import { buildLevelInteriorDetailsGeometry } from './buildInteriorDetails';
 
 export const CUTAWAY_WALL_HEIGHT = 0.45;
 export const SLAB_EDGE_HEIGHT = 0.06;
@@ -56,6 +57,7 @@ export interface LevelBuiltGeometry {
   exteriorWallsByNormal: ExteriorWallBuiltRecord[];
   interiorOpaqueGeometry: THREE.BufferGeometry;
   glassWallGeometry: THREE.BufferGeometry;
+  interiorDetailsGeometry: THREE.BufferGeometry;
 }
 
 function createEmptyGeometry(): THREE.BufferGeometry {
@@ -531,6 +533,7 @@ export function buildLevelGeometry(
 
   const interiorOpaqueGeometry = mergeBufferGeometries(interiorOpaqueParts);
   const glassWallGeometry = mergeBufferGeometries(glassParts);
+  const interiorDetailsGeometry = buildLevelInteriorDetailsGeometry(level.code);
 
   interiorOpaqueParts.forEach(g => g.dispose());
   glassParts.forEach(g => g.dispose());
@@ -544,5 +547,6 @@ export function buildLevelGeometry(
     exteriorWallsByNormal,
     interiorOpaqueGeometry,
     glassWallGeometry,
+    interiorDetailsGeometry,
   };
 }

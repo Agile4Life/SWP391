@@ -169,6 +169,8 @@ function LevelGroup({
     (built.interiorOpaqueGeometry.getAttribute('position')?.count ?? 0) > 0;
   const hasGlassWalls =
     (built.glassWallGeometry.getAttribute('position')?.count ?? 0) > 0;
+  const hasInteriorDetails =
+    (built.interiorDetailsGeometry.getAttribute('position')?.count ?? 0) > 0;
 
   return (
     <group
@@ -186,11 +188,13 @@ function LevelGroup({
         receiveShadow
       />
 
-      {/* 2. Salmon Perimeter Trim */}
-      <mesh
-        geometry={built.slabEdgeGeometry}
-        material={dimmed ? materials.zoneBorder : materials.slabEdge}
-      />
+      {/* 2. Dimmed Perimeter Trim Override (normal salmon perimeter trim is merged into interiorDetailsGeometry) */}
+      {dimmed && (
+        <mesh
+          geometry={built.slabEdgeGeometry}
+          material={materials.zoneBorder}
+        />
+      )}
 
       {/* 3. Zone Floors & Borders */}
       {built.zoneFloorGeometries.map(zf => {
@@ -276,6 +280,15 @@ function LevelGroup({
         />
       )}
 
+      {/* 7. Merged Architectural & Zone Interior Furnishings, Mirrors, Racks & Floodlights */}
+      {hasInteriorDetails && (
+        <mesh
+          geometry={built.interiorDetailsGeometry}
+          material={materials.vertexColored}
+          receiveShadow
+        />
+      )}
+
       {children}
     </group>
   );
@@ -312,6 +325,7 @@ export function LevelStack({ renderLevelChildren }: LevelStackProps) {
         built.slabEdgeGeometry.dispose();
         built.interiorOpaqueGeometry.dispose();
         built.glassWallGeometry.dispose();
+        built.interiorDetailsGeometry.dispose();
         for (const zf of built.zoneFloorGeometries) {
           zf.geometry.dispose();
           zf.borderGeometry.dispose();

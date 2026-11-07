@@ -203,7 +203,74 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
     });
 
     const unitPlaneGeom = new THREE.PlaneGeometry(1, 1);
-    const unitBoxGeom = new THREE.BoxGeometry(1, 1, 1);
+
+    const { width, depth } = OASIS_POOL_DIMENSIONS;
+    const borderThickness = 0.42;
+    const copingBoxes = [
+      new THREE.BoxGeometry(width + borderThickness * 2, 0.16, borderThickness).translate(
+        0,
+        0.08,
+        -(depth * 0.5 + borderThickness * 0.5),
+      ),
+      new THREE.BoxGeometry(width + borderThickness * 2, 0.16, borderThickness).translate(
+        0,
+        0.08,
+        depth * 0.5 + borderThickness * 0.5,
+      ),
+      new THREE.BoxGeometry(borderThickness, 0.16, depth).translate(
+        -(width * 0.5 + borderThickness * 0.5),
+        0.08,
+        0,
+      ),
+      new THREE.BoxGeometry(borderThickness, 0.16, depth).translate(
+        width * 0.5 + borderThickness * 0.5,
+        0.08,
+        0,
+      ),
+    ];
+    const copingGeom = new THREE.BufferGeometry();
+    {
+      const positions = new Float32Array(24 * 4 * 3);
+      const normals = new Float32Array(24 * 4 * 3);
+      const indices = new Uint16Array(36 * 4);
+      for (let b = 0; b < 4; b += 1) {
+        const box = copingBoxes[b]!;
+        positions.set(box.getAttribute('position').array as Float32Array, b * 24 * 3);
+        normals.set(box.getAttribute('normal').array as Float32Array, b * 24 * 3);
+        const idx = box.getIndex()!;
+        for (let i = 0; i < 36; i += 1) {
+          indices[b * 36 + i] = idx.getX(i) + b * 24;
+        }
+        box.dispose();
+      }
+      copingGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      copingGeom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      copingGeom.setIndex(new THREE.BufferAttribute(indices, 1));
+    }
+
+    const trimBoxes = [
+      new THREE.BoxGeometry(0.08, 0.02, depth).translate(width * 0.5 + 0.04, 0.165, 0),
+      new THREE.BoxGeometry(0.08, 0.02, depth).translate(-(width * 0.5 + 0.04), 0.165, 0),
+    ];
+    const trimGeom = new THREE.BufferGeometry();
+    {
+      const positions = new Float32Array(24 * 2 * 3);
+      const normals = new Float32Array(24 * 2 * 3);
+      const indices = new Uint16Array(36 * 2);
+      for (let b = 0; b < 2; b += 1) {
+        const box = trimBoxes[b]!;
+        positions.set(box.getAttribute('position').array as Float32Array, b * 24 * 3);
+        normals.set(box.getAttribute('normal').array as Float32Array, b * 24 * 3);
+        const idx = box.getIndex()!;
+        for (let i = 0; i < 36; i += 1) {
+          indices[b * 36 + i] = idx.getX(i) + b * 24;
+        }
+        box.dispose();
+      }
+      trimGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      trimGeom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      trimGeom.setIndex(new THREE.BufferAttribute(indices, 1));
+    }
 
     return {
       basinTex,
@@ -213,7 +280,8 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
       copingMat,
       accentTrimMat,
       unitPlaneGeom,
-      unitBoxGeom,
+      copingGeom,
+      trimGeom,
     };
   }, []);
 
@@ -228,7 +296,8 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
       resources.basinTex.dispose();
       resources.waterTex.dispose();
       resources.unitPlaneGeom.dispose();
-      resources.unitBoxGeom.dispose();
+      resources.copingGeom.dispose();
+      resources.trimGeom.dispose();
     };
   }, [resources]);
 
@@ -251,7 +320,6 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
 
   const b1WorldY = levelB1 ? getLevelWorldY(levelB1, levelMode) : -4.5;
   const { centerX, centerZ, width, depth } = OASIS_POOL_DIMENSIONS;
-  const borderThickness = 0.42;
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -302,45 +370,11 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
         onPointerOut={handlePointerOut}
       />
 
-      {/* Perimeter stone coping deck curb */}
-      <mesh
-        position={[0, 0.08, -(depth * 0.5 + borderThickness * 0.5)]}
-        scale={[width + borderThickness * 2, 0.16, borderThickness]}
-        geometry={resources.unitBoxGeom}
-        material={resources.copingMat}
-      />
-      <mesh
-        position={[0, 0.08, depth * 0.5 + borderThickness * 0.5]}
-        scale={[width + borderThickness * 2, 0.16, borderThickness]}
-        geometry={resources.unitBoxGeom}
-        material={resources.copingMat}
-      />
-      <mesh
-        position={[-(width * 0.5 + borderThickness * 0.5), 0.08, 0]}
-        scale={[borderThickness, 0.16, depth]}
-        geometry={resources.unitBoxGeom}
-        material={resources.copingMat}
-      />
-      <mesh
-        position={[width * 0.5 + borderThickness * 0.5, 0.08, 0]}
-        scale={[borderThickness, 0.16, depth]}
-        geometry={resources.unitBoxGeom}
-        material={resources.copingMat}
-      />
+      {/* Merged perimeter stone coping deck curb */}
+      <mesh geometry={resources.copingGeom} material={resources.copingMat} />
 
-      {/* SÖL salmon overflow gutter accent strip on east & west ends */}
-      <mesh
-        position={[width * 0.5 + 0.04, 0.165, 0]}
-        scale={[0.08, 0.02, depth]}
-        geometry={resources.unitBoxGeom}
-        material={resources.accentTrimMat}
-      />
-      <mesh
-        position={[-(width * 0.5 + 0.04), 0.165, 0]}
-        scale={[0.08, 0.02, depth]}
-        geometry={resources.unitBoxGeom}
-        material={resources.accentTrimMat}
-      />
+      {/* Merged SÖL salmon overflow gutter accent strips */}
+      <mesh geometry={resources.trimGeom} material={resources.accentTrimMat} />
     </group>
   );
 }
