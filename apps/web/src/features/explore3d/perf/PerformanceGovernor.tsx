@@ -11,10 +11,10 @@ export function getNextLowerTier(currentTier: QualityTier): {
   dpr: number;
 } | null {
   if (currentTier === 'high') {
-    return { tier: 'medium', dpr: 1.15 };
+    return { tier: 'medium', dpr: 1.5 };
   }
   if (currentTier === 'medium') {
-    return { tier: 'low', dpr: 1.0 };
+    return { tier: 'low', dpr: 1.15 };
   }
   return null;
 }
@@ -72,7 +72,7 @@ export function PerformanceGovernor() {
   }, []);
 
   const handleFallback = useCallback(() => {
-    useExploreStore.getState().setQualityTier('low', 1.0);
+    useExploreStore.getState().setQualityTier('low', 1.15);
   }, []);
 
   return <PerformanceMonitor onDecline={handleDecline} onFallback={handleFallback} />;

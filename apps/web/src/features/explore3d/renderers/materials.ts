@@ -47,7 +47,7 @@ export interface ExploreThemePalette {
   };
 }
 
-const DARK_PALETTE: ExploreThemePalette = {
+export const DARK_PALETTE: ExploreThemePalette = {
   theme: 'dark',
   canvasBg: '#161618',
   fogColor: '#161618',
@@ -97,7 +97,7 @@ const DARK_PALETTE: ExploreThemePalette = {
   },
 };
 
-const LIGHT_PALETTE: ExploreThemePalette = {
+export const LIGHT_PALETTE: ExploreThemePalette = {
   theme: 'light',
   canvasBg: '#eae5dd',
   fogColor: '#eae5dd',
@@ -169,11 +169,14 @@ export class MaterialRegistry {
   public readonly floors: Record<FloorMaterialKind, THREE.MeshStandardMaterial>;
   public readonly walls: {
     concrete: THREE.MeshStandardMaterial;
+    interior: THREE.MeshStandardMaterial;
     glass: THREE.MeshStandardMaterial;
     'accent-salmon': THREE.MeshStandardMaterial;
     'wood-slat': THREE.MeshStandardMaterial;
     exteriorConcrete: THREE.MeshStandardMaterial;
+    exterior: THREE.MeshStandardMaterial;
     cutawayCap: THREE.MeshBasicMaterial;
+    cutCap: THREE.MeshBasicMaterial;
   };
   public readonly slabBase: THREE.MeshStandardMaterial;
   public readonly slabEdge: THREE.MeshStandardMaterial;
@@ -184,6 +187,9 @@ export class MaterialRegistry {
   public readonly plazaWalkway: THREE.MeshStandardMaterial;
   public readonly vertexColored: THREE.MeshStandardMaterial;
   public readonly items: {
+    base: THREE.MeshStandardMaterial;
+    selected: THREE.MeshStandardMaterial;
+    hovered: THREE.MeshStandardMaterial;
     equipmentFrame: THREE.MeshStandardMaterial;
     equipmentVipFrame: THREE.MeshStandardMaterial;
     salmonAccent: THREE.MeshStandardMaterial;
@@ -202,66 +208,90 @@ export class MaterialRegistry {
       'rubber-dark': new THREE.MeshStandardMaterial({
         name: 'floor-rubber-dark',
         color: p.floors['rubber-dark'],
-        roughness: 0.88,
-        metalness: 0.05,
+        roughness: 0.72,
+        metalness: 0.1,
+        envMapIntensity: 1.15,
       }),
       hardwood: new THREE.MeshStandardMaterial({
         name: 'floor-hardwood',
         color: p.floors.hardwood,
-        roughness: 0.62,
-        metalness: 0.08,
+        roughness: 0.44,
+        metalness: 0.14,
+        envMapIntensity: 1.2,
       }),
       turf: new THREE.MeshStandardMaterial({
         name: 'floor-turf',
         color: p.floors.turf,
-        roughness: 0.92,
-        metalness: 0.02,
+        roughness: 0.78,
+        metalness: 0.06,
+        envMapIntensity: 1.1,
       }),
       'tile-stone': new THREE.MeshStandardMaterial({
         name: 'floor-tile-stone',
         color: p.floors['tile-stone'],
-        roughness: 0.55,
-        metalness: 0.1,
+        roughness: 0.38,
+        metalness: 0.18,
+        envMapIntensity: 1.25,
       }),
       water: new THREE.MeshStandardMaterial({
         name: 'floor-water',
         color: p.floors.water,
-        roughness: 0.22,
-        metalness: 0.15,
+        roughness: 0.14,
+        metalness: 0.22,
+        envMapIntensity: 1.35,
       }),
       'acrylic-court': new THREE.MeshStandardMaterial({
         name: 'floor-acrylic-court',
         color: p.floors['acrylic-court'],
-        roughness: 0.68,
-        metalness: 0.05,
+        roughness: 0.5,
+        metalness: 0.1,
+        envMapIntensity: 1.15,
       }),
       'concrete-polished': new THREE.MeshStandardMaterial({
         name: 'floor-concrete-polished',
         color: p.floors['concrete-polished'],
-        roughness: 0.5,
-        metalness: 0.12,
+        roughness: 0.36,
+        metalness: 0.2,
+        envMapIntensity: 1.25,
       }),
       tatami: new THREE.MeshStandardMaterial({
         name: 'floor-tatami',
         color: p.floors.tatami,
-        roughness: 0.82,
-        metalness: 0.04,
+        roughness: 0.66,
+        metalness: 0.08,
+        envMapIntensity: 1.12,
       }),
     };
 
     // Never use MeshPhysicalMaterial with transmission — use MeshStandardMaterial for glass
+    const wallConcrete = new THREE.MeshStandardMaterial({
+      name: 'wall-concrete',
+      color: p.walls.concrete,
+      roughness: 0.58,
+      metalness: 0.12,
+      envMapIntensity: 1.15,
+    });
+    const wallExteriorConcrete = new THREE.MeshStandardMaterial({
+      name: 'wall-exterior-concrete',
+      color: p.walls.exteriorConcrete,
+      roughness: 0.62,
+      metalness: 0.14,
+      envMapIntensity: 1.15,
+    });
+    const wallCutawayCap = new THREE.MeshBasicMaterial({
+      name: 'wall-cutaway-cap',
+      color: p.walls.cutawayCap,
+    });
+
     this.walls = {
-      concrete: new THREE.MeshStandardMaterial({
-        name: 'wall-concrete',
-        color: p.walls.concrete,
-        roughness: 0.8,
-        metalness: 0.05,
-      }),
+      concrete: wallConcrete,
+      interior: wallConcrete,
       glass: new THREE.MeshStandardMaterial({
         name: 'wall-glass',
         color: p.walls.glass,
-        roughness: 0.18,
-        metalness: 0.1,
+        roughness: 0.1,
+        metalness: 0.18,
+        envMapIntensity: 1.4,
         transparent: true,
         opacity: 0.28,
         depthWrite: false,
@@ -270,41 +300,41 @@ export class MaterialRegistry {
       'accent-salmon': new THREE.MeshStandardMaterial({
         name: 'wall-accent-salmon',
         color: p.walls['accent-salmon'],
-        roughness: 0.58,
-        metalness: 0.12,
+        emissive: p.walls['accent-salmon'],
+        emissiveIntensity: 0.08,
+        roughness: 0.38,
+        metalness: 0.22,
+        envMapIntensity: 1.25,
       }),
       'wood-slat': new THREE.MeshStandardMaterial({
         name: 'wall-wood-slat',
         color: p.walls['wood-slat'],
-        roughness: 0.68,
-        metalness: 0.06,
+        roughness: 0.48,
+        metalness: 0.12,
+        envMapIntensity: 1.2,
       }),
-      exteriorConcrete: new THREE.MeshStandardMaterial({
-        name: 'wall-exterior-concrete',
-        color: p.walls.exteriorConcrete,
-        roughness: 0.82,
-        metalness: 0.06,
-      }),
-      cutawayCap: new THREE.MeshBasicMaterial({
-        name: 'wall-cutaway-cap',
-        color: p.walls.cutawayCap,
-      }),
+      exteriorConcrete: wallExteriorConcrete,
+      exterior: wallExteriorConcrete,
+      cutawayCap: wallCutawayCap,
+      cutCap: wallCutawayCap,
     };
 
     this.slabBase = new THREE.MeshStandardMaterial({
       name: 'slab-base',
       color: p.slab.base,
-      roughness: 0.85,
-      metalness: 0.05,
+      roughness: 0.64,
+      metalness: 0.12,
+      envMapIntensity: 1.15,
     });
 
     this.slabEdge = new THREE.MeshStandardMaterial({
       name: 'slab-edge',
       color: p.slab.edge,
       emissive: p.slab.edge,
-      emissiveIntensity: 0.14,
-      roughness: 0.48,
-      metalness: 0.22,
+      emissiveIntensity: 0.18,
+      roughness: 0.36,
+      metalness: 0.28,
+      envMapIntensity: 1.25,
     });
 
     this.zoneBorder = new THREE.MeshBasicMaterial({
@@ -320,82 +350,117 @@ export class MaterialRegistry {
     this.plazaGround = new THREE.MeshStandardMaterial({
       name: 'plaza-ground',
       color: p.slab.plaza,
-      roughness: 0.92,
-      metalness: 0.02,
+      roughness: 0.76,
+      metalness: 0.08,
+      envMapIntensity: 1.1,
     });
 
     this.plazaGrid = new THREE.LineBasicMaterial({
       name: 'plaza-grid',
       color: p.slab.grid,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.56,
     });
 
     this.plazaWalkway = new THREE.MeshStandardMaterial({
       name: 'plaza-walkway',
       color: p.slab.walkway,
-      roughness: 0.65,
-      metalness: 0.1,
+      roughness: 0.48,
+      metalness: 0.18,
+      envMapIntensity: 1.2,
     });
 
     this.vertexColored = new THREE.MeshStandardMaterial({
       name: 'arch-vertex-colored',
       color: '#ffffff',
       vertexColors: true,
-      roughness: 0.48,
-      metalness: 0.2,
+      roughness: 0.34,
+      metalness: 0.28,
+      envMapIntensity: 1.25,
     });
 
     this.items = {
+      base: new THREE.MeshStandardMaterial({
+        name: 'item-base-vertex-colored',
+        color: '#ffffff',
+        vertexColors: true,
+        roughness: 0.34,
+        metalness: 0.28,
+        envMapIntensity: 1.25,
+      }),
+      selected: new THREE.MeshStandardMaterial({
+        name: 'item-selected',
+        color: p.accentSalmon,
+        emissive: p.accentSalmon,
+        emissiveIntensity: 0.28,
+        roughness: 0.24,
+        metalness: 0.35,
+        envMapIntensity: 1.35,
+      }),
+      hovered: new THREE.MeshStandardMaterial({
+        name: 'item-hovered',
+        color: p.accentSalmonHover,
+        emissive: p.accentSalmonHover,
+        emissiveIntensity: 0.18,
+        roughness: 0.24,
+        metalness: 0.35,
+        envMapIntensity: 1.3,
+      }),
       equipmentFrame: new THREE.MeshStandardMaterial({
         name: 'item-equipment-frame',
         color: p.items.equipmentFrame,
-        roughness: 0.45,
-        metalness: 0.55,
+        roughness: 0.34,
+        metalness: 0.62,
+        envMapIntensity: 1.25,
       }),
       equipmentVipFrame: new THREE.MeshStandardMaterial({
         name: 'item-equipment-vip-frame',
         color: p.items.equipmentVipFrame,
-        roughness: 0.32,
-        metalness: 0.72,
+        roughness: 0.24,
+        metalness: 0.78,
+        envMapIntensity: 1.35,
       }),
       salmonAccent: new THREE.MeshStandardMaterial({
         name: 'item-salmon-accent',
         color: p.items.salmonAccent,
         emissive: p.items.salmonAccent,
-        emissiveIntensity: 0.12,
-        roughness: 0.38,
-        metalness: 0.28,
+        emissiveIntensity: 0.18,
+        roughness: 0.28,
+        metalness: 0.35,
+        envMapIntensity: 1.25,
       }),
       upholstery: new THREE.MeshStandardMaterial({
         name: 'item-upholstery',
         color: p.items.upholstery,
-        roughness: 0.75,
-        metalness: 0.08,
+        roughness: 0.58,
+        metalness: 0.12,
+        envMapIntensity: 1.15,
       }),
       chrome: new THREE.MeshStandardMaterial({
         name: 'item-chrome',
         color: p.items.chrome,
-        roughness: 0.2,
-        metalness: 0.88,
+        roughness: 0.14,
+        metalness: 0.92,
+        envMapIntensity: 1.45,
       }),
       statusMaintenance: new THREE.MeshStandardMaterial({
         name: 'item-status-maintenance',
         color: p.items.statusMaintenance,
-        roughness: 0.5,
-        metalness: 0.2,
+        roughness: 0.38,
+        metalness: 0.26,
+        envMapIntensity: 1.2,
       }),
       statusBroken: new THREE.MeshStandardMaterial({
         name: 'item-status-broken',
         color: p.items.statusBroken,
-        roughness: 0.7,
-        metalness: 0.1,
+        roughness: 0.56,
+        metalness: 0.14,
       }),
       statusRetired: new THREE.MeshStandardMaterial({
         name: 'item-status-retired',
         color: p.items.statusRetired,
-        roughness: 0.85,
-        metalness: 0.05,
+        roughness: 0.72,
+        metalness: 0.08,
         transparent: true,
         opacity: 0.5,
       }),
@@ -418,21 +483,28 @@ export class MaterialRegistry {
     this.walls.concrete.color.set(p.walls.concrete);
     this.walls.glass.color.set(p.walls.glass);
     this.walls['accent-salmon'].color.set(p.walls['accent-salmon']);
+    this.walls['accent-salmon'].emissive.set(p.walls['accent-salmon']);
     this.walls['wood-slat'].color.set(p.walls['wood-slat']);
     this.walls.exteriorConcrete.color.set(p.walls.exteriorConcrete);
     this.walls.cutawayCap.color.set(p.walls.cutawayCap);
 
     this.slabBase.color.set(p.slab.base);
     this.slabEdge.color.set(p.slab.edge);
+    this.slabEdge.emissive.set(p.slab.edge);
     this.zoneBorder.color.set(p.slab.zoneBorder);
     this.zoneSelectedBorder.color.set(p.accentSalmon);
     this.plazaGround.color.set(p.slab.plaza);
     this.plazaGrid.color.set(p.slab.grid);
     this.plazaWalkway.color.set(p.slab.walkway);
 
+    this.items.selected.color.set(p.accentSalmon);
+    this.items.selected.emissive.set(p.accentSalmon);
+    this.items.hovered.color.set(p.accentSalmonHover);
+    this.items.hovered.emissive.set(p.accentSalmonHover);
     this.items.equipmentFrame.color.set(p.items.equipmentFrame);
     this.items.equipmentVipFrame.color.set(p.items.equipmentVipFrame);
     this.items.salmonAccent.color.set(p.items.salmonAccent);
+    this.items.salmonAccent.emissive.set(p.items.salmonAccent);
     this.items.upholstery.color.set(p.items.upholstery);
     this.items.chrome.color.set(p.items.chrome);
     this.items.statusMaintenance.color.set(p.items.statusMaintenance);
@@ -455,18 +527,27 @@ export class MaterialRegistry {
   }
 
   public dispose(): void {
-    Object.values(this.floors).forEach(m => m.dispose());
-    Object.values(this.walls).forEach(m => m.dispose());
-    this.slabBase.dispose();
-    this.slabEdge.dispose();
-    this.zoneBorder.dispose();
-    this.zoneSelectedBorder.dispose();
-    this.plazaGround.dispose();
-    this.plazaGrid.dispose();
-    this.plazaWalkway.dispose();
-    this.vertexColored.dispose();
-    Object.values(this.items).forEach(m => m.dispose());
+    const uniqueMaterials = new Set<THREE.Material>([
+      ...Object.values(this.floors),
+      ...Object.values(this.walls),
+      this.slabBase,
+      this.slabEdge,
+      this.zoneBorder,
+      this.zoneSelectedBorder,
+      this.plazaGround,
+      this.plazaGrid,
+      this.plazaWalkway,
+      this.vertexColored,
+      ...Object.values(this.items),
+    ]);
+    uniqueMaterials.forEach(m => m.dispose());
   }
+}
+
+export function createMaterialLibrary(
+  mode: ExploreTheme = detectDocumentTheme(),
+): MaterialRegistry {
+  return new MaterialRegistry(mode);
 }
 
 let sharedRegistry: MaterialRegistry | null = null;

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -17,7 +18,7 @@ const OASIS_POOL_DIMENSIONS = {
   depth: 12.0,
 } as const;
 
-function createPoolBasinTexture(): THREE.Texture {
+export function createPoolBasinTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([24, 68, 96, 255]);
     const tex = new THREE.DataTexture(data, 1, 1);
@@ -26,67 +27,97 @@ function createPoolBasinTexture(): THREE.Texture {
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 512;
+  canvas.width = 2048;
+  canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
     // Deep aquatic mosaic base
-    ctx.fillStyle = '#173f5a';
-    ctx.fillRect(0, 0, 1024, 512);
+    ctx.fillStyle = '#153b56';
+    ctx.fillRect(0, 0, 2048, 1024);
 
-    // Subtle mosaic tile grid lines
-    ctx.strokeStyle = 'rgba(130, 195, 228, 0.14)';
+    // Fine ceramic sub-mosaic tile grid lines (32px intervals)
+    ctx.strokeStyle = 'rgba(135, 205, 240, 0.12)';
     ctx.lineWidth = 1;
-    for (let x = 0; x <= 1024; x += 32) {
+    for (let x = 0; x <= 2048; x += 32) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, 512);
+      ctx.lineTo(x, 1024);
       ctx.stroke();
     }
-    for (let y = 0; y <= 512; y += 32) {
+    for (let y = 0; y <= 1024; y += 32) {
       ctx.beginPath();
       ctx.moveTo(0, y);
-      ctx.lineTo(1024, y);
+      ctx.lineTo(2048, y);
       ctx.stroke();
     }
 
-    // Center divider line between Lane 01 and Lane 02
+    // Major architectural tile grout lines (64px intervals) for high-definition crispness
+    ctx.strokeStyle = 'rgba(165, 222, 248, 0.24)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x <= 2048; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 1024);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= 1024; y += 64) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(2048, y);
+      ctx.stroke();
+    }
+
+    // Crisp perimeter tile border frame
+    ctx.strokeStyle = 'rgba(206, 145, 128, 0.55)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(24, 24, 2000, 976);
+
+    // Center divider line between Lane 01 and Lane 02 (scaled 2x)
     ctx.save();
-    ctx.setLineDash([18, 12]);
-    ctx.strokeStyle = 'rgba(244, 243, 239, 0.45)';
-    ctx.lineWidth = 5;
+    ctx.setLineDash([36, 24]);
+    ctx.strokeStyle = 'rgba(250, 249, 246, 0.62)';
+    ctx.lineWidth = 10;
     ctx.beginPath();
-    ctx.moveTo(36, 256);
-    ctx.lineTo(988, 256);
+    ctx.moveTo(72, 512);
+    ctx.lineTo(1976, 512);
     ctx.stroke();
     ctx.restore();
 
-    // FINA floor lane T-marks for Lane 01 (y=128) and Lane 02 (y=384)
-    const laneYs = [128, 384];
+    // FINA floor lane T-marks for Lane 01 (y=256) and Lane 02 (y=768) (scaled 2x)
+    const laneYs = [256, 768];
     for (const ly of laneYs) {
+      // Crisp bright ceramic contrast border around lane stripe & T-bars
+      ctx.fillStyle = 'rgba(225, 244, 255, 0.35)';
+      ctx.fillRect(164, ly - 24, 1720, 48);
+      ctx.fillRect(148, ly - 92, 44, 184);
+      ctx.fillRect(1856, ly - 92, 44, 184);
+
       // Main dark floor guide stripe
-      ctx.fillStyle = '#0c2233';
-      ctx.fillRect(84, ly - 10, 856, 20);
+      ctx.fillStyle = '#091b29';
+      ctx.fillRect(168, ly - 20, 1712, 40);
       // End T-bars
-      ctx.fillRect(76, ly - 44, 18, 88);
-      ctx.fillRect(930, ly - 44, 18, 88);
+      ctx.fillRect(152, ly - 88, 36, 176);
+      ctx.fillRect(1860, ly - 88, 36, 176);
 
       // Salmon turn-target accent crossbars
       ctx.fillStyle = '#ce9180';
-      ctx.fillRect(80, ly - 36, 10, 72);
-      ctx.fillRect(934, ly - 36, 10, 72);
+      ctx.fillRect(160, ly - 72, 20, 144);
+      ctx.fillRect(1868, ly - 72, 20, 144);
     }
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 16;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
   return texture;
 }
 
-function createPoolWaterCausticTexture(): THREE.Texture {
+export function createWaterCausticsTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([58, 124, 165, 255]);
     const tex = new THREE.DataTexture(data, 1, 1);
@@ -97,26 +128,43 @@ function createPoolWaterCausticTexture(): THREE.Texture {
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
+  canvas.width = 512;
+  canvas.height = 512;
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
-    ctx.fillStyle = '#2d7a9c';
-    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#297496';
+    ctx.fillRect(0, 0, 512, 512);
 
-    // Soft procedural caustic wave bands
-    ctx.strokeStyle = 'rgba(220, 245, 255, 0.22)';
-    ctx.lineWidth = 3;
+    // Primary crisp procedural caustic wave bands (scaled 2x)
+    ctx.strokeStyle = 'rgba(230, 249, 255, 0.34)';
+    ctx.lineWidth = 5;
     for (let row = 0; row < 8; row++) {
-      const baseY = row * 32 + 16;
+      const baseY = row * 64 + 32;
       ctx.beginPath();
-      for (let x = 0; x <= 256; x += 8) {
-        const wave = Math.sin((x / 256) * Math.PI * 4 + row * 0.9) * 6;
+      for (let x = 0; x <= 512; x += 8) {
+        const wave = Math.sin((x / 512) * Math.PI * 4 + row * 0.9) * 12;
         if (x === 0) {
           ctx.moveTo(x, baseY + wave);
         } else {
           ctx.lineTo(x, baseY + wave);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // Secondary cross-harmonic caustic filaments for sharper water refraction shimmer
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 2.5;
+    for (let col = 0; col < 8; col++) {
+      const baseX = col * 64 + 32;
+      ctx.beginPath();
+      for (let y = 0; y <= 512; y += 8) {
+        const wave = Math.cos((y / 512) * Math.PI * 4 + col * 1.1) * 10;
+        if (y === 0) {
+          ctx.moveTo(baseX + wave, y);
+        } else {
+          ctx.lineTo(baseX + wave, y);
         }
       }
       ctx.stroke();
@@ -128,9 +176,15 @@ function createPoolWaterCausticTexture(): THREE.Texture {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(4, 2);
+  texture.anisotropy = 16;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
   return texture;
 }
+
+const createPoolWaterCausticTexture = createWaterCausticsTexture;
 
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState<boolean>(() => {
@@ -170,8 +224,9 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
     const basinMat = new THREE.MeshStandardMaterial({
       name: 'oasis-pool-basin-mat',
       map: basinTex,
-      roughness: 0.45,
-      metalness: 0.08,
+      roughness: 0.34,
+      metalness: 0.12,
+      envMapIntensity: 1.2,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
@@ -181,8 +236,9 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
       name: 'oasis-pool-water-mat',
       color: '#3a8bb2',
       map: waterTex,
-      roughness: 0.16,
-      metalness: 0.12,
+      roughness: 0.1,
+      metalness: 0.18,
+      envMapIntensity: 1.35,
       transparent: true,
       opacity: 0.68,
       depthWrite: false,
@@ -191,15 +247,19 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
     const copingMat = new THREE.MeshStandardMaterial({
       name: 'oasis-pool-coping-mat',
       color: '#38383d',
-      roughness: 0.62,
-      metalness: 0.1,
+      roughness: 0.48,
+      metalness: 0.16,
+      envMapIntensity: 1.15,
     });
 
     const accentTrimMat = new THREE.MeshStandardMaterial({
       name: 'oasis-pool-salmon-trim-mat',
       color: '#ce9180',
-      roughness: 0.48,
-      metalness: 0.2,
+      emissive: '#ce9180',
+      emissiveIntensity: 0.1,
+      roughness: 0.34,
+      metalness: 0.28,
+      envMapIntensity: 1.25,
     });
 
     const unitPlaneGeom = new THREE.PlaneGeometry(1, 1);

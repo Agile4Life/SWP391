@@ -79,9 +79,9 @@ function nextSeq(): number {
 }
 
 const DEFAULT_DPR_BY_TIER: Record<QualityTier, number> = {
-  high: 1.5,
-  medium: 1.25,
-  low: 1.0,
+  high: 2.0,
+  medium: 1.5,
+  low: 1.15,
 };
 
 export const useExploreStore = create<ExploreState>((set, get) => ({
@@ -92,7 +92,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   wallMode: 'cutaway',
   viewMode: '3d',
   tier: 'high',
-  dpr: 1.35,
+  dpr: 2.0,
   tourActive: false,
   tourPaused: false,
   tourStepIndex: 0,

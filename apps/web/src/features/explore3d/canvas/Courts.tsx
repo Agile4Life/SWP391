@@ -19,72 +19,118 @@ function createBadmintonCourtTexture(): THREE.Texture {
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
+  canvas.width = 1024;
+  canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
     // Charcoal outer surround
-    ctx.fillStyle = '#232629';
-    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = '#1f2226';
+    ctx.fillRect(0, 0, 1024, 1024);
 
     // Subtle salmon perimeter accent frame
     ctx.strokeStyle = '#ce9180';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(24, 24, 464, 464);
+    ctx.lineWidth = 8;
+    ctx.strokeRect(48, 48, 928, 928);
 
     // Tournament green playing mat
-    ctx.fillStyle = '#275947';
-    ctx.fillRect(34, 34, 444, 444);
+    ctx.fillStyle = '#255845';
+    ctx.fillRect(68, 68, 888, 888);
 
-    // White BWF court lines
-    ctx.strokeStyle = '#f4f3ef';
-    ctx.lineWidth = 6;
+    // Subtle matte PVC court micro-seam grid for close-up surface sharpness
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+    ctx.lineWidth = 2;
+    for (let y = 132; y < 928; y += 64) {
+      ctx.beginPath();
+      ctx.moveTo(68, y);
+      ctx.lineTo(956, y);
+      ctx.stroke();
+    }
+
+    // Crisp outer contrast border around BWF court lines
+    ctx.strokeStyle = 'rgba(15, 34, 27, 0.55)';
+    ctx.lineWidth = 18;
+    ctx.strokeRect(108, 96, 808, 832);
+
+    // High-contrast white BWF court lines (scaled 2x)
+    ctx.strokeStyle = '#faf9f6';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'square';
+    ctx.lineJoin = 'miter';
 
     // Doubles boundary
-    ctx.strokeRect(54, 48, 404, 416);
+    ctx.strokeRect(108, 96, 808, 832);
 
     // Singles sidelines
     ctx.beginPath();
-    ctx.moveTo(88, 48);
-    ctx.lineTo(88, 464);
-    ctx.moveTo(424, 48);
-    ctx.lineTo(424, 464);
+    ctx.moveTo(176, 96);
+    ctx.lineTo(176, 928);
+    ctx.moveTo(848, 96);
+    ctx.lineTo(848, 928);
 
     // Doubles long service lines
-    ctx.moveTo(54, 78);
-    ctx.lineTo(458, 78);
-    ctx.moveTo(54, 434);
-    ctx.lineTo(458, 434);
+    ctx.moveTo(108, 156);
+    ctx.lineTo(916, 156);
+    ctx.moveTo(108, 868);
+    ctx.lineTo(916, 868);
 
     // Short service lines
-    ctx.moveTo(54, 188);
-    ctx.lineTo(458, 188);
-    ctx.moveTo(54, 324);
-    ctx.lineTo(458, 324);
+    ctx.moveTo(108, 376);
+    ctx.lineTo(916, 376);
+    ctx.moveTo(108, 648);
+    ctx.lineTo(916, 648);
 
     // Center service lines
-    ctx.moveTo(256, 48);
-    ctx.lineTo(256, 188);
-    ctx.moveTo(256, 324);
-    ctx.lineTo(256, 464);
+    ctx.moveTo(512, 96);
+    ctx.lineTo(512, 376);
+    ctx.moveTo(512, 648);
+    ctx.lineTo(512, 928);
     ctx.stroke();
 
-    // Dashed center net line
-    ctx.save();
-    ctx.setLineDash([10, 8]);
-    ctx.strokeStyle = '#ce9180';
+    // Service box corner tick marks for architectural precision
+    ctx.strokeStyle = 'rgba(206, 145, 128, 0.85)';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(44, 256);
-    ctx.lineTo(468, 256);
+    ctx.moveTo(512 - 16, 376);
+    ctx.lineTo(512 + 16, 376);
+    ctx.moveTo(512 - 16, 648);
+    ctx.lineTo(512 + 16, 648);
+    ctx.stroke();
+
+    // Crisp double-line net tape & salmon center net line
+    ctx.strokeStyle = 'rgba(250, 249, 246, 0.92)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(88, 504);
+    ctx.lineTo(936, 504);
+    ctx.moveTo(88, 520);
+    ctx.lineTo(936, 520);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.setLineDash([20, 14]);
+    ctx.strokeStyle = '#ce9180';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(88, 512);
+    ctx.lineTo(936, 512);
     ctx.stroke();
     ctx.restore();
+
+    // Vertical center net strap mark & post anchor pads
+    ctx.fillStyle = '#faf9f6';
+    ctx.fillRect(507, 496, 10, 32);
+    ctx.fillStyle = '#ce9180';
+    ctx.fillRect(78, 498, 20, 28);
+    ctx.fillRect(926, 498, 20, 28);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 16;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
   return texture;
 }
@@ -98,62 +144,99 @@ function createTennisCourtTexture(): THREE.Texture {
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 1024;
+  canvas.width = 1024;
+  canvas.height = 2048;
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
     // Terracotta / salmon outer apron
-    ctx.fillStyle = '#8b4c3e';
-    ctx.fillRect(0, 0, 512, 1024);
+    ctx.fillStyle = '#86483a';
+    ctx.fillRect(0, 0, 1024, 2048);
 
-    // Championship green inner acrylic court
-    ctx.fillStyle = '#2f6b55';
-    ctx.fillRect(52, 74, 408, 876);
+    // Crisp outer architectural apron frame
+    ctx.strokeStyle = '#ce9180';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(44, 60, 936, 1928);
 
-    // Crisp white ITF markings
-    ctx.strokeStyle = '#f4f3ef';
-    ctx.lineWidth = 7;
+    // Championship green inner acrylic court (scaled 2x)
+    ctx.fillStyle = '#2c6852';
+    ctx.fillRect(104, 148, 816, 1752);
+
+    // Subtle acrylic squeegee pass bands for high-definition court realism
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+    for (let y = 148; y < 1900; y += 175) {
+      ctx.fillRect(104, y, 816, 88);
+    }
+
+    // Subtle dark edge shadow around outer doubles boundary for maximum line crispness
+    ctx.strokeStyle = 'rgba(14, 34, 26, 0.55)';
+    ctx.lineWidth = 20;
+    ctx.strokeRect(136, 184, 752, 1680);
+
+    // Crisp white ITF markings (scaled 2x)
+    ctx.strokeStyle = '#faf9f6';
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'square';
+    ctx.lineJoin = 'miter';
 
     // Doubles boundary
-    ctx.strokeRect(68, 92, 376, 840);
+    ctx.strokeRect(136, 184, 752, 1680);
 
     // Singles sidelines
     ctx.beginPath();
-    ctx.moveTo(114, 92);
-    ctx.lineTo(114, 932);
-    ctx.moveTo(398, 92);
-    ctx.lineTo(398, 932);
+    ctx.moveTo(228, 184);
+    ctx.lineTo(228, 1864);
+    ctx.moveTo(796, 184);
+    ctx.lineTo(796, 1864);
 
     // Service lines
-    ctx.moveTo(114, 296);
-    ctx.lineTo(398, 296);
-    ctx.moveTo(114, 728);
-    ctx.lineTo(398, 728);
+    ctx.moveTo(228, 592);
+    ctx.lineTo(796, 592);
+    ctx.moveTo(228, 1456);
+    ctx.lineTo(796, 1456);
 
     // Center service line
-    ctx.moveTo(256, 296);
-    ctx.lineTo(256, 728);
+    ctx.moveTo(512, 592);
+    ctx.lineTo(512, 1456);
 
     // Baseline center marks
-    ctx.moveTo(256, 92);
-    ctx.lineTo(256, 114);
-    ctx.moveTo(256, 910);
-    ctx.lineTo(256, 932);
+    ctx.moveTo(512, 184);
+    ctx.lineTo(512, 228);
+    ctx.moveTo(512, 1820);
+    ctx.lineTo(512, 1864);
     ctx.stroke();
 
-    // Center net line
-    ctx.strokeStyle = '#ce9180';
+    // Double-line white net tape + salmon center net chord + vertical center strap mark
+    ctx.strokeStyle = '#faf9f6';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(52, 512);
-    ctx.lineTo(460, 512);
+    ctx.moveTo(104, 1014);
+    ctx.lineTo(920, 1014);
+    ctx.moveTo(104, 1034);
+    ctx.lineTo(920, 1034);
     ctx.stroke();
+
+    ctx.strokeStyle = '#ce9180';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(104, 1024);
+    ctx.lineTo(920, 1024);
+    ctx.stroke();
+
+    // Center net strap & net post bases
+    ctx.fillStyle = '#faf9f6';
+    ctx.fillRect(505, 1004, 14, 40);
+    ctx.fillStyle = '#ce9180';
+    ctx.fillRect(92, 1006, 24, 36);
+    ctx.fillRect(908, 1006, 24, 36);
   }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
+  texture.anisotropy = 16;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
   return texture;
 }
@@ -266,8 +349,9 @@ export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
     const badmintonMat = new THREE.MeshStandardMaterial({
       name: 'court-surface-badminton-mat',
       map: badmintonTex,
-      roughness: 0.62,
-      metalness: 0.05,
+      roughness: 0.48,
+      metalness: 0.08,
+      envMapIntensity: 1.15,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
@@ -276,8 +360,9 @@ export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
     const tennisMat = new THREE.MeshStandardMaterial({
       name: 'court-surface-tennis-mat',
       map: tennisTex,
-      roughness: 0.68,
-      metalness: 0.04,
+      roughness: 0.52,
+      metalness: 0.06,
+      envMapIntensity: 1.15,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
