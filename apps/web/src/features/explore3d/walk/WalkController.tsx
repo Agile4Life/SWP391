@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { context as r3fContext, useThree } from '@react-three/fiber';
 import {
   useCallback,
@@ -22,10 +23,42 @@ import {
   stepWalkPose,
   type WalkPose,
 } from '../camera/cameraMath';
-import { polygonBounds2D, type Vec2 } from '../scene/schema';
+import { polygonBounds2D, type LevelCode, type Vec2 } from '../scene/schema';
 import { getLevelByCode, wallsOfLevel } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore } from '../state/exploreStore';
+
+const VERTICAL_BUILDING_FLOORS: readonly LevelCode[] = ['B1', 'L1', 'L2', 'RF'] as const;
+
+const WALK_FLOOR_OPTIONS: readonly {
+  code: LevelCode;
+  shortLabel: string;
+  titleVi: string;
+  titleEn: string;
+}[] = [
+  { code: 'B1', shortLabel: 'B1', titleVi: 'Tầng hầm B1 · Hồ bơi Oasis', titleEn: 'Basement B1 · Oasis Pool' },
+  { code: 'L1', shortLabel: 'L1', titleVi: 'Tầng 1 · Sảnh & Gym', titleEn: 'Level 1 · Lobby & Gym' },
+  { code: 'L2', shortLabel: 'L2', titleVi: 'Tầng 2 · VIP & InBody', titleEn: 'Level 2 · VIP & InBody' },
+  { code: 'RF', shortLabel: 'RF', titleVi: 'Tầng thượng RF · Yoga', titleEn: 'Rooftop RF · Yoga' },
+  { code: 'OUT', shortLabel: 'OUT', titleVi: 'Ngoài trời · Sân Tennis', titleEn: 'Outdoor · Tennis Courts' },
+] as const;
+
+export function getNextVerticalWalkLevel(
+  current: LevelCode,
+  direction: 'up' | 'down',
+): LevelCode {
+  if (current === 'OUT') {
+    return direction === 'down' ? 'B1' : 'L2';
+  }
+  const idx = VERTICAL_BUILDING_FLOORS.indexOf(current);
+  if (idx === -1) return 'L1';
+  if (direction === 'down') {
+    return VERTICAL_BUILDING_FLOORS[Math.max(0, idx - 1)]!;
+  }
+  return VERTICAL_BUILDING_FLOORS[
+    Math.min(VERTICAL_BUILDING_FLOORS.length - 1, idx + 1)
+  ]!;
+}
 
 function isTypingElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -80,14 +113,14 @@ function WalkSceneOverlay({
 }
 
 const HUD_BTN_STYLE = {
-  minHeight: '28px',
-  minWidth: '28px',
-  padding: '0.15rem 0.42rem',
+  minHeight: '26px',
+  minWidth: '26px',
+  padding: '0.12rem 0.36rem',
   borderRadius: '999px',
   border: '1px solid var(--explore-border-accent)',
   background: 'var(--explore-chip-bg)',
   color: 'var(--explore-ink)',
-  fontSize: '0.74rem',
+  fontSize: '0.72rem',
   fontWeight: 700,
   cursor: 'pointer',
   lineHeight: 1,
@@ -101,7 +134,31 @@ export function WalkController() {
   const focusLevel = useExploreStore(state => state.focusLevel);
   const selectedId = useExploreStore(state => state.selectedId);
   const setWalkMode = useExploreStore(state => state.setWalkMode);
+  const setFocusLevel = useExploreStore(state => state.setFocusLevel);
   const flyToViewpoint = useExploreStore(state => state.flyToViewpoint);
+
+  const activeWalkLevel: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
+  const canGoDownFloor = activeWalkLevel !== 'B1';
+  const canGoUpFloor = activeWalkLevel !== 'RF';
+
+  const switchWalkFloor = useCallback(
+    (targetLevel: LevelCode) => {
+      setFocusLevel(targetLevel);
+    },
+    [setFocusLevel],
+  );
+
+  const stepWalkFloor = useCallback(
+    (direction: 'up' | 'down') => {
+      const storeLevel = useExploreStore.getState().focusLevel;
+      const curr: LevelCode = storeLevel === 'ALL' ? 'L1' : storeLevel;
+      const next = getNextVerticalWalkLevel(curr, direction);
+      if (next !== curr) {
+        setFocusLevel(next);
+      }
+    },
+    [setFocusLevel],
+  );
 
   const poseRef = useRef<WalkPose | null>(null);
   const headlampRef = useRef<THREE.PointLight | null>(null);
@@ -293,6 +350,25 @@ export function WalkController() {
       }
 
       const key = event.key.toLowerCase();
+      if (key === '[' || key === 'j') {
+        event.preventDefault();
+        stepWalkFloor('down');
+        return;
+      }
+      if (key === ']' || key === 'u') {
+        event.preventDefault();
+        stepWalkFloor('up');
+        return;
+      }
+      if (key >= '1' && key <= '5') {
+        event.preventDefault();
+        const opt = WALK_FLOOR_OPTIONS[Number(key) - 1];
+        if (opt) {
+          switchWalkFloor(opt.code);
+        }
+        return;
+      }
+
       if (
         key === 'w' ||
         key === 'a' ||
@@ -515,7 +591,7 @@ export function WalkController() {
         rafRef.current = null;
       }
     };
-  }, [walkMode, setWalkMode, commitWalkPose]);
+  }, [walkMode, setWalkMode, commitWalkPose, stepWalkFloor, switchWalkFloor]);
 
   if (!walkMode) {
     return null;
@@ -527,6 +603,9 @@ export function WalkController() {
       data-testid="explore3d-walk-hud"
       role="status"
       aria-live="polite"
+      onPointerDown={e => e.stopPropagation()}
+      onPointerUp={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
       style={{
         pointerEvents: 'auto',
       }}
@@ -541,16 +620,80 @@ export function WalkController() {
           flexShrink: 0,
         }}
       />
-      <span>
-        {t(
-          'WASD / Kéo chuột xoay 360° · Chạm sàn để di chuyển · Esc để thoát',
-          'WASD / Drag to look 360° · Click floor to move · Esc to exit',
-        )}
-      </span>
+      <span>{t('WASD · Xoay 360°', 'WASD · Look 360°')}</span>
+      <div
+        role="group"
+        aria-label={t('Thang máy & chuyển tầng khi đi bộ', 'Elevator and floor switcher in walk mode')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.18rem',
+          padding: '0.1rem 0.22rem',
+          borderRadius: '999px',
+          background: 'var(--explore-segment-bg)',
+        }}
+      >
+        <button
+          type="button"
+          className="explore3d-walk-hud__btn"
+          data-testid="walk-floor-down"
+          disabled={!canGoDownFloor}
+          onClick={() => stepWalkFloor('down')}
+          aria-label={t('Xuống tầng dưới / Tầng hầm ([ / J)', 'Go down a floor ([ / J)')}
+          title={t('Xuống tầng dưới / Tầng hầm ([ / J)', 'Go down a floor ([ / J)')}
+          style={{
+            ...HUD_BTN_STYLE,
+            opacity: canGoDownFloor ? 1 : 0.4,
+            cursor: canGoDownFloor ? 'pointer' : 'not-allowed',
+          }}
+        >
+          ▼
+        </button>
+        {WALK_FLOOR_OPTIONS.map(opt => {
+          const isCurrent = activeWalkLevel === opt.code;
+          return (
+            <button
+              key={opt.code}
+              type="button"
+              className="explore3d-walk-hud__btn"
+              data-testid={`walk-floor-${opt.code}`}
+              aria-pressed={isCurrent}
+              onClick={() => switchWalkFloor(opt.code)}
+              aria-label={t(opt.titleVi, opt.titleEn)}
+              title={t(opt.titleVi, opt.titleEn)}
+              style={{
+                ...HUD_BTN_STYLE,
+                padding: '0.15rem 0.46rem',
+                background: isCurrent ? 'var(--explore-accent)' : 'transparent',
+                color: isCurrent ? 'var(--explore-on-accent)' : 'var(--explore-ink)',
+                borderColor: isCurrent ? 'var(--explore-accent)' : 'transparent',
+              }}
+            >
+              {opt.shortLabel}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className="explore3d-walk-hud__btn"
+          data-testid="walk-floor-up"
+          disabled={!canGoUpFloor}
+          onClick={() => stepWalkFloor('up')}
+          aria-label={t('Lên tầng trên (] / U)', 'Go up a floor (] / U)')}
+          title={t('Lên tầng trên (] / U)', 'Go up a floor (] / U)')}
+          style={{
+            ...HUD_BTN_STYLE,
+            opacity: canGoUpFloor ? 1 : 0.4,
+            cursor: canGoUpFloor ? 'pointer' : 'not-allowed',
+          }}
+        >
+          ▲
+        </button>
+      </div>
       <div
         role="group"
         aria-label={t('Điều hướng góc nhìn và bước đi', 'Walk and look controls')}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
       >
         <button
           type="button"

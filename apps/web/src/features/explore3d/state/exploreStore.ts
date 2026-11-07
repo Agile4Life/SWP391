@@ -132,6 +132,15 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
         ? 'solo'
         : current.levelMode;
 
+    if (current.walkMode && lvl) {
+      set({
+        selectedId: id,
+        focusLevel: lvl.code,
+        levelMode: 'solo',
+      });
+      return;
+    }
+
     set({
       selectedId: id,
       focusLevel: nextFocusLevel,
@@ -161,6 +170,14 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       return;
     }
     const levelNodeId = `lvl-${level.toLowerCase()}`;
+    if (current.walkMode) {
+      set({
+        focusLevel: level,
+        levelMode: 'solo',
+        selectedId: levelNodeId,
+      });
+      return;
+    }
     set({
       focusLevel: level,
       levelMode: current.levelMode === 'stacked' ? 'solo' : current.levelMode,

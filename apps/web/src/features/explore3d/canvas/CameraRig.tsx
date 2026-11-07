@@ -234,6 +234,10 @@ export function CameraRig() {
     if (cameraCommand.seq === lastCommandSeqRef.current) return;
     lastCommandSeqRef.current = cameraCommand.seq;
 
+    if (walkMode && cameraCommand.kind !== 'viewpoint') {
+      return;
+    }
+
     const enableTransition = !prefersReducedMotion();
     const prevLevel = lastLevelRef.current;
 

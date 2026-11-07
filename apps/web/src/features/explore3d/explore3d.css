@@ -408,16 +408,16 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
   z-index: 22;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.32rem 0.5rem 0.32rem 0.75rem;
+  gap: 0.38rem;
+  padding: 0.26rem 0.45rem 0.26rem 0.65rem;
   border-radius: 999px;
   background: var(--explore-surface-elevated);
   border: 1px solid var(--explore-border-accent);
   color: var(--explore-ink);
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   box-shadow: var(--explore-shadow);
   backdrop-filter: blur(14px);
-  max-width: calc(100% - 13rem);
+  max-width: calc(100% - 1.5rem);
   overflow-x: auto;
   white-space: nowrap;
 }
