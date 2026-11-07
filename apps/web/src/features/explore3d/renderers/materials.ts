@@ -182,6 +182,7 @@ export class MaterialRegistry {
   public readonly plazaGround: THREE.MeshStandardMaterial;
   public readonly plazaGrid: THREE.LineBasicMaterial;
   public readonly plazaWalkway: THREE.MeshStandardMaterial;
+  public readonly vertexColored: THREE.MeshStandardMaterial;
   public readonly items: {
     equipmentFrame: THREE.MeshStandardMaterial;
     equipmentVipFrame: THREE.MeshStandardMaterial;
@@ -337,6 +338,14 @@ export class MaterialRegistry {
       metalness: 0.1,
     });
 
+    this.vertexColored = new THREE.MeshStandardMaterial({
+      name: 'arch-vertex-colored',
+      color: '#ffffff',
+      vertexColors: true,
+      roughness: 0.48,
+      metalness: 0.2,
+    });
+
     this.items = {
       equipmentFrame: new THREE.MeshStandardMaterial({
         name: 'item-equipment-frame',
@@ -455,6 +464,7 @@ export class MaterialRegistry {
     this.plazaGround.dispose();
     this.plazaGrid.dispose();
     this.plazaWalkway.dispose();
+    this.vertexColored.dispose();
     Object.values(this.items).forEach(m => m.dispose());
   }
 }

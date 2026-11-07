@@ -3,6 +3,11 @@ import { useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
+  buildCampusGeometry,
+  buildCampusSignageGeometry,
+  createCampusSignageTexture,
+} from '../renderers/architecture/buildCampusGeometry';
+import {
   getExploreThemePalette,
   useDocumentTheme,
   useExploreMaterials,
@@ -44,6 +49,8 @@ export function buildPlazaGridGeometry(
   return geom;
 }
 
+const SHARED_PLAZA_PLANE = new THREE.PlaneGeometry(1, 1);
+
 export function Environment() {
   const theme = useDocumentTheme();
   const palette = getExploreThemePalette(theme);
@@ -58,23 +65,54 @@ export function Environment() {
       : focusLevel === 'B1'
         ? -4.82
         : PLAZA_BOUNDS.y;
-  const showEntranceWalkway = levelMode !== 'exploded' && focusLevel !== 'B1';
+
+  const campusGeometry = useMemo(() => buildCampusGeometry(theme), [theme]);
+  const showRooftopSigns =
+    levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'RF';
+  const rooftopOffsetY = levelMode === 'exploded' ? 12.0 : 0;
+
+  const signageGeometry = useMemo(
+    () => buildCampusSignageGeometry(rooftopOffsetY, showRooftopSigns),
+    [rooftopOffsetY, showRooftopSigns],
+  );
+  const signageMaterialBundle = useMemo(() => {
+    const tex = createCampusSignageTexture();
+    const mat = new THREE.MeshBasicMaterial({
+      name: 'sol-campus-signage-atlas-mat',
+      map: tex ?? undefined,
+      color: tex ? '#ffffff' : '#ce9180',
+      side: THREE.DoubleSide,
+    });
+    return { tex, mat };
+  }, []);
 
   useEffect(() => {
     invalidate();
-  }, [theme, plazaY, showEntranceWalkway, invalidate]);
+  }, [theme, plazaY, levelMode, focusLevel, invalidate]);
+
+  useEffect(() => {
+    return () => {
+      campusGeometry.dispose();
+    };
+  }, [campusGeometry]);
+
+  useEffect(() => {
+    return () => {
+      signageGeometry.dispose();
+    };
+  }, [signageGeometry]);
+
+  useEffect(() => {
+    return () => {
+      signageMaterialBundle.mat.dispose();
+      signageMaterialBundle.tex?.dispose();
+    };
+  }, [signageMaterialBundle]);
 
   const plazaWidth = PLAZA_BOUNDS.maxX - PLAZA_BOUNDS.minX;
   const plazaDepth = PLAZA_BOUNDS.maxZ - PLAZA_BOUNDS.minZ;
   const plazaCenterX = (PLAZA_BOUNDS.minX + PLAZA_BOUNDS.maxX) * 0.5;
   const plazaCenterZ = (PLAZA_BOUNDS.minZ + PLAZA_BOUNDS.maxZ) * 0.5;
-
-  const walkwayWidth = ENTRANCE_WALKWAY_BOUNDS.maxX - ENTRANCE_WALKWAY_BOUNDS.minX;
-  const walkwayDepth = ENTRANCE_WALKWAY_BOUNDS.maxZ - ENTRANCE_WALKWAY_BOUNDS.minZ;
-  const walkwayCenterX =
-    (ENTRANCE_WALKWAY_BOUNDS.minX + ENTRANCE_WALKWAY_BOUNDS.maxX) * 0.5;
-  const walkwayCenterZ =
-    (ENTRANCE_WALKWAY_BOUNDS.minZ + ENTRANCE_WALKWAY_BOUNDS.maxZ) * 0.5;
 
   const gridGeometry = useMemo(() => buildPlazaGridGeometry(), []);
 
@@ -87,18 +125,18 @@ export function Environment() {
   return (
     <>
       <color attach="background" args={[palette.canvasBg]} />
-      <fog attach="fog" args={[palette.fogColor, 85, 195]} />
+      <fog attach="fog" args={[palette.fogColor, 88, 205]} />
 
       <group name="sol-plaza-environment">
         {/* Ground Plaza Plane [-45..58] X, [-30..30] Z */}
         <mesh
           position={[plazaCenterX, plazaY, plazaCenterZ]}
           rotation={[-Math.PI / 2, 0, 0]}
+          scale={[plazaWidth, plazaDepth, 1]}
+          geometry={SHARED_PLAZA_PLANE}
           material={materials.plazaGround}
           receiveShadow
-        >
-          <planeGeometry args={[plazaWidth, plazaDepth]} />
-        </mesh>
+        />
 
         {/* Subtle Architectural Grid Lines */}
         <lineSegments
@@ -107,17 +145,20 @@ export function Environment() {
           material={materials.plazaGrid}
         />
 
-        {/* Salmon Entrance Walkway at South Facade (z = 16..22) */}
-        {showEntranceWalkway && (
-          <mesh
-            position={[walkwayCenterX, ENTRANCE_WALKWAY_BOUNDS.y, walkwayCenterZ]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            material={materials.plazaWalkway}
-            receiveShadow
-          >
-            <planeGeometry args={[walkwayWidth, walkwayDepth]} />
-          </mesh>
-        )}
+        {/* Full 3D Exterior Campus: Main Gate, Guard Booth, Car & Motorbike Parking, EV Chargers, Fountain, Canopy, Trees & Streetlamps */}
+        <mesh
+          name="sol-campus-architecture"
+          geometry={campusGeometry}
+          material={materials.vertexColored}
+          receiveShadow
+        />
+
+        {/* Illuminated 3D Rooftop Sky-Signs, Gate Sign, Lobby Canopy Sign, Parking & Tennis Signs */}
+        <mesh
+          name="sol-campus-signage"
+          geometry={signageGeometry}
+          material={signageMaterialBundle.mat}
+        />
       </group>
     </>
   );
