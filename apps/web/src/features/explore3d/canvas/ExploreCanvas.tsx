@@ -1,5 +1,6 @@
 import { Canvas, type RootState } from '@react-three/fiber';
 import { useCallback, useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import type { ResolvedSceneBindings } from '../data/bindings';
 import { BenchmarkRunner } from '../perf/BenchmarkRunner';
 import { PerformanceGovernor } from '../perf/PerformanceGovernor';
@@ -13,6 +14,7 @@ import { Hotspots } from './Hotspots';
 import { ItemInstances } from './ItemInstances';
 import { LevelStack } from './LevelStack';
 import { Lights } from './Lights';
+import { LiveActivityActors } from './LiveActivityActors';
 import { Picking, handleCanvasPointerMissed } from './Picking';
 import { Pool } from './Pool';
 import { SelectionHighlight } from './SelectionHighlight';
@@ -30,8 +32,8 @@ const GL_CONFIG = {
 const INITIAL_CAMERA_CONFIG = {
   position: [46, 36, 48] as [number, number, number],
   fov: 38,
-  near: 0.1,
-  far: 260,
+  near: 0.05,
+  far: 380,
 };
 
 export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasProps) {
@@ -52,6 +54,11 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
     if (cleanupListenersRef.current) {
       cleanupListenersRef.current();
       cleanupListenersRef.current = null;
+    }
+
+    if ('toneMapping' in state.gl) {
+      state.gl.toneMapping = THREE.ACESFilmicToneMapping;
+      state.gl.toneMappingExposure = 1.08;
     }
 
     const domElement = state.gl.domElement;
@@ -110,6 +117,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
         <Pool />
         <ItemInstances resolvedItems={bindings?.items} />
       </Picking>
+      <LiveActivityActors benchEnabled={benchEnabled} />
       <SelectionHighlight />
       <Hotspots />
       <WalkController />
