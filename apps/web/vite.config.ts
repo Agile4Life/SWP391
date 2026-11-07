@@ -12,6 +12,7 @@ export default defineConfig({
       const assets = Object.keys(bundle).filter(path => path.startsWith('assets/') && !path.endsWith('.map')).map(path => '/' + path);
       const precache = new Set<string>();
       const addChunk = (name: string) => {
+        if (name.includes('three-vendor') || name.includes('ExplorePage')) return;
         const chunk = bundle[name];
         if (chunk?.type !== 'chunk' || precache.has('/' + name)) return;
         precache.add('/' + name);
@@ -19,7 +20,13 @@ export default defineConfig({
       };
       for (const file of Object.values(bundle)) {
         if (file.type === 'chunk' && file.isEntry) addChunk(file.fileName);
-        if (file.fileName.endsWith('.css')) precache.add('/' + file.fileName);
+        if (
+          file.fileName.endsWith('.css') &&
+          !file.fileName.includes('ExplorePage') &&
+          !file.fileName.includes('explore3d')
+        ) {
+          precache.add('/' + file.fileName);
+        }
       }
       this.emitFile({ type: 'asset', fileName: 'sw.js', source: createWorkerSource(Date.now().toString(36), assets, [...precache]) });
     },
@@ -38,6 +45,18 @@ export default defineConfig({
           }
           if (normalized.includes('node_modules/react-router')) {
             return 'router-vendor';
+          }
+          if (
+            normalized.includes('node_modules/three') ||
+            normalized.includes('node_modules/@react-three/') ||
+            normalized.includes('node_modules/camera-controls') ||
+            normalized.includes('node_modules/troika-') ||
+            normalized.includes('node_modules/three-mesh-bvh') ||
+            normalized.includes('node_modules/three-stdlib') ||
+            normalized.includes('node_modules/maath') ||
+            normalized.includes('node_modules/meshline')
+          ) {
+            return 'three-vendor';
           }
         },
       },
