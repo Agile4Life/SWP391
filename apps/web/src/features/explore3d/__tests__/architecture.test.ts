@@ -13,6 +13,11 @@ import {
   splitWallIntoSegments,
 } from '../renderers/architecture/buildLevelGeometry';
 import {
+  buildCampusGeometry,
+  buildCampusSignageGeometry,
+} from '../renderers/architecture/buildCampusGeometry';
+import { buildLevelInteriorDetailsGeometry } from '../renderers/architecture/buildInteriorDetails';
+import {
   collectSceneExteriorWallDescriptors,
   computeCutawayWallIds,
   computeWallCameraDot,
@@ -102,6 +107,28 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       // Interior opaque & glass wall buckets must be valid (OUT has only exterior fence walls)
       assertValidBufferGeometry(built.interiorOpaqueGeometry, levelId === 'lvl-out');
       assertValidBufferGeometry(built.glassWallGeometry, levelId === 'lvl-out');
+
+      // Interior details geometry must be non-empty and vertex-colored on all 5 levels
+      expect(built.interiorDetailsGeometry.getAttribute('position').count).toBeGreaterThan(100);
+      expect(built.interiorDetailsGeometry.getAttribute('color')).toBeDefined();
+    });
+
+    it('builds comprehensive exterior campus & signage geometries without NaN vertices', () => {
+      const campusDark = buildCampusGeometry('dark');
+      expect(campusDark.getAttribute('position').count).toBeGreaterThan(1000);
+      expect(campusDark.getAttribute('color')).toBeDefined();
+      campusDark.dispose();
+
+      const signageGeom = buildCampusSignageGeometry();
+      assertValidBufferGeometry(signageGeom);
+      expect(signageGeom.getAttribute('position').count).toBeGreaterThanOrEqual(40);
+      signageGeom.dispose();
+
+      for (const code of ['B1', 'L1', 'L2', 'RF', 'OUT'] as const) {
+        const details = buildLevelInteriorDetailsGeometry(code);
+        expect(details.getAttribute('position').count).toBeGreaterThan(100);
+        details.dispose();
+      }
     });
 
     it('merges arbitrary BufferGeometries with typed arrays without NaN vertices', () => {

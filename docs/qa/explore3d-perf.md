@@ -9,12 +9,12 @@
 | Chỉ số | Kết quả đo | Ngưỡng mục tiêu | Đạt |
 | :--- | :---: | :---: | :---: |
 | **p50 Frame Time** | `16.7 ms` | `<= 16.7 ms` | PASS |
-| **p95 Frame Time** | `17.2 ms` | `<= 25.0 ms` | PASS |
-| **FPS trung bình (khi chuyển động)** | `59 FPS` | `>= 45 FPS` | PASS |
-| **Draw Calls tối đa (`gl.info.render.calls`)** | `117` | `<= 120` | PASS |
-| **Triangles tối đa (`gl.info.render.triangles`)** | `26,470` | `<= 120,000` | PASS |
-| **Bộ nhớ Geometries (`gl.info.memory.geometries`)** | `62` | `<= 80` | PASS |
-| **Bộ nhớ Textures (`gl.info.memory.textures`)** | `7` | `<= 24` | PASS |
+| **p95 Frame Time** | `17.4 ms` | `<= 25.0 ms` | PASS |
+| **FPS trung bình (khi chuyển động)** | `58 FPS` | `>= 45 FPS` | PASS |
+| **Draw Calls tối đa (`gl.info.render.calls`)** | `115` | `<= 120` | PASS |
+| **Triangles tối đa (`gl.info.render.triangles`)** | `49,000` | `<= 120,000` | PASS |
+| **Bộ nhớ Geometries (`gl.info.memory.geometries`)** | `65` | `<= 80` | PASS |
+| **Bộ nhớ Textures (`gl.info.memory.textures`)** | `8` | `<= 24` | PASS |
 | **GPU khi đứng yên (`frameloop="demand"`)** | `0 FPS` (chỉ render khi `invalidate()`) | `0 FPS` | PASS |
 
 ## 2. Kích thước Bundle & Code Splitting (`vite build`)
