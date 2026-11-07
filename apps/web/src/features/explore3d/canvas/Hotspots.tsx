@@ -16,10 +16,11 @@ import { allHotspots, hotspotsOfLevel, levelOf, zoneOf } from '../scene/selector
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
 
-export const MAX_ACTIVE_HOTSPOTS = 18;
+export const MAX_ACTIVE_HOTSPOTS = 0;
 
 export interface HotspotsProps {
   scene?: SceneDoc;
+  showLabels?: boolean;
 }
 
 export function computeHotspotWorldPosition(
@@ -32,26 +33,19 @@ export function computeHotspotWorldPosition(
   return [hotspot.position[0], hotspot.position[1] + extraY, hotspot.position[2]];
 }
 
-const STACKED_OVERVIEW_HOTSPOT_IDS = new Set([
-  'hs-rf-zen',
-  'hs-rf-yoga',
-  'hs-l2-inbody',
-  'hs-l1-packages',
-  'hs-l1-concierge',
-  'hs-l1-supplement',
-  'hs-out-tennis',
-  'hs-l1-main-gate',
-  'hs-l1-parking',
-]);
-
 export function getVisibleHotspots(
   scene: SceneDoc,
   focusLevel: LevelCode | 'ALL',
   selectedId: string | null,
   hoveredId: string | null,
+  showLabels = false,
 ): HotspotNode[] {
+  if (!showLabels) {
+    return [];
+  }
+
   if (focusLevel !== 'ALL') {
-    return hotspotsOfLevel(scene, focusLevel).slice(0, MAX_ACTIVE_HOTSPOTS);
+    return hotspotsOfLevel(scene, focusLevel).slice(0, 1);
   }
 
   const selectedZoneId = zoneOf(scene, selectedId)?.id ?? null;
@@ -59,12 +53,10 @@ export function getVisibleHotspots(
 
   const all = allHotspots(scene);
   if (!selectedId && !hoveredId) {
-    return all.filter(hs => STACKED_OVERVIEW_HOTSPOT_IDS.has(hs.id));
+    return [];
   }
 
   const prioritized: HotspotNode[] = [];
-  const primaryRest: HotspotNode[] = [];
-
   for (const hs of all) {
     const isDirectMatch = hs.id === selectedId || hs.id === hoveredId;
     const isZoneMatch =
@@ -73,12 +65,10 @@ export function getVisibleHotspots(
 
     if (isDirectMatch || isZoneMatch) {
       prioritized.push(hs);
-    } else if (hs.priority === 'primary') {
-      primaryRest.push(hs);
     }
   }
 
-  return [...prioritized, ...primaryRest].slice(0, MAX_ACTIVE_HOTSPOTS);
+  return prioritized.slice(0, 1);
 }
 
 function ProjectedHotspot({
@@ -178,7 +168,7 @@ function ProjectedHotspot({
   return null;
 }
 
-export function Hotspots({ scene = SOL_CENTER_SCENE }: HotspotsProps) {
+export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: HotspotsProps) {
   const { t } = useI18n();
   const r3fStore = useContext(r3fContext);
 
@@ -188,9 +178,13 @@ export function Hotspots({ scene = SOL_CENTER_SCENE }: HotspotsProps) {
   const hoveredId = useExploreStore(s => s.hoveredId);
 
   const visibleHotspots = useMemo(
-    () => getVisibleHotspots(scene, focusLevel, selectedId, hoveredId),
-    [scene, focusLevel, selectedId, hoveredId],
+    () => getVisibleHotspots(scene, focusLevel, selectedId, hoveredId, showLabels),
+    [scene, focusLevel, selectedId, hoveredId, showLabels],
   );
+
+  if (visibleHotspots.length === 0) {
+    return null;
+  }
 
   const handleHotspotClick = (hotspot: HotspotNode) => {
     const state = useExploreStore.getState();
