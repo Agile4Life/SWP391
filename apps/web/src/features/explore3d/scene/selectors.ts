@@ -342,27 +342,52 @@ export function resolveDeepLinkNode(doc: SceneDoc, key: string | null | undefine
 
   const normalized = normalizeSearchText(trimmed);
 
-  // Match zone code or roomName or discipline
+  // Match zone code, id, bilingual name, or roomName
   for (const z of allZones(doc)) {
     if (
       normalizeSearchText(z.code) === normalized ||
       normalizeSearchText(z.id) === normalized ||
+      normalizeSearchText(z.name.vi) === normalized ||
+      normalizeSearchText(z.name.en) === normalized ||
       (z.liveBinding?.roomName && normalizeSearchText(z.liveBinding.roomName) === normalized)
     ) {
       return z;
     }
   }
 
-  // Match item id, courtName, or equipmentCode (slot 0)
+  // Match item id, bilingual name, courtName, or equipmentCode (slot 0)
   for (const item of allItems(doc)) {
     if (
       normalizeSearchText(item.id) === normalized ||
+      normalizeSearchText(item.name.vi) === normalized ||
+      normalizeSearchText(item.name.en) === normalized ||
       (item.liveCourtBinding?.courtName &&
         normalizeSearchText(item.liveCourtBinding.courtName) === normalized) ||
       (item.liveEquipmentBinding?.equipmentCode &&
         normalizeSearchText(item.liveEquipmentBinding.equipmentCode) === normalized)
     ) {
       return item;
+    }
+  }
+
+  // Match hotspot id or bilingual title
+  for (const hs of allHotspots(doc)) {
+    if (
+      normalizeSearchText(hs.id) === normalized ||
+      normalizeSearchText(hs.title.vi) === normalized ||
+      normalizeSearchText(hs.title.en) === normalized
+    ) {
+      return hs;
+    }
+  }
+
+  // Match level id or code
+  for (const lvl of getLevels(doc)) {
+    if (
+      normalizeSearchText(lvl.id) === normalized ||
+      normalizeSearchText(lvl.code) === normalized
+    ) {
+      return lvl;
     }
   }
 

@@ -78,6 +78,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
     closeButton.current?.focus();
     const close = () => { setOpen(false); trigger.current?.focus(); };
     const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (event.key === 'Escape') { event.preventDefault(); close(); }
     };
     const onPointer = (event: PointerEvent) => {

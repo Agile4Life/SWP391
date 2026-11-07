@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useI18n } from '../../shared/i18n';
 
 /** Bàn phím vật lý: Enter gửi, Shift + Enter xuống dòng. Màn hình cảm ứng giữ Enter để xuống dòng. */
@@ -19,6 +19,20 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
   const [emojiOpen, setEmojiOpen] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const canSend = !disabled && !sending && value.trim().length > 0;
+
+  useEffect(() => {
+    if (!emojiOpen || disabled) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setEmojiOpen(false);
+        input.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [emojiOpen, disabled]);
 
   // Ô nhập tự giãn theo nội dung tới tối đa ~4 dòng rồi cuộn bên trong.
   useLayoutEffect(() => {
@@ -58,7 +72,7 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
         disabled={disabled} onChange={event => onChange(event.target.value)} placeholder={placeholder ?? t('Nhắn tin...', 'Message...')}
         aria-describedby={error ? errorId : hintId}
         onKeyDown={event => {
-          if (event.key === 'Escape' && emojiOpen) { event.stopPropagation(); setEmojiOpen(false); return; }
+          if (event.key === 'Escape' && emojiOpen) { event.preventDefault(); event.stopPropagation(); setEmojiOpen(false); return; }
           if (event.key === 'Enter' && !event.nativeEvent.isComposing && (event.ctrlKey || event.metaKey || (quickSend && !event.shiftKey))) {
             event.preventDefault(); submit();
           }

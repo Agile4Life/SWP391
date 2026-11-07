@@ -33,7 +33,9 @@ export function parseExploreSearchParams(searchParams: URLSearchParams): ParsedE
 
   const rawItem = searchParams.get('item');
   const rawFocus = searchParams.get('focus');
-  const resolved = resolveDeepLinkNode(SOL_CENTER_SCENE, rawItem ?? rawFocus);
+  const resolved =
+    resolveDeepLinkNode(SOL_CENTER_SCENE, rawItem) ??
+    resolveDeepLinkNode(SOL_CENTER_SCENE, rawFocus);
   if (resolved) {
     result.selectedId = resolved.id;
     const inferredLevel = levelOf(SOL_CENTER_SCENE, resolved.id);

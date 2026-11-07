@@ -141,6 +141,13 @@ describe('mobile portal navigation', () => {
     expect(host.querySelector('.member-ai-chat')).toBeNull();
   });
 
+  it('hides floating chat widget on /staff/check-in scanner route', async () => {
+    const router = await renderPortal('STAFF', '/staff/dashboard');
+    expect(host.querySelector('.chat-widget')).not.toBeNull();
+    await act(async () => router.navigate('/staff/check-in'));
+    expect(host.querySelector('.chat-widget')).toBeNull();
+  });
+
   it('closes install help before closing its parent navigation menu', async () => {
     await renderPortal('MEMBER', '/member/dashboard');
     await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Thêm màn hình"]')!.click());

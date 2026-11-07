@@ -22,7 +22,8 @@ const failure = (error: unknown) => error instanceof ApiError ? error : 'Không 
 export function StaffSupportPage() {
   const { t } = useStaffI18n();
   // Receptionists take every complaint first; managers only receive what a receptionist escalates.
-  const isManager = getCurrentUser()?.role === 'MANAGER';
+  const role = getCurrentUser()?.role;
+  const isManager = role === 'MANAGER' || role === 'CENTER_MANAGER';
   const [escalating, setEscalating] = useState(false), [escalationReason, setEscalationReason] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]), [page, setPage] = useState(0), [pages, setPages] = useState(0), [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true), [listError, setListError] = useState<StaffMessage>('');
@@ -94,7 +95,7 @@ export function StaffSupportPage() {
 
   function close() {
     returnFocus.current = listFocus.current?.querySelector<HTMLElement>(`[data-support-ticket="${selection.current}"]`) ?? listFocus.current;
-    selection.current = null; detailGeneration.current++; setSelected(null); setTicket(null);
+    selection.current = null; detailGeneration.current++; setSelected(null); setTicket(null); setEscalating(false); setEscalationReason('');
   }
   function changeQuery(nextPage: number, nextFilter: string) {
     // Invalidate old responses immediately; pending mutations use this latest query.
@@ -133,8 +134,7 @@ export function StaffSupportPage() {
   function submitEscalation(event: FormEvent) {
     event.preventDefault();
     const reason = escalationReason.trim();
-    if (!ticket || !reason || reason.length > 500) return;
-    if (!ticket || !reason || reason.length > 500 || isBusy) return;
+    if (!ticket || !canEscalate(ticket) || !reason || reason.length > 500 || isBusy) return;
     void actOnTicket(async () => { const updated = await escalateSupportTicket(ticket.id, reason); if (alive.current) { setEscalating(false); setEscalationReason(''); } return updated; }, undefined, 'Đã chuyển khiếu nại lên quản lý.');
   }
   return <div data-i18n-managed className="portal-container member-support staff-support">
@@ -142,7 +142,7 @@ export function StaffSupportPage() {
     <p role="status" className="member-support-context">{t(connections[connection])}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">{t("Trạng thái")}</label><Select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">{t("Tất cả")}</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</Select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>
-      {loading ? <LoadingSkeleton label={t("Đang tải phiếu hỗ trợ…")} count={4} /> : listError ? <div role="alert"><p>{t(listError)}</p><button className="member-support-link" onClick={() => void loadList()}>{t("Thử lại")}</button></div> : !tickets.length ? <p className="portal-empty">{t("Không có phiếu hỗ trợ phù hợp.")}</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} data-support-ticket={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{t(labels[item.status])}</span>{item.escalatedAt && !isManager && <span className="member-support-status member-support-status--escalated">{t("Đã chuyển quản lý")}</span>}</span><span className="member-support-meta">{item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`)} · {formatCenterDateTime(item.createdAt)} · {item.assignedToName || t('Chưa phân công')}</span></button>)}</div>}
+      {loading ? <LoadingSkeleton label={t("Đang tải phiếu hỗ trợ…")} count={4} /> : listError ? <div role="alert"><p>{t(listError)}</p><button className="member-support-link" onClick={() => void loadList()}>{t("Thử lại")}</button></div> : !tickets.length ? <p className="portal-empty">{t("Không có phiếu hỗ trợ phù hợp.")}</p> : <div className="member-support-list">{tickets.map(item => <button key={item.id} data-support-ticket={item.id} className="member-support-ticket" aria-haspopup="dialog" onClick={event => { returnFocus.current = event.currentTarget; selection.current = item.id; detailGeneration.current++; setTicket(null); setMessages([]); setDetailError(''); setEscalating(false); setEscalationReason(''); setSelected(item.id); }}><span className="member-support-ticket-top"><strong>#{item.id} · {item.subject}</strong><span className={`member-support-status member-support-status--${item.status}`}>{t(labels[item.status])}</span>{item.escalatedAt && !isManager && <span className="member-support-status member-support-status--escalated">{t("Đã chuyển quản lý")}</span>}</span><span className="member-support-meta">{item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`)} · {formatCenterDateTime(item.createdAt)} · {item.assignedToName || t('Chưa phân công')}</span></button>)}</div>}
       {!loading && !listError && pages > 1 && <div className="member-support-pages"><button disabled={!page} onClick={() => changeQuery(page - 1, filter)}>{t("Trước")}</button><span>{page + 1}/{pages}</span><button disabled={page + 1 >= pages} onClick={() => changeQuery(page + 1, filter)}>{t("Sau")}</button></div>}
     </section>
     {selected !== null && <Modal title={t(`Hỗ trợ · Phiếu #${selected}`, `Support · Ticket #${selected}`)} onClose={close} returnFocusRef={returnFocus}><div className="member-support-conversation">

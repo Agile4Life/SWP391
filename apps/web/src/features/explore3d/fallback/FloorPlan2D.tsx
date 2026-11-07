@@ -86,6 +86,74 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
     }
   }, [selectedId]);
 
+  // Global keyboard shortcuts when 2D floor plan is active (0..5, F, R, Esc, /)
+  useEffect(() => {
+    const isTypingElement = (target: EventTarget | null): boolean => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      return target.isContentEditable;
+    };
+
+    const handleWindowKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (isTypingElement(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const state = useExploreStore.getState();
+
+      if (event.key === 'Escape') {
+        if (state.searchOpen) {
+          state.setSearchOpen(false);
+        } else if (state.tourActive) {
+          state.stopTour();
+        } else if (state.selectedId) {
+          state.selectNode(null);
+        }
+        return;
+      }
+
+      if (event.key === '/') {
+        event.preventDefault();
+        state.setSearchOpen(true);
+        return;
+      }
+
+      if (event.key === '0') {
+        event.preventDefault();
+        state.setFocusLevel('ALL');
+        return;
+      }
+
+      if (event.key >= '1' && event.key <= '5') {
+        event.preventDefault();
+        const levelIndex = Number(event.key) - 1;
+        const levelCode = LEVEL_ORDER[levelIndex];
+        if (levelCode) {
+          setActiveLevel(levelCode);
+          state.setFocusLevel(levelCode);
+        }
+        return;
+      }
+
+      if (event.key === 'f' || event.key === 'F') {
+        if (state.selectedId) {
+          event.preventDefault();
+          state.flyToNode(state.selectedId, true);
+        }
+        return;
+      }
+
+      if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        state.flyToOverview();
+      }
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, []);
+
   const levelNode = getLevelByCode(SOL_CENTER_SCENE, activeLevel) ?? getLevelByCode(SOL_CENTER_SCENE, 'L1')!;
   const zones = zonesOfLevel(SOL_CENTER_SCENE, levelNode.code);
   const walls = wallsOfLevel(SOL_CENTER_SCENE, levelNode.code);

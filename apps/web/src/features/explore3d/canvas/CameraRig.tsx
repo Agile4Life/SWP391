@@ -326,6 +326,7 @@ export function CameraRig() {
   // Keyboard shortcuts and custom zoom events
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (isTypingElement(event.target)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 

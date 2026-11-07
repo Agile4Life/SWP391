@@ -15,6 +15,7 @@ import {
 } from '../data/bindings';
 import { FloorPlan2D } from '../fallback/FloorPlan2D';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
+import { parseExploreSearchParams } from '../state/deepLink';
 import { useExploreStore } from '../state/exploreStore';
 
 const SEED_SNAPSHOT: LiveCenterSnapshot = {
@@ -275,5 +276,74 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     clickTestId('explore3d-search-hit-zone-l1-gym');
     expect(useExploreStore.getState().selectedId).toBe('zone-l1-gym');
     expect(useExploreStore.getState().searchOpen).toBe(false);
+  });
+
+  it('supports keyboard shortcuts (0..5, /, Escape, R) in FloorPlan2D without Escape collision when search modal is open', () => {
+    const liveBindings = resolveBindings(SOL_CENTER_SCENE, SEED_SNAPSHOT);
+    renderUi(
+      <>
+        <FloorPlan2D bindings={liveBindings} />
+        <ExploreSearchModal />
+      </>,
+    );
+
+    act(() => {
+      useExploreStore.getState().selectNode('zone-l1-gym');
+    });
+    expect(useExploreStore.getState().selectedId).toBe('zone-l1-gym');
+
+    // Press '3' -> switches to L2 (and selects lvl-l2)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true, cancelable: true }));
+    });
+    expect(useExploreStore.getState().focusLevel).toBe('L2');
+    expect(useExploreStore.getState().selectedId).toBe('lvl-l2');
+
+    // Select a zone on L2
+    act(() => {
+      useExploreStore.getState().selectNode('zone-l2-vip-gym');
+    });
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+
+    // Press '/' -> opens search modal
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true }));
+    });
+    expect(useExploreStore.getState().searchOpen).toBe(true);
+
+    // Focus close button inside modal (non-input) and press Escape: closes modal ONLY, preserves selectedId
+    const closeBtn = container.querySelector<HTMLElement>('[data-testid="explore3d-search-close"]');
+    closeBtn?.focus();
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    });
+    expect(useExploreStore.getState().searchOpen).toBe(false);
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+
+    // Pressing Escape again with modal closed clears selectedId
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    });
+    expect(useExploreStore.getState().selectedId).toBeNull();
+  });
+
+  it('parses deep links with empty item fallback, hotspot IDs, and bilingual zone names', () => {
+    const emptyItemFallback = parseExploreSearchParams(
+      new URLSearchParams('item=&focus=zone-l1-gym'),
+    );
+    expect(emptyItemFallback.selectedId).toBe('zone-l1-gym');
+    expect(emptyItemFallback.level).toBe('L1');
+
+    const hotspotLink = parseExploreSearchParams(
+      new URLSearchParams('focus=hs-l1-chat'),
+    );
+    expect(hotspotLink.selectedId).toBe('hs-l1-chat');
+    expect(hotspotLink.level).toBe('L1');
+
+    const bilingualNameLink = parseExploreSearchParams(
+      new URLSearchParams('focus=Phòng Gym VIP'),
+    );
+    expect(bilingualNameLink.selectedId).toBe('zone-l2-vip-gym');
+    expect(bilingualNameLink.level).toBe('L2');
   });
 });

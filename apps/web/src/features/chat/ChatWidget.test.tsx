@@ -176,3 +176,24 @@ it('switches widget status, dialog and action names in both languages', async ()
   expect(host.querySelector('.chat-widget__status')!.textContent).toBe('Đang kết nối…');
   expect(button('Đóng cửa sổ tin nhắn')).not.toBeNull();
 });
+
+it('closes only the emoji picker on Escape without closing the chat widget dialog', async () => {
+  await render();
+  await act(async () => button('Mở tin nhắn').click());
+  await settle();
+  const dialog = host.querySelector<HTMLElement>('[role="dialog"]')!;
+  expect(dialog.hidden).toBe(false);
+
+  const contact = [...host.querySelectorAll('button')].find(node => node.textContent?.includes('Coach Linh'))!;
+  await act(async () => contact.click());
+
+  const emojiBtn = button('Chọn biểu tượng cảm xúc');
+  await act(async () => emojiBtn.click());
+  expect(host.querySelector('.direct-chat__emoji-bar')).not.toBeNull();
+
+  await act(async () => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  });
+  expect(host.querySelector('.direct-chat__emoji-bar')).toBeNull();
+  expect(dialog.hidden).toBe(false);
+});

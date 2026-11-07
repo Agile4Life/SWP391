@@ -251,7 +251,7 @@ it('retains send failure after a realtime refresh and guards duplicate submit', 
   } finally { vi.useRealTimers(); }
 });
 
-const asRole = (role: 'STAFF' | 'MANAGER') => localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '1', name: 'Nhân viên', identifier: 'staff', role }));
+const asRole = (role: 'STAFF' | 'MANAGER' | 'CENTER_MANAGER') => localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '1', name: 'Nhân viên', identifier: 'staff', role }));
 const escalated: api.SupportTicket = { ...ticket, escalatedAt: '2026-11-02T09:30:00', escalatedByName: 'Lễ tân Hoa', escalationReason: 'Cần quản lý duyệt hoàn tiền' };
 const buttonByText = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === text);
 
@@ -282,15 +282,18 @@ it('locks an escalated complaint for the receptionist', async () => {
   expect(host.querySelector<HTMLSelectElement>('#staff-support-status')!.disabled).toBe(true);
 });
 
-it('shows managers the escalation reason and lets them reply', async () => {
-  asRole('MANAGER');
-  vi.mocked(api.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
-  vi.mocked(api.getSupportTicket).mockResolvedValue(escalated);
-  await render();
-  expect(host.textContent).toContain('Khiếu nại chuyển lên quản lý');
-  await open();
-  expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Cần quản lý duyệt hoàn tiền');
-  expect(buttonByText('Chuyển lên quản lý')).toBeUndefined();
-  expect(host.querySelector('.member-support-compose')).not.toBeNull();
-  expect(host.querySelector<HTMLSelectElement>('#staff-support-status')!.disabled).toBe(false);
+it('shows managers (MANAGER and CENTER_MANAGER) the escalation reason and lets them reply', async () => {
+  for (const managerRole of ['MANAGER', 'CENTER_MANAGER'] as const) {
+    asRole(managerRole);
+    vi.mocked(api.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
+    vi.mocked(api.getSupportTicket).mockResolvedValue(escalated);
+    await render();
+    expect(host.textContent).toContain('Khiếu nại chuyển lên quản lý');
+    await open();
+    expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Cần quản lý duyệt hoàn tiền');
+    expect(buttonByText('Chuyển lên quản lý')).toBeUndefined();
+    expect(host.querySelector('.member-support-compose')).not.toBeNull();
+    expect(host.querySelector<HTMLSelectElement>('#staff-support-status')!.disabled).toBe(false);
+    await close();
+  }
 });

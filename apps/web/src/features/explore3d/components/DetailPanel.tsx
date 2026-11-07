@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../../shared/i18n';
+import { formatCenterDate } from '../../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import type {
   LiveCenterSnapshot,
@@ -478,7 +479,7 @@ export function DetailPanel({
                   <div className="explore3d-session-item__title">{session.className}</div>
                   <div className="explore3d-session-item__meta">
                     <span>
-                      {session.sessionDate} · {session.startTime.slice(0, 5)} –{' '}
+                      {formatCenterDate(session.sessionDate)} · {session.startTime.slice(0, 5)} –{' '}
                       {session.endTime.slice(0, 5)}
                     </span>
                     {session.coachName && <span>· {session.coachName}</span>}

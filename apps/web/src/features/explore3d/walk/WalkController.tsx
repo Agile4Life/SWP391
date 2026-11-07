@@ -301,6 +301,10 @@ export function WalkController() {
     if (!walkMode) return;
 
     const applyStep = (dtSec: number) => {
+      if (useExploreStore.getState().searchOpen) {
+        pressedKeysRef.current.clear();
+        return;
+      }
       const currentPose = poseRef.current;
       if (!currentPose) return;
 
@@ -371,6 +375,11 @@ export function WalkController() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (useExploreStore.getState().searchOpen) {
+        pressedKeysRef.current.clear();
+        return;
+      }
       if (isTypingElement(event.target)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
