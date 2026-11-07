@@ -92,7 +92,8 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
 
   const slabBounds = polygonBounds2D(levelNode.slabPolygon);
   const pad = 3.5;
-  const viewBox = `${slabBounds.minX - pad} ${slabBounds.minZ - pad} ${slabBounds.maxX - slabBounds.minX + pad * 2} ${slabBounds.maxZ - slabBounds.minZ + pad * 2}`;
+  const southExtraPad = levelNode.code === 'L1' ? 8.5 : 0;
+  const viewBox = `${slabBounds.minX - pad} ${slabBounds.minZ - pad} ${slabBounds.maxX - slabBounds.minX + pad * 2} ${slabBounds.maxZ - slabBounds.minZ + pad * 2 + southExtraPad}`;
 
   const handleSvgKeySelect = (event: KeyboardEvent, nodeId: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -163,6 +164,106 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             stroke="rgba(206, 145, 128, 0.32)"
             strokeWidth={0.22}
           />
+
+          {/* L1 Exterior Campus Forecourt: Car/EV Parking, Main Gate, Fountain & Motorbike Shelter */}
+          {levelNode.code === 'L1' && (
+            <g className="explore3d-svg-campus" data-testid="floorplan-campus-forecourt">
+              {/* Car & EV Solar Parking Court */}
+              <rect
+                x={-22}
+                y={16.8}
+                width={16.2}
+                height={5.8}
+                rx={0.4}
+                fill="rgba(30, 36, 46, 0.9)"
+                stroke="rgba(52, 211, 153, 0.45)"
+                strokeWidth={0.14}
+              />
+              {[-19.2, -16.5, -13.8, -11.1, -8.4].map(sx => (
+                <line
+                  key={sx}
+                  x1={sx}
+                  y1={17.1}
+                  x2={sx}
+                  y2={21.2}
+                  stroke="rgba(248, 250, 252, 0.35)"
+                  strokeWidth={0.08}
+                />
+              ))}
+              <text
+                x={-13.9}
+                y={19.6}
+                textAnchor="middle"
+                fill="#10b981"
+                fontSize={0.62}
+                fontWeight={700}
+              >
+                {t('P · BÃI ĐỖ Ô TÔ & SẠC EV', 'P · CAR & EV PARKING')}
+              </text>
+
+              {/* Main Entrance Gate, Guard Booth & Porte-Cochère Drop-Off */}
+              <rect
+                x={0.5}
+                y={16.4}
+                width={12.4}
+                height={7.4}
+                rx={0.4}
+                fill="rgba(206, 145, 128, 0.16)"
+                stroke="#ce9180"
+                strokeWidth={0.18}
+              />
+              <text
+                x={6.7}
+                y={18.6}
+                textAnchor="middle"
+                fill="#faf9f6"
+                fontSize={0.62}
+                fontWeight={700}
+              >
+                {t('MÁI ĐÓN SẢNH PORTE-COCHÈRE', 'PORTE-COCHÈRE DROP-OFF')}
+              </text>
+              <text
+                x={6.7}
+                y={22.8}
+                textAnchor="middle"
+                fill="#ce9180"
+                fontSize={0.68}
+                fontWeight={800}
+              >
+                {t('CỔNG CHÍNH SÖL · AN NINH 24/7', 'SÖL MAIN GATE · 24/7 SECURITY')}
+              </text>
+
+              {/* Reflection Fountain & Solar Car/EV + Motorbike Parking */}
+              <circle
+                cx={-1.8}
+                cy={19.6}
+                r={1.15}
+                fill="rgba(56, 189, 248, 0.35)"
+                stroke="#ce9180"
+                strokeWidth={0.12}
+              />
+              <rect
+                x={13.5}
+                y={16.8}
+                width={8.5}
+                height={5.8}
+                rx={0.4}
+                fill="rgba(30, 36, 46, 0.9)"
+                stroke="rgba(56, 189, 248, 0.45)"
+                strokeWidth={0.14}
+              />
+              <text
+                x={17.75}
+                y={19.8}
+                textAnchor="middle"
+                fill="#38bdf8"
+                fontSize={0.56}
+                fontWeight={700}
+              >
+                {t('P · Ô TÔ EV & XE MÁY', 'P · EV CAR & MOTORBIKE')}
+              </text>
+            </g>
+          )}
 
           {/* Clickable Zones */}
           {zones.map(zone => {

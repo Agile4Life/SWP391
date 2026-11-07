@@ -791,6 +791,32 @@ export function DetailPanel({
 
         {renderLiveDataBanner(bindings.hasLiveData && !error)}
 
+        {/* Campus & Exterior Viewpoints */}
+        {SOL_CENTER_SCENE.nodes['site-sol']?.type === 'site' &&
+          SOL_CENTER_SCENE.nodes['site-sol'].viewpoints.length > 0 && (
+            <div className="explore3d-subsection" data-testid="detail-campus-viewpoints">
+              <h3 className="explore3d-subsection-title">
+                {t('Góc nhìn ngoại cảnh & toàn khu', 'Campus & exterior viewpoints')}
+              </h3>
+              <div className="explore3d-chip-row">
+                {SOL_CENTER_SCENE.nodes['site-sol'].viewpoints.map(vp => (
+                  <button
+                    key={vp.id}
+                    type="button"
+                    className="explore3d-viewpoint-chip"
+                    data-testid={`campus-viewpoint-${vp.id}`}
+                    onClick={() => {
+                      setFocusLevel('ALL');
+                      flyToViewpoint(vp);
+                    }}
+                  >
+                    {vp.label ? (lang === 'en' ? vp.label.en : vp.label.vi) : vp.kind}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
         {/* Zones grouped by level */}
         <div className="explore3d-subsection">
           <h3 className="explore3d-subsection-title">

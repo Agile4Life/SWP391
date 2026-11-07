@@ -33,12 +33,15 @@ export function computeHotspotWorldPosition(
 }
 
 const STACKED_OVERVIEW_HOTSPOT_IDS = new Set([
+  'hs-rf-zen',
   'hs-rf-yoga',
   'hs-l2-inbody',
-  'hs-l1-badminton',
+  'hs-l1-packages',
   'hs-l1-concierge',
   'hs-l1-supplement',
   'hs-out-tennis',
+  'hs-l1-main-gate',
+  'hs-l1-parking',
 ]);
 
 export function getVisibleHotspots(

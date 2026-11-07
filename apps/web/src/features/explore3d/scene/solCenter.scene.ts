@@ -50,10 +50,26 @@ const siteNode: SiteNode = register({
     },
     {
       id: 'vp-site-front',
-      label: { vi: 'Mặt tiền SÖL', en: 'SÖL Facade' },
+      label: { vi: 'Mặt tiền & Biển hiệu SÖL', en: 'SÖL Facade & Signage' },
       kind: 'hero',
-      position: [0, 18, 42],
-      target: [0, 3, 4],
+      position: [2, 17, 44],
+      target: [2, 4, 8],
+      fov: 38,
+    },
+    {
+      id: 'vp-site-gate',
+      label: { vi: 'Cổng chính & Đài phun nước', en: 'Main Gate & Fountain' },
+      kind: 'hero',
+      position: [14, 11, 38],
+      target: [5.5, 2.4, 21],
+      fov: 38,
+    },
+    {
+      id: 'vp-site-parking',
+      label: { vi: 'Bãi đỗ xe Ô tô & Xe máy', en: 'Car, EV & Motorbike Parking' },
+      kind: 'hero',
+      position: [34, 15, 38],
+      target: [25, 1.5, 19.8],
       fov: 38,
     },
   ],
@@ -2090,6 +2106,48 @@ addHotspot(zoneOutTennis, {
     ctaLabel: { vi: 'Đặt Sân Tennis', en: 'Book Tennis Court' },
     secondaryTo: '/member/classes?discipline=Tennis',
     secondaryLabel: { vi: 'Lịch lớp Tennis', en: 'Tennis Classes' },
+  },
+});
+
+// 27. Main Entrance Gate & Porte-Cochère Plaza -> /member/check-in
+addHotspot(zoneL1Lobby, {
+  id: 'hs-l1-main-gate',
+  localPosition: [12.4, 3.6, 21.6],
+  title: { vi: 'Cổng chính SÖL & Chốt An ninh 24/7', en: 'SÖL Main Gate & 24/7 Security' },
+  subtitle: {
+    vi: 'Cổng chào kiến trúc SÖL, làn đón trả khách Porte-Cochère, đài phun nước cảnh quan và kiểm soát barrier tự động.',
+    en: 'Monumental SÖL entrance archway, porte-cochère drop-off loop, reflection fountain and automated barrier access.',
+  },
+  badge: 'GATE · ENTRY',
+  icon: 'scan',
+  priority: 'primary',
+  liveSummaryKey: 'checkin',
+  action: {
+    type: 'navigate',
+    to: '/member/check-in',
+    ctaLabel: { vi: 'Mở QR Check-in Hội viên', en: 'Open Member QR Check-in' },
+    secondaryTo: '/member/card',
+    secondaryLabel: { vi: 'Mở Thẻ hội viên', en: 'Open Member Card' },
+  },
+});
+
+// 28. Executive Car & EV Parking + Covered Motorbike Shelter -> /member/card
+addHotspot(zoneL1Lobby, {
+  id: 'hs-l1-parking',
+  localPosition: [21.2, 2.6, 20.2],
+  title: { vi: 'Bãi Đỗ Xe Ô tô (EV) & Nhà Xe Máy Có Mái Che', en: 'Solar Car & EV Parking + Motorbike Shelter' },
+  subtitle: {
+    vi: 'Bãi đỗ ô tô mái năng lượng mặt trời kèm 4 trạm sạc nhanh EV Supercharge và nhà để xe máy/xe đạp có mái che.',
+    en: 'Solar-canopy car parking with 4 EV fast chargers and covered motorbike & bicycle pavilion.',
+  },
+  badge: 'P · PARKING & EV',
+  icon: 'card',
+  priority: 'primary',
+  liveSummaryKey: 'card',
+  action: {
+    type: 'navigate',
+    to: '/member/card',
+    ctaLabel: { vi: 'Thẻ Gửi Xe Hội viên', en: 'Member Parking Pass' },
   },
 });
 
