@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
     List<StockMovement> findAllByVariant_IdOrderByCreatedAtDescIdDesc(Long variantId);
+
+    boolean existsByOrderIdAndReason(Long orderId, String reason);
 }

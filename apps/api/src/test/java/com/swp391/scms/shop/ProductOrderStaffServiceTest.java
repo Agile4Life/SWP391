@@ -228,5 +228,11 @@ class ProductOrderStaffServiceTest {
                 .thenReturn(new PageImpl<>(List.of()));
         service.list("paid", "  SOL-26 ", 0, 20);
         verify(orders).searchStaff(eq("paid"), eq(false), eq("sol-26"), any());
+
+        when(orders.searchStaff(eq(""), eq(true), eq(""), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        service.list("pending_payment", null, 0, 20);
+        service.list("counter_pending", null, 0, 20);
+        verify(orders, times(2)).searchStaff(eq(""), eq(true), eq(""), any());
     }
 }

@@ -76,9 +76,10 @@ export function ManagerProductsPage() {
     setOrdersLoading(true);
     setOrdersError('');
     try {
+      const statusParam = orderStatus === 'pending_payment' ? 'counter_pending' : orderStatus || undefined;
       const [pageRes, countsRes, summaryRes] = await Promise.all([
         shopApi.staff.listOrders({
-          status: orderStatus || undefined,
+          status: statusParam,
           q: orderQuery.trim() || undefined,
           page: orderPage,
           size: 20,

@@ -390,6 +390,12 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                   />
                 )}
 
+                {Boolean(detail.registrationNumber?.trim()) && (
+                  <p className="shop-detail__reg muted" style={{ margin: 0 }}>
+                    {sourceText("Số công bố: ")}{detail.registrationNumber!.trim()}
+                  </p>
+                )}
+
                 <ShopDisclaimer />
               </div>
             )

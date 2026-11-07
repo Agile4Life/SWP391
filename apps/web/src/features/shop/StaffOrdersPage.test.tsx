@@ -161,6 +161,11 @@ it('tabs show live counts and search filters by code, name or phone', async () =
   expect(shopApi.staff.listOrders).toHaveBeenLastCalledWith(
     expect.objectContaining({ status: 'paid', q: '0901234567', page: 0 }),
   );
+
+  await click('Chờ trả tại quầy');
+  expect(shopApi.staff.listOrders).toHaveBeenLastCalledWith(
+    expect.objectContaining({ status: 'counter_pending', q: '0901234567', page: 0 }),
+  );
 });
 
 it('dialog offers only the actions valid for the order status and fulfilment', async () => {

@@ -41,12 +41,18 @@ const EMPTY_ADDRESS: AddressRequest = {
   makeDefault: false,
 };
 
+const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)\d{8}$/;
+
 function validateNewAddress(addr: AddressRequest): Partial<Record<string, string>> {
   const errors: Partial<Record<string, string>> = {};
-  if (!addr.recipientName.trim()) {
+  const name = addr.recipientName.trim();
+  if (!name) {
     errors.recipientName = 'Vui lòng nhập họ tên người nhận.';
+  } else if (name.length < 2 || name.length > 80) {
+    errors.recipientName = 'Họ tên người nhận cần từ 2 đến 80 ký tự.';
   }
-  if (!addr.phone.trim() || !/^0\d{8,10}$/.test(addr.phone.trim())) {
+  const phone = addr.phone.replace(/[\s.-]/g, '');
+  if (!phone || !PHONE_REGEX.test(phone)) {
     errors.phone = 'Vui lòng nhập số điện thoại hợp lệ.';
   }
   if (!addr.provinceCode) {
@@ -55,8 +61,14 @@ function validateNewAddress(addr: AddressRequest): Partial<Record<string, string
   if (!addr.wardCode) {
     errors.wardCode = 'Vui lòng chọn Phường / Xã.';
   }
-  if (!addr.streetLine.trim()) {
+  const street = addr.streetLine.trim();
+  if (!street) {
     errors.streetLine = 'Vui lòng nhập số nhà, tên đường.';
+  } else if (street.length < 5 || street.length > 200) {
+    errors.streetLine = 'Địa chỉ số nhà, tên đường cần từ 5 đến 200 ký tự.';
+  }
+  if (addr.note && addr.note.length > 200) {
+    errors.note = 'Ghi chú tối đa 200 ký tự.';
   }
   return errors;
 }
@@ -262,7 +274,7 @@ export function CheckoutPage() {
         fulfillment === 'delivery' && useNewAddress
           ? {
               recipientName: newAddress.recipientName.trim(),
-              phone: newAddress.phone.trim(),
+              phone: newAddress.phone.replace(/[\s.-]/g, ''),
               provinceCode: newAddress.provinceCode,
               wardCode: newAddress.wardCode,
               streetLine: newAddress.streetLine.trim(),

@@ -101,10 +101,12 @@ public class ProductOrderStaffService {
     public Page<OrderDto> list(String status, String q, int page, int size) {
         int safePage = Math.max(0, page);
         int safeSize = Math.clamp(size, 1, 50);
-        boolean counterPending = "counter_pending".equalsIgnoreCase(status);
-        String normalizedStatus = (status == null || status.isBlank() || "all".equalsIgnoreCase(status) || counterPending)
+        String trimmedStatus = status == null ? "" : status.trim();
+        boolean counterPending = "counter_pending".equalsIgnoreCase(trimmedStatus)
+                || "pending_payment".equalsIgnoreCase(trimmedStatus);
+        String normalizedStatus = (trimmedStatus.isEmpty() || "all".equalsIgnoreCase(trimmedStatus) || counterPending)
                 ? ""
-                : status.trim().toLowerCase(Locale.ROOT);
+                : trimmedStatus.toLowerCase(Locale.ROOT);
         String normalizedQ = (q == null || q.isBlank()) ? "" : q.trim().toLowerCase(Locale.ROOT);
         Pageable pageable = PageRequest.of(
                 safePage,

@@ -119,7 +119,7 @@ it('drawer quotes the cart, flags short stock and blocks checkout while invalid'
 
   expect(host.textContent).toContain('Chỉ còn 1 sản phẩm');
   expect(host.textContent).toContain(
-    'Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.',
+    'Thực phẩm bổ sung không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.',
   );
   const checkoutBtn = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Thanh toán'))!;
   expect(checkoutBtn.disabled).toBe(true);

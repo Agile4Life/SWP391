@@ -363,4 +363,62 @@ class ProductOrderServiceTest {
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_NOT_FOUND");
     }
+
+    @Test
+    void duplicateVariantLinesAreMergedAndCannotBypassStockCheck() {
+        givenVariant(1L, "500000", 30, 3);
+        // 2 + 2 = 4 > stock (3), must be rejected without touching stock
+        assertThatThrownBy(() -> service.create(
+                member,
+                order(List.of(line(1L, 2), line(1L, 2)), "pickup", "online", "2000000")
+        ))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "PRODUCT_OUT_OF_STOCK");
+        assertThat(variant(1L).getStock()).isEqualTo(3);
+    }
+
+    @Test
+    void inactiveProductOrCategoryCannotBeOrdered() {
+        ProductVariant v = givenVariant(1L, "500000", 30, 5);
+        v.getProduct().setActive(false);
+        assertThatThrownBy(() -> service.create(member, order(List.of(line(1L, 1)), "pickup", "online", "500000")))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "PRODUCT_OUT_OF_STOCK");
+        assertThat(v.getStock()).isEqualTo(5);
+
+        v.getProduct().setActive(true);
+        v.getProduct().getCategory().setActive(false);
+        assertThatThrownBy(() -> service.create(member, order(List.of(line(1L, 1)), "pickup", "online", "500000")))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "PRODUCT_OUT_OF_STOCK");
+        assertThat(v.getStock()).isEqualTo(5);
+    }
+
+    @Test
+    void cancellingOrReleasingTwiceDoesNotDoubleRestoreStock() {
+        ProductVariant v = givenVariant(1L, "1290000", 68, 3);
+        ProductOrder order = new ProductOrder();
+        order.setId(9L);
+        order.setCode("SOL-261105-ABCD");
+        order.setMember(memberProfile);
+        order.setStatus(OrderStatus.pending_payment.name());
+        order.setFulfillment("pickup");
+        order.setPaymentMethod("online");
+        order.setSubtotal(new BigDecimal("2580000"));
+        order.setShippingFee(BigDecimal.ZERO);
+        order.setTotal(new BigDecimal("2580000"));
+        order.addItem(ProductOrderItem.snapshot(v, 2));
+
+        service.cancelInternal(order, "Lần 1", true, user);
+        assertThat(v.getStock()).isEqualTo(5);
+
+        // Second cancelInternal on already-cancelled order is a no-op
+        service.cancelInternal(order, "Lần 2", true, user);
+        assertThat(v.getStock()).isEqualTo(5);
+
+        // Direct StockService.release when movement already exists is also a no-op
+        when(movements.existsByOrderIdAndReason(9L, "order_release")).thenReturn(true);
+        new StockService(variants, movements, clock).release(order, 1L);
+        assertThat(v.getStock()).isEqualTo(5);
+    }
 }

@@ -67,7 +67,11 @@ public class StockService {
         for (Map.Entry<Long, Integer> entry : qtyByVariant.entrySet()) {
             ProductVariant variant = byId.get(entry.getKey());
             int q = entry.getValue();
-            if (variant == null || !variant.isActive() || variant.getStock() < q) {
+            if (variant == null
+                    || !variant.isActive()
+                    || (variant.getProduct() != null && !variant.getProduct().isActive())
+                    || (variant.getProduct() != null && variant.getProduct().getCategory() != null && !variant.getProduct().getCategory().isActive())
+                    || variant.getStock() < q) {
                 throw new ConflictException("PRODUCT_OUT_OF_STOCK", "error.shop.product_out_of_stock", null, "Out of stock");
             }
             variant.setStock(variant.getStock() - q);
@@ -84,6 +88,9 @@ public class StockService {
 
     public void release(ProductOrder order, Long actorId) {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
+            return;
+        }
+        if (order.getId() != null && movements.existsByOrderIdAndReason(order.getId(), "order_release")) {
             return;
         }
         List<Long> ids = order.getItems().stream()

@@ -261,8 +261,8 @@ export function ProductDetailPage() {
                       <p>{product.warnings}</p>
                     </div>
                   )}
-                  {product.registrationNumber && (
-                    <p className="shop-detail__reg">{sourceText("Số công bố: ")}{product.registrationNumber}</p>
+                  {Boolean(product.registrationNumber?.trim()) && (
+                    <p className="shop-detail__reg">{sourceText("Số công bố: ")}{product.registrationNumber!.trim()}</p>
                   )}
                 </div>
               </div>

@@ -65,6 +65,12 @@ class ProductOrderPaymentsTest {
         assertThatThrownBy(() -> service.requirePayable(9L))
                 .isInstanceOf(ConflictException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "VNPAY_TARGET_UNAVAILABLE");
+
+        counterOrder.setStatus(OrderStatus.pending_payment.name());
+        counterOrder.setPaymentDueAt(java.time.LocalDateTime.of(2026, 11, 5, 13, 59));
+        assertThatThrownBy(() -> service.requirePayable(9L))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "VNPAY_TARGET_UNAVAILABLE");
     }
 
     @Test

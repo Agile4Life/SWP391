@@ -50,7 +50,8 @@ public class ProductOrderPayments {
         }
         ProductOrder order = orders.findByIdForUpdate(orderId).orElseThrow(ProductOrderPayments::unavailable);
         if (!OrderStatus.pending_payment.name().equals(order.getStatus())
-                || "counter".equalsIgnoreCase(order.getPaymentMethod())) {
+                || "counter".equalsIgnoreCase(order.getPaymentMethod())
+                || (order.getPaymentDueAt() != null && order.getPaymentDueAt().isBefore(now()))) {
             throw unavailable();
         }
         return order;

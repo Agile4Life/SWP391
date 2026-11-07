@@ -284,6 +284,9 @@ public class ProductOrderService {
 
     @Transactional
     public void cancelInternal(ProductOrder order, String reason, boolean restock, User actor) {
+        if (order == null || OrderStatus.cancelled.name().equals(order.getStatus())) {
+            return;
+        }
         LocalDateTime now = now();
         String previousStatus = order.getStatus();
         order.setStatus(OrderStatus.cancelled.name());

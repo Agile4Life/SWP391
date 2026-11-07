@@ -189,13 +189,21 @@ it('shows a retryable error for a network failure instead of a missing product',
   expect(host.querySelector('#product-detail-title')?.textContent).toBe(sampleDetail.name);
 });
 
-it('detail always renders the legal disclaimer', async () => {
-  vi.mocked(shopApi.getProduct).mockResolvedValue(sampleDetail);
+it('detail always renders the legal disclaimer and hides whitespace-only registrationNumber', async () => {
+  vi.mocked(shopApi.getProduct).mockResolvedValue({ ...sampleDetail, registrationNumber: '   ' });
 
   await renderAt('/products/sol-whey-isolate');
 
   expect(host.textContent).toContain(
-    'Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.',
+    'Thực phẩm bổ sung không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.',
   );
+  expect(host.textContent).not.toContain('Số công bố:');
   expect(host.querySelector('.shop-facts table caption')?.textContent).toContain('Thành phần dinh dưỡng');
+});
+
+it('detail renders registrationNumber when non-empty', async () => {
+  vi.mocked(shopApi.getProduct).mockResolvedValue({ ...sampleDetail, registrationNumber: ' 12345/2025/ĐKSP ' });
+
+  await renderAt('/products/sol-whey-isolate');
+  expect(host.textContent).toContain('Số công bố: 12345/2025/ĐKSP');
 });

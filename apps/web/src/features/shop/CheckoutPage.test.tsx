@@ -369,4 +369,7 @@ it('the cart is cleared once the order exists, even before VNPay returns', async
 
   expect(getCart()).toEqual([]);
   expect(vnpayApi.navigateToVnpay).toHaveBeenCalledTimes(1);
+  expect(host.textContent).toContain(
+    'Thực phẩm bổ sung không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.',
+  );
 });

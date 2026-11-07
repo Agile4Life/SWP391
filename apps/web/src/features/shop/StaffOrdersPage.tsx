@@ -170,8 +170,9 @@ export function StaffOrdersPage() {
     setLoading(true);
     setError('');
     try {
+      const statusParam = status === 'pending_payment' ? 'counter_pending' : status || undefined;
       const [orderPage, orderCounts] = await Promise.all([
-        shopApi.staff.listOrders({ status: status || undefined, q: q.trim() || undefined, page, size: 20 }),
+        shopApi.staff.listOrders({ status: statusParam, q: q.trim() || undefined, page, size: 20 }),
         shopApi.staff.counts(),
       ]);
       setData(orderPage);

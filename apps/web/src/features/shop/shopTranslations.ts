@@ -210,6 +210,7 @@ export const englishShopPublicLabels: Readonly<Record<string, string>> = {
   "Chọn Tỉnh / Thành phố": "Select province / city",
   "Phường / Xã": "Ward / Commune",
   "Chọn Phường / Xã": "Select ward / commune",
+  "Thực phẩm bổ sung không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.": "This supplement is not a medicine and is not intended to replace medical treatment.",
   "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.": "This supplement is not a medicine and is not intended to replace medical treatment.",
   "Không thể cập nhật đơn hàng. Vui lòng thử lại.": "Unable to update order. Please try again.",
   "Vui lòng nhập mã vận đơn (từ 3 đến 60 ký tự).": "Please enter a tracking number (3–60 characters).",
