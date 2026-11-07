@@ -9,8 +9,8 @@
 | Chỉ số | Kết quả đo | Ngưỡng mục tiêu | Đạt |
 | :--- | :---: | :---: | :---: |
 | **p50 Frame Time** | `16.7 ms` | `<= 16.7 ms` | PASS |
-| **p95 Frame Time** | `17.4 ms` | `<= 25.0 ms` | PASS |
-| **FPS trung bình (khi chuyển động)** | `58 FPS` | `>= 45 FPS` | PASS |
+| **p95 Frame Time** | `18.4 ms` | `<= 25.0 ms` | PASS |
+| **FPS trung bình (khi chuyển động)** | `59 FPS` | `>= 45 FPS` | PASS |
 | **Draw Calls tối đa (`gl.info.render.calls`)** | `115` | `<= 120` | PASS |
 | **Triangles tối đa (`gl.info.render.triangles`)** | `49,000` | `<= 120,000` | PASS |
 | **Bộ nhớ Geometries (`gl.info.memory.geometries`)** | `65` | `<= 80` | PASS |

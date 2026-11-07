@@ -296,6 +296,102 @@ async function waitFor3DReady(page) {
   await page.waitForTimeout(750);
 }
 
+async function assertSingleScreenAndNoCollisions(page, label) {
+  const layoutCheck = await page.evaluate(() => {
+    const docEl = document.documentElement;
+    const scrollHeight = docEl.scrollHeight;
+    const innerHeight = window.innerHeight;
+    const scrollWidth = docEl.scrollWidth;
+    const innerWidth = window.innerWidth;
+
+    const selectors = [
+      '.explore3d-breadcrumb-list',
+      '.explore3d-search-btn',
+      '.explore3d-level-pill-group',
+      '.explore3d-level-mode-group',
+      '.explore3d-toolbar',
+      '.explore3d-walk-hud',
+      '.explore3d-tour-bar',
+      '.explore3d-detail-panel',
+      '.chat-widget__trigger',
+    ];
+
+    const boxes = [];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+        continue;
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        boxes.push({ name: sel, rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } });
+      }
+    }
+
+    const pins = document.querySelectorAll('.explore3d-hotspot-pin');
+    for (const pin of pins) {
+      const style = window.getComputedStyle(pin);
+      const parentStyle = pin.parentElement ? window.getComputedStyle(pin.parentElement) : null;
+      if (
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        Number(style.opacity) === 0 ||
+        (parentStyle &&
+          (parentStyle.display === 'none' ||
+            parentStyle.visibility === 'hidden' ||
+            Number(parentStyle.opacity) === 0))
+      ) {
+        continue;
+      }
+      const rect = pin.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        boxes.push({
+          name: `pin:${pin.getAttribute('data-hotspot-id') || 'unknown'}`,
+          rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+        });
+      }
+    }
+
+    const overlaps = [];
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (a.name.startsWith('pin:') && b.name.startsWith('pin:')) continue;
+        const xOverlap = Math.min(a.rect.right, b.rect.right) - Math.max(a.rect.left, b.rect.left);
+        const yOverlap = Math.min(a.rect.bottom, b.rect.bottom) - Math.max(a.rect.top, b.rect.top);
+        if (xOverlap > 1 && yOverlap > 1) {
+          overlaps.push(`${a.name} <-> ${b.name} (${xOverlap.toFixed(1)}x${yOverlap.toFixed(1)}px)`);
+        }
+      }
+    }
+
+    return {
+      scrollHeight,
+      innerHeight,
+      scrollWidth,
+      innerWidth,
+      overlaps,
+    };
+  });
+
+  assert.ok(
+    layoutCheck.scrollHeight <= layoutCheck.innerHeight,
+    `[${label}] Expected zero vertical scroll (scrollHeight <= innerHeight), got ${layoutCheck.scrollHeight} > ${layoutCheck.innerHeight}`,
+  );
+  assert.ok(
+    layoutCheck.scrollWidth <= layoutCheck.innerWidth,
+    `[${label}] Expected zero horizontal scroll (scrollWidth <= innerWidth), got ${layoutCheck.scrollWidth} > ${layoutCheck.innerWidth}`,
+  );
+  assert.equal(
+    layoutCheck.overlaps.length,
+    0,
+    `[${label}] Unexpected HUD/component overlaps: ${layoutCheck.overlaps.join(', ')}`,
+  );
+}
+
 (async () => {
   const server = process.env.EXPLORE3D_URL
     ? { proc: null, baseUrl: process.env.EXPLORE3D_URL }
@@ -332,6 +428,7 @@ async function waitFor3DReady(page) {
     // 1. Overview 3D Dark (1440x900)
     await page.goto(`${server.baseUrl}/member/explore`);
     await waitFor3DReady(page);
+    await assertSingleScreenAndNoCollisions(page, '01-overview-dark-1440');
     await page.screenshot({ path: path.join(outDir, '01-overview-dark-1440.png') });
     console.log('Captured 01-overview-dark-1440.png');
 
@@ -345,6 +442,7 @@ async function waitFor3DReady(page) {
       });
     }
     await page.waitForTimeout(600);
+    await assertSingleScreenAndNoCollisions(page, '02-overview-light-1440');
     await page.screenshot({ path: path.join(outDir, '02-overview-light-1440.png') });
     console.log('Captured 02-overview-light-1440.png');
     if (await themeToggle.count()) {
@@ -362,6 +460,7 @@ async function waitFor3DReady(page) {
       await explodedBtn.click();
     }
     await page.waitForTimeout(900);
+    await assertSingleScreenAndNoCollisions(page, '03-exploded-levels-1440');
     await page.screenshot({ path: path.join(outDir, '03-exploded-levels-1440.png') });
     console.log('Captured 03-exploded-levels-1440.png');
 
@@ -369,16 +468,25 @@ async function waitFor3DReady(page) {
     await page.goto(`${server.baseUrl}/member/explore?level=L1&focus=zone-l1-gym`);
     await waitFor3DReady(page);
     await page.waitForTimeout(700);
+    await assertSingleScreenAndNoCollisions(page, '04-level1-gym-cutaway-1440');
     await page.screenshot({ path: path.join(outDir, '04-level1-gym-cutaway-1440.png') });
     console.log('Captured 04-level1-gym-cutaway-1440.png');
 
-    // Verify first-person Walk Mode multi-angle navigation & wall collision in live WebGL
+    // Verify first-person Walk Mode multi-angle navigation, Light Mode HUD unity & zero collision
     await page.locator('[data-testid="explore3d-btn-walk"]').click();
     await page.locator('[data-testid="explore3d-walk-hud"]').waitFor({ state: 'visible', timeout: 5000 });
     await page.locator('[data-testid="walk-turn-right"]').click();
     await page.locator('[data-testid="walk-look-up"]').click();
     await page.locator('[data-testid="walk-step-forward"]').click();
     await page.waitForTimeout(350);
+    await assertSingleScreenAndNoCollisions(page, '04b-walk-dark-1440');
+    if (await themeToggle.count()) {
+      await themeToggle.click();
+      await page.waitForTimeout(350);
+      await assertSingleScreenAndNoCollisions(page, '04c-walk-light-1440');
+      await themeToggle.click();
+      await page.waitForTimeout(300);
+    }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(350);
 
@@ -386,6 +494,7 @@ async function waitFor3DReady(page) {
     await page.locator('[data-testid="explore3d-level-L2"]').click();
     await page.locator('[data-testid="directory-zone-zone-l2-vip-gym"]').click();
     await page.waitForTimeout(800);
+    await assertSingleScreenAndNoCollisions(page, '05-level2-vip-inbody-1440');
     await page.screenshot({ path: path.join(outDir, '05-level2-vip-inbody-1440.png') });
     console.log('Captured 05-level2-vip-inbody-1440.png');
 
@@ -393,6 +502,7 @@ async function waitFor3DReady(page) {
     await page.locator('[data-testid="explore3d-level-B1"]').click();
     await page.locator('[data-testid="directory-zone-zone-b1-pool"]').click();
     await page.waitForTimeout(800);
+    await assertSingleScreenAndNoCollisions(page, '06-b1-pool-lanes-1440');
     await page.screenshot({ path: path.join(outDir, '06-b1-pool-lanes-1440.png') });
     console.log('Captured 06-b1-pool-lanes-1440.png');
 
@@ -400,6 +510,7 @@ async function waitFor3DReady(page) {
     await page.locator('[data-testid="explore3d-level-RF"]').click();
     await page.locator('[data-testid="directory-zone-zone-rf-zen"]').click();
     await page.waitForTimeout(800);
+    await assertSingleScreenAndNoCollisions(page, '07-rooftop-zen-yoga-1440');
     await page.screenshot({ path: path.join(outDir, '07-rooftop-zen-yoga-1440.png') });
     console.log('Captured 07-rooftop-zen-yoga-1440.png');
 
@@ -407,6 +518,7 @@ async function waitFor3DReady(page) {
     await page.locator('[data-testid="explore3d-level-OUT"]').click();
     await page.locator('[data-testid="directory-zone-zone-out-tennis"]').click();
     await page.waitForTimeout(800);
+    await assertSingleScreenAndNoCollisions(page, '08-outdoor-tennis-1440');
     await page.screenshot({ path: path.join(outDir, '08-outdoor-tennis-1440.png') });
     console.log('Captured 08-outdoor-tennis-1440.png');
 
@@ -415,6 +527,7 @@ async function waitFor3DReady(page) {
     await page.locator('[data-testid="explore3d-level-L1"]').click();
     await page.locator('[data-testid="directory-zone-zone-l1-gym"]').click();
     await page.waitForTimeout(800);
+    await assertSingleScreenAndNoCollisions(page, '09-mobile-bottomsheet-390');
     await page.screenshot({ path: path.join(outDir, '09-mobile-bottomsheet-390.png') });
     console.log('Captured 09-mobile-bottomsheet-390.png');
 
