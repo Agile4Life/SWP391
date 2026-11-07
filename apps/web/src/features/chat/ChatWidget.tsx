@@ -63,6 +63,17 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
   useCloseWhenOtherPanelOpens('chat', () => setOpen(false));
 
   useEffect(() => {
+    const onOpenChat = () => {
+      setVisited(true);
+      announceFloatingPanel('chat');
+      onOpen();
+      setOpen(true);
+    };
+    window.addEventListener('scms:open-chat', onOpenChat);
+    return () => window.removeEventListener('scms:open-chat', onOpenChat);
+  }, [onOpen]);
+
+  useEffect(() => {
     if (!open) return;
     closeButton.current?.focus();
     const close = () => { setOpen(false); trigger.current?.focus(); };

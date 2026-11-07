@@ -21,6 +21,7 @@ export function getRoleLabel(role: UserSession['role'], lang: Language = 'vi'): 
 
 export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; roles: UserSession['role'][] }[] = [
   { to: '/member/dashboard', label: 'Bảng điều khiển', icon: 'board', roles: ['MEMBER'] },
+  { to: '/member/explore', label: 'Tham quan 3D', icon: 'cube', roles: ['MEMBER'] },
   { to: '/member/packages', label: 'Gói tập', icon: 'package', roles: ['MEMBER'] },
   { to: '/member/classes', label: 'Lịch học & Đặt chỗ', icon: 'calendar', roles: ['MEMBER'] },
   { to: '/member/courts', label: 'Đặt sân', icon: 'court', roles: ['MEMBER'] },
@@ -57,6 +58,7 @@ export const PORTAL_NAV: { to: string; label: string; icon: PortalIconName; role
 
 export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/dashboard': 'Dashboard',
+  '/member/explore': 'Explore 3D',
   '/member/packages': 'Memberships',
   '/member/classes': 'Schedule & Booking',
   '/member/courts': 'Court Booking',

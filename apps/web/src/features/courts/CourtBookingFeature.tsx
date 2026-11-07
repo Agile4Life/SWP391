@@ -20,7 +20,7 @@ const SLOT_LABELS = { free: 'Trống', booked: 'Đã đặt', class: 'Đang có 
 export function CourtBookingFeature() {
   useLanguage();
   const [params, setParams] = useSearchParams();
-  const discipline = COURT_DISCIPLINES.find(item => matchesDiscipline(params.get('discipline') ?? 'Tennis', item.name))?.name ?? 'Tennis';
+  const discipline = COURT_DISCIPLINES.find(item => matchesDiscipline(params.get('discipline') ?? params.get('sport') ?? 'Tennis', item.name))?.name ?? 'Tennis';
   const [date, setDate] = useState(centerDate);
   const [refresh, setRefresh] = useState(0);
   const [rows, setRows] = useState<{ court: Court; slots: CourtSlot[] }[]>([]);
@@ -92,7 +92,10 @@ export function CourtBookingFeature() {
       </div>
       {!validDate ? <p role="alert">{memberText("Chọn ngày từ hôm nay trở đi.")}</p> : loading ? <LoadingSkeleton label={memberText("Đang tải sân")} variant="cards" count={2} /> : error ? <CourtLoadError message={memberRenderMessage(error)} retry={reload} /> : !rows.length ? <div className="portal-card portal-state">{memberText("Chưa có sân cho bộ môn này")}</div> : <div className="court-grid">
         {rows.map(({ court, slots }) => <article className="portal-card court-card" key={court.id}>
-          <h3 className="portal-card-title">{court.name}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <h3 className="portal-card-title" style={{ margin: 0 }}>{court.name}</h3>
+            <Link to={`/member/explore?item=${encodeURIComponent(court.name)}`} className="btn-secondary btn-sm">{memberText("Xem trong 3D", "View in 3D")}</Link>
+          </div>
           <p className="muted">{court.location ? `${court.location} · ` : ''}{shortTime(court.openTime)}–{shortTime(court.closeTime)}</p>
           <div className="court-slots">{slots.map(slot => <button type="button" key={slot.startTime} className={`court-slot court-slot--${slot.status}`} disabled={slot.status !== 'free' || busy} onClick={() => { setActionError(''); setNeedsMembership(false); setConflict(false); setOutcome(null); setRecurrence({ period: 'once', days: [] }); setSelection({ court, slot, date }); }} aria-label={`${court.name}, ${shortTime(slot.startTime)}–${shortTime(slot.endTime)}, ${memberText(SLOT_LABELS[slot.status])}`}><strong>{shortTime(slot.startTime)}–{shortTime(slot.endTime)}</strong><span>{memberText(SLOT_LABELS[slot.status])}</span></button>)}</div>
           {!slots.length && <p className="muted">{memberText("Chưa có khung giờ cho ngày này.")}</p>}

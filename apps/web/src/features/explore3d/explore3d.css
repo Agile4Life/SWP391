@@ -1,0 +1,1112 @@
+/* ==========================================================================
+   SÖL 3D Virtual Center — Charcoal–Salmon UI & HUD (explore3d.css)
+   ========================================================================== */
+
+.explore3d-page {
+  --explore-bg: #202020;
+  --explore-surface: rgba(32, 32, 32, 0.9);
+  --explore-surface-elevated: rgba(43, 43, 43, 0.94);
+  --explore-border: rgba(250, 249, 246, 0.14);
+  --explore-border-accent: rgba(206, 145, 128, 0.44);
+  --explore-accent: #ce9180;
+  --explore-accent-hover: #e1aa98;
+  --explore-on-accent: #202020;
+  --explore-ink: #faf9f6;
+  --explore-ink-muted: #cbc7c3;
+  --explore-status-available: #5c8f73;
+  --explore-status-maintenance: #e0a050;
+  --explore-status-broken: #c95b5b;
+  --explore-status-retired: #6b6b6b;
+
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  width: 100%;
+  margin-top: 52px;
+  height: calc(100dvh - 104px);
+  min-height: 580px;
+  background: linear-gradient(180deg, #202020 0%, #292929 100%);
+  color: var(--explore-ink);
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--explore-border);
+}
+
+html[data-theme='light'] .explore3d-page {
+  --explore-bg: #f5f5f3;
+  --explore-surface: rgba(255, 255, 255, 0.92);
+  --explore-surface-elevated: rgba(245, 245, 243, 0.96);
+  --explore-border: rgba(32, 32, 32, 0.14);
+  --explore-border-accent: rgba(206, 145, 128, 0.55);
+  --explore-on-accent: #202020;
+  --explore-ink: #202020;
+  --explore-ink-muted: rgba(32, 32, 32, 0.68);
+  background: linear-gradient(180deg, #f5f5f3 0%, #eeefec 100%);
+}
+
+/* Hide scrollbars globally inside explore3d per DESIGN.md */
+.explore3d-page,
+.explore3d-page * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.explore3d-page::-webkit-scrollbar,
+.explore3d-page *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.explore3d-stage,
+.explore3d-Stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Top-Left Breadcrumb & Search HUD
+   -------------------------------------------------------------------------- */
+
+.explore3d-breadcrumb-bar {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.85rem;
+  right: 0.85rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+  flex-wrap: wrap;
+}
+
+.explore3d-breadcrumb-nav,
+.explore3d-breadcrumb-actions {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.explore3d-breadcrumb-list {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.25rem 0.55rem;
+  list-style: none;
+  background: var(--explore-surface);
+  border: 1px solid var(--explore-border);
+  border-radius: 999px;
+  backdrop-filter: blur(14px);
+}
+
+.explore3d-breadcrumb-sep {
+  color: var(--explore-ink-muted);
+  font-size: 0.85rem;
+  padding: 0 0.15rem;
+  user-select: none;
+}
+
+.explore3d-breadcrumb-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--explore-ink-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.explore3d-breadcrumb-btn:hover {
+  color: var(--explore-ink);
+  background: rgba(206, 145, 128, 0.12);
+}
+
+.explore3d-breadcrumb-btn.is-active {
+  color: var(--explore-accent);
+  font-weight: 700;
+}
+
+.explore3d-sim-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(206, 145, 128, 0.16);
+  border: 1px solid var(--explore-border-accent);
+  color: var(--explore-accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(12px);
+}
+
+.explore3d-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  background: var(--explore-surface);
+  border: 1px solid var(--explore-border);
+  color: var(--explore-ink);
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.explore3d-search-btn:hover {
+  border-color: var(--explore-accent);
+}
+
+.explore3d-search-kbd {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  background: rgba(250, 249, 246, 0.08);
+  border: 1px solid var(--explore-border);
+  color: var(--explore-ink-muted);
+  font-size: 0.72rem;
+  font-family: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   Left Level Switcher HUD
+   -------------------------------------------------------------------------- */
+
+.explore3d-level-switcher {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.explore3d-level-pill-group,
+.explore3d-level-mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-radius: 16px;
+  background: var(--explore-surface);
+  border: 1px solid var(--explore-border);
+  backdrop-filter: blur(14px);
+}
+
+.explore3d-level-btn,
+.explore3d-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--explore-ink-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.explore3d-level-btn:hover,
+.explore3d-mode-btn:hover {
+  color: var(--explore-ink);
+  background: rgba(206, 145, 128, 0.12);
+}
+
+.explore3d-level-btn.is-active,
+.explore3d-mode-btn.is-active {
+  background: var(--explore-accent);
+  color: var(--explore-on-accent);
+  border-color: var(--explore-accent);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Bottom-Center Toolbar HUD
+   -------------------------------------------------------------------------- */
+
+.explore3d-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 0.85rem;
+  transform: translateX(-50%);
+  z-index: 19;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: var(--explore-surface);
+  border: 1px solid var(--explore-border);
+  backdrop-filter: blur(14px);
+  max-width: calc(100% - 1.5rem);
+  overflow-x: auto;
+}
+
+.explore3d-toolbar-segment {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.2rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.explore3d-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--explore-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.explore3d-toolbar-btn:hover {
+  background: rgba(206, 145, 128, 0.14);
+}
+
+.explore3d-toolbar-btn.is-active {
+  background: var(--explore-accent);
+  color: var(--explore-on-accent);
+  border-color: var(--explore-accent);
+  font-weight: 700;
+}
+
+.explore3d-toolbar-btn--accent {
+  border-color: var(--explore-border-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Right Detail Panel (360px desktop drawer / mobile bottom sheet)
+   -------------------------------------------------------------------------- */
+
+.explore3d-detail-panel {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  height: 100%;
+  background: var(--explore-surface-elevated);
+  border-left: 1px solid var(--explore-border);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+
+.explore3d-detail-panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--explore-border);
+}
+
+.explore3d-detail-close {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--explore-border);
+  background: transparent;
+  color: var(--explore-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explore3d-detail-loading {
+  padding: 0.75rem 1rem 0;
+}
+
+.explore3d-detail-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.explore3d-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.explore3d-detail-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.explore3d-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(250, 249, 246, 0.08);
+  border: 1px solid var(--explore-border);
+  color: var(--explore-ink-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.explore3d-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.explore3d-status-pill.is-available,
+.explore3d-status-pill.is-active {
+  background: rgba(92, 143, 115, 0.22);
+  color: #8fd4ae;
+  border: 1px solid rgba(92, 143, 115, 0.48);
+}
+
+.explore3d-status-pill.is-maintenance {
+  background: rgba(224, 160, 80, 0.22);
+  color: #f4be74;
+  border: 1px solid rgba(224, 160, 80, 0.48);
+}
+
+.explore3d-status-pill.is-broken,
+.explore3d-status-pill.is-closed {
+  background: rgba(201, 91, 91, 0.22);
+  color: #f19999;
+  border: 1px solid rgba(201, 91, 91, 0.48);
+}
+
+.explore3d-status-pill.is-retired,
+.explore3d-status-pill.is-unknown {
+  background: rgba(107, 107, 107, 0.24);
+  color: var(--explore-ink-muted);
+  border: 1px solid var(--explore-border);
+}
+
+.explore3d-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(206, 145, 128, 0.22);
+  border: 1px solid var(--explore-border-accent);
+  color: var(--explore-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.explore3d-detail-title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--explore-ink);
+}
+
+.explore3d-detail-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-detail-parent {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-inline-link {
+  min-height: 44px;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--explore-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.explore3d-live-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: rgba(224, 160, 80, 0.12);
+  border: 1px solid rgba(224, 160, 80, 0.35);
+}
+
+.explore3d-live-status-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--explore-ink);
+}
+
+.explore3d-live-status-banner__text span {
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-tier-lock-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border-radius: 12px;
+  background: rgba(206, 145, 128, 0.14);
+  border: 1px solid var(--explore-border-accent);
+}
+
+.explore3d-tier-lock-card__text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--explore-ink);
+}
+
+.explore3d-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.explore3d-metric-box {
+  padding: 0.6rem 0.7rem;
+  border-radius: 11px;
+  background: rgba(250, 249, 246, 0.04);
+  border: 1px solid var(--explore-border);
+}
+
+.explore3d-metric-box.is-wide {
+  grid-column: 1 / -1;
+}
+
+.explore3d-metric-box dt {
+  font-size: 0.72rem;
+  color: var(--explore-ink-muted);
+  margin-bottom: 0.2rem;
+}
+
+.explore3d-metric-box dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--explore-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.explore3d-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--explore-border);
+}
+
+.explore3d-subsection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.explore3d-subsection-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.explore3d-viewpoint-chip {
+  min-height: 44px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--explore-border);
+  background: rgba(250, 249, 246, 0.05);
+  color: var(--explore-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.explore3d-viewpoint-chip:hover {
+  border-color: var(--explore-accent);
+}
+
+.explore3d-equipment-table-wrap {
+  overflow-x: auto;
+}
+
+.explore3d-equipment-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.explore3d-equipment-table th,
+.explore3d-equipment-table td {
+  padding: 0.45rem 0.35rem;
+  text-align: left;
+  border-bottom: 1px solid var(--explore-border);
+}
+
+.explore3d-eq-name {
+  font-weight: 600;
+  color: var(--explore-ink);
+}
+
+.explore3d-eq-code {
+  font-size: 0.7rem;
+  color: var(--explore-ink-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.explore3d-overflow-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.3rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: var(--explore-accent);
+  color: var(--explore-on-accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.explore3d-court-list,
+.explore3d-hotspot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.explore3d-court-card,
+.explore3d-hotspot-card,
+.explore3d-live-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: rgba(250, 249, 246, 0.04);
+  border: 1px solid var(--explore-border);
+}
+
+.explore3d-court-card__meta,
+.explore3d-session-item__meta,
+.explore3d-live-card__meta {
+  font-size: 0.76rem;
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-court-card__actions,
+.explore3d-cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.explore3d-hotspot-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.explore3d-hotspot-card__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--explore-ink);
+}
+
+.explore3d-hotspot-card__subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.explore3d-btn--primary {
+  background: var(--explore-accent);
+  border: 1px solid var(--explore-accent);
+  color: var(--explore-on-accent);
+}
+
+.explore3d-btn--primary:hover {
+  background: var(--explore-accent-hover);
+  border-color: var(--explore-accent-hover);
+}
+
+.explore3d-btn--secondary {
+  background: rgba(250, 249, 246, 0.06);
+  border: 1px solid var(--explore-border);
+  color: var(--explore-ink);
+}
+
+.explore3d-btn--secondary:hover {
+  border-color: var(--explore-accent);
+}
+
+.explore3d-session-list,
+.explore3d-product-list,
+.explore3d-coach-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.explore3d-session-item,
+.explore3d-product-item,
+.explore3d-coach-item {
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(250, 249, 246, 0.04);
+  border: 1px solid var(--explore-border);
+  font-size: 0.8rem;
+}
+
+.explore3d-directory-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.explore3d-directory-level-btn {
+  min-height: 44px;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: rgba(206, 145, 128, 0.1);
+  color: var(--explore-accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.explore3d-directory-zone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.explore3d-directory-zone-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 44px;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--explore-border);
+  background: rgba(250, 249, 246, 0.03);
+  color: var(--explore-ink);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.explore3d-directory-zone-btn:hover {
+  border-color: var(--explore-accent);
+}
+
+/* --------------------------------------------------------------------------
+   2D Architectural SVG Fallback (FloorPlan2D)
+   -------------------------------------------------------------------------- */
+
+.explore3d-floorplan-2d {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 4.4rem 1.25rem 5.2rem 8.5rem;
+  box-sizing: border-box;
+  gap: 0.75rem;
+}
+
+.explore3d-floorplan-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.explore3d-floorplan-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--explore-border);
+  background: var(--explore-surface);
+  color: var(--explore-ink-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.explore3d-floorplan-tab.is-active {
+  background: var(--explore-accent);
+  border-color: var(--explore-accent);
+  color: var(--explore-on-accent);
+}
+
+.explore3d-floorplan-tab__sub {
+  font-size: 0.74rem;
+  opacity: 0.88;
+}
+
+.explore3d-floorplan-canvas-wrap {
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(20, 20, 20, 0.55);
+  border: 1px solid var(--explore-border);
+  padding: 0.75rem;
+  overflow: hidden;
+}
+
+.explore3d-floorplan-svg {
+  width: 100%;
+  height: 100%;
+  max-height: 540px;
+}
+
+.explore3d-floorplan-a11y-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  background: var(--explore-surface);
+  border: 1px solid var(--explore-border);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.explore3d-floorplan-a11y-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.explore3d-floorplan-a11y-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--explore-ink-muted);
+}
+
+.explore3d-floorplan-a11y-btn {
+  min-height: 44px;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--explore-border);
+  background: transparent;
+  color: var(--explore-ink);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.explore3d-floorplan-a11y-btn.is-active {
+  border-color: var(--explore-accent);
+  color: var(--explore-accent);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Search Modal / Combobox
+   -------------------------------------------------------------------------- */
+
+.explore3d-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4.5rem 1rem 1rem;
+  background: rgba(12, 12, 12, 0.68);
+  backdrop-filter: blur(8px);
+}
+
+.explore3d-search-modal {
+  width: min(560px, 100%);
+  max-height: min(520px, calc(100dvh - 6rem));
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--explore-surface-elevated);
+  border: 1px solid var(--explore-border-accent);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.explore3d-search-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--explore-border);
+}
+
+.explore3d-search-input {
+  flex: 1;
+  min-height: 44px;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--explore-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--explore-ink);
+  font-size: 0.92rem;
+}
+
+.explore3d-search-close {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--explore-border);
+  background: transparent;
+  color: var(--explore-ink);
+  cursor: pointer;
+}
+
+.explore3d-search-results {
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.explore3d-search-hit-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--explore-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.explore3d-search-hit-btn:hover,
+.explore3d-search-hit-btn.is-active {
+  background: rgba(206, 145, 128, 0.14);
+  border-color: var(--explore-border-accent);
+}
+
+.explore3d-search-hit-btn__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.explore3d-search-hit-btn__title {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.explore3d-search-hit-btn__sub {
+  font-size: 0.76rem;
+  color: var(--explore-ink-muted);
+  margin-top: 0.15rem;
+}
+
+.explore3d-search-empty {
+  padding: 1.25rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--explore-ink-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Keyboard Focus & Reduced Motion
+   -------------------------------------------------------------------------- */
+
+.explore3d-page button:focus-visible,
+.explore3d-page input:focus-visible,
+.explore3d-page [role='button']:focus-visible {
+  outline: 2px solid var(--explore-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 759px) {
+  .explore3d-page {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(290px, 52%) minmax(220px, 48%);
+    margin-top: 44px;
+    height: calc(100dvh - 108px);
+    min-height: 480px;
+  }
+
+  .explore3d-stage,
+  .explore3d-Stage {
+    min-height: 280px;
+  }
+
+  .explore3d-breadcrumb-bar {
+    top: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    flex-wrap: nowrap;
+  }
+
+  .explore3d-breadcrumb-bar .explore3d-sim-badge {
+    display: none;
+  }
+
+  .explore3d-breadcrumb-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: calc(100vw - 88px);
+  }
+
+  .explore3d-breadcrumb-btn {
+    min-height: 36px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .explore3d-level-switcher {
+    top: auto;
+    bottom: 3.6rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    transform: none;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.35rem;
+  }
+
+  .explore3d-level-pill-group,
+  .explore3d-level-mode-group {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    padding: 0.2rem;
+  }
+
+  .explore3d-level-btn,
+  .explore3d-mode-btn {
+    min-height: 34px;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .explore3d-toolbar {
+    bottom: 0.45rem;
+    padding: 0.2rem;
+  }
+
+  .explore3d-toolbar-btn {
+    min-height: 36px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.74rem;
+  }
+
+  .explore3d-detail-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--explore-border);
+    border-radius: 18px 18px 0 0;
+  }
+
+  .explore3d-floorplan-2d {
+    padding: 3.4rem 0.5rem 6.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explore3d-page *,
+  .explore3d-page *::before,
+  .explore3d-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+  }
+}

@@ -1,4 +1,4 @@
-﻿import { memberMessage, memberText, memberRenderMessage, memberNotify } from './memberI18n';
+import { memberMessage, memberText, memberRenderMessage, memberNotify } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useRef, useState } from 'react';
@@ -562,6 +562,14 @@ export function MemberClassesPage() {
                       <div className="row-card__meta row-card__meta--inline">
                         <span><strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
                         <span>{item.roomName}</span>
+                        {item.roomName && (
+                          <Link
+                            to={`/member/explore?focus=${encodeURIComponent(item.roomName)}`}
+                            className="member-classes-package-link"
+                          >
+                            {text('Xem trong 3D', 'View in 3D')}
+                          </Link>
+                        )}
                         <span>{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
                       </div>
                       <div className="row-card__meta">
