@@ -354,7 +354,18 @@ async function assertSingleScreenAndNoCollisions(page, label) {
       }
     }
 
+    const topbarEl = document.querySelector('.app-topbar');
+    const pageEl = document.querySelector('.explore3d-page');
     const overlaps = [];
+    if (topbarEl && pageEl) {
+      const tbRect = topbarEl.getBoundingClientRect();
+      const pgRect = pageEl.getBoundingClientRect();
+      const xOv = Math.min(tbRect.right, pgRect.right) - Math.max(tbRect.left, pgRect.left);
+      const yOv = Math.min(tbRect.bottom, pgRect.bottom) - Math.max(tbRect.top, pgRect.top);
+      if (xOv > 1 && yOv > 1) {
+        overlaps.push(`.app-topbar <-> .explore3d-page (${xOv.toFixed(1)}x${yOv.toFixed(1)}px)`);
+      }
+    }
     for (let i = 0; i < boxes.length; i += 1) {
       for (let j = i + 1; j < boxes.length; j += 1) {
         const a = boxes[i];
