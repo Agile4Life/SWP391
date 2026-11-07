@@ -8,11 +8,15 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
-import { formatCenterDateTime, formatCenterTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDateTime, formatCenterTime } from '../../shared/lib/centerTime';
 
 type Mode = 'in' | 'out';
 const RANGES = [{ days: 1, label: 'Hôm nay' }, { days: 7, label: '7 ngày' }, { days: 30, label: '30 ngày' }];
-const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function subtractCenterDays(dateKey: string, offsetDays: number): string {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - offsetDays);
+  return date.toISOString().slice(0, 10);
+}
 
 export function MemberCheckInPage() {
   useLanguage();
@@ -29,8 +33,8 @@ export function MemberCheckInPage() {
   const mounted = useRef(true);
   const loadHistory = useCallback(async () => {
     setLoading(true); setHistoryError('');
-    try { const today = new Date(); const from = new Date(today); from.setDate(today.getDate() - days + 1);
-      const visits = await memberCheckinApi.history(days === 1 ? undefined : { fromDate: isoDay(from), toDate: isoDay(today) }); if (mounted.current) setHistory(Array.isArray(visits) ? visits : []); }
+    try { const toDate = centerNowParts().date; const fromDate = subtractCenterDays(toDate, days - 1);
+      const visits = await memberCheckinApi.history(days === 1 ? undefined : { fromDate, toDate }); if (mounted.current) setHistory(Array.isArray(visits) ? visits : []); }
     catch { if (mounted.current) setHistoryError(memberMessage("Không thể tải lịch sử ra vào.")); }
     finally { if (mounted.current) setLoading(false); }
   }, [days]);

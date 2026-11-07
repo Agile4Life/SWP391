@@ -39,4 +39,12 @@ describe('booking time helpers', () => {
     expect(isCourtDiscipline('Cầu lông')).toBe(true);
     expect(isCourtDiscipline('Tennis nâng cao')).toBe(false);
   });
+
+  it('maps COURT_BOOKING_TOO_FAR to the 365-day horizon message', async () => {
+    const { courtError } = await import('./courtsApi');
+    const { ApiError } = await import('../../shared/api/client');
+    const { memberRenderMessage } = await import('../member/memberI18n');
+    expect(memberRenderMessage(courtError(new ApiError('raw', 400, 'COURT_BOOKING_TOO_FAR'))))
+      .toBe('Chỉ được đặt sân trước tối đa 365 ngày (đặt định kỳ: tối đa 1 tháng).');
+  });
 });

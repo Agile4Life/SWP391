@@ -332,4 +332,45 @@ class CourtBookingServiceTest {
         verify(bookings, never()).saveAndFlush(any());
         error("COURT_BOOKING_FORBIDDEN", () -> service.bookRecurring(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), recurring(date, "week", null)));
     }
+
+    @Test void cancellingPaidCourtBookingMarksPaymentRefundedAndCreditsMemberWallet() {
+        var payments = mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var wallets = mock(com.swp391.scms.wallet.WalletService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "payments", payments);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "wallets", wallets);
+
+        CourtBooking booking = existing(LocalTime.of(14, 0));
+        booking.setPrice(new java.math.BigDecimal("80000"));
+        booking.setPaymentMethod("vnpay");
+        booking.setPaymentStatus("paid");
+
+        var paidPayment = new com.swp391.scms.finance.entity.Payment();
+        paidPayment.setId(91L);
+        paidPayment.setAmount(new java.math.BigDecimal("80000"));
+        paidPayment.setStatus("success");
+        when(payments.findAllByCourtBookingId(8L)).thenReturn(List.of(paidPayment));
+
+        var cancelled = service.cancel(member, 8L, "  Mưa lớn  ");
+        assertEquals("cancelled", cancelled.status());
+        assertEquals("refunded", cancelled.paymentStatus());
+        assertEquals("refunded", paidPayment.getStatus());
+        assertEquals(new java.math.BigDecimal("80000"), paidPayment.getRefundedAmount());
+        verify(wallets).creditCourtRefund(1L, new java.math.BigDecimal("80000"), "COURT_REFUND_8", "Mưa lớn");
+    }
+
+    @Test void overlappingActiveSubscriptionsSelectHighestMonthlyQuota() {
+        var trialPkg = new MembershipPackage(); trialPkg.setName("Trial 3 ngày");
+        var trialSub = new MembershipSubscription(); trialSub.setStatus("active");
+        trialSub.setStartDate(date.minusDays(1)); trialSub.setEndDate(date.plusDays(2)); trialSub.setMembershipPackage(trialPkg);
+
+        var goldPkg = new MembershipPackage(); goldPkg.setName("Gold");
+        var goldSub = new MembershipSubscription(); goldSub.setStatus("active");
+        goldSub.setStartDate(date.minusDays(1)); goldSub.setEndDate(date.plusDays(30)); goldSub.setMembershipPackage(goldPkg);
+
+        when(subscriptions.findByMemberUserIdAndStatus(1L, "active")).thenReturn(List.of(trialSub, goldSub));
+        var quota = service.quota(member, date);
+        assertEquals("Gold", quota.packageName());
+        assertEquals(2, quota.monthlyQuota());
+        assertEquals(2, quota.remaining());
+    }
 }

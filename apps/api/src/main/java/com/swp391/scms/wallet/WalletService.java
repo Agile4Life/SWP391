@@ -289,6 +289,15 @@ public class WalletService {
                 orderId != null ? "/member/orders/" + orderId : "/member/orders");
     }
 
+    /** Credits a cancelled paid court-booking refund to the member's wallet; idempotent per {@code referenceId}. */
+    @Transactional
+    public void creditCourtRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
+        String description = (reason != null && !reason.isBlank())
+                ? ("Hoàn tiền hủy sân tập: " + reason)
+                : "Hoàn tiền hủy sân tập về Ví";
+        credit(userId, amount, referenceId, "COURT_REFUND", description, "/member/courts");
+    }
+
     private void credit(Long userId, BigDecimal amount, String referenceId, String referenceType,
                         String description, String actionPath) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {

@@ -1,4 +1,4 @@
-﻿import { getIntlLocale } from '../../shared/i18n/language';
+import { getIntlLocale } from '../../shared/i18n/language';
 import { memberMessage, memberError } from '../member/memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { apiFetch, ApiError } from '../../shared/api/client';
@@ -62,7 +62,7 @@ export function courtError(error: unknown): string | SourceMessage {
     COURT_BOOKING_SLOT_TAKEN: 'Khung giờ vừa được đặt hoặc đang có lớp. Vui lòng chọn khung khác.',
     COURT_BOOKING_MEMBERSHIP_INVALID: 'Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập trước khi đặt sân.',
     COURT_BOOKING_PAST_SLOT: 'Khung giờ đã qua. Vui lòng chọn khung khác.',
-    COURT_BOOKING_TOO_FAR: 'Bạn chỉ có thể đặt trước tối đa 7 ngày (đặt định kỳ: tối đa 1 tháng).',
+    COURT_BOOKING_TOO_FAR: 'Chỉ được đặt sân trước tối đa 365 ngày (đặt định kỳ: tối đa 1 tháng).',
     COURT_BOOKING_PAYMENT_REQUIRED: 'Lượt này vượt quá số lần đặt sân đã bao gồm trong gói. Vui lòng chọn phương thức thanh toán.',
     COURT_BOOKING_INVALID_PAYMENT_METHOD: 'Phương thức thanh toán không hợp lệ.',
     COURT_BOOKING_LIMIT_REACHED: 'Bạn đã có đủ 4 lượt đặt trong ngày này.',

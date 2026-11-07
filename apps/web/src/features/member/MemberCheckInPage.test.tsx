@@ -48,8 +48,14 @@ it('sends the gate code to the checkout endpoint in check-out mode', async () =>
   await act(async () => camera.decode!({ data: code }));
   expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self/checkout'))).toHaveLength(1);
 });
-it('requests a date range when a longer history window is chosen', async () => {
-  await render();
-  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === '7 ngày')!.click());
-  expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('fromDate='))).toBe(true);
+it('requests a date range in Asia/Ho_Chi_Minh when a longer history window is chosen', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-31T17:30:00Z'));
+  try {
+    await render();
+    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === '7 ngày')!.click());
+    expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('fromDate=2026-10-26&toDate=2026-11-01'))).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });

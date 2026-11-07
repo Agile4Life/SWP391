@@ -87,18 +87,16 @@ class CourtBookingPostgreSqlTest {
     }
 
     @Test
-    void concurrentFifthBookingCannotExceedDailyLimit() throws Exception {
+    void memberCanBookMoreThanFourNonOverlappingSlotsInOneDay() {
         long firstRoom = room();
         long secondRoom = room();
         long member = member(true);
         booking(jdbc, firstRoom, member, 8);
         booking(jdbc, firstRoom, member, 9);
+        booking(jdbc, firstRoom, member, 10);
         booking(jdbc, firstRoom, member, 11);
-        race("court-member:" + member,
-                worker -> booking(worker, firstRoom, member, 10),
-                worker -> booking(worker, secondRoom, member, 12),
-                "trg_court_bookings_check_limit");
-        assertEquals(4, count("member_id = " + member));
+        booking(jdbc, secondRoom, member, 12);
+        assertEquals(5, count("member_id = " + member));
     }
 
     @Test
@@ -156,7 +154,8 @@ class CourtBookingPostgreSqlTest {
         constraint("trg_court_bookings_check_slot", () -> insertBooking(jdbc, room, member, tomorrow, "10:30", "11:30"));
         constraint("trg_court_bookings_check_slot", () -> insertBooking(jdbc, room, member, tomorrow, "05:00", "06:00"));
         constraint("trg_court_bookings_check_past", () -> insertBooking(jdbc, room, member, tomorrow.minusDays(2), "10:00", "11:00"));
-        constraint("trg_court_bookings_check_horizon", () -> insertBooking(jdbc, room, member, tomorrow.plusDays(7), "10:00", "11:00"));
+        insertBooking(jdbc, room, member, tomorrow.plusDays(7), "10:00", "11:00");
+        constraint("trg_court_bookings_check_membership", () -> insertBooking(jdbc, room, member, tomorrow.plusDays(11), "10:00", "11:00"));
     }
 
     @Test

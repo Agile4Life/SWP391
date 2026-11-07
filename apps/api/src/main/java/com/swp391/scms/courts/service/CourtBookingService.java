@@ -46,6 +46,8 @@ public class CourtBookingService {
     /** Optional so the service stays constructible in unit tests; without it no revenue row is written. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository payments;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.wallet.WalletService wallets;
     @org.springframework.beans.factory.annotation.Value("${app.vnpay.timeout-minutes:15}")
     private int vnpayTimeoutMinutes = 15;
     private static final Set<String> PAYMENT_METHODS = Set.of("cash", "vnpay");
@@ -210,7 +212,9 @@ public class CourtBookingService {
         return subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
                 .filter(s -> s.getStartDate() != null && s.getEndDate() != null
                         && !s.getStartDate().isAfter(date) && !s.getEndDate().isBefore(date))
-                .findFirst().orElse(null);
+                .max(Comparator.comparingInt(s -> s.getMembershipPackage() == null ? -1
+                        : CourtPricing.monthlyQuota(s.getMembershipPackage().getName())))
+                .orElse(null);
     }
     private int monthlyQuota(Long memberId, LocalDate date) {
         MembershipSubscription subscription = activeSubscription(memberId, date);
@@ -260,13 +264,37 @@ public class CourtBookingService {
         if (!canCancel(booking, principal)) throw invalid("cancel_too_late");
         if (reason != null && reason.length() > 255) throw invalid("invalid_slot");
         if (vnpayGuard != null) vnpayGuard.court(booking.getId());
+        String trimmedReason = reason == null || reason.isBlank() ? null : reason.trim();
+        BigDecimal refundedTotal = BigDecimal.ZERO;
         if (payments != null) {
-            payments.findAllByCourtBookingId(booking.getId()).stream()
-                    .filter(payment -> "pending".equals(payment.getStatus()))
-                    .forEach(payment -> payment.setStatus("failed"));
+            for (Payment payment : payments.findAllByCourtBookingId(booking.getId())) {
+                if ("pending".equals(payment.getStatus())) {
+                    payment.setStatus("failed");
+                } else if ("success".equals(payment.getStatus())) {
+                    BigDecimal refundable = payment.netAmount();
+                    if (refundable.compareTo(BigDecimal.ZERO) > 0) {
+                        payment.setRefundedAmount(payment.getAmount());
+                        payment.setStatus("refunded");
+                        refundedTotal = refundedTotal.add(refundable);
+                    }
+                }
+            }
+        }
+        if ("paid".equals(booking.getPaymentStatus())) {
+            booking.setPaymentStatus("refunded");
+            if (refundedTotal.compareTo(BigDecimal.ZERO) == 0
+                    && booking.getPrice() != null && booking.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                refundedTotal = booking.getPrice();
+            }
+        } else if (refundedTotal.compareTo(BigDecimal.ZERO) > 0) {
+            booking.setPaymentStatus("refunded");
+        }
+        if (refundedTotal.compareTo(BigDecimal.ZERO) > 0 && wallets != null && booking.getMember() != null) {
+            wallets.creditCourtRefund(booking.getMember().getId(), refundedTotal,
+                    "COURT_REFUND_" + booking.getId(), trimmedReason);
         }
         booking.setStatus("cancelled"); booking.setCancelledAt(now());
-        booking.setCancelReason(reason == null || reason.isBlank() ? null : reason.trim());
+        booking.setCancelReason(trimmedReason);
         return dto(bookings.saveAndFlush(booking), principal);
     }
 

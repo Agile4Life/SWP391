@@ -1,9 +1,12 @@
 import type { ProgressMetric, TrainingItem, TrainingPlan } from './memberProgressApi';
+import { centerNowParts, parseCenterTime } from '../../shared/lib/centerTime';
 
 export interface WeeklyPoint { weekStart: string; weight: number | null; bmi: number | null }
 
 function mondayOf(dateKey: string): string | null {
-  const date = new Date(`${dateKey.slice(0, 10)}T12:00:00Z`);
+  const parsed = parseCenterTime(dateKey);
+  if (!parsed) return null;
+  const date = new Date(`${centerNowParts(parsed).date}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return null;
   date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
   return date.toISOString().slice(0, 10);

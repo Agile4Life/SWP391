@@ -84,6 +84,7 @@ public class HealthMetricController {
     }
 
     @Operation(summary = "Chuỗi dữ liệu lịch sử chỉ số sức khỏe cá nhân (SCRUM-119)", description = "Trả về lịch sử chỉ số sức khỏe sắp xếp tăng dần theo recorded_at để vẽ biểu đồ tiến độ (Line Chart)")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('MEMBER')")
     @GetMapping("/api/v1/health/metrics/my")
     public ApiResponse<List<HealthMetricDto>> getMyMetricsChronological(
                                                      @AuthenticationPrincipal AuthenticatedPrincipal principal) {

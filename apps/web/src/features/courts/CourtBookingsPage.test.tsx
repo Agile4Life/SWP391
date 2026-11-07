@@ -124,3 +124,25 @@ it('switches court booking labels and status copy while preserving server court 
   await act(async () => setLanguage('vi'));
   expect(host.textContent).toContain('Đặt sân');
 });
+
+it('renders distinct payment status labels for pending, paid, refunded, and cancelled unpaid court bookings', async () => {
+  const base = { roomId: 5, roomName: 'Sân A', disciplineName: 'Tennis', memberId: 1, memberName: 'M', date: '2099-01-05', startTime: '09:00', endTime: '10:00', createdAt: '', cancelledAt: null, cancelReason: null, canCancel: false, price: 80000, paymentMethod: 'vnpay' };
+  vi.mocked(courtsApi.my).mockResolvedValue({
+    content: [
+      { ...base, id: 1, status: 'booked', paymentStatus: 'pending' },
+      { ...base, id: 2, status: 'cancelled', paymentStatus: 'pending' },
+      { ...base, id: 3, status: 'cancelled', paymentStatus: 'refunded' },
+      { ...base, id: 4, status: 'booked', paymentStatus: 'paid' },
+    ],
+    totalPages: 1, totalElements: 4, number: 0,
+  });
+  await render();
+  const rows = [...host.querySelectorAll('.court-booking-row')].map(row => row.textContent ?? '');
+  expect(rows[0]).toContain('Chờ thanh toán');
+  expect(rows[0]).not.toContain('Đã thanh toán');
+  expect(rows[1]).toContain('Chưa thanh toán');
+  expect(rows[1]).not.toContain('Đã thanh toán');
+  expect(rows[2]).toContain('Đã hoàn tiền');
+  expect(rows[2]).not.toContain('Đã thanh toán');
+  expect(rows[3]).toContain('Đã thanh toán');
+});

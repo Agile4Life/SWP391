@@ -37,5 +37,13 @@ class HealthMetricWriteSecurityTest {
  verify(service).recordMetric(any(),eq(20L),eq("RECEPTIONIST"));
  }
  @Test void coachReachesGuardedService() throws Exception {mvc.perform(post("/api/v1/health/metrics").with(authentication(actor("COACH"))).contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isOk());verify(service).recordMetric(any(),eq(20L),eq("COACH"));}
+ @Test void myChronologicalMetricsEndpointIsMemberOnly() throws Exception {
+ mvc.perform(get("/api/v1/health/metrics/my").with(authentication(actor("MEMBER")))).andExpect(status().isOk());
+ verify(service).getMyMetricsChronological(20L);
+ for(String role:List.of("COACH","RECEPTIONIST","CENTER_MANAGER")){
+ mvc.perform(get("/api/v1/health/metrics/my").with(authentication(actor(role)))).andExpect(status().isForbidden());
+ }
+ mvc.perform(get("/api/v1/health/metrics/my")).andExpect(status().isUnauthorized());
+ }
 
 }

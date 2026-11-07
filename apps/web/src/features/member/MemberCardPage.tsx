@@ -9,6 +9,7 @@ import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { notify } from '../../shared/lib/portalNotices';
 import { cardStatus } from './cardStatus';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { getMembershipHistory, getMySubscription, getDynamicQr, type CardSubscription } from './memberCardApi';
 
 function displayDate(value: string) {
@@ -35,8 +36,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const paidThroughDate = subscription.paidThroughDate ?? subscription.endDate;
   const status = cardStatus(subscription.status, paidThroughDate);
   const periodStatus = cardStatus(subscription.status, subscription.endDate);
-  const today = new Date();
-  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const localToday = centerNowParts().date;
   const canShowQr =
     validDate(subscription.startDate) &&
     subscription.startDate <= localToday &&
