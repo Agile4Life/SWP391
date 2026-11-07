@@ -18,6 +18,8 @@
   justify-content: space-between;
   gap: 12px;
   width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
   text-align: left;
   cursor: pointer;
   appearance: none;
@@ -104,6 +106,12 @@
   will-change: transform, opacity;
 }
 
+.ui-select__menu::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .ui-select__menu--down {
   top: calc(100% + 6px);
   transform-origin: top center;
@@ -112,6 +120,11 @@
 .ui-select__menu--up {
   bottom: calc(100% + 6px);
   transform-origin: bottom center;
+}
+
+.ui-select__menu--right {
+  left: auto;
+  right: 0;
 }
 
 .ui-select__menu.is-open {

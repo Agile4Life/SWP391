@@ -57,7 +57,7 @@ public class StaffInternalRequest {
     private LocalDateTime reviewedAt;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

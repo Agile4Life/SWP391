@@ -4,7 +4,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
-import { formatCenterDate } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 
@@ -13,17 +13,16 @@ const paymentMethods: Record<string, string> = {
   cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
 };
 
+const addCenterDays = (isoDate: string, deltaDays: number) => {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + deltaDays)).toISOString().slice(0, 10);
+};
+
 const formatTransactionTime = (paidAt: string) => {
-  try {
-    const d = new Date(paidAt);
-    if (isNaN(d.getTime())) return { date: paidAt, time: '' };
-    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-    const date = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    return { date, time };
-  } catch {
-    return { date: paidAt, time: '' };
-  }
+  if (!paidAt) return { date: '', time: '' };
+  const date = formatCenterDate(paidAt, paidAt);
+  const time = formatCenterTimeSeconds(paidAt, '');
+  return { date, time };
 };
 
 // CSV quoting alone does not stop spreadsheet formula evaluation.
@@ -45,12 +44,8 @@ export function ManagerReportsPage() {
   }, [currentUser]);
 
   // Bộ lọc khoảng ngày mặc định: 30 ngày gần nhất
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const thirtyDaysAgoStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
-  }, []);
+  const todayStr = useMemo(() => centerNowParts().date, []);
+  const thirtyDaysAgoStr = useMemo(() => addCenterDays(todayStr, -30), [todayStr]);
 
   const [startDate, setStartDate] = useState(thirtyDaysAgoStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -169,9 +164,7 @@ export function ManagerReportsPage() {
 
   const handleQuickRange = (days: number) => {
     const end = todayStr;
-    const d = new Date();
-    d.setDate(d.getDate() - days);
-    const start = d.toISOString().slice(0, 10);
+    const start = addCenterDays(todayStr, -days);
     setStartDate(start);
     setEndDate(end);
     void fetchReports(start, end);

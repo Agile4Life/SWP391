@@ -297,4 +297,16 @@ class StaffInternalRequestServiceTest {
         verify(notificationService).send(eq(1L), any(),
                 org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L));
     }
+
+    @Test
+    void ignoresAllPlaceholderInStatusAndTypeFilters() {
+        when(requestRepository.findByUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of());
+        when(requestRepository.findWithFilters(null, null)).thenReturn(List.of());
+
+        assertTrue(service.getMyRequests(10L, "ALL").isEmpty());
+        assertTrue(service.getAllRequests("ALL", "all").isEmpty());
+
+        verify(requestRepository).findByUserIdOrderByCreatedAtDesc(10L);
+        verify(requestRepository).findWithFilters(null, null);
+    }
 }

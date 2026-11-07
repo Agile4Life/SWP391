@@ -44,7 +44,7 @@ public class AuditLog {
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

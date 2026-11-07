@@ -101,10 +101,10 @@ public class StaffInternalRequestService {
         req.setReason(requestDto.reason().trim());
         req.setStartDate(requestDto.startDate());
         req.setEndDate(requestDto.endDate());
-        req.setTargetShift(requestDto.targetShift());
+        req.setTargetShift(requestDto.targetShift() != null && !requestDto.targetShift().isBlank() ? requestDto.targetShift().trim() : null);
         req.setReplacementUser(replacement);
         req.setStatus("PENDING");
-        req.setCreatedAt(LocalDateTime.now());
+        req.setCreatedAt(LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE));
 
         StaffInternalRequest saved = requestRepository.save(req);
 
@@ -134,7 +134,7 @@ public class StaffInternalRequestService {
     @Transactional(readOnly = true)
     public List<StaffInternalRequestDto> getMyRequests(Long userId, String status) {
         List<StaffInternalRequest> list;
-        if (status != null && !status.isBlank()) {
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status.trim())) {
             list = requestRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, status.toUpperCase().trim());
         } else {
             list = requestRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -156,15 +156,15 @@ public class StaffInternalRequestService {
         }
 
         req.setStatus("CANCELLED");
-        req.setUpdatedAt(LocalDateTime.now());
+        req.setUpdatedAt(LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE));
         StaffInternalRequest updated = requestRepository.save(req);
         return mapToDto(updated);
     }
 
     @Transactional(readOnly = true)
     public List<StaffInternalRequestDto> getAllRequests(String status, String requestType) {
-        String cleanStatus = (status != null && !status.isBlank()) ? status.toUpperCase().trim() : null;
-        String cleanType = (requestType != null && !requestType.isBlank()) ? requestType.toUpperCase().trim() : null;
+        String cleanStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status.trim())) ? status.toUpperCase().trim() : null;
+        String cleanType = (requestType != null && !requestType.isBlank() && !"ALL".equalsIgnoreCase(requestType.trim())) ? requestType.toUpperCase().trim() : null;
         return requestRepository.findWithFilters(cleanStatus, cleanType).stream()
                 .map(this::mapToDto)
                 .toList();
@@ -194,8 +194,9 @@ public class StaffInternalRequestService {
         req.setStatus(newStatus);
         req.setManagerNotes(reviewDto.managerNotes() != null ? reviewDto.managerNotes().trim() : null);
         req.setReviewedBy(manager);
-        req.setReviewedAt(LocalDateTime.now());
-        req.setUpdatedAt(LocalDateTime.now());
+        LocalDateTime reviewedNow = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
+        req.setReviewedAt(reviewedNow);
+        req.setUpdatedAt(reviewedNow);
 
         StaffInternalRequest saved = requestRepository.save(req);
 

@@ -117,7 +117,8 @@ public class CoachBookingService {
         this.subscriptionRepository = subscriptionRepository;
         this.disciplineRepository = disciplineRepository;
         this.notificationService = notificationService;
-        this.clock = clock != null ? clock : Clock.systemDefaultZone();
+        this.clock = (clock != null ? clock : Clock.system(com.swp391.scms.common.CenterTime.ZONE))
+                .withZone(com.swp391.scms.common.CenterTime.ZONE);
         this.messageService = messageService;
     }
 

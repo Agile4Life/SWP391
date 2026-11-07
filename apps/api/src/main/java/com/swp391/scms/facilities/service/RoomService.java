@@ -80,11 +80,16 @@ public class RoomService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.courts.repository.CourtBookingRepository courtBookings;
 
-    /** A room that was ever used by a class or a court booking is kept (set status to closed instead). */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.facilities.repository.EquipmentRepository equipment;
+
+    /** A room that was ever used by a class, court booking, or equipment is kept (set status to closed instead). */
     @Transactional
     public void delete(Long id) {
         Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));
-        if ((classes != null && classes.existsByRoomId(id)) || (courtBookings != null && courtBookings.existsByRoomId(id))) {
+        if ((classes != null && classes.existsByRoomId(id))
+                || (courtBookings != null && courtBookings.existsByRoomId(id))
+                || (equipment != null && equipment.existsByRoomId(id))) {
             throw new com.swp391.scms.common.exception.ConflictException("ROOM_IN_USE", "catalog.room.in_use", null, null);
         }
         rooms.delete(room);

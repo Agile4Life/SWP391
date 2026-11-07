@@ -10,7 +10,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { formatCenterTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterTime } from '../../shared/lib/centerTime';
 import {
   aiApi,
   type CoachOption,
@@ -57,40 +57,21 @@ export function CoachTrainingPlanPage() {
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
   const [planGoal, setPlanGoal] = useState('Tăng cường sức mạnh và cải thiện tư thế');
-  const todayStr = useMemo(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }, []);
+  const addCenterDays = (isoDate: string, days: number): string => {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+  };
 
-  const [startDate, setStartDate] = useState(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 28);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  });
+  const todayStr = useMemo(() => centerNowParts().date, []);
+
+  const [startDate, setStartDate] = useState(() => centerNowParts().date);
+  const [endDate, setEndDate] = useState(() => addCenterDays(centerNowParts().date, 28));
 
   const handleStartDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     setStartDate(val);
     if (val && endDate && val > endDate) {
-      const nextDate = new Date(val);
-      nextDate.setDate(nextDate.getDate() + 28);
-      const y = nextDate.getFullYear();
-      const m = String(nextDate.getMonth() + 1).padStart(2, '0');
-      const d = String(nextDate.getDate()).padStart(2, '0');
-      setEndDate(`${y}-${m}-${d}`);
+      setEndDate(addCenterDays(val, 28));
     }
   };
 

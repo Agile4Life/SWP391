@@ -22,6 +22,8 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
 
     boolean existsByCodeAndIdNot(String code, Long id);
 
+    boolean existsByRoomId(Long roomId);
+
     long countByStatus(String status);
 }
 

@@ -128,5 +128,40 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
     });
     expect(host.textContent).toContain('Vui lòng nhập tiêu đề đơn.');
   });
+
+  it('validates start date requirement for LEAVE request before submitting', async () => {
+    await render();
+
+    const createBtn = [...host.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Tạo đơn từ mới')
+    );
+    await act(async () => {
+      createBtn?.click();
+    });
+
+    const titleInput = host.querySelector('#internal-request-title') as HTMLInputElement;
+    const reasonInput = host.querySelector('#internal-request-reason') as HTMLTextAreaElement;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+    const textareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+
+    await act(async () => {
+      setter?.call(titleInput, 'Xin nghỉ phép 1 ngày');
+      titleInput.dispatchEvent(new Event('input', { bubbles: true }));
+      titleInput.dispatchEvent(new Event('change', { bubbles: true }));
+      textareaSetter?.call(reasonInput, 'Có việc riêng cần giải quyết');
+      reasonInput.dispatchEvent(new Event('input', { bubbles: true }));
+      reasonInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const submitBtn = [...host.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Gửi đơn tới Quản Lý')
+    );
+    await act(async () => {
+      submitBtn?.click();
+    });
+
+    expect(host.textContent).toContain('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu.');
+    expect(staffRequestApi.createStaffRequest).not.toHaveBeenCalled();
+  });
 });
 

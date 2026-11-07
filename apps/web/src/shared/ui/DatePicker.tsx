@@ -1,10 +1,12 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../i18n/language';
+import { centerNowParts } from '../lib/centerTime';
 import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './datepicker.css';
 
 export interface DatePickerProps {
   id?: string;
+  name?: string;
   value: string; // YYYY-MM-DD
   onChange: (e: { target: { value: string } }) => void;
   min?: string; // YYYY-MM-DD
@@ -14,6 +16,9 @@ export interface DatePickerProps {
   placeholder?: string;
   className?: string;
   style?: React.CSSProperties;
+  'data-field'?: string;
+  'aria-label'?: string;
+  'aria-invalid'?: boolean | 'true' | 'false';
 }
 
 const WEEKDAYS_VI = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -25,6 +30,7 @@ const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
 export function DatePicker({
   id,
+  name,
   value,
   onChange,
   min,
@@ -34,6 +40,9 @@ export function DatePicker({
   placeholder,
   className = '',
   style,
+  'data-field': dataField,
+  'aria-label': ariaLabel,
+  'aria-invalid': ariaInvalid,
 }: DatePickerProps) {
   const { lang, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -43,12 +52,9 @@ export function DatePicker({
 
   // Parse initial year & month from value or today
   const initialDate = useMemo(() => {
-    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const [y, m, d] = value.split('-').map(Number);
-      return { year: y, month: m - 1, day: d };
-    }
-    const today = new Date();
-    return { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
+    const source = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : centerNowParts().date;
+    const [y, m, d] = source.split('-').map(Number);
+    return { year: y, month: m - 1, day: d };
   }, [value]);
 
   const [viewYear, setViewYear] = useState(initialDate.year);
@@ -147,8 +153,7 @@ export function DatePicker({
       isToday: boolean;
     }> = [];
 
-    const todayObj = new Date();
-    const todayStr = `${todayObj.getFullYear()}-${pad2(todayObj.getMonth() + 1)}-${pad2(todayObj.getDate())}`;
+    const todayStr = centerNowParts().date;
 
     // First day of current month (0: Sunday, 1: Monday, ... 6: Saturday)
     const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
@@ -224,12 +229,12 @@ export function DatePicker({
 
   const handleToday = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const todayObj = new Date();
-    const todayStr = `${todayObj.getFullYear()}-${pad2(todayObj.getMonth() + 1)}-${pad2(todayObj.getDate())}`;
+    const todayStr = centerNowParts().date;
     if (min && todayStr < min) return;
     if (max && todayStr > max) return;
-    setViewYear(todayObj.getFullYear());
-    setViewMonth(todayObj.getMonth());
+    const [ty, tm] = todayStr.split('-').map(Number);
+    setViewYear(ty);
+    setViewMonth(tm - 1);
     onChange({ target: { value: todayStr } });
     setIsOpen(false);
   };
@@ -238,7 +243,7 @@ export function DatePicker({
     <div className={`luxury-datepicker-wrap ${className}`} ref={containerRef} style={style}>
       <input
         type="hidden"
-        name={id}
+        name={name ?? id}
         value={value}
         min={min}
         max={max}
@@ -247,6 +252,9 @@ export function DatePicker({
       <button
         id={id}
         type="button"
+        data-field={dataField}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
         className={`luxury-datepicker-trigger ${isOpen ? 'is-open' : ''}`}
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}

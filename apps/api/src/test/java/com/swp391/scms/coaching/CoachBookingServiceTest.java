@@ -62,8 +62,8 @@ class CoachBookingServiceTest {
     void setUp() {
         // Fix clock at 2026-10-31 08:00:00
         Instant fixedInstant = LocalDateTime.of(2026, 10, 31, 8, 0, 0)
-                .atZone(ZoneId.systemDefault()).toInstant();
-        fixedClock = Clock.fixed(fixedInstant, ZoneId.systemDefault());
+                .atZone(com.swp391.scms.common.CenterTime.ZONE).toInstant();
+        fixedClock = Clock.fixed(fixedInstant, com.swp391.scms.common.CenterTime.ZONE);
 
         service = new CoachBookingService(
                 coachBookingRepository,

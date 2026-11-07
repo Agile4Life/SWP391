@@ -24,7 +24,7 @@ public class Discipline {
 
     @PrePersist
     void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
     public Long getId() { return id; }

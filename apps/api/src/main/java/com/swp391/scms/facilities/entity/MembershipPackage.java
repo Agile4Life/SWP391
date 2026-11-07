@@ -49,12 +49,12 @@ public class MembershipPackage {
 
     @PrePersist
     void onCreate() {
-        createdAt = updatedAt = LocalDateTime.now();
+        createdAt = updatedAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
     @PreUpdate
     void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
     public Long getId() { return id; }

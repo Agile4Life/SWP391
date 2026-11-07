@@ -81,7 +81,8 @@ public class RevenueReportService {
         this.snapshotRepository = snapshotRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
-        this.clock = clock;
+        this.clock = (clock != null ? clock : Clock.system(com.swp391.scms.common.CenterTime.ZONE))
+                .withZone(com.swp391.scms.common.CenterTime.ZONE);
         this.transactionReportRepository = transactionReportRepository;
         this.gymClassRepository = gymClassRepository;
         this.classEnrollmentRepository = classEnrollmentRepository;
@@ -164,7 +165,7 @@ public class RevenueReportService {
                     MembershipPackage pkg = subOpt.get().getMembershipPackage();
                     Long pkgId = pkg.getId();
                     String pkgName = pkg.getName();
-                    BigDecimal amount = payment.netAmount();
+                    BigDecimal amount = payment.netAmount() != null ? payment.netAmount() : BigDecimal.ZERO;
 
                     revenueMap.put(pkgId, revenueMap.getOrDefault(pkgId, BigDecimal.ZERO).add(amount));
                     countMap.put(pkgId, countMap.getOrDefault(pkgId, 0) + 1);

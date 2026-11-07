@@ -84,6 +84,14 @@ export function StaffInternalRequestsPage() {
       setFormError('Vui lòng nhập lý do cụ thể.');
       return;
     }
+    if (createType === 'LEAVE' && !createStartDate) {
+      setFormError('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu.');
+      return;
+    }
+    if (createStartDate && createEndDate && createEndDate < createStartDate) {
+      setFormError('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.');
+      return;
+    }
 
     setSubmitting(true);
     setFormError('');
@@ -449,9 +457,10 @@ export function StaffInternalRequestsPage() {
             )}
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+              <label htmlFor="internal-request-type" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                 {t("Loại đơn từ:")}</label>
               <Select
+                id="internal-request-type"
                 value={createType}
                 onChange={(e) => setCreateType(e.target.value as RequestType)}
                 style={{ width: '100%' }}
@@ -464,9 +473,10 @@ export function StaffInternalRequestsPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+              <label htmlFor="internal-request-title" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                 {t("Tiêu đề đơn:")}</label>
               <input
+                id="internal-request-title"
                 type="text"
                 className="portal-input"
                 placeholder={t("Ví dụ: Xin nghỉ phép cá nhân ngày 05/11, Đổi ca trực sáng...")}
@@ -495,6 +505,7 @@ export function StaffInternalRequestsPage() {
                 <DatePicker
                   id="internal-request-end"
                   value={createEndDate}
+                  min={createStartDate || undefined}
                   onChange={(e) => setCreateEndDate(e.target.value)}
                 />
               </div>
@@ -502,9 +513,10 @@ export function StaffInternalRequestsPage() {
 
             {(createType === 'SHIFT_EXCHANGE' || createType === 'SCHEDULE_CHANGE') && (
               <div data-i18n-managed>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+                <label htmlFor="internal-request-shift" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                   {t("Ca trực / Khung giờ dạy cần đổi:")}</label>
                 <input data-i18n-managed
+                  id="internal-request-shift"
                   type="text"
                   className="portal-input"
                   placeholder={t("Ví dụ: Ca sáng (06:00 - 14:00) đổi sang Ca tối, hoặc Lớp Boxing 18:00...")}
@@ -516,9 +528,10 @@ export function StaffInternalRequestsPage() {
             )}
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+              <label htmlFor="internal-request-reason" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                 {t("Lý do & Nội dung chi tiết:")}</label>
               <textarea
+                id="internal-request-reason"
                 className="portal-input"
                 rows={4}
                 placeholder={t("Nêu rõ lý do, kế hoạch bàn giao hoặc người hỗ trợ thay thế...")}

@@ -3,7 +3,9 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useNavigatio
 import { apiFetch, clearAuthSession, syncSessionWithServer, TOKEN_STORAGE_KEY, type UserSession } from '../../shared/api/client';
 import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { LanguageSetting, useI18n } from '../../shared/i18n';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { localizableError } from '../../shared/lib/errorMessage';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -67,7 +69,8 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const navigating = navigation.state !== 'idle';
-  const [dialog, setDialog] = useState<'search' | 'menu' | 'logout' | 'notifications' | 'wallet' | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
+  const [dialog, setDialog] = useState<'search' | 'menu' | 'notifications' | 'wallet' | null>(null);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const avatarMenuRef = useRef<HTMLDivElement | null>(null);
   // Thanh công cụ nổi ở góc phải trên cùng; tiêu đề trang chừa đúng bề rộng của nó để nội dung bắt đầu từ đầu trang.
@@ -470,9 +473,22 @@ function PortalShellContent({ user }: { user: UserSession }) {
                     type="button"
                     role="menuitem"
                     data-testid="avatar-menu-logout"
-                    onClick={() => {
+                    onClick={async () => {
                       setAvatarMenuOpen(false);
-                      setDialog('logout');
+                      avatarMenuRef.current?.querySelector<HTMLButtonElement>('.portal-account')?.focus();
+                      const ok = await confirm({
+                        title: { vi: 'Đăng xuất khỏi SÖL?', en: 'Sign out of SÖL?' },
+                        message: {
+                          vi: 'Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.',
+                          en: 'You can sign back in anytime to continue your journey.',
+                        },
+                        cancelLabel: { vi: 'Ở lại', en: 'Stay' },
+                        confirmLabel: { vi: 'Đăng xuất', en: 'Sign out' },
+                      });
+                      if (ok) {
+                        clearAuthSession();
+                        navigate('/login', { replace: true });
+                      }
                     }}
                     style={{
                       display: 'flex',
@@ -629,7 +645,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                         <div className="row-card__meta" style={{ fontSize: 12 }}>{tx.description}</div>
                       )}
                       {tx.createdAt && (
-                        <div className="row-card__meta" style={{ fontSize: 11 }}>{tx.createdAt}</div>
+                        <div className="row-card__meta" style={{ fontSize: 11 }}>{formatCenterDateTime(tx.createdAt, tx.createdAt)}</div>
                       )}
                     </div>
                     <div
@@ -653,13 +669,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
           </div>
         </Modal>
       )}
-      {dialog === 'logout' && <Modal title={t('Đăng xuất khỏi SÖL?', 'Sign out of SÖL?')} onClose={() => setDialog(null)}>
-        <p className="portal-subtitle">{t('Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.', 'You can sign back in anytime to continue your journey.')}</p>
-        <div className="form-actions" style={{ marginTop: 24 }}>
-          <button type="button" className="btn-secondary" onClick={() => setDialog(null)}>{t('Ở lại', 'Stay')}</button>
-          <button type="button" className="btn-primary" onClick={() => { clearAuthSession(); navigate('/login', { replace: true }); }}>{t('Đăng xuất', 'Sign out')}</button>
-        </div>
-      </Modal>}
       {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? t('Không gian của bạn', 'Your Workspace') : t('Tìm màn hình', 'Find Screen')} onClose={() => setDialog(null)} returnFocusRef={dialog === 'menu' ? moreRef : undefined}>
         <label className="portal-label" htmlFor="portal-screen-search">{t('Tên màn hình', 'Screen name')}</label>
         <input id="portal-screen-search" className="portal-input" type="search" placeholder={t('Ví dụ: lịch học, gói tập…', 'e.g. classes, memberships…')} value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -677,6 +686,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           <Link className="portal-menu-home" to="/" onClick={() => setDialog(null)}>{t('Về trang chủ SÖL', 'Back to SÖL Home')}</Link>
         </div>}
       </Modal>}
+      {confirmDialog}
     </div>
   </div>;
 }

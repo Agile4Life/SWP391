@@ -22,7 +22,7 @@ const failure = (error: unknown) => error instanceof ApiError ? error : 'Không 
 export function StaffSupportPage() {
   const { t } = useStaffI18n();
   // Receptionists take every complaint first; managers only receive what a receptionist escalates.
-  const role = getCurrentUser()?.role;
+  const role: string | undefined = getCurrentUser()?.role;
   const isManager = role === 'MANAGER' || role === 'CENTER_MANAGER';
   const [escalating, setEscalating] = useState(false), [escalationReason, setEscalationReason] = useState('');
   const [tickets, setTickets] = useState<SupportTicket[]>([]), [page, setPage] = useState(0), [pages, setPages] = useState(0), [filter, setFilter] = useState('');

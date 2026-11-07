@@ -149,7 +149,7 @@ export function ManagerEquipmentPage() {
     if (item.status === newStatus) return;
     try {
       await equipmentApi.updateStatus(item.id, newStatus);
-      notify(staffMessage(`Đã chuyển trạng thái máy "${item.name}" sang ${STATUS_LABEL[newStatus]?.label ?? newStatus}`, `Changed equipment status for "${item.name}" sang ${STATUS_LABEL[newStatus]?.label ?? newStatus}`), 'success');
+      notify(staffMessage(`Đã chuyển trạng thái máy "${item.name}" sang ${STATUS_LABEL[newStatus]?.label ?? newStatus}`, `Changed equipment status for "${item.name}" to ${STATUS_LABEL[newStatus]?.label ?? newStatus}`), 'success');
       await loadData();
     } catch (err) {
       notify(errorMessage(err, 'Không thể cập nhật trạng thái máy.'), 'error');
@@ -371,7 +371,7 @@ export function ManagerEquipmentPage() {
             style={{ minWidth: 160 }}
           >
             {CATEGORIES.map((cat) => (
-              <option data-i18n-managed key={t(cat)} value={cat}>{cat}</option>
+              <option data-i18n-managed key={cat} value={cat}>{t(cat)}</option>
             ))}
           </Select>
         </div>

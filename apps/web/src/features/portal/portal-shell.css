@@ -11,7 +11,9 @@ body:has(.portal-backdrop) {
 html:has(.portal-backdrop)::-webkit-scrollbar,
 body:has(.portal-backdrop)::-webkit-scrollbar,
 .portal-backdrop::-webkit-scrollbar,
-.portal-backdrop *::-webkit-scrollbar {
+.portal-backdrop *::-webkit-scrollbar,
+.portal-v2::-webkit-scrollbar,
+.portal-v2 *::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
@@ -29,7 +31,9 @@ body:has(.portal-backdrop) .click-ripple {
 }
 
 .portal-backdrop,
-.portal-backdrop * {
+.portal-backdrop *,
+.portal-v2,
+.portal-v2 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }

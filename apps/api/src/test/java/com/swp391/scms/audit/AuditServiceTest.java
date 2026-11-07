@@ -147,4 +147,18 @@ class AuditServiceTest {
         assertThat(dto.oldValue()).isEqualTo("Plain string not JSON");
         assertThat(dto.newValue()).isNull();
     }
+
+    @Test
+    @DisplayName("AuditSpecifications ignores ALL placeholder for entityType and action")
+    void specifications_IgnoresAllPlaceholder() {
+        var root = org.mockito.Mockito.mock(jakarta.persistence.criteria.Root.class);
+        var query = org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaQuery.class);
+        var cb = org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaBuilder.class);
+        var conjunction = org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class);
+        when(cb.and()).thenReturn(conjunction);
+
+        var spec = AuditSpecifications.filter(null, "ALL", "ALL", null, null);
+        assertThat(spec.toPredicate(root, query, cb)).isSameAs(conjunction);
+        org.mockito.Mockito.verifyNoInteractions(root);
+    }
 }

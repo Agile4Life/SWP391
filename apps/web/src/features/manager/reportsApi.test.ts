@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { reportsApi } from './reportsApi';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import * as client from '../../shared/api/client';
 
 vi.mock('../../shared/api/client', () => ({
@@ -32,7 +33,7 @@ describe('reportsApi', () => {
   });
 
   it('computes summary accurately', async () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = centerNowParts().date;
     const mockDaily = [
       { date: today, revenue: 2000000, transactionCount: 1 },
       { date: '2026-09-20', revenue: 3000000, transactionCount: 2 },

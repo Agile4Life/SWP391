@@ -15,8 +15,8 @@ const defaultCatalog: PublicCatalog = {
     { id: 11, name: 'HLV Phạm Hải', specialization: 'Cầu lông', bio: 'Chuyên gia Cầu lông', certification: 'BWF Coach', avatarUrl: null },
   ],
   sessions: [
-    { id: 1, classId: 1, className: 'Boxing căn bản', disciplineId: 1, disciplineName: 'Boxing & Kickfit', coachId: 10, coachName: 'HLV Huỳnh Đắc Tài', roomId: 1, roomName: 'Phòng 1', sessionDate: '2999-01-01', startTime: '18:00:00', endTime: '19:00:00', status: 'scheduled', capacity: 10, bookedCount: 2 },
-    { id: 2, classId: 2, className: 'Cầu lông đôi', disciplineId: 2, disciplineName: 'Cầu lông', coachId: 11, coachName: 'HLV Phạm Hải', roomId: 2, roomName: 'Sân 1', sessionDate: '2999-01-01', startTime: '19:00:00', endTime: '20:00:00', status: 'scheduled', capacity: 10, bookedCount: 2 },
+    { id: 1, classId: 1, className: 'Boxing căn bản', disciplineId: 1, disciplineName: 'Boxing & Kickfit', coachId: 10, coachName: 'HLV Huỳnh Đắc Tài', roomId: 1, roomName: 'Phòng 1', sessionDate: '2999-01-01', startTime: '18:00:00', endTime: '19:00:00', status: 'scheduled', cancelReason: null, capacity: 10, bookedCount: 2 },
+    { id: 2, classId: 2, className: 'Cầu lông đôi', disciplineId: 2, disciplineName: 'Cầu lông', coachId: 11, coachName: 'HLV Phạm Hải', roomId: 2, roomName: 'Sân 1', sessionDate: '2999-01-01', startTime: '19:00:00', endTime: '20:00:00', status: 'scheduled', cancelReason: null, capacity: 10, bookedCount: 2 },
   ],
 };
 

@@ -12,8 +12,11 @@ import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.Receptionist;
 import com.swp391.scms.users.entity.User;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.util.Base64;
 import java.util.List;
+import javax.imageio.ImageIO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -167,7 +170,7 @@ public class ProfileService {
                 );
             }
             try {
-                java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(decoded));
+                BufferedImage image = ImageIO.read(new ByteArrayInputStream(decoded));
                 if (image != null) {
                     int width = image.getWidth();
                     int height = image.getHeight();

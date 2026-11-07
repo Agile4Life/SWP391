@@ -83,13 +83,18 @@ class RoomServiceTest {
     @Test void deleteBlockedWhenClassOrCourtBookingUsesRoom() {
         var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
         var bookings = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
+        var equipment = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.EquipmentRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "courtBookings", bookings);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "equipment", equipment);
         when(rooms.findById(1L)).thenReturn(Optional.of(new Room()));
         when(classes.existsByRoomId(1L)).thenReturn(true);
         assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
         when(classes.existsByRoomId(1L)).thenReturn(false);
         when(bookings.existsByRoomId(1L)).thenReturn(true);
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
+        when(bookings.existsByRoomId(1L)).thenReturn(false);
+        when(equipment.existsByRoomId(1L)).thenReturn(true);
         assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
         org.mockito.Mockito.verify(rooms, org.mockito.Mockito.never()).delete(any(Room.class));
     }

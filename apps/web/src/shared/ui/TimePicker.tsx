@@ -5,6 +5,7 @@ import './timepicker.css';
 
 export interface TimePickerProps {
   id?: string;
+  name?: string;
   value: string; // HH:mm (e.g. '08:00')
   onChange: (e: { target: { value: string } }) => void;
   disabled?: boolean;
@@ -14,6 +15,9 @@ export interface TimePickerProps {
   style?: React.CSSProperties;
   /** Chỉ cho chọn giờ chẵn (phút luôn là 00), ẩn cột phút. */
   wholeHour?: boolean;
+  'data-field'?: string;
+  'aria-label'?: string;
+  'aria-invalid'?: boolean | 'true' | 'false';
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => (i < 10 ? `0${i}` : `${i}`));
@@ -21,6 +25,7 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
 export function TimePicker({
   id,
+  name,
   value,
   onChange,
   disabled = false,
@@ -29,6 +34,9 @@ export function TimePicker({
   className = '',
   style,
   wholeHour = false,
+  'data-field': dataField,
+  'aria-label': ariaLabel,
+  'aria-invalid': ariaInvalid,
 }: TimePickerProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -104,9 +112,18 @@ export function TimePicker({
 
   return (
     <div className={`luxury-timepicker-wrap ${className}`} ref={containerRef} style={style}>
+      <input
+        type="hidden"
+        name={name ?? id}
+        value={value}
+        readOnly
+      />
       <button
         id={id}
         type="button"
+        data-field={dataField}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
         className={`luxury-timepicker-trigger ${isOpen ? 'is-open' : ''}`}
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}

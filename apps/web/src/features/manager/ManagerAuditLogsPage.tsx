@@ -406,10 +406,8 @@ export function ManagerAuditLogsPage() {
           </div>}
 
           <div className="occupancy-chart-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-main)', margin: '0 0 6px' }}>
+            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-main)', margin: '0 0 12px' }}>
               {t("Biểu đồ trực quan tỷ lệ lấp đầy theo lớp & bộ môn")}</h3>
-            <p style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)', margin: 0 }}>
-              {t("Thước đo tỷ lệ học viên ghi danh so với sức chứa tối đa của phòng học (Capacity).")}</p>
 
             {loadingOccupancy ? (
               <LoadingSkeleton label={t("Đang tải biểu đồ công suất lớp học…")} count={4} />

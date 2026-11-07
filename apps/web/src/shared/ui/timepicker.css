@@ -178,8 +178,14 @@
   background: var(--portal-ink, rgba(0, 0, 0, 0.18));
   border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.1));
   border-radius: 10px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-accent-gold, #ce9180) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ltp-col-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .ltp-item-btn {

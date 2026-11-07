@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import { centerNowParts } from '../../shared/lib/centerTime';
 
 export interface DailyRevenue {
   date: string;
@@ -81,7 +82,7 @@ export const reportsApi = {
     const periodRevenue = daily.reduce((sum, d) => sum + (Number(d.revenue) || 0), 0);
     const packagesSoldCount = packages.reduce((sum, p) => sum + (Number(p.subscriptionCount) || 0), 0);
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = centerNowParts().date;
     const todayItem = daily.find((d) => d.date === todayStr);
     const todayRevenue = todayItem ? Number(todayItem.revenue) || 0 : 0;
 

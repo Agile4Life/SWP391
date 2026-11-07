@@ -13,6 +13,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './select.css';
 
 interface Opt {
@@ -92,7 +93,7 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState(-1);
-  const [placement, setPlacement] = useState<'down' | 'up'>('down');
+  const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'left' });
   const [maxH, setMaxH] = useState(MENU_MAX);
 
   const openMenu = useCallback(() => {
@@ -124,9 +125,10 @@ export function Select({
     const below = bottom - rect.bottom - 12;
     const above = rect.top - top - 12;
     const need = Math.min(options.length * 42 + 12, MENU_MAX);
-    const up = below < need && above > below;
-    setPlacement(up ? 'up' : 'down');
-    setMaxH(Math.max(120, Math.min(MENU_MAX, up ? above : below)));
+    const width = Math.max(listRef.current?.offsetWidth || 0, rect.width, 220);
+    const nextPlacement = popoverPlacement(triggerRef.current, width, need);
+    setPlacement(nextPlacement);
+    setMaxH(Math.max(120, Math.min(MENU_MAX, nextPlacement.v === 'up' ? above : below)));
   }, [open, options.length]);
 
   // Đóng khi bấm ra ngoài
@@ -260,7 +262,7 @@ export function Select({
           ref={listRef}
           id={listId}
           role="listbox"
-          className={`ui-select__menu ui-select__menu--${placement} ${open ? 'is-open' : 'is-closing'}`}
+          className={`ui-select__menu ui-select__menu--${placement.v} ui-select__menu--${placement.h} ${open ? 'is-open' : 'is-closing'}`}
           style={{ maxHeight: maxH }}
         >
           {options.map((o, i) => (

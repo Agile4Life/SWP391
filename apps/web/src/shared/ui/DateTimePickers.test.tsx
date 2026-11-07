@@ -3,15 +3,39 @@ import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
+import { Select } from './Select';
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); host = document.createElement('div'); document.body.append(host); root = createRoot(host); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 it('associates a date label with the visible trigger and preserves the submitted value', async () => {
-  await act(async () => root.render(<form><label htmlFor="session-date">Ngày học</label><DatePicker id="session-date" value="2026-10-31" onChange={() => {}} /></form>));
+  await act(async () => root.render(<form><label htmlFor="session-date">Ngày học</label><DatePicker id="session-date" name="custom-date" data-field="sessionDate" aria-label="Ngày buổi học" aria-invalid="true" value="2026-10-31" onChange={() => {}} /></form>));
   const trigger = host.querySelector('button')!;
   expect(host.querySelector('label')!.control).toBe(trigger);
-  expect(new FormData(host.querySelector('form')!).get('session-date')).toBe('2026-10-31');
+  expect(trigger.getAttribute('data-field')).toBe('sessionDate');
+  expect(trigger.getAttribute('aria-label')).toBe('Ngày buổi học');
+  expect(trigger.getAttribute('aria-invalid')).toBe('true');
+  expect(new FormData(host.querySelector('form')!).get('custom-date')).toBe('2026-10-31');
+});
+it('forwards name, data-field, aria-label and aria-invalid on TimePicker and Select', async () => {
+  await act(async () => root.render(
+    <form>
+      <TimePicker id="session-time" name="custom-time" data-field="startTime" aria-label="Giờ bắt đầu" aria-invalid="true" value="08:00" onChange={() => {}} />
+      <Select id="room-select" name="roomId" data-field="roomId" aria-label="Chọn phòng" aria-invalid="true" value="1" onChange={() => {}}>
+        <option value="1">Phòng 1</option>
+      </Select>
+    </form>
+  ));
+  const timeBtn = host.querySelector<HTMLButtonElement>('#session-time')!;
+  expect(timeBtn.getAttribute('data-field')).toBe('startTime');
+  expect(timeBtn.getAttribute('aria-label')).toBe('Giờ bắt đầu');
+  expect(timeBtn.getAttribute('aria-invalid')).toBe('true');
+  expect(new FormData(host.querySelector('form')!).get('custom-time')).toBe('08:00');
+  const selectBtn = host.querySelector<HTMLButtonElement>('#room-select')!;
+  expect(selectBtn.getAttribute('data-field')).toBe('roomId');
+  expect(selectBtn.getAttribute('aria-label')).toBe('Chọn phòng');
+  expect(selectBtn.getAttribute('aria-invalid')).toBe('true');
+  expect(new FormData(host.querySelector('form')!).get('roomId')).toBe('1');
 });
 it.each(['date', 'time'])('consumes Escape inside an open %s picker and restores trigger focus', async (kind) => {
   const Picker = kind === 'date' ? DatePicker : TimePicker;
