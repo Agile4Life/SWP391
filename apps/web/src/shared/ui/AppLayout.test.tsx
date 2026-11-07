@@ -166,4 +166,13 @@ describe('portal navigation', () => {
     await act(async () => profileLink.click());
     expect(router.state.location.pathname).toBe('/member/profile');
   });
+
+  it('renders distinct sidebar SVG icons for /member/explore and /member/packages', async () => {
+    await renderPortal('MEMBER');
+    const exploreSvgPath = host.querySelector('aside.app-sidebar a[href="/member/explore"] svg path')?.getAttribute('d');
+    const packagesSvgPath = host.querySelector('aside.app-sidebar a[href="/member/packages"] svg path')?.getAttribute('d');
+    expect(exploreSvgPath).toBeTruthy();
+    expect(packagesSvgPath).toBeTruthy();
+    expect(exploreSvgPath).not.toBe(packagesSvgPath);
+  });
 });

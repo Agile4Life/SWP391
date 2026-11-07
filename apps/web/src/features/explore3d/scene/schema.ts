@@ -233,7 +233,8 @@ export interface HotspotNode {
     | 'profile'
     | 'star'
     | 'dumbbell'
-    | 'cube';
+    | 'cube'
+    | 'compass';
   priority: 'primary' | 'secondary';
   action: HotspotAction;
   liveSummaryKey?:
@@ -504,6 +505,7 @@ const HotspotNodeSchema = z.object({
     'star',
     'dumbbell',
     'cube',
+    'compass',
   ]),
   priority: z.enum(['primary', 'secondary']),
   action: HotspotActionSchema,

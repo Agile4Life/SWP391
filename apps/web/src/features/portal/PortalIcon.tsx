@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support' | 'inbox' | 'file' | 'feedback' | 'dumbbell' | 'star' | 'history' | 'clock' | 'refresh' | 'court' | 'bag' | 'box' | 'cube';
+export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support' | 'inbox' | 'file' | 'feedback' | 'dumbbell' | 'star' | 'history' | 'clock' | 'refresh' | 'court' | 'bag' | 'box' | 'cube' | 'compass';
 
 const paths: Record<PortalIconName, string> = {
   court: 'M3 4h18v16H3z M3 8h18 M3 16h18 M8 4v16 M16 4v16 M3 12h18',
@@ -33,7 +33,8 @@ const paths: Record<PortalIconName, string> = {
   clock: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M12 7v5l3 2',
   bag: 'M6 7h12l1 13H5L6 7Z M9 7V5a3 3 0 0 1 6 0v2',
   box: 'M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8Z M3.3 7l8.7 5 8.7-5 M12 22V12',
-  cube: 'M12 2 3 7v10l9 5 9-5V7l-9-5Z M3 7l9 5 9-5 M12 12v10 M7.5 4.5l9 5',
+  cube: 'M12 3v9m0 0-7.8 4.5M12 12l7.8 4.5 M12 2l9 5.2v9.6L12 22l-9-5.2V7.2L12 2Z',
+  compass: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12Z M12 12h.01',
 };
 
 export function PortalIcon({ name, size = 20, style }: { name: PortalIconName; size?: number; style?: CSSProperties }) {
