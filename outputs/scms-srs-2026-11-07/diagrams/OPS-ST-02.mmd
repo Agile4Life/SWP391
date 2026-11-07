@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> PENDING_APPROVAL: chưa từng có subscription + giấy tờ hợp lệ/duy nhất
+    PENDING_APPROVAL --> APPROVED: reception duyệt / identityVerified, tạo active<br/>subscription
+    PENDING_APPROVAL --> REJECTED: reception từ chối / lưu lý do
+    REJECTED --> PENDING_APPROVAL: member sửa hồ sơ và gửi lại
+    REJECTED --> APPROVED: hiện code vẫn cho duyệt trực tiếp
+    REJECTED --> REJECTED: reception từ chối lại
+    note right of APPROVED
+        Không xin lại, duyệt lại hoặc từ chối sau APPROVED.
+        NONE chỉ là DTO khi chưa có record, không state lưu DB.
+        Trial endDate hiện today + 3, entitlement inclusive: cần PO xác nhận.
+    end note

@@ -1,0 +1,20 @@
+flowchart LR
+ P["/portal → Center Manager home"] --> CAT["/manager/catalogs"]
+ P --> EQ["/manager/equipment"]
+ P --> CA["/manager/coach-assignments"]
+ P --> AC["/manager/staff-accounts
+Alias redirect /manager/users"]
+ P --> REP["/manager/reports
+Có duyệt cancellation
+Alias redirect /manager/cancellations"]
+ P --> AU["/manager/audit-logs"]
+ P --> REV["/manager/coach-reviews"]
+ P --> SUP["/manager/support
+Chỉ ticket được escalation"]
+ P --> REQ["/manager/requests"]
+ P --> CL["/staff/classes dùng chung"]
+ P --> O["/staff/orders dùng chung"]
+ P --> PROD["/manager/products"] --> ED["/manager/products/new
+/manager/products/:productId"]
+ P --> N["/member/notifications dùng chung"]
+ P --> AV["Avatar → /profile và Logout"]

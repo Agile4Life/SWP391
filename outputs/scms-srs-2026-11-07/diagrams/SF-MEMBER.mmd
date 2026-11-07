@@ -1,0 +1,22 @@
+flowchart LR
+ D["/member/dashboard"] --> PK["/member/packages"]
+ PK --> CK["/member/packages/checkout"] --> V["VNPay Sandbox"] --> RET["/member/payments/vnpay/return"]
+ D --> CL["/member/classes
+Đặt từng buổi và PT trong màn hình"]
+ D --> CR["/member/courts"]
+ D --> CA["/member/card"]
+ D --> CI["/member/check-in
+Self check-in; self-checkout API có gate conflict"]
+ D --> ST["/member/streak"]
+ D --> PR["/member/progress"]
+ D --> INV["/member/invoices"]
+ D --> OR["/member/orders
+Tabs đơn hàng và địa chỉ"] --> OD["/member/orders/:orderId"]
+ D --> SH["/member/products
+Dùng lại MemberOrdersPage tab shop"]
+ D --> SU["/member/support"]
+ D --> N["/member/notifications"]
+ D --> AV["Menu avatar"] --> PROF["/profile hoặc /member/profile"]
+ AV --> W["Ví overlay trong PortalShell"]
+ D --> MSG["Widget Tin nhắn hoặc /messages"]
+ MSG --> AI["SÖL AI thread trong widget"]

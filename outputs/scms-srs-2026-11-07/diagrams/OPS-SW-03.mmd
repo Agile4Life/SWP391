@@ -1,0 +1,40 @@
+flowchart LR
+    subgraph Member[Hội viên]
+        A[Chọn buổi lẻ hoặc danh sách tuần/tháng]
+        C[Yêu cầu hủy booking]
+        OLD[Client legacy đăng ký cả lớp]
+    end
+    subgraph Staff[Coach hoặc staff quản lý lớp]
+        SC[Hủy một class_session]
+    end
+    subgraph System[Hệ thống]
+        LOOP[Loại ID trùng, tối đa 62; xử lý từng session]
+        G{Lớp active, session scheduled và tương lai; một gói bao phủ today + ngày học; quyền Platinum?}
+        O{Không trùng booking/lịch lớp/PT và còn capacity?}
+        B[Tạo session_booking booked]
+        SKIP[Single trả lỗi; bulk ghi skipped và tiếp tục]
+        LG{Không enrollment/booking cùng lớp; đủ chỗ tính buổi bận nhất?}
+        E[Tạo class_enrollment booked giữ mọi buổi]
+        TYPE{Loại booking hủy?}
+        BC{Owner/staff, booked và start > now?}
+        EC{Owner/staff và enrollment booked?}
+        CANCEL[Chuyển cancelled, giải phóng chỗ, thông báo]
+        SS[Session cancelled; hủy booking lẻ; giữ enrollment cả lớp]
+        ERR[Trả lỗi nghiệp vụ]
+    end
+    A --> LOOP --> G
+    G -- Không --> SKIP
+    G -- Có --> O
+    O -- Không --> SKIP
+    O -- Có --> B
+    OLD --> LEGACY[Kiểm tra session/gói/Platinum trên buổi truyền vào] --> LG
+    LG -- Có --> E
+    LG -- Không --> ERR
+    C --> TYPE
+    TYPE -- session_booking --> BC
+    TYPE -- class_enrollment --> EC
+    BC -- Có --> CANCEL
+    BC -- Không --> ERR
+    EC -- Có --> CANCEL
+    EC -- Không --> ERR
+    SC --> SS

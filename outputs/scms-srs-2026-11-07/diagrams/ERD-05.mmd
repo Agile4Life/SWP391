@@ -1,0 +1,109 @@
+erDiagram
+  direction LR
+  class_enrollments {
+    bigint id PK
+  }
+  coach_bookings {
+    bigint id PK
+  }
+  court_bookings {
+    bigint id PK
+  }
+  invoice_items {
+    bigint id PK
+    bigint invoice_id FK
+    varchar_255 description
+    integer quantity
+    numeric_12_2 unit_price
+    numeric_12_2 amount
+  }
+  invoices {
+    bigint id PK
+    bigint payment_id FK,UK
+    varchar_50 invoice_number UK
+    timestamp issued_at
+    numeric_12_2 subtotal_amount
+    numeric_12_2 tax_amount
+    numeric_12_2 total_amount
+    varchar_255 pdf_url
+    timestamp created_at
+  }
+  members {
+    bigint user_id PK,FK,UK
+  }
+  membership_subscriptions {
+    bigint id PK
+  }
+  payments {
+    bigint id PK
+    bigint member_id FK
+    bigint subscription_id FK
+    bigint coach_booking_id FK
+    bigint court_booking_id FK
+    bigint product_order_id FK
+    bigint class_enrollment_id FK
+    numeric_12_2 amount
+    numeric_12_2 refunded_amount
+    varchar_20 method
+    varchar_20 status
+    timestamp paid_at
+    bigint received_by FK
+    varchar_255 note
+    text receipt_image
+    timestamp created_at
+  }
+  product_orders {
+    bigint id PK
+  }
+  report_snapshots {
+    bigint id PK
+    varchar_30 report_type
+    date period_start
+    date period_end
+    jsonb data
+    bigint generated_by FK
+    timestamp generated_at
+  }
+  users {
+    bigint id PK
+  }
+  vnpay_transactions {
+    varchar_32 reference PK
+    bigint payment_id FK
+    numeric_12_2 amount
+    timestamp created_at
+    timestamp expires_at
+    varchar_45 ip_address
+    varchar_20 status
+    varchar_20 gateway_transaction_no UK
+  }
+  wallet_transactions {
+    bigint id PK
+    bigint wallet_id FK
+    varchar_30 type
+    numeric_15_2 amount
+    numeric_15_2 balance_after
+    varchar_50 reference_type
+    varchar_100 reference_id
+    varchar_500 description
+    timestamp created_at
+  }
+  wallets {
+    bigint id PK
+    bigint user_id FK,UK
+    numeric_15_2 balance
+    timestamp updated_at
+  }
+  payments ||--o| invoices : "payment_id"
+  invoices ||--o{ invoice_items : "invoice_id"
+  members ||--o{ payments : "member_id"
+  membership_subscriptions |o--o{ payments : "subscription_id"
+  coach_bookings |o--o{ payments : "coach_booking_id"
+  court_bookings |o--o{ payments : "court_booking_id"
+  product_orders |o--o{ payments : "product_order_id"
+  class_enrollments |o--o{ payments : "class_enrollment_id"
+  users |o--o{ payments : "received_by"
+  payments ||--o{ vnpay_transactions : "payment_id"
+  users |o--o{ report_snapshots : "generated_by"
+  users ||--o| wallets : "user_id"
+  wallets ||--o{ wallet_transactions : "wallet_id"

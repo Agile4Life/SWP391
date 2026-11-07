@@ -1,0 +1,23 @@
+stateDiagram-v2
+    state "class_enrollments — cả lớp" as CE {
+        [*] --> EBooked: tạo legacy enrollment / giữ chỗ mọi buổi
+        state "booked" as EBooked
+        state "cancelled" as ECancelled
+        EBooked --> ECancelled: chủ/staff hủy, xóa lớp hoặc mất quyền
+        note right of EBooked
+            API hủy legacy không kiểm tra cutoff giờ.
+            Hủy một session không hủy cả enrollment.
+        end note
+    }
+    state "session_bookings — từng buổi" as SB {
+        [*] --> BBooked: đặt lẻ/bulk / kiểm tra từng buổi
+        state "booked" as BBooked
+        state "cancelled" as BCancelled
+        BBooked --> BCancelled: chủ/staff hủy [chưa bắt đầu]
+        BBooked --> BCancelled: session bị hủy / xóa lớp / mất quyền
+    }
+    note left of CE
+        completed là giá trị DB được phép ở cả hai bảng,
+        chưa tìm thấy use-case Java đổi completed.
+        Không có Requested, Confirmed, Attended hoặc Waitlisted.
+    end note

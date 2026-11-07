@@ -1,0 +1,49 @@
+flowchart TD
+    subgraph U[Người dùng]
+      A[Chọn luồng xác thực]
+      R[Nhập username email mật khẩu]
+      O[Nhập OTP]
+      G[Đăng nhập Google]
+    end
+    subgraph S[API AuthService]
+      V{Username email phone chưa tồn tại?}
+      N[Tạo MEMBER inactive]
+      ASK[Yêu cầu send-otp riêng sau đăng ký]
+      ORIGIN{Đang xác minh Google OTP?}
+      CONFIRM[Trả xác nhận kích hoạt; chưa có JWT]
+      LOGIN[Đăng nhập mật khẩu qua username hoặc email]
+      Q[Phát challenge OTP]
+      C{OTP đúng còn hạn còn lượt?}
+      ACTIVE[Đổi tài khoản inactive sang active]
+      T[Phát JWT]
+      GV[Xác minh danh tính Google và email verified]
+      MODE{Endpoint nào?}
+      CALLBACK[OAuth callback: tạo mới inactive hoặc lấy tài khoản đã có]
+      DIRECT[POST auth/google: tạo mới active hoặc lấy tài khoản đã có]
+      ALLOW{Role MEMBER COACH RECEPTIONIST và status được phép?}
+      ST{Tài khoản active?}
+      DENY[Từ chối yêu cầu]
+    end
+    subgraph E[Adapter gửi OTP]
+      DELIVERY{Debug OTP?}
+      DEBUG[Phản hồi debug OTP theo cấu hình]
+      SMTP[SMTP email sau commit; thiếu adapter hoặc SMS báo lỗi]
+    end
+    A --> R --> V
+    V -->|Không| DENY
+    V -->|Có| N --> ASK --> Q
+    Q --> DELIVERY
+    DELIVERY -->|Có| DEBUG --> O
+    DELIVERY -->|Không| SMTP --> O
+    O --> C
+    C -->|Không| DENY
+    C -->|Có| ACTIVE --> ORIGIN
+    ORIGIN -->|Có| T
+    ORIGIN -->|Không| CONFIRM --> LOGIN --> T
+    A --> G --> GV --> MODE
+    MODE -->|OAuth callback| CALLBACK --> ALLOW
+    MODE -->|ID token trực tiếp| DIRECT --> ALLOW
+    ALLOW -->|Không| DENY
+    ALLOW -->|Có| ST
+    ST -->|Có| T
+    ST -->|Không - chỉ MEMBER inactive| Q

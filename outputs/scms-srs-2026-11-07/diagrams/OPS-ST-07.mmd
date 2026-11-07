@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> confirmed: đặt hợp lệ / đủ quota hoặc cho phép chưa trả
+    confirmed --> cancelled: chủ / coach phụ trách / CENTER_MANAGER hủy [start ><br/>now]
+    confirmed --> cancelled: mất entitlement [chưa bắt đầu]
+    note right of confirmed
+        package_quota: paymentStatus used_quota.
+        cash/bank_transfer: paymentStatus pending.
+        Reception/CENTER_MANAGER thu tiền: pending sang paid,
+        ghi payment success, booking vẫn confirmed.
+        completed có trong DB nhưng chưa thấy writer Java.
+        Không có Requested/PendingApproval của PT booking.
+    end note

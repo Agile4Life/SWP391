@@ -1,0 +1,35 @@
+stateDiagram-v2
+    state "center_checkins — MỖI LƯỢT QUÉT là record mới" as Gate {
+        [*] --> GRANTED: QR + user + gói hợp lệ, không anti-passback
+        [*] --> DENIED: QR sai/hết hạn, user/gói không hợp lệ, visit đang mở
+        GRANTED --> GRANTED: staff checkout / gán checkOutTime
+        GRANTED --> GRANTED: tự checkout stale > 12 giờ / note<br/>SYSTEM_AUTO_CHECKOUT
+        note right of GRANTED
+            Đã ra cửa không đổi status sang CheckedOut.
+            Self-checkout hiện xung đột filter/method RBAC nên không reachable.
+            Service còn caveat truy vấn không lọc GRANTED.
+        end note
+    }
+    state "session_attendance — coach/staff upsert" as Attend {
+        [*] --> present
+        [*] --> late
+        [*] --> absent
+        [*] --> excused
+        present --> late: sửa điểm danh
+        present --> absent: sửa điểm danh
+        present --> excused: sửa điểm danh
+        late --> present: sửa điểm danh
+        late --> absent: sửa điểm danh
+        late --> excused: sửa điểm danh
+        absent --> present: sửa điểm danh
+        absent --> late: sửa điểm danh
+        absent --> excused: sửa điểm danh
+        excused --> present: sửa điểm danh
+        excused --> late: sửa điểm danh
+        excused --> absent: sửa điểm danh
+        note right of present
+            Ghi khi buổi đã bắt đầu, không cancelled, member có chỗ.
+            present/late có checkedInAt, absent/excused xóa giờ.
+            Chưa điểm danh là null/không record.
+        end note
+    }

@@ -1,0 +1,48 @@
+flowchart LR
+    subgraph Member[Hội viên]
+        A{Yêu cầu}
+        H[Gửi hold + lý do]
+        R[Yêu cầu resume]
+        C[Đề nghị hủy với lễ tân; xem yêu cầu của mình]
+    end
+    subgraph Reception[Lễ tân]
+        HD{Duyệt hold?}
+        CS[Gửi staff-request + lý do + tiền hoàn đề xuất]
+    end
+    subgraph Manager[CENTER_MANAGER]
+        CD{Duyệt cancellation?}
+    end
+    subgraph System[Hệ thống và job]
+        HG{Active hôm nay, không trial, không conflict?}
+        HP[holdStatus PENDING]
+        HR[holdStatus REJECTED; gói giữ active]
+        FR[frozen + APPROVED]
+        RG{frozen APPROVED hợp lệ, không kỳ conflict?}
+        RA[active; cộng ngày hold tối đa 90; xóa holdStatus]
+        CP{Subscription status active, không hold/request trùng?}
+        CQ[request PENDING]
+        CG{Vẫn active; không entitlement khác/pending/công nợ chặn?}
+        CC[subscription cancelled; request APPROVED]
+        CR[request REJECTED; gói không đổi]
+        RELEASE[Hủy lịch tương lai không còn gói active bao phủ]
+        REFUND[Credit refund vào ví nếu số tiền > 0]
+        ERR[Trả lỗi; không chuyển state]
+        JOB[Job daily: hold đủ 90 ngày]
+    end
+    A -- Hold --> H --> HG
+    HG -- Không --> ERR
+    HG -- Có --> HP --> HD
+    HD -- Không --> HR
+    HD -- Có --> FR --> RELEASE
+    A -- Resume --> R --> RG
+    RG -- Không --> ERR
+    RG -- Có --> RA
+    JOB --> RA
+    A -- Hủy --> C --> CS --> CP
+    CP -- Không --> ERR
+    CP -- Có --> CQ --> CD
+    CD -- Không --> CR
+    CD -- Có --> CG
+    CG -- Không --> ERR
+    CG -- Có --> CC --> RELEASE
+    CC --> REFUND

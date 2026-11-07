@@ -1,0 +1,117 @@
+erDiagram
+  direction LR
+  center_checkins {
+    bigint id PK
+    bigint member_id FK
+    timestamp check_in_time
+    timestamp check_out_time
+    varchar_10 method
+    bigint recorded_by FK
+    varchar_50 gate
+    varchar_20 status
+    varchar_255 denial_reason
+    varchar_255 notes
+  }
+  class_enrollments {
+    bigint id PK
+    bigint class_id FK
+    bigint member_id FK
+    varchar_20 status
+    timestamp enrolled_at
+    timestamp cancelled_at
+    bigint cancelled_by FK
+    varchar_255 cancel_reason
+  }
+  class_sessions {
+    bigint id PK
+    bigint class_id FK
+    date session_date
+    time start_time
+    time end_time
+    varchar_20 status
+    varchar_255 cancel_reason
+    timestamp created_at
+    timestamp updated_at
+  }
+  classes {
+    bigint id PK
+    varchar_150 name
+    bigint discipline_id FK
+    bigint coach_id FK
+    bigint room_id FK
+    integer capacity
+    varchar_20 level
+    text description
+    varchar_20 status
+    bigint created_by FK
+    timestamp created_at
+    timestamp updated_at
+  }
+  coaches {
+    bigint user_id PK,FK,UK
+  }
+  court_bookings {
+    bigint id PK
+    bigint room_id FK
+    bigint member_id FK
+    date booking_date
+    time start_time
+    time end_time
+    varchar_20 status
+    timestamp created_at
+    timestamp cancelled_at
+    varchar_255 cancel_reason
+    numeric_12_2 price
+    varchar_20 payment_method
+    varchar_20 payment_status
+  }
+  disciplines {
+    bigint id PK
+  }
+  members {
+    bigint user_id PK,FK,UK
+  }
+  rooms {
+    bigint id PK
+  }
+  session_attendance {
+    bigint id PK
+    bigint session_id FK
+    bigint member_id FK
+    varchar_20 status
+    timestamp checked_in_at
+    bigint recorded_by FK
+    varchar_255 notes
+  }
+  session_bookings {
+    bigint id PK
+    bigint session_id FK
+    bigint member_id FK
+    varchar_20 status
+    timestamp booked_at
+    varchar_36 batch_id
+    timestamp cancelled_at
+    bigint cancelled_by FK
+    varchar_255 cancel_reason
+  }
+  users {
+    bigint id PK
+  }
+  members |o--o{ center_checkins : "member_id"
+  users |o--o{ center_checkins : "recorded_by"
+  class_sessions ||--o{ session_attendance : "session_id"
+  members ||--o{ session_attendance : "member_id"
+  coaches ||--o{ session_attendance : "recorded_by"
+  rooms ||--o{ court_bookings : "room_id"
+  users ||--o{ court_bookings : "member_id"
+  classes ||--o{ class_enrollments : "class_id"
+  members ||--o{ class_enrollments : "member_id"
+  users |o--o{ class_enrollments : "cancelled_by"
+  classes ||--o{ class_sessions : "class_id"
+  disciplines ||--o{ classes : "discipline_id"
+  coaches ||--o{ classes : "coach_id"
+  rooms ||--o{ classes : "room_id"
+  users |o--o{ classes : "created_by"
+  class_sessions ||--o{ session_bookings : "session_id"
+  members ||--o{ session_bookings : "member_id"
+  users |o--o{ session_bookings : "cancelled_by"

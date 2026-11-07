@@ -1,0 +1,2772 @@
+[
+  {
+    "id": "BR-IAM-001",
+    "domain": "IAM",
+    "rule": "Năm vai trò lõi được seed: ADMIN, CENTER_MANAGER, RECEPTIONIST, COACH, MEMBER.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/IdentitySeeder.java:42",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-002",
+    "domain": "IAM",
+    "rule": "API quản trị toàn bộ users và roles chỉ dành cho ADMIN.",
+    "source": "apps/api/src/main/java/com/swp391/scms/security/SecurityConfig.java:191",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-003",
+    "domain": "IAM",
+    "rule": "CENTER_MANAGER hoặc ADMIN chỉ tạo tài khoản nhân viên qua staff-accounts với vai trò COACH hoặc RECEPTIONIST.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/UserService.java:34",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-004",
+    "domain": "IAM",
+    "rule": "Đăng ký tự phục vụ không được dùng username đã tồn tại, so sánh không phân biệt hoa thường.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:103",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-005",
+    "domain": "IAM",
+    "rule": "Đăng ký tự phục vụ không được dùng email đã tồn tại, kể cả tài khoản đã xóa mềm.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:108",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-006",
+    "domain": "IAM",
+    "rule": "Số điện thoại không rỗng khi đăng ký phải chưa tồn tại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:111",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-007",
+    "domain": "IAM",
+    "rule": "Tài khoản tự đăng ký là MEMBER ở trạng thái inactive.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:266",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-008",
+    "domain": "IAM",
+    "rule": "Xác minh OTP đăng ký thành công kích hoạt tài khoản inactive thành active.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:125",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-009",
+    "domain": "IAM",
+    "rule": "Đăng nhập mật khẩu chấp nhận username hoặc email của tài khoản chưa xóa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/UserRepository.java:24",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-010",
+    "domain": "IAM",
+    "rule": "Chỉ tài khoản active được đăng nhập mật khẩu.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:93",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-011",
+    "domain": "IAM",
+    "rule": "Google chỉ chấp nhận tài khoản thuộc MEMBER, COACH hoặc RECEPTIONIST.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:456",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-012",
+    "domain": "IAM",
+    "rule": "Tài khoản Google mới luôn được tạo với vai trò MEMBER.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:279",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-013",
+    "domain": "IAM",
+    "rule": "Google OAuth callback tạo MEMBER mới ở inactive và gửi OTP; endpoint login ID-token trực tiếp có thể tạo MEMBER active.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:208",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-014",
+    "domain": "IAM",
+    "rule": "Chỉ MEMBER được phép đi qua Google khi đang inactive; COACH và RECEPTIONIST phải active.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/AuthService.java:461",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-015",
+    "domain": "IAM",
+    "rule": "Không được khóa, xóa hoặc đổi vai trò làm mất ADMIN active cuối cùng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/UserService.java:316",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-016",
+    "domain": "IAM",
+    "rule": "Không được xóa hoặc đổi vai trò MEMBER còn gói active/frozen/pending_payment chưa hết hạn hoặc lịch đặt sắp tới.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/UserService.java:285",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-IAM-017",
+    "domain": "IAM",
+    "rule": "Không được xóa hoặc đổi vai trò COACH còn lớp scheduled hoặc lịch PT sắp tới.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/UserService.java:301",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-001",
+    "domain": "SUP",
+    "rule": "Support request mới bắt đầu ở trạng thái open.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequest.java:55",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-002",
+    "domain": "SUP",
+    "rule": "Khiếu nại mới thông báo cho RECEPTIONIST trước.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:111",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-003",
+    "domain": "SUP",
+    "rule": "CENTER_MANAGER chỉ được xem khiếu nại đã escalated.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:391",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-004",
+    "domain": "SUP",
+    "rule": "RECEPTIONIST được xem toàn bộ khiếu nại nhưng chỉ xử lý khiếu nại chưa escalated.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:399",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-005",
+    "domain": "SUP",
+    "rule": "Chỉ RECEPTIONIST được chuyển cấp khiếu nại đang open hoặc in_progress.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:416",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-006",
+    "domain": "SUP",
+    "rule": "Chuyển cấp xóa người được phân công cũ và ghi người, thời điểm, lý do chuyển cấp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:432",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-007",
+    "domain": "SUP",
+    "rule": "Người được phân công phải là RECEPTIONIST trước chuyển cấp, CENTER_MANAGER sau chuyển cấp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:179",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-008",
+    "domain": "SUP",
+    "rule": "Member chỉ đọc và gửi tin trong khiếu nại của chính mình.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:218",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-009",
+    "domain": "SUP",
+    "rule": "Nhân viên trả lời khiếu nại open tự chuyển sang in_progress và tự nhận nếu chưa có người được phân công.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:252",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-010",
+    "domain": "SUP",
+    "rule": "Khiếu nại closed không được đổi trạng thái, phân công lại hoặc gửi tin mới.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:147",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SUP-011",
+    "domain": "SUP",
+    "rule": "Chuyển trạng thái hợp lệ: open→in_progress/resolved; in_progress→open/resolved/closed; resolved→in_progress/closed; giữ nguyên trạng thái được phép nếu chưa closed.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:478",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CHAT-001",
+    "domain": "CHAT",
+    "rule": "Chỉ MEMBER được tìm liên hệ và mở cuộc hội thoại trực tiếp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/service/ChatService.java:70",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CHAT-002",
+    "domain": "CHAT",
+    "rule": "Member được mở chat với COACH hoặc RECEPTIONIST active chưa xóa; code không đòi đã đặt lịch với coach.",
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/service/ChatService.java:76",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CHAT-003",
+    "domain": "CHAT",
+    "rule": "Một cặp MEMBER–nhân viên tái sử dụng cùng cuộc hội thoại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/service/ChatService.java:79",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CHAT-004",
+    "domain": "CHAT",
+    "rule": "Chỉ hai người tham gia đúng vai trò được đọc hoặc gửi tin trong cuộc hội thoại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/service/ChatService.java:130",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CHAT-005",
+    "domain": "CHAT",
+    "rule": "Không gửi tin mới khi đối phương đã ngừng active, bị xóa hoặc đã đổi sang vai trò không hợp lệ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/service/ChatService.java:111",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-INT-001",
+    "domain": "OPS",
+    "rule": "Đơn nội bộ chỉ chấp nhận loại LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE hoặc OTHER.",
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/service/StaffInternalRequestService.java:26",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-INT-002",
+    "domain": "OPS",
+    "rule": "Ngày kết thúc đơn không được trước ngày bắt đầu.",
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/service/StaffInternalRequestService.java:74",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-INT-003",
+    "domain": "OPS",
+    "rule": "Đơn LEAVE phải có ngày bắt đầu.",
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/service/StaffInternalRequestService.java:80",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-INT-004",
+    "domain": "OPS",
+    "rule": "Người thay thế được đề xuất phải là COACH/RECEPTIONIST active chưa xóa và khác người gửi.",
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/service/StaffInternalRequestService.java:85",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-INT-005",
+    "domain": "OPS",
+    "rule": "Người gửi chỉ được hủy đơn của mình khi còn PENDING.",
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/service/StaffInternalRequestService.java:145",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-INT-006",
+    "domain": "OPS",
+    "rule": "Quản lý chỉ duyệt đơn PENDING sang APPROVED hoặc REJECTED; từ chối phải có managerNotes.",
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/service/StaffInternalRequestService.java:173",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-NOT-001",
+    "domain": "NOT",
+    "rule": "Mỗi người dùng chỉ đánh dấu đã đọc thông báo thuộc hộp thư của mình.",
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/NotificationService.java:69",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-NOT-002",
+    "domain": "NOT",
+    "rule": "Nhắc gói hết hạn nhắm gói active có ngày kết thúc đúng 7 ngày sau ngày quét.",
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/NotificationScheduler.java:95",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-NOT-003",
+    "domain": "NOT",
+    "rule": "Không nhắc hết hạn nếu đã có kỳ tiếp nối active/expired hoặc thông báo của subscription này đã được tạo.",
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/NotificationScheduler.java:121",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-NOT-004",
+    "domain": "NOT",
+    "rule": "Nhắc lớp trong cửa sổ từ lúc quét tới 2 giờ tới cho hợp người có class enrollment booked và session booking booked; chỉ một thông báo mỗi user/session.",
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/NotificationScheduler.java:188",
+    "kind": "BR",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-001",
+    "domain": "RPT",
+    "rule": "Khoảng ngày revenue/renewal/recent mặc định từ hôm nay trừ 30 ngày tới hôm nay; ngày bắt đầu không được sau ngày kết thúc.",
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java:91",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-002",
+    "domain": "RPT",
+    "rule": "Doanh thu ngày chỉ lấy Payment success theo paidAt, cộng netAmount và trả cả ngày không phát sinh với số tiền 0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java:126",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-003",
+    "domain": "RPT",
+    "rule": "netAmount bằng amount trừ refundedAmount; refundedAmount null được coi là 0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:219",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-004",
+    "domain": "RPT",
+    "rule": "Doanh thu theo gói chỉ phân bổ Payment success có subscription ánh xạ tới gói; tỷ trọng = doanh thu gói/tổng doanh thu các gói được phân bổ ×100, làm tròn 1 số lẻ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java:160",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-005",
+    "domain": "RPT",
+    "rule": "Renewal rate = số kỳ đã hết hạn có kỳ tiếp nối đã trả tiền / số kỳ đã hết hạn đã trả tiền ×100; chỉ tính ngày kết thúc tới hôm qua; mẫu số 0 trả null.",
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java:102",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-006",
+    "domain": "RPT",
+    "rule": "Utilization dùng E=max(enrolledCount,presentCount); tỷ lệ = min(E,capacity)/capacity×100; capacity 0 trả 0; làm tròn 1 số lẻ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java:228",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-RPT-007",
+    "domain": "RPT",
+    "rule": "Attendance rate = min(presentCount,E)/E×100 với E=max(enrolledCount,presentCount); E 0 trả 0; làm tròn 1 số lẻ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/service/RevenueReportService.java:244",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-AI-001",
+    "domain": "AI",
+    "rule": "Coach tạo gợi ý giáo án cho hội viên mình huấn luyện khi có coach profile và CoachMemberAccess được inject.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/service/AiRecommendationService.java:156",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-AI-003",
+    "domain": "AI",
+    "rule": "Áp dụng gợi ý tạo giáo án cho member của recommendation, mặc định bắt đầu hôm nay và kết thúc sau 4 tuần.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/service/AiRecommendationService.java:264",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-AI-004",
+    "domain": "AI",
+    "rule": "Giáo án áp dụng từ gợi ý chỉ tự activate khi request.activate đúng true.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/service/AiRecommendationService.java:298",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-AI-005",
+    "domain": "AI",
+    "rule": "MEMBER chỉ được tạo/đọc/gửi trong phiên AI chat của chính mình.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/service/AiChatService.java:274",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "SEC-IAM-001",
+    "domain": "IAM",
+    "rule": "OTP là 6 chữ số, hiệu lực 5 phút, chỉ lưu hash; phát lại thay challenge cũ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/OtpService.java:32",
+    "kind": "SEC",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "SEC-IAM-002",
+    "domain": "IAM",
+    "rule": "OTP tối đa 3 lần sai, xóa challenge khi hết lượt hoặc xác minh thành công.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/OtpService.java:50",
+    "kind": "SEC",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "SEC-IAM-003",
+    "domain": "IAM",
+    "rule": "Rate limit trong bộ nhớ theo IP/phút: auth chung 60, scan 60, dynamic QR 30; /auth/me được miễn.",
+    "source": "apps/api/src/main/java/com/swp391/scms/security/RateLimitingFilter.java:30",
+    "kind": "SEC",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "SEC-IAM-004",
+    "domain": "IAM",
+    "rule": "JWT request đọc lại role/status từ DB và chỉ authenticate tài khoản active chưa xóa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/security/JwtAuthenticationFilter.java:43",
+    "kind": "SEC",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "DI-NOT-001",
+    "domain": "NOT",
+    "rule": "In-app lưu Notification thật; email/push/webhook notification hiện là mock adapter, không chứng minh đã gửi ngoài.",
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/adapter/MockPushNotificationChannelAdapter.java:24",
+    "kind": "DI",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "DI-IAM-001",
+    "domain": "IAM",
+    "rule": "OTP có SMTP adapter thật theo app.auth.otp.delivery=smtp; số đích không phải email bị từ chối vì SMS chưa hỗ trợ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/auth/SmtpOtpDeliveryAdapter.java:38",
+    "kind": "DI",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "DI-AI-001",
+    "domain": "AI",
+    "rule": "AiClient cho recommendations chọn OpenAI/Groq/Gemini khi có key; còn lại fallback MockAiClient.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/client/AiClientConfig.java:35",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "DI-AI-002",
+    "domain": "AI",
+    "rule": "AI chat dùng provider riêng OpenAI/Groq/Gemini, không fallback mock; thiếu cấu hình báo AI_CHAT_NOT_CONFIGURED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/client/AiChatProvider.java:104",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "OPEN-SUP-001",
+    "domain": "SUP",
+    "rule": "Sơ đồ cũ nói member xác nhận/tự đóng 72 giờ; chưa thấy endpoint member-close hoặc scheduler 72h trong support; SRS cần đánh dấu chưa triển khai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/support/SupportRequestService.java:478",
+    "kind": "OPEN",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "OPEN-NOT-001",
+    "domain": "NOT",
+    "rule": "Sơ đồ cũ ghi Push/SMS đã gửi tới thiết bị; enum kênh hiện không có SMS và các outbound notification adapters chỉ mock.",
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/port/NotificationChannel.java:6",
+    "kind": "OPEN",
+    "owner": "Tài",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "OPEN-AI-001",
+    "domain": "AI",
+    "rule": "Chưa thấy endpoint hoặc trường rating/feedback của AI chat/recommendation; không mô tả AI rating là chức năng đã triển khai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/entity/AiRecommendationLog.java:19",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-001",
+    "domain": "Membership",
+    "rule": "Chỉ mua gói có status active và durationDays > 0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:906",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-002",
+    "domain": "Membership",
+    "rule": "Mua mới bị chặn nếu member có bất kỳ subscription frozen.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:141",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-003",
+    "domain": "Membership",
+    "rule": "Mua mới bị chặn nếu có subscription active với endDate >= hôm nay hoặc có subscription pending_payment.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:146",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-004",
+    "domain": "Membership",
+    "rule": "Mua gói đầu tiên yêu cầu identityVerified=true hoặc trial APPROVED; áp dụng khi chưa từng có subscription.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:162",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-005",
+    "domain": "Membership",
+    "rule": "Mua mới tạo pending_payment, bắt đầu hôm nay, kết thúc hôm nay + durationDays - 1 và chốt quotedPrice theo giá lúc yêu cầu.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:176",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-006",
+    "domain": "Membership",
+    "rule": "Gia hạn chỉ từ kỳ active hoặc expired; kỳ frozen không được coi là kỳ đã trả tiền để gia hạn.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:239",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-007",
+    "domain": "Membership",
+    "rule": "Gia hạn bị chặn khi có hold PENDING trên kỳ active, pending_payment, frozen hoặc chuỗi kỳ trả tiền bị nhánh, vòng lặp, sai khoảng ngày hay chồng nhau ngoài chuyển tiếp nâng cấp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:249",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-008",
+    "domain": "Membership",
+    "rule": "Gia hạn nối vào đuôi chuỗi cùng package: startDate = hôm nay nếu đuôi đã hết hạn, ngược lại endDate đuôi + 1; tạo kỳ pending_payment mới.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:287",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-009",
+    "domain": "Membership",
+    "rule": "Nâng cấp chỉ được từ kỳ active đang bao phủ hôm nay và không có hold PENDING.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:385",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-010",
+    "domain": "Membership",
+    "rule": "Nâng cấp bị chặn nếu có pending_payment, successor pending/active hoặc kỳ gia hạn đã trả tiền trong tương lai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:402",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-011",
+    "domain": "Membership",
+    "rule": "Gói cao hơn được xác định bằng giá cao hơn; nếu giá bằng nhau thì durationDays phải lớn hơn; không được chọn lại cùng package.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:531",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-012",
+    "domain": "Membership",
+    "rule": "Phí nâng cấp = giá gói đích lúc yêu cầu - giá trị còn lại kỳ hiện tại; phải > 0 và được chốt cùng creditApplied.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:425",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-013",
+    "domain": "Membership",
+    "rule": "Giá trị còn lại tính cả ngày hôm nay; kỳ chưa bắt đầu còn nguyên giá trị; kỳ hết hạn còn 0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/SubscriptionValueCalculator.java:99",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-014",
+    "domain": "Membership",
+    "rule": "Quy đổi một phần = paidValue × remainingDays / totalDays, làm tròn xuống đến 1.000 đồng; còn đủ kỳ thì giữ nguyên paidValue.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/SubscriptionValueCalculator.java:123",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-015",
+    "domain": "Membership",
+    "rule": "paidValue ưu tiên tổng payment success/refunded trừ refundedAmount cộng creditApplied; fallback upgradeCharge + credit, sau đó giá catalog.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/SubscriptionValueCalculator.java:43",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-016",
+    "domain": "Membership",
+    "rule": "Chủ gói hoặc staff được hủy pending_payment; đã cancelled trả kết quả hiện có; trạng thái khác bị từ chối.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:460",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-017",
+    "domain": "Membership",
+    "rule": "Không hủy yêu cầu gói nếu có payment success hoặc VNPay còn có thể quyết toán; member không được tự hủy payment pending ngoài online_wallet; pending được đóng failed khi hủy hợp lệ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:499",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-018",
+    "domain": "Membership",
+    "rule": "Yêu cầu hold chỉ cho chủ kỳ active bao phủ hôm nay; gói trial không hỗ trợ hold.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:554",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-019",
+    "domain": "Membership",
+    "rule": "Lý do hold sau trim phải có 1–500 ký tự; không gửi thêm khi holdStatus=PENDING.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:581",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-020",
+    "domain": "Membership",
+    "rule": "Hold bị chặn khi có pending_payment, gia hạn tương lai đã trả tiền hoặc cancellation request PENDING cùng subscription.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:618",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-021",
+    "domain": "Membership",
+    "rule": "Duyệt hold chỉ khi hold PENDING và subscription vẫn active hôm nay; chuyển subscription thành frozen và holdStatus thành APPROVED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:739",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-022",
+    "domain": "Membership",
+    "rule": "Từ chối hold chỉ khi PENDING, chuyển holdStatus=REJECTED và giữ trạng thái subscription.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:806",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-023",
+    "domain": "Membership",
+    "rule": "Resume chỉ từ frozen + APPROVED với ngày duyệt hợp lệ trong kỳ; bị chặn nếu có active còn hạn, pending_payment hoặc gia hạn tương lai đã trả.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:647",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-024",
+    "domain": "Membership",
+    "rule": "Resume giữ nguyên kỳ và cộng endDate số ngày đã hold, tối đa 90; trả active và xóa holdStatus; scheduler tự resume khi đủ 90 ngày.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipSubscriptionService.java:661",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-025",
+    "domain": "Membership",
+    "rule": "Hold, hủy gói và quét lifecycle giải phóng booking tương lai không còn active subscription bao phủ ngày tập; booking PT/sân đã bắt đầu được giữ lịch sử.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/EntitlementRevocationService.java:56",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-026",
+    "domain": "Trial/KYC",
+    "rule": "Chỉ member chưa từng có bất kỳ subscription nào được gửi trial; hash giấy tờ đã dùng bởi tài khoản khác bị chặn.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:150",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-027",
+    "domain": "Trial/KYC",
+    "rule": "CCCD phải 9 hoặc 12 chữ số; passport phải 6–15 ký tự chữ/số và chỉ dành cho quốc tịch không Việt Nam đã cung cấp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:102",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-028",
+    "domain": "Trial/KYC",
+    "rule": "Trial APPROVED không được xin lại; PENDING_APPROVAL không được gửi trùng; REJECTED được cập nhật hồ sơ và gửi lại PENDING_APPROVAL.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:162",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-029",
+    "domain": "Trial/KYC",
+    "rule": "Duyệt trial xác minh identity, đồng bộ họ tên/giấy tờ, tạo subscription active miễn phí có QR và liên kết trial APPROVED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:264",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-030",
+    "domain": "Trial/KYC",
+    "rule": "Ngày kết thúc trial hiện được code gán today.plusDays(3), trong khi entitlement kiểm tra ngày kết thúc inclusive.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:286",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-031",
+    "domain": "Cancellation",
+    "rule": "HTTP chỉ cho RECEPTIONIST/CENTER_MANAGER tạo cancellation qua staff-request: lý do bắt buộc, chọn subscriptionId hoặc memberId; kỳ phải status active (chưa buộc active hôm nay khi gửi), không hold PENDING hoặc cancellation PENDING trùng; staff được đề xuất refund >= 0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/MembershipCancellationController.java:37; apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java:102",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-032",
+    "domain": "Cancellation",
+    "rule": "Chỉ CENTER_MANAGER quyết định cancellation; request phải PENDING; duyệt yêu cầu subscription vẫn active hôm nay và không có hold PENDING.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java:197",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-033",
+    "domain": "Cancellation",
+    "rule": "Không duyệt hủy nếu còn payment enrollment tương lai chưa giải quyết, kỳ active/frozen khác còn hạn hoặc kỳ pending_payment khác.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java:346",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-034",
+    "domain": "Cancellation",
+    "rule": "Duyệt hủy chuyển subscription cancelled, giải phóng lịch không còn quyền; request APPROVED; từ chối chỉ request REJECTED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java:213",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-035",
+    "domain": "Cancellation",
+    "rule": "Tiền hoàn đề xuất là phần paidValue chưa sử dụng; manager được ghi đè; khoản > 0 được credit vào ví với khóa CANCEL_REQ_<id>.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java:236",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-036",
+    "domain": "Scheduling",
+    "rule": "Đặt buổi yêu cầu class active, session scheduled và thời điểm bắt đầu strictly sau hiện tại theo Asia/Ho_Chi_Minh.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionBookingService.java:170",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-037",
+    "domain": "Scheduling",
+    "rule": "Một kỳ membership active hiện tại phải đồng thời bao phủ hôm nay và ngày buổi tập; không cộng gộp kỳ gia hạn tương lai để đáp ứng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionEligibility.java:39",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-038",
+    "domain": "Scheduling",
+    "rule": "Phòng tier PLATINUM yêu cầu gói active có tên chứa PLATINUM và bao phủ ngày học.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionEligibility.java:53",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-039",
+    "domain": "Scheduling",
+    "rule": "Member không được đặt cùng session booked hai lần hoặc đặt lẻ buổi khi đã có class_enrollment booked cùng lớp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionBookingService.java:179",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-040",
+    "domain": "Scheduling",
+    "rule": "Số chỗ dùng của từng buổi = class_enrollments booked của lớp + session_bookings booked của buổi; chỉ đặt khi tổng < capacity.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionBookingService.java:189",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-041",
+    "domain": "Scheduling",
+    "rule": "Member không giữ hai buổi lớp hoặc PT giao nhau: startA < endB và endA > startB; hai slot tiếp giáp được phép.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionBookingService.java:205",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-042",
+    "domain": "Scheduling",
+    "rule": "class_enrollment legacy giữ một chỗ cho mọi buổi của lớp; không được tạo nếu đã có session_bookings booked trong lớp đó.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/EnrollmentService.java:90",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-043",
+    "domain": "Scheduling",
+    "rule": "Capacity khi tạo class_enrollment legacy tính enrollments booked + số session_bookings cao nhất trên bất kỳ buổi trong lớp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/EnrollmentService.java:134",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-044",
+    "domain": "Scheduling",
+    "rule": "Bulk đặt/hủy không được rỗng; ID hợp lệ được loại trùng; tối đa 62; kết quả trả danh sách thành công và skipped với nguyên nhân từng mục.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionBookingService.java:354",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-045",
+    "domain": "Scheduling",
+    "rule": "Chủ booking hoặc staff được hủy session_booking chỉ khi booked và thời điểm bắt đầu strictly sau hiện tại; giải phóng chỗ bằng cancelled.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/SessionBookingService.java:288",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-046",
+    "domain": "Scheduling",
+    "rule": "Chủ hoặc staff được hủy class_enrollment legacy booked; service không áp dụng cutoff 2 giờ hoặc kiểm tra buổi đã bắt đầu cho thao tác này.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/EnrollmentService.java:248",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-047",
+    "domain": "Scheduling",
+    "rule": "Hủy một class_session chuyển session cancelled và các session_bookings booked của buổi thành cancelled; class_enrollments giữ hiệu lực cho buổi khác.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/ClassSessionService.java:69",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-048",
+    "domain": "Scheduling",
+    "rule": "HLV chỉ được hủy session thuộc lớp mình phụ trách; CENTER_MANAGER/MANAGER/STAFF/RECEPTIONIST được hủy.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/ClassSessionService.java:158",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-049",
+    "domain": "Scheduling",
+    "rule": "Tạo lớp yêu cầu discipline/coach/room tồn tại, coach employment active và room available; có đủ ngày giờ thì tạo buổi đầu trong cùng transaction.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/ClassService.java:145",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-050",
+    "domain": "Scheduling",
+    "rule": "Không giảm capacity thấp hơn số class_enrollments booked + số session_bookings cao nhất của một buổi; đổi coach/room kiểm tra lại các scheduled session.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/ClassService.java:247",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-051",
+    "domain": "Scheduling",
+    "rule": "Xóa lớp có bản ghi phụ thuộc chuyển inactive, hủy các scheduled sessions và booked enrollments/bookings, giữ lịch sử; không có phụ thuộc thì xóa vật lý.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/ClassService.java:313",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-052",
+    "domain": "Attendance",
+    "rule": "HTTP scan và staff checkout thực tế chỉ RECEPTIONIST/CENTER_MANAGER: SecurityConfig chặn ADMIN dù controller/service liệt kê ADMIN; member có selfScan riêng dùng QR cửa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/security/SecurityConfig.java:78; apps/api/src/main/java/com/swp391/scms/attendance/CenterCheckinController.java:65",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-053",
+    "domain": "Attendance",
+    "rule": "QR động xác minh chữ ký, thời hạn và cặp user/subscription; QR tĩnh tra subscription theo qrCode; QR sai cũng lưu DENIED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:183",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-054",
+    "domain": "Attendance",
+    "rule": "Chỉ GRANTED khi user active, chưa xóa mềm và subscription active có startDate <= hôm nay <= endDate; các trường hợp từ chối đều ghi denial_reason.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:210",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-055",
+    "domain": "Attendance",
+    "rule": "Anti-passback: còn visit GRANTED chưa checkout thì lần vào tiếp theo ghi DENIED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:242",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-056",
+    "domain": "Attendance",
+    "rule": "Visit chưa đóng quá 12 giờ được tự checkout; giờ checkout gán min(checkIn + 4 giờ, now), note SYSTEM_AUTO_CHECKOUT; job mặc định 03:00.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:267",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-057",
+    "domain": "Attendance",
+    "rule": "Checkout staff chỉ RECEPTIONIST/CENTER_MANAGER qua HTTP; từ chối record DENIED hoặc đã có checkOutTime, hợp lệ thì ghi giờ server; endpoint selfCheckout có xung đột RBAC được ghi riêng OPEN.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:323; apps/api/src/main/java/com/swp391/scms/security/SecurityConfig.java:79",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-058",
+    "domain": "Attendance",
+    "rule": "QR cửa chỉ hỗ trợ A1/A2/B1, HMAC-SHA256 và TTL 60 giây; issued ở tương lai hoặc age >= 60 giây bị từ chối.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/GateQrService.java:19",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-059",
+    "domain": "Attendance",
+    "rule": "Roster là hợp class_enrollments booked và session_bookings booked của buổi, loại trùng theo member.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/SessionAttendanceService.java:103",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-060",
+    "domain": "Attendance",
+    "rule": "Chỉ ghi batch attendance khi session không cancelled và đã bắt đầu; member phải có class enrollment booked/completed hoặc booking booked của buổi.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/SessionAttendanceService.java:233",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-061",
+    "domain": "Attendance",
+    "rule": "Attendance upsert theo session/member; present/late có checkedInAt, absent/excused xóa checkedInAt; publishEvaluations + progressScore tạo/cập nhật evaluation.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/SessionAttendanceService.java:281",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-062",
+    "domain": "Courts",
+    "rule": "Chỉ MEMBER được đặt sân; room phải available, đúng discipline sân và có giờ mở/đóng nguyên giờ hợp lệ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:168",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-063",
+    "domain": "Courts",
+    "rule": "Đặt sân đơn cho ngày từ hôm nay đến hôm nay + 365 ngày inclusive; recurring tối đa hôm nay + 31 ngày inclusive.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:87",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-064",
+    "domain": "Courts",
+    "rule": "Slot sân dài đúng 1 giờ, bắt đầu nguyên giờ, strictly trong tương lai và nằm trọn giờ mở cửa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:171",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-065",
+    "domain": "Courts",
+    "rule": "Đặt sân yêu cầu user active chưa xóa và một membership active bao phủ cả hôm nay lẫn ngày đặt.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:177",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-066",
+    "domain": "Courts",
+    "rule": "Không đặt sân giao nhau với booking cùng sân, buổi lớp dùng sân hoặc booking sân của chính member.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:182",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-067",
+    "domain": "Courts",
+    "rule": "Giá slot bắt đầu trước 18:00 là 100.000đ; từ 18:00 là 125.000đ đã bao gồm chiếu sáng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtPricing.java:10",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-068",
+    "domain": "Courts",
+    "rule": "Quota sân theo tháng lịch cộng chung Tennis/Badminton/Swimming: Silver 1, Gold 2, Platinum 3; gói khác 0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtPricing.java:22",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-069",
+    "domain": "Courts",
+    "rule": "Còn quota thì booking giá 0, method package_quota và paymentStatus covered; hết quota bắt buộc chọn cash hoặc vnpay và paymentStatus pending.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:185",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-070",
+    "domain": "Courts",
+    "rule": "Member hủy sân khi start >= now + 2 giờ; staff hủy khi start > now; đã cancelled trả lại kết quả cũ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:317",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-071",
+    "domain": "Courts",
+    "rule": "Hủy sân đóng payment pending thành failed và đổi booking cancelled; không có thao tác tự hoàn payment đã success trong service hủy sân.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:254",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-072",
+    "domain": "Courts",
+    "rule": "Staff xác nhận thanh toán sân chỉ khi booked + payment pending + method cash; chuyển paid và payment success.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:273",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-073",
+    "domain": "Courts",
+    "rule": "Sân cash chưa trả bị hủy khi slot bắt đầu; sân VNPay chưa trả quá timeout + 1 phút (mặc định 16 phút) bị hủy nếu gateway guard cho phép.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:288",
+    "kind": "BR",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-074",
+    "domain": "Coaching/PT",
+    "rule": "PT chỉ đặt với coach employment active, không nghỉ phép đã duyệt vào ngày đặt; slot đúng 1 giờ nguyên giờ trong 06:00–21:00.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:273",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-075",
+    "domain": "Coaching/PT",
+    "rule": "PT cần đặt trước ít nhất 120 phút; đúng now + 120 phút được phép.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:303",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-076",
+    "domain": "Coaching/PT",
+    "rule": "PT không được giao lớp/PT của coach hoặc lớp/PT của member; không tạo chuỗi 4 slot PT liên tiếp cho coach, kể cả đặt không theo thứ tự.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:315",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-077",
+    "domain": "Coaching/PT",
+    "rule": "PT trả tiền hay quota đều yêu cầu một membership active bao phủ cả hôm nay và ngày đặt.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:363",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-078",
+    "domain": "Coaching/PT",
+    "rule": "Quota PT theo tháng ngày booking: trial 1, Gold 3, Platinum 6, gói khác 0; hết quota phải chọn thanh toán theo giờ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:385",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-079",
+    "domain": "Coaching/PT",
+    "rule": "PT theo giờ 200.000đ, method cash/bank_transfer, payment pending; chặn khi member có từ 2 booking chưa trả trở lên; quota dùng method package_quota và used_quota.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:429",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-080",
+    "domain": "Coaching/PT",
+    "rule": "PT tạo ngay status confirmed; chủ member, CENTER_MANAGER hoặc coach của booking được hủy trước giờ bắt đầu; completed/cancelled không được hủy.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:521",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-081",
+    "domain": "Coaching/PT",
+    "rule": "RECEPTIONIST/CENTER_MANAGER thu PT pending ngoài package_quota và chưa cancelled, đổi paid và ghi payment success theo cash/bank_transfer.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java:575",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-082",
+    "domain": "Coaching/PT",
+    "rule": "Recurring PT/sân chỉ period week hoặc month, thứ ISO 1–7; week từ start đến start + 6, month đến start + 1 tháng - 1; từng ngày được kiểm tra và trả skipped độc lập.",
+    "source": "apps/api/src/main/java/com/swp391/scms/common/RecurrenceDates.java:26",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-083",
+    "domain": "Coaching",
+    "rule": "Current coach scope gồm plan active/draft chưa qua endDate, PT confirmed ngày >= hôm nay hoặc enrollment/booking booked có lớp active và scheduled session ngày >= hôm nay; user member phải active chưa xóa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/repository/CurrentCoachMemberRepository.java:10",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-084",
+    "domain": "Coaching",
+    "rule": "Plan mới có startDate <= endDate; HLV chỉ tạo cho mình và member đang có current assignment; tạo draft mặc định hoặc active nếu yêu cầu activate/status active.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/TrainingPlanService.java:63",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-085",
+    "domain": "Coaching",
+    "rule": "Plan chỉ sửa nội dung khi draft/active; activate chấp nhận draft hoặc active; xóa active chuyển cancelled, xóa draft xóa vật lý, cancelled idempotent, completed không được xóa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/TrainingPlanService.java:153",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-086",
+    "domain": "Coaching",
+    "rule": "Member chỉ tick/untick bài thuộc plan mình vào đúng hôm nay, plan active trong khoảng ngày và thứ bài trùng hôm nay; ghi hoàn thành unique member/item/date.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/TrainingCompletionService.java:37",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-087",
+    "domain": "Coaching",
+    "rule": "Review coach 1–5 sao, phải chọn đúng một PT booking hoặc class_session; nguồn phải thuộc member và coach, đã kết thúc strictly trước hiện tại, không cancelled và chưa review trùng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachReviewService.java:162",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-088",
+    "domain": "Coaching",
+    "rule": "Review lớp cần attendance present/late; review mới được approved ngay; anonymous ẩn memberId và ID nguồn trong public view.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachReviewService.java:196",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-089",
+    "domain": "Health",
+    "rule": "Member chỉ xem số đo của mình; manager xem mọi member; coach chỉ xem trong current assignment.",
+    "source": "apps/api/src/main/java/com/swp391/scms/health/HealthMetricService.java:48",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-090",
+    "domain": "Health",
+    "rule": "Coach/manager được thêm/sửa/xóa số đo; receptionist chỉ append khi có visit GRANTED mở hôm nay do chính receptionist ghi, user member active chưa xóa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/health/HealthMetricService.java:133",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-091",
+    "domain": "Health",
+    "rule": "Tên metric chỉ weight/height/bmi/body_fat/muscle_mass/waist; unit lần lượt kg/cm/không đơn vị/%/kg/cm.",
+    "source": "apps/api/src/main/java/com/swp391/scms/health/HealthMetricService.java:171",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-092",
+    "domain": "Health",
+    "rule": "Giá trị số đo 0,01–99.999.999,99, tối đa 2 chữ số thập phân; body_fat <= 100; recordedAt do server Asia/Ho_Chi_Minh gán.",
+    "source": "apps/api/src/main/java/com/swp391/scms/health/HealthMetricService.java:171",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-093",
+    "domain": "Scheduling",
+    "rule": "DB check cho phép session_bookings/class_enrollments: booked,cancelled,completed; completed là giá trị được phép, chưa tìm thấy writer chuyển completed trong Java hiện tại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/SessionBooking.java:16",
+    "kind": "DI",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-094",
+    "domain": "Membership",
+    "rule": "DB subscription states là pending_payment,active,frozen,expired,cancelled; holdStatus là thuộc tính riêng PENDING/APPROVED/REJECTED/null, không phải state subscription.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipSubscription.java:13",
+    "kind": "DI",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-095",
+    "domain": "Coaching",
+    "rule": "DB plan states là draft,active,completed,cancelled; aiGenerated là boolean, không phải state AI_Generated.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingPlan.java:13",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-096",
+    "domain": "Courts",
+    "rule": "DB court booking chỉ booked,cancelled; trạng thái free/class/past từ availability là giá trị hiển thị tính toán, không lưu state booking.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/entity/CourtBooking.java:13",
+    "kind": "DI",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-097",
+    "domain": "Attendance",
+    "rule": "Checkin result chỉ GRANTED/DENIED; inside/outside được suy ra checkOutTime, không lưu state CheckedOut.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/CenterCheckin.java:11",
+    "kind": "DI",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-098",
+    "domain": "Attendance",
+    "rule": "Attendance status chỉ present,absent,late,excused; chưa điểm danh là chưa có record/null, không phải state persisted.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/SessionAttendance.java:11",
+    "kind": "DI",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-099",
+    "domain": "Coaching",
+    "rule": "HealthMetricService dùng CurrentCoachMembers, nhưng nhiều luồng đọc plan/evaluation vẫn dùng CoachMemberAccess với quan hệ lịch sử; không khẳng định cả hệ thống đã thống nhất current scope.",
+    "source": "apps/api/src/main/java/com/swp391/scms/health/HealthMetricService.java:142",
+    "kind": "SEC",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-100",
+    "domain": "Trial/KYC",
+    "rule": "Trial endDate=today+3 và kiểm tra inclusive cho phép 4 ngày lịch; phải xác nhận với PO trước khi ghi SRS là đúng 3 ngày.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:291",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-101",
+    "domain": "Trial/KYC",
+    "rule": "approveTrialInternal chỉ chặn APPROVED; không yêu cầu PENDING_APPROVAL nên code còn cho duyệt trực tiếp REJECTED; reject cũng chỉ chặn APPROVED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MemberTrialService.java:254",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-102",
+    "domain": "Membership",
+    "rule": "Không tìm thấy job Java đổi active sang expired khi hết ngày; lifecycle hiện resume hold và revoke booking. expired có writer khi nâng cấp trả tiền. Không vẽ tự động expiry status nếu chưa được PO xác nhận.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipLifecycleScheduler.java:35",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-103",
+    "domain": "Scheduling",
+    "rule": "Không tìm thấy entity/service/endpoint waitlist hiện tại; không đưa Waitlisted/Requested/Attended vào state enrollment như chức năng đã triển khai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassEnrollment.java:10",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-104",
+    "domain": "Coaching",
+    "rule": "PT completed và plan completed có trong DB constraint nhưng chưa tìm thấy use-case Java chuyển sang completed; diagram nên dùng chú thích giá trị hợp lệ chưa có transition triển khai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachBooking.java:17",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-105",
+    "domain": "Courts",
+    "rule": "Hủy sân đã trả và entitlement revoke không tự credit refund trong service này; không suy luận chính sách hoàn sân 100% từ membership cancellation.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/service/CourtBookingService.java:254",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-106",
+    "domain": "Scheduling",
+    "rule": "Legacy enrollment service kiểm tra membership/overlap trên session được truyền vào, trong khi seat giữ cả lớp; DB triggers kiểm tra thêm PT và member overlap. Không đồng nhất với per-session validation.",
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/service/EnrollmentService.java:109",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-107",
+    "domain": "Attendance",
+    "rule": "selfCheckout truy vấn visit mở không lọc GRANTED; DENIED cũng có checkOutTime null. Ý định comment là đóng GRANTED nhưng cần xác nhận hành vi thực tế và sửa trước khi mô tả như đảm bảo.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:153",
+    "kind": "OPEN",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-108",
+    "domain": "Coaching",
+    "rule": "CreateEvaluation chỉ kiểm tra score và coach identity, chưa thấy kiểm tra current member assignment, attendance hoặc session đã bắt đầu trong method; batch attendance có guard riêng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/SessionEvaluationService.java:70",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-109",
+    "domain": "Cancellation",
+    "kind": "OPEN",
+    "rule": "Service request(principal, subscriptionId, body) cho member xin hủy vẫn tồn tại nhưng controller không expose endpoint gọi method này; không mô tả member tự submit cancellation là chức năng HTTP đã triển khai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/MembershipCancellationController.java:31",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-110",
+    "domain": "Courts",
+    "kind": "DI",
+    "rule": "Quota sân chỉ đếm booking status booked và method package_quota trong tháng bookingDate; hủy sẽ hoàn quota dùng vì record không còn booked.",
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/repository/CourtBookingRepository.java:50",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-111",
+    "domain": "Coaching/PT",
+    "kind": "DI",
+    "rule": "Quota PT đếm mọi booking khác cancelled dùng package_quota trong tháng bookingDate; giới hạn chưa trả đếm pending + confirmed/completed, kể cả PT trong quá khứ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/repository/CoachBookingRepository.java:64",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-112",
+    "domain": "Coaching/Assignment",
+    "kind": "BR",
+    "rule": "API phân công chỉ tạo loại TRAINING_PLAN, yêu cầu coach employment active và user active chưa xóa; member user active chưa xóa và có membership active hôm nay.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachAssignmentService.java:152",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-113",
+    "domain": "Coaching/Assignment",
+    "kind": "BR",
+    "rule": "Plan phân công mới có startDate <= endDate và endDate >= hôm nay; tạo active; goal ưu tiên request, rồi fitnessGoal, rồi mặc định.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachAssignmentService.java:156",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-114",
+    "domain": "Coaching/Assignment",
+    "kind": "BR",
+    "rule": "Reassign chỉ TRAINING_PLAN hoặc PT_1_1, fromCoach khác toCoach, reference phải đúng member và coach nguồn; CLASS chỉ đọc tại màn phân công.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachAssignmentService.java:173",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-115",
+    "domain": "Coaching/Assignment",
+    "kind": "BR",
+    "rule": "Reassign plan chỉ khi active chưa hết endDate; reassign PT chỉ khi confirmed, chưa bắt đầu, gói phủ hôm nay/ngày tập và coach mới không nghỉ phép hoặc trùng lịch lớp/PT.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachAssignmentService.java:184",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-116",
+    "domain": "Coaching/Assignment",
+    "kind": "BR",
+    "rule": "Reassign ghi audit hai coach và đúng reference, gửi thông báo cho coach cũ/mới và member; remove assignment chuyển active plan chưa hết hạn sang cancelled, giữ lịch sử.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachAssignmentService.java:208",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-117",
+    "domain": "Coaching/Leaderboard",
+    "kind": "BR",
+    "rule": "Tổng kết tháng tính averageRating từ review approved, tổng review và số PT/lớp trong tháng không cancelled; số buổi không buộc status completed.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachLeaderboardService.java:107",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-118",
+    "domain": "Coaching/Leaderboard",
+    "kind": "BR",
+    "rule": "Xếp hạng generate ưu tiên coach có review, tiếp theo averageRating giảm dần, totalSessions giảm dần, totalReviews giảm dần; rank liên tiếp i+1.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachLeaderboardService.java:143",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-119",
+    "domain": "Coaching/Leaderboard",
+    "kind": "BR",
+    "rule": "Generate gán published; badge mặc định top1 thưởng 2.000.000đ, top2 1.000.000đ, top3 500.000đ, còn lại 0; badge tùy chỉnh đã có được giữ lại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachLeaderboardService.java:131",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-120",
+    "domain": "Coaching/Leaderboard",
+    "kind": "BR",
+    "rule": "Manager được sửa rank, badge, bonus, feedback, status tổng kết tháng; cập nhật published gửi notification coach; leaderboard và coach my-review chỉ lấy published.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/CoachLeaderboardService.java:200",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-121",
+    "domain": "Coaching",
+    "kind": "BR",
+    "rule": "Bài trong plan yêu cầu exerciseName không trống tối đa 150 ký tự; sets/reps/duration nếu cung cấp phải >=1, restSeconds >=0, dayOfWeek nếu có nằm 1–7.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/dto/TrainingPlanItemCreateDto.java:11",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-122",
+    "domain": "Coaching",
+    "kind": "BR",
+    "rule": "Xem progress theo ngày chỉ coach/CENTER_MANAGER, ngày không tương lai; ngày ngoài kỳ trả danh sách rỗng; trong kỳ chỉ hiện bài đúng thứ cùng completion của member.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/TrainingPlanProgressService.java:21",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-123",
+    "domain": "Coaching",
+    "kind": "BR",
+    "rule": "Tạo evaluation yêu cầu progressScore 1–100; coach không được ghi thay coach khác; không có sessionId vẫn được ghi evaluation.",
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/service/SessionEvaluationService.java:70",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-124",
+    "domain": "Attendance",
+    "kind": "BR",
+    "rule": "Batch attendance records không rỗng, status chỉ present/absent/late/excused không phân biệt hoa thường, notes tối đa 255 ký tự, progressScore tùy chọn 1–100.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/dto/BatchAttendanceRequest.java:17",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-125",
+    "domain": "Attendance",
+    "kind": "BR",
+    "rule": "Lịch sử check-in mặc định hôm nay; khoảng ngày inclusive tối đa 31 ngày; member chỉ xem bản ghi chính mình.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:360",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-126",
+    "domain": "Attendance",
+    "kind": "SEC",
+    "rule": "POST /api/v1/check-in/self/checkout bị xung đột: SecurityConfig pattern /check-in/*/checkout chỉ RECEPTIONIST/CENTER_MANAGER, trong khi @PreAuthorize selfCheckout chỉ MEMBER; không coi member tự checkout là HTTP reachable hiện tại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/security/SecurityConfig.java:79; apps/api/src/main/java/com/swp391/scms/attendance/CenterCheckinController.java:101",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-OPS-127",
+    "domain": "Attendance",
+    "kind": "BR",
+    "rule": "Streak chỉ dùng các ngày có visit GRANTED hợp lệ đã xảy ra, loại trùng ngày; current streak đếm lùi từ hôm nay nếu đã tập, nếu chưa thì từ hôm qua; longest là chuỗi ngày liên tục dài nhất; recent window từ thứ Hai đầu tuần lùi 12 tuần đến hôm nay.",
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/service/CenterCheckinService.java:396",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-001",
+    "domain": "FIN",
+    "rule": "Member tạo payment chỉ cho chính mình, chỉ pending, không tự đặt paidAt/receivedBy; cash yêu cầu ảnh biên lai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:112",
+    "kind": "SEC",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-002",
+    "domain": "FIN",
+    "rule": "Subscription payment phải thuộc member, trạng thái pending_payment và amount bằng payableAmount; không tạo thêm payment nếu subscription đã có payment.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:173",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-003",
+    "domain": "FIN",
+    "rule": "Payment status flow tổng quát: pending → success hoặc failed; failed → pending; lặp nguyên trạng là no-op; success → refunded phải đi refund use case.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:244",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-004",
+    "domain": "FIN",
+    "rule": "Generic refund chỉ nhận payment success; refundable=amount−refundedAmount; nếu không truyền refundAmount thì hoàn hết phần còn lại, 0<refundAmount≤refundable.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:474",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-005",
+    "domain": "FIN",
+    "rule": "Hoàn một phần giữ payment success và quyền gói; khi tổng refund=amount mới chuyển refunded và hủy target subscription/enrollment.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:493",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-006",
+    "domain": "FIN",
+    "rule": "Hoàn toàn bộ upgrade có thể phục hồi gói trước đã expired với endDate gốc nếu chưa qua hạn; quyền booking tương lai được thu hồi theo entitlement còn lại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:545",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-007",
+    "domain": "FIN",
+    "rule": "Endpoint generic refund chỉ CENTER_MANAGER; refund được audit PAYMENT_REFUND và bắt buộc đi use case riêng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/PaymentController.java:95",
+    "kind": "SEC",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-008",
+    "domain": "FIN",
+    "rule": "Generic refund chặn pending VNPay và chặn payment có VNPay success (VNPAY_REFUND_UNSUPPORTED).",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentGuard.java:44",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-009",
+    "domain": "FIN",
+    "rule": "VNPay chỉ enabled khi flag bật, hashSecret không rỗng, tmnCode 8 ký tự chữ/số, timeout 1..60 phút, payment URL HTTPS host sandbox.vnpayment.vn; return HTTPS hoặc HTTP localhost/127.0.0.1 và không query/fragment/userInfo.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayGateway.java:27",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-010",
+    "domain": "FIN",
+    "rule": "VNPay amount phải số nguyên VND dương; gửi vnp_Amount=amount×100, tối đa 12 chữ số (amount nguyên tối đa 9.999.999.999 VND).",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayGateway.java:45",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-011",
+    "domain": "FIN",
+    "rule": "Chữ ký VNPay HMAC-SHA512 trên key sắp xếp + URL encode, bỏ SecureHash/SecureHashType và giá trị rỗng; kiểm tmnCode, 128 hex và so sánh constant time.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayGateway.java:60",
+    "kind": "SEC",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-012",
+    "domain": "FIN",
+    "rule": "Checkout phải chọn đúng một ID dương trong subscriptionId/coachBookingId/courtBookingId/paymentId/productOrderId và target thuộc member.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:180",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-013",
+    "domain": "FIN",
+    "rule": "Checkout chỉ xử lý payment pending: subscription pending_payment, PT confirmed/completed với payment pending, court booked với payment pending, shop pending_payment không phải counter.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:185",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-014",
+    "domain": "FIN",
+    "rule": "Checkout dùng lại VNPay attempt pending chưa hết hạn; đã hết hạn phải chờ thêm grace 15 phút rồi mới đóng failed và tạo attempt mới.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:156",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-015",
+    "domain": "FIN",
+    "rule": "Attempt VNPay pending quá expiresAt+15 phút mới stale (so sánh strict before); scheduler mặc định 300.000 ms, đồng thời guard kiểm tra khi đổi payment/cancel.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentGuard.java:70",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-016",
+    "domain": "FIN",
+    "rule": "IPN yêu cầu chữ ký hợp lệ, TxnRef chữ/số 1..32, amount số 1..12 chữ số và bằng storedAmount×100; mã trả tương ứng 97/01/04 khi sai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:266",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-017",
+    "domain": "FIN",
+    "rule": "IPN success cần ResponseCode=00, TransactionStatus=00 và TransactionNo 1..15 chữ số khác toàn 0; settlement success, target paid, invoice và wallet ledger nằm cùng transaction.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:282",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-018",
+    "domain": "FIN",
+    "rule": "IPN duplicate/target đã settle trả 02, không credit hoặc settle lần hai; lỗi runtime rollback trả 99 để gateway retry; query param trùng trả 97.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayIpnHandler.java:24",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-019",
+    "domain": "FIN",
+    "rule": "IPN không success chỉ chốt attempt failed với TransactionStatus 02/04/07; trạng thái provisional/khác trả 99 và tiếp tục chặn để đối soát.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:314",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-020",
+    "domain": "FIN",
+    "rule": "Late success sau local expiry vẫn được settle nếu payment còn pending; nếu shop đã cancelled và payment failed thì chuyển payment refunded và credit wallet thay vì mở lại đơn.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:275",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-021",
+    "domain": "FIN",
+    "rule": "Signed verify-return gọi ipn.process cùng settlement trước khi đọc trạng thái; thiếu chữ ký chỉ đọc status. Không thể mô tả browser return luôn chỉ đọc hoặc hoàn toàn không settle.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/controller/VnpayController.java:38",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-022",
+    "domain": "FIN",
+    "rule": "Auto-issue invoice chỉ payment success, dùng lại invoice hiện có; subtotal=payment.amount, tax=0, shop tách từng item snapshot và dòng shipping nếu fee>0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/InvoiceService.java:128",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-023",
+    "domain": "FIN",
+    "rule": "Invoice total_amount được DB generated=subtotal_amount+tax_amount; InvoiceItem amount generated=quantity×unit_price.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Invoice.java:44",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-024",
+    "domain": "FIN",
+    "rule": "Member chỉ xem/tải invoice payment của chính mình đang success; trả stored total, không expose pdfUrl nội bộ.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/InvoiceService.java:112",
+    "kind": "SEC",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-025",
+    "domain": "FIN",
+    "rule": "Có GET /api/v1/invoices/my/by-payment/{id}/download trả PDF attachment no-store; thiếu dữ liệu stored total/metadata báo unavailable; PDF là bản thông tin, không phải hóa đơn thuế ký số.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/MemberInvoiceController.java:56",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-001",
+    "domain": "WAL",
+    "rule": "Ví khởi tạo balance=0 cho user chưa bị xóa; GET /wallet/my được dùng bởi user authenticated.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletService.java:48",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-002",
+    "domain": "WAL",
+    "rule": "Lịch sử ví trả 50 dòng mới nhất theo createdAt desc rồi id desc.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletService.java:76",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-003",
+    "domain": "WAL",
+    "rule": "Các thay đổi ví lấy pessimistic write lock theo user để tính balance mới trong transaction.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletRepository.java:17",
+    "kind": "DI",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-004",
+    "domain": "WAL",
+    "rule": "Member nạp VNPay tối thiểu 10.000 và tối đa 100.000.000 VND; chỉ credit sau verified success, không credit khi mới tạo checkout.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:88",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-005",
+    "domain": "WAL",
+    "rule": "Topup cộng amount vào số dư; idempotency theo wallet+reference:TOPUP; ghi TOPUP_VNPAY/VNPAY_TOPUP và balanceAfter.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletService.java:94",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-006",
+    "domain": "WAL",
+    "rule": "Thanh toán ví yêu cầu amount>0 và balance≥amount; balance mới=balance−amount, ghi PAYMENT_DEBIT/WALLET_PAYMENT với WALLET_PAY_{paymentId}.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletService.java:147",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-007",
+    "domain": "WAL",
+    "rule": "Ví thanh toán target pending thành công thì payment success, target paid và invoice; không yêu cầu bật VNPay để chi số dư có sẵn.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayPaymentService.java:110",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-008",
+    "domain": "WAL",
+    "rule": "Thanh toán trực tiếp qua VNPay cho dịch vụ ghi TOPUP rồi DEBIT cùng amount nên net balance không đổi; chặn lặp bằng reference:TOPUP.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletService.java:206",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-009",
+    "domain": "WAL",
+    "rule": "Refund ví cộng amount vào balance, ghi REFUND_CREDIT; không lặp khi cùng referenceId trong ví, description cắt tối đa 500 ký tự.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletService.java:288",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-010",
+    "domain": "WAL",
+    "rule": "Shop refund dùng reference ORDER_REFUND_{orderId}; late payment refund dùng ORDER_LATE_REFUND_{reference}, hoàn toàn bộ paid.amount về ví.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderRefunds.java:34",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-011",
+    "domain": "WAL",
+    "rule": "Duyệt cancellation membership credit ví bằng CANCEL_REQ_{requestId} khi refundAmount>0; đây là use case khác generic PaymentService.refundPayment.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/service/MembershipCancellationService.java:236",
+    "kind": "BR",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-001",
+    "domain": "SHOP",
+    "rule": "Catalog public chỉ product active + category active; inStock filter yêu cầu có active variant stock>0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/repository/ProductRepository.java:23",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-002",
+    "domain": "SHOP",
+    "rule": "Chi tiết public chỉ đưa active variants; public stock clamp 0..99, available=active và stock>0.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/mapper/ProductMapper.java:100",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-003",
+    "domain": "SHOP",
+    "rule": "Price-per-serving=price/servingsPerContainer làm tròn nguyên HALF_UP; trả null nếu servings thiếu/<1 hoặc price thiếu.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductVariant.java:45",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-004",
+    "domain": "SHOP",
+    "rule": "Mỗi product có 1..12 variant, giá 1.000..100.000.000 VND, servings nếu có 1..1.000, initialStock 0..9.999.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductAdminService.java:576",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-005",
+    "domain": "SHOP",
+    "rule": "SKU không trùng trong request hay toàn catalog (so không phân biệt hoa/thường); product slug sinh từ tên và phải độc nhất.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductAdminService.java:148",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-006",
+    "domain": "SHOP",
+    "rule": "Không xóa product/variant đã xuất hiện trong order; quản trị có thể tắt active để ngừng bán.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductAdminService.java:304",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-007",
+    "domain": "SHOP",
+    "rule": "Stock adjustment delta khác 0 trong −9.999..9.999, reason restock/adjustment, kết quả không âm; tạo StockMovement và actor.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductAdminService.java:395",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-008",
+    "domain": "SHOP",
+    "rule": "Cart/quote không rỗng; merge variant trùng, tổng quantity mỗi variant 1..20 và tối đa 30 variant.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/QuoteService.java:38",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-009",
+    "domain": "SHOP",
+    "rule": "Quote không giữ stock: trả NOT_FOUND/INACTIVE/OUT_OF_STOCK/INSUFFICIENT_STOCK; quantity thực tế=min(requested,stock), valid=false khi có problem.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/QuoteService.java:85",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-010",
+    "domain": "SHOP",
+    "rule": "Line total=roundHalfUp(unitPrice,0)×actualQty; subtotal=sum(lineTotal); total=subtotal+shippingFee, cả subtotal và total≤100.000.000 VND.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/QuoteService.java:115",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-011",
+    "domain": "SHOP",
+    "rule": "Pickup fee=0; delivery miễn phí nếu subtotal≥ngưỡng mặc định 500.000 VND, thấp hơn thu mặc định 30.000 VND; đều lấy ShopProperties/env.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ShopPricing.java:18",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-012",
+    "domain": "SHOP",
+    "rule": "Member có tối đa 5 saved addresses; lưu địa chỉ trong checkout khi đầy thì bỏ qua lưu, không chặn đặt hàng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/AddressService.java:56",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-013",
+    "domain": "SHOP",
+    "rule": "Địa chỉ đầu tiên mặc định; đặt mặc định mới bỏ mặc định cũ; xóa mặc định chuyển sang địa chỉ mới nhất còn lại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/AddressService.java:128",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-014",
+    "domain": "SHOP",
+    "rule": "Địa chỉ yêu cầu recipient 2..80, street 5..200, note≤200; phone ^(0|\\+84)(3|5|7|8|9)\\d{8}$ và chuẩn hóa +84→0; ward phải thuộc province từ resource hai cấp đóng gói.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/AddressService.java:217",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-015",
+    "domain": "SHOP",
+    "rule": "Đặt hàng yêu cầu MEMBER đang active/chưa xóa; không kiểm subscription active để mua shop.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:163",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-016",
+    "domain": "SHOP",
+    "rule": "clientRequestId bắt buộc 8..36 ký tự; cùng member+requestId trả order cũ (200), tạo mới 201; unique collision được đọc lại order thay vì trừ stock lần nữa.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/controller/ShopOrderController.java:45",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-017",
+    "domain": "SHOP",
+    "rule": "Tạo order phải quote lại dưới lock variant; lỗi stock trả PRODUCT_OUT_OF_STOCK; expectedTotal làm tròn nguyên phải bằng giá server, nếu khác ORDER_PRICE_CHANGED.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:181",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-018",
+    "domain": "SHOP",
+    "rule": "Fulfillment chỉ pickup/delivery; paymentMethod chỉ online/counter; counter chỉ đi với pickup.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:374",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-019",
+    "domain": "SHOP",
+    "rule": "Delivery cần đúng một addressId hoặc shippingAddress; pickup cấm cả hai; khi tạo order lưu shipping snapshot và item snapshot.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:193",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-020",
+    "domain": "SHOP",
+    "rule": "Order bắt đầu pending_payment; paymentDueAt=now+30 phút online hoặc now+48 giờ counter theo default cấu hình.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:202",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-021",
+    "domain": "SHOP",
+    "rule": "Ngay khi tạo order reserve stock bằng stock−quantity và StockMovement order_reserve; hủy có restock thì stock+quantity, movement order_release.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/StockService.java:51",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-022",
+    "domain": "SHOP",
+    "rule": "Thanh toán online/ví chỉ cho order pending_payment không phải counter; success đổi paid và ghi paidAt.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderPayments.java:47",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-023",
+    "domain": "SHOP",
+    "rule": "Staff thu quầy chỉ pending_payment+counter+pickup bằng cash/pos/bank_transfer; tạo payment success đúng order.total và invoice.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderStaffService.java:232",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-024",
+    "domain": "SHOP",
+    "rule": "Luồng delivery: paid→processing→shipping→completed; chuyển shipping cần trackingNumber 3..60 và carrier≤60, không gọi carrier API.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderStaffService.java:137",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-025",
+    "domain": "SHOP",
+    "rule": "Luồng pickup: paid→processing→ready_for_pickup→completed; riêng pickup counter được paid→completed trực tiếp.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderStaffService.java:184",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-026",
+    "domain": "SHOP",
+    "rule": "Member chỉ hủy pending_payment hoặc paid; pending có VNPay chưa rõ kết quả bị chặn, hủy trả stock và nếu đã paid hoàn về wallet.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:263",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-027",
+    "domain": "SHOP",
+    "rule": "Staff hủy bất kỳ trạng thái chưa terminal, reason 5..255; restock tùy chọn mặc định true; completed/cancelled không hủy lại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderStaffService.java:277",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-028",
+    "domain": "SHOP",
+    "rule": "Job mỗi 60.000 ms lấy pending_payment có dueAt<now, khóa lại, bỏ qua nếu VNPay pending, hủy+release stock và chuyển payment pending thành failed.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderService.java:334",
+    "kind": "BR",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-029",
+    "domain": "SHOP",
+    "rule": "OrderStatus đúng 7 giá trị: pending_payment, paid, processing, shipping, ready_for_pickup, completed, cancelled; terminal=completed/cancelled.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/OrderStatus.java:3",
+    "kind": "DI",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-026",
+    "domain": "FIN",
+    "rule": "Chỉ xác minh code/config mặc định; chưa truy cập deployment/secrets/VNPay merchant console, chưa chứng minh live enabled hoặc registered IPN/public return URL hoạt động.",
+    "source": ".env.example:55",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-027",
+    "domain": "FIN",
+    "rule": "Không mô tả VNPay production: adapter hard-code allowlist sandbox host và application.yml dùng sandbox URL; đổi env flag chưa đủ để thành gateway thật.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/VnpayGateway.java:35",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-028",
+    "domain": "FIN",
+    "rule": "Manual createInvoice chỉ chặn failed/refunded nên pending vẫn tạo được invoice; auto-issue/member view yêu cầu success. Cần chốt SRS phân biệt invoice draft/manual.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/InvoiceService.java:58",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-029",
+    "domain": "FIN",
+    "rule": "Generic refund không chuyển tiền qua VNPay/bank và không credit WalletService; SRS không được gộp với shop refund hoặc membership cancellation refund.",
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/service/PaymentService.java:474",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-FIN-030",
+    "domain": "FIN",
+    "rule": "Member cancellation service.request vẫn có nhưng không được expose qua controller; chỉ staff-request hiện hữu. Mock frontend cũ không chứng minh member flow khả dụng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/MembershipCancellationController.java:31",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-WAL-012",
+    "domain": "WAL",
+    "rule": "WalletTransaction reference_id chỉ có index, không unique; credit có existence guard sau row lock nhưng debitForPayment không tự kiểm reference duplicate. Không ghi là mọi thao tác ví có DB exactly-once.",
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletTransaction.java:8",
+    "kind": "OPEN",
+    "owner": "Phong",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-030",
+    "domain": "SHOP",
+    "rule": "Không tìm thấy coupon/discountCode trong shop DTO/service/frontend được scan; total hiện subtotal+shippingFee. Coupon discount không phải BR đã triển khai.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/dto/OrderDtos.java:18",
+    "kind": "OPEN",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-031",
+    "domain": "SHOP",
+    "rule": "requirePayable không so now với paymentDueAt; expiry chỉ có scheduler. Có khoảng dueAt đã qua nhưng job chưa hủy vẫn có thể thanh toán; cần chốt desired SRS. OrderMapper.canPay có xét dueAt nên UI và service gate chưa đồng nhất.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductOrderPayments.java:47",
+    "kind": "OPEN",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-032",
+    "domain": "SHOP",
+    "rule": "Staff service cho role MANAGER nhưng controller chỉ RECEPTIONIST/STAFF/CENTER_MANAGER; không coi MANAGER là role HTTP hợp lệ đã chứng minh.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/controller/StaffProductOrderController.java:25",
+    "kind": "OPEN",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-SHOP-033",
+    "domain": "SHOP",
+    "rule": "Catalog sort giá/price_per_serving chỉ nạp tối đa 500 product rồi sort in-memory; không khẳng định sort toàn catalog khi catalog lớn.",
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/service/ProductCatalogService.java:118",
+    "kind": "OPEN",
+    "owner": "Thịnh",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-001",
+    "kind": "BR",
+    "rule": "Không xóa bộ môn đang được lớp, phòng hoặc PT booking tham chiếu; khi xóa được thì gỡ member favorites trước.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/service/DisciplineService.java:73",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-002",
+    "kind": "BR",
+    "rule": "Không xóa gói đã từng có subscription; dùng trạng thái inactive để ngừng bán mà giữ lịch sử.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/service/PackageService.java:72",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-003",
+    "kind": "BR",
+    "rule": "Không xóa phòng đã từng được lớp hoặc court booking sử dụng; endpoint trả ROOM_IN_USE.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/service/RoomService.java:85",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-004",
+    "kind": "BR",
+    "rule": "Phòng gắn discipline phải là discipline sân được hỗ trợ và có giờ mở/đóng hợp lệ; phòng không gắn discipline sẽ xóa giờ mở/đóng.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/service/RoomService.java:52",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-005",
+    "kind": "DI",
+    "rule": "Room capacity tối thiểu 1; status available/maintenance/closed; tier STANDARD hoặc PLATINUM, không phân biệt hoa thường ở DTO.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/dto/CatalogRequests.java:17",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-006",
+    "kind": "DI",
+    "rule": "Gói có price không âm, durationDays tối thiểu 1, classCreditLimit không âm nếu có; trạng thái active/inactive.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/dto/CatalogRequests.java:33",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-007",
+    "kind": "BR",
+    "rule": "Mã thiết bị không rỗng phải duy nhất theo kiểm tra repository; khi cập nhật loại trừ ID thiết bị hiện tại.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/service/EquipmentService.java:104",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-CAT-008",
+    "kind": "DI",
+    "rule": "Thiết bị có quantity tối thiểu 1 và trạng thái active/maintenance/broken/retired; tên tối đa 150, mã tối đa 60, ghi chú tối đa 500 ký tự.",
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/dto/EquipmentRequest.java:7",
+    "domain": "Catalog",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-KYC-001",
+    "kind": "BR",
+    "rule": "Member KYC yêu cầu họ tên không rỗng, ảnh mặt trước; CCCD yêu cầu ảnh mặt sau và số 9/12 chữ số; passport 6–15 chữ/số chỉ cho người không có quốc tịch Việt Nam.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/ProfileService.java:223",
+    "domain": "KYC",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  },
+  {
+    "id": "BR-KYC-002",
+    "kind": "BR",
+    "rule": "submitMemberKyc hiện trực tiếp đặt identityVerified=true và identityVerifiedAt sau validation, lưu giấy tờ và đồng bộ fullName; không có bước duyệt riêng trong method này.",
+    "source": "apps/api/src/main/java/com/swp391/scms/users/ProfileService.java:273",
+    "domain": "KYC",
+    "owner": "An",
+    "verification": "Đọc code; chưa chạy E2E",
+    "review": "Pending"
+  }
+]

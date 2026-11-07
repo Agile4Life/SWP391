@@ -1,0 +1,167 @@
+erDiagram
+  direction LR
+  ai_chat_messages {
+    bigint id PK
+    bigint session_id FK
+    varchar_10 sender
+    text message
+    timestamp created_at
+  }
+  ai_chat_sessions {
+    bigint id PK
+    bigint member_id FK
+    varchar_150 topic
+    timestamp started_at
+    timestamp ended_at
+  }
+  ai_recommendation_logs {
+    bigint id PK
+    bigint coach_id FK
+    bigint member_id FK
+    jsonb input_context
+    jsonb recommended_content
+    varchar_100 model_name
+    boolean is_applied
+    timestamp created_at
+  }
+  class_sessions {
+    bigint id PK
+  }
+  classes {
+    bigint id PK
+  }
+  coach_bookings {
+    bigint id PK
+    bigint member_id FK
+    bigint coach_id FK
+    bigint discipline_id FK
+    date booking_date
+    time start_time
+    time end_time
+    numeric_12_2 hourly_rate
+    varchar_30 payment_method
+    varchar_20 payment_status
+    varchar_20 status
+    varchar_500 notes
+    timestamp created_at
+    timestamp cancelled_at
+    varchar_255 cancel_reason
+  }
+  coach_monthly_reviews {
+    bigint id PK
+    bigint coach_id FK
+    bigint manager_id FK
+    integer review_year
+    integer review_month
+    numeric_3_2 average_rating
+    integer total_reviews
+    integer total_sessions
+    integer rank_position
+    varchar_100 badge
+    numeric_12_2 bonus_amount
+    text manager_feedback
+    varchar_20 status
+    timestamp created_at
+    timestamp updated_at
+  }
+  coach_reviews {
+    bigint id PK
+    bigint coach_id FK
+    bigint member_id FK
+    bigint booking_id
+    bigint class_session_id
+    integer rating
+    text comment
+    boolean is_anonymous
+    varchar_20 status
+    text manager_notes
+    timestamp created_at
+  }
+  coaches {
+    bigint user_id PK,FK,UK
+  }
+  disciplines {
+    bigint id PK
+  }
+  member_progress_logs {
+    bigint id PK
+    bigint member_id FK
+    varchar_100 metric_name
+    numeric_10_2 metric_value
+    varchar_20 unit
+    bigint recorded_by FK
+    timestamp recorded_at
+  }
+  members {
+    bigint user_id PK,FK,UK
+  }
+  session_evaluations {
+    bigint id PK
+    bigint session_id FK
+    bigint member_id FK
+    bigint coach_id FK
+    text performance_notes
+    numeric_4_1 progress_score
+    text feedback
+    timestamp evaluated_at
+    timestamp created_at
+  }
+  training_item_completions {
+    bigint id PK
+    bigint member_id FK
+    bigint training_plan_item_id FK
+    date exercise_date
+    timestamp completed_at
+  }
+  training_plan_items {
+    bigint id PK
+    bigint training_plan_id FK
+    integer day_of_week
+    varchar_150 exercise_name
+    text description
+    integer rest_seconds
+    integer sets
+    integer reps
+    integer duration_minutes
+    integer order_index
+  }
+  training_plans {
+    bigint id PK
+    bigint member_id FK
+    bigint coach_id FK
+    bigint class_id FK
+    varchar_255 goal
+    date start_date
+    date end_date
+    varchar_20 status
+    boolean is_ai_generated
+    bigint ai_recommendation_id FK
+    timestamp created_at
+    timestamp updated_at
+  }
+  users {
+    bigint id PK
+  }
+  ai_chat_sessions ||--o{ ai_chat_messages : "session_id"
+  members ||--o{ ai_chat_sessions : "member_id"
+  coaches |o--o{ ai_recommendation_logs : "coach_id"
+  members ||--o{ ai_recommendation_logs : "member_id"
+  members ||--o{ coach_bookings : "member_id"
+  coaches ||--o{ coach_bookings : "coach_id"
+  disciplines |o--o{ coach_bookings : "discipline_id"
+  coaches ||--o{ coach_monthly_reviews : "coach_id"
+  users |o--o{ coach_monthly_reviews : "manager_id"
+  coaches ||--o{ coach_reviews : "coach_id"
+  members ||--o{ coach_reviews : "member_id"
+  class_sessions |o--o{ session_evaluations : "session_id"
+  members ||--o{ session_evaluations : "member_id"
+  coaches ||--o{ session_evaluations : "coach_id"
+  members ||--o{ training_item_completions : "member_id"
+  training_plan_items ||--o{ training_item_completions : "training_plan_item_id"
+  members ||--o{ training_plans : "member_id"
+  coaches ||--o{ training_plans : "coach_id"
+  classes |o--o{ training_plans : "class_id"
+  ai_recommendation_logs |o--o{ training_plans : "ai_recommendation_id"
+  training_plans ||--o{ training_plan_items : "training_plan_id"
+  members ||--o{ member_progress_logs : "member_id"
+  users ||--o{ member_progress_logs : "recorded_by"

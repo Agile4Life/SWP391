@@ -1,0 +1,30 @@
+flowchart TD
+    subgraph Actors[Actor]
+      A1[CENTER_MANAGER generic payment refund]
+      A2[Receptionist / manager tạo cancellation membership]
+      A3[Member / staff hủy order đã thanh toán]
+      A4[Late success VNPay của order cancelled]
+    end
+    subgraph Domain[Use case]
+      D1[Guard VNPay; payment phải success]
+      D2[Refund amount trong phần còn lại]
+      D3{Đã refund đủ amount?}
+      D4[Giữ success và quyền gói]
+      D5[Payment refunded; hủy target và revoke entitlement]
+      D6[Manager approve cancellation request PENDING]
+      D7[Subscription cancelled; revoke uncovered bookings]
+      D8[Shop paid payment success chuyển refunded]
+      D9[Payment failed chuyển refunded; order vẫn cancelled]
+    end
+    subgraph Ledger[Wallet hoặc sổ ghi nhận]
+      L1[Generic refund ghi refundedAmount và note; không auto credit ví]
+      L2[Credit ví CANCEL_REQ_requestId nếu amount dương]
+      L3[Credit ví ORDER_REFUND_orderId]
+      L4[Credit ví ORDER_LATE_REFUND_reference]
+    end
+    A1 --> D1 --> D2 --> D3
+    D3 -->|Chưa đủ| D4 --> L1
+    D3 -->|Đủ| D5 --> L1
+    A2 --> D6 --> D7 --> L2
+    A3 --> D8 --> L3
+    A4 --> D9 --> L4

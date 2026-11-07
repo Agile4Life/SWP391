@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> scheduled: manager tạo buổi tương lai, không trùng<br/>room/coach/member
+    scheduled --> scheduled: manager sửa ngày/giờ hợp lệ
+    scheduled --> cancelled: coach phụ trách hoặc staff hủy
+    scheduled --> cancelled: xóa lớp có dữ liệu phụ thuộc
+    note right of cancelled
+        Hủy session_bookings booked của buổi và gửi thông báo.
+        Giữ class_enrollments cho các buổi khác.
+        Service hủy chỉ chặn session đã cancelled,
+        không có cutoff tương lai cho hủy session.
+    end note
+    note left of scheduled
+        completed được DB cho phép nhưng chưa tìm thấy
+        transition Java, không tự vẽ hoàn thành theo đồng hồ.
+    end note

@@ -1,0 +1,17 @@
+flowchart LR
+ P["/portal → Receptionist home"] --> R["/staff/reception
+Lookup, thu ngân, trial/KYC, hold, hủy gói hộ"]
+ P --> C["/staff/check-in
+Quét member QR, QR cửa, lịch sử, checkout"]
+ P --> CL["/staff/classes
+Lớp và lịch"]
+ P --> CT["/staff/courts"]
+ P --> S["/staff/support
+Tiếp nhận và escalation"]
+ P --> O["/staff/orders
+Fulfillment sản phẩm"]
+ P --> I["/staff/requests
+Gửi yêu cầu nội bộ"]
+ P --> M["/messages và widget chat/AI"]
+ P --> N["/member/notifications dùng chung"]
+ P --> A["Avatar → /profile và Logout"]

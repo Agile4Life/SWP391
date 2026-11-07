@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> PENDING: COACH hoặc RECEPTIONIST gửi đơn hợp lệ
+    PENDING --> CANCELLED: Chính người gửi hủy
+    PENDING --> APPROVED: CENTER_MANAGER chấp thuận
+    PENDING --> REJECTED: CENTER_MANAGER từ chối và có ghi chú
+    note right of APPROVED
+      Ghi reviewedBy và reviewedAt
+      Thông báo người gửi
+      LEAVE: thông báo ảnh hưởng lịch cho quản lý
+      Không tự phân công lại replacement
+    end note

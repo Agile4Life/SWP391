@@ -1,0 +1,18 @@
+stateDiagram-v2
+    [*] --> open: Member gửi yêu cầu
+    open --> in_progress: Handler xử lý hoặc trả lời
+    open --> resolved: Handler giải quyết
+    in_progress --> open: Handler chuyển lại
+    in_progress --> resolved: Handler giải quyết
+    in_progress --> closed: Handler đóng
+    resolved --> in_progress: Handler mở xử lý lại
+    resolved --> closed: Handler đóng
+    note right of in_progress
+      Chưa escalated: RECEPTIONIST là handler
+      Đã escalated: CENTER_MANAGER là handler
+      Re-assignment theo role handler
+    end note
+    note right of closed
+      Không chỉnh sửa hoặc gửi tin mới
+      Không có nhánh member xác nhận hay auto-close 72h
+    end note

@@ -1,0 +1,100 @@
+erDiagram
+  direction LR
+  audit_logs {
+    bigint id PK
+    bigint user_id FK
+    varchar_100 action
+    varchar_100 entity_type
+    bigint entity_id
+    jsonb old_value
+    jsonb new_value
+    varchar_45 ip_address
+    timestamp created_at
+  }
+  chat_conversations {
+    bigint id PK
+    bigint member_user_id FK
+    bigint staff_user_id FK
+    timestamptz created_at
+    timestamptz last_activity_at
+    bigint member_last_read_message_id
+    bigint staff_last_read_message_id
+  }
+  chat_messages {
+    bigint id PK
+    bigint conversation_id FK
+    bigint sender_user_id FK
+    uuid client_message_id
+    varchar_2000 message
+    timestamptz created_at
+  }
+  members {
+    bigint user_id PK,FK,UK
+  }
+  notifications {
+    bigint id PK
+    bigint user_id FK
+    varchar_150 title
+    text content
+    varchar_30 type
+    varchar_50 related_entity_type
+    bigint related_entity_id
+    boolean is_read
+    timestamp created_at
+    varchar_500 action_path
+  }
+  staff_internal_requests {
+    bigint id PK
+    bigint user_id FK
+    varchar_50 request_type
+    varchar_200 title
+    text reason
+    date start_date
+    date end_date
+    varchar_100 target_shift
+    bigint replacement_user_id FK
+    varchar_30 status
+    text manager_notes
+    bigint reviewed_by_user_id FK
+    timestamp reviewed_at
+    timestamp created_at
+    timestamp updated_at
+  }
+  support_request_messages {
+    bigint id PK
+    bigint support_request_id FK
+    bigint sender_user_id FK
+    text message
+    timestamp created_at
+    uuid client_message_id
+  }
+  support_requests {
+    bigint id PK
+    bigint member_id FK
+    bigint assigned_to FK
+    varchar_150 subject
+    text description
+    varchar_20 status
+    timestamp created_at
+    timestamp resolved_at
+    timestamp escalated_at
+    bigint escalated_by FK
+    varchar_500 escalation_reason
+  }
+  users {
+    bigint id PK
+  }
+  users |o--o{ audit_logs : "user_id"
+  users ||--o{ chat_conversations : "member_user_id"
+  users ||--o{ chat_conversations : "staff_user_id"
+  chat_conversations ||--o{ chat_messages : "conversation_id"
+  users ||--o{ chat_messages : "sender_user_id"
+  users ||--o{ notifications : "user_id"
+  users ||--o{ staff_internal_requests : "user_id"
+  users |o--o{ staff_internal_requests : "replacement_user_id"
+  users |o--o{ staff_internal_requests : "reviewed_by_user_id"
+  members ||--o{ support_requests : "member_id"
+  users |o--o{ support_requests : "assigned_to"
+  users |o--o{ support_requests : "escalated_by"
+  support_requests ||--o{ support_request_messages : "support_request_id"
+  users ||--o{ support_request_messages : "sender_user_id"

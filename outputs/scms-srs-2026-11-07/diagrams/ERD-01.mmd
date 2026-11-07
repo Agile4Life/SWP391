@@ -1,0 +1,99 @@
+erDiagram
+  direction LR
+  center_managers {
+    bigint user_id PK,FK,UK
+    date hire_date
+  }
+  coaches {
+    bigint user_id PK,FK,UK
+    varchar_150 specialization
+    text bio
+    varchar_255 certification
+    date hire_date
+    varchar_20 employment_status
+  }
+  disciplines {
+    bigint id PK
+  }
+  member_favorite_disciplines {
+    bigint member_id FK
+    bigint discipline_id FK
+  }
+  members {
+    bigint user_id PK,FK,UK
+    varchar_30 membership_code UK
+    date join_date
+    varchar_255 health_notes
+    varchar_255 fitness_goal
+    varchar_20 fitness_level
+    varchar_150 emergency_contact_name
+    varchar_20 emergency_contact_phone
+    varchar_20 document_type
+    varchar_30 citizen_id
+    varchar_100 nationality
+    text front_image_url
+    text back_image_url
+    boolean identity_verified
+    timestamp identity_verified_at
+    uuid payment_realtime_topic
+  }
+  otp_challenges {
+    bigint id PK
+    varchar_255 target UK
+    varchar_100 code_hash
+    timestamp expires_at
+    integer failed_attempts
+    timestamp created_at
+  }
+  permissions {
+    bigint id PK
+    varchar_100 code UK
+    varchar_150 name
+    varchar_50 module
+    timestamp created_at
+  }
+  receptionists {
+    bigint user_id PK,FK,UK
+    date hire_date
+    varchar_50 shift
+    varchar_20 employment_status
+  }
+  role_permissions {
+    bigint role_id FK
+    bigint permission_id FK
+  }
+  roles {
+    bigint id PK
+    varchar_50 code UK
+    varchar_100 name
+    varchar_255 description
+    timestamp created_at
+  }
+  users {
+    bigint id PK
+    bigint role_id FK
+    varchar_150 full_name
+    varchar_150 email UK
+    varchar_50 username
+    varchar_20 phone
+    varchar_255 password_hash
+    date dob
+    varchar_10 gender
+    text avatar_url
+    varchar_255 address
+    varchar_20 status
+    timestamp last_login_at
+    timestamp created_at
+    timestamp updated_at
+    timestamp deleted_at
+    varchar_100 google_sub UK
+  }
+  users ||--o| center_managers : "user_id"
+  users ||--o| coaches : "user_id"
+  users ||--o| members : "user_id"
+  users ||--o| receptionists : "user_id"
+  roles ||--o{ users : "role_id"
+  roles ||--o{ role_permissions : "role_id"
+  permissions ||--o{ role_permissions : "permission_id"
+  members ||--o{ member_favorite_disciplines : "member_id"
+  disciplines ||--o{ member_favorite_disciplines : "discipline_id"

@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph Member[Hội viên]
+        A[Chọn trial hoặc mua gói]
+        D[Gửi giấy tờ và thông tin]
+        BUY[Chọn mua / gia hạn / nâng cấp]
+        PAY[Thực hiện thanh toán]
+    end
+    subgraph Reception[Lễ tân]
+        REVIEW{Đối chiếu KYC}
+        REJECT[Từ chối kèm lý do]
+    end
+    subgraph System[Hệ thống]
+        KIND{Trial?}
+        VALID{Chưa từng có gói, giấy tờ đúng và chưa dùng?}
+        PEND[trial PENDING_APPROVAL]
+        TRIAL[identityVerified; trial APPROVED; subscription active + QR]
+        GUARD{Gói active, KYC đầu tiên, không frozen/pending; guards renewal/upgrade?}
+        QUOTE[subscription MỚI pending_payment; chốt giá/credit]
+        FAIL[Trả lỗi nghiệp vụ]
+        OK{Thanh toán và activation hợp lệ?}
+        ACTIVE[subscription active + QR; upgrade làm kỳ cũ expired]
+    end
+    A --> KIND
+    KIND -- Có --> D --> VALID
+    VALID -- Không --> FAIL
+    VALID -- Có --> PEND --> REVIEW
+    REVIEW -- Sai --> REJECT --> D
+    REVIEW -- Đúng --> TRIAL
+    KIND -- Không --> BUY --> GUARD
+    GUARD -- Không --> FAIL
+    GUARD -- Có --> QUOTE --> PAY --> OK
+    OK -- Không --> FAIL
+    OK -- Có --> ACTIVE

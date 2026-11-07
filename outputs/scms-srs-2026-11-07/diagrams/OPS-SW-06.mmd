@@ -1,0 +1,52 @@
+flowchart LR
+    subgraph Member[Hội viên]
+        A[Xuất trình QR hoặc tự quét QR cửa]
+        T[Tick/untick bài hôm nay]
+        VIEW[Xem history/plan/evaluation của mình]
+    end
+    subgraph Reception[Lễ tân]
+        SCAN[Quét QR member]
+        INTAKE[Thêm số đo intake]
+    end
+    subgraph Coach[Coach phụ trách hoặc manager]
+        ATT[Batch attendance; tùy chọn publish evaluation]
+        PLAN[Tạo/sửa plan cho current member]
+        HEALTH[Thêm/sửa/xóa số đo]
+    end
+    subgraph System[Hệ thống]
+        G{QR + user + gói hợp lệ và không anti-passback?}
+        YES[Lưu GRANTED, visit mở]
+        NO[Lưu DENIED + lý do]
+        I{Visit GRANTED mở hôm nay do chính receptionist ghi?}
+        H[Validate metric/value/unit; lưu server time]
+        HG{Manager hoặc coach current member?}
+        AG{Session đã bắt đầu, không cancelled, member có chỗ, coach đúng?}
+        AT[Upsert present/late/absent/excused; optional evaluation]
+        PG{Plan/date/coach/current assignment hợp lệ?}
+        PL[draft hoặc active; aiGenerated boolean]
+        TG{Plan của mình active, đúng hôm nay/thứ và trong kỳ?}
+        DONE[Insert/delete completion; không đổi state plan]
+        FAIL[Trả lỗi nghiệp vụ]
+    end
+    A --> SCAN --> G
+    A -- selfScan QR cửa --> G
+    G -- Có --> YES
+    G -- Không --> NO
+    YES --> INTAKE --> I
+    I -- Có --> H
+    I -- Không --> FAIL
+    HEALTH --> HG
+    HG -- Có --> H
+    HG -- Không --> FAIL
+    ATT --> AG
+    AG -- Có --> AT
+    AG -- Không --> FAIL
+    PLAN --> PG
+    PG -- Có --> PL
+    PG -- Không --> FAIL
+    T --> TG
+    TG -- Có --> DONE
+    TG -- Không --> FAIL
+    AT --> VIEW
+    PL --> VIEW
+    H --> VIEW

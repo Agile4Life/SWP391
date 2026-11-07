@@ -1,0 +1,118 @@
+erDiagram
+  direction LR
+  disciplines {
+    bigint id PK
+    varchar_100 name UK
+    text description
+    timestamp created_at
+  }
+  equipment {
+    bigint id PK
+    varchar_150 name
+    varchar_60 code UK
+    varchar_80 category
+    bigint room_id FK
+    integer quantity
+    varchar_30 status
+    date purchase_date
+    date maintenance_date
+    varchar_500 note
+    timestamp created_at
+    timestamp updated_at
+  }
+  member_trial_redemptions {
+    bigint id PK
+    bigint member_id FK,UK
+    varchar_64 cccd_hash UK
+    varchar_4 cccd_last4
+    varchar_150 full_name
+    varchar_20 document_type
+    varchar_100 nationality
+    text front_image_url
+    text back_image_url
+    varchar_30 status
+    bigint reviewed_by
+    timestamp reviewed_at
+    varchar_500 rejection_reason
+    bigint subscription_id FK,UK
+    timestamp redeemed_at
+  }
+  members {
+    bigint user_id PK,FK,UK
+  }
+  membership_cancellation_requests {
+    bigint id PK
+    bigint member_id FK
+    bigint subscription_id FK
+    varchar_500 reason
+    numeric_15_2 refund_amount
+    bigint requested_by FK
+    varchar_20 status
+    timestamp requested_at
+    bigint resolved_by FK
+    timestamp resolved_at
+    varchar_500 resolution_note
+  }
+  membership_packages {
+    bigint id PK
+    varchar_150 name
+    text description
+    numeric_12_2 price
+    integer duration_days
+    integer class_credit_limit
+    varchar_20 status
+    varchar_30 tier
+    bigint created_by FK
+    timestamp created_at
+    timestamp updated_at
+  }
+  membership_subscriptions {
+    bigint id PK
+    bigint member_id FK
+    bigint package_id FK
+    bigint previous_subscription_id FK
+    date start_date
+    date end_date
+    varchar_20 status
+    varchar_255 qr_code UK
+    numeric_14_2 upgrade_charge
+    numeric_14_2 credit_applied
+    numeric_14_2 quoted_price
+    date replaced_end_date
+    varchar_20 hold_status
+    varchar_500 hold_reason
+    timestamp hold_requested_at
+    timestamp hold_resolved_at
+    bigint hold_resolved_by FK
+    bigint created_by FK
+    timestamp created_at
+    timestamp updated_at
+  }
+  rooms {
+    bigint id PK
+    varchar_100 name
+    varchar_150 location
+    integer capacity
+    varchar_20 status
+    bigint discipline_id FK
+    time open_time
+    time close_time
+    varchar_30 tier
+  }
+  users {
+    bigint id PK
+  }
+  rooms |o--o{ equipment : "room_id"
+  users |o--o{ membership_packages : "created_by"
+  disciplines |o--o{ rooms : "discipline_id"
+  members ||--o| member_trial_redemptions : "member_id"
+  membership_subscriptions |o--o| member_trial_redemptions : "subscription_id"
+  members ||--o{ membership_cancellation_requests : "member_id"
+  membership_subscriptions ||--o{ membership_cancellation_requests : "subscription_id"
+  users |o--o{ membership_cancellation_requests : "requested_by"
+  users |o--o{ membership_cancellation_requests : "resolved_by"
+  members ||--o{ membership_subscriptions : "member_id"
+  membership_packages ||--o{ membership_subscriptions : "package_id"
+  membership_subscriptions |o--o{ membership_subscriptions : "previous_subscription_id"
+  users |o--o{ membership_subscriptions : "hold_resolved_by"
+  users |o--o{ membership_subscriptions : "created_by"

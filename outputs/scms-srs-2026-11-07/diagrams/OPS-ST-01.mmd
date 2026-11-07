@@ -1,0 +1,24 @@
+stateDiagram-v2
+    [*] --> pending_payment: mua / gia hạn / nâng cấp tạo BẢN GHI MỚI
+    pending_payment --> active: thanh toán hợp lệ / cấp QR
+    pending_payment --> cancelled: chủ hoặc staff rút yêu cầu / payment đã giải quyết
+    [*] --> active: reception duyệt trial / miễn phí
+    state active {
+        [*] --> NoHold
+        state "holdStatus = null" as NoHold
+        state "holdStatus = PENDING" as HP
+        state "holdStatus = REJECTED" as HR
+        NoHold --> HP: chủ xin hold [không trial, active hôm nay, không<br/>xung đột]
+        HR --> HP: gửi lại hold [cùng guards]
+        HP --> HR: reception từ chối
+    }
+    HP --> frozen: reception duyệt [còn hiệu lực] / holdStatus APPROVED
+    frozen --> active: chủ resume [hợp lệ, không kỳ xung đột] / cộng tối đa<br/>90 ngày, xóa holdStatus
+    frozen --> active: job khi hold đủ 90 ngày / cộng 90 ngày, xóa<br/>holdStatus
+    active --> cancelled: manager duyệt cancellation [không quyền khác / công<br/>nợ chặn]
+    active --> expired: thanh toán nâng cấp thành công / hết hiệu lực KỲ CŨ
+    note right of active
+        Tạo renewal/upgrade là một subscription khác.
+        Không vẽ active sang expired tự động khi qua endDate:
+        chưa thấy job chuyển status, quyền dùng còn xét ngày.
+    end note

@@ -1,0 +1,826 @@
+[
+  {
+    "parent": "ai_chat_sessions",
+    "child": "ai_chat_messages",
+    "column": "session_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/entity/AiChatMessage.java:22"
+  },
+  {
+    "parent": "members",
+    "child": "ai_chat_sessions",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/entity/AiChatSession.java:18"
+  },
+  {
+    "parent": "coaches",
+    "child": "ai_recommendation_logs",
+    "column": "coach_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/entity/AiRecommendationLog.java:21"
+  },
+  {
+    "parent": "members",
+    "child": "ai_recommendation_logs",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/ai/entity/AiRecommendationLog.java:25"
+  },
+  {
+    "parent": "members",
+    "child": "center_checkins",
+    "column": "member_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/CenterCheckin.java:21"
+  },
+  {
+    "parent": "users",
+    "child": "center_checkins",
+    "column": "recorded_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/CenterCheckin.java:34"
+  },
+  {
+    "parent": "class_sessions",
+    "child": "session_attendance",
+    "column": "session_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/SessionAttendance.java:21"
+  },
+  {
+    "parent": "members",
+    "child": "session_attendance",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/SessionAttendance.java:25"
+  },
+  {
+    "parent": "coaches",
+    "child": "session_attendance",
+    "column": "recorded_by",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/attendance/entity/SessionAttendance.java:35"
+  },
+  {
+    "parent": "users",
+    "child": "audit_logs",
+    "column": "user_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/audit/AuditLog.java:19"
+  },
+  {
+    "parent": "users",
+    "child": "chat_conversations",
+    "column": "member_user_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/entity/ChatConversation.java:13"
+  },
+  {
+    "parent": "users",
+    "child": "chat_conversations",
+    "column": "staff_user_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/entity/ChatConversation.java:14"
+  },
+  {
+    "parent": "chat_conversations",
+    "child": "chat_messages",
+    "column": "conversation_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/entity/ChatMessage.java:13"
+  },
+  {
+    "parent": "users",
+    "child": "chat_messages",
+    "column": "sender_user_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/chat/entity/ChatMessage.java:14"
+  },
+  {
+    "parent": "members",
+    "child": "coach_bookings",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachBooking.java:32"
+  },
+  {
+    "parent": "coaches",
+    "child": "coach_bookings",
+    "column": "coach_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachBooking.java:36"
+  },
+  {
+    "parent": "disciplines",
+    "child": "coach_bookings",
+    "column": "discipline_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachBooking.java:40"
+  },
+  {
+    "parent": "coaches",
+    "child": "coach_monthly_reviews",
+    "column": "coach_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachMonthlyReview.java:29"
+  },
+  {
+    "parent": "users",
+    "child": "coach_monthly_reviews",
+    "column": "manager_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachMonthlyReview.java:33"
+  },
+  {
+    "parent": "coaches",
+    "child": "coach_reviews",
+    "column": "coach_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachReview.java:29"
+  },
+  {
+    "parent": "members",
+    "child": "coach_reviews",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/CoachReview.java:33"
+  },
+  {
+    "parent": "class_sessions",
+    "child": "session_evaluations",
+    "column": "session_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/SessionEvaluation.java:22"
+  },
+  {
+    "parent": "members",
+    "child": "session_evaluations",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/SessionEvaluation.java:26"
+  },
+  {
+    "parent": "coaches",
+    "child": "session_evaluations",
+    "column": "coach_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/SessionEvaluation.java:30"
+  },
+  {
+    "parent": "members",
+    "child": "training_item_completions",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingItemCompletion.java:21"
+  },
+  {
+    "parent": "training_plan_items",
+    "child": "training_item_completions",
+    "column": "training_plan_item_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingItemCompletion.java:26"
+  },
+  {
+    "parent": "members",
+    "child": "training_plans",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingPlan.java:23"
+  },
+  {
+    "parent": "coaches",
+    "child": "training_plans",
+    "column": "coach_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingPlan.java:27"
+  },
+  {
+    "parent": "classes",
+    "child": "training_plans",
+    "column": "class_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingPlan.java:31"
+  },
+  {
+    "parent": "ai_recommendation_logs",
+    "child": "training_plans",
+    "column": "ai_recommendation_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingPlan.java:50"
+  },
+  {
+    "parent": "training_plans",
+    "child": "training_plan_items",
+    "column": "training_plan_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/coaching/entity/TrainingPlanItem.java:21"
+  },
+  {
+    "parent": "rooms",
+    "child": "court_bookings",
+    "column": "room_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/entity/CourtBooking.java:17"
+  },
+  {
+    "parent": "users",
+    "child": "court_bookings",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/courts/entity/CourtBooking.java:18"
+  },
+  {
+    "parent": "rooms",
+    "child": "equipment",
+    "column": "room_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/entity/Equipment.java:33"
+  },
+  {
+    "parent": "users",
+    "child": "membership_packages",
+    "column": "created_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/entity/MembershipPackage.java:42"
+  },
+  {
+    "parent": "disciplines",
+    "child": "rooms",
+    "column": "discipline_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/facilities/entity/Room.java:30"
+  },
+  {
+    "parent": "payments",
+    "child": "invoices",
+    "column": "payment_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Invoice.java:24"
+  },
+  {
+    "parent": "invoices",
+    "child": "invoice_items",
+    "column": "invoice_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/InvoiceItem.java:21"
+  },
+  {
+    "parent": "members",
+    "child": "payments",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:29"
+  },
+  {
+    "parent": "membership_subscriptions",
+    "child": "payments",
+    "column": "subscription_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:32"
+  },
+  {
+    "parent": "coach_bookings",
+    "child": "payments",
+    "column": "coach_booking_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:40"
+  },
+  {
+    "parent": "court_bookings",
+    "child": "payments",
+    "column": "court_booking_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:45"
+  },
+  {
+    "parent": "product_orders",
+    "child": "payments",
+    "column": "product_order_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:50"
+  },
+  {
+    "parent": "class_enrollments",
+    "child": "payments",
+    "column": "class_enrollment_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:65"
+  },
+  {
+    "parent": "users",
+    "child": "payments",
+    "column": "received_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/Payment.java:90"
+  },
+  {
+    "parent": "payments",
+    "child": "vnpay_transactions",
+    "column": "payment_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/finance/entity/VnpayTransaction.java:14"
+  },
+  {
+    "parent": "members",
+    "child": "member_progress_logs",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/health/entity/MemberProgressLog.java:19"
+  },
+  {
+    "parent": "users",
+    "child": "member_progress_logs",
+    "column": "recorded_by",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/health/entity/MemberProgressLog.java:32"
+  },
+  {
+    "parent": "members",
+    "child": "member_trial_redemptions",
+    "column": "member_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MemberTrialRedemption.java:32"
+  },
+  {
+    "parent": "membership_subscriptions",
+    "child": "member_trial_redemptions",
+    "column": "subscription_id",
+    "required": false,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MemberTrialRedemption.java:70"
+  },
+  {
+    "parent": "members",
+    "child": "membership_cancellation_requests",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipCancellationRequest.java:20"
+  },
+  {
+    "parent": "membership_subscriptions",
+    "child": "membership_cancellation_requests",
+    "column": "subscription_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipCancellationRequest.java:23"
+  },
+  {
+    "parent": "users",
+    "child": "membership_cancellation_requests",
+    "column": "requested_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipCancellationRequest.java:30"
+  },
+  {
+    "parent": "users",
+    "child": "membership_cancellation_requests",
+    "column": "resolved_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipCancellationRequest.java:37"
+  },
+  {
+    "parent": "members",
+    "child": "membership_subscriptions",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipSubscription.java:23"
+  },
+  {
+    "parent": "membership_packages",
+    "child": "membership_subscriptions",
+    "column": "package_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipSubscription.java:27"
+  },
+  {
+    "parent": "membership_subscriptions",
+    "child": "membership_subscriptions",
+    "column": "previous_subscription_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipSubscription.java:31"
+  },
+  {
+    "parent": "users",
+    "child": "membership_subscriptions",
+    "column": "hold_resolved_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipSubscription.java:84"
+  },
+  {
+    "parent": "users",
+    "child": "membership_subscriptions",
+    "column": "created_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/membership/entity/MembershipSubscription.java:88"
+  },
+  {
+    "parent": "users",
+    "child": "notifications",
+    "column": "user_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/notifications/entity/Notification.java:19"
+  },
+  {
+    "parent": "users",
+    "child": "staff_internal_requests",
+    "column": "user_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/entity/StaffInternalRequest.java:22"
+  },
+  {
+    "parent": "users",
+    "child": "staff_internal_requests",
+    "column": "replacement_user_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/entity/StaffInternalRequest.java:44"
+  },
+  {
+    "parent": "users",
+    "child": "staff_internal_requests",
+    "column": "reviewed_by_user_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/operations/entity/StaffInternalRequest.java:54"
+  },
+  {
+    "parent": "users",
+    "child": "report_snapshots",
+    "column": "generated_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/reports/entity/ReportSnapshot.java:35"
+  },
+  {
+    "parent": "classes",
+    "child": "class_enrollments",
+    "column": "class_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassEnrollment.java:20"
+  },
+  {
+    "parent": "members",
+    "child": "class_enrollments",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassEnrollment.java:24"
+  },
+  {
+    "parent": "users",
+    "child": "class_enrollments",
+    "column": "cancelled_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassEnrollment.java:37"
+  },
+  {
+    "parent": "classes",
+    "child": "class_sessions",
+    "column": "class_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/ClassSession.java:23"
+  },
+  {
+    "parent": "disciplines",
+    "child": "classes",
+    "column": "discipline_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/GymClass.java:27"
+  },
+  {
+    "parent": "coaches",
+    "child": "classes",
+    "column": "coach_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/GymClass.java:31"
+  },
+  {
+    "parent": "rooms",
+    "child": "classes",
+    "column": "room_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/GymClass.java:35"
+  },
+  {
+    "parent": "users",
+    "child": "classes",
+    "column": "created_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/GymClass.java:51"
+  },
+  {
+    "parent": "class_sessions",
+    "child": "session_bookings",
+    "column": "session_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/SessionBooking.java:29"
+  },
+  {
+    "parent": "members",
+    "child": "session_bookings",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/SessionBooking.java:33"
+  },
+  {
+    "parent": "users",
+    "child": "session_bookings",
+    "column": "cancelled_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/scheduling/entity/SessionBooking.java:50"
+  },
+  {
+    "parent": "members",
+    "child": "member_addresses",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/MemberAddress.java:19"
+  },
+  {
+    "parent": "product_categories",
+    "child": "products",
+    "column": "category_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/Product.java:23"
+  },
+  {
+    "parent": "products",
+    "child": "product_images",
+    "column": "product_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductImage.java:18"
+  },
+  {
+    "parent": "products",
+    "child": "product_nutrients",
+    "column": "product_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductNutrient.java:18"
+  },
+  {
+    "parent": "members",
+    "child": "product_orders",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductOrder.java:37"
+  },
+  {
+    "parent": "users",
+    "child": "product_orders",
+    "column": "cancelled_by_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductOrder.java:103"
+  },
+  {
+    "parent": "product_orders",
+    "child": "product_order_items",
+    "column": "order_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductOrderItem.java:22"
+  },
+  {
+    "parent": "product_variants",
+    "child": "product_order_items",
+    "column": "variant_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductOrderItem.java:26"
+  },
+  {
+    "parent": "products",
+    "child": "product_variants",
+    "column": "product_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/ProductVariant.java:22"
+  },
+  {
+    "parent": "product_variants",
+    "child": "product_stock_movements",
+    "column": "variant_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/StockMovement.java:19"
+  },
+  {
+    "parent": "users",
+    "child": "product_stock_movements",
+    "column": "actor_id",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/StockMovement.java:34"
+  },
+  {
+    "parent": "members",
+    "child": "support_requests",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequest.java:21"
+  },
+  {
+    "parent": "users",
+    "child": "support_requests",
+    "column": "assigned_to",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequest.java:25"
+  },
+  {
+    "parent": "users",
+    "child": "support_requests",
+    "column": "escalated_by",
+    "required": false,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequest.java:48"
+  },
+  {
+    "parent": "support_requests",
+    "child": "support_request_messages",
+    "column": "support_request_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequestMessage.java:22"
+  },
+  {
+    "parent": "users",
+    "child": "support_request_messages",
+    "column": "sender_user_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/support/entity/SupportRequestMessage.java:26"
+  },
+  {
+    "parent": "users",
+    "child": "center_managers",
+    "column": "user_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/CenterManager.java:13"
+  },
+  {
+    "parent": "users",
+    "child": "coaches",
+    "column": "user_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Coach.java:13"
+  },
+  {
+    "parent": "users",
+    "child": "members",
+    "column": "user_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Member.java:13"
+  },
+  {
+    "parent": "users",
+    "child": "receptionists",
+    "column": "user_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Receptionist.java:13"
+  },
+  {
+    "parent": "roles",
+    "child": "users",
+    "column": "role_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/User.java:21"
+  },
+  {
+    "parent": "users",
+    "child": "wallets",
+    "column": "user_id",
+    "required": true,
+    "one": true,
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/Wallet.java:18"
+  },
+  {
+    "parent": "wallets",
+    "child": "wallet_transactions",
+    "column": "wallet_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/wallet/WalletTransaction.java:20"
+  },
+  {
+    "parent": "roles",
+    "child": "role_permissions",
+    "column": "role_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Role.java:28"
+  },
+  {
+    "parent": "permissions",
+    "child": "role_permissions",
+    "column": "permission_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Role.java:28"
+  },
+  {
+    "parent": "members",
+    "child": "member_favorite_disciplines",
+    "column": "member_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Member.java:119"
+  },
+  {
+    "parent": "disciplines",
+    "child": "member_favorite_disciplines",
+    "column": "discipline_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/users/entity/Member.java:119"
+  },
+  {
+    "parent": "products",
+    "child": "product_goals",
+    "column": "product_id",
+    "required": true,
+    "one": false,
+    "source": "apps/api/src/main/java/com/swp391/scms/shop/entity/Product.java:68"
+  }
+]

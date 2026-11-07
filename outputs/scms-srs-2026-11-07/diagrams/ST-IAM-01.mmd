@@ -1,0 +1,22 @@
+stateDiagram-v2
+    [*] --> inactive: Tự đăng ký hoặc Google OAuth callback tạo MEMBER mới
+    [*] --> active: Admin tạo user hoặc Google ID token trực tiếp tạo<br/>MEMBER
+    inactive --> active: OTP hợp lệ
+    active --> locked: Admin khóa hoặc Manager khóa COACH/RECEPTIONIST
+    locked --> active: Admin hoặc Manager mở khóa staff hợp lệ
+    active --> SoftDeleted: Xóa thủ công khi qua guard
+    locked --> SoftDeleted: Xóa thủ công khi qua guard
+    inactive --> SoftDeleted: Xóa thủ công khi qua guard
+    active --> SoftDeleted: Cleanup đạt ngưỡng và không có sử dụng/quyền lợi gần<br/>đây
+    inactive --> SoftDeleted: Cleanup đạt ngưỡng và không có sử dụng/quyền lợi gần<br/>đây
+    locked --> SoftDeleted: Cleanup đạt ngưỡng và không có sử dụng/quyền lợi gần<br/>đây
+    note right of SoftDeleted
+      deleted_at là thuộc tính độc lập
+      Không phải giá trị users.status
+      Không authenticate hoặc list mặc định
+    end note
+    note right of locked
+      Không khóa ADMIN active cuối cùng
+      Xóa hoặc đổi role còn kiểm tra open commitments
+      Cleanup bỏ qua role nhân viên
+    end note

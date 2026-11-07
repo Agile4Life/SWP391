@@ -1,0 +1,14 @@
+flowchart LR
+ H["/ Landing"] --> S["/swimming /tennis /boxing /badminton /yoga
+/sports/:sportId"]
+ H --> T["/trainers và /trainers/:trainerId"]
+ H --> P["/products"] --> PD["/products/:slug"]
+ PD --> CART["Giỏ hàng overlay dùng chung"]
+ CART --> CO["/checkout"]
+ CO --> AUTH{"Đã là MEMBER?"}
+ AUTH -- Chưa đăng nhập --> L["/login?returnTo=%2Fcheckout"]
+ L --> CO
+ L --> REG["/register → OTP trong luồng auth"]
+ AUTH -- Có --> PAY["Địa chỉ/nhận tại quầy → quote → tạo order"]
+ PAY --> V["VNPay hoặc Wallet hoặc counter theo fulfillment"]
+ V --> O["/member/orders/:orderId"]

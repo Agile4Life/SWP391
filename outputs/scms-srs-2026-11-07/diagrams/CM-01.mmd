@@ -1,0 +1,49 @@
+classDiagram
+ direction LR
+ class User
+ class Role
+ class Permission
+ class Member
+ class Coach
+ class Receptionist
+ class CenterManager
+ class MembershipPackage
+ class Subscription
+ class Discipline
+ class Room
+ class Class
+ class Session
+ class ClassEnrollment
+ class SessionBooking
+ class CourtBooking
+ class PTBooking
+ class TrainingPlan
+ class ProgressLog
+ class Checkin
+ class Attendance
+ Role "1" --> "0..*" User : phân vai
+ Role "0..*" --> "0..*" Permission : có quyền
+ User "1" --> "0..1" Member : hồ sơ hội viên
+ User "1" --> "0..1" Coach : hồ sơ HLV
+ User "1" --> "0..1" Receptionist : hồ sơ lễ tân
+ User "1" --> "0..1" CenterManager : hồ sơ quản lý
+ Member "1" --> "0..*" Subscription : sở hữu
+ MembershipPackage "1" --> "0..*" Subscription : xác định quyền lợi
+ Discipline "1" --> "0..*" Class : phân loại
+ Coach "1" --> "0..*" Class : dạy
+ Room "1" --> "0..*" Class : tổ chức
+ Class "1" --> "0..*" Session : có buổi
+ Member "1" --> "0..*" ClassEnrollment : đăng ký cả lớp
+ Class "1" --> "0..*" ClassEnrollment : nhận đăng ký
+ Member "1" --> "0..*" SessionBooking : đặt từng buổi
+ Session "1" --> "0..*" SessionBooking : nhận đặt chỗ
+ Member "1" --> "0..*" CourtBooking : thuê sân
+ Room "1" --> "0..*" CourtBooking : được thuê
+ Member "1" --> "0..*" PTBooking : thuê HLV
+ Coach "1" --> "0..*" PTBooking : phụ trách
+ Coach "1" --> "0..*" TrainingPlan : soạn
+ Member "1" --> "0..*" TrainingPlan : nhận giáo án
+ Member "1" --> "0..*" ProgressLog : có chỉ số
+ Member "0..1" --> "0..*" Checkin : được ghi nhận
+ Session "1" --> "0..*" Attendance : ghi điểm danh
+ Member "1" --> "0..*" Attendance : được điểm danh

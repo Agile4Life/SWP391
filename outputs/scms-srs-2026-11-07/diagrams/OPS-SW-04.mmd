@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph Member[Hội viên]
+        A[Chọn sân, ngày, giờ; đơn hoặc recurring]
+        M[Chọn cash/vnpay]
+        C[Hủy sân]
+    end
+    subgraph Desk[Lễ tân/nhân viên được phép]
+        COLLECT[Xác nhận thu cash]
+        DC[Hủy trước giờ bắt đầu]
+    end
+    subgraph System[Hệ thống]
+        G{Sân available, slot 1h nguyên giờ trong hạn, user/gói hợp lệ, không trùng?}
+        Q{Quota tháng còn? Silver1 Gold2 Platinum3}
+        FREE[booked; price 0; package_quota; covered]
+        PAID[booked; price 100k trước 18h, 125k từ 18h; payment pending]
+        PAY[paid; payment success]
+        CG{Member còn ít nhất 2h?}
+        CANCEL[cancelled; payment pending thành failed; không tự hoàn success]
+        EXP{Online quá timeout+1 phút hoặc cash đến giờ, guard cho phép?}
+        ERR[Trả lỗi / recurring ghi skipped]
+    end
+    A --> G
+    G -- Không --> ERR
+    G -- Có --> Q
+    Q -- Có --> FREE
+    Q -- Không --> M --> PAID
+    PAID -- method cash --> COLLECT --> PAY
+    C --> CG
+    CG -- Không --> ERR
+    CG -- Có --> CANCEL
+    DC --> CANCEL
+    PAID --> EXP
+    EXP -- Có --> CANCEL

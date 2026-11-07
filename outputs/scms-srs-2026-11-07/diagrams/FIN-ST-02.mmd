@@ -1,0 +1,17 @@
+stateDiagram-v2
+    [*] --> pending: Tạo attempt có expiresAt
+    pending --> success: Chữ ký + amount hợp lệ, response/status 00,<br/>transactionNo hợp lệ
+    pending --> failed: Callback không success với status 02/04/07
+    pending --> failed: now lớn hơn expiresAt cộng grace 15 phút
+    pending --> pending: Provisional callback trả 99, tiếp tục chặn
+    failed --> success: Late verified success và payment vẫn pending
+    failed --> success: Shop cancelled, payment failed, credit wallet và<br/>payment refunded
+    note right of failed
+      Job mặc định mỗi 5 phút.
+      Hết vnp_ExpireDate chưa đủ để retry:
+      phải hết grace 15 phút.
+    end note
+    note right of success
+      Callback lặp trả 02.
+      Không ghi ledger hoặc settle lần hai.
+    end note

@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> Waiting: Phát mã 6 chữ số và lưu hash, TTL 5 phút
+    Waiting --> Waiting: Sai mã nhưng failedAttempts còn dưới 3
+    Waiting --> Replaced: Phát lại xóa challenge cũ
+    Replaced --> Waiting: Tạo mã mới
+    Waiting --> Removed: Sai lần thứ 3
+    Waiting --> Removed: Verify khi đã quá hạn
+    Waiting --> Removed: Verify đúng mã
+    Removed --> [*]
+    note right of Removed
+      Verify đúng mới trả SUCCESS
+      Hết hạn trả EXPIRED_OR_NOT_FOUND
+      Hết lượt trả MAX_ATTEMPTS_EXCEEDED
+    end note

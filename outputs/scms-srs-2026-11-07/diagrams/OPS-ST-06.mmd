@@ -1,0 +1,18 @@
+stateDiagram-v2
+    [*] --> booked: member đặt slot hợp lệ
+    booked --> cancelled: member hủy [còn ít nhất 2 giờ]
+    booked --> cancelled: staff hủy [chưa bắt đầu]
+    booked --> cancelled: chưa thanh toán quá hạn / gateway guard cho phép
+    booked --> cancelled: mất entitlement cho ngày đặt và chưa bắt đầu
+    cancelled --> cancelled: gọi hủy lại / trả kết quả hiện có
+    note right of booked
+        Còn quota: paymentStatus covered, price 0.
+        Ngoài quota: pending, cash hoặc vnpay.
+        Staff xác nhận cash: pending sang paid,
+        booking vẫn booked và payment thành success.
+        Availability free/booked/class/past là DTO tính toán.
+    end note
+    note right of cancelled
+        Hủy thủ công đóng payment pending thành failed.
+        Service không tự hoàn khoản success.
+    end note

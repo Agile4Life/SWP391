@@ -1,0 +1,148 @@
+erDiagram
+  direction LR
+  member_addresses {
+    bigint id PK
+    bigint member_id FK
+    varchar_80 recipient_name
+    varchar_15 phone
+    varchar_10 province_code
+    varchar_80 province_name
+    varchar_10 ward_code
+    varchar_80 ward_name
+    varchar_200 street_line
+    varchar_200 note
+    boolean is_default
+    timestamp created_at
+    timestamp updated_at
+  }
+  members {
+    bigint user_id PK,FK,UK
+  }
+  product_categories {
+    bigint id PK
+    varchar_80 name UK
+    varchar_80 slug UK
+    integer sort_order
+    boolean active
+    timestamp created_at
+  }
+  product_goals {
+    bigint product_id FK
+    varchar_30 goal
+  }
+  product_images {
+    bigint id PK
+    bigint product_id FK
+    text data_url
+    varchar_20 content_type
+    varchar_160 alt_text
+    integer sort_order
+    timestamp created_at
+  }
+  product_nutrients {
+    bigint id PK
+    bigint product_id FK
+    varchar_80 name
+    numeric_10_2 amount
+    varchar_12 unit
+    integer daily_value_percent
+    boolean sub_row
+    boolean highlight
+    integer sort_order
+  }
+  product_order_items {
+    bigint id PK
+    bigint order_id FK
+    bigint variant_id FK
+    varchar_160 product_name
+    varchar_80 variant_label
+    varchar_40 sku
+    numeric_12_2 unit_price
+    integer quantity
+    numeric_12_2 line_total
+  }
+  product_orders {
+    bigint id PK
+    varchar_20 code UK
+    bigint member_id FK
+    varchar_36 client_request_id
+    varchar_20 status
+    varchar_10 fulfillment
+    varchar_10 payment_method
+    numeric_12_2 subtotal
+    numeric_12_2 shipping_fee
+    numeric_12_2 total
+    varchar_80 ship_recipient_name
+    varchar_15 ship_phone
+    varchar_80 ship_province_name
+    varchar_80 ship_ward_name
+    varchar_200 ship_street_line
+    varchar_200 ship_note
+    timestamp payment_due_at
+    timestamp paid_at
+    timestamp processing_at
+    timestamp shipped_at
+    timestamp ready_at
+    timestamp completed_at
+    timestamp cancelled_at
+    varchar_255 cancel_reason
+    bigint cancelled_by_id FK
+    varchar_60 tracking_carrier
+    varchar_60 tracking_number
+    timestamp created_at
+    timestamp updated_at
+  }
+  product_stock_movements {
+    bigint id PK
+    bigint variant_id FK
+    integer delta
+    varchar_20 reason
+    bigint order_id
+    varchar_200 note
+    bigint actor_id FK
+    timestamp created_at
+  }
+  product_variants {
+    bigint id PK
+    bigint product_id FK
+    varchar_40 sku UK
+    varchar_80 label
+    numeric_12_2 price
+    integer servings_per_container
+    integer stock
+    boolean active
+    integer sort_order
+  }
+  products {
+    bigint id PK
+    bigint category_id FK
+    varchar_160 name
+    varchar_180 slug UK
+    varchar_80 brand
+    varchar_20 form
+    varchar_300 short_description
+    text description
+    varchar_60 serving_size
+    text usage_instructions
+    text warnings
+    varchar_60 registration_number
+    boolean active
+    boolean featured
+    timestamp created_at
+    timestamp updated_at
+  }
+  users {
+    bigint id PK
+  }
+  members ||--o{ member_addresses : "member_id"
+  product_categories ||--o{ products : "category_id"
+  products ||--o{ product_images : "product_id"
+  products ||--o{ product_nutrients : "product_id"
+  members ||--o{ product_orders : "member_id"
+  users |o--o{ product_orders : "cancelled_by_id"
+  product_orders ||--o{ product_order_items : "order_id"
+  product_variants ||--o{ product_order_items : "variant_id"
+  products ||--o{ product_variants : "product_id"
+  product_variants ||--o{ product_stock_movements : "variant_id"
+  users |o--o{ product_stock_movements : "actor_id"
+  products ||--o{ product_goals : "product_id"

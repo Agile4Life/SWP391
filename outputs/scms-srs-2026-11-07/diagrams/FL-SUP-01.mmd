@@ -1,0 +1,27 @@
+flowchart TD
+    subgraph M[Hội viên]
+      CREATE[Gửi khiếu nại]
+      MEMBER[Đọc hoặc gửi tin của chính mình]
+    end
+    subgraph R[Lễ tân]
+      INBOX[Nhận thông báo và xem inbox]
+      REPLY[Trả lời; open tự sang in_progress; tự nhận nếu chưa phân công]
+      ESC{Cần chuyển cấp và còn open hoặc in_progress?}
+      READ[Đã chuyển cấp: lễ tân còn xem được nhưng không xử lý]
+    end
+    subgraph S[Hệ thống]
+      SAVE[Lưu request open và thông báo lễ tân]
+      HANDOFF[Ghi escalatedAt escalatedBy reason; xóa assignee cũ]
+      NOTIFY[Thông báo quản lý và hội viên còn nhận được thông báo]
+      STATUS[Cập nhật trạng thái theo transition hợp lệ]
+    end
+    subgraph G[Quản lý trung tâm]
+      GI[Chỉ đọc request đã chuyển cấp]
+      HANDLE[Trả lời hoặc phân công CENTER_MANAGER và xử lý]
+    end
+    CREATE --> SAVE --> INBOX --> REPLY --> ESC
+    ESC -->|Không| STATUS
+    ESC -->|Có| HANDOFF --> NOTIFY --> GI --> HANDLE --> STATUS
+    HANDOFF --> READ
+    MEMBER --> REPLY
+    MEMBER --> HANDLE

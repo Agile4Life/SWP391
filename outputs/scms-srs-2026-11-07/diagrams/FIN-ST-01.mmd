@@ -1,0 +1,18 @@
+stateDiagram-v2
+    [*] --> pending: Tạo giao dịch
+    pending --> success: Cashier xác nhận hoặc ví / VNPay verified
+    pending --> failed: Xác nhận thất bại hoặc hủy đơn chưa trả
+    failed --> pending: Retry cho phép, subscription còn pending_payment
+    success --> success: Refund một phần, refundedAmount tăng
+    success --> refunded: Generic refund đủ tổng amount
+    success --> refunded: Shop hủy đơn đã thanh toán, hoàn ví
+    failed --> refunded: VNPay late success của shop đã cancelled, hoàn ví
+    note right of success
+      Generic refund không tự credit ví.
+      VNPay success bị chặn generic refund.
+      Shop và membership cancellation có use case hoàn ví riêng.
+    end note
+    note right of pending
+      Same-status update là no-op.
+      Attempt VNPay là state machine riêng.
+    end note

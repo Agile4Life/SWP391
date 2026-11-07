@@ -1,0 +1,44 @@
+classDiagram
+ direction LR
+ class Member
+ class User
+ class ProductCategory
+ class Product
+ class Variant
+ class StockMovement
+ class Order
+ class OrderItem
+ class Address
+ class Payment
+ class VnpayAttempt
+ class Invoice
+ class InvoiceItem
+ class Wallet
+ class WalletEntry
+ class SupportTicket
+ class SupportMessage
+ class Conversation
+ class ChatMessage
+ class Notification
+ class InternalRequest
+ ProductCategory "1" --> "0..*" Product : nhóm hàng
+ Product "1" --> "0..*" Variant : biến thể
+ Variant "1" --> "0..*" StockMovement : biến động kho
+ Member "1" --> "0..*" Order : đặt mua
+ Order "1" --> "0..*" OrderItem : chứa dòng hàng
+ Variant "1" --> "0..*" OrderItem : sản phẩm được mua
+ Member "1" --> "0..*" Address : lưu địa chỉ
+ Member "1" --> "0..*" Payment : thanh toán
+ Order "0..1" --> "0..*" Payment : nhận thanh toán
+ Payment "1" --> "0..*" VnpayAttempt : thử thanh toán
+ Payment "1" --> "0..1" Invoice : phát hành hóa đơn
+ Invoice "1" --> "0..*" InvoiceItem : chứa
+ User "1" --> "0..1" Wallet : có ví
+ Wallet "1" --> "0..*" WalletEntry : ghi sổ
+ Member "1" --> "0..*" SupportTicket : yêu cầu hỗ trợ
+ SupportTicket "1" --> "0..*" SupportMessage : có trao đổi
+ User "1" --> "0..*" Notification : nhận
+ Member "1" --> "0..*" Conversation : tham gia
+ User "1" --> "0..*" Conversation : đối tác hội thoại
+ Conversation "1" --> "0..*" ChatMessage : chứa
+ User "1" --> "0..*" InternalRequest : gửi yêu cầu

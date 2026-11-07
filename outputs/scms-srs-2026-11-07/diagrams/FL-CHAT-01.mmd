@@ -1,0 +1,38 @@
+flowchart TD
+    subgraph M[Hội viên]
+      FIND[Tìm COACH hoặc RECEPTIONIST active]
+      OPEN[Mở cuộc hội thoại]
+      SEND[Gửi tin kèm clientMessageId]
+    end
+    subgraph S[API Chat]
+      PAIR[Khóa member và tìm hoặc tạo một cặp hội thoại]
+      CHECK{Actor active và đúng participant?}
+      PEER{Peer còn active và đúng role?}
+      RETRY{clientMessageId đã có?}
+      SAME{Nội dung giống lần trước?}
+      OLD[Trả message cũ]
+      SAVE[Lưu tin và cập nhật read cursor người gửi]
+      FAIL[Từ chối hoặc báo retry conflict]
+      CAP{Đủ URL publishable key signing secret?}
+      ENABLED[Cấp token nhận private channel hạn 300 giây]
+      OFF[Trả realtime enabled=false]
+    end
+    subgraph P[Coach hoặc lễ tân]
+      REPLY[Đọc và trả lời cuộc hội thoại mình tham gia]
+    end
+    subgraph R[Supabase Realtime]
+      SIGNAL[Client nghe private broadcast changed và tải lại REST]
+    end
+    FIND --> OPEN --> PAIR --> SEND --> CHECK
+    REPLY --> CHECK
+    CHECK -->|Không| FAIL
+    CHECK -->|Có| RETRY
+    RETRY -->|Có| SAME
+    SAME -->|Có| OLD
+    SAME -->|Không| FAIL
+    RETRY -->|Chưa| PEER
+    PEER -->|Có| SAVE
+    PEER -->|Không| FAIL
+    OPEN --> CAP
+    CAP -->|Có| ENABLED --> SIGNAL
+    CAP -->|Không| OFF

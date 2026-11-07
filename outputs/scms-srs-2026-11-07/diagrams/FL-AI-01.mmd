@@ -1,0 +1,37 @@
+flowchart TD
+    subgraph U[Coach hoặc quản lý]
+      REQ[Yêu cầu gợi ý giáo án]
+      APPLY[Chọn áp dụng recommendation]
+    end
+    subgraph B[Backend AI]
+      READ[Kiểm tra member và quyền coach; lấy hồ sơ và metrics]
+      SELECT{Provider recommendations có key hợp lệ?}
+      PARSE[Parse nội dung hoặc xây items mặc định; lưu recommendation]
+      PLAN[Tạo giáo án AI draft; mặc định hôm nay đến 4 tuần]
+      ACT{activate đúng true?}
+      ACTIVE[Kích hoạt qua TrainingPlanService]
+      DRAFT[Giữ draft]
+      OWNER[Kiểm tra chủ phiên nếu MEMBER; lấy lịch sử và RAG]
+      CONFIG{Chat provider là OpenAI Groq Gemini và có key?}
+      FAIL[Trả AI_CHAT_NOT_CONFIGURED hoặc AI unavailable]
+      PERSIST[Kiểm tra quyền lại; lưu tin user và AI theo thứ tự]
+    end
+    subgraph X[Adapter và provider bên ngoài]
+      REAL[OpenAI Groq Gemini recommendation client]
+      MOCK[MockAiClient recommendation]
+      CHATREAL[AI chat provider thật; không mock fallback]
+    end
+    subgraph M[Hội viên hoặc role AI chat được phép]
+      CHAT[Gửi tin AI chat]
+    end
+    REQ --> READ --> SELECT
+    SELECT -->|Có| REAL --> PARSE
+    SELECT -->|Không| MOCK --> PARSE
+    PARSE --> APPLY --> PLAN --> ACT
+    ACT -->|Có| ACTIVE
+    ACT -->|Không| DRAFT
+    CHAT --> OWNER --> CONFIG
+    CONFIG -->|Không| FAIL
+    CONFIG -->|Có| CHATREAL
+    CHATREAL -->|Thành công| PERSIST
+    CHATREAL -->|Lỗi| FAIL

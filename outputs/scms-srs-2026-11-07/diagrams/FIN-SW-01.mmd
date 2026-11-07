@@ -1,0 +1,45 @@
+flowchart TD
+    subgraph MemberWeb[Member và Web]
+      M1[Chọn đúng một target thuộc mình] --> M2[Nhận checkout URL rồi mở VNPay]
+      M3[Browser return] --> M4[POST verify-return có authentication]
+      M5[Hiển thị trạng thái persisted]
+    end
+    subgraph PaymentAPI[Payment API và settlement transaction]
+      A1[Kiểm target và lock member / target]
+      A2{Attempt pending còn hạn?}
+      A3[Dùng lại checkout]
+      A4{Đã hết expiresAt cộng grace?}
+      A5[Chặn awaiting confirmation]
+      A6[Đóng attempt cũ; tạo attempt mới]
+      A7{Return có chữ ký?}
+      A8[HMAC / tmnCode / reference / amount]
+      A9{Callback success hợp lệ?}
+      A10[Lock và refresh; settle payment / target]
+      A11[Invoice + wallet ledger + notification]
+      A12[Đọc status và kiểm owner]
+      A13[Kết quả xử lý callback]
+      ORIGIN{Caller là public IPN hay member return?}
+      ACK[Trả IPN response cho Gateway: 00 / 01 / 02 / 04 / 97 / 99]
+    end
+    subgraph Gateway[VNPay Sandbox]
+      G1[Gateway payment]
+      G2[GET public IPN]
+    end
+    M1 --> A1 --> A2
+    A2 -->|Có| A3 --> M2
+    A2 -->|Không| A4
+    A4 -->|Không| A5
+    A4 -->|Có hoặc chưa có attempt| A6 --> M2
+    M2 --> G1
+    G1 --> M3
+    G1 --> G2 --> A8
+    M4 --> A7
+    A7 -->|Có| A8
+    A7 -->|Không| A12
+    A8 --> A9
+    A9 -->|Có và chưa settle| A10 --> A11 --> A13
+    A9 -->|Sai / lặp / provisional| A13
+    A13 --> ORIGIN
+    ORIGIN -->|Public IPN| ACK
+    ORIGIN -->|Member verify-return| A12
+    A12 --> M5

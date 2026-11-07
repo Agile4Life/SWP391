@@ -1,0 +1,31 @@
+flowchart TD
+    subgraph E[Coach hoặc lễ tân]
+      FORM[Nhập loại title reason ngày và replacement tùy chọn]
+      OWN[Chọn hủy đơn của mình]
+    end
+    subgraph A[API Operations]
+      VALID{Loại hợp lệ; end không trước start; LEAVE có start; replacement hợp lệ?}
+      NEW[Lưu PENDING và thông báo quản lý]
+      PEND{Đơn còn PENDING?}
+      DECIDE{Kết quả APPROVED hoặc REJECTED?}
+      WHY{REJECTED có managerNotes?}
+      SAVE[Lưu kết quả người và thời điểm duyệt]
+      IMPACT[LEAVE approved: đếm lịch class/PT để báo quản lý]
+      N[Thông báo người gửi]
+      CANCEL[Đúng owner và PENDING: CANCELLED]
+      ERR[Từ chối yêu cầu]
+    end
+    subgraph G[Quản lý trung tâm]
+      REVIEW[Đọc đơn và nhập kết quả]
+    end
+    FORM --> VALID
+    VALID -->|Không| ERR
+    VALID -->|Có| NEW --> REVIEW --> PEND
+    PEND -->|Không| ERR
+    PEND -->|Có| DECIDE
+    DECIDE -->|APPROVED| SAVE
+    DECIDE -->|REJECTED| WHY
+    WHY -->|Không| ERR
+    WHY -->|Có| SAVE
+    SAVE --> IMPACT --> N
+    OWN --> CANCEL

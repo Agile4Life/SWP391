@@ -1,0 +1,41 @@
+flowchart TD
+    subgraph MemberWeb[Member và Web]
+      M1[Xem catalog active; chọn variant và số lượng]
+      M2[Xem quote từ server]
+      M3[Chọn pickup / delivery; online / counter]
+      M4[Chọn địa chỉ sở hữu hoặc inline nếu delivery]
+      M5[Submit clientRequestId và expectedTotal]
+      M6[Nhận order cũ nếu retry cùng key]
+      M7[Giá / tồn thay đổi: tải lại quote]
+    end
+    subgraph ShopService[Shop service và DB]
+      S1[Quote không reserve; merge tối đa 30 variant và 20 mỗi variant]
+      S2[Lock active member và variant; reprice]
+      S3{Đã có member + clientRequestId?}
+      S4{Tồn hợp lệ và total khớp?}
+      S5[Snapshot item / shipping; order pending_payment]
+      S6[Reserve stock; online 30 phút / counter 48 giờ mặc định]
+      S7[Payment success; order paid]
+    end
+    subgraph Payment[Payment]
+      P1[Member thanh toán online VNPay hoặc ví]
+      P2[Staff thu cash / pos / bank_transfer; chỉ counter pickup]
+    end
+    subgraph Fulfillment[Staff fulfillment]
+      T1[Start processing]
+      T2{Delivery hay pickup?}
+      T3[Nhập tracking; shipping]
+      T4[Ready for pickup]
+      T5[Completed]
+    end
+    M1 --> S1 --> M2 --> M3 --> M4 --> M5 --> S3
+    S3 -->|Có| M6
+    S3 -->|Không| S2 --> S4
+    S4 -->|Không| M7
+    S4 -->|Có| S5 --> S6
+    S6 -->|Online| P1 --> S7
+    S6 -->|Counter pickup| P2 --> S7
+    S7 --> T1 --> T2
+    T2 -->|Delivery| T3 --> T5
+    T2 -->|Pickup| T4 --> T5
+    S7 -->|Pickup counter cho phép giao ngay| T5

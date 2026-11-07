@@ -1,0 +1,34 @@
+flowchart LR
+ subgraph G["Guest và Member"]
+ G1["Khám phá dịch vụ/shop"] --> G2["Đăng ký và xác thực"] --> G3["Chọn gói/lớp/sân/PT hoặc sản phẩm"]
+ G4["Tập luyện, xem giáo án/tiến độ"]
+ G5["Hỗ trợ và chat"]
+ end
+ subgraph R["Receptionist"]
+ R1["Duyệt trial KYC, thu ngân, hold, xin hủy hộ"]
+ R2["Quét check-in, xử lý đơn, hỗ trợ/escalate"]
+ end
+ subgraph S["SCMS API và tác vụ nền"]
+ S1{"Xác thực, role, ownership, entitlement và availability"}
+ S2["Tạo tài nguyên và payment theo use case"]
+ S3["Settle, invoice, wallet ledger nếu áp dụng"]
+ S4["DB trigger capacity/conflict và lưu dữ liệu"]
+ S5["In-app notification và realtime khi cấu hình"]
+ end
+ subgraph C["Coach"]
+ C1["Lịch dạy, attendance, giáo án, metrics và đánh giá"]
+ end
+ subgraph MA["Center Manager và Admin"]
+ M1["Manager: catalog, nhân sự, duyệt, báo cáo, audit"]
+ A1["Admin: tài khoản toàn hệ thống"]
+ end
+ G3 --> S1
+ S1 -- Hợp lệ --> S2 --> S4
+ S1 -- Từ chối --> G3
+ S2 --> R1 --> S3
+ S2 --> V["VNPay Sandbox"] --> S3
+ S3 --> S4 --> S5 --> G4
+ G4 <--> C1
+ G5 <--> R2
+ M1 --> S4
+ A1 --> S4

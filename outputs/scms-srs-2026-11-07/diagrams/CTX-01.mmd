@@ -1,0 +1,13 @@
+flowchart LR
+ G["Guest"] --> S["SCMS Web và API"]
+ M["Member"] <--> S
+ R["Receptionist"] <--> S
+ C["Coach"] <--> S
+ CM["Center Manager"] <--> S
+ A["Admin"] <--> S
+ S <--> DB[("PostgreSQL profile supabase")]
+ S <--> V["VNPay Sandbox khi bật cấu hình"]
+ S <--> AI["AI provider theo loại tính năng"]
+ S <--> EM["SMTP cho OTP khi cấu hình"]
+ S <--> RT["Supabase private broadcast khi cấu hình"]
+ GG["Google Identity"] <--> S

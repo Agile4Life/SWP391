@@ -1,0 +1,9 @@
+flowchart LR
+ L["/login"] --> P["/portal → Admin home"]
+ P --> U["/admin/users
+Quản lý toàn bộ tài khoản theo guard API"]
+ P --> N["/member/notifications dùng chung"]
+ P --> AV["Menu avatar"] --> PR["/profile hoặc /member/profile"]
+ AV --> LOG["Xác nhận Logout → Landing"]
+ P --> FORB["Đường dẫn ngoài role → Forbidden
+ADMIN không tự có quyền mọi endpoint"]

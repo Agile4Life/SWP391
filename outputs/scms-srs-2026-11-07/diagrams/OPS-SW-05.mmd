@@ -1,0 +1,36 @@
+flowchart LR
+    subgraph Member[Hội viên]
+        A[Chọn coach, slot, quota hoặc trả tiền; đơn/recurring]
+        C[Hủy PT]
+    end
+    subgraph Coach[Coach phụ trách]
+        CC[Hủy PT của mình]
+    end
+    subgraph Desk[RECEPTIONIST / CENTER_MANAGER]
+        MONEY[Ghi nhận thu cash/bank_transfer]
+    end
+    subgraph System[Hệ thống]
+        G{Coach active không nghỉ phép; slot 1h 06–21h; advance >=120 phút; không trùng/4 PT liên tiếp; gói phủ today và ngày tập?}
+        Q{package_quota?}
+        QUOTA{Trial1 Gold3 Platinum6 và chưa dùng hết tháng ngày tập?}
+        UNPAID{Số PT pending < 2?}
+        B[confirmed; used_quota]
+        P[confirmed; 200k; pending]
+        PAID[confirmed; paid + payment success]
+        CG{Owner/coach/CENTER_MANAGER và chưa bắt đầu, chưa completed/cancelled?}
+        CANCEL[cancelled; pending payment thành failed]
+        ERR[Trả lỗi hoặc recurring ghi skipped]
+    end
+    A --> G
+    G -- Không --> ERR
+    G -- Có --> Q
+    Q -- Có --> QUOTA
+    QUOTA -- Có --> B
+    QUOTA -- Không --> ERR
+    Q -- Không --> UNPAID
+    UNPAID -- Có --> P --> MONEY --> PAID
+    UNPAID -- Không --> ERR
+    C --> CG
+    CC --> CG
+    CG -- Có --> CANCEL
+    CG -- Không --> ERR

@@ -1,0 +1,21 @@
+flowchart LR
+ subgraph U["Admin hoặc Center Manager"]
+ A["Admin chọn quản lý user"]
+ M["Manager chọn catalog/nhân sự/báo cáo"]
+ F["Nhập bộ lọc hoặc thay đổi"]
+ end
+ subgraph S["SCMS"]
+ R{"Role và phạm vi được phép?"}
+ V{"DTO và ràng buộc dữ liệu hợp lệ?"}
+ Q["Đọc/tổng hợp report hoặc ghi nghiệp vụ"]
+ AUD["Audit theo endpoint có gọi AuditService"]
+ ERR["Trả lỗi quyền/validation/conflict"]
+ end
+ A --> R
+ M --> R
+ R -- Có --> F --> V
+ R -- Không --> ERR
+ V -- Có --> Q --> AUD --> RES["Hiển thị kết quả UI"]
+ V -- Không --> ERR
+ Q --> INV["Invoice PDF chỉ ở flow hóa đơn hiện có
+Không suy ra report export Excel/PDF"]

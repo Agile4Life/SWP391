@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> PENDING: RECEPTIONIST/CENTER_MANAGER tạo staff-request, không<br/>trùng
+    PENDING --> APPROVED: CENTER_MANAGER duyệt [kỳ vẫn active hôm nay, không<br/>hold / quyền khác / công nợ chặn]
+    PENDING --> REJECTED: CENTER_MANAGER từ chối
+    note right of PENDING
+        Gửi yêu cầu chưa đổi subscription active.
+        Staff request yêu cầu status active,
+        duyệt vẫn yêu cầu active bao phủ hôm nay.
+        Member chỉ có GET my, chưa expose POST xin hủy.
+    end note
+    note right of APPROVED
+        subscription cancelled, giải phóng lịch không còn quyền.
+        refund > 0 được credit vào ví, manager được ghi đè.
+        Không quyết định lại request đã APPROVED/REJECTED.
+    end note

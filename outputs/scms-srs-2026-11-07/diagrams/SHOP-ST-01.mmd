@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> pending_payment: Tạo order và reserve stock
+    pending_payment --> paid: Online / ví success hoặc staff thu quầy pickup
+    paid --> processing: Staff bắt đầu xử lý
+    processing --> shipping: Delivery, staff nhập tracking
+    processing --> ready_for_pickup: Pickup, staff báo sẵn sàng
+    shipping --> completed: Staff xác nhận hoàn tất delivery
+    ready_for_pickup --> completed: Staff bàn giao pickup
+    paid --> completed: Chỉ pickup counter
+    pending_payment --> cancelled: Member / staff, không còn pending VNPay
+    pending_payment --> cancelled: Scheduler dueAt đã qua và guard không chặn
+    paid --> cancelled: Member hoặc staff, hoàn ví
+    processing --> cancelled: Chỉ staff, hoàn ví
+    shipping --> cancelled: Chỉ staff, hoàn ví
+    ready_for_pickup --> cancelled: Chỉ staff, hoàn ví
+    completed --> [*]
+    cancelled --> [*]
+    note right of cancelled
+      Member và scheduler trả stock.
+      Staff chọn restock, mặc định true.
+      Late VNPay success giữ order cancelled,
+      chỉ credit ví và payment refunded.
+    end note

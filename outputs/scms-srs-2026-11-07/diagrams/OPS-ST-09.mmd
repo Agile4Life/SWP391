@@ -1,0 +1,15 @@
+stateDiagram-v2
+    [*] --> draft: coach/manager tạo mặc định
+    [*] --> active: tạo activate=true/status active hoặc manager phân<br/>công
+    draft --> active: activate
+    active --> active: activate lại / sửa plan hợp lệ
+    draft --> draft: sửa plan/bài hợp lệ
+    active --> cancelled: xóa/withdraw plan active / giữ bài và completion<br/>history
+    draft --> [*]: xóa vật lý draft
+    cancelled --> cancelled: xóa lại / idempotent
+    note right of active
+        aiGenerated là boolean, không có AI_Generated, Assigned, In_Progress.
+        Member tick bài tạo completion theo member/item/date,
+        không đổi state plan.
+        completed có DB constraint, chưa thấy transition Java.
+    end note
