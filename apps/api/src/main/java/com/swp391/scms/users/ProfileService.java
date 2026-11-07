@@ -318,7 +318,8 @@ public class ProfileService {
 
     private boolean isVietnamese(String nationality) {
         String lower = nationality.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("việt nam") || lower.contains("viet nam") || lower.contains("vietnam") || "vn".equals(lower);
+        return lower.contains("việt nam") || lower.contains("viet nam") || lower.contains("vietnam")
+                || "vn".equals(lower) || "vnm".equals(lower);
     }
 
     private ProfileDto toDto(User user, Member member, Coach coach, Receptionist receptionist) {

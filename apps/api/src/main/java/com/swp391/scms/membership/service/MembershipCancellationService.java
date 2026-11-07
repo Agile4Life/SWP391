@@ -54,6 +54,14 @@ public class MembershipCancellationService {
     @Autowired(required = false)
     private SubscriptionValueCalculator valueCalculator;
 
+    public void setWalletService(WalletService walletService) {
+        this.walletService = walletService;
+    }
+
+    public void setNotificationService(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
     public MembershipCancellationService(MembershipCancellationRequestRepository requests,
             MembershipSubscriptionRepository subscriptions, MemberRepository members,
             UserRepository users, EnrollmentService enrollments, MessageService messages, Clock clock,
@@ -122,7 +130,7 @@ public class MembershipCancellationService {
             member = lockMember(body.memberId());
             MembershipSubscription activeSub = subscriptions.findByMemberUserIdOrderByCreatedAtDesc(body.memberId())
                     .stream()
-                    .filter(s -> isActiveNow(s) || "active".equalsIgnoreCase(s.getStatus()))
+                    .filter(this::isActiveNow)
                     .findFirst()
                     .orElseThrow(() -> new ConflictException("CANCELLATION_NOT_ACTIVE", "error.membership.cancellation_not_active", null, null));
             subscription = lockSubscription(activeSub.getId());
@@ -130,7 +138,7 @@ public class MembershipCancellationService {
             throw new BadRequestException("CANCELLATION_TARGET_REQUIRED", "resource.subscription", null, null);
         }
 
-        if (!isActiveNow(subscription) && !"active".equalsIgnoreCase(subscription.getStatus())) {
+        if (!isActiveNow(subscription)) {
             throw new ConflictException("CANCELLATION_NOT_ACTIVE", "error.membership.cancellation_not_active", null, null);
         }
         if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
@@ -197,7 +205,8 @@ public class MembershipCancellationService {
     @Transactional
     public CancellationDtos.Response decide(AuthenticatedPrincipal principal, Long requestId,
             boolean approve, CancellationDtos.Decision body) {
-        if (principal == null || !"CENTER_MANAGER".equalsIgnoreCase(principal.role())) {
+        if (principal == null || !("CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                || "MANAGER".equalsIgnoreCase(principal.role()))) {
             throw new ForbiddenException("CANCELLATION_MANAGER_ONLY", "error.membership.cancellation_manager_only", null, null);
         }
         MembershipCancellationRequest initial = requests.findById(requestId)

@@ -289,4 +289,36 @@ describe('MemberCheckoutPage Component', () => {
     expect(walletApi.payWithWallet).not.toHaveBeenCalled();
   });
 
+  it('still requires KYC verification when history only contains pending or cancelled subscriptions and identityVerified is false', async () => {
+    vi.mocked(profileApi.getProfile).mockResolvedValue({
+      userId: 10,
+      fullName: 'Hội Viên Mới',
+      email: 'member@sol.com',
+      phone: '0901234567',
+      dob: '1995-05-10',
+      gender: 'male',
+      avatarUrl: null,
+      address: '123 Le Loi',
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: false,
+      citizenId: null,
+      documentType: null,
+    });
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([
+      { ...pendingUpgrade, id: 77, packageId: 1, status: 'cancelled' },
+    ]);
+
+    await renderCheckout('/member/packages/checkout?packageId=1');
+
+    expect(host.textContent).toContain('Xác minh danh tính trước khi đăng ký gói tập đầu tiên');
+    expect(host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement | null).toSatisfy(
+      (btn: HTMLButtonElement | null) => btn === null || btn.disabled,
+    );
+  });
+
 });

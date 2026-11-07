@@ -2,7 +2,7 @@ import { memberMessage, memberText } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails, isTrialPackage } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -71,9 +71,17 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
+function isKycRequiredError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as { code?: string }).code;
+  if (code === 'MEMBERSHIP_KYC_REQUIRED') return true;
+  return /kyc|cccd|căn cước|hộ chiếu|identity|error\.membership\.kyc_required/i.test(error.message);
+}
+
 export function MemberPackagesPage() {
   useLanguage();
   const { lang, t } = useI18n();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedId = selectedPackageId(searchParams.toString());
   useEffect(() => clearPurchaseIntent(), []);
@@ -95,6 +103,7 @@ export function MemberPackagesPage() {
   const refreshNow = useRef<() => void>(() => {});
   const refreshQueued = useRef(false);
   const [blockedMessage, setBlockedMessage] = useState<string | Error | null>(null);
+  const [blockedKycPackageId, setBlockedKycPackageId] = useState<number | null>(null);
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
   const [syncError, setSyncError] = useState(false);
@@ -159,12 +168,20 @@ export function MemberPackagesPage() {
         return;
       }
     } else {
-      if (docClean.length < 6 || docClean.length > 20) {
+      if (!/^[A-Za-z0-9]{6,15}$/.test(docClean)) {
         setTrialError(memberMessage("Số Hộ chiếu không hợp lệ (từ 6 đến 20 ký tự)."));
         return;
       }
-      if (!trialNationality.trim()) {
+      const natClean = trialNationality.trim();
+      if (!natClean) {
         setTrialError(memberMessage("Vui lòng nhập quốc tịch cho người nước ngoài."));
+        return;
+      }
+      if (/^(vn|vnm|vietnam|việt nam|viet nam)$/i.test(natClean)) {
+        setTrialError(sourceMessage(
+          "Hộ chiếu chỉ áp dụng cho người nước ngoài. Công dân Việt Nam vui lòng sử dụng CCCD.",
+          "Passports are only accepted for foreign nationals. Vietnamese citizens must use a citizen ID.",
+        ));
         return;
       }
     }
@@ -534,6 +551,12 @@ export function MemberPackagesPage() {
         action: upgradeFrom ? 'upgrade' : renewFrom ? 'renew' : 'register',
       });
     } catch (error) {
+      if (!upgradeFrom && !renewFrom && isKycRequiredError(error)) {
+        setBlockedKycPackageId(membershipPackage.id);
+        navigate(`/member/packages/checkout?packageId=${membershipPackage.id}`);
+      } else {
+        setBlockedKycPackageId(null);
+      }
       setBlockedMessage(
         localizableError(error, 'Không thể xử lý yêu cầu. Vui lòng thử lại.'),
       );
@@ -642,10 +665,21 @@ export function MemberPackagesPage() {
 
   return (
     <div data-i18n-managed className="portal-container member-packages" >
-      {blockedMessage && <Modal returnFocusRef={membershipFocus} title={t("Chưa thể thực hiện", "Action unavailable")} onClose={() => setBlockedMessage(null)}>
+      {blockedMessage && <Modal returnFocusRef={membershipFocus} title={t("Chưa thể thực hiện", "Action unavailable")} onClose={() => { setBlockedMessage(null); setBlockedKycPackageId(null); }}>
         <div className="package-result package-result--error">
           <p role="alert">{t(blockedMessage)}</p>
-          <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>{t("Đóng", "Close")}</button>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {blockedKycPackageId != null && (
+              <Link
+                to={`/member/packages/checkout?packageId=${blockedKycPackageId}`}
+                className="btn-primary"
+                onClick={() => { setBlockedMessage(null); setBlockedKycPackageId(null); }}
+              >
+                {t("Xác thực định danh & Thanh toán", "Verify identity & Checkout")}
+              </Link>
+            )}
+            <button type="button" className={blockedKycPackageId != null ? "btn-secondary" : "btn-primary"} onClick={() => { setBlockedMessage(null); setBlockedKycPackageId(null); }}>{t("Đóng", "Close")}</button>
+          </div>
         </div>
       </Modal>}
       <PageHeader

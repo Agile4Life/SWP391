@@ -37,8 +37,8 @@ public class VnpayController {
     }
     @PostMapping("/verify-return") @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<Status> verifyReturn(@AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @RequestBody Map<String,String> params) {
-        String reference = params != null ? params.get("vnp_TxnRef") : "";
+            @RequestBody(required = false) Map<String,String> params) {
+        String reference = params != null ? params.get("vnp_TxnRef") : null;
         if (params != null && params.containsKey("vnp_SecureHash")) {
             ipn.process(params);
         }

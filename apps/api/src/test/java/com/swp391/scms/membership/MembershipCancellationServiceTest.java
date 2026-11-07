@@ -205,4 +205,39 @@ class MembershipCancellationServiceTest {
         verify(requests).findAllForManager();
         verify(requests, never()).findAll();
     }
+
+    @Test
+    void staffRequest_requiresStaffRoleNonBlankReasonAndActiveSubscription() {
+        var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+        assertThatThrownBy(() -> service.staffRequest(owner, new CancellationDtos.StaffRequest(10L, 100L, "Moving", null)))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service.staffRequest(receptionist, new CancellationDtos.StaffRequest(10L, 100L, "   ", null)))
+                .isInstanceOf(BadRequestException.class);
+
+        MembershipSubscription future = new MembershipSubscription();
+        future.setId(101L); future.setMember(member); future.setMembershipPackage(active.getMembershipPackage());
+        future.setStatus("active");
+        future.setStartDate(LocalDate.of(2026, 11, 2));
+        future.setEndDate(LocalDate.of(2026, 12, 2));
+        when(subscriptions.findById(101L)).thenReturn(Optional.of(future));
+        when(subscriptions.findByIdForUpdate(101L)).thenReturn(Optional.of(future));
+        assertThatThrownBy(() -> service.staffRequest(receptionist, new CancellationDtos.StaffRequest(10L, 101L, "Moving", null)))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void decide_creditsWalletWhenRefundPositiveAndSkipsWalletWhenRefundZero() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        stubDecision();
+        pending.setRefundAmount(new java.math.BigDecimal("110000"));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active));
+        User managerUser = new User(); managerUser.setId(20L);
+        when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(managerUser));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.decide(manager, 7L, true, new CancellationDtos.Decision("Approved", new java.math.BigDecimal("110000")));
+        verify(walletService).creditRefund(10L, new java.math.BigDecimal("110000"), "CANCEL_REQ_7", "Moving");
+    }
 }

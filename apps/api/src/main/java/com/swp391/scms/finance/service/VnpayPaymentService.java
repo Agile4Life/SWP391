@@ -114,6 +114,17 @@ public class VnpayPaymentService {
         }
         Payment payment = resolveTargetPayment(principal, request);
         if (!"pending".equals(payment.getStatus())) throw unavailable();
+        if (payment.getId() != null) {
+            var existing = transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(), "pending");
+            if (existing.isPresent()) {
+                VnpayTransaction current = existing.get();
+                if (!current.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now())) {
+                    throw new ConflictException("VNPAY_AWAITING_CONFIRMATION", "finance.vnpay.awaiting_confirmation", null, null);
+                }
+                current.setStatus("failed");
+                transactions.save(current);
+            }
+        }
         payment.setMethod("online_wallet");
         payment = payments.saveAndFlush(payment);
 
@@ -247,7 +258,11 @@ public class VnpayPaymentService {
     }
     @Transactional(readOnly=true)
     public Status status(AuthenticatedPrincipal principal,String reference) {
-        var t=transactions.findById(reference).orElseThrow(()->new ResourceNotFoundException("resource.payment",reference));
+        String normalizedRef = reference == null ? "" : reference.trim();
+        if (normalizedRef.isEmpty()) {
+            throw new ResourceNotFoundException("resource.payment", reference);
+        }
+        var t=transactions.findById(normalizedRef).orElseThrow(()->new ResourceNotFoundException("resource.payment",normalizedRef));
         Payment p=t.getPayment();requireOwner(principal,p.getMember().getUserId());
         String status="refunded".equals(p.getStatus())?"refunded":t.getStatus();
         String targetPath = p.getProductOrderId()!=null
@@ -261,7 +276,7 @@ public class VnpayPaymentService {
                                         : "wallet_topup".equalsIgnoreCase(p.getMethod())
                                                 ? "/member/packages"
                                                 : "/member/invoices";
-        return new Status(reference,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
+        return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
     }
     public String ipn(Map<String,String> fields) {
         if(!gateway.validSignature(fields)) return "97";

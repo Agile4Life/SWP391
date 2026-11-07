@@ -910,4 +910,18 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
   });
 
+  it('offers direct checkout KYC link when first-time subscription creation requires KYC verification', async () => {
+    api.create.mockRejectedValueOnce(
+      Object.assign(new Error('Vui lòng xác thực định danh (CCCD/Hộ chiếu) trước khi đăng ký gói tập đầu tiên.'), {
+        code: 'MEMBERSHIP_KYC_REQUIRED',
+      }),
+    );
+    await render();
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    const kycLink = host.querySelector<HTMLAnchorElement>('dialog a.btn-primary');
+    expect(kycLink).not.toBeNull();
+    expect(kycLink?.getAttribute('href')).toBe('/member/packages/checkout?packageId=5');
+    expect(kycLink?.textContent).toContain('Xác thực định danh & Thanh toán');
+  });
+
 });

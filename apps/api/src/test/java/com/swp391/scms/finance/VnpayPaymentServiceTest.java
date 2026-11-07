@@ -273,4 +273,34 @@ class VnpayPaymentServiceTest {
         verifyNoInteractions(refunds, settlement, invoices);
         assertNull(transaction.getGatewayTransactionNo());
     }
+    @Test void statusRejectsNullOrBlankReferenceWithNotFound() {
+        assertThrows(com.swp391.scms.common.exception.ResourceNotFoundException.class, () -> service.status(owner, null));
+        assertThrows(com.swp391.scms.common.exception.ResourceNotFoundException.class, () -> service.status(owner, "   "));
+    }
+    @Test void payWithWalletBlocksLiveVnpayAttemptAndClosesAbandonedAttemptBeforeDebiting() {
+        var sub = new MembershipSubscription();
+        sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
+        sub.setQuotedPrice(new BigDecimal("650000"));
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
+        when(payments.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+
+        // Live pending VNPay transaction blocks wallet payment before debiting wallet
+        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(transaction));
+        var conflict = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null)));
+        assertEquals("VNPAY_AWAITING_CONFIRMATION", conflict.getErrorCode());
+        verifyNoInteractions(walletService);
+
+        // Abandoned VNPay transaction older than grace period is closed and wallet payment succeeds
+        var abandoned = new VnpayTransaction("OLD", payment, payment.getAmount(),
+                LocalDateTime.of(2026, 11, 2, 12, 0), LocalDateTime.of(2026, 11, 2, 12, 15), "127.0.0.1");
+        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(abandoned));
+        service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null));
+        assertEquals("failed", abandoned.getStatus());
+        verify(walletService).debitForPayment(eq(7L), eq(new BigDecimal("650000")), eq("WALLET_PAY_9"), any(), eq("/member/packages"));
+        verify(settlement).updatePaymentStatus(9L, "success");
+    }
 }

@@ -149,6 +149,10 @@ public class WalletService {
             throw new BadRequestException("INVALID_PAYMENT_AMOUNT", "error.wallet.invalid_amount", null, "Số tiền thanh toán không hợp lệ.");
         }
         Wallet wallet = getOrCreateWalletForUpdate(userId);
+        if (referenceId != null && !referenceId.isBlank()
+                && walletTransactionRepository.existsByWallet_IdAndReferenceId(wallet.getId(), referenceId)) {
+            return toDto(wallet);
+        }
         BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
         if (currentBalance.compareTo(amount) < 0) {
             throw new BadRequestException(

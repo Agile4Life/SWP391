@@ -65,7 +65,9 @@ export function MemberCheckoutPage() {
         if (!active || version !== request) return;
 
         setProfile(userProfile);
-        setHasPriorSubscriptions(history.length > 0);
+        setHasPriorSubscriptions(
+          history.some((item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen'),
+        );
         if (userProfile?.fullName) {
           setKycFullName(userProfile.fullName);
         }
@@ -136,17 +138,21 @@ export function MemberCheckoutPage() {
       setKycError(memberMessage("Vui lòng nhập số CCCD hoặc Hộ chiếu."));
       return;
     }
-    if (kycDocType === 'CCCD' && !/^\d{12}$/.test(kycNumber.trim())) {
+    if (kycDocType === 'CCCD' && !/^(\d{9}|\d{12})$/.test(kycNumber.trim())) {
       setKycError(memberMessage("Số Căn cước công dân (CCCD) phải bao gồm đúng 12 chữ số."));
       return;
     }
     if (kycDocType === 'PASSPORT') {
+      if (!/^[A-Za-z0-9]{6,15}$/.test(kycNumber.trim())) {
+        setKycError(memberMessage("Số Hộ chiếu không hợp lệ (từ 6 đến 20 ký tự)."));
+        return;
+      }
       if (!kycNationality.trim()) {
         setKycError(memberMessage("Vui lòng nhập quốc tịch của bạn."));
         return;
       }
       const nat = kycNationality.trim().toLowerCase();
-      if (nat.includes('việt nam') || nat.includes('vietnam') || nat.includes('viet nam') || nat === 'vn') {
+      if (nat.includes('việt nam') || nat.includes('vietnam') || nat.includes('viet nam') || nat === 'vn' || nat === 'vnm') {
         setKycError(memberMessage("Hộ chiếu chỉ áp dụng cho người nước ngoài. Công dân Việt Nam vui lòng sử dụng CCCD."));
         return;
       }
@@ -393,6 +399,7 @@ export function MemberCheckoutPage() {
                 {t(" ⚠️ Vui lòng hoàn tất biểu mẫu xác minh danh tính ở trên để mở khóa các nút thanh toán. ", "⚠️ Complete identity verification above to enable payment.")}</p>
             )}
             <VnpayPayButton
+              disabled={!isKycVerified}
               prepare={preparePaymentTarget}
               onPaid={() => navigate('/member/packages', { replace: true })}
             />
