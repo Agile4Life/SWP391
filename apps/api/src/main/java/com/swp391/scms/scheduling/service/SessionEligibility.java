@@ -17,6 +17,14 @@ final class SessionEligibility {
     private SessionEligibility() {
     }
 
+    static LocalDateTime now(Clock clock) {
+        return clock.instant().atZone(CENTER_ZONE).toLocalDateTime();
+    }
+
+    static LocalDate today(Clock clock) {
+        return clock.instant().atZone(CENTER_ZONE).toLocalDate();
+    }
+
     static void ensureBookable(ClassSession session, Clock clock) {
         if ("cancelled".equalsIgnoreCase(session.getStatus())) {
             throw new BadRequestException("SCHEDULING_SESSION_CANCELLED", "error.scheduling.session_cancelled",

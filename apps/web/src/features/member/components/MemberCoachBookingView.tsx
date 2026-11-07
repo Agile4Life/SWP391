@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { RecurrenceFields, RecurrenceSummary } from '../../../shared/ui/RecurrenceFields';
 import { expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
+import { centerNowParts } from '../../../shared/lib/centerTime';
+import { addDays, parseISODate } from '../../schedule/timetable';
 import {
   getCoaches,
   getAvailableSlots,
@@ -55,8 +57,7 @@ function coachBookingErrorMessage(err: unknown): string | SourceMessage {
 }
 
 function localToday(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return centerNowParts().date;
 }
 
 function nextDays(count = 14): Array<{
@@ -76,10 +77,10 @@ function nextDays(count = 14): Array<{
     isToday: boolean;
   }> = [];
   const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const todayIso = localToday();
   for (let i = 0; i < count; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const iso = addDays(todayIso, i);
+    const d = parseISODate(iso);
     const dayName = memberText(dayNames[d.getDay()], ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]);
     const dayNumber = String(d.getDate()).padStart(2, '0');
     const monthText = memberText(`Tháng ${d.getMonth() + 1}`, `Month ${d.getMonth() + 1}`);

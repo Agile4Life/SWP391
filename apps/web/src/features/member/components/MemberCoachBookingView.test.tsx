@@ -413,4 +413,27 @@ describe('weekly PT booking after Monday has passed', () => {
       vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks();
     }
   });
+
+  it('uses Asia/Ho_Chi_Minh date for startDate even when UTC is still on the previous calendar day', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    // 2026-11-05T20:00:00Z is 2026-11-06 03:00:00 in Asia/Ho_Chi_Minh
+    vi.setSystemTime(new Date('2026-11-05T20:00:00Z'));
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV A', specialization: 'Gym' }]);
+    mocks.getMyCoachBookings.mockResolvedValue([]);
+    mocks.getMyCoachReviews.mockResolvedValue([]);
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
+    mocks.getAvailableSlots.mockResolvedValue([]);
+    try {
+      await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+      expect(mocks.getAvailableSlots).toHaveBeenCalledWith(1, '2026-11-06');
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks();
+    }
+  });
 });

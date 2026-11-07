@@ -321,7 +321,7 @@ public class EnrollmentService {
                 .distinct().sorted().toList();
         // Lock classes in ascending order before loading mutable enrollment state.
         List<GymClass> lockedClasses = classIds.stream().map(this::lockClass).toList();
-        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime now = SessionEligibility.now(clock);
         LocalDate today = now.toLocalDate();
         LocalTime nowTime = now.toLocalTime();
         int cancelledCount = 0;
@@ -403,7 +403,7 @@ public class EnrollmentService {
         if (classSessions == null || classSessions.isEmpty()) {
             return null;
         }
-        LocalDate today = LocalDate.now(clock);
+        LocalDate today = SessionEligibility.today(clock);
         return classSessions.stream()
                 .filter(s -> s.getSessionDate() != null && !s.getSessionDate().isBefore(today)
                         && !"cancelled".equalsIgnoreCase(s.getStatus()))

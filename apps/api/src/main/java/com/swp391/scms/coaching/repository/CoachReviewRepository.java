@@ -13,6 +13,7 @@ import java.util.List;
 public interface CoachReviewRepository extends JpaRepository<CoachReview, Long> {
     boolean existsByMemberUserIdAndBookingId(Long memberId, Long bookingId);
     boolean existsByMemberUserIdAndClassSessionId(Long memberId, Long classSessionId);
+    boolean existsByClassSessionId(Long classSessionId);
 
 
     @Query("SELECT r FROM CoachReview r JOIN FETCH r.coach c JOIN FETCH c.user JOIN FETCH r.member m JOIN FETCH m.user " +

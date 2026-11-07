@@ -184,13 +184,22 @@ export function MemberClassesPage() {
     setSearchParams(params, { replace: true });
   }
 
-  // Normalize removed/unknown URL ranges without losing tab or discipline.
+  // Normalize removed/unknown URL ranges and legacy ?tab=my without losing tab or discipline.
   useEffect(() => {
     const week = searchParams.get('week');
     const next = weekFromQuery(week);
-    if (week !== null && week !== String(next)) {
+    const rawTab = searchParams.get('tab');
+    const needsWeekNormalize = week !== null && week !== String(next);
+    const needsTabNormalize = rawTab === 'my';
+    if (needsWeekNormalize || needsTabNormalize) {
       const params = new URLSearchParams(searchParams);
-      params.set('week', String(next));
+      if (needsWeekNormalize) {
+        params.set('week', String(next));
+      }
+      if (needsTabNormalize) {
+        params.delete('tab');
+        setTab('timetable');
+      }
       setSearchParams(params, { replace: true });
     }
   }, [searchParams, setSearchParams]);

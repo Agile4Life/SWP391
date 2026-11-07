@@ -50,6 +50,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 
+    boolean existsByClassEnrollmentGymClassId(Long classId);
+
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByStatusAndPaidAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 

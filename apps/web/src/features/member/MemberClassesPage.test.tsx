@@ -271,6 +271,18 @@ describe('MemberClassesPage', () => {
     expect(tabs).toEqual(['Lịch của tôi', 'Lịch lớp học', 'Đặt lịch HLV 1:1 (PT)']);
   });
 
+  it('normalizes legacy ?tab=my to the Lịch của tôi calendar tab while keeping exactly 3 tabs', async () => {
+    mocks.sessions.mockResolvedValue([session]);
+    await render('/member/classes?tab=my');
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    expect(tabs.map((item) => item.textContent?.trim())).toEqual([
+      'Lịch của tôi',
+      'Lịch lớp học',
+      'Đặt lịch HLV 1:1 (PT)',
+    ]);
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
+  });
+
   it('marks a past session unavailable even when capacity remains', async () => {
     mocks.sessions.mockResolvedValue([{ ...session, sessionDate: '2020-10-19', bookedCount: 2 }]);
     await render();

@@ -1,4 +1,4 @@
-﻿import { memberError, memberRenderMessage, memberNotify, memberMessage } from '../memberI18n';
+import { memberError, memberRenderMessage, memberNotify, memberMessage } from '../memberI18n';
 import type { SourceMessage } from '../../../shared/i18n/language';
 import { useLanguage } from '../../../shared/i18n/language';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -368,7 +368,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
           <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text("Tuần sau", 'Next week') : text("Tháng sau", 'Next month')} onClick={() => shift(1)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
-          <button type="button" className="mcal__today-btn" onClick={() => { setFocusDay(null); setView('week'); setAnchor(today); }}>{labels.thisWeek}</button>
+          <button type="button" className="mcal__today-btn" onClick={() => { setFocusDay(null); setView('week'); setAnchor(centerNowParts().date); }}>{labels.thisWeek}</button>
           <h2 className="mcal__range" aria-live="polite">{rangeLabel(view, anchor, english)}</h2>
         </div>
         <div className="mcal__side">

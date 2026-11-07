@@ -339,15 +339,17 @@ public class ClassService {
                             if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())
                                     && enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
                                 Long memberId = enrollment.getMember().getUserId();
-                                affectedMemberUserIds.add(memberId);
-                                if (notificationService != null) {
-                                    notificationService.send(
-                                            memberId,
-                                            msg("notifications.session.cancelled.title"),
-                                            msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
-                                            "schedule_change",
-                                            "class_session",
-                                            session.getId());
+                                if (!affectedMemberUserIds.contains(memberId)) {
+                                    affectedMemberUserIds.add(memberId);
+                                    if (notificationService != null) {
+                                        notificationService.send(
+                                                memberId,
+                                                msg("notifications.session.cancelled.title"),
+                                                msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
+                                                "schedule_change",
+                                                "class_session",
+                                                session.getId());
+                                    }
                                 }
                             }
                         }
@@ -363,15 +365,15 @@ public class ClassService {
                             if (member != null && member.getUserId() != null) {
                                 if (!affectedMemberUserIds.contains(member.getUserId())) {
                                     affectedMemberUserIds.add(member.getUserId());
-                                }
-                                if (notificationService != null) {
-                                    notificationService.send(
-                                            member.getUserId(),
-                                            msg("notifications.session.cancelled.title"),
-                                            msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
-                                            "schedule_change",
-                                            "class_session",
-                                            session.getId());
+                                    if (notificationService != null) {
+                                        notificationService.send(
+                                                member.getUserId(),
+                                                msg("notifications.session.cancelled.title"),
+                                                msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
+                                                "schedule_change",
+                                                "class_session",
+                                                session.getId());
+                                    }
                                 }
                             }
                         }
@@ -420,6 +422,9 @@ public class ClassService {
         if (classEnrollments != null && !classEnrollments.isEmpty()) {
             return true;
         }
+        if (payments != null && payments.existsByClassEnrollmentGymClassId(classId)) {
+            return true;
+        }
         if (sessionBookings != null && !sessionBookings.findBookedByClassId(classId).isEmpty()) {
             return true;
         }
@@ -435,7 +440,8 @@ public class ClassService {
                 if (sid != null) {
                     if (sessionBookings != null && (
                             !sessionBookings.findBySessionIdAndStatus(sid, ENROLLMENT_BOOKED).isEmpty()
-                                    || !sessionBookings.findBySessionIdAndStatus(sid, "cancelled").isEmpty())) {
+                                    || !sessionBookings.findBySessionIdAndStatus(sid, "cancelled").isEmpty()
+                                    || !sessionBookings.findBySessionIdAndStatus(sid, "completed").isEmpty())) {
                         return true;
                     }
                     if (sessionAttendances != null && !sessionAttendances.findBySessionId(sid).isEmpty()) {
@@ -444,15 +450,19 @@ public class ClassService {
                     if (sessionEvaluations != null && !sessionEvaluations.findBySessionIdOrderByEvaluatedAtDesc(sid).isEmpty()) {
                         return true;
                     }
+                    if (coachReviews != null && coachReviews.existsByClassSessionId(sid)) {
+                        return true;
+                    }
                 }
             }
         }
         if (entityManager != null) {
             if (countQuery("SELECT COUNT(sb) FROM SessionBooking sb WHERE sb.session.gymClass.id = :cid", classId) > 0
                     || countQuery("SELECT COUNT(ce) FROM ClassEnrollment ce WHERE ce.gymClass.id = :cid", classId) > 0
+                    || countQuery("SELECT COUNT(p) FROM Payment p WHERE p.classEnrollment.gymClass.id = :cid", classId) > 0
                     || countQuery("SELECT COUNT(sa) FROM SessionAttendance sa WHERE sa.session.gymClass.id = :cid", classId) > 0
                     || countQuery("SELECT COUNT(se) FROM SessionEvaluation se WHERE se.session.gymClass.id = :cid", classId) > 0
-                    || countQuery("SELECT COUNT(cr) FROM CoachReview cr WHERE cr.classSession.gymClass.id = :cid", classId) > 0) {
+                    || countQuery("SELECT COUNT(cr) FROM CoachReview cr, ClassSession cs WHERE cr.classSessionId = cs.id AND cs.gymClass.id = :cid", classId) > 0) {
                 return true;
             }
         }

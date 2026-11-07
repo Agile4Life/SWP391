@@ -297,12 +297,13 @@ public class SessionBookingService {
                     "Only a booked session can be cancelled");
         }
         ClassSession session = booking.getSession();
-        if (!LocalDateTime.of(session.getSessionDate(), session.getStartTime()).isAfter(LocalDateTime.now(clock))) {
+        LocalDateTime now = SessionEligibility.now(clock);
+        if (!LocalDateTime.of(session.getSessionDate(), session.getStartTime()).isAfter(now)) {
             throw new BadRequestException("SCHEDULING_BOOKING_TOO_LATE", "error.scheduling.booking_too_late", null,
                     "A session that has started can no longer be cancelled");
         }
         booking.setStatus(CANCELLED);
-        booking.setCancelledAt(LocalDateTime.now(clock));
+        booking.setCancelledAt(now);
         booking.setCancelReason(msg("scheduling.enrollment.cancelled_by_role", principal.role()));
         return toDto(bookings.saveAndFlush(booking));
     }
@@ -316,7 +317,7 @@ public class SessionBookingService {
         if (memberId == null) {
             return 0;
         }
-        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime now = SessionEligibility.now(clock);
         int cancelled = 0;
         for (SessionBooking booking : bookings.findUpcomingBookedForMember(memberId, now.toLocalDate())) {
             ClassSession session = booking.getSession();

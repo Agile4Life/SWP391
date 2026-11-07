@@ -484,4 +484,114 @@ class ClassServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of(20L, 21L),
                 students.stream().map(s -> s.memberId()).toList());
     }
+
+    @Test
+    @DisplayName("deleteClass soft-deactivates class, cancels scheduled sessions and deduplicates notifications when historical data exists")
+    void deleteClass_softDeactivatesAndNotifiesWithoutDuplicatesWhenHistoricalDataExists() {
+        var sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        var notificationService = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "sessionBookings", sessionBookings);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "notificationService", notificationService);
+
+        gymClass.setId(1L);
+        gymClass.setName("Yoga Flow");
+        gymClass.setStatus("active");
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+
+        ClassSession pastSession = new ClassSession();
+        pastSession.setId(101L);
+        pastSession.setGymClass(gymClass);
+        pastSession.setSessionDate(LocalDate.of(2026, 10, 10));
+        pastSession.setStartTime(LocalTime.of(8, 0));
+        pastSession.setEndTime(LocalTime.of(9, 0));
+        pastSession.setStatus("completed");
+
+        ClassSession upcomingSession = new ClassSession();
+        upcomingSession.setId(102L);
+        upcomingSession.setGymClass(gymClass);
+        upcomingSession.setSessionDate(LocalDate.of(2026, 10, 20));
+        upcomingSession.setStartTime(LocalTime.of(8, 0));
+        upcomingSession.setEndTime(LocalTime.of(9, 0));
+        upcomingSession.setStatus("scheduled");
+
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(1L))
+                .thenReturn(java.util.List.of(pastSession, upcomingSession));
+
+        com.swp391.scms.users.entity.Member member20 = new com.swp391.scms.users.entity.Member();
+        member20.setUserId(20L);
+        com.swp391.scms.scheduling.entity.ClassEnrollment classWideEnrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        classWideEnrollment.setGymClass(gymClass);
+        classWideEnrollment.setMember(member20);
+        classWideEnrollment.setStatus("booked");
+
+        com.swp391.scms.users.entity.Member member21 = new com.swp391.scms.users.entity.Member();
+        member21.setUserId(21L);
+        com.swp391.scms.scheduling.entity.ClassEnrollment cancelledEnrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        cancelledEnrollment.setGymClass(gymClass);
+        cancelledEnrollment.setMember(member21);
+        cancelledEnrollment.setStatus("cancelled");
+
+        when(enrollments.findByGymClassId(1L))
+                .thenReturn(java.util.List.of(classWideEnrollment, cancelledEnrollment));
+
+        com.swp391.scms.users.entity.Member member22 = new com.swp391.scms.users.entity.Member();
+        member22.setUserId(22L);
+        com.swp391.scms.scheduling.entity.SessionBooking booking20 = new com.swp391.scms.scheduling.entity.SessionBooking();
+        booking20.setSession(upcomingSession);
+        booking20.setMember(member20);
+        booking20.setStatus("booked");
+
+        com.swp391.scms.scheduling.entity.SessionBooking booking22 = new com.swp391.scms.scheduling.entity.SessionBooking();
+        booking22.setSession(upcomingSession);
+        booking22.setMember(member22);
+        booking22.setStatus("booked");
+
+        when(sessionBookings.findBySessionIdAndStatus(102L, "booked"))
+                .thenReturn(java.util.List.of(booking20, booking22));
+
+        service.deleteClass(1L);
+
+        assertThat(gymClass.getStatus()).isEqualTo("inactive");
+        assertThat(pastSession.getStatus()).isEqualTo("completed");
+        assertThat(upcomingSession.getStatus()).isEqualTo("cancelled");
+        assertThat(upcomingSession.getCancelReason()).isEqualTo("Lớp học ngừng hoạt động");
+        assertThat(booking20.getStatus()).isEqualTo("cancelled");
+        assertThat(booking22.getStatus()).isEqualTo("cancelled");
+        assertThat(classWideEnrollment.getStatus()).isEqualTo("cancelled");
+
+        verify(notificationService, org.mockito.Mockito.times(1)).send(
+                org.mockito.ArgumentMatchers.eq(20L),
+                any(), any(), org.mockito.ArgumentMatchers.eq("schedule_change"),
+                org.mockito.ArgumentMatchers.eq("class_session"),
+                org.mockito.ArgumentMatchers.eq(102L));
+        verify(notificationService, org.mockito.Mockito.times(1)).send(
+                org.mockito.ArgumentMatchers.eq(22L),
+                any(), any(), org.mockito.ArgumentMatchers.eq("schedule_change"),
+                org.mockito.ArgumentMatchers.eq("class_session"),
+                org.mockito.ArgumentMatchers.eq(102L));
+        verify(notificationService, org.mockito.Mockito.never()).send(
+                org.mockito.ArgumentMatchers.eq(21L),
+                any(), any(), any(), any(), any());
+        verify(gymClasses, org.mockito.Mockito.never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("deleteClass soft-deactivates when payment or coach review exists for the class")
+    void deleteClass_softDeactivatesWhenPaymentsOrReviewsExist() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "payments", payments);
+
+        gymClass.setId(1L);
+        gymClass.setStatus("active");
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(enrollments.findByGymClassId(1L)).thenReturn(java.util.List.of());
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(1L)).thenReturn(java.util.List.of());
+        when(payments.existsByClassEnrollmentGymClassId(1L)).thenReturn(true);
+
+        service.deleteClass(1L);
+
+        assertThat(gymClass.getStatus()).isEqualTo("inactive");
+        verify(gymClasses).save(gymClass);
+        verify(gymClasses, org.mockito.Mockito.never()).delete(any());
+    }
 }
