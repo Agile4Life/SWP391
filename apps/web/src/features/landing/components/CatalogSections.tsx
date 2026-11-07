@@ -73,8 +73,9 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
   useSourceLanguage();
   const [discipline, setDiscipline] = useState('all');
   const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
-  const matchesSport = (value: string) => sportName ? matchesDiscipline(value, sportName) : isStandardDiscipline(value);
-  const sessions = catalog.sessions.filter(session => matchesSport(session.disciplineName)
+  const matchesSport = (value: string | null | undefined) => sportName ? matchesDiscipline(value, sportName) : isStandardDiscipline(value);
+  const sessions = catalog.sessions.filter(session => (!session.status || session.status === 'scheduled')
+    && matchesSport(session.disciplineName)
     && (!coachId || session.coachId === coachId));
   const disciplines = [...new Set(sessions.map(session => session.disciplineName))];
   const activeDiscipline = disciplines.includes(discipline) ? discipline : 'all';
@@ -86,13 +87,19 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
     </div>}
     {visible.length === 0 && <p className="fit-catalog-state" role="status">{sourceText("Chưa có lịch lớp phù hợp trong 7 ngày tới.")}</p>}
     <div className="fit-schedule-grid" key={activeDiscipline}>
-      {visible.map(session => <article key={session.id} className="fit-schedule-card" data-reveal="lift">
-        <div className="fit-schedule-top"><span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {session.startTime.slice(0, 5)} — {session.endTime.slice(0, 5)}</span>
-          <span className="fit-schedule-spots">{Math.max(0, session.capacity - session.bookedCount)}{sourceText(" chỗ trống")}</span></div>
-        <h3>{session.className}</h3><p className="fit-schedule-meta">{session.disciplineName} · {session.roomName}</p>
-        <Link to={`/trainers/${session.coachId}`} className="fit-text-link">{sourceText("HLV: ")}{session.coachName}</Link>
-        <Link to={joinPath} className="fit-text-link">{session.bookedCount >= session.capacity ? sourceText('Đã đầy chỗ') : sourceText('Đặt lớp')}<RoundArrow diagonal /></Link>
-      </article>)}
+      {visible.map(session => {
+        const canonicalDiscipline = DISCIPLINES.find(d => matchesDiscipline(session.disciplineName, d.name))?.name;
+        const sessionJoinPath = joinPath === '/member/classes' && canonicalDiscipline
+          ? `/member/classes?discipline=${encodeURIComponent(canonicalDiscipline)}`
+          : joinPath;
+        return <article key={session.id} className="fit-schedule-card" data-reveal="lift">
+          <div className="fit-schedule-top"><span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {(session.startTime || '').slice(0, 5)} — {(session.endTime || '').slice(0, 5)}</span>
+            <span className="fit-schedule-spots">{Math.max(0, session.capacity - session.bookedCount)}{sourceText(" chỗ trống")}</span></div>
+          <h3>{session.className}</h3><p className="fit-schedule-meta">{session.disciplineName} · {session.roomName}</p>
+          <Link to={`/trainers/${session.coachId}`} className="fit-text-link">{sourceText("HLV: ")}{session.coachName}</Link>
+          <Link to={sessionJoinPath} className="fit-text-link">{session.bookedCount >= session.capacity ? sourceText('Đã đầy chỗ') : sourceText('Đặt lớp')}<RoundArrow diagonal /></Link>
+        </article>;
+      })}
     </div>
   </>;
 }
@@ -106,14 +113,18 @@ export function CatalogTrainers({ catalog }: { catalog: PublicCatalog }) {
     {catalog.coaches.length === 0 && <p className="fit-catalog-state" role="status">{sourceText("Chưa có huấn luyện viên đang hoạt động.")}</p>}
     {pageCount > 1 && <div className="fit-slider-controls" aria-label={sourceText("Chọn nhóm huấn luyện viên")}>{Array.from({ length: pageCount }, (_, index) => <button type="button" key={index} className={currentPage === index ? 'is-active' : ''} aria-label={sourceFormat("Nhóm huấn luyện {0}", index + 1)} aria-pressed={currentPage === index} onClick={() => setPage(index)} />)}</div>}
     <div className="fit-trainer-grid" key={currentPage}>
-      {catalog.coaches.slice(currentPage * 2, currentPage * 2 + 2).map(coach => <article className="fit-trainer-card" data-reveal="lift" key={coach.id}>
-        <Link to={`/trainers/${coach.id}`} className="fit-trainer-card-link" aria-label={sourceFormat("Xem hồ sơ của {0}", coach.name)}>
-          <LoadingImage src={coach.avatarUrl || coachIllustration(coach.specialization, coach.name)} alt={coach.avatarUrl || coachPortrait(coach.name) ? coach.name : sourceText('Ảnh minh họa huấn luyện viên theo bộ môn')} loading="lazy" />
-          {!coach.avatarUrl && !coachPortrait(coach.name) && <span className="fit-image-caption">{sourceText("Ảnh minh họa")}</span>}
-          <div className="fit-trainer-card-info"><span className="fit-trainer-vn-name">{sourceText("Huấn luyện viên")}</span><h3>{coach.name}</h3><p>{coach.specialization || sourceText('Huấn luyện thể thao')}</p><span className="fit-trainer-story-cta">{sourceText("Xem hồ sơ & lịch lớp →")}</span></div>
-          <RoundArrow diagonal />
-        </Link>
-      </article>)}
+      {catalog.coaches.slice(currentPage * 2, currentPage * 2 + 2).map(coach => {
+        const avatarUrl = coach.avatarUrl?.trim() || null;
+        const portrait = coachPortrait(coach.name);
+        return <article className="fit-trainer-card" data-reveal="lift" key={coach.id}>
+          <Link to={`/trainers/${coach.id}`} className="fit-trainer-card-link" aria-label={sourceFormat("Xem hồ sơ của {0}", coach.name)}>
+            <LoadingImage src={avatarUrl || coachIllustration(coach.specialization, coach.name)} alt={avatarUrl || portrait ? coach.name : sourceText('Ảnh minh họa huấn luyện viên theo bộ môn')} loading="lazy" />
+            {!avatarUrl && !portrait && <span className="fit-image-caption">{sourceText("Ảnh minh họa")}</span>}
+            <div className="fit-trainer-card-info"><span className="fit-trainer-vn-name">{sourceText("Huấn luyện viên")}</span><h3>{coach.name}</h3><p>{coach.specialization || sourceText('Huấn luyện thể thao')}</p><span className="fit-trainer-story-cta">{sourceText("Xem hồ sơ & lịch lớp →")}</span></div>
+            <RoundArrow diagonal />
+          </Link>
+        </article>;
+      })}
     </div>
   </>;
 }

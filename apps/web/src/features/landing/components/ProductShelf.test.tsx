@@ -145,3 +145,31 @@ it('shelf shows retry on error and reloads when clicked', async () => {
 
   expect(host.textContent).toContain('SÖL Whey Isolate');
 });
+
+it('caps displayed featured products to a maximum of 3 cards even if API returns more', async () => {
+  vi.mocked(shopApi.listProducts).mockResolvedValue({
+    content: [
+      { ...sampleProduct, id: 1, slug: 'p-1', name: 'Sản phẩm 1' },
+      { ...sampleProduct, id: 2, slug: 'p-2', name: 'Sản phẩm 2' },
+      { ...sampleProduct, id: 3, slug: 'p-3', name: 'Sản phẩm 3' },
+      { ...sampleProduct, id: 4, slug: 'p-4', name: 'Sản phẩm 4' },
+    ],
+    number: 0,
+    size: 3,
+    totalElements: 4,
+    totalPages: 2,
+  });
+
+  await act(async () => {
+    root.render(
+      <MemoryRouter>
+        <ProductShelf />
+      </MemoryRouter>,
+    );
+  });
+
+  expect(host.querySelectorAll('.shop-shelf-grid > *')).toHaveLength(3);
+  expect(host.textContent).toContain('Sản phẩm 1');
+  expect(host.textContent).toContain('Sản phẩm 3');
+  expect(host.textContent).not.toContain('Sản phẩm 4');
+});

@@ -1,5 +1,6 @@
 package com.swp391.scms.catalog;
 
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
 import com.swp391.scms.scheduling.repository.SessionBookingRepository;
 import com.swp391.scms.scheduling.dto.SessionBookingCount;
@@ -11,8 +12,7 @@ import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.users.CoachRepository;
 import java.time.Clock;
-import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,12 +58,19 @@ public class PublicCatalogService {
 
     @Transactional(readOnly = true)
     public CatalogDto getCatalog() {
-        var today = LocalDate.now(clock);
+        var centerClock = (clock != null ? clock : Clock.system(CenterTime.ZONE)).withZone(CenterTime.ZONE);
+        var now = LocalDateTime.now(centerClock);
+        var today = now.toLocalDate();
         var publicPackages = packages.findByStatusOrderByPriceAsc("active").stream().map(PackageDto::of).toList();
-        var publicCoaches = coaches.findPublicCoaches().stream().map(c -> new CoachDto(c.getUserId(),
-                c.getUser().getFullName(), c.getSpecialization(), c.getBio(), c.getCertification(),
-                c.getUser().getAvatarUrl())).toList();
-        var visibleSessions = sessions.findPublicSessions(today, today.plusDays(6), LocalTime.now(clock));
+        var publicCoaches = coaches.findPublicCoaches().stream().map(c -> {
+            String rawAvatar = c.getUser() != null ? c.getUser().getAvatarUrl() : null;
+            String avatarUrl = rawAvatar != null && !rawAvatar.isBlank() ? rawAvatar.trim() : null;
+            return new CoachDto(c.getUserId(),
+                    c.getUser() != null ? c.getUser().getFullName() : null,
+                    c.getSpecialization(), c.getBio(), c.getCertification(),
+                    avatarUrl);
+        }).toList();
+        var visibleSessions = sessions.findPublicSessions(today, today.plusDays(6), now.toLocalTime());
         var classIds = visibleSessions.stream().map(s -> s.getGymClass().getId()).distinct().toList();
         var bookedCounts = classIds.isEmpty() ? Map.<Long, Long>of()
                 : enrollments.countByClassIdsAndStatus(classIds, "booked").stream()

@@ -17,9 +17,16 @@ describe('disciplines', () => {
     ['Badminton', 'Cầu lông', true],
     ['Tennis', 'Tennis', true],
     ['Mindful Yoga', 'Yoga', true],
+    ['Badminton', 'badminton', true],
+    ['Thermal Aquatics', 'swimming', true],
     ['Yoga cơ bản', 'Gym', false],
     ['Tennis', 'Gym', false],
     ['Bơi lội', 'Boxing', false],
+    ['', 'Gym', false],
+    ['Gym', '', false],
+    [null, 'Gym', false],
+    ['Gym', undefined, false],
+    ['   ', '   ', false],
   ])('matches catalog name "%s" against filter "%s" -> %s', (name, filter, expected) => {
     expect(matchesDiscipline(name, filter)).toBe(expected);
   });

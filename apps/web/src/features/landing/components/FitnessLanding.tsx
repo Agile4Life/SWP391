@@ -345,6 +345,39 @@ const handleCardPointerLeave = (event: PointerEvent<HTMLElement>) => {
   event.currentTarget.style.setProperty('--fit-py', '0px');
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function parseBmiMetric(raw: string | number | null | undefined): number {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : Number.NaN;
+  if (typeof raw !== 'string') return Number.NaN;
+  const trimmed = raw.trim();
+  if (!trimmed || !/^[+-]?\d+([.,]\d+)?$/.test(trimmed)) return Number.NaN;
+  const value = Number(trimmed.replace(',', '.'));
+  return Number.isFinite(value) ? value : Number.NaN;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function calculateBmi(
+  heightInput: string | number | null | undefined,
+  weightInput: string | number | null | undefined,
+): number | null {
+  const parsedHeight = parseBmiMetric(heightInput);
+  const parsedWeight = parseBmiMetric(weightInput);
+  if (
+    !Number.isFinite(parsedHeight) ||
+    !Number.isFinite(parsedWeight) ||
+    parsedHeight < 100 ||
+    parsedHeight > 240 ||
+    parsedWeight < 30 ||
+    parsedWeight > 250
+  ) {
+    return null;
+  }
+  const heightMeters = parsedHeight / 100;
+  const rawBmi = parsedWeight / (heightMeters * heightMeters);
+  if (!Number.isFinite(rawBmi) || rawBmi <= 0) return null;
+  return Number(rawBmi.toFixed(1));
+}
+
 export function FitnessLanding() {
   const manifestoWords = sourceText('Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.').split(' ');
   useSourceLanguage();
@@ -374,6 +407,14 @@ export function FitnessLanding() {
     setActiveMuscleId(id);
   };
 
+  const clearMuscleImmediately = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setActiveMuscleId(null);
+  };
+
   // Callout nằm cách vùng cơ một khoảng; cần đủ thời gian để rê chuột sang nút CTA.
   const scheduleClearMuscle = () => {
     if (closeTimerRef.current !== null) {
@@ -385,11 +426,18 @@ export function FitnessLanding() {
     }, MUSCLE_CLOSE_DELAY_MS);
   };
 
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+  }, []);
+
   const activeMuscle = muscleGroups.find((group) => group.id === activeMuscleId) ?? null;
-  const parsedHeight = Number(heightCm);
-  const parsedWeight = Number(weightKg);
-  const validMetrics = parsedHeight >= 100 && parsedHeight <= 240 && parsedWeight >= 30 && parsedWeight <= 250;
-  const bmiValue = validMetrics ? +(parsedWeight / ((parsedHeight / 100) ** 2)).toFixed(1) : null;
+  const parsedHeight = parseBmiMetric(heightCm);
+  const parsedWeight = parseBmiMetric(weightKg);
+  const validHeight = Number.isFinite(parsedHeight) && parsedHeight >= 100 && parsedHeight <= 240;
+  const validWeight = Number.isFinite(parsedWeight) && parsedWeight >= 30 && parsedWeight <= 250;
+  const bmiValue = calculateBmi(heightCm, weightKg);
   const bmiStatus = bmiValue === null
     ? 'Nhập chiều cao & cân nặng hợp lệ'
     : bmiValue < 18.5
@@ -419,7 +467,16 @@ export function FitnessLanding() {
         fetchPriority="high"
         decoding="async"
       />
-      <div className="fit-hero-anatomy-stage" onPointerLeave={(e) => { if (e.pointerType !== 'touch') scheduleClearMuscle(); }}>
+      <div
+        className="fit-hero-anatomy-stage"
+        onPointerLeave={(e) => { if (e.pointerType !== 'touch') scheduleClearMuscle(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            clearMuscleImmediately();
+          }
+        }}
+      >
         <svg
           className="fit-hero-anatomy"
           viewBox="0 0 1024 1536"
@@ -494,6 +551,8 @@ export function FitnessLanding() {
           aria-live="polite"
           onPointerEnter={() => activateMuscle(activeMuscle.id)}
           onMouseEnter={() => activateMuscle(activeMuscle.id)}
+          onFocus={() => activateMuscle(activeMuscle.id)}
+          onBlur={scheduleClearMuscle}
         >
           <span className="fit-muscle-zone-badge">{activeMuscle.zone}</span>
           <h3>{activeMuscle.name}</h3>
@@ -670,11 +729,11 @@ export function FitnessLanding() {
         <div className="fit-bmi-inputs">
           <label htmlFor="fit-bmi-height">
             <span>{sourceText("Chiều cao (cm)")}</span>
-            <input id="fit-bmi-height" type="number" min={100} max={240} value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+            <input id="fit-bmi-height" type="text" inputMode="decimal" min={100} max={240} aria-invalid={!validHeight} value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
           </label>
           <label htmlFor="fit-bmi-weight">
             <span>{sourceText("Cân nặng (kg)")}</span>
-            <input id="fit-bmi-weight" type="number" min={30} max={250} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+            <input id="fit-bmi-weight" type="text" inputMode="decimal" min={30} max={250} aria-invalid={!validWeight} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
           </label>
         </div>
         <div className="fit-bmi-goals" role="group" aria-label={sourceText("Chọn mục tiêu tập luyện")}>

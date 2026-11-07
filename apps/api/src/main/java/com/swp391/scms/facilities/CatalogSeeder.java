@@ -236,10 +236,13 @@ public class CatalogSeeder implements ApplicationRunner {
 
     /** Tạo bộ môn chuẩn nếu chưa có; đổi tên bộ môn cũ tương ứng (giữ nguyên id và lớp học đang gắn). */
     private void upsertDiscipline(String name, String description, String... legacyNames) {
-        for (var discipline : disciplines.list()) {
+        var existingList = disciplines.list();
+        for (var discipline : existingList) {
             if (name.equalsIgnoreCase(discipline.name())) {
                 return;
             }
+        }
+        for (var discipline : existingList) {
             for (String legacy : legacyNames) {
                 if (legacy.equalsIgnoreCase(discipline.name())) {
                     disciplines.update(discipline.id(), new DisciplineRequest(name,
@@ -270,7 +273,9 @@ public class CatalogSeeder implements ApplicationRunner {
             if (name.equalsIgnoreCase(pkg.name())) {
                 return;
             }
-            if (legacyAliases != null) {
+        }
+        if (legacyAliases != null) {
+            for (var pkg : existingList) {
                 for (String alias : legacyAliases) {
                     if (alias.equalsIgnoreCase(pkg.name())) {
                         packages.update(pkg.id(), new PackageRequest(name, pkg.description(),

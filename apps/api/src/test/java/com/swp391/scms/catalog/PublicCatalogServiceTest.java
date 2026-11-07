@@ -66,4 +66,30 @@ class PublicCatalogServiceTest {
         verify(enrollments).countByClassIdsAndStatus(List.of(11L, 12L), "booked");
         verifyNoMoreInteractions(enrollments);
     }
+
+    @Test
+    void evaluatesSevenDayWindowInHoChiMinhTimezoneEvenWhenClockUsesUtcAndNormalizesBlankAvatar() {
+        var packages = mock(MembershipPackageRepository.class);
+        var coaches = mock(CoachRepository.class);
+        var sessions = mock(ClassSessionRepository.class);
+        var enrollments = mock(ClassEnrollmentRepository.class);
+        // 2026-10-23T18:30:00Z is 2026-10-24T01:30:00+07:00 in Asia/Ho_Chi_Minh
+        var utcClock = Clock.fixed(Instant.parse("2026-10-23T18:30:00Z"), ZoneOffset.UTC);
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of());
+        var user = new User();
+        user.setFullName("Huỳnh Đắc Tài");
+        user.setAvatarUrl("   ");
+        var coach = new Coach();
+        coach.setUserId(9L);
+        coach.setUser(user);
+        coach.setSpecialization("Gym");
+        when(coaches.findPublicCoaches()).thenReturn(List.of(coach));
+        when(sessions.findPublicSessions(LocalDate.of(2026, 10, 24), LocalDate.of(2026, 10, 30), LocalTime.of(1, 30)))
+                .thenReturn(List.of());
+
+        var result = new PublicCatalogService(packages, coaches, sessions, enrollments, new SchedulingMapper(), utcClock).getCatalog();
+
+        assertNull(result.coaches().getFirst().avatarUrl());
+        verify(sessions).findPublicSessions(LocalDate.of(2026, 10, 24), LocalDate.of(2026, 10, 30), LocalTime.of(1, 30));
+    }
 }

@@ -30,7 +30,14 @@ export function usePublicCatalog() {
         const data = await apiFetch<PublicCatalog>('/public/catalog', {
           cache: 'no-store', signal: controller.signal, headers: { Authorization: '' },
         });
-        if (active && request === sequence) { setCatalog(data); setError(false); }
+        if (active && request === sequence) {
+          setCatalog({
+            packages: Array.isArray(data?.packages) ? data.packages : [],
+            coaches: Array.isArray(data?.coaches) ? data.coaches : [],
+            sessions: Array.isArray(data?.sessions) ? data.sessions : [],
+          });
+          setError(false);
+        }
       } catch {
         // Hide stale prices and schedules when refresh fails.
         if (active && request === sequence) { setError(true); setCatalog(null); }
@@ -40,12 +47,20 @@ export function usePublicCatalog() {
     const refresh = () => { if (document.visibilityState === 'visible') void load(); };
     const timer = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
-    return () => { active = false; controller.abort(); window.clearInterval(timer); window.removeEventListener('focus', refresh); };
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false;
+      controller.abort();
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
   }, [attempt]);
   return { catalog, error, retry };
 }
 
 export function sessionDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
+  const [year, month, day] = (value || '').split('-').map(Number);
+  if (!year || !month || !day) return value;
   return new Date(year, month - 1, day).toLocaleDateString(getIntlLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' });
 }

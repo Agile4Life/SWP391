@@ -27,7 +27,7 @@ export function ProductShelf() {
       .listProducts({ goal, size: 3, sort: 'newest', featuredFirst: true })
       .then(page => {
         if (!active) return;
-        const list = page?.content ?? [];
+        const list = (page?.content ?? []).slice(0, 3);
         if (!goal && list.length === 0) {
           setInitialEmpty(true);
         } else {

@@ -8,7 +8,7 @@ const profilePortraits = new Map([
 export function coachPortrait(coachName?: string | null) {
   const name = (coachName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[đĐ]/g, 'd').toLowerCase().trim().replace(/\s+/g, ' ')
-    .replace(/^(hlv|coach)\s+/, '');
+    .replace(/^(hlv|coach)[.:]?\s+/, '');
   return profilePortraits.get(name);
 }
 

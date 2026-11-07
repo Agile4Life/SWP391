@@ -141,9 +141,10 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
         const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
         if (trackedSections.length > 0) {
           const mapSectionToNav = (id: string): string => {
-            if (id === 'about' || id === 'multisport') return 'about';
+            if (id === 'about' || id === 'disciplines') return 'about';
+            if (id === 'multisport') return 'multisport';
             if (id === 'trainers' || id === 'journey') return 'trainers';
-            if (id === 'packages' || id === 'benefits') return 'packages';
+            if (id === 'packages' || id === 'benefits' || id === 'faq') return 'packages';
 
             return '';
           };

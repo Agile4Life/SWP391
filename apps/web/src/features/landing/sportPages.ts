@@ -99,6 +99,6 @@ export const SPORT_PAGE_LIST = Object.values(SPORT_PAGES);
 
 /** Nhận `/boxing` hoặc `/sports/boxing`; không khớp trả về `undefined`. */
 export function sportIdFromPath(pathname: string): SportPageId | undefined {
-  const segment = pathname.replace(/^\/(sports\/)?/, '').split('/')[0];
+  const segment = (pathname || '').trim().toLowerCase().replace(/^\/(sports\/)?/, '').split('/')[0];
   return segment in SPORT_PAGES ? (segment as SportPageId) : undefined;
 }

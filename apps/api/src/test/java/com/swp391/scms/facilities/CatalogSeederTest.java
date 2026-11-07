@@ -174,4 +174,26 @@ class CatalogSeederTest {
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().description()).isEqualTo("Tạ");
         verify(disciplines, times(2)).create(any());
     }
+
+    @Test
+    void doesNotRenameLegacyAliasWhenCanonicalDisciplineOrPackageAlreadyExistsLaterInSortedList() {
+        when(disciplines.list()).thenReturn(List.of(
+                new DisciplineDto(1L, "Bơi lội", null),
+                new DisciplineDto(2L, "Boxing", null),
+                new DisciplineDto(3L, "Cầu lông", null),
+                new DisciplineDto(4L, "Gym", null),
+                new DisciplineDto(5L, "Mindful Yoga", "Legacy"),
+                new DisciplineDto(6L, "Tennis", null),
+                new DisciplineDto(7L, "Yoga", "Canonical")));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(packages.list()).thenReturn(List.of(
+                new PackageDto(10L, "The Essential", "Old alias", new BigDecimal("150000"), 30, 2, "inactive"),
+                new PackageDto(11L, CatalogSeeder.SILVER_NAME, "Manager custom", new BigDecimal("450000"), 30, 2, "active")));
+
+        seeder.run(null);
+
+        verify(disciplines, never()).update(any(), any());
+        verify(disciplines, never()).create(any());
+        verify(packages, never()).update(any(), any());
+    }
 }
