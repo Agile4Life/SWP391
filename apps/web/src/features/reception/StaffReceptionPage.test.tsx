@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
   getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
+  getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
@@ -37,6 +38,8 @@ beforeEach(() => {
   api.getRenewalCandidates.mockResolvedValue([]);
   api.getPendingReceipt.mockResolvedValue(null);
   api.getPendingTrials.mockResolvedValue([]);
+  api.getMemberWallet.mockResolvedValue({ balance: 150000 });
+  api.topupMemberWallet.mockResolvedValue({ balance: 650000 });
   api.processPayment.mockResolvedValue({ id: 42, memberId: 10, amount: 200, method: 'pos', status: 'success', paidAt: '2026-10-01T10:00:00', invoiceNumber: 'INV-42' });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
@@ -224,4 +227,31 @@ it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
   const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
   await act(async () => retry.click());
   expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
+});
+
+it('lets the receptionist top up a selected member wallet at the counter', async () => {
+  await selectMember();
+  expect(api.getMemberWallet).toHaveBeenCalledWith(10);
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toContain('150.000');
+
+  const openModalBtn = host.querySelector<HTMLButtonElement>('[data-testid="open-counter-topup-modal-btn"]')!;
+  expect(openModalBtn).not.toBeNull();
+  await act(async () => openModalBtn.click());
+
+  const amountInput = document.body.querySelector<HTMLInputElement>('[data-testid="counter-topup-amount-input"]')!;
+  expect(amountInput).not.toBeNull();
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(amountInput, '500000');
+    amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  const submitBtn = document.body.querySelector<HTMLButtonElement>('[data-testid="submit-counter-topup-btn"]')!;
+  await act(async () => submitBtn.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+
+  expect(api.topupMemberWallet).toHaveBeenCalledWith(10, {
+    amount: 500000,
+    paymentMethod: 'cash',
+    note: undefined,
+  });
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toContain('650.000');
 });

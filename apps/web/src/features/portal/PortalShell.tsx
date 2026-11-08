@@ -38,6 +38,7 @@ interface WalletSummaryResponse {
 
 function walletTypeLabel(type?: string, lang: 'vi' | 'en' = 'vi') {
   if (type === 'TOPUP_VNPAY') return lang === 'en' ? 'VNPay top-up' : 'Nạp từ VNPay';
+  if (type === 'TOPUP_COUNTER') return lang === 'en' ? 'Counter top-up' : 'Nạp tại quầy Lễ tân';
   if (type === 'REFUND_CREDIT') return lang === 'en' ? 'Refund to wallet' : 'Hoàn tiền vào ví';
   if (type === 'PAYMENT_DEBIT') return lang === 'en' ? 'Service payment' : 'Thanh toán dịch vụ';
   return type || (lang === 'en' ? 'Wallet transaction' : 'Giao dịch ví');
@@ -45,7 +46,7 @@ function walletTypeLabel(type?: string, lang: 'vi' | 'en' = 'vi') {
 
 function isCreditTransaction(type?: string, amount?: number) {
   if (type === 'PAYMENT_DEBIT') return false;
-  if (type === 'TOPUP_VNPAY' || type === 'REFUND_CREDIT') return true;
+  if (type === 'TOPUP_VNPAY' || type === 'TOPUP_COUNTER' || type === 'REFUND_CREDIT') return true;
   return (amount ?? 0) >= 0;
 }
 

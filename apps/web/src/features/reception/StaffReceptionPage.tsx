@@ -92,6 +92,15 @@ export function StaffReceptionPage() {
   const selectedPendingId = selectedPending?.id;
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
+  // Ví SÖL của hội viên đang chọn & Modal nạp tiền tại quầy
+  const [memberWalletBalance, setMemberWalletBalance] = useState<number | null>(null);
+  const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
+  const [topupAmount, setTopupAmount] = useState('200000');
+  const [topupMethod, setTopupMethod] = useState<'cash' | 'bank_transfer' | 'pos'>('cash');
+  const [topupNote, setTopupNote] = useState('');
+  const [topupModalError, setTopupModalError] = useState<StaffMessage | null>(null);
+  const [isSubmittingTopup, setIsSubmittingTopup] = useState(false);
+
   // Danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày chờ Lễ tân duyệt
   const [trialList, setTrialList] = useState<ReceptionTrialItem[]>([]);
   const [loadingTrials, setLoadingTrials] = useState(true);
@@ -111,6 +120,59 @@ export function StaffReceptionPage() {
       .catch(() => { if (active) setReceiptImage(null); });
     return () => { active = false; };
   }, [hasAccess, selectedMemberId, selectedPendingId]);
+
+  useEffect(() => {
+    setMemberWalletBalance(null);
+    if (!hasAccess || selectedMemberId == null) return;
+    let active = true;
+    receptionApi.getMemberWallet(selectedMemberId)
+      .then((wallet) => { if (active) setMemberWalletBalance(Number(wallet?.balance ?? 0)); })
+      .catch(() => { if (active) setMemberWalletBalance(0); });
+    return () => { active = false; };
+  }, [hasAccess, selectedMemberId]);
+
+  const handleOpenTopupModal = () => {
+    if (!selectedMember) return;
+    setTopupAmount('200000');
+    setTopupMethod('cash');
+    setTopupNote('');
+    setTopupModalError(null);
+    setIsTopupModalOpen(true);
+  };
+
+  const handleSubmitCounterTopup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMember || isSubmittingTopup) return;
+    const parsed = Number(topupAmount);
+    if (!Number.isFinite(parsed) || parsed < 10000 || parsed > 100000000) {
+      setTopupModalError(staffMessage('Số tiền nạp Ví phải từ 10.000 đ đến 100.000.000 đ.', 'Top-up amount must be between 10,000 VND and 100,000,000 VND.'));
+      return;
+    }
+    setIsSubmittingTopup(true);
+    setTopupModalError(null);
+    try {
+      const updated = await receptionApi.topupMemberWallet(selectedMember.userId, {
+        amount: parsed,
+        paymentMethod: topupMethod,
+        note: topupNote.trim() || undefined,
+      });
+      const newBalance = Number(updated?.balance ?? 0);
+      setMemberWalletBalance(newBalance);
+      setIsTopupModalOpen(false);
+      notify(
+        staffMessage(
+          `Đã cộng +${vnd(parsed)} vào Ví SÖL của hội viên ${selectedMember.fullName}. Số dư mới: ${vnd(newBalance)}.`,
+          `Credited +${vnd(parsed)} to ${selectedMember.fullName}'s SÖL Wallet. New balance: ${vnd(newBalance)}.`
+        ),
+        'success',
+        { record: true }
+      );
+    } catch (err: unknown) {
+      setTopupModalError(errorMessage(err, 'Không thể nạp tiền vào Ví hội viên. Vui lòng thử lại.'));
+    } finally {
+      setIsSubmittingTopup(false);
+    }
+  };
 
   const loadPendingSubscriptions = useCallback(async () => {
     if (!hasAccess) return;
@@ -753,6 +815,23 @@ export function StaffReceptionPage() {
                   </span>
                 </div>
 
+                <div className="kv-row" style={{ alignItems: 'center' }}>
+                  <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <strong data-testid="member-wallet-balance" style={{ color: 'var(--portal-salmon, #fb923c)', fontSize: '0.96rem' }}>
+                      {memberWalletBalance != null ? vnd(memberWalletBalance) : t('Đang tải…', 'Loading…')}
+                    </strong>
+                    <button
+                      type="button"
+                      data-testid="open-counter-topup-modal-btn"
+                      className="btn-primary btn-sm"
+                      onClick={handleOpenTopupModal}
+                    >
+                      {t('+ Nạp tiền vào Ví', '+ Top up Wallet')}
+                    </button>
+                  </div>
+                </div>
+
                 {selectedPending && receiptImage && (
                   <div data-i18n-managed className="kv-row" style={{ display: 'block' }}>
                     <span>{t("Ảnh hóa đơn hội viên đã gửi")}</span>
@@ -1225,6 +1304,116 @@ export function StaffReceptionPage() {
       </div>
 
       {selectedMember && currentUser?.role === 'STAFF' && <CoachHealthMetrics memberId={selectedMember.userId} memberName={selectedMember.fullName} intakeOnly />}
+
+      {isTopupModalOpen && selectedMember && (
+        <Modal
+          title={t('Nạp tiền vào Ví SÖL tại quầy Lễ tân', 'Top up SÖL Wallet at Reception')}
+          onClose={() => setIsTopupModalOpen(false)}
+          busy={isSubmittingTopup}
+        >
+          <form onSubmit={(e) => void handleSubmitCounterTopup(e)} style={{ display: 'grid', gap: '14px' }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+              {t('Hội viên: ', 'Member: ')}
+              <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              <br />
+              {t('Số dư hiện tại: ', 'Current balance: ')}
+              <strong style={{ color: 'var(--portal-salmon, #fb923c)' }}>
+                {vnd(memberWalletBalance ?? 0)}
+              </strong>
+            </div>
+
+            <div className="portal-form-group" style={{ margin: 0 }}>
+              <label className="portal-label" htmlFor="counter-topup-amount">
+                {t('Số tiền nạp vào Ví (VNĐ) *', 'Top-up amount (VND) *')}
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                {[100000, 200000, 500000, 1000000, 2000000].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={Number(topupAmount) === preset ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                    disabled={isSubmittingTopup}
+                    onClick={() => setTopupAmount(String(preset))}
+                  >
+                    +{vnd(preset)}
+                  </button>
+                ))}
+              </div>
+              <input
+                id="counter-topup-amount"
+                data-testid="counter-topup-amount-input"
+                type="number"
+                min={10000}
+                max={100000000}
+                step={1000}
+                required
+                className="portal-input"
+                value={topupAmount}
+                onChange={(e) => setTopupAmount(e.target.value)}
+                disabled={isSubmittingTopup}
+              />
+            </div>
+
+            <div className="portal-form-group" style={{ margin: 0 }}>
+              <label className="portal-label" htmlFor="counter-topup-method">
+                {t('Hình thức thu tại quầy *', 'Counter payment method *')}
+              </label>
+              <Select
+                id="counter-topup-method"
+                className="portal-select"
+                value={topupMethod}
+                onChange={(e) => setTopupMethod(e.target.value as 'cash' | 'bank_transfer' | 'pos')}
+                disabled={isSubmittingTopup}
+              >
+                <option value="cash">{t('Tiền mặt tại quầy', 'Cash at the counter')}</option>
+                <option value="bank_transfer">{t('Chuyển khoản ngân hàng', 'Bank transfer')}</option>
+                <option value="pos">{t('Thẻ / Máy POS tại quầy', 'Card / POS terminal')}</option>
+              </Select>
+            </div>
+
+            <div className="portal-form-group" style={{ margin: 0 }}>
+              <label className="portal-label" htmlFor="counter-topup-note">
+                {t('Ghi chú giao dịch (tùy chọn)', 'Transaction note (optional)')}
+              </label>
+              <input
+                id="counter-topup-note"
+                type="text"
+                maxLength={500}
+                className="portal-input"
+                placeholder={t('Ví dụ: Thu tiền mặt nạp ví tại quầy...', 'E.g., Cash wallet top-up at counter...')}
+                value={topupNote}
+                onChange={(e) => setTopupNote(e.target.value)}
+                disabled={isSubmittingTopup}
+              />
+            </div>
+
+            {topupModalError && (
+              <p data-i18n-managed className="form-error" role="alert" style={{ margin: 0 }}>
+                {t(topupModalError)}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={isSubmittingTopup}
+                onClick={() => setIsTopupModalOpen(false)}
+              >
+                {t('Đóng', 'Close')}
+              </button>
+              <button
+                type="submit"
+                data-testid="submit-counter-topup-btn"
+                className="btn-primary"
+                disabled={isSubmittingTopup}
+              >
+                {isSubmittingTopup ? t('Đang cộng tiền...', 'Crediting wallet...') : t('Xác nhận cộng tiền vào Ví', 'Confirm wallet top-up')}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {isCancelModalOpen && selectedMember && (
         <Modal

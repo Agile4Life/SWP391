@@ -303,4 +303,42 @@ class VnpayPaymentServiceTest {
         verify(walletService).debitForPayment(eq(7L), eq(new BigDecimal("650000")), eq("WALLET_PAY_9"), any(), eq("/member/packages"));
         verify(settlement).updatePaymentStatus(9L, "success");
     }
+
+    @Test void vnpayWalletTopupUsesValidPaymentMethodAndCreditsWalletImmediatelyOnCallback() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        when(members.findById(7L)).thenReturn(Optional.of(payment.getMember()));
+        final Payment[] savedPayment = new Payment[1];
+        when(payments.save(any())).thenAnswer(i -> {
+            Payment p = i.getArgument(0);
+            p.setId(88L);
+            savedPayment[0] = p;
+            return p;
+        });
+
+        var checkout = service.topupWallet(owner, new BigDecimal("200000"), "0:0:0:0:0:0:0:1", "https://scms.bluesymphony.site");
+        assertNotNull(savedPayment[0]);
+        assertEquals("online_wallet", savedPayment[0].getMethod());
+        assertEquals("WALLET_TOPUP", savedPayment[0].getNote());
+        assertTrue(checkout.paymentUrl().contains("https%3A%2F%2Fscms.bluesymphony.site%2Fmember%2Fpayments%2Fvnpay%2Freturn"));
+
+        var topupTx = new VnpayTransaction(checkout.reference(), savedPayment[0], new BigDecimal("200000"),
+                LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
+        when(transactions.findById(checkout.reference())).thenReturn(Optional.of(topupTx));
+
+        var data = new HashMap<>(Map.of(
+                "vnp_TmnCode", "TEST1234",
+                "vnp_TxnRef", checkout.reference(),
+                "vnp_Amount", "20000000",
+                "vnp_ResponseCode", "00",
+                "vnp_TransactionStatus", "00",
+                "vnp_TransactionNo", "987654",
+                "vnp_PayDate", "20261103120100"
+        ));
+        data.put("vnp_SecureHash", gateway.sign(data));
+
+        assertEquals("00", service.ipn(data));
+        assertEquals("success", topupTx.getStatus());
+        verify(walletService, times(1)).creditTopup(7L, new BigDecimal("200000"), checkout.reference());
+    }
 }

@@ -32,14 +32,18 @@ export function VnpayReturnPage() {
     async function load() {
       try {
         const hasSignedCallback = params.has('vnp_SecureHash') && params.has('vnp_ResponseCode');
-        const status = (hasSignedCallback && attempts === 0 && typeof verifyVnpayReturn === 'function')
+        const status = (hasSignedCallback && typeof verifyVnpayReturn === 'function')
           ? await verifyVnpayReturn(Object.fromEntries(params.entries()))
           : await getVnpayStatus(reference);
         if (!active) return;
         setData(status); setError('');
         if (!notified && status.status !== 'pending') {
           notified = true;
-          if (status.status === 'success') { toast.success(t("Thanh toán VNPay thành công", "VNPay payment successful"), sourceMessage("Thanh toán VNPay thành công", "VNPay payment successful")); window.dispatchEvent(new Event('member-notifications-changed')); }
+          if (status.status === 'success') {
+            toast.success(t("Thanh toán VNPay thành công", "VNPay payment successful"), sourceMessage("Thanh toán VNPay thành công", "VNPay payment successful"));
+            window.dispatchEvent(new CustomEvent('wallet-updated'));
+            window.dispatchEvent(new Event('member-notifications-changed'));
+          }
           else if (status.status === 'failed') toast.error(t("Thanh toán VNPay chưa thành công", "VNPay payment unsuccessful"), sourceMessage("Thanh toán VNPay chưa thành công", "VNPay payment unsuccessful"));
         }
         if (status.status === 'pending' && ++attempts < 12) timer = setTimeout(() => void load(), 2500);

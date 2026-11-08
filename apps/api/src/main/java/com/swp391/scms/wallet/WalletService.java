@@ -145,6 +145,79 @@ public class WalletService {
     }
 
     @Transactional
+    public WalletDto creditByReceptionist(
+            Long memberId,
+            BigDecimal amount,
+            String paymentMethod,
+            String note,
+            Long staffUserId) {
+        if (memberId == null || amount == null
+                || amount.compareTo(new BigDecimal("10000")) < 0
+                || amount.compareTo(new BigDecimal("100000000")) > 0) {
+            throw new BadRequestException(
+                    "INVALID_TOPUP_AMOUNT",
+                    "error.wallet.topup_range",
+                    null,
+                    "Số tiền nạp Ví phải từ 10.000đ đến 100.000.000đ"
+            );
+        }
+
+        Wallet wallet = getOrCreateWalletForUpdate(memberId);
+        LocalDateTime now = LocalDateTime.now();
+        BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
+        BigDecimal newBalance = currentBalance.add(amount);
+
+        String methodLabel = switch (paymentMethod == null ? "cash" : paymentMethod.trim().toLowerCase()) {
+            case "bank_transfer" -> "Chuyển khoản tại quầy Lễ tân";
+            case "pos" -> "Thẻ / POS tại quầy Lễ tân";
+            default -> "Tiền mặt tại quầy Lễ tân";
+        };
+        String refId = "POS-" + System.currentTimeMillis() + (staffUserId != null ? ("-S" + staffUserId) : "");
+        String description = "Nạp tiền vào Ví (" + methodLabel + ")"
+                + (note != null && !note.isBlank() ? (": " + note.trim()) : "");
+        if (description.length() > 500) {
+            description = description.substring(0, 500);
+        }
+
+        WalletTransaction topup = new WalletTransaction();
+        topup.setWallet(wallet);
+        topup.setType("TOPUP_COUNTER");
+        topup.setAmount(amount);
+        topup.setBalanceAfter(newBalance);
+        topup.setReferenceType("COUNTER_TOPUP");
+        topup.setReferenceId(refId);
+        topup.setDescription(description);
+        topup.setCreatedAt(now);
+        walletTransactionRepository.save(topup);
+
+        wallet.setBalance(newBalance);
+        wallet.setUpdatedAt(now);
+        walletRepository.saveAndFlush(wallet);
+
+        if (notificationService != null) {
+            try {
+                String title = messageService != null
+                        ? messageService.getMessage("notifications.wallet.topup.title")
+                        : "Nạp tiền vào Ví SÖL thành công";
+                String body = messageService != null
+                        ? messageService.getMessage("notifications.wallet.topup.body", amount.toPlainString(), methodLabel, newBalance.toPlainString())
+                        : "Ví của bạn đã được cộng +" + amount.toPlainString() + " VNĐ qua phương thức: " + methodLabel + ". Số dư mới: " + newBalance.toPlainString() + " VNĐ.";
+                notificationService.send(
+                        memberId,
+                        title,
+                        body,
+                        "payment",
+                        "wallet",
+                        wallet.getId(),
+                        "/member/packages"
+                );
+            } catch (RuntimeException ignored) {
+            }
+        }
+        return toDto(wallet);
+    }
+
+    @Transactional
     public WalletDto debitForPayment(Long userId, BigDecimal amount, String referenceId, String serviceDescription, String actionPath) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("INVALID_PAYMENT_AMOUNT", "error.wallet.invalid_amount", null, "Số tiền thanh toán không hợp lệ.");

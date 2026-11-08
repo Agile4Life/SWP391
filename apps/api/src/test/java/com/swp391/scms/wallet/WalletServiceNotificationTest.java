@@ -83,4 +83,35 @@ class WalletServiceNotificationTest {
                 .contains("VNPay (#VNP888)")
                 .contains("350000");
     }
+
+    @Test
+    void creditByReceptionistSendsNotificationIncludingCounterPaymentMethod() {
+        User user = new User();
+        user.setId(101L);
+        Wallet wallet = new Wallet();
+        wallet.setId(7L);
+        wallet.setUser(user);
+        wallet.setBalance(new BigDecimal("100000"));
+
+        when(walletRepository.findByUserIdForUpdate(101L)).thenReturn(Optional.of(wallet));
+
+        walletService.creditByReceptionist(101L, new BigDecimal("500000"), "bank_transfer", "CK tại quầy", 12L);
+
+        ArgumentCaptor<String> titleCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(notificationService).send(
+                eq(101L),
+                titleCaptor.capture(),
+                bodyCaptor.capture(),
+                eq("payment"),
+                eq("wallet"),
+                eq(7L),
+                eq("/member/packages")
+        );
+
+        assertThat(bodyCaptor.getValue())
+                .contains("500000")
+                .contains("Chuyển khoản tại quầy Lễ tân")
+                .contains("600000");
+    }
 }

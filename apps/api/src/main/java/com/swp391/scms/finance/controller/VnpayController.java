@@ -29,7 +29,11 @@ public class VnpayController {
     @PostMapping("/checkout") @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<Checkout> checkout(@AuthenticationPrincipal AuthenticatedPrincipal principal,
             @Valid @RequestBody CheckoutRequest body,HttpServletRequest request) {
-        return ApiResponse.ok(msg("finance.vnpay.checkout_created"),payments.checkout(principal,body,request.getRemoteAddr()));
+        String ip = request != null && request.getRemoteAddr() != null ? request.getRemoteAddr() : "127.0.0.1";
+        String origin = request != null
+                ? (request.getHeader("Origin") != null ? request.getHeader("Origin") : request.getHeader("Referer"))
+                : null;
+        return ApiResponse.ok(msg("finance.vnpay.checkout_created"),payments.checkout(principal,body,ip,origin));
     }
     @GetMapping("/transactions/{reference}") @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<Status> status(@AuthenticationPrincipal AuthenticatedPrincipal principal,@PathVariable String reference) {

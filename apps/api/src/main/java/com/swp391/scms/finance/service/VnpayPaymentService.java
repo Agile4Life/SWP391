@@ -86,6 +86,10 @@ public class VnpayPaymentService {
     }
 
     public Checkout topupWallet(AuthenticatedPrincipal principal, BigDecimal amount, String ip) {
+        return topupWallet(principal, amount, ip, null);
+    }
+
+    public Checkout topupWallet(AuthenticatedPrincipal principal, BigDecimal amount, String ip, String origin) {
         requireMember(principal);
         gateway.requireEnabled();
         if (amount == null || amount.compareTo(BigDecimal.valueOf(10_000)) < 0 || amount.compareTo(BigDecimal.valueOf(100_000_000)) > 0) {
@@ -95,16 +99,28 @@ public class VnpayPaymentService {
         Payment payment = new Payment();
         payment.setMember(members.findById(principal.id()).orElseThrow(this::unavailable));
         payment.setAmount(amount);
-        payment.setMethod("wallet_topup");
+        payment.setMethod("online_wallet");
+        payment.setNote("WALLET_TOPUP");
         payment.setStatus("pending");
         payment = payments.save(payment);
 
         String reference = UUID.randomUUID().toString().replace("-", "");
         var created = now();
         var transaction = new VnpayTransaction(reference, payment, payment.getAmount(), created, created.plusMinutes(gateway.timeoutMinutes()), ip);
-        Checkout response = checkoutDto(transaction);
+        Checkout response = checkoutDto(transaction, origin);
         transactions.save(transaction);
         return response;
+    }
+
+    private boolean isWalletTopup(Payment p) {
+        if (p == null) return false;
+        if ("wallet_topup".equalsIgnoreCase(p.getMethod())) return true;
+        if (p.getNote() != null && p.getNote().startsWith("WALLET_TOPUP")) return true;
+        return p.getSubscriptionId() == null
+                && p.getCoachBookingId() == null
+                && p.getCourtBookingId() == null
+                && p.getProductOrderId() == null
+                && p.getClassEnrollmentId() == null;
     }
 
     public com.swp391.scms.wallet.WalletDto payWithWallet(AuthenticatedPrincipal principal, CheckoutRequest request) {
@@ -165,6 +181,10 @@ public class VnpayPaymentService {
         return checkout(principal, new CheckoutRequest(subscriptionId,null,null,null),ip);
     }
     public Checkout checkout(AuthenticatedPrincipal principal, CheckoutRequest request, String ip) {
+        return checkout(principal, request, ip, null);
+    }
+
+    public Checkout checkout(AuthenticatedPrincipal principal, CheckoutRequest request, String ip, String origin) {
         requireMember(principal); gateway.requireEnabled();
         Payment payment = resolveTargetPayment(principal, request);
         if (!"pending".equals(payment.getStatus())) throw unavailable();
@@ -172,7 +192,7 @@ public class VnpayPaymentService {
         var existing=transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(),"pending");
         if(existing.isPresent()) {
             VnpayTransaction current=existing.get();
-            if(current.getExpiresAt().isAfter(now())) return checkoutDto(current);
+            if(current.getExpiresAt().isAfter(now())) return checkoutDto(current, origin);
             // The gateway refuses payment after expiry; wait out the IPN grace period, then start a fresh attempt.
             if(!current.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now()))
                 throw new ConflictException("VNPAY_AWAITING_CONFIRMATION","finance.vnpay.awaiting_confirmation",null,null);
@@ -182,7 +202,7 @@ public class VnpayPaymentService {
         String reference=UUID.randomUUID().toString().replace("-","");
         var created=now();
         var transaction=new VnpayTransaction(reference,payment,payment.getAmount(),created,created.plusMinutes(gateway.timeoutMinutes()),ip);
-        Checkout response=checkoutDto(transaction); // validate before persisting a payment attempt
+        Checkout response=checkoutDto(transaction, origin); // validate before persisting a payment attempt
         payment.setMethod("online_wallet");
         transactions.save(transaction);
         return response;
@@ -253,8 +273,8 @@ public class VnpayPaymentService {
         Payment p=new Payment();p.setMember(members.findById(memberId).orElseThrow(this::unavailable));
         p.setAmount(amount);p.setMethod("online_wallet");p.setStatus("pending");return p;
     }
-    private Checkout checkoutDto(VnpayTransaction t) {
-        return new Checkout(t.getReference(),gateway.paymentUrl(t.getReference(),t.getAmount(),t.getCreatedAt(),t.getExpiresAt(),t.getIpAddress()),t.getAmount(),t.getExpiresAt());
+    private Checkout checkoutDto(VnpayTransaction t, String origin) {
+        return new Checkout(t.getReference(),gateway.paymentUrl(t.getReference(),t.getAmount(),t.getCreatedAt(),t.getExpiresAt(),t.getIpAddress(), origin),t.getAmount(),t.getExpiresAt());
     }
     @Transactional(readOnly=true)
     public Status status(AuthenticatedPrincipal principal,String reference) {
@@ -273,7 +293,7 @@ public class VnpayPaymentService {
                                 ? "/member/classes?tab=pt"
                                 : p.getSubscriptionId()!=null
                                         ? "/member/packages"
-                                        : "wallet_topup".equalsIgnoreCase(p.getMethod())
+                                        : isWalletTopup(p)
                                                 ? "/member/packages"
                                                 : "/member/invoices";
         return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
@@ -294,7 +314,7 @@ public class VnpayPaymentService {
         String lateOrderCode=refundLateOrderPayment(fields,t,p,reference);
         if(lateOrderCode!=null) return lateOrderCode;
         if((!"pending".equals(t.getStatus()) && !lateAfterLocalExpiry) || !"pending".equals(p.getStatus())) return "02";
-        String response=fields.get("vnp_ResponseCode"),status=fields.get("vnp_TransactionStatus");
+        String response=fields.get("vnp_ResponseCode"),status=fields.getOrDefault("vnp_TransactionStatus", response);
         if(response==null || status==null || !response.matches("[0-9]{2}") || !status.matches("[0-9]{2}")) return "97";
         if("00".equals(response) && "00".equals(status)) {
             String gatewayId=fields.get("vnp_TransactionNo");
@@ -304,9 +324,12 @@ public class VnpayPaymentService {
             transactions.saveAndFlush(t); // guard sees a terminal transaction in the same atomic settlement
             settlement.updatePaymentStatus(p.getId(),"success");
             markBookingPaid(p);
-            invoices.autoIssueInvoiceForPayment(p.getId());
+            try {
+                invoices.autoIssueInvoiceForPayment(p.getId());
+            } catch (RuntimeException ignored) {
+            }
             if (walletService != null) {
-                boolean isDirectTopup = "wallet_topup".equalsIgnoreCase(p.getMethod());
+                boolean isDirectTopup = isWalletTopup(p);
 
                 if (isDirectTopup) {
                     walletService.creditTopup(p.getMember().getUserId(), t.getAmount(), reference);
@@ -323,9 +346,14 @@ public class VnpayPaymentService {
                     walletService.recordVnpayTopupAndDebit(p.getMember().getUserId(), t.getAmount(), reference, desc);
                 }
             }
-            notifications.send(p.getMember().getUserId(), messages.getMessage("notifications.payment.vnpay_success.title"),
-                    messages.getMessage("notifications.payment.vnpay_success.body", t.getAmount().toPlainString(), reference),
-                    "payment", "payment", p.getId());
+            if (notifications != null && messages != null) {
+                try {
+                    notifications.send(p.getMember().getUserId(), messages.getMessage("notifications.payment.vnpay_success.title"),
+                            messages.getMessage("notifications.payment.vnpay_success.body", t.getAmount().toPlainString(), reference),
+                            "payment", "payment", p.getId());
+                } catch (RuntimeException ignored) {
+                }
+            }
         } else {
             if (lateAfterLocalExpiry) return "02"; // already closed as failed
             // A provisional/unknown status is not proof of a failed debit; keep it blocked for reconciliation.

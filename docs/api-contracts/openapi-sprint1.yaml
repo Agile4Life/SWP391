@@ -476,6 +476,30 @@ paths:
       responses:
         '200': { description: "data = MemberLookupItem[]" }
         '400': { description: Keyword too short }
+  /wallet/members/{memberId}:
+    get:
+      summary: Get a member's SÖL Wallet balance and transactions at reception (RECEPTIONIST, STAFF, CENTER_MANAGER)
+      parameters: [ { name: memberId, in: path, required: true, schema: { type: integer } } ]
+      responses:
+        '200': { description: "data = WalletDto" }
+  /wallet/members/{memberId}/topup:
+    post:
+      summary: Credit a member's SÖL Wallet at the reception counter (RECEPTIONIST, STAFF, CENTER_MANAGER)
+      parameters: [ { name: memberId, in: path, required: true, schema: { type: integer } } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: number, minimum: 10000, maximum: 100000000 }
+                paymentMethod: { type: string, enum: [cash, bank_transfer, pos], default: cash }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '200': { description: "data = WalletDto" }
+        '400': { description: INVALID_TOPUP_AMOUNT }
   /disciplines:
     get: { summary: List disciplines (any authenticated user), responses: { '200': { description: "data = Discipline[]" } } }
     post: { summary: Create discipline (CENTER_MANAGER), responses: { '201': { description: Created }, '409': { description: Name exists } } }

@@ -335,4 +335,24 @@ export const receptionApi = {
       body: JSON.stringify({ reason }),
     });
   },
+
+  /**
+   * Lấy số dư & lịch sử Ví SÖL của hội viên tại quầy Lễ tân
+   */
+  getMemberWallet: async (memberId: number): Promise<{ balance: number; updatedAt?: string }> => {
+    return apiFetch<{ balance: number; updatedAt?: string }>(`/wallet/members/${memberId}`);
+  },
+
+  /**
+   * Lễ tân nạp/cộng tiền trực tiếp vào Ví SÖL cho hội viên tại quầy
+   */
+  topupMemberWallet: async (
+    memberId: number,
+    payload: { amount: number; paymentMethod: string; note?: string }
+  ): Promise<{ balance: number; updatedAt?: string }> => {
+    return apiFetch<{ balance: number; updatedAt?: string }>(`/wallet/members/${memberId}/topup`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 };

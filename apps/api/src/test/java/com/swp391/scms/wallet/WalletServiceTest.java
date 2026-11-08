@@ -129,4 +129,26 @@ class WalletServiceTest {
         verify(walletTransactionRepository, times(1)).save(any(WalletTransaction.class));
         verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/packages"));
     }
+
+    @Test
+    void creditByReceptionist_creditsMemberWalletAndRecordsCounterTransaction() {
+        WalletDto dto = walletService.creditByReceptionist(
+                7L,
+                new BigDecimal("300000"),
+                "cash",
+                "Thu tiền mặt tại quầy",
+                99L
+        );
+
+        assertThat(dto.balance()).isEqualByComparingTo("800000");
+        assertThat(wallet.getBalance()).isEqualByComparingTo("800000");
+        verify(walletTransactionRepository, times(1)).save(argThat(tx ->
+                "TOPUP_COUNTER".equals(tx.getType())
+                        && tx.getAmount().compareTo(new BigDecimal("300000")) == 0
+                        && tx.getBalanceAfter().compareTo(new BigDecimal("800000")) == 0
+                        && "COUNTER_TOPUP".equals(tx.getReferenceType())
+                        && tx.getDescription().contains("Tiền mặt tại quầy Lễ tân")
+        ));
+        verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/packages"));
+    }
 }
