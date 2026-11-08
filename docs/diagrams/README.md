@@ -20,6 +20,7 @@ Thư mục này lưu trữ toàn bộ các sơ đồ kiến trúc, cơ sở dữ
 
 | Tên tập tin | Định dạng | Mô tả chi tiết |
 |---|:---:|---|
+| [`screen_flow_diagram.drawio`](screen_flow_diagram.drawio) | Draw.io XML | **Sơ đồ luồng màn hình (Screen Flow Diagram - 7 tabs)**: Chia tách tinh gọn theo phân hệ (Tổng quan điều hướng, Public/Cửa hàng/Auth, Hội viên - Mua gói & Tập luyện, Hội viên - Mua sắm & Hỗ trợ, Lễ tân, Huấn luyện viên, Quản lý & Admin) kèm liên kết chuyển trang (`data:page/id`). |
 | [`sports_center_all_flows_swimlane.drawio`](sports_center_all_flows_swimlane.drawio) | Draw.io XML | **Sơ đồ phân làn Swimlane đầy đủ (7 tabs)**: Gồm Master Swimlane và 6 luồng nghiệp vụ chi tiết (Đăng ký/Mua gói, Đặt lịch/Hủy lớp, Check-in/Điểm danh, AI Coaching & Tập luyện, Hỗ trợ & Đổi ca, Báo cáo & Quyết toán). |
 | [`sports_center_main_flow_swimlane.drawio`](sports_center_main_flow_swimlane.drawio) | Draw.io XML | **Sơ đồ phân làn luồng chính**: Tương tác giữa 6 Actor (Member, Receptionist, Coach, Center Manager, AI Engine, System Core). |
 | [`sports_center_flow.drawio`](sports_center_flow.drawio) | Draw.io XML | **Sơ đồ quy trình nghiệp vụ nguyên bản** kết hợp các bước thao tác người dùng. |
@@ -56,6 +57,11 @@ Thư mục [`screenshots/`](screenshots/) chứa các ảnh PNG kết xuất đ�
 
 ## 5. Công Cụ Tự Động Hóa (Automation Scripts)
 
+- [`build_screen_flow_diagram.py`](build_screen_flow_diagram.py): Script Python (theo chuẩn `drawio-skill`) tự động sinh file [`screen_flow_diagram.drawio`](screen_flow_diagram.drawio) gồm 7 tabs phân hệ.
+  ```bash
+  # Cách chạy tái tạo sơ đồ luồng màn hình:
+  python3 docs/diagrams/build_screen_flow_diagram.py
+  ```
 - [`build_state_diagrams.js`](build_state_diagrams.js): Script Node.js tự động tạo file `state_diagrams.drawio` và kết xuất ra ảnh PNG tại `screenshots/` bằng draw.io CLI.
   ```bash
   # Cách chạy tái tạo sơ đồ và ảnh:
