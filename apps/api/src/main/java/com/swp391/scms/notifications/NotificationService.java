@@ -81,7 +81,7 @@ public class NotificationService {
         notificationRepository.markAllAsReadByUserId(userId);
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RuntimeException.class)
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         send(userId, title, message, type, relatedEntityType, relatedEntityId, null);
     }
@@ -90,19 +90,26 @@ public class NotificationService {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RuntimeException.class)
     public void notifyEvaluation(Long memberId) {
         send(memberId, evaluationMessage("notifications.evaluation.title"),
                 evaluationMessage("notifications.evaluation.body"), "system", null, null,
                 "/member/progress#coach-evaluations");
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RuntimeException.class)
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId, String actionPath) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
         
-        Notification notification = new Notification(user, title, message, type, relatedEntityType, relatedEntityId);
+        Notification notification = new Notification(
+                user,
+                title,
+                message,
+                Notification.normalizeType(type),
+                Notification.normalizeEntityType(relatedEntityType),
+                relatedEntityId
+        );
         notification.setActionPath(actionPath);
         notificationRepository.save(notification);
         if (notificationDispatcher != null) {

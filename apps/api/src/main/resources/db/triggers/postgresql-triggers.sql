@@ -460,6 +460,15 @@ BEGIN
     ) THEN
         EXECUTE format('UPDATE %I.members SET identity_verified = FALSE WHERE identity_verified IS NULL', current_schema());
     END IF;
+
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name = 'vnpay_transactions'
+    ) THEN
+        EXECUTE format('UPDATE %I.vnpay_transactions SET status = ''failed'' WHERE status = ''pending'' AND gateway_transaction_no IS NULL', current_schema());
+    END IF;
 END;
 $$;
 

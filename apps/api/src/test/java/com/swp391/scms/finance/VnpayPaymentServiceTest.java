@@ -341,4 +341,11 @@ class VnpayPaymentServiceTest {
         assertEquals("success", topupTx.getStatus());
         verify(walletService, times(1)).creditTopup(7L, new BigDecimal("200000"), checkout.reference());
     }
+
+    @Test void customerCancelledVnpayReturnClosesTransactionAsFailedImmediately() {
+        var cancelled = callback("24", "24", "65000000");
+        assertEquals("00", service.ipn(cancelled));
+        assertEquals("failed", transaction.getStatus());
+        assertEquals("pending", payment.getStatus());
+    }
 }

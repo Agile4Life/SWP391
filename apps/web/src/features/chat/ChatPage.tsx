@@ -121,7 +121,7 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
 
   return <div data-i18n-managed className={`portal-container direct-chat${mobileThread ? ' direct-chat--thread-open' : ''}`}>
     {/* Trong widget, tiêu đề, trạng thái kết nối và nút làm mới nằm ở header của widget. */}
-    {!embedded && <header className="portal-header"><div><p className="portal-eyebrow">{t("Kết nối tại SÖL", "Connect at SÖL")}</p><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1></div>
+    {!embedded && <header className="portal-header"><div><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1></div>
       <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}>{t(...connectionLabel[connection])}</span>
         {connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={() => setConnectionAttempt(n => n + 1)}>{t("Thử kết nối lại", "Reconnect")}</button>}
         <RefreshButton label={t("Làm mới tin nhắn", "Refresh messages")} onClick={() => { void loadInbox(pageRef.current); void refresh(); }} disabled={loading} /></div>

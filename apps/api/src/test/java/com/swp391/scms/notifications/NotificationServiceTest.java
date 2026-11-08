@@ -209,6 +209,35 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("send normalizes type and relatedEntityType to satisfy PostgreSQL check constraints while preserving raw values for external dispatch")
+    void sendNormalizesDatabaseCheckConstraintValues() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        User user = new User();
+        user.setId(101L);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+
+        service.send(101L, "Nạp ví", "Đã cộng tiền", "payment", "wallet", 10L, "/member/packages");
+        service.send(101L, "Đơn hàng", "Hoàn tiền đơn hàng", "order", "product_order", 20L, "/member/orders/20");
+        service.send(101L, "Bảo mật", "Đổi mật khẩu", "system", "password_changed", 101L);
+
+        var saved = org.mockito.ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository, times(3)).save(saved.capture());
+        List<Notification> captured = saved.getAllValues();
+
+        assertThat(captured.get(0).getType()).isEqualTo("payment");
+        assertThat(captured.get(0).getRelatedEntityType()).isEqualTo("payment");
+        assertThat(Notification.ALLOWED_TYPES).contains(captured.get(0).getType());
+        assertThat(Notification.ALLOWED_ENTITY_TYPES).contains(captured.get(0).getRelatedEntityType());
+
+        assertThat(captured.get(1).getType()).isEqualTo("payment");
+        assertThat(captured.get(1).getRelatedEntityType()).isEqualTo("payment");
+
+        assertThat(captured.get(2).getType()).isEqualTo("system");
+        assertThat(captured.get(2).getRelatedEntityType()).isNull();
+    }
+
+    @Test
     @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
     void springContextResolvesAutowiredConstructor() {
         org.springframework.context.annotation.AnnotationConfigApplicationContext context =

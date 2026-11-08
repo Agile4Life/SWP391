@@ -45,14 +45,56 @@ public class Notification {
     public String getActionPath() { return actionPath; }
     public void setActionPath(String actionPath) { this.actionPath = actionPath; }
 
+    public static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of(
+            "schedule_change", "package_expiry", "class_reminder", "system", "support_reply", "payment"
+    );
+
+    public static final java.util.Set<String> ALLOWED_ENTITY_TYPES = java.util.Set.of(
+            "class_session", "membership_subscription", "payment", "support_request", "class_enrollment", "training_plan"
+    );
+
+    public static String normalizeType(String rawType) {
+        if (rawType == null || rawType.isBlank()) {
+            return "system";
+        }
+        String trimmed = rawType.trim();
+        if (ALLOWED_TYPES.contains(trimmed)) {
+            return trimmed;
+        }
+        if ("order".equalsIgnoreCase(trimmed) || "wallet".equalsIgnoreCase(trimmed)) {
+            return "payment";
+        }
+        if ("booking".equalsIgnoreCase(trimmed)) {
+            return "class_reminder";
+        }
+        return "system";
+    }
+
+    public static String normalizeEntityType(String rawEntityType) {
+        if (rawEntityType == null || rawEntityType.isBlank()) {
+            return null;
+        }
+        String trimmed = rawEntityType.trim();
+        if (ALLOWED_ENTITY_TYPES.contains(trimmed)) {
+            return trimmed;
+        }
+        if ("wallet".equalsIgnoreCase(trimmed) || "product_order".equalsIgnoreCase(trimmed)) {
+            return "payment";
+        }
+        if ("booking".equalsIgnoreCase(trimmed) || "session_booking".equalsIgnoreCase(trimmed)) {
+            return "class_session";
+        }
+        return null;
+    }
+
     public Notification() {}
 
     public Notification(User user, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         this.user = user;
         this.title = title;
         this.message = message;
-        this.type = type;
-        this.relatedEntityType = relatedEntityType;
+        this.type = normalizeType(type);
+        this.relatedEntityType = normalizeEntityType(relatedEntityType);
         this.relatedEntityId = relatedEntityId;
         this.isRead = false;
         this.createdAt = LocalDateTime.now();
@@ -71,10 +113,10 @@ public class Notification {
     public void setMessage(String message) { this.message = message; }
     
     public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public void setType(String type) { this.type = normalizeType(type); }
     
     public String getRelatedEntityType() { return relatedEntityType; }
-    public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = relatedEntityType; }
+    public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = normalizeEntityType(relatedEntityType); }
 
     public Long getRelatedEntityId() { return relatedEntityId; }
     public void setRelatedEntityId(Long relatedEntityId) { this.relatedEntityId = relatedEntityId; }

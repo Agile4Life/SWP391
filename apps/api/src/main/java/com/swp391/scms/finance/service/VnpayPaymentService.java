@@ -310,7 +310,7 @@ public class VnpayPaymentService {
         // An attempt closed locally after its gateway expiry may still report a delayed success: honour it while the
         // payment is unsettled so the customer's money is never taken without the order being paid.
         boolean lateAfterLocalExpiry="failed".equals(t.getStatus()) && t.getGatewayTransactionNo()==null
-                && "pending".equals(p.getStatus()) && !t.getExpiresAt().isAfter(now());
+                && "pending".equals(p.getStatus());
         String lateOrderCode=refundLateOrderPayment(fields,t,p,reference);
         if(lateOrderCode!=null) return lateOrderCode;
         if((!"pending".equals(t.getStatus()) && !lateAfterLocalExpiry) || !"pending".equals(p.getStatus())) return "02";
@@ -356,8 +356,8 @@ public class VnpayPaymentService {
             }
         } else {
             if (lateAfterLocalExpiry) return "02"; // already closed as failed
-            // A provisional/unknown status is not proof of a failed debit; keep it blocked for reconciliation.
-            if (!Set.of("02", "04", "07").contains(status)) return "99";
+            // A provisional/in-progress status (01, 05, 06) is not proof of a failed debit; keep it blocked for reconciliation.
+            if (Set.of("01", "05", "06").contains(status)) return "99";
             t.setStatus("failed");
         }
         return "00";
