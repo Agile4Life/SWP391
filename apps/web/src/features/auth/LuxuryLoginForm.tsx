@@ -1,7 +1,7 @@
 import { sourceText, useSourceLanguage, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../shop/shopI18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, type UserSession } from '../../shared/api/client';
+import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, ApiError, type UserSession } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { loginSchema } from './authValidation';
@@ -56,6 +56,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const [otpMessage, setOtpMessage] = useState<string | Error | import('../../shared/i18n').SourceMessage>('');
   const [debugOtpCode, setDebugOtpCode] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [lockCountdown, setLockCountdown] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -85,6 +86,15 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }, 1000);
     return () => clearInterval(timer);
   }, [countdown]);
+
+  // Countdown timer for login lockout
+  useEffect(() => {
+    if (lockCountdown <= 0) return;
+    const timer = window.setInterval(() => {
+      setLockCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lockCountdown]);
 
   const fail = useCallback((msg: string | Error) => {
     setFormError(msg);
@@ -296,6 +306,11 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       navigate(authDestination(res.user.role, search), { viewTransition: true });
     } catch (err: unknown) {
       const msg = sourceError(err, 'Đăng nhập không thành công.');
+      if (err instanceof ApiError && (err.status === 429 || err.code === 'LOGIN_LOCKED')) {
+        const match = err.message.match(/(\d+)\s*(?:giây|seconds|s)/i);
+        const sec = match ? parseInt(match[1], 10) : 60;
+        setLockCountdown(sec > 0 ? sec : 60);
+      }
       fail(msg);
     } finally {
       setIsLoading(false);
@@ -619,11 +634,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               </div>
             </div>
 
-            <button type="submit" className="luxury-login-submit-btn" disabled={isLoading || success}>
+            <button type="submit" className="luxury-login-submit-btn" disabled={isLoading || success || lockCountdown > 0}>
               {success ? (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
                   <StatusMark size={22} />
                   {sourceText("ĐÃ XÁC THỰC")}</span>
+              ) : lockCountdown > 0 ? (
+                <span>{sourceFormat("THỬ LẠI SAU ({0}s)", lockCountdown)}</span>
               ) : (
                 <>
                   <span>{isLoading ? sourceText('ĐANG XÁC THỰC...') : sourceText('ĐĂNG NHẬP')}</span>

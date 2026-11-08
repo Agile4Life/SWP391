@@ -44,6 +44,7 @@ public class AuthService {
     private final MessageService messageService;
     private final GoogleTokenVerifierPort googleTokenVerifierPort;
     private final com.swp391.scms.notifications.NotificationService notificationService;
+    private final LoginAttemptService loginAttemptService;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
@@ -66,7 +67,17 @@ public class AuthService {
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
                        MessageService messageService,
                        GoogleTokenVerifierPort googleTokenVerifierPort) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, null, null);
+    }
+
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
+                       @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
+                       MessageService messageService,
+                       GoogleTokenVerifierPort googleTokenVerifierPort,
+                       com.swp391.scms.notifications.NotificationService notificationService) {
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, notificationService, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -76,7 +87,8 @@ public class AuthService {
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
                        MessageService messageService,
                        @org.springframework.beans.factory.annotation.Autowired(required = false) GoogleTokenVerifierPort googleTokenVerifierPort,
-                       @org.springframework.beans.factory.annotation.Autowired(required = false) com.swp391.scms.notifications.NotificationService notificationService) {
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) com.swp391.scms.notifications.NotificationService notificationService,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -88,24 +100,49 @@ public class AuthService {
         this.messageService = messageService;
         this.googleTokenVerifierPort = googleTokenVerifierPort;
         this.notificationService = notificationService;
+        this.loginAttemptService = loginAttemptService != null ? loginAttemptService : new LoginAttemptService(clock);
     }
 
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    public LoginAttemptService getLoginAttemptService() {
+        return loginAttemptService;
+    }
+
     @Transactional
     public AuthTokenResponse login(LoginRequest request) {
-        User user = userRepository.findActiveByIdentifier(normalize(request.username()))
-                .orElseThrow(() -> new UnauthorizedException("INVALID_CREDENTIALS", "auth.login.invalid_credentials", null, null));
+        String identifier = normalize(request.username());
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new UnauthorizedException("INVALID_CREDENTIALS", "auth.login.invalid_credentials", null, null);
+        if (loginAttemptService.isBlocked(identifier)) {
+            long remainingSeconds = Math.max(1, loginAttemptService.getRemainingLockoutSeconds(identifier));
+            throw new TooManyRequestsException("LOGIN_LOCKED", "auth.login.locked",
+                    new Object[]{remainingSeconds},
+                    "Tài khoản tạm thời bị khóa do nhập sai quá 5 lần. Vui lòng thử lại sau " + remainingSeconds + " giây.");
         }
+
+        User user = userRepository.findActiveByIdentifier(identifier).orElse(null);
+        boolean passwordMatches = user != null && passwordEncoder.matches(request.password(), user.getPasswordHash());
+
+        if (!passwordMatches) {
+            int remaining = loginAttemptService.recordFailure(identifier);
+            if (remaining <= 0) {
+                long remainingSeconds = Math.max(1, loginAttemptService.getRemainingLockoutSeconds(identifier));
+                throw new TooManyRequestsException("LOGIN_LOCKED", "auth.login.locked",
+                        new Object[]{remainingSeconds},
+                        "Tài khoản tạm thời bị khóa do nhập sai quá 5 lần. Vui lòng thử lại sau " + remainingSeconds + " giây.");
+            }
+            throw new UnauthorizedException("INVALID_CREDENTIALS", "auth.login.invalid_credentials_remaining",
+                    new Object[]{remaining},
+                    "Tên đăng nhập hoặc mật khẩu không chính xác. Bạn còn " + remaining + " lần thử.");
+        }
+
         if (!"active".equalsIgnoreCase(user.getStatus())) {
             throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
         }
 
+        loginAttemptService.loginSucceeded(identifier);
         user.setLastLoginAt(LocalDateTime.now(clock));
         return issueTokenForUser(user);
     }

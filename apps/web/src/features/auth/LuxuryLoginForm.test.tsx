@@ -305,3 +305,51 @@ it('sends password reset OTP via email and resets password with 6-digit OTP', as
   );
   expect(host.querySelector('#login-identifier')).not.toBeNull();
 });
+
+it('locks login submission and shows countdown when receiving 429 lockout response', async () => {
+  vi.useFakeTimers();
+  const mockFetch = vi.fn().mockResolvedValueOnce({
+    ok: false,
+    status: 429,
+    json: async () => ({
+      code: 'LOGIN_LOCKED',
+      message: 'Tài khoản tạm thời bị khóa do nhập sai quá 5 lần. Vui lòng thử lại sau 60 giây.',
+    }),
+  });
+  vi.stubGlobal('fetch', mockFetch);
+
+  await renderForm();
+
+  const idInput = host.querySelector<HTMLInputElement>('#login-identifier')!;
+  const passInput = host.querySelector<HTMLInputElement>('#login-password')!;
+
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(idInput, 'lockeduser');
+    idInput.dispatchEvent(new Event('input', { bubbles: true }));
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(passInput, 'WrongPass123');
+    passInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await act(async () => {
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  });
+
+  expect(host.textContent).toContain('Tài khoản tạm thời bị khóa');
+  const submitBtn = host.querySelector<HTMLButtonElement>('.luxury-login-submit-btn')!;
+  expect(submitBtn.disabled).toBe(true);
+  expect(submitBtn.textContent).toContain('60s');
+
+  await act(async () => {
+    vi.advanceTimersByTime(30000);
+  });
+  expect(submitBtn.textContent).toContain('30s');
+  expect(submitBtn.disabled).toBe(true);
+
+  await act(async () => {
+    vi.advanceTimersByTime(30000);
+  });
+  expect(submitBtn.disabled).toBe(false);
+  expect(submitBtn.textContent).toContain('ĐĂNG NHẬP');
+
+  vi.useRealTimers();
+});

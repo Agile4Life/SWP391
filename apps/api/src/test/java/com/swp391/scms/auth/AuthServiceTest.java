@@ -1,6 +1,7 @@
 package com.swp391.scms.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.TooManyRequestsException;
+import com.swp391.scms.common.exception.UnauthorizedException;
 import com.swp391.scms.security.JwtService;
 import com.swp391.scms.users.RoleRepository;
 import com.swp391.scms.users.UserRepository;
@@ -259,5 +261,45 @@ class AuthServiceTest {
 
         assertEquals("encoded-new-pass", user.getPasswordHash());
         verify(userRepository).save(user);
+    }
+
+    @Test
+    void loginLocksAfterFiveFailedAttemptsForOneMinute() {
+        User user = new User();
+        user.setId(10L);
+        user.setUsername("testmember");
+        user.setPasswordHash("hashed_real_password");
+        user.setStatus("active");
+        com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
+        role.setCode("MEMBER");
+        user.setRole(role);
+
+        when(userRepository.findActiveByIdentifier("testmember")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong_pwd", "hashed_real_password")).thenReturn(false);
+        when(passwordEncoder.matches("correct_pwd", "hashed_real_password")).thenReturn(true);
+        when(jwtService.generateToken(any(), any(), any())).thenReturn("mock_token");
+
+        // First 4 failures: UnauthorizedException with decreasing remaining attempts
+        for (int i = 1; i <= 4; i++) {
+            UnauthorizedException ex = assertThrows(UnauthorizedException.class,
+                    () -> service.login(new LoginRequest("testmember", "wrong_pwd")));
+            assertEquals("INVALID_CREDENTIALS", ex.getErrorCode());
+        }
+
+        // 5th failure: TooManyRequestsException (LOGIN_LOCKED)
+        TooManyRequestsException lockEx = assertThrows(TooManyRequestsException.class,
+                () -> service.login(new LoginRequest("testmember", "wrong_pwd")));
+        assertEquals("LOGIN_LOCKED", lockEx.getErrorCode());
+
+        // 6th attempt even with correct password is blocked while locked
+        TooManyRequestsException stillLocked = assertThrows(TooManyRequestsException.class,
+                () -> service.login(new LoginRequest("testmember", "correct_pwd")));
+        assertEquals("LOGIN_LOCKED", stillLocked.getErrorCode());
+
+        // Reset and login with correct password succeeds
+        service.getLoginAttemptService().reset("testmember");
+        var tokenResponse = service.login(new LoginRequest("testmember", "correct_pwd"));
+        assertNotNull(tokenResponse);
+        assertEquals("mock_token", tokenResponse.token());
     }
 }
