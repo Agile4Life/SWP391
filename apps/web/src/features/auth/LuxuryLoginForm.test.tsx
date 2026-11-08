@@ -235,3 +235,73 @@ it('renders active session role label in English without recording missing trans
   expect(getMissingTranslations()).toEqual([]);
   setLanguage('vi');
 });
+
+it('sends password reset OTP via email and resets password with 6-digit OTP', async () => {
+  const mockFetch = vi
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { email: 'member@example.com', expiresInMinutes: 5 },
+      }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { email: 'member@example.com' },
+      }),
+    });
+  vi.stubGlobal('fetch', mockFetch);
+
+  await renderForm();
+  const forgotBtn = host.querySelector<HTMLButtonElement>('#forgot-password-btn');
+  expect(forgotBtn).not.toBeNull();
+  await act(async () => forgotBtn!.click());
+
+  const emailInput = host.querySelector<HTMLInputElement>('#reset-email-input')!;
+  expect(emailInput).not.toBeNull();
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(emailInput, 'member@example.com');
+    emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () =>
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+  );
+
+  expect(mockFetch).toHaveBeenCalledWith(
+    '/api/v1/auth/password/send-otp',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ email: 'member@example.com' }),
+    }),
+  );
+
+  const otpInput = host.querySelector<HTMLInputElement>('#reset-otp-input')!;
+  const newPassInput = host.querySelector<HTMLInputElement>('#reset-new-password-input')!;
+  expect(otpInput).not.toBeNull();
+  expect(newPassInput).not.toBeNull();
+
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(otpInput, '246810');
+    otpInput.dispatchEvent(new Event('input', { bubbles: true }));
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(newPassInput, 'NewSecret123');
+    newPassInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  await act(async () =>
+    host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
+  );
+
+  expect(mockFetch).toHaveBeenCalledWith(
+    '/api/v1/auth/password/reset',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ email: 'member@example.com', otpCode: '246810', newPassword: 'NewSecret123' }),
+    }),
+  );
+  expect(host.querySelector('#login-identifier')).not.toBeNull();
+});

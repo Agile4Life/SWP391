@@ -93,6 +93,11 @@ export function MemberProfilePage() {
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState<string | SourceMessage>('');
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -192,6 +197,39 @@ export function MemberProfilePage() {
       setError(memberError(err, 'Không thể lưu hồ sơ.'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordBusy) return;
+    setError('');
+    if (!currentPassword || !newPassword) {
+      setError(memberMessage('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.'));
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError(memberMessage('Mật khẩu mới phải có ít nhất 6 ký tự.'));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError(memberMessage('Mật khẩu xác nhận không khớp.'));
+      return;
+    }
+
+    setPasswordBusy(true);
+    try {
+      await profileApi.changePassword(currentPassword, newPassword);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPasswordChange(false);
+      notify(memberText('Đã đổi mật khẩu thành công.'), 'success', {
+        translation: memberMessage('Đã đổi mật khẩu thành công.'),
+      });
+    } catch (err) {
+      setError(memberError(err, 'Không thể đổi mật khẩu.'));
+    } finally {
+      setPasswordBusy(false);
     }
   };
 
@@ -568,6 +606,83 @@ export function MemberProfilePage() {
               )}
             </button>
           </form>
+
+          <div
+            style={{
+              marginTop: 24,
+              paddingTop: 20,
+              borderTop: '1px solid var(--portal-border, #ffffff1a)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{memberText('Bảo mật tài khoản')}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                  {memberText('Cập nhật mật khẩu định kỳ và nhận thông báo bảo mật qua email')}
+                </div>
+              </div>
+              <button
+                type="button"
+                id="toggle-password-change-btn"
+                className="btn-secondary btn-sm"
+                onClick={() => setShowPasswordChange((prev) => !prev)}
+              >
+                {showPasswordChange ? memberText('Ẩn đổi mật khẩu') : memberText('Đổi mật khẩu')}
+              </button>
+            </div>
+
+            {showPasswordChange && (
+              <div style={{ marginTop: 16 }}>
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="currentPassword">
+                    {memberText('Mật khẩu hiện tại')}
+                  </label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    className="portal-input"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                <div className="grid-2">
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="newPassword">
+                      {memberText('Mật khẩu mới')}
+                    </label>
+                    <input
+                      id="newPassword"
+                      type="password"
+                      className="portal-input"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="portal-form-group">
+                    <label className="portal-label" htmlFor="confirmPassword">
+                      {memberText('Xác nhận mật khẩu mới')}
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      type="password"
+                      className="portal-input"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  id="submit-password-change-btn"
+                  className="btn-primary btn-sm"
+                  disabled={passwordBusy}
+                  onClick={() => void handleChangePassword()}
+                >
+                  {passwordBusy ? memberText('Đang cập nhật...') : memberText('Cập nhật mật khẩu')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
       </div>

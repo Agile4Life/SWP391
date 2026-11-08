@@ -13,6 +13,7 @@ const mockApi = vi.hoisted(() => ({
   updateCoachProfile: vi.fn(),
   updateReceptionistProfile: vi.fn(),
   uploadAvatar: vi.fn(),
+  changePassword: vi.fn(),
   listHealthMetrics: vi.fn(),
   addHealthMetric: vi.fn(),
   updateHealthMetric: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('./profileApi', () => ({
   updateCoachProfile: mockApi.updateCoachProfile,
   updateReceptionistProfile: mockApi.updateReceptionistProfile,
   uploadAvatar: mockApi.uploadAvatar,
+  changePassword: mockApi.changePassword,
   listHealthMetrics: mockApi.listHealthMetrics,
   addHealthMetric: mockApi.addHealthMetric,
   updateHealthMetric: mockApi.updateHealthMetric,
@@ -336,5 +338,38 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
     expect(host.textContent).toContain('Account role');
     expect(host.textContent).toContain('Coach');
+    setLanguage('vi');
+  });
+
+  it('allows changing password inside the single profile card', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' })
+    );
+    mockApi.changePassword.mockResolvedValue(undefined);
+    await renderPage();
+
+    const toggleBtn = host.querySelector<HTMLButtonElement>('#toggle-password-change-btn');
+    expect(toggleBtn).not.toBeNull();
+    await act(async () => toggleBtn!.click());
+
+    expect(host.querySelectorAll('.portal-card')).toHaveLength(1);
+    const currentInput = host.querySelector<HTMLInputElement>('#currentPassword')!;
+    const newInput = host.querySelector<HTMLInputElement>('#newPassword')!;
+    const confirmInput = host.querySelector<HTMLInputElement>('#confirmPassword')!;
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(currentInput, 'OldPass123');
+      currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(newInput, 'NewPass456');
+      newInput.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(confirmInput, 'NewPass456');
+      confirmInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const submitPwdBtn = host.querySelector<HTMLButtonElement>('#submit-password-change-btn')!;
+    await act(async () => submitPwdBtn.click());
+
+    expect(mockApi.changePassword).toHaveBeenCalledWith('OldPass123', 'NewPass456');
   });
 });

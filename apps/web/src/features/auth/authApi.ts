@@ -39,6 +39,18 @@ export const sendOtp = (email: string) =>
 export const verifyOtp = (target: string, otpCode: string) =>
   apiFetch('/auth/verify-otp', { method: 'POST', body: JSON.stringify({ target, otpCode }) });
 
+export const sendPasswordResetOtp = (email: string) =>
+  apiFetch<{ email: string; expiresInMinutes: number; debugOtp?: string }>('/auth/password/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+
+export const resetPasswordWithOtp = (email: string, otpCode: string, newPassword: string) =>
+  apiFetch<{ email: string }>('/auth/password/reset', {
+    method: 'POST',
+    body: JSON.stringify({ email, otpCode, newPassword }),
+  });
+
 export const googleSendOtp = (email: string) =>
   apiFetch<GoogleSendOtpResponse>('/auth/google/send-otp', {
     method: 'POST',

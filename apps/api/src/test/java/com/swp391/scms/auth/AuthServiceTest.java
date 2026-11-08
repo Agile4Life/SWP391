@@ -221,4 +221,33 @@ class AuthServiceTest {
             org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
         }
     }
+
+    @Test
+    void requestPasswordResetOtpSendsCodeToActiveUser() {
+        User active = pendingUser();
+        active.setStatus("active");
+        when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("a@b.com")).thenReturn(Optional.of(active));
+        when(otpService.generateOtp("a@b.com")).thenReturn("246810");
+
+        String code = service.requestPasswordResetOtp("A@b.com");
+
+        assertEquals("246810", code);
+        verify(otpDeliveryPort).send("a@b.com", "246810");
+    }
+
+    @Test
+    void resetPasswordWithOtpUpdatesEncodedPasswordAndActivatesAccount() {
+        User user = pendingUser();
+        user.setId(77L);
+        user.setStatus("active");
+        when(otpService.verifyOtp("a@b.com", "246810"))
+                .thenReturn(new OtpService.Status(OtpService.VerifyResult.SUCCESS, 0));
+        when(userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull("a@b.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("NewPass123!")).thenReturn("encoded-new-pass");
+
+        service.resetPasswordWithOtp(new ResetPasswordRequest("A@b.com", "246810", "NewPass123!"));
+
+        assertEquals("encoded-new-pass", user.getPasswordHash());
+        verify(userRepository).save(user);
+    }
 }

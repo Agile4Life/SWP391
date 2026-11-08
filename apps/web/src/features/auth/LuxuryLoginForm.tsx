@@ -13,6 +13,8 @@ import {
   type GoogleVerifyResponse,
   googleSendOtp,
   googleVerifyOtp,
+  sendPasswordResetOtp,
+  resetPasswordWithOtp,
   type GoogleOAuthCallbackInput,
 } from './authApi';
 
@@ -28,7 +30,7 @@ const ROLE_NAMES: Record<UserSession['role'], string> = {
   get MANAGER() { return sourceText('Quản lý trung tâm'); },
 };
 
-type AuthMode = 'standard' | 'google_otp';
+type AuthMode = 'standard' | 'google_otp' | 'forgot_email' | 'forgot_reset';
 
 export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   useSourceLanguage();
@@ -43,6 +45,10 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Forgot Password Form
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
 
   // Google Login Form
   const [googleEmail, setGoogleEmail] = useState('');
@@ -352,6 +358,64 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
   };
 
+  const handleRequestPasswordResetOtp = async (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
+    const cleanEmail = resetEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+      fail('Vui lòng nhập đúng địa chỉ email.');
+      return;
+    }
+
+    setIsLoading(true);
+    setFormError('');
+    try {
+      const res = await sendPasswordResetOtp(cleanEmail);
+      if (res.debugOtp) {
+        setDebugOtpCode(res.debugOtp);
+        setOtpCode(res.debugOtp);
+      } else {
+        setDebugOtpCode('');
+        setOtpCode('');
+      }
+      setMode('forgot_reset');
+      setCountdown(30);
+      toast(sourceFormatPair('Mã OTP đặt lại mật khẩu đã gửi đến {0}', cleanEmail));
+    } catch (err: unknown) {
+      fail(sourceError(err, 'Không thể gửi mã OTP đặt lại mật khẩu.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanOtp = otpCode.trim();
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      fail('Mã OTP gồm đúng 6 chữ số.');
+      return;
+    }
+    if (resetNewPassword.length < 6) {
+      fail('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    setIsLoading(true);
+    setFormError('');
+    try {
+      await resetPasswordWithOtp(resetEmail.trim(), cleanOtp, resetNewPassword);
+      toast('Đặt lại mật khẩu thành công!', 'success');
+      setIdentifier(resetEmail.trim());
+      setPassword('');
+      setOtpCode('');
+      setResetNewPassword('');
+      setMode('standard');
+    } catch (err: unknown) {
+      fail(sourceError(err, 'Không thể đặt lại mật khẩu.'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (currentUser && !isExpired) {
     return (
       <div
@@ -461,6 +525,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         >
           {mode === 'standard' && sourceText('Đăng nhập')}
           {mode === 'google_otp' && sourceText('Xác thực tài khoản')}
+          {(mode === 'forgot_email' || mode === 'forgot_reset') && sourceText('Đặt lại mật khẩu')}
         </h3>
       </div>
 
@@ -530,6 +595,28 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 }}
                 aria-invalid={!!formError && (!password || !!identifier.trim()) ? true : undefined}
               />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  id="forgot-password-btn"
+                  onClick={() => {
+                    setFormError('');
+                    setResetEmail(identifier.includes('@') ? identifier.trim() : '');
+                    setMode('forgot_email');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '0.78rem',
+                    color: 'var(--color-accent-gold)',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontWeight: 600,
+                  }}
+                >
+                  {sourceText('Quên mật khẩu?')}
+                </button>
+              </div>
             </div>
 
             <button type="submit" className="luxury-login-submit-btn" disabled={isLoading || success}>
@@ -586,6 +673,122 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               {sourceText("Đăng ký hội viên")}</Link>
           </p>
         </>
+      )}
+
+      {mode === 'forgot_email' && (
+        <form onSubmit={handleRequestPasswordResetOtp}>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="reset-email-input">
+              {sourceText('Email tài khoản')}
+            </label>
+            <input
+              id="reset-email-input"
+              type="email"
+              className="portal-input"
+              placeholder={sourceText('Nhập email đã đăng ký')}
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="luxury-login-submit-btn" disabled={isLoading}>
+            <span>{isLoading ? sourceText('ĐANG GỬI MÃ OTP...') : sourceText('GỬI MÃ OTP')}</span>
+            <span className="submit-arrow" aria-hidden="true">→</span>
+          </button>
+          <div style={{ textAlign: 'center', marginTop: '14px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setFormError('');
+                setMode('standard');
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '0.82rem',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              {sourceText('Quay lại đăng nhập')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {mode === 'forgot_reset' && (
+        <form onSubmit={handleResetPasswordSubmit}>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="reset-otp-input">
+              {sourceText('Mã OTP (6 chữ số)')}
+            </label>
+            <input
+              id="reset-otp-input"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              className="portal-input"
+              placeholder="000000"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              required
+            />
+          </div>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="reset-new-password-input">
+              {sourceText('Mật khẩu mới')}
+            </label>
+            <input
+              id="reset-new-password-input"
+              type={showPassword ? 'text' : 'password'}
+              className="portal-input"
+              placeholder={sourceText('Tối thiểu 6 ký tự')}
+              value={resetNewPassword}
+              onChange={(e) => setResetNewPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="luxury-login-submit-btn" disabled={isLoading}>
+            <span>{isLoading ? sourceText('ĐANG CẬP NHẬT...') : sourceText('ĐẶT LẠI MẬT KHẨU')}</span>
+            <span className="submit-arrow" aria-hidden="true">→</span>
+          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            <button
+              type="button"
+              disabled={countdown > 0 || isLoading}
+              onClick={handleRequestPasswordResetOtp}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '0.82rem',
+                color: 'var(--color-accent-gold)',
+                cursor: countdown > 0 || isLoading ? 'not-allowed' : 'pointer',
+                padding: 0,
+                fontWeight: 600,
+              }}
+            >
+              {countdown > 0 ? sourceFormat('Gửi lại mã sau ({0}s)', countdown) : sourceText('Gửi lại mã xác nhận')}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFormError('');
+                setMode('standard');
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '0.82rem',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              {sourceText('Quay lại đăng nhập')}
+            </button>
+          </div>
+        </form>
       )}
 
       {/* MODE 3: Google OTP Verification (Hiển thị sau khi Google OAuth callback hoặc gửi OTP qua mail) */}

@@ -43,12 +43,13 @@ public class AuthService {
     private final Clock clock;
     private final MessageService messageService;
     private final GoogleTokenVerifierPort googleTokenVerifierPort;
+    private final com.swp391.scms.notifications.NotificationService notificationService;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null, null);
     }
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
@@ -56,7 +57,16 @@ public class AuthService {
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
                        MessageService messageService) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null, null);
+    }
+
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
+                       @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
+                       MessageService messageService,
+                       GoogleTokenVerifierPort googleTokenVerifierPort) {
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, null);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -65,7 +75,8 @@ public class AuthService {
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
                        MessageService messageService,
-                       @org.springframework.beans.factory.annotation.Autowired(required = false) GoogleTokenVerifierPort googleTokenVerifierPort) {
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) GoogleTokenVerifierPort googleTokenVerifierPort,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) com.swp391.scms.notifications.NotificationService notificationService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -76,6 +87,7 @@ public class AuthService {
         this.clock = clock;
         this.messageService = messageService;
         this.googleTokenVerifierPort = googleTokenVerifierPort;
+        this.notificationService = notificationService;
     }
 
     private String msg(String key) {
@@ -141,6 +153,56 @@ public class AuthService {
     public String generateOtp(String target) {
         findPendingUser(target);
         return issueAndSendOtp(normalize(target));
+    }
+
+    @Transactional(readOnly = true)
+    public String requestPasswordResetOtp(String rawEmail) {
+        if (!isValidEmail(rawEmail)) {
+            throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
+        }
+        String email = normalize(rawEmail);
+        User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
+        if ("locked".equalsIgnoreCase(user.getStatus())) {
+            throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
+        }
+        return issueAndSendOtp(email);
+    }
+
+    @Transactional
+    public void resetPasswordWithOtp(ResetPasswordRequest request) {
+        if (request == null || !isValidEmail(request.email())) {
+            throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
+        }
+        if (request.otpCode() == null || request.otpCode().isBlank()) {
+            throw new BadRequestException("INVALID_OTP", "validation.auth.otp.not_blank", null, null);
+        }
+        String email = normalize(request.email());
+        verifyOtpChallenge(email, request.otpCode().trim());
+
+        User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
+        if ("locked".equalsIgnoreCase(user.getStatus())) {
+            throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        if ("inactive".equalsIgnoreCase(user.getStatus())) {
+            user.setStatus("active");
+        }
+        user.setUpdatedAt(LocalDateTime.now(clock));
+        userRepository.save(user);
+
+        if (notificationService != null && user.getId() != null) {
+            notificationService.send(
+                    user.getId(),
+                    msg("notifications.auth.password_changed.title"),
+                    msg("notifications.auth.password_changed.body"),
+                    "password_changed",
+                    "user",
+                    user.getId()
+            );
+        }
     }
 
     private void activateAccount(String target) {

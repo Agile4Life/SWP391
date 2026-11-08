@@ -103,6 +103,30 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.otp.verified"), Map.of("target", request.target(), "isVerified", true));
     }
 
+    @Operation(summary = "Gửi mã OTP đặt lại mật khẩu", description = "Gửi mã OTP 6 chữ số qua email để đặt lại mật khẩu")
+    @PostMapping("/password/send-otp")
+    public ApiResponse<Map<String, Object>> sendPasswordResetOtp(@Valid @RequestBody GoogleOtpRequest request) {
+        String email = request.email() == null ? "" : request.email().trim();
+        if (email.isBlank()) {
+            throw new BadRequestException("MISSING_EMAIL", "auth.otp.missing_target", null, null);
+        }
+        String code = authService.requestPasswordResetOtp(email);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("email", email);
+        data.put("expiresInMinutes", 5);
+        if (debugOtpEnabled) {
+            data.put("debugOtp", code);
+        }
+        return ApiResponse.ok(msg("auth.password.otp_sent"), data);
+    }
+
+    @Operation(summary = "Đặt lại mật khẩu bằng OTP", description = "Xác thực mã OTP 6 chữ số và cập nhật mật khẩu mới")
+    @PostMapping("/password/reset")
+    public ApiResponse<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPasswordWithOtp(request);
+        return ApiResponse.ok(msg("auth.password.reset_success"), Map.of("email", request.email().trim()));
+    }
+
     @Operation(summary = "Gửi mã OTP đăng nhập Google", description = "Tạo tài khoản nếu chưa có và gửi mã OTP xác nhận về Gmail")
     @PostMapping("/google/send-otp")
     public ApiResponse<Map<String, Object>> sendGoogleOtp(@Valid @RequestBody GoogleOtpRequest request) {

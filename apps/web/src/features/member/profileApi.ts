@@ -71,6 +71,12 @@ export const submitMemberKyc = (data: MemberKycRequest) =>
 export const uploadAvatar = (avatarUrl: string | null) =>
   apiFetch<Profile>('/profile/avatar', { method: 'POST', body: JSON.stringify({ avatarUrl }) });
 
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  apiFetch<void>('/profile/password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
 export const updateCoachProfile = (payload: CoachProfileUpdate) =>
   apiFetch<void>('/profile/coach', { method: 'PUT', body: JSON.stringify(payload) });
 

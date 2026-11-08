@@ -247,4 +247,34 @@ class AuthControllerTest {
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
+    @Test
+    @DisplayName("POST /api/v1/auth/password/send-otp sends reset OTP to email")
+    void sendPasswordResetOtpSuccess() throws Exception {
+        GoogleOtpRequest req = new GoogleOtpRequest("user@example.com");
+        when(authService.requestPasswordResetOtp("user@example.com")).thenReturn("135790");
+
+        mockMvc.perform(post("/api/v1/auth/password/send-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("user@example.com"))
+                .andExpect(jsonPath("$.data.expiresInMinutes").value(5));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/password/reset resets password using OTP")
+    void resetPasswordSuccess() throws Exception {
+        ResetPasswordRequest req = new ResetPasswordRequest("user@example.com", "135790", "NewSecret123");
+
+        mockMvc.perform(post("/api/v1/auth/password/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("user@example.com"));
+
+        verify(authService).resetPasswordWithOtp(any());
+    }
+
 }

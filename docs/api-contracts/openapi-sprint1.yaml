@@ -109,6 +109,16 @@ paths:
       summary: Verify OTP and activate account (public). data = { target, isVerified }
       security: []
       responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '429': { description: MAX_ATTEMPTS } }
+  /auth/password/send-otp:
+    post:
+      summary: Send 6-digit password reset OTP to an existing user's email (public). data = { email, expiresInMinutes, debugOtp? }
+      security: []
+      responses: { '200': { description: OK }, '400': { description: INVALID_EMAIL / MISSING_EMAIL }, '403': { description: ACCOUNT_INACTIVE }, '404': { description: NOT_FOUND }, '503': { description: Delivery channel not configured } }
+  /auth/password/reset:
+    post:
+      summary: Verify 6-digit OTP and reset account password (public). data = { email }
+      security: []
+      responses: { '200': { description: OK }, '400': { description: OTP_EXPIRED / INVALID_OTP }, '403': { description: ACCOUNT_INACTIVE }, '404': { description: NOT_FOUND }, '429': { description: MAX_ATTEMPTS } }
   /auth/google/send-otp:
     post:
       summary: Create pending account if needed and send Google login OTP (public). data = { email, message, expiresInMinutes, debugOtp? }
@@ -415,6 +425,22 @@ paths:
       responses:
         '200': { description: Updated persisted profile in ApiResponse.data }
         '400': { description: Invalid avatar URL, format or data, or avatar exceeds 2 MiB }
+  /profile/password:
+    post:
+      summary: Change the authenticated user's password and dispatch notification email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, minLength: 1 }
+                newPassword: { type: string, minLength: 6, maxLength: 50 }
+      responses:
+        '200': { description: Password updated }
+        '400': { description: INVALID_CURRENT_PASSWORD / PASSWORD_UNCHANGED }
   /profile/kyc:
     post:
       summary: Verify Member identity (CCCD or Passport) and synchronize fullName before first package purchase

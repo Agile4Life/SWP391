@@ -34,13 +34,58 @@ public class ProfileService {
     private final MemberRepository memberRepository;
     private final CoachRepository coachRepository;
     private final ReceptionistRepository receptionistRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.swp391.scms.notifications.NotificationService notificationService;
+    private final com.swp391.scms.common.i18n.MessageService messageService;
 
     public ProfileService(UserRepository userRepository, MemberRepository memberRepository,
                           CoachRepository coachRepository, ReceptionistRepository receptionistRepository) {
+        this(userRepository, memberRepository, coachRepository, receptionistRepository, null, null, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ProfileService(UserRepository userRepository, MemberRepository memberRepository,
+                          CoachRepository coachRepository, ReceptionistRepository receptionistRepository,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) com.swp391.scms.notifications.NotificationService notificationService,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) com.swp391.scms.common.i18n.MessageService messageService) {
         this.userRepository = userRepository;
         this.memberRepository = memberRepository;
         this.coachRepository = coachRepository;
         this.receptionistRepository = receptionistRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.notificationService = notificationService;
+        this.messageService = messageService;
+    }
+
+    private String msg(String key) {
+        return messageService != null ? messageService.getMessage(key) : key;
+    }
+
+    @Transactional
+    @Audited(action = "PASSWORD_CHANGE", entity = "users")
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = findActiveUser(userId);
+        if (passwordEncoder != null && !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new BadRequestException("INVALID_CURRENT_PASSWORD", "users.profile.password.invalid_current", null, null);
+        }
+        if (currentPassword != null && currentPassword.equals(newPassword)) {
+            throw new BadRequestException("PASSWORD_UNCHANGED", "users.profile.password.unchanged", null, null);
+        }
+        user.setPasswordHash(passwordEncoder != null ? passwordEncoder.encode(newPassword) : newPassword);
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
+
+        if (notificationService != null) {
+            notificationService.send(
+                    user.getId(),
+                    msg("notifications.auth.password_changed.title"),
+                    msg("notifications.auth.password_changed.body"),
+                    "password_changed",
+                    "user",
+                    user.getId()
+            );
+        }
     }
 
     @Transactional(readOnly = true)

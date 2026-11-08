@@ -438,4 +438,45 @@ class ProfileControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("TRIAL_PASSPORT_FOREIGN_ONLY"));
     }
+
+    @Test
+    @DisplayName("POST /api/v1/profile/password updates password and sends notification")
+    void changePasswordSuccess() throws Exception {
+        User user = sampleUser();
+        user.setEmail("member1@example.com");
+        user.setPasswordHash("old-hash");
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+
+        var passwordEncoder = org.mockito.Mockito.mock(org.springframework.security.crypto.password.PasswordEncoder.class);
+        var notificationService = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
+        when(passwordEncoder.matches("OldPass123", "old-hash")).thenReturn(true);
+        when(passwordEncoder.encode("NewPass456")).thenReturn("new-hash");
+
+        ProfileService svcWithDeps = new ProfileService(
+                userRepository, memberRepository, coachRepository, receptionistRepository,
+                passwordEncoder, notificationService, messageService
+        );
+        MockMvc customMvc = MockMvcBuilders.standaloneSetup(new ProfileController(svcWithDeps, messageService))
+                .setControllerAdvice(new GlobalExceptionHandler(messageService))
+                .setCustomArgumentResolvers(principalResolver)
+                .build();
+
+        ProfileController.ChangePasswordRequest req = new ProfileController.ChangePasswordRequest("OldPass123", "NewPass456");
+
+        customMvc.perform(post("/api/v1/profile/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        org.junit.jupiter.api.Assertions.assertEquals("new-hash", user.getPasswordHash());
+        org.mockito.Mockito.verify(notificationService).send(
+                org.mockito.ArgumentMatchers.eq(101L),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.eq("password_changed"),
+                org.mockito.ArgumentMatchers.eq("user"),
+                org.mockito.ArgumentMatchers.eq(101L)
+        );
+    }
 }

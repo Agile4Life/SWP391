@@ -7,6 +7,7 @@ import com.swp391.scms.users.dto.ProfileDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +19,14 @@ import org.springframework.web.bind.annotation.*;
 public class ProfileController {
 
     public record AvatarUploadRequest(@Size(max = 2800000) String avatarUrl) {}
+
+    public record ChangePasswordRequest(
+            @NotBlank(message = "{validation.auth.password.not_blank}")
+            String currentPassword,
+            @NotBlank(message = "{validation.auth.password.not_blank}")
+            @Size(min = 6, max = 50, message = "{validation.auth.password.size}")
+            String newPassword
+    ) {}
 
     private final ProfileService profileService;
     private final MessageService messageService;
@@ -54,6 +63,14 @@ public class ProfileController {
     public ApiResponse<ProfileDto> updateMyAvatar(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                                   @Valid @RequestBody AvatarUploadRequest request) {
         return ApiResponse.ok(msg("users.profile.update.success"), profileService.updateAvatar(principal.id(), request.avatarUrl()));
+    }
+
+    @Operation(summary = "Đổi mật khẩu cá nhân", description = "Xác minh mật khẩu hiện tại, cập nhật mật khẩu mới và gửi email thông báo")
+    @PostMapping("/password")
+    public ApiResponse<Void> changeMyPassword(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+                                              @Valid @RequestBody ChangePasswordRequest request) {
+        profileService.changePassword(principal.id(), request.currentPassword(), request.newPassword());
+        return ApiResponse.ok(msg("users.profile.password.success"), null);
     }
 
     @Operation(summary = "Xác minh danh tính CCCD/Hộ chiếu", description = "Cập nhật thông tin định danh (CCCD/Hộ chiếu) và đồng bộ họ tên tài khoản trước khi đăng ký gói tập đầu tiên")
