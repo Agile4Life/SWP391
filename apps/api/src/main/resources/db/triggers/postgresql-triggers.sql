@@ -467,7 +467,23 @@ BEGIN
         WHERE table_schema = current_schema()
           AND table_name = 'vnpay_transactions'
     ) THEN
-        EXECUTE format('UPDATE %I.vnpay_transactions SET status = ''failed'' WHERE status = ''pending'' AND gateway_transaction_no IS NULL', current_schema());
+        -- Only expire transactions past expires_at; a restart must not fail a payment still open at the gateway.
+        EXECUTE format('UPDATE %I.vnpay_transactions SET status = ''failed'' WHERE status = ''pending'' AND gateway_transaction_no IS NULL AND expires_at < CURRENT_TIMESTAMP', current_schema());
+    END IF;
+
+    -- Normalize legacy notification values, then enforce the same lists as Notification.java.
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name = 'notifications'
+    ) THEN
+        EXECUTE format('UPDATE %I.notifications SET type = CASE WHEN lower(type) IN (''order'',''wallet'') THEN ''payment'' WHEN lower(type) = ''booking'' THEN ''class_reminder'' ELSE ''system'' END WHERE type NOT IN (''schedule_change'',''package_expiry'',''class_reminder'',''system'',''support_reply'',''payment'')', current_schema());
+        EXECUTE format('UPDATE %I.notifications SET related_entity_type = CASE WHEN lower(related_entity_type) IN (''wallet'',''product_order'') THEN ''payment'' WHEN lower(related_entity_type) IN (''booking'',''session_booking'') THEN ''class_session'' ELSE NULL END WHERE related_entity_type IS NOT NULL AND related_entity_type NOT IN (''class_session'',''membership_subscription'',''payment'',''support_request'',''class_enrollment'',''training_plan'')', current_schema());
+        EXECUTE format('ALTER TABLE %I.notifications DROP CONSTRAINT IF EXISTS ck_notifications_type', current_schema());
+        EXECUTE format('ALTER TABLE %I.notifications ADD CONSTRAINT ck_notifications_type CHECK (type IN (''schedule_change'',''package_expiry'',''class_reminder'',''system'',''support_reply'',''payment''))', current_schema());
+        EXECUTE format('ALTER TABLE %I.notifications DROP CONSTRAINT IF EXISTS ck_notifications_entity_type', current_schema());
+        EXECUTE format('ALTER TABLE %I.notifications ADD CONSTRAINT ck_notifications_entity_type CHECK (related_entity_type IS NULL OR related_entity_type IN (''class_session'',''membership_subscription'',''payment'',''support_request'',''class_enrollment'',''training_plan''))', current_schema());
     END IF;
 END;
 $$;
