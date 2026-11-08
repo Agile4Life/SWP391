@@ -50,9 +50,23 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
             String fromAddress,
             RestClient restClient) {
         this.userRepository = userRepository;
-        this.apiKey = apiKey != null ? apiKey.trim() : "";
-        this.fromAddress = (fromAddress != null && !fromAddress.isBlank()) ? fromAddress.trim() : "SÖL Fitness <no-reply@scms.bluesymphony.site>";
+        this.apiKey = stripQuotes(apiKey);
+        String cleanFrom = stripQuotes(fromAddress);
+        this.fromAddress = !cleanFrom.isBlank() ? cleanFrom : "SÖL Fitness <no-reply@scms.bluesymphony.site>";
         this.restClient = restClient != null ? restClient : defaultRestClient("https://api.resend.com");
+    }
+
+    private static String stripQuotes(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() >= 2
+                && ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
+                || (trimmed.startsWith("'") && trimmed.endsWith("'")))) {
+            return trimmed.substring(1, trimmed.length() - 1).trim();
+        }
+        return trimmed;
     }
 
     private static RestClient defaultRestClient(String baseUrl) {

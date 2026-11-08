@@ -4,7 +4,7 @@ import com.swp391.scms.common.exception.ServiceUnavailableException;
 import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-@ConditionalOnProperty(name = "app.auth.otp.delivery", havingValue = "resend")
+@Primary
 public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
 
     private final String apiKey;
@@ -44,10 +44,24 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
             String fromAddress,
             MessageService messageService,
             RestClient restClient) {
-        this.apiKey = apiKey != null ? apiKey.trim() : "";
-        this.fromAddress = (fromAddress != null && !fromAddress.isBlank()) ? fromAddress.trim() : "SÖL Fitness <no-reply@scms.bluesymphony.site>";
+        this.apiKey = stripQuotes(apiKey);
+        String cleanFrom = stripQuotes(fromAddress);
+        this.fromAddress = !cleanFrom.isBlank() ? cleanFrom : "SÖL Fitness <no-reply@scms.bluesymphony.site>";
         this.messageService = messageService;
         this.restClient = restClient != null ? restClient : defaultRestClient("https://api.resend.com");
+    }
+
+    private static String stripQuotes(String value) {
+        if (value == null) {
+            return "";
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() >= 2
+                && ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
+                || (trimmed.startsWith("'") && trimmed.endsWith("'")))) {
+            return trimmed.substring(1, trimmed.length() - 1).trim();
+        }
+        return trimmed;
     }
 
     private static RestClient defaultRestClient(String baseUrl) {
