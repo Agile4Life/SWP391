@@ -478,7 +478,7 @@ export function MemberPackagesPage() {
       window.removeEventListener('pageshow', onRestore);
       document.removeEventListener('visibilitychange', onRefresh);
     };
-  }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId]);
+  }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId, loadTrialStatus]);
 
   useEffect(() => {
     if (syncError) {

@@ -1,5 +1,6 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
-import { CoachHealthMetrics, calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './CoachHealthMetrics';
+import { CoachHealthMetrics } from './CoachHealthMetrics';
+import { calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './coachHealthUtils';
 import { listHealthMetrics } from '../member/profileApi';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
