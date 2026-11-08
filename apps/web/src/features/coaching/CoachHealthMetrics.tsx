@@ -44,7 +44,9 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly, onMetricsChange }
  const alive = useRef(false);
  const latestRowsRef = useRef<HealthMetric[]>([]);
  const onMetricsChangeRef = useRef(onMetricsChange);
- onMetricsChangeRef.current = onMetricsChange;
+ useEffect(() => {
+  onMetricsChangeRef.current = onMetricsChange;
+ });
  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
  useEffect(() => {
   let active = true; setLoading(true); setLoadError('');

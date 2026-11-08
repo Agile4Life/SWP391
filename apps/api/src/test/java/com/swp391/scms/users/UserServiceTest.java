@@ -168,7 +168,7 @@ class UserServiceTest {
         role.setId(3L);
         role.setCode("COACH");
         when(roleRepository.findByCode("COACH")).thenReturn(Optional.of(role));
-        when(userRepository.findByEmailIgnoreCase("dup@gmail.com")).thenReturn(Optional.of(new User()));
+        when(userRepository.findByEmailIgnoreCase("Dup@Gmail.com")).thenReturn(Optional.of(new User()));
 
         var dupEmailReq = new com.swp391.scms.users.dto.StaffAccountCreateDto(
                 "Coach Dup", " Dup@Gmail.com ", "0901234567", "Secret123", "male", "COACH");
