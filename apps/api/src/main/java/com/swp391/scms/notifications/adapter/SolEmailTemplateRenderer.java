@@ -70,7 +70,7 @@ public final class SolEmailTemplateRenderer {
                   </div>
                   <div style="margin-top: 14px;">
                     <span style="display: inline-block; background-color: rgba(244, 122, 96, 0.14); border: 1px solid rgba(244, 122, 96, 0.35); color: #FDBA74; font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 999px;">
-                      ⏳ Hiệu lực trong 05:00 phút · Chỉ sử dụng 01 lần
+                      Hiệu lực trong 05:00 phút - Chỉ sử dụng 01 lần
                     </span>
                   </div>
                 </div>
@@ -78,7 +78,7 @@ public final class SolEmailTemplateRenderer {
                 <!-- Security Checklist -->
                 <div style="background-color: #232329; border-left: 4px solid #F47A60; border-radius: 12px; padding: 16px 18px; margin-bottom: 24px;">
                   <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #F47A60; margin-bottom: 8px;">
-                    🔒 LƯU Ý AN TOÀN TÀI KHOẢN
+                    LƯU Ý AN TOÀN TÀI KHOẢN
                   </div>
                   <p style="margin: 0; color: #D4D4D8; font-size: 13px; line-height: 1.65;">
                     Đội ngũ Lễ tân &amp; Huấn luyện viên SÖL Fitness <strong>không bao giờ</strong> yêu cầu bạn cung cấp mã OTP qua điện thoại hay tin nhắn. Nếu không phải bạn vừa thực hiện thao tác này, vui lòng bỏ qua email này.
@@ -92,7 +92,7 @@ public final class SolEmailTemplateRenderer {
                 "SECURITY & VERIFICATION",
                 safeSubject,
                 bodyContent,
-                "Truy cập Cổng Hội Viên SÖL →",
+                "Truy cập Cổng Hội Viên SÖL",
                 baseUrl + "/login",
                 timestamp,
                 baseUrl
@@ -222,7 +222,7 @@ public final class SolEmailTemplateRenderer {
                                   </td>
                                   <td align="right" valign="middle">
                                     <span style="display: inline-block; background-color: rgba(244, 122, 96, 0.14); border: 1px solid rgba(244, 122, 96, 0.35); color: #F47A60; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; padding: 6px 12px; border-radius: 999px; text-transform: uppercase;">
-                                      ● %s
+                                      %s
                                     </span>
                                   </td>
                                 </tr>
@@ -264,19 +264,19 @@ public final class SolEmailTemplateRenderer {
                               </p>
                               <table role="presentation" width="100%%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
-                                  <td width="33%%" align="center" style="padding: 8px 4px; background-color: #1F1F24; border-radius: 10px;">
-                                    <div style="font-size: 12px; font-weight: 700; color: #F47A60;">⚡ PT 1:1</div>
-                                    <div style="font-size: 11px; color: #A1A1AA; margin-top: 2px;">Lộ trình cá nhân</div>
+                                  <td width="33%%" align="center" style="padding: 10px 6px; background-color: #1F1F24; border-radius: 10px;">
+                                    <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.06em;">PT 1:1</div>
+                                    <div style="font-size: 11px; color: #A1A1AA; margin-top: 3px;">Lộ trình cá nhân</div>
                                   </td>
                                   <td width="2%%">&nbsp;</td>
-                                  <td width="30%%" align="center" style="padding: 8px 4px; background-color: #1F1F24; border-radius: 10px;">
-                                    <div style="font-size: 12px; font-weight: 700; color: #F47A60;">🔥 Studio &amp; Sân</div>
-                                    <div style="font-size: 11px; color: #A1A1AA; margin-top: 2px;">Đặt lịch 1 chạm</div>
+                                  <td width="30%%" align="center" style="padding: 10px 6px; background-color: #1F1F24; border-radius: 10px;">
+                                    <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.06em;">Studio &amp; Sân</div>
+                                    <div style="font-size: 11px; color: #A1A1AA; margin-top: 3px;">Đặt lịch 1 chạm</div>
                                   </td>
                                   <td width="2%%">&nbsp;</td>
-                                  <td width="33%%" align="center" style="padding: 8px 4px; background-color: #1F1F24; border-radius: 10px;">
-                                    <div style="font-size: 12px; font-weight: 700; color: #F47A60;">💎 Ví SÖL Pay</div>
-                                    <div style="font-size: 11px; color: #A1A1AA; margin-top: 2px;">Thanh toán tức thì</div>
+                                  <td width="33%%" align="center" style="padding: 10px 6px; background-color: #1F1F24; border-radius: 10px;">
+                                    <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.06em;">Ví SÖL Pay</div>
+                                    <div style="font-size: 11px; color: #A1A1AA; margin-top: 3px;">Thanh toán tức thì</div>
                                   </td>
                                 </tr>
                               </table>
@@ -344,15 +344,15 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        ✨ Trải nghiệm 1 chạm cùng Ví SÖL
+                        Trải nghiệm 1 chạm cùng Ví SÖL
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
-                        • Gia hạn gói tập, đặt lịch Huấn luyện viên PT 1:1 hoặc giữ chỗ sân Tennis / Cầu lông / Bơi lội tức thì.<br/>
-                        • Nhận hoàn tiền tự động 100%% về Ví khi hủy lịch hợp lệ hoặc được duyệt hoàn gói tập.
+                        Gia hạn gói tập, đặt lịch Huấn luyện viên PT 1:1 hoặc giữ chỗ sân Tennis / Cầu lông / Bơi lội tức thì.<br/>
+                        Nhận hoàn tiền tự động 100%% về Ví khi hủy lịch hợp lệ hoặc được duyệt hoàn gói tập.
                       </div>
                     </div>
                     """,
-                    "Mở Ví SÖL & Khám phá Đặc quyền →",
+                    "Mở Ví SÖL & Khám phá Đặc quyền",
                     baseUrl + "/member/packages"
             );
         }
@@ -368,15 +368,15 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        🛍️ Hướng dẫn nhận hàng nhanh
+                        Hướng dẫn nhận hàng nhanh
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
-                        • Với đơn <strong>Nhận tại quầy</strong>: Xuất trình mã đơn hàng tại quầy Lễ tân SÖL Fitness ngay trong buổi tập tiếp theo.<br/>
-                        • Với đơn <strong>Giao tận nơi</strong>: Theo dõi trạng thái vận chuyển theo thời gian thực trên Cổng Hội Viên.
+                        Với đơn <strong>Nhận tại quầy</strong>: Xuất trình mã đơn hàng tại quầy Lễ tân SÖL Fitness ngay trong buổi tập tiếp theo.<br/>
+                        Với đơn <strong>Giao tận nơi</strong>: Theo dõi trạng thái vận chuyển theo thời gian thực trên Cổng Hội Viên.
                       </div>
                     </div>
                     """,
-                    "Xem Chi tiết Đơn hàng →",
+                    "Xem Chi tiết Đơn hàng",
                     baseUrl + orderPath
             );
         }
@@ -391,14 +391,14 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #10B981; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        🧾 Hóa đơn điện tử tự động
+                        Hóa đơn điện tử tự động
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
                         Hóa đơn điện tử và lịch sử giao dịch đã được lưu trữ trong hồ sơ hội viên của bạn. Bạn có thể tra cứu bất cứ lúc nào tại mục <strong>Giao dịch &amp; Hóa đơn</strong>.
                       </div>
                     </div>
                     """,
-                    "Xem Giao dịch & Hóa đơn →",
+                    "Xem Giao dịch & Hóa đơn",
                     baseUrl + "/member/invoices"
             );
         }
@@ -413,15 +413,15 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #F59E0B; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        🔥 Giữ vững chuỗi ngày tập luyện (Workout Streak)
+                        Giữ vững chuỗi ngày tập luyện (Workout Streak)
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
-                        • Duy trì gói tập liên tục để giữ nguyên quyền đặt chỗ sớm các lớp Studio giờ vàng và lịch PT 1:1.<br/>
-                        • Nâng cấp hoặc gia hạn trực tuyến chỉ trong 30 giây qua Ví SÖL hoặc VNPay.
+                        Duy trì gói tập liên tục để giữ nguyên quyền đặt chỗ sớm các lớp Studio giờ vàng và lịch PT 1:1.<br/>
+                        Nâng cấp hoặc gia hạn trực tuyến chỉ trong 30 giây qua Ví SÖL hoặc VNPay.
                       </div>
                     </div>
                     """,
-                    "Quản lý Gói tập Hội viên →",
+                    "Quản lý Gói tập Hội viên",
                     baseUrl + "/member/packages"
             );
         }
@@ -438,16 +438,16 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        🎒 Chuẩn bị gì cho buổi tập hoàn hảo?
+                        Chuẩn bị cho buổi tập hoàn hảo
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
-                        • <strong>Check-in trước 10 phút</strong>: Mở mã QR Hội viên để check-in nhanh tại cổng và khởi động làm nóng khớp.<br/>
-                        • <strong>Nạp nước hợp lý</strong>: Mang theo bình nước cá nhân để bù khoáng trong suốt buổi tập.<br/>
-                        • <strong>Linh hoạt</strong>: Nếu thay đổi kế hoạch, bạn có thể quản lý lịch đặt trực tiếp trên Cổng Hội Viên.
+                        <strong>Check-in trước 10 phút</strong>: Mở mã QR Hội viên để check-in nhanh tại cổng và khởi động làm nóng khớp.<br/>
+                        <strong>Nạp nước hợp lý</strong>: Mang theo bình nước cá nhân để bù khoáng trong suốt buổi tập.<br/>
+                        <strong>Linh hoạt</strong>: Nếu thay đổi kế hoạch, bạn có thể quản lý lịch đặt trực tiếp trên Cổng Hội Viên.
                       </div>
                     </div>
                     """,
-                    "Xem Lịch tập & Mã QR Check-in →",
+                    "Xem Lịch tập & Mã QR Check-in",
                     baseUrl + "/member/classes"
             );
         }
@@ -462,14 +462,14 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #60A5FA; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        💬 Đồng hành 24/7 cùng Hội viên
+                        Đồng hành 24/7 cùng Hội viên
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
                         Bạn có thể nhấn vào nút bên dưới để xem toàn bộ cuộc trò chuyện hoặc gửi thêm câu hỏi trực tiếp cho ban quản lý câu lạc bộ.
                       </div>
                     </div>
                     """,
-                    "Mở Phiếu Hỗ trợ trên Portal →",
+                    "Mở Phiếu Hỗ trợ trên Portal",
                     baseUrl + "/member/support"
             );
         }
@@ -484,14 +484,14 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        🛡️ Khuyến nghị bảo mật
+                        Khuyến nghị bảo mật
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
                         Nếu chính bạn vừa thực hiện thay đổi này, tài khoản của bạn hoàn toàn an toàn. Nếu không phải bạn, vui lòng đặt lại mật khẩu ngay lập tức.
                       </div>
                     </div>
                     """,
-                    "Kiểm tra Hồ sơ & Bảo mật →",
+                    "Kiểm tra Hồ sơ & Bảo mật",
                     baseUrl + "/member/profile"
             );
         }
@@ -506,14 +506,14 @@ public final class SolEmailTemplateRenderer {
                     """
                     <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                       <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                        📈 Theo dõi sát sao từng bước tiến bộ
+                        Theo dõi sát sao từng bước tiến bộ
                       </div>
                       <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
                         Xem chi tiết nhận xét kỹ thuật, chỉ số hình thể (BMI, % cơ - mỡ) và mục tiêu buổi tập tiếp theo ngay trên bảng Tiến độ Tập luyện.
                       </div>
                     </div>
                     """,
-                    "Xem Tiến độ & Lộ trình PT →",
+                    "Xem Tiến độ & Lộ trình PT",
                     baseUrl + "/member/progress"
             );
         }
@@ -527,14 +527,14 @@ public final class SolEmailTemplateRenderer {
                 """
                 <div style="background-color: #1F1F25; border: 1px solid #2E2E36; border-radius: 14px; padding: 16px 18px; margin-top: 16px;">
                   <div style="font-size: 12px; font-weight: 700; color: #F47A60; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
-                    🌟 Sẵn sàng bứt phá giới hạn hôm nay
+                    Sẵn sàng bứt phá giới hạn hôm nay
                   </div>
                   <div style="color: #D4D4D8; font-size: 13px; line-height: 1.65;">
                     Đặt lịch lớp tập yêu thích, kiểm tra tiến độ thể hình và tận hưởng không gian tập luyện chuẩn quốc tế tại SÖL Fitness.
                   </div>
                 </div>
                 """,
-                "Truy cập Cổng Hội Viên SÖL →",
+                "Truy cập Cổng Hội Viên SÖL",
                 baseUrl + "/member"
         );
     }
