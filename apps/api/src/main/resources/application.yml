@@ -44,17 +44,6 @@ spring:
         format_sql: true
         hbm2ddl.halt_on_error: true
         default_batch_fetch_size: 50
-  mail:
-    host: ${SMTP_HOST:localhost}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME:}
-    password: ${SMTP_PASSWORD:}
-    properties:
-      mail.smtp.auth: ${SMTP_AUTH:true}
-      mail.smtp.starttls.enable: ${SMTP_STARTTLS:true}
-      mail.smtp.connectiontimeout: 5000
-      mail.smtp.timeout: 5000
-      mail.smtp.writetimeout: 5000
 
 springdoc:
   api-docs:
@@ -96,10 +85,10 @@ app:
     debug-otp-enabled: ${APP_AUTH_DEBUG_OTP_ENABLED:false}
     otp:
       delivery: ${APP_OTP_DELIVERY:disabled}
-      from-address: ${RESEND_FROM:${SMTP_FROM:no-reply@example.invalid}}
+      from-address: ${RESEND_FROM:SÖL Fitness <no-reply@scms.bluesymphony.site>}
   resend:
     api-key: ${RESEND_API_KEY:}
-    from-address: ${RESEND_FROM:${SMTP_FROM:SÖL Fitness <no-reply@scms.bluesymphony.site>}}
+    from-address: ${RESEND_FROM:SÖL Fitness <no-reply@scms.bluesymphony.site>}
     base-url: ${RESEND_BASE_URL:https://api.resend.com}
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
