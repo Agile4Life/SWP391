@@ -14,6 +14,35 @@ import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerT
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
+import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber } from '../auth/authValidation';
+
+function validateUserEmail(raw: string, existingUsers: UserAccount[] = []): string | undefined {
+  const cleanEmail = raw.trim();
+  if (!cleanEmail) return 'Vui lòng nhập email liên hệ.';
+  if (cleanEmail.toLowerCase().endsWith('@gmail.co')) {
+    return 'Có vẻ bạn gõ nhầm @gmail.co? Vui lòng sửa thành @gmail.com';
+  }
+  if (!isValidEmailAddress(cleanEmail)) {
+    return 'Email liên hệ không đúng định dạng (vd: mai@sol-wellness.vn).';
+  }
+  if (existingUsers.some(u => u.email?.trim().toLowerCase() === cleanEmail.toLowerCase())) {
+    return 'Email đã tồn tại.';
+  }
+  return undefined;
+}
+
+function validateUserPhone(raw: string, required = true, existingUsers: UserAccount[] = [], excludeUserId?: string): string | undefined {
+  const cleanPhone = raw.trim();
+  if (!cleanPhone) return required ? 'Vui lòng nhập số điện thoại.' : undefined;
+  if (!isValidPhoneNumber(cleanPhone)) {
+    return 'Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).';
+  }
+  const target = normalizePhoneNumber(cleanPhone);
+  if (existingUsers.some(u => u.id !== excludeUserId && u.phone && normalizePhoneNumber(u.phone) === target)) {
+    return 'Số điện thoại đã tồn tại.';
+  }
+  return undefined;
+}
 
 export function UserManagerPage() {
   const { t } = useStaffI18n();
@@ -185,21 +214,11 @@ export function UserManagerPage() {
       errors.name = 'Họ và tên quá ngắn (tối thiểu 2 ký tự).';
     }
 
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-    if (!cleanEmail) {
-      errors.email = 'Vui lòng nhập email liên hệ.';
-    } else if (cleanEmail.toLowerCase().endsWith('@gmail.co')) {
-      errors.email = 'Có vẻ bạn gõ nhầm @gmail.co? Vui lòng sửa thành @gmail.com';
-    } else if (!emailRegex.test(cleanEmail)) {
-      errors.email = 'Email liên hệ không đúng định dạng (vd: mai@sol-wellness.vn).';
-    }
+    const emailErr = validateUserEmail(cleanEmail, users);
+    if (emailErr) errors.email = emailErr;
 
-    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-    if (!cleanPhone) {
-      errors.phone = 'Vui lòng nhập số điện thoại.';
-    } else if (!phoneRegex.test(cleanPhone)) {
-      errors.phone = 'Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).';
-    }
+    const phoneErr = validateUserPhone(cleanPhone, true, users);
+    if (phoneErr) errors.phone = phoneErr;
 
     if (formData.password.length < 6 || formData.password.length > 50) {
       errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự.';
@@ -222,7 +241,7 @@ export function UserManagerPage() {
       const created = await userApi.createUser({
         name: cleanName,
         email: cleanEmail,
-        phone: cleanPhone,
+        phone: normalizePhoneNumber(cleanPhone),
         password: formData.password,
         role: formData.role,
         gender: formData.gender,
@@ -232,6 +251,14 @@ export function UserManagerPage() {
       setFormData({ name: '', email: '', phone: '', password: '', role: 'COACH', gender: 'female' });
       notify(staffMessage(`Đã tạo tài khoản "${created.name}".`, `Created account "${created.name}".`), 'success');
     } catch (err) {
+      const code = (err as { code?: string })?.code;
+      const msg = err instanceof Error ? err.message : '';
+      if (code === 'EMAIL_EXISTS' || /email.*tồn tại|email already exists/i.test(msg)) {
+        setFieldErrors((prev) => ({ ...prev, email: 'Email đã tồn tại.' }));
+      }
+      if (code === 'PHONE_EXISTS' || /điện thoại.*tồn tại|phone.*already exists/i.test(msg)) {
+        setFieldErrors((prev) => ({ ...prev, phone: 'Số điện thoại đã tồn tại.' }));
+      }
       setCreateError(errorMessage(err, 'Không thể tạo người dùng.'));
     } finally {
       setIsCreating(false);
@@ -265,9 +292,9 @@ export function UserManagerPage() {
       errors.name = 'Họ và tên quá ngắn (tối thiểu 2 ký tự).';
     }
 
-    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-    if (cleanPhone && !phoneRegex.test(cleanPhone)) {
-      errors.phone = 'Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).';
+    const editPhoneErr = validateUserPhone(cleanPhone, false, users, editingUser.id);
+    if (editPhoneErr) {
+      errors.phone = editPhoneErr;
     }
 
     if (Object.keys(errors).length > 0) {
@@ -282,7 +309,7 @@ export function UserManagerPage() {
     try {
       const updated = await userApi.updateUser(editingUser.id, {
         name: cleanName,
-        phone: cleanPhone || undefined,
+        phone: normalizePhoneNumber(cleanPhone) || undefined,
         role: editFormData.role,
         gender: editFormData.gender,
       });
@@ -290,6 +317,8 @@ export function UserManagerPage() {
       setEditingUser(null);
       notify(staffMessage(`Đã cập nhật tài khoản "${updated.name}".`, `Updated account "${updated.name}".`), 'success');
     } catch (err) {
+      const code = (err as { code?: string })?.code;
+      if (code === 'PHONE_EXISTS') setEditFieldErrors((prev) => ({ ...prev, phone: 'Số điện thoại đã tồn tại.' }));
       setEditError(errorMessage(err, 'Không thể cập nhật tài khoản.'));
     } finally {
       setIsUpdating(false);
@@ -657,10 +686,19 @@ export function UserManagerPage() {
                 type="email"
                 className="portal-input"
                 placeholder="mai.nguyen@sol-wellness.vn"
+                aria-invalid={!!fieldErrors.email}
                 value={formData.email}
                 onChange={(e) => {
-                  setFormData({ ...formData, email: e.target.value });
-                  if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  const val = e.target.value;
+                  setFormData({ ...formData, email: val });
+                  if (val.trim() || fieldErrors.email) {
+                    setFieldErrors((prev) => ({ ...prev, email: validateUserEmail(val, users) }));
+                  }
+                }}
+                onBlur={() => {
+                  if (formData.email.trim() || fieldErrors.email) {
+                    setFieldErrors((prev) => ({ ...prev, email: validateUserEmail(formData.email, users) }));
+                  }
                 }}
               />
               {fieldErrors.email && (
@@ -678,11 +716,19 @@ export function UserManagerPage() {
                 className="portal-input"
                 placeholder="0912345678"
                 maxLength={11}
+                aria-invalid={!!fieldErrors.phone}
                 value={formData.phone}
                 onChange={(e) => {
                   const onlyNums = e.target.value.replace(/[^0-9]/g, '');
                   setFormData({ ...formData, phone: onlyNums });
-                  if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                  if (onlyNums || fieldErrors.phone) {
+                    setFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(onlyNums, true, users) }));
+                  }
+                }}
+                onBlur={() => {
+                  if (formData.phone.trim() || fieldErrors.phone) {
+                    setFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(formData.phone, true, users) }));
+                  }
                 }}
               />
               {fieldErrors.phone && (
@@ -832,12 +878,14 @@ export function UserManagerPage() {
                 className="portal-input"
                 placeholder="0912345678"
                 maxLength={11}
+                aria-invalid={!!editFieldErrors.phone}
                 value={editFormData.phone}
                 onChange={(e) => {
                   const onlyNums = e.target.value.replace(/[^0-9]/g, '');
                   setEditFormData({ ...editFormData, phone: onlyNums });
-                  if (editFieldErrors.phone) setEditFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                  setEditFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(onlyNums, false, users, editingUser.id) }));
                 }}
+                onBlur={() => setEditFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(editFormData.phone, false, users, editingUser.id) }))}
               />
               {editFieldErrors.phone && (
                 <div data-i18n-managed className="form-error">

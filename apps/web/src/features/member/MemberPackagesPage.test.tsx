@@ -924,4 +924,49 @@ describe('SCRUM-86 packages', () => {
     expect(kycLink?.textContent).toContain('Xác thực định danh & Thanh toán');
   });
 
+  it('allows upgrading from an active 3-day trial subscription to any paid package without sync error blocking', async () => {
+    const trialSub: MemberSubscription = {
+      id: 99,
+      memberId: 10,
+      packageId: 5,
+      packageName: 'Gói Trải Nghiệm 3 Ngày',
+      previousSubscriptionId: null,
+      startDate: '2026-11-05',
+      endDate: '2026-11-08',
+      status: 'active',
+      qrCode: 'qr-trial-99',
+      createdAt: '2026-11-05T08:00:00',
+      holdStatus: null,
+      holdReason: null,
+      holdRequestedAt: null,
+      holdResolvedAt: null,
+      paidThroughDate: '2026-11-08',
+      upgradeCharge: 0,
+      remainingValue: 0,
+    };
+    api.packages.mockResolvedValue([membershipPackage, higherPackage]);
+    api.current.mockResolvedValue(trialSub);
+    api.history.mockResolvedValue([trialSub]);
+    api.upgrade.mockResolvedValue({
+      ...pending,
+      id: 105,
+      packageId: membershipPackage.id,
+      packageName: membershipPackage.name,
+      previousSubscriptionId: trialSub.id,
+      upgradeCharge: membershipPackage.price,
+      creditApplied: 0,
+    });
+
+    await render();
+
+    const upgradeButtons = Array.from(host.querySelectorAll('button')).filter(
+      item => item.textContent?.trim() === 'Nâng cấp gói',
+    );
+    expect(upgradeButtons.length).toBeGreaterThanOrEqual(2);
+
+    await act(async () => upgradeButtons[0].click());
+    expect(host.textContent).not.toContain('Chờ đồng bộ trạng thái mới nhất.');
+    expect(api.upgrade).toHaveBeenCalledWith(99, membershipPackage.id);
+  });
+
 });

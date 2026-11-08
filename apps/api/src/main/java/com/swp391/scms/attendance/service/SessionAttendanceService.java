@@ -321,7 +321,13 @@ public class SessionAttendanceService {
                         eval.setCreatedAt(now);
                     }
                     evaluationRepository.save(eval);
-                    if (notificationService != null) notificationService.notifyEvaluation(member.getUserId());
+                    if (notificationService != null) {
+                        try {
+                            notificationService.notifyEvaluation(member.getUserId());
+                        } catch (ResourceNotFoundException ex) {
+                            log.debug("Skipping evaluation notification for inactive user {}", member.getUserId());
+                        }
+                    }
                 }
 
                 User user = member.getUser();

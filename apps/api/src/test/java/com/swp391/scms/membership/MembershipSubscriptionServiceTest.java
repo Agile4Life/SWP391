@@ -1363,4 +1363,51 @@ class MembershipSubscriptionServiceTest {
         assertThat(held.getStatus()).isEqualTo("frozen");
         assertThat(held.getEndDate()).isEqualTo(java.time.LocalDate.of(2026, 11, 1));
     }
+
+    @Test
+    void upgrade_allowsUpgradingFromThreeDayTrialToAnyPaidPackage() {
+        Member member = new Member();
+        member.setUserId(10L);
+
+        MembershipPackage fallbackGold = new MembershipPackage();
+        fallbackGold.setId(2L);
+        fallbackGold.setName("GOLD");
+        fallbackGold.setPrice(new BigDecimal("299000"));
+        fallbackGold.setDurationDays(30);
+        fallbackGold.setStatus("active");
+
+        MembershipPackage silver = new MembershipPackage();
+        silver.setId(1L);
+        silver.setName("SILVER");
+        silver.setPrice(new BigDecimal("199000"));
+        silver.setDurationDays(30);
+        silver.setStatus("active");
+
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription trial = new MembershipSubscription();
+        trial.setId(99L);
+        trial.setMember(member);
+        trial.setMembershipPackage(fallbackGold);
+        trial.setStartDate(today);
+        trial.setEndDate(today.plusDays(3));
+        trial.setStatus("active");
+        trial.setUpgradeCharge(BigDecimal.ZERO);
+
+        when(subscriptions.findById(99L)).thenReturn(Optional.of(trial));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(1L)).thenReturn(Optional.of(silver));
+        when(subscriptions.saveAndFlush(any(MembershipSubscription.class))).thenAnswer(inv -> {
+            MembershipSubscription saved = inv.getArgument(0);
+            saved.setId(105L);
+            return saved;
+        });
+
+        SubscriptionDto upgraded = service.upgrade(principal, 99L, new SubscriptionRequests.Upgrade(1L));
+
+        assertThat(upgraded.packageId()).isEqualTo(1L);
+        assertThat(upgraded.previousSubscriptionId()).isEqualTo(99L);
+        assertThat(upgraded.status()).isEqualTo("pending_payment");
+        assertThat(upgraded.creditApplied()).isEqualByComparingTo("0");
+        assertThat(upgraded.upgradeCharge()).isEqualByComparingTo("199000");
+    }
 }

@@ -19,6 +19,8 @@ export function localizeTitle(title?: string | null): string {
     'Several class sessions cancelled': 'Đã hủy nhiều buổi học',
     'New PT booking': 'Lịch dạy PT 1:1 mới',
     'PT session booked': 'Đặt lịch HLV 1:1 thành công',
+    '1:1 PT booking — Awaiting payment': 'Đặt lịch HLV 1:1 — Chờ thanh toán',
+    '1:1 PT session payment confirmed': 'Xác nhận thanh toán buổi tập PT 1:1',
     'PT session cancelled': 'Hủy lịch dạy PT 1:1',
     'New member review': 'Đánh giá mới từ học viên',
     'New progress evaluation': 'Đánh giá tiến độ mới',
@@ -95,6 +97,16 @@ export function localizeMessage(message?: string | null): string {
   const ptMemberMatch = message.match(/^You booked a PT session with (.+?) on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);
   if (ptMemberMatch) {
     return `Bạn đã đặt lịch tập 1:1 với HLV ${ptMemberMatch[1]} ngày ${ptMemberMatch[2]} (${ptMemberMatch[3]} - ${ptMemberMatch[4]}).`;
+  }
+
+  const ptPendingPaymentMatch = message.match(/^Your 1:1 PT session with (.+?) on ([0-9/-]+) \(([^ ]+) - ([^)]+)\) is recorded\. Please complete the payment of ([0-9,.]+) VND \(via SÖL Wallet, VNPay, or at the Reception desk\)\.$/i);
+  if (ptPendingPaymentMatch) {
+    return `Lịch tập 1:1 với HLV ${ptPendingPaymentMatch[1]} ngày ${ptPendingPaymentMatch[2]} (${ptPendingPaymentMatch[3]} - ${ptPendingPaymentMatch[4]}) đã được ghi nhận. Vui lòng hoàn tất thanh toán ${ptPendingPaymentMatch[5]} VNĐ (Ví SÖL, VNPay hoặc tại quầy Lễ tân).`;
+  }
+
+  const ptConfirmedPaymentMatch = message.match(/^Payment of ([0-9,.]+) VND for your 1:1 PT session with (.+?) on ([0-9/-]+) \(([^ ]+) - ([^)]+)\) has been confirmed\.$/i);
+  if (ptConfirmedPaymentMatch) {
+    return `Buổi tập 1:1 với HLV ${ptConfirmedPaymentMatch[2]} ngày ${ptConfirmedPaymentMatch[3]} (${ptConfirmedPaymentMatch[4]} - ${ptConfirmedPaymentMatch[5]}) đã được xác nhận thanh toán (${ptConfirmedPaymentMatch[1]} VNĐ).`;
   }
 
   const ptCancelledMatch = message.match(/^Member (.+?) cancelled the PT session on ([0-9/-]+) \(([^ ]+) - ([^)]+)\)\.$/i);

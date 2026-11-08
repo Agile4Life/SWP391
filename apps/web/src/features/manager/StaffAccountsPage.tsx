@@ -5,15 +5,39 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { createStaffAccount, listStaffAccounts, setStaffAccountLocked, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
+import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber } from '../auth/authValidation';
 
 const initialForm: StaffAccountInput = {
   fullName: '', email: '', phone: '', password: '', gender: 'other', roleCode: 'COACH',
 };
 
+function validateStaffEmail(raw: string, accounts: StaffAccount[] = []): string | undefined {
+  const clean = raw.trim();
+  if (!clean) return 'Vui lòng nhập email liên hệ.';
+  if (clean.toLowerCase().endsWith('@gmail.co')) return 'Có vẻ bạn gõ nhầm @gmail.co? Vui lòng sửa thành @gmail.com';
+  if (!isValidEmailAddress(clean)) return 'Email liên hệ không đúng định dạng (vd: mai@sol-wellness.vn).';
+  if (accounts.some(acc => acc.email?.trim().toLowerCase() === clean.toLowerCase())) {
+    return 'Email đã tồn tại.';
+  }
+  return undefined;
+}
+
+function validateStaffPhone(raw?: string, accounts: StaffAccount[] = []): string | undefined {
+  const clean = (raw ?? '').trim();
+  if (!clean) return undefined;
+  if (!isValidPhoneNumber(clean)) return 'Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).';
+  const target = normalizePhoneNumber(clean);
+  if (accounts.some(acc => acc.phone && normalizePhoneNumber(acc.phone) === target)) {
+    return 'Số điện thoại đã tồn tại.';
+  }
+  return undefined;
+}
+
 export function StaffAccountsPage() {
   const { t } = useStaffI18n();
   const [accounts, setAccounts] = useState<StaffAccount[]>([]);
   const [form, setForm] = useState(initialForm);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string }>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<StaffMessage>('');
   const [saving, setSaving] = useState(false);
@@ -60,14 +84,31 @@ export function StaffAccountsPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
+    const emailError = validateStaffEmail(form.email, accounts);
+    const phoneError = validateStaffPhone(form.phone, accounts);
+    if (emailError || phoneError) {
+      setFieldErrors({ email: emailError, phone: phoneError });
+      return;
+    }
+    setFieldErrors({});
     setError('');
     setSaving(true);
     try {
-      const created = await createStaffAccount({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), phone: form.phone?.trim() || undefined });
+      const normalizedPhone = normalizePhoneNumber(form.phone) || undefined;
+      const created = await createStaffAccount({ ...form, fullName: form.fullName.trim(), email: form.email.trim(), phone: normalizedPhone });
       setAccounts(current => [...current, created]);
       setForm(initialForm);
+      setFieldErrors({});
       notify(staffMessage(`Đã tạo tài khoản ${created.email}. Nhân sự có thể đăng nhập bằng email hoặc Google với đúng email đã được cấp.`, `Created account ${created.email}. Staff can sign in with email or Google using the assigned email address.`), 'success');
     } catch (err) {
+      const code = (err as { code?: string })?.code;
+      const msg = err instanceof Error ? err.message : '';
+      if (code === 'EMAIL_EXISTS' || /email.*tồn tại|email already exists/i.test(msg)) {
+        setFieldErrors(prev => ({ ...prev, email: 'Email đã tồn tại.' }));
+      }
+      if (code === 'PHONE_EXISTS' || /điện thoại.*tồn tại|phone.*already exists/i.test(msg)) {
+        setFieldErrors(prev => ({ ...prev, phone: 'Số điện thoại đã tồn tại.' }));
+      }
       setError(errorMessage(err, 'Không thể tạo tài khoản. Vui lòng thử lại.'));
     } finally {
       setSaving(false);
@@ -86,11 +127,50 @@ export function StaffAccountsPage() {
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="staff-email">Email *</label>
-            <input id="staff-email" className="portal-input" type="email" required maxLength={150} autoComplete="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            <input
+              id="staff-email"
+              className="portal-input"
+              type="email"
+              required
+              maxLength={150}
+              autoComplete="email"
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? 'staff-email-error' : undefined}
+              value={form.email}
+              onChange={e => {
+                const value = e.target.value;
+                setForm({ ...form, email: value });
+                if (value.trim() || fieldErrors.email) {
+                  setFieldErrors(prev => ({ ...prev, email: validateStaffEmail(value, accounts) }));
+                }
+              }}
+              onBlur={() => {
+                if (form.email.trim() || fieldErrors.email) {
+                  setFieldErrors(prev => ({ ...prev, email: validateStaffEmail(form.email, accounts) }));
+                }
+              }}
+            />
+            {fieldErrors.email && <p id="staff-email-error" role="alert" className="form-error">{t(fieldErrors.email)}</p>}
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="staff-phone">{t("Số điện thoại")}</label>
-            <input id="staff-phone" className="portal-input" type="tel" maxLength={20} autoComplete="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+            <input
+              id="staff-phone"
+              className="portal-input"
+              type="tel"
+              maxLength={20}
+              autoComplete="tel"
+              aria-invalid={!!fieldErrors.phone}
+              aria-describedby={fieldErrors.phone ? 'staff-phone-error' : undefined}
+              value={form.phone}
+              onChange={e => {
+                const value = e.target.value;
+                setForm({ ...form, phone: value });
+                setFieldErrors(prev => ({ ...prev, phone: validateStaffPhone(value, accounts) }));
+              }}
+              onBlur={() => setFieldErrors(prev => ({ ...prev, phone: validateStaffPhone(form.phone, accounts) }))}
+            />
+            {fieldErrors.phone && <p id="staff-phone-error" role="alert" className="form-error">{t(fieldErrors.phone)}</p>}
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="staff-password">{t("Mật khẩu *")}</label>

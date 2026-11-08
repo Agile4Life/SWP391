@@ -1140,6 +1140,10 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   overflow: hidden;
 }
 
+:is(.portal-card--flush, .portal-table-wrapper):has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
+  overflow: visible;
+}
+
 .profile-grid--single {
   grid-template-columns: minmax(0, 1fr) !important;
   max-width: 860px;

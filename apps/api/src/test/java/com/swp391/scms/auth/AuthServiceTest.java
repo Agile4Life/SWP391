@@ -79,6 +79,16 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerRejectsShortPhoneAndInvalidGmail() {
+        assertThrows(BadRequestException.class,
+                () -> service.register(new RegisterRequest("newuser", "secret1", "user@gmail.co", "0912345678", null)));
+        assertThrows(BadRequestException.class,
+                () -> service.register(new RegisterRequest("newuser", "secret1", "bad_user@gmail.com", "0912345678", null)));
+        assertThrows(BadRequestException.class,
+                () -> service.register(new RegisterRequest("newuser", "secret1", "valid@gmail.com", "091234", null)));
+    }
+
+    @Test
     void verifyOtpActivatesPendingAccount() {
         User user = pendingUser();
         when(otpService.verifyOtp("a@b.com", "123456"))

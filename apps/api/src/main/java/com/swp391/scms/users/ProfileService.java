@@ -105,11 +105,9 @@ public class ProfileService {
 
         user.setFullName(request.fullName());
         if (request.phone() != null) {
-            String phone = request.phone().isBlank() ? null : request.phone().trim();
-            if (phone != null) {
-                userRepository.findByPhone(phone)
-                        .filter(existing -> !existing.getId().equals(userId))
-                        .ifPresent(existing -> { throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null); });
+            String phone = UserService.normalizePhone(request.phone());
+            if (phone != null && UserService.phoneExists(userRepository, request.phone(), userId)) {
+                throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null);
             }
             user.setPhone(phone);
         }

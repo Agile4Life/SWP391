@@ -92,9 +92,14 @@ public class NotificationService {
 
     @Transactional(noRollbackFor = RuntimeException.class)
     public void notifyEvaluation(Long memberId) {
-        send(memberId, evaluationMessage("notifications.evaluation.title"),
-                evaluationMessage("notifications.evaluation.body"), "system", null, null,
-                "/member/progress#coach-evaluations");
+        if (memberId == null) return;
+        try {
+            send(memberId, evaluationMessage("notifications.evaluation.title"),
+                    evaluationMessage("notifications.evaluation.body"), "system", null, null,
+                    "/member/progress#coach-evaluations");
+        } catch (ResourceNotFoundException ex) {
+            log.debug("Skipping evaluation notification for inactive or missing user {}", memberId);
+        }
     }
 
     @Transactional(noRollbackFor = RuntimeException.class)

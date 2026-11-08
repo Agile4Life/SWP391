@@ -6,6 +6,7 @@ import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n/language';
 import { aiApi, type MemberOption } from './aiApi';
+import * as profileApi from '../member/profileApi';
 
 vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn().mockResolvedValue([]), addHealthMetric: vi.fn() }));
 
@@ -330,6 +331,35 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
     const card=[...host.querySelectorAll('.exercise-item-card')].find(item=>item.textContent?.includes('Assisted Pull-up'))!;
     expect(card.textContent).toContain('Hiệp: 5');expect(card.textContent).toContain('8 reps');expect(card.textContent).toContain('90s');
+  });
+
+  it('syncs manually updated height, weight, and auto-calculated BMI into the AI assistant modal', async () => {
+    vi.mocked(profileApi.listHealthMetrics).mockResolvedValue([
+      { id: 1, metricName: 'height', metricValue: 172, unit: 'cm', recordedAt: '2026-11-08T08:00:00' },
+    ]);
+    vi.mocked(profileApi.addHealthMetric).mockResolvedValue({});
+
+    await renderComponent();
+
+    const valueInput = host.querySelector('#coach-metric-value') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(valueInput, '68');
+      valueInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const metricForm = valueInput.closest('form')!;
+    await act(async () => {
+      metricForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    const aiBtn = Array.from(host.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Gợi ý giáo án bằng AI')
+    );
+    await act(async () => {
+      aiBtn?.click();
+    });
+
+    expect(host.textContent).toContain('172 cm / 68 kg');
+    expect(host.textContent).toContain('23');
   });
 
 });

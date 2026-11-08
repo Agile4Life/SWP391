@@ -360,7 +360,8 @@ public class MembershipSubscriptionService {
         MembershipSubscription older = newer == b ? a : newer == a ? b : null;
         return older != null && older.getMembershipPackage() != null
                 && newer.getMembershipPackage() != null
-                && !older.getMembershipPackage().getId().equals(newer.getMembershipPackage().getId())
+                && (!older.getMembershipPackage().getId().equals(newer.getMembershipPackage().getId())
+                    || newer.getUpgradeCharge() != null)
                 && older.getEndDate().equals(newer.getStartDate());
     }
 
@@ -413,8 +414,10 @@ public class MembershipSubscriptionService {
 
         MembershipPackage targetPackage = findActivePackage(request.packageId());
         MembershipPackage currentPackage = current.getMembershipPackage();
+        BigDecimal targetPrice = targetPackage.getPrice() != null ? targetPackage.getPrice() : BigDecimal.ZERO;
+        boolean trialUpgradeToPaid = isTrialSubscription(current) && targetPrice.signum() > 0;
 
-        if (!isHigherPackage(currentPackage, targetPackage)) {
+        if (!trialUpgradeToPaid && !isHigherPackage(currentPackage, targetPackage)) {
             throw new BadRequestException(
                     "MEMBERSHIP_UPGRADE_NOT_HIGHER",
                     "error.membership.upgrade_not_higher",
@@ -425,7 +428,6 @@ public class MembershipSubscriptionService {
         // Phần quy đổi lấy từ tiền hội viên thực trả cho kỳ hiện tại; giá gói mới lấy theo danh mục lúc báo giá.
         // Cả hai được chốt trên yêu cầu nên Quản lý đổi giá sau đó không làm lệch số tiền phải thu.
         BigDecimal credit = valueCalculator().remainingValue(current, today);
-        BigDecimal targetPrice = targetPackage.getPrice() != null ? targetPackage.getPrice() : BigDecimal.ZERO;
         BigDecimal charge = SubscriptionValueCalculator.upgradeCharge(targetPrice, credit);
         if (charge.signum() <= 0) {
             throw new BadRequestException(

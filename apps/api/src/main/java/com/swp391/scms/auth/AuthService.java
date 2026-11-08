@@ -112,18 +112,25 @@ public class AuthService {
 
     @Transactional
     public RegistrationResponse register(RegisterRequest request) {
+        if (!isValidEmail(request.email())) {
+            throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
+        }
         String username = normalize(request.username());
         String email = normalize(request.email());
         if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
             throw new ConflictException("USERNAME_EXISTS", "auth.register.username_exists", null, null);
         }
-        if (userRepository.findByEmailIgnoreCase(email).isPresent()) {
+        if (com.swp391.scms.users.UserService.emailExists(userRepository, email)) {
             throw new ConflictException("EMAIL_EXISTS", "auth.register.email_exists", null, null);
         }
         String phone = null;
         if (request.phone() != null && !request.phone().isBlank()) {
-            phone = request.phone().trim();
-            if (userRepository.findByPhone(phone).isPresent()) {
+            phone = request.phone().replaceAll("\\s+", "");
+            if (!isValidPhone(phone)) {
+                throw new BadRequestException("INVALID_PHONE", "validation.users.phone.invalid", null, null);
+            }
+            phone = com.swp391.scms.users.UserService.normalizePhone(phone);
+            if (com.swp391.scms.users.UserService.phoneExists(userRepository, request.phone(), null)) {
                 throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null);
             }
         }
@@ -540,7 +547,24 @@ public class AuthService {
             return false;
         }
         String trimmed = rawEmail.trim();
-        return !trimmed.isEmpty() && trimmed.length() <= 150 && trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+        if (trimmed.isEmpty() || trimmed.length() > 150
+                || !trimmed.matches("^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$")) {
+            return false;
+        }
+        String[] parts = trimmed.split("@", 2);
+        String localPart = parts[0];
+        String domain = parts[1].toLowerCase(Locale.ROOT);
+        if (domain.matches("^(gmail\\.(?!com$).+|(gmai|gmial|gmal|gamil)\\..+)$")) {
+            return false;
+        }
+        if ("gmail.com".equals(domain) || "googlemail.com".equals(domain)) {
+            return localPart.matches("^[a-zA-Z0-9]+(\\.[a-zA-Z0-9]+)*(\\+[a-zA-Z0-9._-]+)?$");
+        }
+        return true;
+    }
+
+    private boolean isValidPhone(String rawPhone) {
+        return rawPhone != null && rawPhone.matches("^(0|\\+84)(3|5|7|8|9)[0-9]{8}$");
     }
 
     private String normalize(String value) {

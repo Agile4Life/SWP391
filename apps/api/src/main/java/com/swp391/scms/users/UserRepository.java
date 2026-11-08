@@ -25,8 +25,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findActiveByIdentifier(@Param("identifier") String identifier);
     Optional<User> findByEmailIgnoreCase(String email);
     Optional<User> findByEmailIgnoreCaseAndDeletedAtIsNull(String email);
+    @Query("select count(u) > 0 from User u where lower(trim(u.email)) = lower(trim(:email))")
+    boolean existsByNormalizedEmail(@Param("email") String email);
     Optional<User> findByPhone(String phone);
     Optional<User> findByPhoneAndDeletedAtIsNull(String phone);
+    @Query("select u from User u where u.phone is not null and replace(replace(replace(u.phone, ' ', ''), '-', ''), '.', '') in :phones")
+    List<User> findAllByCompactPhoneIn(@Param("phones") java.util.Collection<String> phones);
     Optional<User> findByGoogleSub(String googleSub);
 
     @Query("select u from User u join fetch u.role r where u.deletedAt is null and upper(r.code) in ('CENTER_MANAGER', 'MANAGER', 'RECEPTIONIST', 'STAFF', 'ROLE_CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_STAFF') order by u.id asc")

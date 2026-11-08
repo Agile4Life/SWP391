@@ -198,24 +198,43 @@ export function MemberCardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
 
-  async function loadCard() {
-    setLoading(true);
-    setError('');
-    setHistory([]);
+  async function loadCard(silent = false) {
+    if (!silent) {
+      setLoading(true);
+      setError('');
+      setHistory([]);
+    }
     try {
       const [memberProfile, memberSubscription] = await Promise.all([getProfile(), getMySubscription()]);
       const memberHistory = memberSubscription ? [] : await getMembershipHistory();
       setProfile(memberProfile);
       setSubscription(memberSubscription);
       setHistory(memberHistory);
+      if (silent) setError('');
     } catch {
-      setError(memberMessage("Không thể tải thông tin thẻ hội viên. Vui lòng thử lại."));
+      if (!silent) {
+        setError(memberMessage("Không thể tải thông tin thẻ hội viên. Vui lòng thử lại."));
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
-  useEffect(() => { void loadCard(); }, []);
+  useEffect(() => {
+    void loadCard();
+    const syncCard = () => {
+      if (document.visibilityState === 'hidden') return;
+      void loadCard(true);
+    };
+    window.addEventListener('focus', syncCard);
+    window.addEventListener('online', syncCard);
+    document.addEventListener('visibilitychange', syncCard);
+    return () => {
+      window.removeEventListener('focus', syncCard);
+      window.removeEventListener('online', syncCard);
+      document.removeEventListener('visibilitychange', syncCard);
+    };
+  }, []);
 
   const expired = history
     .filter((item) => validDate(item.startDate) && validDate(item.endDate) &&

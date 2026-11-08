@@ -803,8 +803,9 @@ body:has(.portal-backdrop) .sol-toast__icon {
   overflow-wrap: anywhere;
 }
 
-.portal-v2 .portal-card:has(.ui-select.is-open, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) {
+.portal-v2 .portal-card:has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
   z-index: 40;
+  overflow: visible;
 }
 
 .portal-v2 .portal-card::before,
@@ -1085,6 +1086,23 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .portal-v2 .portal-table-wrapper {
   max-width: 100%;
   border-radius: inherit;
+}
+
+.portal-v2 .portal-table-wrapper:has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
+  overflow: visible;
+}
+
+.portal-v2 .portal-card--flush .portal-table thead tr:first-child th:first-child {
+  border-top-left-radius: 19px;
+}
+
+.portal-v2 .portal-card--flush .portal-table thead tr:first-child th:last-child {
+  border-top-right-radius: 19px;
+}
+
+.portal-v2 .portal-table :is(tr, td):has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
+  position: relative;
+  z-index: 30;
 }
 
 .portal-v2 .portal-table td.actions {

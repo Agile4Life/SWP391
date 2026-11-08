@@ -47,6 +47,12 @@ public class CoachBookingService {
     private com.swp391.scms.finance.repository.PaymentRepository paymentRepository;
 
     @Autowired(required = false)
+    private com.swp391.scms.finance.service.InvoiceService invoiceService;
+
+    @Autowired(required = false)
+    private com.swp391.scms.wallet.WalletService walletService;
+
+    @Autowired(required = false)
     private com.swp391.scms.users.UserRepository userRepository;
 
     @Autowired(required = false)
@@ -456,22 +462,55 @@ public class CoachBookingService {
 
         CoachBooking saved = coachBookingRepository.save(booking);
 
+        Long pendingPaymentId = null;
+        if (!"package_quota".equalsIgnoreCase(paymentMethod) && paymentRepository != null) {
+            com.swp391.scms.finance.entity.Payment pendingPayment = new com.swp391.scms.finance.entity.Payment();
+            pendingPayment.setMember(member);
+            pendingPayment.setAmount(saved.getHourlyRate() != null ? saved.getHourlyRate() : DEFAULT_HOURLY_RATE);
+            pendingPayment.setMethod(paymentMethod);
+            pendingPayment.setStatus("pending");
+            pendingPayment.setNote("PT #" + saved.getId());
+            pendingPayment.setCoachBookingId(saved.getId());
+            com.swp391.scms.finance.entity.Payment savedPayment = paymentRepository.save(pendingPayment);
+            if (savedPayment != null) {
+                pendingPaymentId = savedPayment.getId();
+            }
+        }
+
         // Notify the coach about the new 1:1 private booking
         if (coach.getUser() != null && notificationService != null) {
             String memberName = member.getUser() != null ? member.getUser().getFullName() : "Hội viên";
             String title = msg("notifications.coaching.booking.coach.title");
             String message = msg("notifications.coaching.booking.coach.body",
                     memberName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
-            notificationService.send(coach.getUserId(), title, message, "system", null, saved.getId());
+            notificationService.send(coach.getUserId(), title, message, "system", null, saved.getId(), "/coach/classes");
         }
 
-        // Notify the member about successful booking
+        // Notify the member about successful booking (or pending payment for hourly session)
         if (member.getUser() != null && notificationService != null) {
             String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "Huấn luyện viên";
-            String title = msg("notifications.coaching.booking.member.title");
-            String message = msg("notifications.coaching.booking.member.body",
-                    coachName, saved.getBookingDate(), saved.getStartTime().toString().substring(0, 5), saved.getEndTime().toString().substring(0, 5));
-            notificationService.send(member.getUserId(), title, message, "system", null, saved.getId());
+            String startStr = saved.getStartTime().toString().substring(0, 5);
+            String endStr = saved.getEndTime().toString().substring(0, 5);
+            if ("pending".equalsIgnoreCase(paymentStatus)) {
+                BigDecimal amount = saved.getHourlyRate() != null ? saved.getHourlyRate() : DEFAULT_HOURLY_RATE;
+                String title = msg("notifications.coaching.booking.payment_pending.title");
+                String message = msg("notifications.coaching.booking.payment_pending.body",
+                        coachName, saved.getBookingDate(), startStr, endStr, amount.stripTrailingZeros().toPlainString());
+                notificationService.send(
+                        member.getUserId(),
+                        title,
+                        message,
+                        "payment",
+                        "payment",
+                        pendingPaymentId != null ? pendingPaymentId : saved.getId(),
+                        "/member/classes?tab=pt"
+                );
+            } else {
+                String title = msg("notifications.coaching.booking.member.title");
+                String message = msg("notifications.coaching.booking.member.body",
+                        coachName, saved.getBookingDate(), startStr, endStr);
+                notificationService.send(member.getUserId(), title, message, "system", null, saved.getId(), "/member/classes?tab=pt");
+            }
         }
 
         return mapToDto(saved);
@@ -540,10 +579,29 @@ public class CoachBookingService {
                     "A 1:1 session that has started can no longer be cancelled.");
         }
 
+        BigDecimal refundedTotal = BigDecimal.ZERO;
         if (paymentRepository != null) {
-            paymentRepository.findAllByCoachBookingId(bookingId).stream()
-                    .filter(payment -> "pending".equals(payment.getStatus()))
-                    .forEach(payment -> payment.setStatus("failed"));
+            for (var payment : paymentRepository.findAllByCoachBookingId(bookingId)) {
+                if ("pending".equals(payment.getStatus())) {
+                    payment.setStatus("failed");
+                } else if ("success".equals(payment.getStatus())) {
+                    BigDecimal refundable = payment.netAmount();
+                    if (refundable != null && refundable.compareTo(BigDecimal.ZERO) > 0) {
+                        payment.setRefundedAmount(payment.getAmount());
+                        payment.setStatus("refunded");
+                        refundedTotal = refundedTotal.add(refundable);
+                    }
+                }
+            }
+        }
+        if (refundedTotal.compareTo(BigDecimal.ZERO) > 0 && walletService != null
+                && booking.getMember() != null && booking.getMember().getUserId() != null) {
+            walletService.creditCoachBookingRefund(
+                    booking.getMember().getUserId(),
+                    refundedTotal,
+                    "COACH_REFUND_" + booking.getId(),
+                    reason
+            );
         }
         booking.setStatus("cancelled");
         booking.setCancelledAt(LocalDateTime.now(clock));
@@ -555,7 +613,7 @@ public class CoachBookingService {
             String title = msg("notifications.coaching.booking.cancelled.title");
             String message = msg("notifications.coaching.booking.cancelled.body",
                     memberName, booking.getBookingDate(), booking.getStartTime().toString().substring(0, 5), booking.getEndTime().toString().substring(0, 5));
-            notificationService.send(booking.getCoach().getUserId(), title, message, "system", null, booking.getId());
+            notificationService.send(booking.getCoach().getUserId(), title, message, "system", null, booking.getId(), "/coach/classes");
         }
 
         return mapToDto(booking);
@@ -592,6 +650,7 @@ public class CoachBookingService {
         }
         booking.setPaymentMethod(paidWith);
         booking.setPaymentStatus("paid");
+        Long savedPaymentId = null;
         if (paymentRepository != null) {
             com.swp391.scms.finance.entity.Payment payment = new com.swp391.scms.finance.entity.Payment();
             payment.setMember(booking.getMember());
@@ -605,13 +664,44 @@ public class CoachBookingService {
                 userRepository.findByIdAndDeletedAtIsNull(principal.id()).ifPresent(payment::setReceivedBy);
             }
             var existing = paymentRepository.findAllByCoachBookingId(bookingId);
+            com.swp391.scms.finance.entity.Payment persisted;
             if (existing != null && !existing.isEmpty()) {
                 if (existing.size() != 1 || !"pending".equals(existing.getFirst().getStatus()))
                     throw new ConflictException("VNPAY_TARGET_UNAVAILABLE", "finance.vnpay.target_unavailable", null, null);
                 var pending = existing.getFirst();
                 pending.setMethod(payment.getMethod()); pending.setStatus("success");pending.setPaidAt(payment.getPaidAt());pending.setReceivedBy(payment.getReceivedBy());
-                paymentRepository.save(pending);
-            } else paymentRepository.save(payment);
+                persisted = paymentRepository.save(pending);
+            } else {
+                persisted = paymentRepository.save(payment);
+            }
+            if (persisted != null) {
+                savedPaymentId = persisted.getId();
+            }
+            if (invoiceService != null && savedPaymentId != null) {
+                try {
+                    invoiceService.autoIssueInvoiceForPayment(savedPaymentId);
+                } catch (RuntimeException ignored) {
+                }
+            }
+        }
+        if (booking.getMember() != null && booking.getMember().getUserId() != null && notificationService != null) {
+            String coachName = booking.getCoach() != null && booking.getCoach().getUser() != null
+                    ? booking.getCoach().getUser().getFullName() : "Huấn luyện viên";
+            String startStr = booking.getStartTime() != null ? booking.getStartTime().toString().substring(0, 5) : "";
+            String endStr = booking.getEndTime() != null ? booking.getEndTime().toString().substring(0, 5) : "";
+            BigDecimal amount = booking.getHourlyRate() != null ? booking.getHourlyRate() : DEFAULT_HOURLY_RATE;
+            String title = msg("notifications.coaching.booking.payment_confirmed.title");
+            String message = msg("notifications.coaching.booking.payment_confirmed.body",
+                    coachName, booking.getBookingDate(), startStr, endStr, amount.stripTrailingZeros().toPlainString());
+            notificationService.send(
+                    booking.getMember().getUserId(),
+                    title,
+                    message,
+                    "payment",
+                    "payment",
+                    savedPaymentId != null ? savedPaymentId : booking.getId(),
+                    "/member/classes?tab=pt"
+            );
         }
         return mapToDto(booking);
     }

@@ -1,38 +1,66 @@
 import { useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { listHealthMetrics, addHealthMetric, type HealthMetric } from '../member/profileApi';
 import { Select } from '../../shared/ui/Select';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
-const fields = {
+const inputFields = {
  weight: { label: 'Cân nặng', unit: 'kg' }, height: { label: 'Chiều cao', unit: 'cm' },
- bmi: { label: 'BMI', unit: '' }, body_fat: { label: 'Tỷ lệ mỡ', unit: '%' }, muscle_mass: { label: 'Khối lượng cơ', unit: 'kg' },
+ body_fat: { label: 'Tỷ lệ mỡ', unit: '%' }, muscle_mass: { label: 'Khối lượng cơ', unit: 'kg' },
 };
-/** Remount for each selected member to isolate drafts and in-flight requests. */
-export function CoachHealthMetrics({ memberId, memberName, intakeOnly = false }: { memberId: number; memberName: string; intakeOnly?: boolean }) {
- return <HealthMetricsForm key={String(memberId) + String(intakeOnly)} memberId={memberId} memberName={memberName} intakeOnly={intakeOnly} />;
+const fields = { ...inputFields, bmi: { label: 'BMI', unit: '' } };
+export interface HealthMetricsSummary { memberId: number; heightCm?: number; weightKg?: number; bmi?: number }
+export function calculateAutoBmi(heightCm?: number | null, weightKg?: number | null): number | undefined {
+ if (heightCm == null || weightKg == null || !Number.isFinite(heightCm) || !Number.isFinite(weightKg) || heightCm <= 0 || weightKg <= 0) return undefined;
+ const heightMeters = heightCm / 100;
+ return Math.round((weightKg / (heightMeters * heightMeters)) * 10) / 10;
 }
-function HealthMetricsForm({ memberId, memberName, intakeOnly }: { memberId: number; memberName: string; intakeOnly: boolean }) {
+export function summarizeHealthMetrics(memberId: number, rows: readonly Pick<HealthMetric, 'metricName' | 'metricValue'>[]): HealthMetricsSummary {
+ let heightCm: number | undefined; let weightKg: number | undefined; let recordedBmi: number | undefined;
+ for (const row of rows) {
+  const metric = row.metricName?.toLowerCase(); const val = Number(row.metricValue);
+  if (!Number.isFinite(val) || val <= 0) continue;
+  if (metric === 'height' && heightCm === undefined) heightCm = val;
+  else if (metric === 'weight' && weightKg === undefined) weightKg = val;
+  else if (metric === 'bmi' && recordedBmi === undefined) recordedBmi = val;
+ }
+ return { memberId, heightCm, weightKg, bmi: calculateAutoBmi(heightCm, weightKg) ?? recordedBmi };
+}
+/** Remount for each selected member to isolate drafts and in-flight requests. */
+export function CoachHealthMetrics({ memberId, memberName, intakeOnly = false, onMetricsChange }: { memberId: number; memberName: string; intakeOnly?: boolean; onMetricsChange?: (summary: HealthMetricsSummary) => void }) {
+ return <HealthMetricsForm key={String(memberId) + String(intakeOnly)} memberId={memberId} memberName={memberName} intakeOnly={intakeOnly} onMetricsChange={onMetricsChange} />;
+}
+function HealthMetricsForm({ memberId, memberName, intakeOnly, onMetricsChange }: { memberId: number; memberName: string; intakeOnly: boolean; onMetricsChange?: (summary: HealthMetricsSummary) => void }) {
   const { t } = useStaffI18n();
  const [rows, setRows] = useState<HealthMetric[]>([]);
  const [loading, setLoading] = useState(true);
  const [loadError, setLoadError] = useState<StaffMessage>('');
  const [saveError, setSaveError] = useState<StaffMessage>('');
  const [attempt, setAttempt] = useState(0);
- const [name, setName] = useState<keyof typeof fields>('weight');
+ const [name, setName] = useState<keyof typeof inputFields>('weight');
  const [value, setValue] = useState('');
  const [saving, setSaving] = useState(false);
  const busy = useRef(false);
  const alive = useRef(false);
+ const latestRowsRef = useRef<HealthMetric[]>([]);
+ const onMetricsChangeRef = useRef(onMetricsChange);
+ onMetricsChangeRef.current = onMetricsChange;
  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
  useEffect(() => {
   let active = true; setLoading(true); setLoadError('');
   if(intakeOnly) { setLoading(false); return () => { active = false; }; }
-  listHealthMetrics(memberId).then(data => { if(active) setRows(data); })
+  listHealthMetrics(memberId).then(data => {
+   if(!active) return;
+   const nextRows = data.length > 0 ? data : latestRowsRef.current;
+   latestRowsRef.current = nextRows;
+   setRows(nextRows);
+   if (nextRows.length > 0) onMetricsChangeRef.current?.(summarizeHealthMetrics(memberId, nextRows));
+  })
    .catch(err => { if(active) setLoadError(errorMessage(err, 'Không thể tải lịch sử số đo.')); })
    .finally(() => { if(active) setLoading(false); });
   return () => { active = false; };
  }, [memberId, attempt, intakeOnly]);
+ const summary = useMemo(() => summarizeHealthMetrics(memberId, rows), [memberId, rows]);
  async function submit(event: FormEvent) {
   event.preventDefault(); if(busy.current || loading || loadError) return;
   const number = Number(value);
@@ -41,8 +69,14 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly }: { memberId: num
   }
   busy.current = true; setSaving(true); setSaveError('');
   try {
-   await addHealthMetric(memberId, { metricName: name, metricValue: number, unit: fields[name].unit || null });
-   if(alive.current) { setValue(''); setAttempt(n => n + 1); notify('Đã ghi nhận số đo sức khỏe.', 'success'); }
+   await addHealthMetric(memberId, { metricName: name, metricValue: number, unit: inputFields[name].unit || null });
+   if(alive.current) {
+    const optimisticRow: HealthMetric = { id: Date.now(), metricName: name, metricValue: number, unit: inputFields[name].unit || null, recordedAt: new Date().toISOString() };
+    const nextRows = [optimisticRow, ...latestRowsRef.current];
+    latestRowsRef.current = nextRows;
+    onMetricsChangeRef.current?.(summarizeHealthMetrics(memberId, nextRows));
+    setValue(''); setAttempt(n => n + 1); notify('Đã ghi nhận số đo sức khỏe.', 'success');
+   }
   } catch(err) { if(alive.current) setSaveError(errorMessage(err, 'Không thể lưu số đo.')); }
   finally { busy.current = false; if(alive.current) setSaving(false); }
  }
@@ -52,13 +86,13 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly }: { memberId: num
   {loading ? <LoadingSkeleton label={t("Đang tải số đo")} count={2} /> : loadError ? <div role="alert">{t(loadError)} <button type="button" className="btn-secondary" onClick={() => setAttempt(n => n + 1)}>{t("Thử lại")}</button></div> : <>
    <form data-i18n-managed onSubmit={event => void submit(event)}>
     <div className="grid-2">
-     <div className="portal-form-group"><label className="portal-label" htmlFor="coach-metric-name">{t("Chỉ số")}</label><Select id="coach-metric-name" value={name} disabled={saving} onChange={e => setName(e.target.value as keyof typeof fields)}>{Object.entries(fields).map(([key, field]) => <option key={key} value={key}>{t(field.label)}{field.unit ? ' (' + field.unit + ')' : ''}</option>)}</Select></div>
-     <div className="portal-form-group"><label className="portal-label" htmlFor="coach-metric-value">{t("Giá trị")}{fields[name].unit ? ' (' + fields[name].unit + ')' : ''}</label><input id="coach-metric-value" className="portal-input" type="number" min="0.01" max={name === 'body_fat' ? 100 : undefined} step="0.01" required value={value} disabled={saving} onChange={e => setValue(e.target.value)} /></div>
+     <div className="portal-form-group"><label className="portal-label" htmlFor="coach-metric-name">{t("Chỉ số")}</label><Select id="coach-metric-name" value={name} disabled={saving} onChange={e => setName(e.target.value as keyof typeof inputFields)}>{Object.entries(inputFields).map(([key, field]) => <option key={key} value={key}>{t(field.label)}{field.unit ? ' (' + field.unit + ')' : ''}</option>)}</Select></div>
+     <div className="portal-form-group"><label className="portal-label" htmlFor="coach-metric-value">{t("Giá trị")}{inputFields[name].unit ? ' (' + inputFields[name].unit + ')' : ''}</label><input id="coach-metric-value" className="portal-input" type="number" min="0.01" max={name === 'body_fat' ? 100 : undefined} step="0.01" required value={value} disabled={saving} onChange={e => setValue(e.target.value)} /></div>
     </div>
     {saveError && <p role="alert" className="form-error">{t(saveError)}</p>}
     <button type="submit" className="btn-primary" disabled={saving}>{saving ? t('Đang lưu…') : t('Thêm số đo')}</button>
    </form>
-   <p data-i18n-managed className="muted">{t("Ngày ghi nhận là thời điểm lưu tại trung tâm. BMI được nhập từ kết quả đo, không tự tính.")}</p>
+   <p data-i18n-managed className="muted">{t("Ngày ghi nhận là thời điểm lưu tại trung tâm. Chỉ số BMI được tự động tính từ chiều cao và cân nặng.")}{!intakeOnly && summary.bmi != null ? ` (${t("Chỉ số BMI")}: ${summary.bmi})` : ''}</p>
    {intakeOnly ? null : rows.length === 0 ? <p>{t("Chưa có số đo được ghi nhận.")}</p> : <div className="portal-table-wrapper"><table className="portal-table"><thead><tr><th scope="col">{t("Ngày ghi nhận")}</th><th scope="col">{t("Chỉ số")}</th><th scope="col">{t("Giá trị")}</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td>{formatCenterDateTime(row.recordedAt)}</td><td>{t(fields[row.metricName as keyof typeof fields]?.label) || row.metricName}</td><td>{row.metricValue} {row.unit}</td></tr>)}</tbody></table></div>}
   </>}
  </section>;

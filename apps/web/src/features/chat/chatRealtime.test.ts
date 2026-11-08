@@ -56,10 +56,13 @@ it('cleans up timers and channels and ignores late events', async () => {
   expect(fake.disconnect).toHaveBeenCalled();
 });
 
-it('reports disabled configuration without opening a socket', async () => {
+it('reports disabled configuration without opening a socket and auto-polls changes', async () => {
   vi.mocked(apiFetch).mockResolvedValue({ enabled: false, userId: 42 });
-  const status = vi.fn(); dispose = subscribeChat(vi.fn(), status); await settle();
+  const changed = vi.fn(), status = vi.fn(); dispose = subscribeChat(changed, status); await settle();
   expect(status).toHaveBeenLastCalledWith('disabled'); expect(fake.createClient).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(4000);
+  expect(changed).toHaveBeenCalledTimes(1);
+  expect(apiFetch).toHaveBeenCalledTimes(1);
 });
 
 it('retries a failed connection and catches up after online/focus', async () => {

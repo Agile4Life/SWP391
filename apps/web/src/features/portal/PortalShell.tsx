@@ -12,6 +12,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
 import { getMobileNavLabel, getNavLabel, getRoleLabel, MOBILE_PRIMARY_NAV, PORTAL_NAV } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
+import { subscribeMembershipChanges } from '../member/membershipRealtime';
 import { getProfile } from '../member/profileApi';
 import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
@@ -250,6 +251,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
     if (!hasServerNotifications) return;
     let active = true;
     const refresh = () => {
+      if (document.visibilityState === 'hidden') return;
       void getUnreadCount().then((count) => {
         if (active) { setUnreadCount(count); setNotificationError(false); }
       }).catch(() => {
@@ -257,14 +259,25 @@ function PortalShellContent({ user }: { user: UserSession }) {
       });
     };
     refresh();
+    const timer = window.setInterval(refresh, 10_000);
     window.addEventListener('member-notifications-changed', refresh);
     window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const disconnectRealtime = user.role === 'MEMBER' && localStorage.getItem(TOKEN_STORAGE_KEY)
+      ? subscribeMembershipChanges(() => {
+          if (!active) return;
+          window.dispatchEvent(new Event('member-notifications-changed'));
+        })
+      : null;
     return () => {
       active = false;
+      window.clearInterval(timer);
+      disconnectRealtime?.();
       window.removeEventListener('member-notifications-changed', refresh);
       window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
-  }, [hasServerNotifications]);
+  }, [hasServerNotifications, user.role]);
 
   useEffect(() => {
     // Role có thể bị Admin đổi sau khi đăng nhập: đối chiếu với server khi vào portal và khi quay lại tab.

@@ -161,12 +161,9 @@ public class AiRecommendationService {
             Map<String, BigDecimal> latestMetrics = readLatestMetrics(member.getUserId());
             BigDecimal height = latestMetrics.get("height");
             BigDecimal weight = latestMetrics.get("weight");
-            BigDecimal bmi = latestMetrics.get("bmi");
-            if (bmi == null && height != null && weight != null && height.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal heightMeters = height.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-                if (heightMeters.compareTo(BigDecimal.ZERO) > 0) {
-                    bmi = weight.divide(heightMeters.multiply(heightMeters), 1, RoundingMode.HALF_UP);
-                }
+            BigDecimal bmi = com.swp391.scms.coaching.service.CurrentCoachMembers.calculateBmi(height, weight);
+            if (bmi == null) {
+                bmi = latestMetrics.get("bmi");
             }
 
             Map<String, Object> inputContextMap = new LinkedHashMap<>();

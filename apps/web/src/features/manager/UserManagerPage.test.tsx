@@ -170,4 +170,38 @@ describe('UserManagerPage', () => {
 
     expect(userApi.cleanupInactiveUsers).toHaveBeenCalledTimes(1);
   });
+
+  it('blocks creating a user when email or phone number already exists in the user list', async () => {
+    await act(async () => {
+      root.render(<UserManagerPage />);
+    });
+
+    const addBtn = button(host, 'Thêm tài khoản');
+    expect(addBtn).toBeTruthy();
+    await act(async () => {
+      addBtn?.click();
+    });
+
+    const setInput = async (id: string, value: string) => {
+      const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    };
+
+    await setInput('user-name', 'New Staff');
+    await setInput('user-email', 'COACH@scms.local');
+    await setInput('user-phone', '0901000003');
+    await setInput('user-pass', 'Secret123!');
+
+    const form = document.querySelector('form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    expect(userApi.createUser).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('Email đã tồn tại');
+    expect(document.body.textContent).toContain('Số điện thoại đã tồn tại');
+  });
 });

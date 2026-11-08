@@ -92,8 +92,44 @@ public class HealthMetricService {
         log.setMetricValue(request.metricValue());
         log.setUnit(validatedUnit(metricName, request.metricValue(), request.unit()));
         log.setRecordedBy(recordedBy);
-        log.setRecordedAt(java.time.LocalDateTime.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))));
-        return toDto(progressLogRepository.save(log));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        log.setRecordedAt(now);
+        MemberProgressLog saved = progressLogRepository.save(log);
+        if ("weight".equals(metricName) || "height".equals(metricName)) {
+            recordAutoCalculatedBmi(member, recordedBy, now, metricName, request.metricValue());
+        }
+        return toDto(saved);
+    }
+
+    private void recordAutoCalculatedBmi(Member member, User recordedBy, java.time.LocalDateTime recordedAt,
+                                         String updatedMetricName, java.math.BigDecimal updatedValue) {
+        if (member == null || member.getUserId() == null) return;
+        java.math.BigDecimal height = "height".equals(updatedMetricName) ? updatedValue : null;
+        java.math.BigDecimal weight = "weight".equals(updatedMetricName) ? updatedValue : null;
+        List<MemberProgressLog> history = progressLogRepository.findByMemberUserIdOrderByRecordedAtDesc(member.getUserId());
+        if (history != null) {
+            for (MemberProgressLog row : history) {
+                if (row == null || row.getMetricName() == null || row.getMetricValue() == null) continue;
+                if (height == null && "height".equalsIgnoreCase(row.getMetricName())) {
+                    height = row.getMetricValue();
+                } else if (weight == null && "weight".equalsIgnoreCase(row.getMetricName())) {
+                    weight = row.getMetricValue();
+                }
+                if (height != null && weight != null) break;
+            }
+        }
+        java.math.BigDecimal bmi = com.swp391.scms.coaching.service.CurrentCoachMembers.calculateBmi(height, weight);
+        if (bmi != null && bmi.compareTo(new java.math.BigDecimal("0.01")) >= 0
+                && bmi.compareTo(new java.math.BigDecimal("99999999.99")) <= 0) {
+            MemberProgressLog bmiLog = new MemberProgressLog();
+            bmiLog.setMember(member);
+            bmiLog.setMetricName("bmi");
+            bmiLog.setMetricValue(bmi);
+            bmiLog.setUnit(null);
+            bmiLog.setRecordedBy(recordedBy);
+            bmiLog.setRecordedAt(recordedAt);
+            progressLogRepository.save(bmiLog);
+        }
     }
 
     @Transactional

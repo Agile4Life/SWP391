@@ -278,6 +278,18 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.shop.product_out_of_stock", "error.shop.product_out_of_stock"))
                 );
             }
+            if (normalizedRootMsg.contains("uq_users_phone")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "PHONE_EXISTS",
+                                resolveMessage("users.phone_exists", "users.phone_exists"))
+                );
+            }
+            if (normalizedRootMsg.contains("users_email_key") || normalizedRootMsg.contains("uq_users_email")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "EMAIL_EXISTS",
+                                resolveMessage("users.email_exists", "users.email_exists"))
+                );
+            }
             if (normalizedRootMsg.contains("duplicate") || normalizedRootMsg.contains("unique constraint") || normalizedRootMsg.contains("uq_")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "DUPLICATE_RESOURCE",

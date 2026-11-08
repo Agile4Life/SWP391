@@ -497,7 +497,7 @@ export function ManagerEquipmentPage() {
                           className="portal-select"
                           value={item.status}
                           onChange={(e) => void handleQuickStatusChange(item, e.target.value as Equipment['status'])}
-                          style={{ fontSize: '0.85rem', padding: '4px 8px', height: 'auto', minWidth: 140 }}
+                          style={{ minWidth: 148 }}
                         >
                           <option value="active">{t("Đang hoạt động")}</option>
                           <option value="maintenance">{t("Đang bảo trì")}</option>

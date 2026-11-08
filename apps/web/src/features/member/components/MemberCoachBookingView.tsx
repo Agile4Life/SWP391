@@ -2,8 +2,9 @@ import { memberMessage, memberError, memberText, memberRenderMessage, memberNoti
 import type { SourceMessage } from '../../../shared/i18n/language';
 import { useLanguage } from '../../../shared/i18n/language';
 import { VnpayPayButton } from '../../payments/VnpayPayButton';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
 import { RecurrenceFields, RecurrenceSummary } from '../../../shared/ui/RecurrenceFields';
 import { expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
@@ -144,6 +145,21 @@ export function MemberCoachBookingView({
 
   // Payment Checkout Modal State
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
+  const watchedPendingBookingsRef = useRef<Set<number>>(new Set());
+  const announcedPaidBookingsRef = useRef<Set<number>>(new Set());
+
+  const refreshBookingsAndQuota = useCallback(async () => {
+    try {
+      const [bookingsList, quota] = await Promise.all([
+        getMyCoachBookings(),
+        getMemberQuotaStatus().catch(() => null),
+      ]);
+      setMyBookings(bookingsList);
+      if (quota) setQuotaStatus(quota);
+    } catch {
+      // Silent background refresh
+    }
+  }, []);
 
   // Review Modal State
   const [reviewTargetBooking, setReviewTargetBooking] = useState<CoachBookingDto | null>(null);
@@ -186,6 +202,88 @@ export function MemberCoachBookingView({
     void init();
     return () => { active = false; };
   }, []);
+
+  // Track pending paid 1:1 bookings and announce real-time payment confirmation
+  useEffect(() => {
+    for (const b of myBookings) {
+      if (b.status !== 'cancelled' && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending') {
+        watchedPendingBookingsRef.current.add(b.id);
+      } else if (
+        watchedPendingBookingsRef.current.has(b.id) &&
+        b.paymentStatus === 'paid' &&
+        !announcedPaidBookingsRef.current.has(b.id)
+      ) {
+        announcedPaidBookingsRef.current.add(b.id);
+        setPaymentModalBooking((prev) => (prev?.id === b.id ? null : prev));
+        memberNotify(
+          memberMessage(
+            `Thanh toán buổi tập PT 1:1 ngày ${b.bookingDate} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) với HLV ${formatCoachName(b.coachName)} thành công!`,
+            `Payment confirmed for 1:1 PT session on ${b.bookingDate} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) with coach ${formatCoachName(b.coachName)}!`,
+          ),
+          'success',
+          { record: true },
+        );
+        window.dispatchEvent(new Event('member-notifications-changed'));
+        window.dispatchEvent(new CustomEvent('wallet-updated'));
+      }
+    }
+    setPaymentModalBooking((prev) => {
+      if (!prev) return null;
+      const latest = myBookings.find((item) => item.id === prev.id);
+      return latest ?? prev;
+    });
+  }, [myBookings]);
+
+  const hasPendingPaymentBooking = myBookings.some(
+    (b) => b.status !== 'cancelled' && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending',
+  );
+
+  // Real-time invalidation & visibility/focus synchronization for 1:1 booking payments
+  useEffect(() => {
+    let fallbackTimer: number | null = null;
+    const stopFallback = () => {
+      if (fallbackTimer !== null) {
+        window.clearInterval(fallbackTimer);
+        fallbackTimer = null;
+      }
+    };
+    const startFallback = () => {
+      if (!hasPendingPaymentBooking || fallbackTimer !== null) return;
+      fallbackTimer = window.setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          void refreshBookingsAndQuota();
+        }
+      }, 8000);
+    };
+    const disconnect = subscribeMembershipChanges(
+      () => {
+        stopFallback();
+        void refreshBookingsAndQuota();
+        window.dispatchEvent(new Event('member-notifications-changed'));
+      },
+      startFallback,
+    );
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshBookingsAndQuota();
+      }
+    };
+    const refreshNow = () => {
+      void refreshBookingsAndQuota();
+    };
+    window.addEventListener('focus', refreshNow);
+    window.addEventListener('online', refreshNow);
+    window.addEventListener('wallet-updated', refreshNow);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    return () => {
+      disconnect();
+      stopFallback();
+      window.removeEventListener('focus', refreshNow);
+      window.removeEventListener('online', refreshNow);
+      window.removeEventListener('wallet-updated', refreshNow);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [hasPendingPaymentBooking, refreshBookingsAndQuota]);
 
   // Load slots when coach or date changes
   useEffect(() => {
@@ -264,7 +362,23 @@ export function MemberCoachBookingView({
         setSlots(updatedSlots);
         setMyBookings(updatedBookings);
         if (updatedQuota) setQuotaStatus(updatedQuota);
-        if (result.booked.length) onBookingSuccess?.();
+        window.dispatchEvent(new Event('member-notifications-changed'));
+        if (result.booked.length) {
+          onBookingSuccess?.();
+          if (paymentMethod === 'hourly_pay') {
+            for (const item of result.booked) {
+              watchedPendingBookingsRef.current.add(item.id);
+            }
+            memberNotify(
+              memberMessage(
+                `Đã đặt ${result.booked.length} buổi tập 1:1 định kỳ — Chờ thanh toán theo giờ.`,
+                `Booked ${result.booked.length} recurring 1:1 sessions — Awaiting hourly payment.`,
+              ),
+              'info',
+              { record: true },
+            );
+          }
+        }
         return;
       }
       const created = await createCoachBooking({
@@ -288,10 +402,20 @@ export function MemberCoachBookingView({
       setSlots(updatedSlots);
       setMyBookings(updatedBookings);
       if (updatedQuota) setQuotaStatus(updatedQuota);
+      window.dispatchEvent(new Event('member-notifications-changed'));
       onBookingSuccess?.();
 
       if (paymentMethod === 'hourly_pay') {
+        watchedPendingBookingsRef.current.add(created.id);
         setPaymentModalBooking(created);
+        memberNotify(
+          memberMessage(
+            `Đã ghi nhận lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) — Chờ thanh toán ${formatPrice(created.hourlyRate)}.`,
+            `1:1 session with coach ${formatCoachName(created.coachName)} on ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) recorded — Awaiting payment of ${formatPrice(created.hourlyRate)}.`,
+          ),
+          'info',
+          { record: true },
+        );
       } else {
         memberNotify(
           memberMessage(`Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`, `1:1 session booked with coach ${formatCoachName(created.coachName)} on ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) using 1 membership session!`)
@@ -337,8 +461,25 @@ export function MemberCoachBookingView({
     if (!cancelTarget) return;
     setCancelling(true);
     try {
+      const wasPaid = cancelTarget.paymentMethod !== 'package_quota' && cancelTarget.paymentStatus === 'paid';
       await cancelCoachBooking(cancelTarget.id, 'Hội viên chủ động hủy');
-      memberNotify(memberMessage(`Đã hủy lịch tập 1:1 với HLV ${formatCoachName(cancelTarget.coachName)} thành công.`, `Your 1:1 session with coach ${formatCoachName(cancelTarget.coachName)} was cancelled.`), 'success');
+      memberNotify(
+        wasPaid
+          ? memberMessage(
+              `Đã hủy lịch tập 1:1 với HLV ${formatCoachName(cancelTarget.coachName)} và hoàn tiền về Ví SÖL.`,
+              `Cancelled your 1:1 session with coach ${formatCoachName(cancelTarget.coachName)} and refunded to your SÖL Wallet.`,
+            )
+          : memberMessage(
+              `Đã hủy lịch tập 1:1 với HLV ${formatCoachName(cancelTarget.coachName)} thành công.`,
+              `Your 1:1 session with coach ${formatCoachName(cancelTarget.coachName)} was cancelled.`,
+            ),
+        'success',
+        { record: true },
+      );
+      window.dispatchEvent(new Event('member-notifications-changed'));
+      if (wasPaid) {
+        window.dispatchEvent(new CustomEvent('wallet-updated'));
+      }
       setCancelTarget(null);
 
       if (selectedCoachId) {
@@ -1040,6 +1181,14 @@ export function MemberCoachBookingView({
                           <span className="badge badge-success" style={{ fontSize: 11 }}>
                             {memberText("Sắp diễn ra")}</span>
                         )}
+                        {!isCancelled && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && (
+                          <span className="badge badge-warning" style={{ fontSize: 11 }}>
+                            {memberText("Chờ thanh toán", "Awaiting payment")}</span>
+                        )}
+                        {!isCancelled && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'paid' && (
+                          <span className="badge badge-success" style={{ fontSize: 11 }}>
+                            {memberText("Đã thanh toán", "Paid")}</span>
+                        )}
                         {existingReview && (
                           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-star)' }}>
                             {memberText("Đã đánh giá (")}{existingReview.rating} {memberText(" sao)", " stars)")}</span>
@@ -1092,7 +1241,17 @@ export function MemberCoachBookingView({
                           {memberText("Đánh giá sau khi kết thúc buổi")}</span>
                       )}
 
-                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && <VnpayPayButton target={{ coachBookingId: b.id }} onPaid={() => void getMyCoachBookings().then(setMyBookings)} />}
+                      {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && (
+                        <VnpayPayButton
+                          target={{ coachBookingId: b.id }}
+                          onPaid={() => {
+                            watchedPendingBookingsRef.current.add(b.id);
+                            void refreshBookingsAndQuota();
+                            window.dispatchEvent(new Event('member-notifications-changed'));
+                            window.dispatchEvent(new CustomEvent('wallet-updated'));
+                          }}
+                        />
+                      )}
                       {b.paymentMethod !== 'package_quota' && (
                         <button
                           type="button"
@@ -1693,7 +1852,18 @@ export function MemberCoachBookingView({
           title={memberText("Thanh toán Buổi tập PT 1:1")}
           onClose={() => setPaymentModalBooking(null)}
         >
-          <VnpayPayButton target={{ coachBookingId: paymentModalBooking.id }} onPaid={() => { setPaymentModalBooking(null); void getMyCoachBookings().then(setMyBookings); }} />
+          {paymentModalBooking.paymentStatus === 'pending' && (
+            <VnpayPayButton
+              target={{ coachBookingId: paymentModalBooking.id }}
+              onPaid={() => {
+                watchedPendingBookingsRef.current.add(paymentModalBooking.id);
+                setPaymentModalBooking(null);
+                void refreshBookingsAndQuota();
+                window.dispatchEvent(new Event('member-notifications-changed'));
+                window.dispatchEvent(new CustomEvent('wallet-updated'));
+              }}
+            />
+          )}
           <div style={{ display: 'grid', gap: 16 }}>
             <div
               style={{
@@ -1704,7 +1874,9 @@ export function MemberCoachBookingView({
               }}
             >
               <h4 style={{ margin: '0 0 6px', color: 'var(--portal-success)', fontSize: 15, fontWeight: 750 }}>
-                {memberText("Lịch tập 1:1 đã được ghi nhận thành công!")}</h4>
+                {paymentModalBooking.paymentStatus === 'paid'
+                  ? memberText("Buổi tập 1:1 đã được thanh toán!", "1:1 PT session has been paid!")
+                  : memberText("Lịch tập 1:1 đã được ghi nhận thành công!")}</h4>
               <p style={{ margin: 0, fontSize: 13 }}>
                 {memberText("HLV: ", "Coach: ")}<strong>{formatCoachName(paymentModalBooking.coachName)}</strong>{memberText(" • Thời gian:")}{' '}
                 <strong>{paymentModalBooking.bookingDate} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
@@ -1723,11 +1895,20 @@ export function MemberCoachBookingView({
               }}
             >
               <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
-                <div>{memberText("Chọn ")}<strong>{memberText("Thanh toán VNPay Sandbox")}</strong>{memberText(" hoặc ")}<strong>{memberText("Thanh toán bằng Ví SÖL")}</strong>{memberText(" ở trên để hoàn tất thanh toán trực tuyến.")}</div>
-                <div>{memberText("Số tiền cần thanh toán: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
-                <div>{memberText("Nội dung chuyển khoản: ")}<strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
-                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted)' }}>
-                  {memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.")}</div>
+                {paymentModalBooking.paymentStatus === 'paid' ? (
+                  <>
+                    <div>{memberText("Trạng thái thanh toán: ")}<strong style={{ color: 'var(--portal-success)' }}>{memberText("Đã thanh toán", "Paid")}</strong></div>
+                    <div>{memberText("Số tiền đã thanh toán: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                  </>
+                ) : (
+                  <>
+                    <div>{memberText("Chọn ")}<strong>{memberText("Thanh toán VNPay Sandbox")}</strong>{memberText(" hoặc ")}<strong>{memberText("Thanh toán bằng Ví SÖL")}</strong>{memberText(" ở trên để hoàn tất thanh toán trực tuyến.")}</div>
+                    <div>{memberText("Số tiền cần thanh toán: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                    <div>{memberText("Nội dung chuyển khoản: ")}<strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
+                    <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted)' }}>
+                      {memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.")}</div>
+                  </>
+                )}
               </div>
             </div>
 

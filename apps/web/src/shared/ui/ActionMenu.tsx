@@ -1,5 +1,6 @@
 import { useI18n } from '../i18n';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './action-menu.css';
 
 /** Menu "⋯" cho thao tác ít dùng: giữ chúng trong tầm tay nhưng không chiếm chỗ cạnh nút chính. */
@@ -7,6 +8,8 @@ export function ActionMenu({ label, children }: { label?: string; children: Reac
   const { t } = useI18n();
   const displayLabel = label ?? t('Thao tác khác', 'More actions');
   const root = useRef<HTMLDetailsElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'right' });
 
   useEffect(() => {
     const close = () => root.current?.removeAttribute('open');
@@ -21,8 +24,20 @@ export function ActionMenu({ label, children }: { label?: string; children: Reac
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
   }, []);
 
-  return <details ref={root} className="action-menu">
+  return <details
+    ref={root}
+    className="action-menu"
+    onToggle={() => {
+      const el = root.current;
+      const trigger = el?.querySelector<HTMLElement>('summary');
+      if (el?.open && trigger) {
+        const h = listRef.current?.offsetHeight || 120;
+        const w = listRef.current?.offsetWidth || 190;
+        setPlacement(popoverPlacement(trigger, w, h));
+      }
+    }}
+  >
     <summary className="action-menu__trigger" aria-label={displayLabel} title={displayLabel}><span aria-hidden="true">⋯</span></summary>
-    <div className="action-menu__list" onClick={(event) => { if ((event.target as HTMLElement).closest('button, a')) root.current?.removeAttribute('open'); }}>{children}</div>
+    <div ref={listRef} className={`action-menu__list action-menu__list--${placement.v}`} onClick={(event) => { if ((event.target as HTMLElement).closest('button, a')) root.current?.removeAttribute('open'); }}>{children}</div>
   </details>;
 }

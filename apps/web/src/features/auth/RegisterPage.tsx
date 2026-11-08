@@ -5,7 +5,7 @@ import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
 import { AuthLayout } from '../landing/components/PublicLayout';
 import { purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { registrationSchema, otpSchema, type RegistrationFields } from './authValidation';
+import { registrationSchema, otpSchema, validateRegistrationField, type RegistrationFields } from './authValidation';
 import { readPendingRegistration, savePendingRegistration, type PendingRegistration } from './pendingRegistration';
 
 const RESEND_COOLDOWN = 30;
@@ -45,6 +45,31 @@ export function RegisterPage() {
     setPendingAccount(next);
     setCountdown(RESEND_COOLDOWN);
     toast(sourceFormatPair("Mã OTP đã được gửi tới {0}", account.email));
+  };
+
+  const updateField = (field: keyof RegistrationFields, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (field === 'phone') {
+      const err = value.trim() ? validateRegistrationField('phone', value) : undefined;
+      setFieldErrors(prev => ({ ...prev, phone: err }));
+      return;
+    }
+    if (value.trim() || fieldErrors[field]) {
+      const err = validateRegistrationField(field, value);
+      setFieldErrors(prev => ({ ...prev, [field]: err }));
+    }
+  };
+
+  const handleFieldBlur = (field: keyof RegistrationFields) => {
+    const value = form[field];
+    if (field === 'phone' && !value.trim()) {
+      setFieldErrors(prev => ({ ...prev, phone: undefined }));
+      return;
+    }
+    if (value.trim() || fieldErrors[field]) {
+      const err = validateRegistrationField(field, value);
+      setFieldErrors(prev => ({ ...prev, [field]: err }));
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -131,17 +156,17 @@ export function RegisterPage() {
       {step === 'register' ? <form onSubmit={handleRegister} aria-busy={busy} noValidate>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-username">{sourceText("Tên đăng nhập")}</label>
-          <input id="reg-username" aria-invalid={!!fieldErrors.username} aria-describedby={fieldErrors.username ? 'reg-username-error' : undefined} className="portal-input" type="text" autoComplete="username" placeholder={sourceText("Tên đăng nhập của bạn")} required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+          <input id="reg-username" aria-invalid={!!fieldErrors.username} aria-describedby={fieldErrors.username ? 'reg-username-error' : undefined} className="portal-input" type="text" autoComplete="username" placeholder={sourceText("Tên đăng nhập của bạn")} required value={form.username} onChange={(e) => updateField('username', e.target.value)} onBlur={() => handleFieldBlur('username')} />
           {fieldErrors.username && <p id="reg-username-error" className="portal-field-error">{sourceText(fieldErrors.username)}</p>}
         </div>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-email">{sourceText("Địa chỉ email")}</label>
-          <input id="reg-email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'reg-email-error' : undefined} className="portal-input" type="email" autoComplete="email" placeholder="ban@example.com" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input id="reg-email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'reg-email-error' : undefined} className="portal-input" type="email" autoComplete="email" placeholder="ban@example.com" required value={form.email} onChange={(e) => updateField('email', e.target.value)} onBlur={() => handleFieldBlur('email')} />
           {fieldErrors.email && <p id="reg-email-error" className="portal-field-error">{sourceText(fieldErrors.email)}</p>}
         </div>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-phone">{sourceText("Số điện thoại ")}<small>{sourceText("(Tùy chọn)")}</small></label>
-          <input id="reg-phone" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'reg-phone-error' : undefined} className="portal-input" type="tel" autoComplete="tel" placeholder="0912 345 678" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <input id="reg-phone" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'reg-phone-error' : undefined} className="portal-input" type="tel" autoComplete="tel" placeholder="0912 345 678" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} onBlur={() => handleFieldBlur('phone')} />
           {fieldErrors.phone && <p id="reg-phone-error" className="portal-field-error">{sourceText(fieldErrors.phone)}</p>}
         </div>
         <div className="portal-form-group">
@@ -149,7 +174,7 @@ export function RegisterPage() {
             <label className="portal-label" htmlFor="reg-password">{sourceText("Mật khẩu")}</label>
             <button className="fit-auth-link" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? sourceText('Ẩn mật khẩu') : sourceText('Hiện mật khẩu')}</button>
           </div>
-          <input id="reg-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'reg-password-error' : undefined} className="portal-input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={sourceText("Tối thiểu 6 ký tự")} required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <input id="reg-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'reg-password-error' : undefined} className="portal-input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={sourceText("Tối thiểu 6 ký tự")} required value={form.password} onChange={(e) => updateField('password', e.target.value)} onBlur={() => handleFieldBlur('password')} />
           {fieldErrors.password && <p id="reg-password-error" className="portal-field-error">{sourceText(fieldErrors.password)}</p>}
         </div>
         <button className="luxury-login-submit-btn" type="submit" disabled={busy}><span>{busy ? sourceText('ĐANG TẠO TÀI KHOẢN...') : sourceText('TIẾP TỤC XÁC THỰC')}</span><span className="submit-arrow" aria-hidden="true">→</span></button>

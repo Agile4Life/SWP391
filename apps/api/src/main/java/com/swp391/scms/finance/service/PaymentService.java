@@ -566,7 +566,8 @@ public class PaymentService {
     private static boolean isUpgradeOf(MembershipSubscription subscription, MembershipSubscription previous) {
         return subscription.getMembershipPackage() != null && previous.getMembershipPackage() != null
                 && previous.getMembershipPackage().getId() != null
-                && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
+                && (!previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId())
+                    || subscription.getUpgradeCharge() != null);
     }
 
     /** A refunded membership grants no booking rights, unless another paid period still covers the member. */
@@ -678,7 +679,8 @@ public class PaymentService {
                 && subscription.getMembershipPackage() != null
                 && previous.getMembershipPackage() != null
                 && previous.getMembershipPackage().getId() != null
-                && !previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId());
+                && (!previous.getMembershipPackage().getId().equals(subscription.getMembershipPackage().getId())
+                    || subscription.getUpgradeCharge() != null);
 
         if (isUpgrade && membershipSubscriptionRepository.findByMemberUserId(
                 subscription.getMember().getUserId()).stream()

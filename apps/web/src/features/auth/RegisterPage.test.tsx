@@ -107,3 +107,23 @@ it('switches registration and existing client validation VI → EN → VI', asyn
   expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Số điện thoại');
   expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('Tối thiểu 6 ký tự');
 });
+
+it('validates incomplete phone numbers and non-standard gmail addresses immediately after input', async () => {
+  await render();
+  await fill('reg-phone', '091234');
+  expect(host.querySelector('#reg-phone')?.getAttribute('aria-invalid')).toBe('true');
+  expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Số điện thoại');
+
+  await fill('reg-phone', '0912345678');
+  expect(host.querySelector('#reg-phone-error')).toBeNull();
+
+  await fill('reg-email', 'member@gmail.co');
+  expect(host.querySelector('#reg-email')?.getAttribute('aria-invalid')).toBe('true');
+  expect(host.querySelector('#reg-email-error')?.textContent).toContain('Email');
+
+  await fill('reg-email', 'bad_user@gmail.com');
+  expect(host.querySelector('#reg-email')?.getAttribute('aria-invalid')).toBe('true');
+
+  await fill('reg-email', 'valid.member@gmail.com');
+  expect(host.querySelector('#reg-email-error')).toBeNull();
+});

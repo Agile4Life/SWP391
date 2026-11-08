@@ -7,12 +7,13 @@ export type ChatConnection = 'connecting' | 'connected' | 'reconnecting' | 'disa
 /** Broadcast only invalidates data. Never render or trust its payload. */
 export function subscribeChat(changed: () => void, status: (state: ChatConnection) => void,
   sessionPath = '/chat/realtime-session'): () => void {
-  let disposed = false, connecting = false, failures = 0;
+  let disposed = false, disabled = false, connecting = false, failures = 0;
   let client: SupabaseClient | null = null;
   let chatToken: string | null = null;
   let hasChannel = false;
   let renewTimer: ReturnType<typeof setTimeout> | undefined;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
+  let pollTimer: ReturnType<typeof setInterval> | undefined;
 
   function closeClient() {
     const previous = client;
@@ -22,20 +23,33 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
       previous.realtime.disconnect();
     }
   }
+  function startFallbackPolling() {
+    if (disposed || pollTimer) return;
+    pollTimer = setInterval(() => {
+      if (!disposed && document.visibilityState !== 'hidden') changed();
+    }, 4000);
+  }
   function retry() {
-    if (disposed || retryTimer) return;
+    if (disposed || disabled || retryTimer) return;
     status('reconnecting');
     retryTimer = setTimeout(() => {
       retryTimer = undefined; closeClient(); void connect();
     }, Math.min(30_000, 3000 * 2 ** Math.min(failures++, 4)));
   }
   async function connect() {
-    if (disposed || connecting) return;
+    if (disposed || disabled || connecting) return;
     connecting = true;
     try {
       const session = await apiFetch<ChatRealtimeSession>(sessionPath, { method: 'POST' });
       if (disposed) return;
-      if (!session.enabled) { clearTimeout(renewTimer); closeClient(); status('disabled'); return; }
+      if (!session.enabled) {
+        disabled = true;
+        clearTimeout(renewTimer);
+        closeClient();
+        status('disabled');
+        startFallbackPolling();
+        return;
+      }
       if (!session.url || !session.publishableKey?.startsWith('sb_publishable_') || !session.topic || !session.token || !session.expiresAt)
         throw new Error('Incomplete realtime session');
       const expires = Date.parse(session.expiresAt);
@@ -71,7 +85,7 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
   function resume() {
     if (disposed || document.visibilityState === 'hidden') return;
     changed();
-    if (!client || retryTimer) {
+    if (!disabled && (!client || retryTimer)) {
       clearTimeout(retryTimer); retryTimer = undefined; closeClient(); void connect();
     }
   }
@@ -80,7 +94,7 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
   window.addEventListener('focus', resume);
   document.addEventListener('visibilitychange', resume);
   return () => {
-    disposed = true; clearTimeout(renewTimer); clearTimeout(retryTimer); closeClient();
+    disposed = true; clearTimeout(renewTimer); clearTimeout(retryTimer); clearInterval(pollTimer); closeClient();
     window.removeEventListener('online', resume); window.removeEventListener('focus', resume);
     document.removeEventListener('visibilitychange', resume);
   };

@@ -470,7 +470,9 @@ class CoachBookingServiceTest {
     @Test
     void deskConfirmsHourlyPaymentAndRecordsRevenue() {
         var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var notifications = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", payments);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "notificationService", notifications);
         CoachBooking booking = new CoachBooking();
         booking.setId(90L);
         booking.setMember(member);
@@ -495,9 +497,105 @@ class CoachBookingServiceTest {
         verify(payments).save(saved.capture());
         assertThat(saved.getValue().getStatus()).isEqualTo("success");
         assertThat(saved.getValue().getAmount()).isEqualByComparingTo("200000.00");
+        verify(notifications).send(
+                eq(10L),
+                eq("notifications.coaching.booking.payment_confirmed.title"),
+                eq("notifications.coaching.booking.payment_confirmed.body"),
+                eq("payment"),
+                eq("payment"),
+                eq(90L),
+                eq("/member/classes?tab=pt")
+        );
 
         assertThatThrownBy(() -> service.confirmHourlyPayment(desk, 90L, "cash"))
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
+    }
+
+    @Test
+    @DisplayName("Đặt lịch 1:1 trả phí tạo khoản chờ thanh toán và gửi thông báo thanh toán")
+    void createHourlyBookingCreatesPendingPaymentAndSendsPaymentNotification() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var notifications = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", payments);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "notificationService", notifications);
+
+        MembershipSubscription active = new MembershipSubscription();
+        active.setStartDate(LocalDate.of(2026, 10, 1));
+        active.setEndDate(LocalDate.of(2026, 11, 30));
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> {
+            CoachBooking b = inv.getArgument(0);
+            b.setId(150L);
+            return b;
+        });
+        when(payments.save(any(com.swp391.scms.finance.entity.Payment.class))).thenAnswer(inv -> {
+            com.swp391.scms.finance.entity.Payment p = inv.getArgument(0);
+            p.setId(501L);
+            return p;
+        });
+
+        CoachBookingDto result = service.createBooking(principal, new CoachBookingCreateDto(
+                20L, null, LocalDate.of(2026, 10, 31), LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", "Tập 1:1"
+        ));
+
+        assertThat(result.paymentStatus()).isEqualTo("pending");
+        var paymentCaptor = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.finance.entity.Payment.class);
+        verify(payments).save(paymentCaptor.capture());
+        assertThat(paymentCaptor.getValue().getStatus()).isEqualTo("pending");
+        assertThat(paymentCaptor.getValue().getCoachBookingId()).isEqualTo(150L);
+        assertThat(paymentCaptor.getValue().getAmount()).isEqualByComparingTo("200000.00");
+
+        verify(notifications).send(
+                eq(10L),
+                eq("notifications.coaching.booking.payment_pending.title"),
+                eq("notifications.coaching.booking.payment_pending.body"),
+                eq("payment"),
+                eq("payment"),
+                eq(501L),
+                eq("/member/classes?tab=pt")
+        );
+    }
+
+    @Test
+    @DisplayName("Hủy buổi tập 1:1 đã thanh toán trước giờ bắt đầu hoàn tiền về Ví hội viên")
+    void cancelPaidBookingBeforeStartRefundsToWallet() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", payments);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "walletService", wallets);
+
+        CoachBooking booking = new CoachBooking();
+        booking.setId(160L);
+        booking.setMember(member);
+        booking.setCoach(coach);
+        booking.setBookingDate(LocalDate.of(2026, 11, 1));
+        booking.setStartTime(LocalTime.of(14, 0));
+        booking.setEndTime(LocalTime.of(15, 0));
+        booking.setHourlyRate(new BigDecimal("200000.00"));
+        booking.setPaymentMethod("online_wallet");
+        booking.setPaymentStatus("paid");
+        booking.setStatus("confirmed");
+        when(coachBookingRepository.findByIdForUpdate(160L)).thenReturn(Optional.of(booking));
+
+        com.swp391.scms.finance.entity.Payment paidPayment = new com.swp391.scms.finance.entity.Payment();
+        paidPayment.setId(601L);
+        paidPayment.setMember(member);
+        paidPayment.setCoachBookingId(160L);
+        paidPayment.setAmount(new BigDecimal("200000.00"));
+        paidPayment.setStatus("success");
+        when(payments.findAllByCoachBookingId(160L)).thenReturn(List.of(paidPayment));
+
+        CoachBookingDto cancelled = service.cancelBooking(principal, 160L, "Bận việc đột xuất");
+
+        assertThat(cancelled.status()).isEqualTo("cancelled");
+        assertThat(paidPayment.getStatus()).isEqualTo("refunded");
+        assertThat(paidPayment.getRefundedAmount()).isEqualByComparingTo("200000.00");
+        verify(wallets).creditCoachBookingRefund(10L, new BigDecimal("200000.00"), "COACH_REFUND_160", "Bận việc đột xuất");
     }
 
     @Test

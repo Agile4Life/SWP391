@@ -103,7 +103,13 @@ public class SessionEvaluationService {
         evaluation.setCreatedAt(now);
 
         SessionEvaluation saved = evaluationRepository.save(evaluation);
-        if (notificationService != null) notificationService.notifyEvaluation(member.getUserId());
+        if (notificationService != null) {
+            try {
+                notificationService.notifyEvaluation(member.getUserId());
+            } catch (ResourceNotFoundException ex) {
+                // Do not fail evaluation creation when member's user account is soft-deleted
+            }
+        }
         return toDto(saved);
     }
 

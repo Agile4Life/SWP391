@@ -78,19 +78,36 @@ it('shows staff daily empty state and queries the paginated daily endpoint', asy
   expect(host.textContent).toContain('Chưa có lượt đặt trong ngày này');
 });
 
-it('books a standing week on the chosen weekdays and reports the skipped day with its reason', async () => {
-  const booking = { id: 1, roomId: 5, roomName: 'Sân A', disciplineName: 'Tennis', memberId: 1, memberName: 'M', date: '2099-01-05', startTime: '09:00', endTime: '10:00', status: 'booked' as const, createdAt: '', cancelledAt: null, cancelReason: null, canCancel: true, price: 0, paymentMethod: 'package_quota', paymentStatus: 'covered' };
-  vi.mocked(courtsApi.bookRecurring).mockResolvedValue({ booked: [booking], skipped: [{ date: '2099-01-07', code: 'COURT_BOOKING_SLOT_TAKEN', message: 'Khung giờ đã có lượt đặt' }] });
+it('books a standing week on the chosen weekdays, calculates weekly total minus free quota, and shows per-session payment in outcome', async () => {
+  const freeBooking = { id: 1, roomId: 5, roomName: 'Sân A', disciplineName: 'Tennis', memberId: 1, memberName: 'M', date: '2099-01-05', startTime: '09:00', endTime: '10:00', status: 'booked' as const, createdAt: '', cancelledAt: null, cancelReason: null, canCancel: true, price: 0, paymentMethod: 'package_quota', paymentStatus: 'covered' };
+  const paidBooking1 = { ...freeBooking, id: 2, date: '2099-01-06', price: 100000, paymentMethod: 'vnpay', paymentStatus: 'pending' };
+  const paidBooking2 = { ...freeBooking, id: 3, date: '2099-01-07', price: 100000, paymentMethod: 'vnpay', paymentStatus: 'pending' };
+  vi.mocked(courtsApi.bookRecurring).mockResolvedValue({ booked: [freeBooking, paidBooking1, paidBooking2], skipped: [{ date: '2099-01-08', code: 'COURT_BOOKING_SLOT_TAKEN', message: 'Khung giờ đã có lượt đặt' }] });
   await render();
   await click('Trống');
   expect(host.querySelector('[role="status"]')).toBeNull();
   await click('Cả tuần');
   expect(host.textContent).toContain('Sẽ đặt 1 buổi');
+  // 1 session selected, 1 free quota remaining -> 0đ surcharge
+  expect(host.querySelector('.court-pricing')?.textContent).toContain('0đ');
+  // Select 2 more weekdays (total 3 sessions in the week: 1 free + 2 paid × 100.000đ = 200.000đ)
+  const weekdayButtons = [...host.querySelectorAll<HTMLButtonElement>('[aria-label="Thứ trong tuần"] button')];
+  const unselected = weekdayButtons.filter(btn => btn.getAttribute('aria-pressed') === 'false');
+  await act(async () => { unselected[0].click(); });
+  await act(async () => { unselected[1].click(); });
+  expect(host.textContent).toContain('Sẽ đặt 3 buổi');
+  expect(host.querySelector('.court-pricing')?.textContent).toContain('1 buổi miễn phí');
+  expect(host.querySelector('.court-pricing')?.textContent).toContain('2 buổi tính phí');
+  expect(host.querySelector('.court-pricing')?.textContent).toContain('200.000đ');
   await click('Xác nhận đặt định kỳ');
   expect(courtsApi.book).not.toHaveBeenCalled();
-  expect(courtsApi.bookRecurring).toHaveBeenCalledWith(expect.objectContaining({ roomId: 5, startTime: '09:00', period: 'week', daysOfWeek: [expect.any(Number)] }));
-  expect(host.textContent).toContain('Đã đặt 1 buổi, bỏ qua 1 buổi');
-  expect(host.textContent).toContain('07/01: Khung giờ đã có lượt đặt');
+  expect(courtsApi.bookRecurring).toHaveBeenCalledWith(expect.objectContaining({ roomId: 5, startTime: '09:00', period: 'week' }));
+  expect(host.textContent).toContain('Đã đặt 3 buổi, bỏ qua 1 buổi');
+  expect(host.textContent).toContain('05/01/2099 · 09:00–10:00 · Miễn phí (theo gói)');
+  expect(host.textContent).toContain('06/01/2099 · 09:00–10:00 · Chờ thanh toán 100.000đ');
+  expect(host.textContent).toContain('07/01/2099 · 09:00–10:00 · Chờ thanh toán 100.000đ');
+  expect(host.querySelector('.court-pricing')?.textContent).toContain('200.000đ');
+  expect(host.textContent).toContain('08/01: Khung giờ đã có lượt đặt');
   await click('Đóng');
   expect(host.querySelector('[role="dialog"]')).toBeNull();
 });

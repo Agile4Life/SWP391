@@ -152,13 +152,64 @@ public class UserService {
         return dto;
     }
 
+    public static String normalizePhone(String rawPhone) {
+        if (rawPhone == null) return null;
+        String compact = rawPhone.trim().replaceAll("[\\s.\\-()]+", "");
+        if (compact.isEmpty()) return null;
+        if (compact.startsWith("+84") && compact.length() == 12 && compact.substring(3).chars().allMatch(Character::isDigit)) {
+            return "0" + compact.substring(3);
+        }
+        if (compact.startsWith("84") && compact.length() == 11 && compact.chars().allMatch(Character::isDigit)) {
+            return "0" + compact.substring(2);
+        }
+        return compact;
+    }
+
+    public static boolean emailExists(UserRepository userRepository, String rawEmail) {
+        if (rawEmail == null || rawEmail.isBlank()) return false;
+        String clean = rawEmail.trim();
+        try {
+            if (userRepository.findByEmailIgnoreCase(clean).isPresent()) return true;
+        } catch (org.springframework.dao.IncorrectResultSizeDataAccessException ex) {
+            return true;
+        }
+        return userRepository.existsByNormalizedEmail(clean);
+    }
+
+    public static boolean phoneExists(UserRepository userRepository, String rawPhone, Long excludeUserId) {
+        String normalized = normalizePhone(rawPhone);
+        if (normalized == null) return false;
+        String trimmed = rawPhone.trim();
+        java.util.LinkedHashSet<String> candidates = new java.util.LinkedHashSet<>();
+        candidates.add(normalized);
+        candidates.add(trimmed);
+        if (normalized.startsWith("0") && normalized.length() == 10 && normalized.chars().allMatch(Character::isDigit)) {
+            candidates.add("+84" + normalized.substring(1));
+            candidates.add("84" + normalized.substring(1));
+        }
+        for (String candidate : candidates) {
+            try {
+                var found = userRepository.findByPhone(candidate);
+                if (found.isPresent() && (excludeUserId == null || !java.util.Objects.equals(found.get().getId(), excludeUserId))) {
+                    return true;
+                }
+            } catch (org.springframework.dao.IncorrectResultSizeDataAccessException ex) {
+                return true;
+            }
+        }
+        var compactMatches = userRepository.findAllByCompactPhoneIn(candidates);
+        return compactMatches != null && compactMatches.stream()
+                .anyMatch(u -> excludeUserId == null || !java.util.Objects.equals(u.getId(), excludeUserId));
+    }
+
     @Transactional
     @Audited(action = "USER_CREATE", entity = "users")
     public UserDto createUser(UserCreateDto dto) {
-        if (userRepository.findByEmailIgnoreCase(dto.getEmail().trim()).isPresent()) {
+        if (emailExists(userRepository, dto.getEmail())) {
             throw new ConflictException("EMAIL_EXISTS", "users.email_exists", null, null);
         }
-        if (dto.getPhone() != null && !dto.getPhone().isBlank() && userRepository.findByPhone(dto.getPhone().trim()).isPresent()) {
+        String normalizedPhone = normalizePhone(dto.getPhone());
+        if (normalizedPhone != null && phoneExists(userRepository, dto.getPhone(), null)) {
             throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null);
         }
 
@@ -168,7 +219,7 @@ public class UserService {
         user.setRole(role);
         user.setFullName(dto.getFullName().trim());
         user.setEmail(dto.getEmail().trim().toLowerCase(Locale.ROOT));
-        user.setPhone(dto.getPhone() == null || dto.getPhone().isBlank() ? null : dto.getPhone().trim());
+        user.setPhone(normalizedPhone);
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         user.setGender(dto.getGender() != null && !dto.getGender().isBlank()
                 ? dto.getGender().trim().toLowerCase(Locale.ROOT)
@@ -219,11 +270,9 @@ public class UserService {
             user.setFullName(dto.getFullName().trim());
         }
         if (dto.getPhone() != null) {
-            String phone = dto.getPhone().isBlank() ? null : dto.getPhone().trim();
-            if (phone != null) {
-                userRepository.findByPhone(phone)
-                        .filter(existing -> !existing.getId().equals(id))
-                        .ifPresent(existing -> { throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null); });
+            String phone = normalizePhone(dto.getPhone());
+            if (phone != null && phoneExists(userRepository, dto.getPhone(), id)) {
+                throw new ConflictException("PHONE_EXISTS", "users.phone_exists", null, null);
             }
             user.setPhone(phone);
         }

@@ -124,7 +124,7 @@ export function Select({
     const bottom = dialog ? Math.min(dialog.bottom, window.innerHeight) : window.innerHeight;
     const below = bottom - rect.bottom - 12;
     const above = rect.top - top - 12;
-    const need = Math.min(options.length * 42 + 12, MENU_MAX);
+    const need = Math.min(listRef.current?.scrollHeight || options.length * 42 + 12, MENU_MAX);
     const width = Math.max(listRef.current?.offsetWidth || 0, rect.width, 220);
     const nextPlacement = popoverPlacement(triggerRef.current, width, need);
     setPlacement(nextPlacement);
@@ -141,10 +141,16 @@ export function Select({
     return () => document.removeEventListener('pointerdown', onDown);
   }, [open]);
 
-  // Cuộn mục đang active vào vùng nhìn
+  // Cuộn mục đang active trong riêng menu, không kéo vùng cuộn cha (bảng, hộp thoại, trang)
   useEffect(() => {
     if (!open || active < 0) return;
-    listRef.current?.children[active]?.scrollIntoView({ block: 'nearest' });
+    const list = listRef.current;
+    const item = list?.children[active] as HTMLElement | undefined;
+    if (!list || !item) return;
+    const top = item.offsetTop;
+    const bottom = top + item.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
   }, [open, active]);
 
   const pick = (opt: Opt) => {

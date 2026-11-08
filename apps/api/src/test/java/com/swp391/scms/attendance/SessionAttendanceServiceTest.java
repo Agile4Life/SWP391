@@ -204,6 +204,28 @@ class SessionAttendanceServiceTest {
         verify(notifications, times(publish ? 1 : 0)).notifyEvaluation(20L);
     }
 
+    @Test
+    void recordBatchAttendance_publishEvaluations_succeedsWhenMemberUserIsSoftDeleted() {
+        var evaluations = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
+        var notifications = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
+        ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        ReflectionTestUtils.setField(service, "notificationService", notifications);
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        stubBookedEnrollment();
+        when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
+        when(attendanceRepository.saveAndFlush(any(SessionAttendance.class))).thenAnswer(inv -> inv.getArgument(0));
+        doThrow(new ResourceNotFoundException("resource.user", 20L)).when(notifications).notifyEvaluation(20L);
+
+        var request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Good form", 85)), true);
+        List<MemberAttendanceItem> items = assertDoesNotThrow(
+                () -> service.recordBatchAttendance(100L, request, coachPrincipal));
+
+        assertEquals(1, items.size());
+        assertEquals(85, items.get(0).progressScore());
+        verify(evaluations).save(any(com.swp391.scms.coaching.entity.SessionEvaluation.class));
+    }
+
     private void stubBookedEnrollment() {
         ClassEnrollment enrollment = new ClassEnrollment();
         enrollment.setGymClass(gymClass);

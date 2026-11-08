@@ -420,7 +420,33 @@ public class VnpayPaymentService {
         }
     }
     private void markBookingPaid(Payment p) {
-        if(p.getCoachBookingId()!=null) { var b=coaches.findById(p.getCoachBookingId()).orElseThrow(this::unavailable);b.setPaymentStatus("paid");b.setPaymentMethod("online_wallet"); }
+        if(p.getCoachBookingId()!=null) {
+            var b=coaches.findById(p.getCoachBookingId()).orElseThrow(this::unavailable);
+            b.setPaymentStatus("paid");
+            b.setPaymentMethod("online_wallet");
+            if (notifications != null && messages != null && b.getMember() != null && b.getMember().getUserId() != null
+                    && b.getBookingDate() != null && b.getStartTime() != null && b.getEndTime() != null) {
+                try {
+                    String coachName = b.getCoach() != null && b.getCoach().getUser() != null
+                            ? b.getCoach().getUser().getFullName() : "Huấn luyện viên";
+                    String startStr = b.getStartTime().toString().substring(0, 5);
+                    String endStr = b.getEndTime().toString().substring(0, 5);
+                    BigDecimal amount = p.getAmount() != null ? p.getAmount()
+                            : (b.getHourlyRate() != null ? b.getHourlyRate() : BigDecimal.valueOf(200_000));
+                    notifications.send(
+                            b.getMember().getUserId(),
+                            messages.getMessage("notifications.coaching.booking.payment_confirmed.title"),
+                            messages.getMessage("notifications.coaching.booking.payment_confirmed.body",
+                                    coachName, b.getBookingDate(), startStr, endStr, amount.stripTrailingZeros().toPlainString()),
+                            "payment",
+                            "payment",
+                            p.getId() != null ? p.getId() : b.getId(),
+                            "/member/classes?tab=pt"
+                    );
+                } catch (RuntimeException ignored) {
+                }
+            }
+        }
         if(p.getCourtBookingId()!=null) { var b=courts.findById(p.getCourtBookingId()).orElseThrow(this::unavailable);b.setPaymentStatus("paid");b.setPaymentMethod("online_wallet"); }
         if(p.getProductOrderId()!=null && orderPayments!=null) { orderPayments.markPaid(p.getProductOrderId(), "online_wallet"); }
     }

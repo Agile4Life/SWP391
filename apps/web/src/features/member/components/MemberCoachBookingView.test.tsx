@@ -436,4 +436,61 @@ describe('weekly PT booking after Monday has passed', () => {
       vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks();
     }
   });
+
+  it('refreshes 1:1 booking payment status in real-time when payment is confirmed', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+
+    let currentPaymentStatus: 'pending' | 'paid' = 'pending';
+    mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV Huỳnh Đắc Tài', specialization: 'Gym', defaultHourlyRate: 200000 }]);
+    mocks.getAvailableSlots.mockResolvedValue([]);
+    mocks.getMyCoachReviews.mockResolvedValue([]);
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 0, usedThisMonth: 0, remainingQuota: 0 });
+    mocks.getMyCoachBookings.mockImplementation(async () => [
+      {
+        id: 201,
+        coachId: 1,
+        coachName: 'HLV Huỳnh Đắc Tài',
+        bookingDate: '2099-11-10',
+        startTime: '14:00:00',
+        endTime: '15:00:00',
+        status: 'confirmed',
+        paymentMethod: 'cash',
+        paymentStatus: currentPaymentStatus,
+        hourlyRate: 200000,
+      },
+    ]);
+
+    const notificationsChanged = vi.fn();
+    window.addEventListener('member-notifications-changed', notificationsChanged);
+
+    try {
+      await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(host.textContent).toContain('Chờ thanh toán');
+
+      // Simulate payment confirmation from Reception or VNPay/Wallet
+      currentPaymentStatus = 'paid';
+      await act(async () => {
+        window.dispatchEvent(new CustomEvent('wallet-updated'));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(host.textContent).toContain('Đã thanh toán');
+      expect(notificationsChanged).toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('member-notifications-changed', notificationsChanged);
+      await act(async () => root.unmount());
+      host.remove();
+      vi.unstubAllGlobals();
+      vi.clearAllMocks();
+    }
+  });
 });

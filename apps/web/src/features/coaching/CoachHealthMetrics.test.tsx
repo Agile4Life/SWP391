@@ -30,3 +30,14 @@ it('reception intake denial keeps the draft and never shows success history',asy
  await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
  expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('input')!.value).toBe('70');expect(api.listHealthMetrics).not.toHaveBeenCalled();
 });
+it('auto-calculates BMI from height and weight and notifies parent without manual BMI input option',async()=>{
+ const onMetricsChange=vi.fn();
+ vi.mocked(api.listHealthMetrics).mockResolvedValueOnce([
+  {id:1,metricName:'height',metricValue:172,unit:'cm',recordedAt:'2026-11-03T08:00:00'},
+  {id:2,metricName:'weight',metricValue:68,unit:'kg',recordedAt:'2026-11-03T08:05:00'},
+ ]);
+ await act(async()=>root.render(<CoachHealthMetrics memberId={10} memberName="Member 10" onMetricsChange={onMetricsChange} />));
+ expect(onMetricsChange).toHaveBeenCalledWith({memberId:10,heightCm:172,weightKg:68,bmi:23});
+ expect(host.textContent).toContain('Chỉ số BMI được tự động tính từ chiều cao và cân nặng.');
+ expect(host.textContent).toContain('(Chỉ số BMI: 23)');
+});

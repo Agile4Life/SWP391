@@ -174,57 +174,61 @@ export function StaffReceptionPage() {
     }
   };
 
-  const loadPendingSubscriptions = useCallback(async () => {
+  const loadPendingSubscriptions = useCallback(async (silent = false) => {
     if (!hasAccess) return;
-    setLoadingPending(true);
+    if (!silent) setLoadingPending(true);
     try {
       const items = await receptionApi.getPendingSubscriptions();
       setPendingList(items);
       setSelectedPending((prev) => items.find((item) => item.id === prev?.id) ?? null);
     } catch {
-      setPendingList([]);
+      if (!silent) setPendingList([]);
     } finally {
-      setLoadingPending(false);
+      if (!silent) setLoadingPending(false);
     }
   }, [hasAccess]);
 
-  const loadPendingHolds = useCallback(async () => {
+  const loadPendingHolds = useCallback(async (silent = false) => {
     if (!hasAccess) return;
-    setLoadingHolds(true);
+    if (!silent) setLoadingHolds(true);
     try {
       const items = await receptionApi.getPendingHoldRequests();
       setHoldList(items);
     } catch {
-      setHoldList([]);
+      if (!silent) setHoldList([]);
     } finally {
-      setLoadingHolds(false);
+      if (!silent) setLoadingHolds(false);
     }
   }, [hasAccess]);
 
-  const loadUnpaidPt = useCallback(async () => {
+  const loadUnpaidPt = useCallback(async (silent = false) => {
     if (!hasAccess) return;
-    setLoadingPt(true);
-    setPtError('');
+    if (!silent) {
+      setLoadingPt(true);
+      setPtError('');
+    }
     try {
       setUnpaidPt(await receptionApi.getUnpaidCoachBookings());
     } catch (err: unknown) {
-      setUnpaidPt([]);
-      setPtError(errorMessage(err, 'Không tải được danh sách buổi PT chưa thanh toán.'));
+      if (!silent) {
+        setUnpaidPt([]);
+        setPtError(errorMessage(err, 'Không tải được danh sách buổi PT chưa thanh toán.'));
+      }
     } finally {
-      setLoadingPt(false);
+      if (!silent) setLoadingPt(false);
     }
   }, [hasAccess]);
 
-  const loadPendingTrials = useCallback(async () => {
+  const loadPendingTrials = useCallback(async (silent = false) => {
     if (!hasAccess) return;
-    setLoadingTrials(true);
+    if (!silent) setLoadingTrials(true);
     try {
       const items = await receptionApi.getPendingTrials();
       setTrialList(items);
     } catch {
-      setTrialList([]);
+      if (!silent) setTrialList([]);
     } finally {
-      setLoadingTrials(false);
+      if (!silent) setLoadingTrials(false);
     }
   }, [hasAccess]);
 
@@ -233,7 +237,25 @@ export function StaffReceptionPage() {
     void loadPendingHolds();
     void loadUnpaidPt();
     void loadPendingTrials();
-  }, [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
+    if (!hasAccess) return;
+    const syncQueues = () => {
+      if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
+      void loadPendingSubscriptions(true);
+      void loadPendingHolds(true);
+      void loadUnpaidPt(true);
+      void loadPendingTrials(true);
+    };
+    const timer = window.setInterval(syncQueues, 6000);
+    window.addEventListener('focus', syncQueues);
+    window.addEventListener('online', syncQueues);
+    document.addEventListener('visibilitychange', syncQueues);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', syncQueues);
+      window.removeEventListener('online', syncQueues);
+      document.removeEventListener('visibilitychange', syncQueues);
+    };
+  }, [hasAccess, loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     let active = true;

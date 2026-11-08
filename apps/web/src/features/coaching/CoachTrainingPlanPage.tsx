@@ -1,8 +1,9 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
-import { CoachHealthMetrics } from './CoachHealthMetrics';
+import { CoachHealthMetrics, calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './CoachHealthMetrics';
+import { listHealthMetrics } from '../member/profileApi';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -159,6 +160,36 @@ export function CoachTrainingPlanPage() {
       active = false;
     };
   }, [hasAccess, isManager, membersAttempt]);
+
+  const handleHealthMetricsChange = useCallback((summary: HealthMetricsSummary) => {
+    setMembers((prev) =>
+      prev.map((m) => {
+        if (m.id !== summary.memberId) return m;
+        const heightCm = summary.heightCm ?? m.heightCm;
+        const weightKg = summary.weightKg ?? m.weightKg;
+        const bmi = calculateAutoBmi(heightCm, weightKg) ?? summary.bmi ?? m.bmi;
+        if (m.heightCm === heightCm && m.weightKg === weightKg && m.bmi === bmi) return m;
+        return { ...m, heightCm, weightKg, bmi };
+      })
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!isAiModalOpen || aiSelectedMemberId == null) return;
+    let active = true;
+    void listHealthMetrics(aiSelectedMemberId)
+      .then((rows) => {
+        if (active && Array.isArray(rows) && rows.length > 0) {
+          handleHealthMetricsChange(summarizeHealthMetrics(aiSelectedMemberId, rows));
+        }
+      })
+      .catch(() => {
+        // Giữ nguyên dữ liệu hiện có của học viên nếu không tải thêm được lịch sử số đo
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAiModalOpen, aiSelectedMemberId, handleHealthMetricsChange]);
 
   // Học viên đang chọn trong form
   const selectedMember: MemberOption | undefined = useMemo(() => {
@@ -525,7 +556,7 @@ export function CoachTrainingPlanPage() {
         </div>
       </div>
 
-      <CoachHealthMetrics memberId={selectedMember.id} memberName={selectedMember.fullName} />
+      <CoachHealthMetrics memberId={selectedMember.id} memberName={selectedMember.fullName} onMetricsChange={handleHealthMetricsChange} />
 
       {/* Main Workspace: Day Selector & Exercise Form */}
       <div className="portal-card">
@@ -768,7 +799,9 @@ export function CoachTrainingPlanPage() {
               </div>
               <div>
                 <div className="ai-member-stat-label">{t("Chỉ số BMI")}</div>
-                <div className="ai-member-stat-val">{aiSelectedMember.bmi ?? '—'}</div>
+                <div className="ai-member-stat-val">
+                  {calculateAutoBmi(aiSelectedMember.heightCm, aiSelectedMember.weightKg) ?? aiSelectedMember.bmi ?? '—'}
+                </div>
               </div>
               <div>
                 <div className="ai-member-stat-label">{t("Trình độ luyện tập")}</div>

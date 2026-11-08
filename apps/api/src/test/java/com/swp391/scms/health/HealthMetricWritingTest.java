@@ -32,4 +32,21 @@ class HealthMetricWritingTest {
   var result=service.updateMetric(10L,3L,metric("bmi","23",null),20L,"COACH");
   assertThat(result.metricName()).isEqualTo("bmi"); assertThat(result.unit()).isNull();
  }
+ @Test void autoCalculatesAndPersistsBmiWhenWeightAndHeightAreAvailable(){
+  ReflectionTestUtils.setField(service,"clock",Clock.fixed(Instant.parse("2026-10-25T17:05:00Z"),ZoneOffset.UTC));
+  Member member=new Member(); member.setUserId(10L);
+  User recorder=new User(); recorder.setId(20L);
+  MemberProgressLog existingHeight=new MemberProgressLog(); existingHeight.setMember(member); existingHeight.setMetricName("height"); existingHeight.setMetricValue(new BigDecimal("172")); existingHeight.setUnit("cm");
+  when(members.findById(10L)).thenReturn(Optional.of(member));
+  when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(recorder));
+  when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(existingHeight));
+  List<MemberProgressLog> savedLogs=new ArrayList<>();
+  when(logs.save(any())).thenAnswer(i->{MemberProgressLog arg=i.getArgument(0);savedLogs.add(arg);return arg;});
+  service.addMetric(10L,metric("weight","68","kg"),20L,"COACH");
+  assertThat(savedLogs).hasSize(2);
+  assertThat(savedLogs.get(0).getMetricName()).isEqualTo("weight");
+  assertThat(savedLogs.get(1).getMetricName()).isEqualTo("bmi");
+  assertThat(savedLogs.get(1).getMetricValue()).isEqualByComparingTo("23.0");
+  assertThat(savedLogs.get(1).getUnit()).isNull();
+ }
 }

@@ -9,6 +9,10 @@
   width: 100%;
 }
 
+.luxury-datepicker-wrap:has(.luxury-datepicker-popover) {
+  z-index: 60;
+}
+
 .luxury-datepicker-trigger {
   width: 100%;
   display: flex;

@@ -55,7 +55,6 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
   };
 
   const selectedDayNames = activeDays.map((d) => t(FULL_WEEKDAY_NAMES[d] || '') || `T${d}`).join(', ');
-  const projectedCount = value.period === 'week' ? dates.length * 4 : dates.length;
 
   return (
     <fieldset disabled={disabled} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
@@ -162,27 +161,14 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
           <div role="status" style={{ marginTop: 14, fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)', lineHeight: 1.4 }}>
             {dates.length ? (
               <>
-                {t(`Lặp lại vào ${selectedDayNames} ${value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Dự kiến: ${projectedCount} buổi/tháng)`, `Repeats on ${selectedDayNames} ${value.period === 'week' ? 'weekly' : 'monthly'} (Estimated: ${projectedCount} sessions/month)`)}</>
+                {t(
+                  `Lặp lại vào ${selectedDayNames} ${value.period === 'week' ? 'hàng tuần' : 'hàng tháng'} (Sẽ đặt ${dates.length} buổi: ${dates.map(shortDate).join(', ')}.)`,
+                  `Repeats on ${selectedDayNames} ${value.period === 'week' ? 'weekly' : 'monthly'} (${dates.length} sessions will be booked: ${dates.map(shortDate).join(', ')}.)`,
+                )}
+              </>
             ) : (
               t("Không có ngày nào trong khoảng đã chọn.", "No dates in the selected range.")
             )}
-            <span
-              style={{
-                position: 'absolute',
-                width: 1,
-                height: 1,
-                padding: 0,
-                margin: -1,
-                overflow: 'hidden',
-                clip: 'rect(0, 0, 0, 0)',
-                whiteSpace: 'nowrap',
-                border: 0,
-              }}
-            >
-              {dates.length
-                ? t(` Sẽ đặt ${dates.length} buổi: ${dates.map(shortDate).join(', ')}.`, ` ${dates.length} sessions will be booked: ${dates.map(shortDate).join(', ')}.`)
-                : t(' Không có ngày nào trong khoảng đã chọn.', ' No dates in the selected range.')}
-            </span>
           </div>
           <div
             style={{

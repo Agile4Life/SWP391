@@ -17,7 +17,7 @@ import './chat.css';
 
 const connectionLabel: Record<ChatConnection, [string, string]> = {
   connecting: ['Đang kết nối cập nhật tin nhắn…', 'Connecting to message updates…'], connected: ['Cập nhật tin nhắn trực tiếp', 'Live message updates'],
-  reconnecting: ['Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting'], disabled: ['Cập nhật trực tiếp chưa được cấu hình', 'Live updates are not configured'],
+  reconnecting: ['Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting'], disabled: ['Tự động đồng bộ tin nhắn', 'Auto-syncing messages'],
 };
 
 function formatRelativeChatTime(iso: string, t: (vi: string, en: string) => string): string {

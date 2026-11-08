@@ -83,3 +83,29 @@ it('locks and unlocks a staff account from the list after confirmation and repor
   expect(setStaffAccountLocked).toHaveBeenLastCalledWith(8, false);
   expect(host.querySelector('tbody')?.textContent).toContain('Đã khóa');
 });
+
+it('rejects duplicate email and phone number before calling createStaffAccount', async () => {
+  vi.mocked(listStaffAccounts).mockResolvedValue([
+    { id: 8, fullName: 'Coach A', email: 'coach.a@gmail.com', phone: '0901234567', roleCode: 'COACH', status: 'active' },
+  ]);
+  await act(async () => root.render(<StaffAccountsPage />));
+  const setInput = async (id: string, value: string) => {
+    const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+  await setInput('staff-name', 'Coach Duplicate Email');
+  await setInput('staff-email', '  COACH.A@gmail.com ');
+  await setInput('staff-password', 'Secret123!');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(createStaffAccount).not.toHaveBeenCalled();
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Email đã tồn tại');
+
+  await setInput('staff-email', 'coach.b@gmail.com');
+  await setInput('staff-phone', '+84 901 234 567');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(createStaffAccount).not.toHaveBeenCalled();
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Số điện thoại đã tồn tại');
+});

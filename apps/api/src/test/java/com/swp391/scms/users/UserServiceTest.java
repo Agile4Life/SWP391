@@ -163,6 +163,31 @@ class UserServiceTest {
     }
 
     @Test
+    void createStaffAccountRejectsDuplicateEmailAndNormalizedPhoneBeforeSaving() {
+        var role = new com.swp391.scms.users.entity.Role();
+        role.setId(3L);
+        role.setCode("COACH");
+        when(roleRepository.findByCode("COACH")).thenReturn(Optional.of(role));
+        when(userRepository.findByEmailIgnoreCase("dup@gmail.com")).thenReturn(Optional.of(new User()));
+
+        var dupEmailReq = new com.swp391.scms.users.dto.StaffAccountCreateDto(
+                "Coach Dup", " Dup@Gmail.com ", "0901234567", "Secret123", "male", "COACH");
+        var emailErr = assertThrows(ConflictException.class, () -> service.createStaffAccount(dupEmailReq));
+        assertEquals("EMAIL_EXISTS", emailErr.getErrorCode());
+
+        when(userRepository.findByEmailIgnoreCase("newcoach@gmail.com")).thenReturn(Optional.empty());
+        when(userRepository.findByPhone("0901234567")).thenReturn(Optional.of(new User()));
+
+        var dupPhoneReq = new com.swp391.scms.users.dto.StaffAccountCreateDto(
+                "Coach Phone Dup", "newcoach@gmail.com", "+84 901 234 567", "Secret123", "male", "COACH");
+        var phoneErr = assertThrows(ConflictException.class, () -> service.createStaffAccount(dupPhoneReq));
+        assertEquals("PHONE_EXISTS", phoneErr.getErrorCode());
+
+        verify(userRepository, never()).saveAndFlush(any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void setStatusLocksAccount() {
         User user = new User();
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));

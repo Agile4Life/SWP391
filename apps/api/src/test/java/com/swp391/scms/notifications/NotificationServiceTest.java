@@ -209,6 +209,16 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("notifyEvaluation skips without throwing when member user account is soft-deleted or missing")
+    void notifyEvaluation_SoftDeletedUser_DoesNotThrow() {
+        when(userRepository.findByIdAndDeletedAtIsNull(2L)).thenReturn(Optional.empty());
+
+        notificationService.notifyEvaluation(2L);
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("send normalizes type and relatedEntityType to satisfy PostgreSQL check constraints while preserving raw values for external dispatch")
     void sendNormalizesDatabaseCheckConstraintValues() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);

@@ -425,6 +425,7 @@ export function MemberPackagesPage() {
         setHistoryState({ status: 'success', data: history });
         setPaymentsState({ status: 'success', data: payments });
         setCancellationsState({ status: 'success', data: cancellations });
+        void loadTrialStatus();
         createdSubscriptions.current = [];
         setSyncError(false);
         setReturnSyncing(false);
@@ -490,7 +491,6 @@ export function MemberPackagesPage() {
 
   useEffect(() => subscribeMembershipChanges(
     () => refreshNow.current(),
-    () => setSyncError(true),
   ), []);
 
   useEffect(() => {
@@ -1052,6 +1052,7 @@ export function MemberPackagesPage() {
             // Chỉ gập khi còn từ 2 ý trở lên; thừa đúng 1 ý thì hiện luôn
             const visibleCount = highlights.length <= 3 ? highlights.length : 2;
             const isCurrent =
+              !isTrial &&
               current?.packageId ===
               membershipPackage.id;
 
@@ -1067,7 +1068,7 @@ export function MemberPackagesPage() {
             const renewFrom = current && isCurrent ? current :
               !current && !ambiguousRenewal ? expiredForPackage[0] ?? null : null;
             const upgradeFrom =
-              current && !isCurrent && isHigherPackage(currentPackage, membershipPackage)
+              current && !isCurrent && (isTrial || isHigherPackage(currentPackage, membershipPackage))
                 ? current
                 : null;
             const renewalConflict = renewFrom && historyState.status === 'success' ? renewalPath(renewFrom.id).conflict : false;

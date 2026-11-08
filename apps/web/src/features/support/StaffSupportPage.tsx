@@ -15,7 +15,7 @@ import './staff-support.css';
 
 import { Select } from '../../shared/ui/Select';
 const labels: Record<SupportTicket['status'], string> = { open: 'Đang chờ', in_progress: 'Đang xử lý', resolved: 'Đã giải quyết', closed: 'Đã đóng' };
-const connections: Record<ChatConnection, string> = { connecting: 'Đang kết nối cập nhật', connected: 'Đã kết nối cập nhật', reconnecting: 'Đang kết nối lại', disabled: 'Cập nhật trực tiếp chưa khả dụng. Dùng Làm mới.' };
+const connections: Record<ChatConnection, string> = { connecting: 'Đang kết nối cập nhật', connected: 'Đã kết nối cập nhật', reconnecting: 'Đang kết nối lại', disabled: 'Tự động đồng bộ cập nhật' };
 const transitions: Record<SupportTicket['status'], SupportTicket['status'][]> = { open: ['open', 'in_progress', 'resolved'], in_progress: ['in_progress', 'open', 'resolved', 'closed'], resolved: ['resolved', 'in_progress', 'closed'], closed: ['closed'] };
 const failure = (error: unknown) => error instanceof ApiError ? error : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
 

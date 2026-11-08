@@ -5,6 +5,13 @@
 .ui-select {
   position: relative;
   width: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.ui-select:has(.ui-select__menu) {
+  z-index: 60;
 }
 
 .portal-toolbar .ui-select {

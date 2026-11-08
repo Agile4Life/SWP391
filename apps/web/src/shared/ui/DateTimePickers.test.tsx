@@ -54,3 +54,19 @@ it('allows existing schedules at any minute instead of rounding to five-minute i
   await act(async () => host.querySelector('button')!.click());
   expect([...host.querySelectorAll('.ltp-col:last-child .ltp-col-scroll button')].some(b => b.textContent === '03')).toBe(true);
 });
+it('keeps Select option scrolling inside the listbox without calling scrollIntoView on ancestors', async () => {
+  const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+  await act(async () => root.render(
+    <div className="portal-card portal-card--flush"><div className="portal-table-wrapper">
+      <Select value="active" onChange={() => {}}>
+        <option value="active">Đang hoạt động</option>
+        <option value="maintenance">Đang bảo trì</option>
+        <option value="broken">Hỏng hóc</option>
+        <option value="retired">Ngừng dùng</option>
+      </Select>
+    </div></div>
+  ));
+  await act(async () => host.querySelector<HTMLButtonElement>('.ui-select__trigger')!.click());
+  expect(host.querySelectorAll('[role="option"]')).toHaveLength(4);
+  expect(scrollIntoView).not.toHaveBeenCalled();
+});

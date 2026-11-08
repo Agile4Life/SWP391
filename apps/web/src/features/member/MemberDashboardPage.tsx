@@ -1,4 +1,4 @@
-﻿import { memberText } from './memberI18n';
+import { memberText } from './memberI18n';
 import { getIntlLocale, useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
@@ -82,31 +82,44 @@ export function MemberDashboardPage() {
   const [classesState, setClassesState] =
     useState<ClassesState>({ status: 'loading' });
 
-  const loadMembership = useCallback(async () => {
-    setMembershipState({ status: 'loading' });
+  const loadMembership = useCallback(async (silent = false) => {
+    if (!silent) setMembershipState({ status: 'loading' });
 
     try {
       const membership = await getCurrentMembership();
       setMembershipState({ status: 'success', membership });
     } catch {
-      setMembershipState({ status: 'error' });
+      if (!silent) setMembershipState({ status: 'error' });
     }
   }, []);
 
-  const loadClasses = useCallback(async () => {
-    setClassesState({ status: 'loading' });
+  const loadClasses = useCallback(async (silent = false) => {
+    if (!silent) setClassesState({ status: 'loading' });
 
     try {
       const classes = await getBookedEnrollments();
       setClassesState({ status: 'success', classes });
     } catch {
-      setClassesState({ status: 'error' });
+      if (!silent) setClassesState({ status: 'error' });
     }
   }, []);
 
   useEffect(() => {
     void loadMembership();
     void loadClasses();
+    const syncDashboard = () => {
+      if (document.visibilityState === 'hidden') return;
+      void loadMembership(true);
+      void loadClasses(true);
+    };
+    window.addEventListener('focus', syncDashboard);
+    window.addEventListener('online', syncDashboard);
+    document.addEventListener('visibilitychange', syncDashboard);
+    return () => {
+      window.removeEventListener('focus', syncDashboard);
+      window.removeEventListener('online', syncDashboard);
+      document.removeEventListener('visibilitychange', syncDashboard);
+    };
   }, [loadMembership, loadClasses]);
 
   const today = new Date();

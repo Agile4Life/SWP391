@@ -5,6 +5,7 @@ export interface StaffAccount {
   id: number;
   fullName: string;
   email: string;
+  phone?: string | null;
   roleCode: StaffRole;
   status: string;
 }

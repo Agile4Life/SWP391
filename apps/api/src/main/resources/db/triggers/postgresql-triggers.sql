@@ -568,6 +568,10 @@ DROP TRIGGER IF EXISTS trg_subscriptions_realtime ON membership_subscriptions;
 CREATE TRIGGER trg_subscriptions_realtime AFTER INSERT OR UPDATE ON membership_subscriptions
 FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
 
+DROP TRIGGER IF EXISTS trg_coach_bookings_realtime ON coach_bookings;
+CREATE TRIGGER trg_coach_bookings_realtime AFTER INSERT OR UPDATE ON coach_bookings
+FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
+
 -- SCRUM-128: transactional private invalidations, containing no ticket/message data.
 CREATE OR REPLACE FUNCTION scms_support_realtime_invalidation()
 RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$

@@ -81,14 +81,14 @@ export function TimePicker({
     };
   }, [isOpen]);
 
-  // Auto scroll active item into view when popover opens
+  // Auto scroll active item into view when popover opens (without scrolling ancestor containers)
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
-        const activeHour = hourScrollRef.current?.querySelector('.is-active');
-        if (activeHour) activeHour.scrollIntoView({ block: 'nearest' });
-        const activeMinute = minuteScrollRef.current?.querySelector('.is-active');
-        if (activeMinute) activeMinute.scrollIntoView({ block: 'nearest' });
+        for (const col of [hourScrollRef.current, minuteScrollRef.current]) {
+          const item = col?.querySelector<HTMLElement>('.is-active');
+          if (col && item) col.scrollTop = Math.max(0, item.offsetTop - (col.clientHeight - item.offsetHeight) / 2);
+        }
       }, 50);
     }
   }, [isOpen]);
