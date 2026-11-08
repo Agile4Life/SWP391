@@ -162,7 +162,6 @@ public class AuthService {
         return issueAndSendOtp(normalize(target));
     }
 
-    @Transactional(readOnly = true)
     public String requestPasswordResetOtp(String rawEmail) {
         if (!isValidEmail(rawEmail)) {
             throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);

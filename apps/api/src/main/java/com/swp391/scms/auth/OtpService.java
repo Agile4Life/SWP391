@@ -41,12 +41,12 @@ public class OtpService {
         return code;
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void invalidate(String target) {
         challengeRepository.deleteByTargetIgnoreCase(normalize(target));
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public Status verifyOtp(String target, String code) {
         String normalizedTarget = normalize(target);
         OtpChallenge challenge = challengeRepository.findByTargetForUpdate(normalizedTarget).orElse(null);
@@ -66,6 +66,7 @@ public class OtpService {
                 return new Status(VerifyResult.MAX_ATTEMPTS_EXCEEDED, 0);
             }
             challenge.setFailedAttempts(attempts);
+            challengeRepository.saveAndFlush(challenge);
             return new Status(VerifyResult.INVALID_CODE, MAX_ATTEMPTS - attempts);
         }
         challengeRepository.delete(challenge);
