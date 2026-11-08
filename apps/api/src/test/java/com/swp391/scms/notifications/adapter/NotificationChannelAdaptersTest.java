@@ -170,5 +170,46 @@ class NotificationChannelAdaptersTest {
         adapter.send(payload);
         // Webhook executed safely without throwing
     }
+
+    @Test
+    @DisplayName("EmailAdapter: dispatches wallet credit notification via Resend HTTP API when apiKey is configured")
+    void emailAdapter_ResendWalletCredit_Success() {
+        org.springframework.web.client.RestClient.Builder builder =
+                org.springframework.web.client.RestClient.builder().baseUrl("https://api.resend.com");
+        org.springframework.test.web.client.MockRestServiceServer server =
+                org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+
+        User user = new User();
+        user.setId(101L);
+        user.setEmail("member@example.com");
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
+
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo("https://api.resend.com/emails"))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.method(org.springframework.http.HttpMethod.POST))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.header(
+                        org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer re_live_key"))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.to[0]").value("member@example.com"))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.subject").value("Nạp tiền vào Ví SÖL thành công"))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.text")
+                        .value("Ví của bạn đã được cộng +500000 VNĐ qua phương thức: VNPay (#VNP999). Số dư mới: 500000 VNĐ."))
+                .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
+                        "{\"id\":\"email_wallet_1\"}", org.springframework.http.MediaType.APPLICATION_JSON));
+
+        MockEmailNotificationChannelAdapter adapter = new MockEmailNotificationChannelAdapter(
+                userRepository, "re_live_key", "SÖL Fitness <onboarding@resend.dev>", builder.build());
+
+        NotificationPayload payload = NotificationPayload.builder()
+                .userId(101L)
+                .title("Nạp tiền vào Ví SÖL thành công")
+                .message("Ví của bạn đã được cộng +500000 VNĐ qua phương thức: VNPay (#VNP999). Số dư mới: 500000 VNĐ.")
+                .type("payment")
+                .relatedEntityType("wallet")
+                .relatedEntityId(10L)
+                .build();
+
+        adapter.send(payload);
+
+        server.verify();
+    }
 }
 

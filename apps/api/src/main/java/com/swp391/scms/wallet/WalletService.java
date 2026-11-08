@@ -123,12 +123,13 @@ public class WalletService {
 
         if (notificationService != null) {
             try {
+                String methodLabel = "VNPay (#" + reference + ")";
                 String title = messageService != null
                         ? messageService.getMessage("notifications.wallet.topup.title")
                         : "Nạp tiền vào Ví SÖL thành công";
                 String body = messageService != null
-                        ? messageService.getMessage("notifications.wallet.topup.body", amount.toPlainString(), "#" + reference, newBalance.toPlainString())
-                        : "Đã nạp thành công " + amount.toPlainString() + " đ vào Ví điện tử SÖL của bạn (#" + reference + "). Số dư mới: " + newBalance.toPlainString() + " đ.";
+                        ? messageService.getMessage("notifications.wallet.topup.body", amount.toPlainString(), methodLabel, newBalance.toPlainString())
+                        : "Đã nạp thành công +" + amount.toPlainString() + " VNĐ vào Ví điện tử SÖL qua phương thức: " + methodLabel + ". Số dư mới: " + newBalance.toPlainString() + " VNĐ.";
                 notificationService.send(
                         userId,
                         title,

@@ -96,7 +96,11 @@ app:
     debug-otp-enabled: ${APP_AUTH_DEBUG_OTP_ENABLED:false}
     otp:
       delivery: ${APP_OTP_DELIVERY:disabled}
-      from-address: ${SMTP_FROM:no-reply@example.invalid}
+      from-address: ${RESEND_FROM:${SMTP_FROM:no-reply@example.invalid}}
+  resend:
+    api-key: ${RESEND_API_KEY:}
+    from-address: ${RESEND_FROM:${SMTP_FROM:SÖL Fitness <no-reply@scms.bluesymphony.site>}}
+    base-url: ${RESEND_BASE_URL:https://api.resend.com}
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
