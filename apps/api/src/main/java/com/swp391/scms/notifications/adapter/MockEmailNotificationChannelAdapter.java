@@ -29,6 +29,7 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
     private final UserRepository userRepository;
     private final String apiKey;
     private final String fromAddress;
+    private final String webOrigin;
     private final RestClient restClient;
 
     public MockEmailNotificationChannelAdapter(UserRepository userRepository) {
@@ -40,8 +41,9 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
             UserRepository userRepository,
             @Value("${app.resend.api-key:}") String apiKey,
             @Value("${app.resend.from-address:${app.auth.otp.from-address:SÖL Fitness <no-reply@scms.bluesymphony.site>}}") String fromAddress,
-            @Value("${app.resend.base-url:https://api.resend.com}") String baseUrl) {
-        this(userRepository, apiKey, fromAddress, defaultRestClient(baseUrl));
+            @Value("${app.resend.base-url:https://api.resend.com}") String baseUrl,
+            @Value("${app.web.origin:https://scms.bluesymphony.site}") String webOrigin) {
+        this(userRepository, apiKey, fromAddress, defaultRestClient(baseUrl), webOrigin);
     }
 
     public MockEmailNotificationChannelAdapter(
@@ -49,10 +51,20 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
             String apiKey,
             String fromAddress,
             RestClient restClient) {
+        this(userRepository, apiKey, fromAddress, restClient, "https://scms.bluesymphony.site");
+    }
+
+    public MockEmailNotificationChannelAdapter(
+            UserRepository userRepository,
+            String apiKey,
+            String fromAddress,
+            RestClient restClient,
+            String webOrigin) {
         this.userRepository = userRepository;
         this.apiKey = stripQuotes(apiKey);
         String cleanFrom = stripQuotes(fromAddress);
         this.fromAddress = !cleanFrom.isBlank() ? cleanFrom : "SÖL Fitness <no-reply@scms.bluesymphony.site>";
+        this.webOrigin = SolEmailTemplateRenderer.resolvePublicOrigin(webOrigin);
         this.restClient = restClient != null ? restClient : defaultRestClient("https://api.resend.com");
     }
 
@@ -91,10 +103,18 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
         }
 
         String recipientEmail = payload.recipientEmail();
-        if ((recipientEmail == null || recipientEmail.isBlank()) && payload.userId() != null) {
-            recipientEmail = userRepository.findByIdAndDeletedAtIsNull(payload.userId())
-                    .map(User::getEmail)
-                    .orElse("member-" + payload.userId() + "@solfitness.local");
+        String recipientName = null;
+        if (payload.userId() != null) {
+            User user = userRepository.findByIdAndDeletedAtIsNull(payload.userId()).orElse(null);
+            if (user != null) {
+                recipientName = user.getFullName();
+                if (recipientEmail == null || recipientEmail.isBlank()) {
+                    recipientEmail = user.getEmail();
+                }
+            }
+            if (recipientEmail == null || recipientEmail.isBlank()) {
+                recipientEmail = "member-" + payload.userId() + "@solfitness.local";
+            }
         }
         if (recipientEmail == null || recipientEmail.isBlank()) {
             recipientEmail = "member-default@solfitness.local";
@@ -104,18 +124,29 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
                 payload.userId(), payload.type(), payload.relatedEntityType(), payload.relatedEntityId());
 
         if (!apiKey.isBlank() && isDeliverableEmail(recipientEmail) && shouldSendRealEmail(payload)) {
-            restClient.post()
-                    .uri("/emails")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "from", fromAddress,
-                            "to", List.of(recipientEmail.trim()),
-                            "subject", payload.title() != null ? payload.title() : "SÖL Fitness",
-                            "text", payload.message() != null ? payload.message() : ""
-                    ))
-                    .retrieve()
-                    .toBodilessEntity();
+            String subject = payload.title() != null && !payload.title().isBlank()
+                    ? payload.title()
+                    : "SÖL Fitness — Thông báo dành cho Hội viên";
+            String textBody = payload.message() != null ? payload.message() : "";
+            String htmlBody = SolEmailTemplateRenderer.renderNotificationHtml(payload, recipientName, webOrigin);
+            try {
+                restClient.post()
+                        .uri("/emails")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(Map.of(
+                                "from", fromAddress,
+                                "to", List.of(recipientEmail.trim()),
+                                "subject", subject,
+                                "text", textBody,
+                                "html", htmlBody
+                        ))
+                        .retrieve()
+                        .toBodilessEntity();
+            } catch (RuntimeException ex) {
+                log.warn("[RESEND-EMAIL] Failed to deliver email for user {} (type={}): {}",
+                        payload.userId(), payload.type(), ex.getClass().getSimpleName());
+            }
         }
     }
 
@@ -127,8 +158,6 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
     }
 
     private static boolean shouldSendRealEmail(NotificationPayload payload) {
-        return "wallet".equalsIgnoreCase(payload.relatedEntityType())
-                || "password_changed".equalsIgnoreCase(payload.type())
-                || "payment".equalsIgnoreCase(payload.type());
+        return payload.title() != null || payload.message() != null;
     }
 }

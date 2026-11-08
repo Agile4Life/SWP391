@@ -181,6 +181,7 @@ class NotificationChannelAdaptersTest {
 
         User user = new User();
         user.setId(101L);
+        user.setFullName("Nguyễn Văn A");
         user.setEmail("member@example.com");
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
 
@@ -192,6 +193,10 @@ class NotificationChannelAdaptersTest {
                 .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.subject").value("Nạp tiền vào Ví SÖL thành công"))
                 .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.text")
                         .value("Ví của bạn đã được cộng +500000 VNĐ qua phương thức: VNPay (#VNP999). Số dư mới: 500000 VNĐ."))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.html")
+                        .value(org.hamcrest.Matchers.containsString("Nguyễn Văn A")))
+                .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.html")
+                        .value(org.hamcrest.Matchers.containsString("VÍ ĐIỆN TỬ SÖL")))
                 .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
                         "{\"id\":\"email_wallet_1\"}", org.springframework.http.MediaType.APPLICATION_JSON));
 

@@ -2,6 +2,7 @@ package com.swp391.scms.auth;
 
 import com.swp391.scms.common.exception.ServiceUnavailableException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.notifications.adapter.SolEmailTemplateRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
@@ -21,6 +22,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
 
     private final String apiKey;
     private final String fromAddress;
+    private final String webOrigin;
     private final MessageService messageService;
     private final RestClient restClient;
 
@@ -36,7 +38,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
             @Value("${app.resend.from-address:${app.auth.otp.from-address:SÖL Fitness <no-reply@scms.bluesymphony.site>}}") String fromAddress,
             @Value("${app.resend.base-url:https://api.resend.com}") String baseUrl,
             @Autowired(required = false) MessageService messageService) {
-        this(apiKey, fromAddress, messageService, defaultRestClient(baseUrl));
+        this(apiKey, fromAddress, messageService, defaultRestClient(baseUrl), "https://scms.bluesymphony.site");
     }
 
     public ResendOtpDeliveryAdapter(
@@ -44,9 +46,19 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
             String fromAddress,
             MessageService messageService,
             RestClient restClient) {
+        this(apiKey, fromAddress, messageService, restClient, "https://scms.bluesymphony.site");
+    }
+
+    public ResendOtpDeliveryAdapter(
+            String apiKey,
+            String fromAddress,
+            MessageService messageService,
+            RestClient restClient,
+            String webOrigin) {
         this.apiKey = stripQuotes(apiKey);
         String cleanFrom = stripQuotes(fromAddress);
         this.fromAddress = !cleanFrom.isBlank() ? cleanFrom : "SÖL Fitness <no-reply@scms.bluesymphony.site>";
+        this.webOrigin = SolEmailTemplateRenderer.resolvePublicOrigin(webOrigin);
         this.messageService = messageService;
         this.restClient = restClient != null ? restClient : defaultRestClient("https://api.resend.com");
     }
@@ -86,6 +98,9 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         if (apiKey.isBlank()) {
             throw new ServiceUnavailableException("OTP_DELIVERY_DISABLED", "auth.otp.delivery_not_configured", null, null);
         }
+        String subject = msg("auth.otp.subject");
+        String textBody = msg("auth.otp.email_body", code);
+        String htmlBody = SolEmailTemplateRenderer.renderOtpHtml(code, subject, textBody, webOrigin);
         try {
             restClient.post()
                     .uri("/emails")
@@ -94,8 +109,9 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
                     .body(Map.of(
                             "from", fromAddress,
                             "to", List.of(destination.trim()),
-                            "subject", msg("auth.otp.subject"),
-                            "text", msg("auth.otp.email_body", code)
+                            "subject", subject,
+                            "text", textBody,
+                            "html", htmlBody
                     ))
                     .retrieve()
                     .toBodilessEntity();

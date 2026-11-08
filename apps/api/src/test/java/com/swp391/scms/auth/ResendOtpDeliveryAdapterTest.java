@@ -38,6 +38,8 @@ class ResendOtpDeliveryAdapterTest {
                 .andExpect(jsonPath("$.to[0]").value("member@example.com"))
                 .andExpect(jsonPath("$.subject").value("Mã xác thực SCMS"))
                 .andExpect(jsonPath("$.text").value("Mã OTP của bạn là 123456. Mã hết hạn sau 5 phút."))
+                .andExpect(jsonPath("$.html").value(org.hamcrest.Matchers.containsString("1 2 3 4 5 6")))
+                .andExpect(jsonPath("$.html").value(org.hamcrest.Matchers.containsString("SÖL")))
                 .andRespond(withSuccess("{\"id\":\"email_123\"}", MediaType.APPLICATION_JSON));
 
         ResendOtpDeliveryAdapter adapter = new ResendOtpDeliveryAdapter(
