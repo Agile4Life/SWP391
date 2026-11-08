@@ -704,6 +704,8 @@
   align-items: center;
   gap: 16px;
   margin-bottom: 24px;
+  position: relative;
+  z-index: 10;
 }
 
 .fit-site .shop-catalog__filter {
