@@ -3,6 +3,7 @@ package com.swp391.scms.scheduling;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest;
@@ -51,15 +52,23 @@ public class ClassController {
 
     @Operation(summary = "Create a class (CENTER_MANAGER only)")
     @PostMapping
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ResponseEntity<ApiResponse<GymClassDto>> createClass(@Valid @RequestBody CreateClassRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("scheduling.class.created"), service.createClass(request)));
     }
 
+    @Operation(summary = "Create a recurring course (CENTER_MANAGER only)")
+    @PostMapping("/recurring")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<GymClassDto>> createRecurringClass(@Valid @RequestBody CreateRecurringClassRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(msg("scheduling.class.created"), service.createRecurringClass(request)));
+    }
+
     @Operation(summary = "Update a class (CENTER_MANAGER only)")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ApiResponse<GymClassDto> updateClass(@PathVariable Long id,
                                                 @Valid @RequestBody UpdateClassRequest request) {
         return ApiResponse.ok(msg("scheduling.class.updated"), service.updateClass(id, request));
@@ -67,7 +76,7 @@ public class ClassController {
 
     @Operation(summary = "Delete a class (CENTER_MANAGER only)")
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ApiResponse<Void> deleteClass(@PathVariable Long id) {
         service.deleteClass(id);
         return ApiResponse.ok(msg("scheduling.class.deleted"), null);

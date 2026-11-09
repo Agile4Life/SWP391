@@ -598,5 +598,11 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "HLV nghỉ sau 3 slot liên tiếp": "Coach break after 3 consecutive slots",
   "Đặt các thứ đã chọn trong 7 ngày kể từ ngày bắt đầu. Thứ đã qua trong tuần này được tính sang tuần sau; ngày trùng lịch hoặc hết quyền lợi sẽ được báo riêng.": "Book the selected weekdays within 7 days of the start date. Past weekdays roll into next week; conflicts and unavailable benefits are reported separately.",
   "Khung giờ cho ngày": "Times for",
-  "· HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.": "· Coaches take a 1-slot break after 3 consecutive 1:1 slots."
+  "· HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.": "· Coaches take a 1-slot break after 3 consecutive 1:1 slots.",
+  "Đăng ký khóa học: Không giới hạn": "Course Enrollment: Unlimited",
+  "Bạn được đăng ký miễn phí không giới hạn tất cả các khóa học fitness định kỳ.": "You have unlimited free enrollment for all recurring fitness courses.",
+  "1 lượt học = 1 khóa học trọn gói. Đăng ký để giữ chỗ cho toàn bộ các buổi học trong khóa.": "1 credit = 1 full course. Enroll to reserve your spot for all course sessions.",
+  "Bạn đã sử dụng hết lượt đăng ký theo gói tập. Các khóa học đăng ký thêm sẽ thanh toán học phí ngoài gói.": "You have used all credits in your plan. Additional courses can be purchased with tuition fee.",
+  "Trạng thái thanh toán: ": "Payment status: ",
+  "Số tiền đã thanh toán: ": "Amount paid: "
 };

@@ -27,4 +27,25 @@ public final class EnrollmentResponses {
             String cancelReason
     ) {
     }
+
+    public record QuotaDto(
+            String tier,
+            Integer totalCredits,
+            int usedCredits,
+            int remainingCredits,
+            boolean unlimited
+    ) {
+    }
+
+    public record CourseCheckoutDto(
+            Long enrollmentId,
+            Long paymentId,
+            Long classId,
+            String className,
+            java.math.BigDecimal amount,
+            String paymentMethod,
+            String paymentStatus,
+            String paymentUrl
+    ) {
+    }
 }

@@ -32,6 +32,28 @@ export interface ClassItem {
   status: 'ACTIVE' | 'ARCHIVED' | 'INACTIVE';
   schedule?: string;
   activeSessions?: number;
+  price?: number;
+  startDate?: string;
+  endDate?: string;
+  recurringDays?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface CreateRecurringClassPayload {
+  name: string;
+  disciplineId: number;
+  coachId: number;
+  roomId: number;
+  capacity: number;
+  level?: string;
+  description?: string;
+  price?: number;
+  startDate: string;
+  endDate: string;
+  recurringDays: string[];
+  startTime: string;
+  endTime: string;
 }
 
 export interface CoachUser {
@@ -89,6 +111,16 @@ export const classesApi = {
       classId ? `/classes/sessions?classId=${classId}` : '/classes/sessions'
     );
     return classId ? list.filter((s) => s.classId === classId) : list;
+  },
+
+  /**
+   * Tạo khóa học định kỳ (Recurring Course) với ngày khai giảng trước 2-3 tuần, các thứ trong tuần và học phí ngoài gói
+   */
+  createRecurringClass: async (payload: CreateRecurringClassPayload): Promise<ClassItem> => {
+    return apiFetch<ClassItem>('/classes/recurring', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   /**

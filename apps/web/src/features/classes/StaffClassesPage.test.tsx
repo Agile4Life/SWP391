@@ -245,6 +245,69 @@ it('shows catalog failure with retry instead of an apparently empty creation for
   expect(host.querySelector('#class-discipline')?.parentElement?.querySelector('select')?.textContent).toContain('Gym');
 });
 
+it('creates a recurring course with advance start date, recurring days and fee', async () => {
+  vi.spyOn(classesApi, 'getAvailableRooms').mockResolvedValue([{ id: 2, name: 'Studio A', capacity: 20, location: 'T1', status: 'available' }]);
+  vi.spyOn(classesApi, 'getActiveCoaches').mockResolvedValue([{ id: 10, fullName: 'HLV Quân', email: 'coach@test.com', status: 'active' }]);
+
+  const createRecurringSpy = vi.spyOn(classesApi, 'createRecurringClass').mockResolvedValue({
+    id: 999,
+    name: 'Advanced Yoga Series',
+    disciplineId: 1,
+    coachId: 10,
+    roomId: 2,
+    capacity: 20,
+    level: 'all',
+    status: 'ACTIVE',
+    price: 500000,
+    startDate: '2026-11-30',
+    endDate: '2026-12-28',
+    recurringDays: 'MONDAY,WEDNESDAY,FRIDAY',
+    startTime: '08:00:00',
+    endTime: '09:00:00',
+  });
+
+  await openForm();
+
+  // Name
+  const nameInput = host.querySelector<HTMLInputElement>('#class-name')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, 'Advanced Yoga Series');
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  // Select coach & room
+  const coachSelect = host.querySelector<HTMLSelectElement>('#class-coach, select#class-coach')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(coachSelect, '10');
+    coachSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  const roomSelect = host.querySelector<HTMLSelectElement>('#class-room, select#class-room')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(roomSelect, '2');
+    roomSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  // Submit form
+  const submitBtn = host.querySelector<HTMLButtonElement>('[data-testid="submit-class-button"]')!;
+  await act(async () => {
+    submitBtn.click();
+  });
+
+  expect(createRecurringSpy).toHaveBeenCalledWith(
+    expect.objectContaining({
+      name: 'Advanced Yoga Series',
+      disciplineId: 1,
+      coachId: 10,
+      roomId: 2,
+      capacity: 20,
+      price: 500000,
+      recurringDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+    })
+  );
+});
+
 });
 
 describe('StaffClassesPage weekly timetable', () => {
@@ -295,6 +358,28 @@ describe('StaffClassesPage weekly timetable', () => {
     expect(dialog.querySelector('#session-date')!.textContent).toContain('06/01/2099');
     expect(dialog.querySelector('#session-start')!.textContent).toContain('10:00');
     expect(dialog.querySelector('#session-end')!.textContent).toContain('11:00');
+  });
+
+  it('allows creating a class with duplicate name as an existing class without blocking', async () => {
+    as('MANAGER');
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-slot="2099-01-06|10"]')!.click());
+    const nameInput = document.body.querySelector<HTMLInputElement>('#class-name')!;
+    expect(nameInput).not.toBeNull();
+
+    await act(async () => {
+      nameInput.value = 'Morning Yoga Flow';
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const warning = document.body.querySelector('[data-testid="duplicate-class-warning"]');
+    expect(warning).toBeNull();
+
+    const submitBtn = document.body.querySelector<HTMLButtonElement>('[data-testid="submit-class-button"]')!;
+    expect(submitBtn).not.toBeNull();
+    // Submit button should not be blocked by duplicate name
+    expect(document.body.textContent).not.toContain('đã tồn tại trong hệ thống');
   });
 
   it('adds a session for an existing class from the empty slot', async () => {

@@ -8,6 +8,10 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.EnrollmentDto;
+import com.swp391.scms.scheduling.dto.EnrollmentResponses.QuotaDto;
+import com.swp391.scms.scheduling.dto.EnrollmentResponses.CourseCheckoutDto;
+import com.swp391.scms.finance.entity.Payment;
+import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
@@ -21,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -63,6 +68,21 @@ public class EnrollmentService {
 
     @Autowired(required = false)
     private SessionBookingService sessionBookingService;
+
+    @Autowired(required = false)
+    private PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private com.swp391.scms.finance.service.VnpayPaymentService vnpayPaymentService;
+
+    public void setPaymentRepository(PaymentRepository paymentRepository) {
+        this.paymentRepository = paymentRepository;
+    }
+
+    public void setVnpayPaymentService(com.swp391.scms.finance.service.VnpayPaymentService vnpayPaymentService) {
+        this.vnpayPaymentService = vnpayPaymentService;
+    }
 
     @Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
@@ -392,6 +412,235 @@ public class EnrollmentService {
                 .filter(enrollment -> normalizedStatus == null
                         || normalizedStatus.equalsIgnoreCase(enrollment.getStatus()))
                 .map(enrollment -> toDto(enrollment, resolveSessionForClass(enrollment.getGymClass())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public QuotaDto getMemberCourseQuota(AuthenticatedPrincipal principal) {
+        Member member = lockMember(principal.id());
+        LocalDate today = SessionEligibility.today(clock);
+        List<com.swp391.scms.membership.entity.MembershipSubscription> activeSubs = subscriptions.findByMemberUserIdAndStatus(member.getUserId(), "active");
+        com.swp391.scms.membership.entity.MembershipSubscription currentSub = activeSubs.stream()
+                .filter(s -> !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
+                .findFirst()
+                .or(() -> activeSubs.stream().findFirst())
+                .orElse(null);
+
+        if (currentSub == null || currentSub.getMembershipPackage() == null) {
+            return new QuotaDto(null, 0, 0, 0, false);
+        }
+
+        var pkg = currentSub.getMembershipPackage();
+        String tier = pkg.getTier() != null ? pkg.getTier() : pkg.getName();
+        Integer creditLimit = pkg.getClassCreditLimit();
+        boolean unlimited = (creditLimit == null);
+
+        long used = enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(
+                member.getUserId(),
+                BOOKED,
+                currentSub.getStartDate(),
+                currentSub.getEndDate()
+        );
+
+        int total = unlimited ? 999999 : creditLimit;
+        int remaining = unlimited ? 999999 : Math.max(0, creditLimit - (int) used);
+
+        return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited);
+    }
+
+    @Transactional
+    public EnrollmentDto enrollCourse(AuthenticatedPrincipal principal, Long classId) {
+        Member member = lockMember(principal.id());
+        GymClass gymClass = gymClasses.findByIdForUpdate(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+
+        if (gymClass.getStatus() != null && !"active".equalsIgnoreCase(gymClass.getStatus())) {
+            throw new BadRequestException("SCHEDULING_CLASS_INACTIVE", "error.scheduling.class_inactive", null,
+                    "Class is currently inactive");
+        }
+
+        LocalDate startDate = gymClass.getStartDate() != null ? gymClass.getStartDate() : SessionEligibility.today(clock);
+        SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), startDate, clock);
+        SessionEligibility.ensurePlatinumRoomAccess(subscriptions, member.getUserId(), gymClass.getRoom(), startDate);
+
+        if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED).isPresent()) {
+            throw new ConflictException("SCHEDULING_ALREADY_ENROLLED", "error.scheduling.already_enrolled", null,
+                    "Member already has an active booking for this class");
+        }
+
+        // Quota check
+        QuotaDto quota = getMemberCourseQuota(principal);
+        if (!quota.unlimited() && quota.remainingCredits() <= 0) {
+            throw new ForbiddenException("SCHEDULING_COURSE_QUOTA_EXCEEDED", "error.scheduling.course_quota_exceeded", null,
+                    "Bạn đã sử dụng hết lượt đăng ký khóa học của gói tập. Vui lòng thanh toán học phí để đăng ký thêm.");
+        }
+
+        long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
+        if (booked >= gymClass.getCapacity()) {
+            throw new ConflictException("SCHEDULING_CLASS_FULL", "error.scheduling.class_full", null, "Class is full");
+        }
+
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus(BOOKED);
+        enrollment.setEnrolledAt(LocalDateTime.now(clock));
+
+        ClassEnrollment saved = enrollments.save(enrollment);
+
+        ClassSession representativeSession = resolveSessionForClass(gymClass);
+        if (notifications != null) {
+            notifications.send(
+                    member.getUserId(),
+                    msg("notifications.booking.class_enrolled.title"),
+                    msg("notifications.booking.class_enrolled.body", gymClass.getName()),
+                    "system",
+                    "class_enrollment",
+                    saved.getId()
+            );
+        }
+
+        return toDto(saved, representativeSession);
+    }
+
+    @Transactional
+    public CourseCheckoutDto checkoutCourse(AuthenticatedPrincipal principal, Long classId, String method) {
+        Member member = lockMember(principal.id());
+        GymClass gymClass = gymClasses.findByIdForUpdate(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+
+        if (gymClass.getStatus() != null && !"active".equalsIgnoreCase(gymClass.getStatus())) {
+            throw new BadRequestException("SCHEDULING_CLASS_INACTIVE", "error.scheduling.class_inactive", null, "Class is currently inactive");
+        }
+
+        LocalDate today = SessionEligibility.today(clock);
+        if (gymClass.getStartDate() != null && gymClass.getStartDate().isBefore(today)) {
+            throw new BadRequestException("SCHEDULING_COURSE_ALREADY_STARTED", "error.scheduling.course_already_started", null,
+                    "Khóa học đã bắt đầu, không thể đăng ký thêm.");
+        }
+
+        SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), gymClass.getStartDate() != null ? gymClass.getStartDate() : today, clock);
+
+        if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED).isPresent()) {
+            throw new ConflictException("SCHEDULING_ALREADY_ENROLLED", "error.scheduling.already_enrolled", null,
+                    "Member already has an active booking for this class");
+        }
+
+        long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
+        if (booked >= gymClass.getCapacity()) {
+            throw new ConflictException("SCHEDULING_CLASS_FULL", "error.scheduling.class_full", null, "Class is full");
+        }
+
+        QuotaDto quota = getMemberCourseQuota(principal);
+        if (quota.unlimited() || quota.remainingCredits() > 0) {
+            EnrollmentDto enrolled = enrollCourse(principal, classId);
+            return new CourseCheckoutDto(
+                    enrolled.id(),
+                    null,
+                    gymClass.getId(),
+                    gymClass.getName(),
+                    BigDecimal.ZERO,
+                    "free_quota",
+                    "success",
+                    null
+            );
+        }
+
+        BigDecimal price = gymClass.getPrice() != null ? gymClass.getPrice() : BigDecimal.ZERO;
+        String normalizedMethod = method != null ? method.toLowerCase() : "cash";
+        if (!List.of("cash", "online_wallet", "vnpay").contains(normalizedMethod)) {
+            normalizedMethod = "cash";
+        }
+
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus(BOOKED);
+        enrollment.setEnrolledAt(LocalDateTime.now(clock));
+        ClassEnrollment savedEnrollment = enrollments.save(enrollment);
+
+        Long paymentId = null;
+        String paymentStatus = "pending";
+        String paymentUrl = null;
+
+        if (paymentRepository != null && price.compareTo(BigDecimal.ZERO) > 0) {
+            Payment payment = new Payment();
+            payment.setMember(member);
+            payment.setClassEnrollmentId(savedEnrollment.getId());
+            payment.setAmount(price);
+            payment.setMethod("vnpay".equals(normalizedMethod) ? "online_wallet" : normalizedMethod);
+            payment.setStatus("pending");
+            payment.setNote("Học phí khóa học: " + gymClass.getName());
+            Payment savedPayment = paymentRepository.save(payment);
+            paymentId = savedPayment.getId();
+
+            if ("vnpay".equals(normalizedMethod) && vnpayPaymentService != null && vnpayPaymentService.enabled()) {
+                try {
+                    var checkout = vnpayPaymentService.checkout(
+                            principal,
+                            new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, savedPayment.getId()),
+                            "127.0.0.1"
+                    );
+                    paymentUrl = checkout.paymentUrl();
+                } catch (Exception ex) {
+                    // The payment stays pending so reception can still collect it; the member can retry online.
+                    org.slf4j.LoggerFactory.getLogger(EnrollmentService.class)
+                            .warn("VNPay checkout could not be created for course payment {}", savedPayment.getId(), ex);
+                }
+            }
+        }
+
+        return new CourseCheckoutDto(
+                savedEnrollment.getId(),
+                paymentId,
+                gymClass.getId(),
+                gymClass.getName(),
+                price,
+                normalizedMethod,
+                paymentStatus,
+                paymentUrl
+        );
+    }
+
+    @Transactional
+    public EnrollmentDto cancelCourseEnrollment(AuthenticatedPrincipal principal, Long classId) {
+        Member member = lockMember(principal.id());
+        ClassEnrollment enrollment = enrollments.findByGymClassIdAndMemberUserIdAndStatus(classId, member.getUserId(), BOOKED)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", classId));
+
+        GymClass gymClass = enrollment.getGymClass();
+        LocalDate today = SessionEligibility.today(clock);
+        if (gymClass != null && gymClass.getStartDate() != null && !gymClass.getStartDate().isAfter(today)) {
+            throw new BadRequestException("SCHEDULING_CANNOT_CANCEL_STARTED_COURSE", "error.scheduling.cannot_cancel_started_course", null,
+                    "Không thể hủy khóa học đã hoặc đang bắt đầu");
+        }
+
+        enrollment.setStatus(CANCELLED);
+        enrollment.setCancelledAt(LocalDateTime.now(clock));
+        enrollment.setCancelledBy(member.getUser());
+        enrollment.setCancelReason("Member requested cancellation");
+
+        // An unpaid course fee must not stay payable once the seat is released; a settled payment is refunded
+        // through the finance refund flow, which keeps the enrollment cancelled.
+        if (paymentRepository != null) {
+            paymentRepository.findByClassEnrollmentId(enrollment.getId())
+                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
+                    .ifPresent(payment -> {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                    });
+        }
+
+        ClassEnrollment saved = enrollments.save(enrollment);
+        return toDto(saved, resolveSessionForClass(gymClass));
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnrollmentDto> getMyCourseEnrollments(AuthenticatedPrincipal principal) {
+        Member member = findMember(principal.id());
+        List<ClassEnrollment> list = enrollments.findByMemberUserId(member.getUserId());
+        return list.stream()
+                .map(e -> toDto(e, resolveSessionForClass(e.getGymClass())))
                 .toList();
     }
 

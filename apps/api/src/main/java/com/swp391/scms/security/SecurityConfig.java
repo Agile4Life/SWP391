@@ -157,15 +157,19 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                    // Recurring-course enroll / checkout / cancel are member actions; they must precede the
+                    // CENTER_MANAGER "/api/v1/classes/**" write matchers below (first match wins).
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/enroll", "/api/v1/classes/*/checkout").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*/enroll").hasRole("MEMBER")
                     // Per-session booking must precede the CENTER_MANAGER "/api/v1/classes/**" write matchers below.
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/bookings", "/api/v1/classes/session-bookings/bulk").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/session-bookings/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/session-bookings/cancel").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/session-bookings/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/cancel").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
                     // Court booking roles are enforced here and at controller boundaries.

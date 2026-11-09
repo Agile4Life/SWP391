@@ -1,7 +1,7 @@
 import { memberMessage, memberText, memberRenderMessage, memberNotify } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
@@ -10,9 +10,9 @@ import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberCalendar } from './components/MemberCalendar';
 import { centerNowParts } from '../../shared/lib/centerTime';
-import { getMySubscription } from './memberCardApi';
+import { getMySubscription, type CardSubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
-import { DISCIPLINES } from '../../shared/lib/disciplines';
+import { DISCIPLINES, matchesDiscipline } from '../../shared/lib/disciplines';
 import {
   bookSession,
   cancelBooking,
@@ -22,9 +22,15 @@ import {
   getMyBookings,
   getMyEnrollments,
   getSessions,
+  getMyQuota,
+  getClasses,
+  enrollCourse,
+  checkoutCourse,
   type ClassSessionDto,
   type EnrollmentDto,
   type SessionBookingDto,
+  type QuotaDto,
+  type GymClassDto,
 } from './memberClassesApi';
 import { weekRangeLabel } from '../schedule/timetable';
 import '../schedule/timetable.css';
@@ -85,6 +91,80 @@ function formatDayGroupLabel(iso: string): string {
   return dayLabel ? `${memberText(dayLabel)} • ${formatShortDate(iso)}` : formatShortDate(iso);
 }
 
+interface CourseScheduleInfo {
+  durationWeeks: number;
+  daysPerWeek: number;
+  daysText: string;
+  totalSessions: number;
+  startDateFormatted: string;
+  endDateFormatted: string;
+  timeRange: string;
+}
+
+function parseCourseSchedule(
+  cls?: GymClassDto | null,
+  defaultDate?: string,
+  defaultStart?: string,
+  defaultEnd?: string,
+): CourseScheduleInfo {
+  const recurringDaysArr = cls?.recurringDays
+    ? cls.recurringDays.split(',').map((d) => d.trim().toUpperCase()).filter(Boolean)
+    : ['MONDAY', 'WEDNESDAY', 'FRIDAY'];
+  const daysPerWeek = recurringDaysArr.length || 3;
+
+  let durationWeeks = 4;
+  if (cls?.startDate && cls?.endDate) {
+    const start = new Date(`${cls.startDate}T00:00:00`).getTime();
+    const end = new Date(`${cls.endDate}T00:00:00`).getTime();
+    if (!isNaN(start) && !isNaN(end) && end > start) {
+      const diffWeeks = Math.round((end - start) / (7 * 24 * 60 * 60 * 1000));
+      if (diffWeeks > 0) durationWeeks = diffWeeks;
+    }
+  }
+
+  const totalSessions = durationWeeks * daysPerWeek;
+
+  const DAY_LABELS: Record<string, string> = {
+    MONDAY: 'Thứ 2',
+    TUESDAY: 'Thứ 3',
+    WEDNESDAY: 'Thứ 4',
+    THURSDAY: 'Thứ 5',
+    FRIDAY: 'Thứ 6',
+    SATURDAY: 'Thứ 7',
+    SUNDAY: 'Chủ Nhật',
+  };
+
+  const daysText = recurringDaysArr.map((d) => DAY_LABELS[d] || d).join(', ');
+  const startTimeStr = cls?.startTime || defaultStart || '08:00';
+  const endTimeStr = cls?.endTime || defaultEnd || '09:00';
+  const timeRange = `${startTimeStr.slice(0, 5)}–${endTimeStr.slice(0, 5)}`;
+  const startDateIso = cls?.startDate || defaultDate || centerNowParts().date;
+  const endDateIso = cls?.endDate || '';
+
+  return {
+    durationWeeks,
+    daysPerWeek,
+    daysText,
+    totalSessions,
+    startDateFormatted: formatShortDate(startDateIso),
+    endDateFormatted: endDateIso ? formatShortDate(endDateIso) : '',
+    timeRange,
+  };
+}
+
+function levelLabel(level?: string | null): string {
+  switch (level?.toLowerCase()) {
+    case 'beginner':
+      return 'Người mới bắt đầu';
+    case 'intermediate':
+      return 'Trung cấp';
+    case 'advanced':
+      return 'Nâng cao';
+    default:
+      return 'Mọi cấp độ (All levels)';
+  }
+}
+
 function findOverlappingEnrollment(
   targetSession: ClassSessionDto,
   activeEnrollments: EnrollmentDto[],
@@ -130,6 +210,196 @@ function disciplineFromQuery(value: string | null): string {
   return found?.name ?? 'ALL';
 }
 
+interface MemberCourseDetailModalProps {
+  course: GymClassDto;
+  quota: QuotaDto | null;
+  subscription: CardSubscription | null;
+  hasActivePackage: boolean | null;
+  isEnrolled: boolean;
+  onClose: () => void;
+  onEnroll: (classId: number, className: string) => void;
+  onCheckout: (target: { classId: number; className: string; price: number }) => void;
+  onCancelCourse: (buttonEl: HTMLButtonElement) => void;
+}
+
+function MemberCourseDetailModal({
+  course,
+  quota,
+  subscription,
+  hasActivePackage,
+  isEnrolled,
+  onClose,
+  onEnroll,
+  onCheckout,
+  onCancelCourse,
+}: MemberCourseDetailModalProps) {
+  const { lang } = useLanguage();
+  const text = (vi: string, en: string) => lang === 'en' ? en : vi;
+  const sched = parseCourseSchedule(course);
+  const priceNum = course.price ?? 500000;
+  const hasQuota = quota?.unlimited || (quota && quota.remainingCredits > 0);
+
+  return (
+    <Modal
+      title={text("Thông tin khóa học & Gói tập", "Course & Membership Plan Details")}
+      onClose={onClose}
+    >
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+            <span className="badge badge-info">{course.disciplineName || 'Fitness'}</span>
+            <span className="badge badge-outline">{levelLabel(course.level)}</span>
+            <span className="badge badge-success" style={{ fontWeight: 600 }}>
+              {memberText(`Khóa ${sched.durationWeeks} tuần (${sched.daysPerWeek} buổi/tuần)`, `${sched.durationWeeks}-week course (${sched.daysPerWeek} sessions/week)`)}
+            </span>
+            {isEnrolled && <span className="badge badge-success">{memberText("Đã đăng ký", "Enrolled")}</span>}
+          </div>
+          <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', color: 'var(--color-salmon, #eb7e6b)' }}>
+            {course.name}
+          </h3>
+        </div>
+
+        {/* Lịch học & thời lượng */}
+        <div
+          style={{
+            padding: '12px 16px',
+            background: 'var(--color-bg-warm, #242424)',
+            borderRadius: 8,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div className="meta-label">{memberText("THỜI LƯỢNG KHÓA HỌC", "COURSE DURATION")}</div>
+            <strong>{memberText(`${sched.durationWeeks} tuần (${sched.totalSessions} buổi học)`, `${sched.durationWeeks} weeks (${sched.totalSessions} sessions)`)}</strong>
+          </div>
+          <div>
+            <div className="meta-label">{memberText("TẦN SUẤT / TUẦN", "SESSIONS / WEEK")}</div>
+            <strong>{memberText(`${sched.daysPerWeek} buổi / tuần`, `${sched.daysPerWeek} sessions / week`)}</strong>
+          </div>
+          <div>
+            <div className="meta-label">{memberText("CÁC NGÀY TẬP", "TRAINING DAYS")}</div>
+            <strong>{sched.daysText}</strong>
+          </div>
+          <div>
+            <div className="meta-label">{memberText("KHUNG GIỜ TẬP", "TIME SLOT")}</div>
+            <strong>{sched.timeRange}</strong>
+          </div>
+          <div>
+            <div className="meta-label">{memberText("NGÀY KHAI GIẢNG", "START DATE")}</div>
+            <strong>{sched.startDateFormatted}</strong>
+          </div>
+          {sched.endDateFormatted && (
+            <div>
+              <div className="meta-label">{memberText("NGÀY BẾ GIẢNG", "END DATE")}</div>
+              <strong>{sched.endDateFormatted}</strong>
+            </div>
+          )}
+          <div>
+            <div className="meta-label">{memberText("HUẤN LUYỆN VIÊN", "COACH")}</div>
+            <strong>{course.coachName}</strong>
+          </div>
+          <div>
+            <div className="meta-label">{memberText("PHÒNG TẬP", "ROOM")}</div>
+            <strong>{course.roomName}</strong>
+            {course.roomName && (
+              <Link
+                to={`/member/explore?focus=${encodeURIComponent(course.roomName)}`}
+                className="member-classes-package-link"
+                style={{ marginLeft: 8 }}
+              >
+                {text('3D', '3D')}
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {course.description && (
+          <div>
+            <div className="meta-label" style={{ marginBottom: 4 }}>{memberText("MÔ TẢ KHÓA HỌC & LƯU Ý", "COURSE DESCRIPTION & NOTES")}</div>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+              {course.description}
+            </p>
+          </div>
+        )}
+
+        {/* Thông tin gói tập & quyền lợi của hội viên */}
+        <div
+          style={{
+            padding: '14px 16px',
+            border: '1px solid var(--color-salmon, #eb7e6b)',
+            borderRadius: 8,
+            backgroundColor: 'rgba(235, 126, 107, 0.06)',
+          }}
+        >
+          <div className="meta-label" style={{ color: 'var(--color-salmon, #eb7e6b)', marginBottom: 6 }}>
+            {memberText("QUYỀN LỢI GÓI TẬP CỦA BẠN", "YOUR MEMBERSHIP BENEFITS")}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: '1rem', fontWeight: 700 }}>
+                {subscription?.packageName || (quota?.tier ? `${memberText("Gói ", "Plan ")}${quota.tier.toUpperCase()}` : memberText("Chưa có gói tập", "No active plan"))}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                {quota?.unlimited
+                  ? memberText("Gói tập Platinum: Không giới hạn số lượng khóa học thể thao định kỳ.", "Platinum membership: Unlimited recurring sports courses.")
+                  : quota && quota.remainingCredits > 0
+                  ? memberText(`Bạn còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí theo hạn mức gói.`, `You have ${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses remaining in your plan.`)
+                  : hasActivePackage
+                  ? memberText("Bạn đã dùng hết hạn mức khóa học miễn phí của gói. Đăng ký thêm tính theo học phí ngoài gói.", "You have used all free course credits in your plan. Additional courses are charged standard tuition.")
+                  : memberText("Bạn chưa có gói hội viên. Vui lòng thanh toán học phí hoặc mua gói tập để hưởng ưu đãi.", "You do not have an active membership. Please pay tuition fee or purchase a membership plan.")}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="meta-label">{memberText("CHI PHÍ ĐĂNG KÝ", "TUITION FEE")}</div>
+              <strong style={{ fontSize: '1.15rem', color: hasQuota ? '#4ade80' : 'var(--color-salmon, #eb7e6b)' }}>
+                {hasQuota ? memberText("0 VNĐ (Miễn phí theo gói)", "0 VND (Free with plan)") : `${priceNum.toLocaleString('vi-VN')} ${memberText("VNĐ", "VND")}`}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal footer actions */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={onClose}
+          >
+            {text("Đóng", "Close")}
+          </button>
+          {isEnrolled ? (
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={(event) => onCancelCourse(event.currentTarget)}
+            >
+              {memberText("Hủy khóa học này", "Cancel this course")}
+            </button>
+          ) : hasQuota ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => onEnroll(course.id, course.name)}
+            >
+              {memberText("Xác nhận đăng ký (Miễn phí theo gói)", "Confirm enrollment (Free with plan)")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => onCheckout({ classId: course.id, className: course.name, price: priceNum })}
+            >
+              {memberText("Thanh toán học phí & Đăng ký", "Pay tuition & enroll")}
+            </button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export function MemberClassesPage() {
   const { lang } = useLanguage();
   const text = (vi: string, en: string) => lang === 'en' ? en : vi;
@@ -160,6 +430,14 @@ export function MemberClassesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | SourceMessage>('');
   const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string; kind: 'enrollment' | 'booking' } | null>(null);
+  const [quota, setQuota] = useState<QuotaDto | null>(null);
+  const [classes, setClasses] = useState<GymClassDto[]>([]);
+  const [subscription, setSubscription] = useState<CardSubscription | null>(null);
+  const [scheduleView, setScheduleView] = useState<'sessions' | 'courses'>('sessions');
+  const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<GymClassDto | null>(null);
+  const [courseCheckoutTarget, setCourseCheckoutTarget] = useState<{ classId: number; className: string; price: number } | null>(null);
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'online_wallet' | 'vnpay' | 'cash'>('online_wallet');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const cancelFocusRef = useRef<HTMLButtonElement | null>(null);
   const busyRef = useRef<string | null>(null);
   const actionGenRef = useRef(0);
@@ -213,13 +491,44 @@ export function MemberClassesPage() {
 
   useEffect(() => {
     let active = true;
+    void getMyQuota()
+      .then((q) => {
+        if (active) setQuota(q);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [retry, myScheduleRetry]);
+
+  useEffect(() => {
+    let active = true;
     void getMySubscription()
-      .then((subscription) => {
-        if (active) setHasActivePackage(!!subscription && ['active', 'warning'].includes(cardStatus(subscription.status, subscription.endDate)));
+      .then((sub) => {
+        if (active) {
+          setSubscription(sub);
+          setHasActivePackage(!!sub && ['active', 'warning'].includes(cardStatus(sub.status, sub.endDate)));
+        }
       })
       .catch(() => {});
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    void getClasses()
+      .then((data) => {
+        if (active && data) setClasses(data);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [retry]);
+
+  const classesMap = useMemo(() => {
+    const map = new Map<number, GymClassDto>();
+    for (const c of classes) {
+      map.set(c.id, c);
+    }
+    return map;
+  }, [classes]);
 
   useEffect(() => {
     let active = true;
@@ -360,6 +669,61 @@ export function MemberClassesPage() {
     }
   }
 
+  async function handleEnrollCourse(classId: number, className: string) {
+    const key = `course-${classId}`;
+    if (busyRef.current) return;
+    busyRef.current = key;
+    setBusyKey(key);
+    setActionError('');
+    try {
+      await enrollCourse(classId);
+      memberNotify(memberMessage(`Đã đăng ký khóa học "${className}" thành công!`, `Course "${className}" enrolled successfully!`), 'success', { record: true });
+      setRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      busyRef.current = null;
+      setBusyKey(null);
+    }
+  }
+
+  async function handleConfirmCourseCheckout() {
+    if (!courseCheckoutTarget || isCheckingOut) return;
+    setIsCheckingOut(true);
+    setActionError('');
+    try {
+      const res = await checkoutCourse(courseCheckoutTarget.classId, checkoutPaymentMethod);
+      if (res.paymentUrl) {
+        window.location.href = res.paymentUrl;
+        return;
+      }
+      if (checkoutPaymentMethod === 'cash') {
+        memberNotify(
+          memberMessage(
+            `Đã đăng ký khóa học "${courseCheckoutTarget.className}". Vui lòng thanh toán ${res.amount ? Number(res.amount).toLocaleString('vi-VN') : ''} đ tại quầy lễ tân trước ngày khai giảng.`,
+            `Registered for "${courseCheckoutTarget.className}". Please pay ${res.amount ? Number(res.amount).toLocaleString('vi-VN') : ''} VND at the reception before the course starts.`
+          ),
+          'success',
+          { record: true }
+        );
+      } else {
+        memberNotify(
+          memberMessage(`Thanh toán và đăng ký khóa học "${courseCheckoutTarget.className}" thành công!`, `Payment & enrollment for "${courseCheckoutTarget.className}" successful!`),
+          'success',
+          { record: true }
+        );
+      }
+      setCourseCheckoutTarget(null);
+      setRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      setIsCheckingOut(false);
+    }
+  }
+
   const weekRange = currentWeek(weekOffset);
   const disciplines = DISCIPLINES.map(item => item.name);
   const visible = filterSessions(sessions, discipline, day)
@@ -369,12 +733,67 @@ export function MemberClassesPage() {
   const activeBookings = myScheduleReady ? bookings.filter((item) => item.status === 'booked') : [];
   const seatsInView: EnrollmentDto[] = [...activeEnrollments, ...activeBookings.map(bookingAsEnrollment)];
 
+  const visibleCourses = useMemo(() => {
+    return classes.filter((cls) => {
+      if (discipline !== 'ALL') {
+        const clsDiscName = cls.disciplineName || '';
+        if (!matchesDiscipline(clsDiscName, discipline)) return false;
+      }
+      return true;
+    });
+  }, [classes, discipline]);
+
   return (
     <div data-i18n-managed className="portal-container member-classes">
       <div data-i18n-managed><PageHeader
         eyebrow={text("Hội viên", 'Member')}
         title={text("Lịch học & đặt chỗ", 'Classes & bookings')}
       /></div>
+
+      {/* Quota Banner: Hiển thị số lượt đăng ký khóa học còn lại của gói */}
+      {quota && (
+        <div
+          className="portal-card"
+          data-testid="course-quota-banner"
+          style={{
+            padding: '14px 18px',
+            marginBottom: 18,
+            backgroundColor: 'var(--color-bg-warm, #1e1e1e)',
+            border: '1px solid var(--color-salmon, #eb7e6b)',
+            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span className="badge badge-info" style={{ fontWeight: 700 }}>
+                {quota.tier ? `GÓI ${quota.tier.toUpperCase()}` : 'GÓI HỘI VIÊN'}
+              </span>
+              <strong style={{ fontSize: '0.96rem', color: 'var(--color-salmon, #eb7e6b)' }}>
+                {quota.unlimited
+                  ? memberText("Đăng ký khóa học: Không giới hạn", "Course Enrollment: Unlimited")
+                  : memberText(`Hạn mức: Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí`)}
+              </strong>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+              {quota.unlimited
+                ? memberText("Bạn được đăng ký miễn phí không giới hạn tất cả các khóa học fitness định kỳ.", "You have unlimited free enrollment for all recurring fitness courses.")
+                : quota.remainingCredits > 0
+                ? memberText("1 lượt học = 1 khóa học trọn gói. Đăng ký để giữ chỗ cho toàn bộ các buổi học trong khóa.", "1 credit = 1 full course. Enroll to reserve your spot for all course sessions.")
+                : memberText("Bạn đã sử dụng hết lượt đăng ký theo gói tập. Các khóa học đăng ký thêm sẽ thanh toán học phí ngoài gói.", "You have used all credits in your plan. Additional courses can be purchased with tuition fee.")}
+            </p>
+          </div>
+          {quota.remainingCredits <= 0 && !quota.unlimited && (
+            <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+              {text('Nâng cấp gói tập', 'Upgrade membership')}
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="portal-tabs" data-i18n-managed role="tablist" aria-label={text("Lịch học", "Class schedule")} style={{ marginBottom: 18 }}>
         <button
@@ -490,6 +909,51 @@ export function MemberClassesPage() {
             </div>
           </div>
 
+          {/* Thanh chuyển đổi chế độ xem: Lịch buổi học theo tuần vs Khóa học định kỳ (Trọn gói) */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                gap: 6,
+                background: 'var(--color-bg-warm, #1e1e1e)',
+                padding: '4px 6px',
+                borderRadius: 8,
+                border: '1px solid var(--portal-border, #333)',
+              }}
+            >
+              <button
+                type="button"
+                className={`btn-sm ${scheduleView === 'sessions' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ borderRadius: 6, fontSize: '0.84rem' }}
+                onClick={() => setScheduleView('sessions')}
+              >
+                {memberText("Lịch buổi học theo tuần", "Weekly Sessions")}
+              </button>
+              <button
+                type="button"
+                className={`btn-sm ${scheduleView === 'courses' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ borderRadius: 6, fontSize: '0.84rem' }}
+                onClick={() => setScheduleView('courses')}
+              >
+                {memberText("Khóa học định kỳ (Trọn gói)", "Recurring Courses")}
+              </button>
+            </div>
+            <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+              {scheduleView === 'sessions'
+                ? memberText("Xem chi tiết lịch học từng buổi trong tuần", "Viewing session timetable for the week")
+                : memberText(`Tổng cộng ${visibleCourses.length} khóa học trọn gói`, `Total ${visibleCourses.length} full courses`)}
+            </span>
+          </div>
+
           {loading ? (
           <div className="stack" role="status" aria-busy="true">
             <span className="sr-only">{text("Đang tải lịch học...", "Loading classes...")}</span>
@@ -514,6 +978,114 @@ export function MemberClassesPage() {
             <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>
               {text("Thử lại", "Retry")}
             </button>
+          </div>
+        ) : scheduleView === 'courses' ? (
+          <div className="stack" id="member-course-results">
+            {visibleCourses.length === 0 ? (
+              <div data-i18n-managed className="portal-card portal-empty">
+                <h3>{text("Chưa có khóa học trọn gói", "No recurring courses available")}</h3>
+                <p>{text("Hãy thử chọn bộ môn khác hoặc quay lại sau.", "Try another discipline or check back later.")}</p>
+              </div>
+            ) : (
+              visibleCourses.map((c) => {
+                const sched = parseCourseSchedule(c);
+                const myEnrollment = activeEnrollments.find((e) => e.classId === c.id);
+                const isEnrolled = !!myEnrollment;
+                const isBusy = busyKey === `course-${c.id}` || (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false);
+                const priceNum = c.price ?? 500000;
+                const hasQuota = quota?.unlimited || (quota && quota.remainingCredits > 0);
+
+                return (
+                  <div key={c.id} className="portal-card portal-card--list member-course-card" style={{ padding: '16px 20px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div className="row-card__meta row-card__meta--inline" style={{ marginBottom: 6 }}>
+                        <span className="badge badge-info">{c.disciplineName || 'Fitness'}</span>
+                        <span className="badge badge-outline">{levelLabel(c.level)}</span>
+                        <span className="badge badge-success" style={{ fontWeight: 600 }}>
+                          {memberText(`Khóa ${sched.durationWeeks} tuần (${sched.daysPerWeek} buổi / tuần)`, `${sched.durationWeeks}-week course (${sched.daysPerWeek} sessions / week)`)}
+                        </span>
+                        {isEnrolled && <span className="badge badge-success">{memberText("Đã đăng ký trọn gói", "Enrolled full course")}</span>}
+                      </div>
+                      <h3 className="row-card__title" style={{ fontSize: '1.2rem', marginBottom: 6 }}>{c.name}</h3>
+                      <div className="row-card__meta row-card__meta--inline" style={{ marginBottom: 6 }}>
+                        <span><strong>{memberText("Lịch học: ", "Schedule: ")}</strong>{sched.daysText} ({sched.timeRange})</span>
+                        <span><strong>{memberText("Tổng số: ", "Total: ")}</strong>{memberText(`${sched.totalSessions} buổi trọn gói`, `${sched.totalSessions} sessions`)}</span>
+                      </div>
+                      <div className="row-card__meta row-card__meta--inline" style={{ marginBottom: 6 }}>
+                        <span>{memberText("Khai giảng: ", "Starts: ")}<strong>{sched.startDateFormatted}</strong></span>
+                        {sched.endDateFormatted && <span>{memberText("Bế giảng: ", "Ends: ")}<strong>{sched.endDateFormatted}</strong></span>}
+                        <span>{memberText("Phòng: ", "Room: ")}<strong>{c.roomName}</strong></span>
+                        <span>{memberText("HLV: ", "Coach: ")}<strong>{c.coachName}</strong></span>
+                      </div>
+                      {c.description && (
+                        <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>
+                          {c.description}
+                        </p>
+                      )}
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--color-bg-warm, rgba(255,255,255,0.04))', borderRadius: 6, fontSize: '0.86rem' }}>
+                        {quota?.unlimited ? (
+                          <span style={{ color: 'var(--color-salmon, #eb7e6b)' }}>
+                            ✓ <strong>{memberText("Gói ", "Plan ")}{quota.tier?.toUpperCase()}:</strong> {memberText("Miễn phí toàn bộ khóa học không giới hạn.", "Unlimited free courses.")}
+                          </span>
+                        ) : quota && quota.remainingCredits > 0 ? (
+                          <span style={{ color: 'var(--color-salmon, #eb7e6b)' }}>
+                            ✓ <strong>{memberText("Quyền lợi gói tập: ", "Plan benefit: ")}</strong>{memberText(`Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí.`, `${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses remaining.`)}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--color-text-muted)' }}>
+                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--color-salmon, #eb7e6b)' }}>{priceNum.toLocaleString('vi-VN')} {memberText("VNĐ", "VND")}</strong> {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', gap: 10, minWidth: 200 }}>
+                      <div className="meta-label">{memberText("SỨC CHỨA KHÓA HỌC", "COURSE CAPACITY")}</div>
+                      <strong>{c.capacity} {memberText("học viên tối đa", "students max")}</strong>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 4 }}>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={() => setSelectedCourseForDetail(c)}
+                        >
+                          {memberText("Xem chi tiết & Lộ trình", "Details & Syllabus")}
+                        </button>
+                        {isEnrolled ? (
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm"
+                            disabled={isBusy}
+                            onClick={(event) => {
+                              cancelFocusRef.current = event.currentTarget;
+                              setCancelTarget({ id: myEnrollment.id, className: c.name, kind: 'enrollment' });
+                            }}
+                          >
+                            {isBusy ? memberText("Đang xử lý...") : memberText("Hủy khóa học", "Cancel course")}
+                          </button>
+                        ) : hasQuota ? (
+                          <button
+                            type="button"
+                            className="btn-primary btn-sm member-class-enroll"
+                            disabled={isBusy}
+                            onClick={() => void handleEnrollCourse(c.id, c.name)}
+                          >
+                            {isBusy ? memberText("Đang đăng ký...", "Enrolling...") : memberText("Đăng ký trọn gói", "Enroll full course")}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-primary btn-sm"
+                            disabled={isBusy}
+                            onClick={() => setCourseCheckoutTarget({ classId: c.id, className: c.name, price: priceNum })}
+                          >
+                            {isBusy ? memberText("Đang xử lý...") : memberText("Đăng ký & Thanh toán", "Enroll & Pay")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         ) : (
           <div className="stack" id="member-class-results">
@@ -541,6 +1113,8 @@ export function MemberClassesPage() {
             ) : (
               <>{visible.slice(0, visibleCount).map((item, index) => {
                 const [year, month, date] = item.sessionDate.split('-');
+                const parentClass = classesMap.get(item.classId);
+                const courseSched = parseCourseSchedule(parentClass, item.sessionDate, item.startTime, item.endTime);
                 const now = centerNowParts();
                 const past =
                   item.sessionDate < now.date ||
@@ -581,6 +1155,14 @@ export function MemberClassesPage() {
                         )}
                         <span>{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
                       </div>
+                      <div className="row-card__meta row-card__meta--inline" style={{ marginTop: 4 }}>
+                        <span className="badge badge-warning" style={{ fontWeight: 600 }}>
+                          {memberText(`Khóa ${courseSched.durationWeeks} tuần (${courseSched.daysPerWeek} buổi/tuần)`, `${courseSched.durationWeeks}-week course (${courseSched.daysPerWeek} sessions/week)`)}
+                        </span>
+                        <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+                          {memberText(`Lịch: ${courseSched.daysText}`, `Schedule: ${courseSched.daysText}`)}
+                        </span>
+                      </div>
                       <div className="row-card__meta">
                         {memberText("Trạng thái: ")}{past ? memberText("Đã qua giờ mở lớp") : item.status === 'scheduled' ? memberText("Đã lên lịch") : item.status === 'cancelled' ? memberText("Đã hủy") : item.status}
                       </div>
@@ -589,6 +1171,27 @@ export function MemberClassesPage() {
                       <div className="meta-label">{memberText("SĨ SỐ HIỆN TẠI")}</div>
                       <strong>{item.bookedCount} / {item.capacity}{memberText(" học viên")}</strong>
                       <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          style={{ fontSize: '0.82rem' }}
+                          onClick={() => {
+                            const courseDto = parentClass || ({
+                              id: item.classId,
+                              name: item.className,
+                              disciplineName: item.disciplineName,
+                              roomName: item.roomName,
+                              coachName: item.coachName,
+                              capacity: item.capacity,
+                              startDate: item.sessionDate,
+                              startTime: item.startTime,
+                              endTime: item.endTime,
+                            } as GymClassDto);
+                            setSelectedCourseForDetail(courseDto);
+                          }}
+                        >
+                          {memberText("Chi tiết khóa học & Gói tập", "Course & Plan Details")}
+                        </button>
                         {!myScheduleReady ? <button type="button" className="btn-secondary btn-sm" disabled>
                           {myScheduleLoading ? memberText("Đang kiểm tra đặt chỗ...") : memberText("Chưa thể kiểm tra đặt chỗ")}
                         </button> : myBooking ? (
@@ -613,16 +1216,34 @@ export function MemberClassesPage() {
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             {memberText("Không thể đặt")}</button>
                         ) : item.bookedCount < item.capacity ? (
-                          <button
-                            type="button"
-                            className="btn-primary member-class-enroll"
-                            aria-label={`${isBusy ? memberText("Đang đặt chỗ") : memberText("Đặt chỗ ngay")}: ${item.className}`}
-                            title={memberText(`Đặt chỗ ngay: ${item.className}`, `Book now: ${item.className}`)}
-                            disabled={isBusy}
-                            onClick={() => void handleBook(item)}
-                          >
-                            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đặt chỗ...") : memberText("Đặt chỗ ngay")}</span>
-                          </button>
+                          quota && !quota.unlimited && quota.remainingCredits <= 0 ? (
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              data-testid={`pay-course-${item.classId}`}
+                              disabled={isBusy}
+                              onClick={() => setCourseCheckoutTarget({ classId: item.classId, className: item.className, price: 500000 })}
+                            >
+                              {text("Thanh toán học phí", "Pay course fee")}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-primary member-class-enroll"
+                              aria-label={`${isBusy ? memberText("Đang đặt chỗ") : memberText("Đặt chỗ ngay")}: ${item.className}`}
+                              title={memberText(`Đặt chỗ ngay: ${item.className}`, `Book now: ${item.className}`)}
+                              disabled={isBusy}
+                              onClick={() => {
+                                if (quota && quota.remainingCredits > 0) {
+                                  void handleEnrollCourse(item.classId, item.className);
+                                } else {
+                                  void handleBook(item);
+                                }
+                              }}
+                            >
+                              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đặt chỗ...") : memberText("Đặt chỗ ngay")}</span>
+                            </button>
+                          )
                         ) : (
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             {memberText("Buổi đã đầy")}</button>
@@ -650,6 +1271,115 @@ export function MemberClassesPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
             <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>{memberText("Giữ đặt chỗ")}</button>
             <button type="button" className="btn-danger" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>{memberText("Xác nhận hủy")}</button>
+          </div>
+        </Modal>
+      )}
+
+      {selectedCourseForDetail && (
+        <MemberCourseDetailModal
+          course={selectedCourseForDetail}
+          quota={quota}
+          subscription={subscription}
+          hasActivePackage={hasActivePackage}
+          isEnrolled={activeEnrollments.some((e) => e.classId === selectedCourseForDetail.id)}
+          onClose={() => setSelectedCourseForDetail(null)}
+          onEnroll={(classId, className) => {
+            setSelectedCourseForDetail(null);
+            void handleEnrollCourse(classId, className);
+          }}
+          onCheckout={(target) => {
+            setSelectedCourseForDetail(null);
+            setCourseCheckoutTarget(target);
+          }}
+          onCancelCourse={(buttonEl) => {
+            cancelFocusRef.current = buttonEl;
+            const targetEnrollment = activeEnrollments.find((e) => e.classId === selectedCourseForDetail.id);
+            const courseName = selectedCourseForDetail.name;
+            setSelectedCourseForDetail(null);
+            if (targetEnrollment) {
+              setCancelTarget({ id: targetEnrollment.id, className: courseName, kind: 'enrollment' });
+            }
+          }}
+        />
+      )}
+
+      {courseCheckoutTarget && (
+        <Modal
+          title={text("Thanh toán học phí khóa học", "Course fee payment")}
+          onClose={() => setCourseCheckoutTarget(null)}
+        >
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem' }}>{courseCheckoutTarget.className}</h3>
+              <p className="row-card__meta" style={{ margin: 0 }}>
+                {text("Học phí khóa học trọn gói:", "Full course tuition fee:")}{' '}
+                <strong style={{ color: 'var(--color-salmon, #eb7e6b)', fontSize: '1.1rem' }}>
+                  {lang === 'en'
+                    ? `${courseCheckoutTarget.price?.toLocaleString('en-US')} VND`
+                    : `${courseCheckoutTarget.price?.toLocaleString('vi-VN')} đ`}
+                </strong>
+              </p>
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label">{text("Phương thức thanh toán", "Payment method")}</label>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                  <input
+                    type="radio"
+                    name="coursePaymentMethod"
+                    value="online_wallet"
+                    checked={checkoutPaymentMethod === 'online_wallet'}
+                    onChange={() => setCheckoutPaymentMethod('online_wallet')}
+                  />
+                  <div>
+                    <strong>{text("Ví điện tử SÖL", "SÖL Member Wallet")}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Thanh toán trừ số dư ví tức thì", "Instant wallet debit")}</div>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                  <input
+                    type="radio"
+                    name="coursePaymentMethod"
+                    value="vnpay"
+                    checked={checkoutPaymentMethod === 'vnpay'}
+                    onChange={() => setCheckoutPaymentMethod('vnpay')}
+                  />
+                  <div>
+                    <strong>{text("Cổng thanh toán VNPay (Thẻ ATM / QR)", "VNPay Gateway (ATM / QR)")}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Chuyển sang trang thanh toán bảo mật VNPay", "Redirect to VNPay portal")}</div>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                  <input
+                    type="radio"
+                    name="coursePaymentMethod"
+                    value="cash"
+                    checked={checkoutPaymentMethod === 'cash'}
+                    onChange={() => setCheckoutPaymentMethod('cash')}
+                  />
+                  <div>
+                    <strong>{text("Tiền mặt tại quầy lễ tân", "Cash at reception")}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Giữ chỗ trước và nộp tiền tại quầy trước khai giảng", "Hold seat and pay at counter")}</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+              <button type="button" className="btn-secondary" onClick={() => setCourseCheckoutTarget(null)} disabled={isCheckingOut}>
+                {text("Hủy bỏ", "Cancel")}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void handleConfirmCourseCheckout()}
+                disabled={isCheckingOut}
+                data-testid="confirm-course-checkout-btn"
+              >
+                {isCheckingOut ? text("Đang xử lý...", "Processing...") : text("Xác nhận thanh toán", "Confirm payment")}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

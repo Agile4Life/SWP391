@@ -34,7 +34,7 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly, onMetricsChange }
  const onMetricsChangeRef = useRef(onMetricsChange);
  useEffect(() => {
   onMetricsChangeRef.current = onMetricsChange;
- });
+ }, [onMetricsChange]);
  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
  useEffect(() => {
   let active = true; setLoading(true); setLoadError('');

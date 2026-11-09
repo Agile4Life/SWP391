@@ -7,6 +7,27 @@ export interface GymClassDto {
   id: number; name: string; disciplineId: number; disciplineName: string;
   coachId: number; coachName: string; roomId: number; roomName: string;
   capacity: number; level: string; description: string | null; status: string;
+  price?: number; startDate?: string; endDate?: string; recurringDays?: string;
+  startTime?: string; endTime?: string;
+}
+
+export interface QuotaDto {
+  tier: string;
+  totalCredits: number | null;
+  usedCredits: number;
+  remainingCredits: number;
+  unlimited: boolean;
+}
+
+export interface CourseCheckoutResult {
+  enrollmentId: number;
+  paymentId: number | null;
+  classId: number;
+  className: string;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  paymentUrl?: string | null;
 }
 
 export interface ClassSessionDto {
@@ -63,6 +84,16 @@ export const cancelBookings = (bookingIds: number[]) => apiFetch<BulkCancelResul
 });
 export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
 export const cancelEnrollment = (enrollmentId: number) => apiFetch<EnrollmentDto>(`/classes/enrollments/${enrollmentId}`, { method: 'DELETE' });
+
+export const getMyQuota = () => apiFetch<QuotaDto>('/classes/my-quota');
+export const enrollCourse = (classId: number) => apiFetch<EnrollmentDto>(`/classes/${classId}/enroll`, { method: 'POST' });
+export const cancelCourse = (classId: number) => apiFetch<EnrollmentDto>(`/classes/${classId}/enroll`, { method: 'DELETE' });
+export const getMyCourseEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/my-enrollments');
+export const checkoutCourse = (classId: number, method = 'cash') =>
+  apiFetch<CourseCheckoutResult>(`/classes/${classId}/checkout`, {
+    method: 'POST',
+    body: JSON.stringify({ method }),
+  });
 
 // Parse YYYY-MM-DD as a calendar date. new Date('YYYY-MM-DD') can shift days by timezone.
 export function weekday(date: string): number {
