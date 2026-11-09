@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { ALL_ITEM_KINDS } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import {
+  buildChamferBoxGeometry,
   clearItemGeometryCache,
   computeItemInstanceMatrix,
   DEFAULT_ITEM_DIMENSIONS,
@@ -10,6 +11,7 @@ import {
   getItemGeometry,
   groupItemsByKind,
   isItemInstanceVisible,
+  ITEM_HIGH_DETAIL_TRIANGLE_BUDGET,
   ITEM_STATUS_COLORS,
   resolveItemInstanceColor,
   warmAllItemGeometries,
@@ -153,5 +155,41 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
     expect(typeof ItemInstances).toBe('function');
     expect(typeof Courts).toBe('function');
     expect(typeof Pool).toBe('function');
+  });
+});
+
+describe('Item chamfer bevel', () => {
+  it('builds a 44 triangle chamfer box with outward unit normals and the requested extents', () => {
+    const geom = buildChamferBoxGeometry(1, 2, 0.5, 0.05);
+    expect(getGeometryTriangleCount(geom)).toBe(44);
+    geom.computeBoundingBox();
+    const size = new THREE.Vector3();
+    geom.boundingBox!.getSize(size);
+    expect(size.x).toBeCloseTo(1, 5);
+    expect(size.y).toBeCloseTo(2, 5);
+    expect(size.z).toBeCloseTo(0.5, 5);
+
+    const pos = geom.getAttribute('position');
+    const norm = geom.getAttribute('normal');
+    for (let i = 0; i < pos.count; i += 3) {
+      const a = new THREE.Vector3().fromBufferAttribute(pos, i);
+      const b = new THREE.Vector3().fromBufferAttribute(pos, i + 1);
+      const c = new THREE.Vector3().fromBufferAttribute(pos, i + 2);
+      const faceNormal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
+      const n = new THREE.Vector3().fromBufferAttribute(norm, i);
+      expect(n.length()).toBeCloseTo(1, 5);
+      // Winding must agree with the stored normal so faces are not culled.
+      expect(faceNormal.dot(n)).toBeGreaterThan(0.99);
+      // Normal points away from the centre of the box.
+      const centroid = a.clone().add(b).add(c).divideScalar(3);
+      expect(centroid.dot(n)).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps every high detail item within the triangle budget', () => {
+    for (const kind of ALL_ITEM_KINDS) {
+      const geom = getItemGeometry(kind, 'high');
+      expect(getGeometryTriangleCount(geom)).toBeLessThanOrEqual(ITEM_HIGH_DETAIL_TRIANGLE_BUDGET);
+    }
   });
 });
