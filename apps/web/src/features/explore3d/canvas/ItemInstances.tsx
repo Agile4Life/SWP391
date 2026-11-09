@@ -1,16 +1,19 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { ItemKind, LevelCode, SceneDoc } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
+import { ItemGlbLoader } from './ItemGlbLoader';
 import {
   computeItemInstanceMatrix,
   getItemGeometry,
+  getItemGeometryRevision,
   groupItemsByKind,
   isItemInstanceVisible,
   lookupResolvedItem,
   resolveItemInstanceColor,
+  subscribeItemGeometries,
   type GroupedItemEntry,
   type ItemDetailLevel,
   type ResolvedItemBindingState,
@@ -50,6 +53,7 @@ interface KindInstancedBatchProps {
   selectedId: string | null;
   hoveredId: string | null;
   resolvedItems?: ResolvedItemsMap;
+  geometryRevision: number;
   onSelect: (id: string, fit?: boolean) => void;
   onHover: (id: string | null) => void;
 }
@@ -66,13 +70,16 @@ function KindInstancedBatch({
   selectedId,
   hoveredId,
   resolvedItems,
+  geometryRevision,
   onSelect,
   onHover,
 }: KindInstancedBatchProps) {
   const meshRef = useRef<THREE.InstancedMesh | null>(null);
   const invalidate = useThree(s => s.invalidate);
 
-  const geometry = useMemo(() => getItemGeometry(kind, detail), [kind, detail]);
+  // geometryRevision changes when a GLB model replaces the procedural geometry.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const geometry = useMemo(() => getItemGeometry(kind, detail), [kind, detail, geometryRevision]);
 
   const hasVisibleItems = useMemo(() => {
     for (let i = 0; i < entries.length; i++) {
@@ -194,17 +201,26 @@ export function ItemInstances({
   const setHoveredId = useExploreStore(s => s.setHoveredId);
 
   const grouped = useMemo(() => groupItemsByKind(scene), [scene]);
+  const geometryRevision = useSyncExternalStore(
+    subscribeItemGeometries,
+    getItemGeometryRevision,
+    getItemGeometryRevision,
+  );
 
+  const useClearcoat = tier !== 'low';
   const sharedMaterial = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshPhysicalMaterial({
         name: 'sol-instanced-items-vertex-colored',
         color: '#ffffff',
         vertexColors: true,
-        roughness: 0.46,
-        metalness: 0.32,
+        roughness: 0.4,
+        metalness: 0.36,
+        // Lacquered-paint sheen on powder-coated frames and padded surfaces.
+        clearcoat: useClearcoat ? 0.35 : 0,
+        clearcoatRoughness: 0.3,
       }),
-    [],
+    [useClearcoat],
   );
 
   useEffect(() => {
@@ -222,6 +238,7 @@ export function ItemInstances({
 
   return (
     <group name="sol-item-instances">
+      <ItemGlbLoader />
       {Array.from(grouped.entries()).map(([kind, entries]) => {
         if (entries.length === 0 || DEDICATED_SURFACE_KINDS.has(kind)) return null;
         return (
@@ -238,6 +255,7 @@ export function ItemInstances({
             selectedId={selectedId}
             hoveredId={hoveredId}
             resolvedItems={resolvedItems}
+            geometryRevision={geometryRevision}
             onSelect={handleSelect}
             onHover={setHoveredId}
           />

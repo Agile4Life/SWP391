@@ -11,12 +11,14 @@ import { Courts } from './Courts';
 import { Cutaway } from './Cutaway';
 import { Environment } from './Environment';
 import { Hotspots } from './Hotspots';
+import { ImageBasedLighting } from './ImageBasedLighting';
 import { ItemInstances } from './ItemInstances';
 import { LevelStack } from './LevelStack';
 import { Lights } from './Lights';
 import { LiveActivityActors } from './LiveActivityActors';
 import { Picking, handleCanvasPointerMissed } from './Picking';
 import { Pool } from './Pool';
+import { RiggedActors } from './RiggedActors';
 import { SelectionHighlight } from './SelectionHighlight';
 
 export interface ExploreCanvasProps {
@@ -116,6 +118,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       onPointerMissed={handleCanvasPointerMissed}
     >
       <Environment />
+      <ImageBasedLighting />
       <Lights />
       <CameraRig />
       <Cutaway />
@@ -126,6 +129,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
         <ItemInstances resolvedItems={bindings?.items} />
       </Picking>
       <LiveActivityActors benchEnabled={benchEnabled} />
+      <RiggedActors benchEnabled={benchEnabled} />
       <SelectionHighlight />
       <Hotspots />
       <WalkController />

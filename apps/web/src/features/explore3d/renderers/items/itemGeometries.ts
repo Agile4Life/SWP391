@@ -119,6 +119,141 @@ function paintGeometry(
   return geom;
 }
 
+/** Edge chamfer used on item boxes. Capped relative to the smallest dimension. */
+export const ITEM_BEVEL_MAX = 0.03;
+const ITEM_BEVEL_MIN_DIMENSION = 0.08;
+
+/**
+ * Box with a single 45 degree chamfer on every edge (44 triangles). The bevel
+ * strips carry their own diagonal normals so edges catch a thin highlight
+ * instead of the hard black/white seam of a plain box, without the ~100+
+ * triangles a RoundedBoxGeometry would add per part.
+ */
+export function buildChamferBoxGeometry(
+  w: number,
+  h: number,
+  d: number,
+  bevel: number,
+): THREE.BufferGeometry {
+  const hx = w / 2;
+  const hy = h / 2;
+  const hz = d / 2;
+  const r = Math.min(bevel, hx * 0.45, hy * 0.45, hz * 0.45);
+  const ix = hx - r;
+  const iy = hy - r;
+  const iz = hz - r;
+
+  const positions: number[] = [];
+  const normals: number[] = [];
+
+  const pushTri = (a: Vec3, b: Vec3, c: Vec3, n: Vec3) => {
+    const ux = b[0] - a[0];
+    const uy = b[1] - a[1];
+    const uz = b[2] - a[2];
+    const vx = c[0] - a[0];
+    const vy = c[1] - a[1];
+    const vz = c[2] - a[2];
+    const cx = uy * vz - uz * vy;
+    const cy = uz * vx - ux * vz;
+    const cz = ux * vy - uy * vx;
+    const flip = cx * n[0] + cy * n[1] + cz * n[2] < 0;
+    const [p1, p2, p3] = flip ? [a, c, b] : [a, b, c];
+    const len = Math.hypot(n[0], n[1], n[2]) || 1;
+    const nx = n[0] / len;
+    const ny = n[1] / len;
+    const nz = n[2] / len;
+    for (const p of [p1, p2, p3]) {
+      positions.push(p[0], p[1], p[2]);
+      normals.push(nx, ny, nz);
+    }
+  };
+  const pushQuad = (a: Vec3, b: Vec3, c: Vec3, e: Vec3, n: Vec3) => {
+    pushTri(a, b, c, n);
+    pushTri(a, c, e, n);
+  };
+
+  const signs = [-1, 1] as const;
+
+  // Six inset faces.
+  for (const s of signs) {
+    pushQuad(
+      [s * hx, -iy, -iz],
+      [s * hx, iy, -iz],
+      [s * hx, iy, iz],
+      [s * hx, -iy, iz],
+      [s, 0, 0],
+    );
+    pushQuad(
+      [-ix, s * hy, -iz],
+      [ix, s * hy, -iz],
+      [ix, s * hy, iz],
+      [-ix, s * hy, iz],
+      [0, s, 0],
+    );
+    pushQuad(
+      [-ix, -iy, s * hz],
+      [ix, -iy, s * hz],
+      [ix, iy, s * hz],
+      [-ix, iy, s * hz],
+      [0, 0, s],
+    );
+  }
+
+  // Twelve bevel strips (four per axis).
+  for (const sa of signs) {
+    for (const sb of signs) {
+      // Edge along X, between the Y and Z faces.
+      pushQuad(
+        [-ix, sa * hy, sb * iz],
+        [ix, sa * hy, sb * iz],
+        [ix, sa * iy, sb * hz],
+        [-ix, sa * iy, sb * hz],
+        [0, sa, sb],
+      );
+      // Edge along Y, between the X and Z faces.
+      pushQuad(
+        [sa * hx, -iy, sb * iz],
+        [sa * hx, iy, sb * iz],
+        [sa * ix, iy, sb * hz],
+        [sa * ix, -iy, sb * hz],
+        [sa, 0, sb],
+      );
+      // Edge along Z, between the X and Y faces.
+      pushQuad(
+        [sa * hx, sb * iy, -iz],
+        [sa * hx, sb * iy, iz],
+        [sa * ix, sb * hy, iz],
+        [sa * ix, sb * hy, -iz],
+        [sa, sb, 0],
+      );
+    }
+  }
+
+  // Eight corner triangles.
+  for (const sx of signs) {
+    for (const sy of signs) {
+      for (const sz of signs) {
+        pushTri(
+          [sx * hx, sy * iy, sz * iz],
+          [sx * ix, sy * hy, sz * iz],
+          [sx * ix, sy * iy, sz * hz],
+          [sx, sy, sz],
+        );
+      }
+    }
+  }
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+  geom.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+  return geom;
+}
+
+/** Matches the per-item budget asserted in items.geometries.test.ts. */
+export const ITEM_HIGH_DETAIL_TRIANGLE_BUDGET = 900;
+
+let bevelEnabled = true;
+
 function box(
   w: number,
   h: number,
@@ -127,7 +262,12 @@ function box(
   pos: Vec3 = [0, h * 0.5, 0],
   rot?: Vec3,
 ): THREE.BufferGeometry {
-  return paintGeometry(new THREE.BoxGeometry(w, h, d), colorHex, pos, rot);
+  const smallest = Math.min(w, h, d);
+  if (!bevelEnabled || smallest < ITEM_BEVEL_MIN_DIMENSION) {
+    return paintGeometry(new THREE.BoxGeometry(w, h, d), colorHex, pos, rot);
+  }
+  const bevel = Math.min(ITEM_BEVEL_MAX, smallest * 0.18);
+  return paintGeometry(buildChamferBoxGeometry(w, h, d, bevel), colorHex, pos, rot);
 }
 
 function cyl(
@@ -164,7 +304,7 @@ function sphere(
   );
 }
 
-function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec3): THREE.BufferGeometry {
+export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec3): THREE.BufferGeometry {
   let totalVertices = 0;
   let totalIndices = 0;
 
@@ -1283,10 +1423,66 @@ function buildLowDetailGeometry(kind: ItemKind): THREE.BufferGeometry {
 
 const geometryCache = new Map<string, THREE.BufferGeometry>();
 
+const geometryOverrides = new Map<ItemKind, THREE.BufferGeometry>();
+const geometryListeners = new Set<() => void>();
+let geometryRevision = 0;
+
+function notifyGeometryChange(): void {
+  geometryRevision += 1;
+  for (const listener of geometryListeners) listener();
+}
+
+/** useSyncExternalStore subscription so instanced batches rebuild when a model is swapped. */
+export function subscribeItemGeometries(listener: () => void): () => void {
+  geometryListeners.add(listener);
+  return () => {
+    geometryListeners.delete(listener);
+  };
+}
+
+export function getItemGeometryRevision(): number {
+  return geometryRevision;
+}
+
+/**
+ * Replace the high-detail geometry of an item kind (for example with a model
+ * loaded from a .glb). Low detail proxies and the procedural builder stay
+ * available as the fallback.
+ */
+export function registerItemGeometryOverride(
+  kind: ItemKind,
+  geometry: THREE.BufferGeometry,
+): void {
+  const previous = geometryOverrides.get(kind);
+  if (previous && previous !== geometry) previous.dispose();
+  geometry.name = `item-geom-${kind}-override`;
+  geometryOverrides.set(kind, geometry);
+  notifyGeometryChange();
+}
+
+export function unregisterItemGeometryOverride(
+  kind: ItemKind,
+  geometry?: THREE.BufferGeometry,
+): void {
+  const current = geometryOverrides.get(kind);
+  if (!current || (geometry && current !== geometry)) return;
+  current.dispose();
+  geometryOverrides.delete(kind);
+  notifyGeometryChange();
+}
+
+export function hasItemGeometryOverride(kind: ItemKind): boolean {
+  return geometryOverrides.has(kind);
+}
+
 export function getItemGeometry(
   kind: ItemKind,
   detail: ItemDetailLevel = 'high',
 ): THREE.BufferGeometry {
+  if (detail === 'high') {
+    const override = geometryOverrides.get(kind);
+    if (override) return override;
+  }
   const key = `${kind}:${detail}`;
   const cached = geometryCache.get(key);
   if (cached) {
@@ -1294,8 +1490,27 @@ export function getItemGeometry(
   }
 
   const builder = HIGH_DETAIL_BUILDERS[kind];
-  const geometry =
-    detail === 'low' ? buildLowDetailGeometry(kind) : builder ? builder() : buildLowDetailGeometry(kind);
+  let geometry: THREE.BufferGeometry;
+  if (detail === 'low' || !builder) {
+    bevelEnabled = false;
+    try {
+      geometry = buildLowDetailGeometry(kind);
+    } finally {
+      bevelEnabled = true;
+    }
+  } else {
+    geometry = builder();
+    if (getGeometryTriangleCount(geometry) > ITEM_HIGH_DETAIL_TRIANGLE_BUDGET) {
+      // Too many parts to afford chamfers: fall back to plain boxes for this kind.
+      geometry.dispose();
+      bevelEnabled = false;
+      try {
+        geometry = builder();
+      } finally {
+        bevelEnabled = true;
+      }
+    }
+  }
   geometry.name = `item-geom-${kind}-${detail}`;
   geometryCache.set(key, geometry);
   return geometry;
@@ -1315,6 +1530,10 @@ export function clearItemGeometryCache(): void {
     geom.dispose();
   }
   geometryCache.clear();
+  for (const geom of geometryOverrides.values()) {
+    geom.dispose();
+  }
+  geometryOverrides.clear();
 }
 
 export function warmAllItemGeometries(): void {
