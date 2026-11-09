@@ -43,7 +43,7 @@ describe('HoldManagementPage', () => {
   it('switches the filter to read the hold history without decision buttons', async () => {
     mocks.list.mockResolvedValueOnce([pending]).mockResolvedValueOnce([{ ...pending, holdStatus: 'COMPLETED' }]);
     await render();
-    await act(async () => [...host.querySelectorAll('button[role="tab"]')].find((button) => button.textContent === 'Đã hoàn tất')!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent === 'Đã hoàn tất')!.click());
     expect(mocks.list).toHaveBeenLastCalledWith('COMPLETED');
     expect([...host.querySelectorAll('button')].some((button) => button.textContent === 'Duyệt bảo lưu')).toBe(false);
   });
@@ -53,7 +53,7 @@ describe('HoldManagementPage', () => {
     await render();
     expect(host.textContent).toContain('Không có yêu cầu bảo lưu nào');
     mocks.list.mockRejectedValueOnce(new Error('Không có quyền'));
-    await act(async () => [...host.querySelectorAll('button[role="tab"]')].find((button) => button.textContent === 'Tất cả')!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent === 'Tất cả')!.click());
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không có quyền');
   });
 });
