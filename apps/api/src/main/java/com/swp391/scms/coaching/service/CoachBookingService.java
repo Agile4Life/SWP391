@@ -726,7 +726,8 @@ public class CoachBookingService {
                 b.getNotes(),
                 b.getCreatedAt(),
                 b.getCancelledAt(),
-                b.getCancelReason()
+                b.getCancelReason(),
+                b.getAttendedAt()
         );
     }
     private String msg(String key, Object... args) {

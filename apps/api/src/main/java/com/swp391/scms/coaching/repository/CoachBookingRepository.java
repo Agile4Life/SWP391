@@ -74,6 +74,22 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             @Param("endDate") LocalDate endDate,
             @Param("paymentMethod") String paymentMethod
     );
+    /** The member's confirmed sessions on {@code date} that have no arrival recorded yet. */
+    @Query("""
+            select cb from CoachBooking cb
+            where cb.member.userId = :memberId and cb.bookingDate = :date
+              and cb.status = 'confirmed' and cb.attendedAt is null
+            """)
+    List<CoachBooking> findOpenForDay(@Param("memberId") Long memberId, @Param("date") LocalDate date);
+
+    /** Confirmed sessions between two dates with no arrival recorded (the sweep decides if a visit covered them). */
+    @Query("""
+            select cb from CoachBooking cb
+            where cb.bookingDate between :fromDate and :toDate
+              and cb.status = 'confirmed' and cb.attendedAt is null
+            """)
+    List<CoachBooking> findOpenBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
     @Query("""
             select cb from CoachBooking cb
             where cb.member.userId = :memberId

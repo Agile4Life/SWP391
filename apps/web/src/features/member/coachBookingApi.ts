@@ -41,6 +41,8 @@ export interface CoachBookingDto {
   createdAt: string;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** When the member was recorded as present (gate scan during the session); null when not recorded. */
+  attendedAt?: string | null;
 }
 
 export interface CoachBookingCreatePayload {

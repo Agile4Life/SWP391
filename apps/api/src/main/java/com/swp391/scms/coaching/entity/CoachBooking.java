@@ -66,6 +66,10 @@ public class CoachBooking {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /** When the member was recorded as arriving for this session (gate scan or a visit covering it); null if not yet. */
+    @Column(name = "attended_at")
+    private LocalDateTime attendedAt;
+
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
 
@@ -113,6 +117,8 @@ public class CoachBooking {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    public LocalDateTime getAttendedAt() { return attendedAt; }
+    public void setAttendedAt(LocalDateTime attendedAt) { this.attendedAt = attendedAt; }
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
 

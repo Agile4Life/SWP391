@@ -380,6 +380,30 @@ class CenterCheckinServiceTest {
     }
 
     @Test
+    void aGrantedEntryAlsoMarksTodaysCourseAndOneToOneSessions() {
+        Member member = mockMember(10L, "Nguyễn Văn E");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var course = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
+        var pt = org.mockito.Mockito.mock(com.swp391.scms.coaching.service.PtAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", course);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "ptAttendance", pt);
+
+        CheckinDto granted = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+
+        assertEquals("GRANTED", granted.status());
+        verify(course).markPresentOnEntry(eq(10L), any(LocalDateTime.class));
+        verify(pt).markArrivedOnEntry(eq(10L), any(LocalDateTime.class));
+
+        // A failure of the attendance hook never blocks the member from entering.
+        org.mockito.Mockito.doThrow(new IllegalStateException("boom")).when(pt).markArrivedOnEntry(any(), any());
+        assertEquals("GRANTED", service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A")).status());
+    }
+
+    @Test
     @DisplayName("BR-02: Gói tập active, đúng hạn, chưa check-in -> result = GRANTED")
     void br02_validSubscription_granted() {
         Member member = mockMember(10L, "Nguyễn Văn E");

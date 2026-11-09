@@ -25,5 +25,7 @@ public record CoachBookingDto(
         String notes,
         LocalDateTime createdAt,
         LocalDateTime cancelledAt,
-        String cancelReason
+        String cancelReason,
+        /** When the member was recorded as present (gate scan during the session); null when not recorded. */
+        LocalDateTime attendedAt
 ) {}

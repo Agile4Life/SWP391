@@ -20,6 +20,17 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
     List<LocalDateTime> findGrantedVisitTimes(@Param("memberId") Long memberId,
                                             @Param("until") LocalDateTime until);
 
+    /**
+     * A granted visit that was inside the center while a session ran: it began no earlier than {@code earliest} (a
+     * bound so a forgotten checkout from the morning does not cover an evening class), no later than the session end,
+     * and was still open or ended after the session start. Returns the earliest such check-in time.
+     */
+    @Query("select min(c.checkInTime) from CenterCheckin c where c.member.userId = :memberId and c.status = 'GRANTED' "
+            + "and c.checkInTime >= :earliest and c.checkInTime <= :end "
+            + "and (c.checkOutTime is null or c.checkOutTime >= :start)")
+    LocalDateTime findCoveringVisitStart(@Param("memberId") Long memberId, @Param("earliest") LocalDateTime earliest,
+                                         @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CenterCheckin c where c.id = :id")
     Optional<CenterCheckin> findByIdForUpdate(@Param("id") Long id);

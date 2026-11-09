@@ -185,3 +185,13 @@ paths:
         null for monthly courses. Invalid days answer 400 SCHEDULING_INVALID_MONTH_DAYS.
       responses:
         '201': { description: Course with all its sessions }
+  /coaching/bookings:
+    get:
+      summary: 1:1 sessions (CoachBookingDto)
+      description: |
+        Adds `attendedAt` (date-time, nullable). A gate scan from 30 minutes before a session until its end sets it. A
+        sweep every 30 minutes also sets it for finished sessions that a granted visit covered, as long as the visit began
+        at most 3 hours before the start (a member who came in early and stayed). A finished session with a null
+        `attendedAt` is a no-show; its quota stays used.
+      responses:
+        '200': { description: Bookings with attendedAt }

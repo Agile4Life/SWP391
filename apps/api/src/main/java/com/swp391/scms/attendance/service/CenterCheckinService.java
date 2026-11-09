@@ -44,6 +44,9 @@ public class CenterCheckinService {
     @Autowired(required = false)
     private CourseAttendanceService courseAttendance;
 
+    @Autowired(required = false)
+    private com.swp391.scms.coaching.service.PtAttendanceService ptAttendance;
+
 
     public static final int ANTI_PASSBACK_TIMEOUT_HOURS = 12;
     public static final int MAX_HISTORY_DAYS = 31;
@@ -262,6 +265,14 @@ public class CenterCheckinService {
         checkin.setDenialReason(null);
 
         CheckinDto result = toDto(checkins.saveAndFlush(checkin));
+        if (ptAttendance != null) {
+            try {
+                ptAttendance.markArrivedOnEntry(member.getUserId(), now);
+            } catch (RuntimeException ex) {
+                org.slf4j.LoggerFactory.getLogger(CenterCheckinService.class)
+                        .warn("Could not mark 1:1 arrival for member {}", member.getUserId(), ex);
+            }
+        }
         if (courseAttendance != null) {
             try {
                 // Coming to the center on a course day counts the session as attended.

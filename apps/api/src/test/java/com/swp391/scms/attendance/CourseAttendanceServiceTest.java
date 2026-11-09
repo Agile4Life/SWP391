@@ -88,6 +88,30 @@ class CourseAttendanceServiceTest {
     }
 
     @Test
+    void aMemberWhoCameInEarlyAndStayedThroughTheSessionIsPresentNotAbsent() {
+        com.swp391.scms.attendance.repository.CenterCheckinRepository checkins =
+                mock(com.swp391.scms.attendance.repository.CenterCheckinRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "checkins", checkins);
+        ClassSession done = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(17, 0), LocalTime.of(18, 0));
+        when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(done));
+        when(enrollments.findByGymClassIdAndStatus(5L, "booked")).thenReturn(List.of(enrollment(LocalDateTime.of(2026, 11, 1, 9, 0))));
+        when(attendance.existsBySessionIdAndMemberUserId(1L, 100L)).thenReturn(false);
+        // The member walked in at 15:30, more than 30 minutes before the 17:00 start, and never left.
+        when(checkins.findCoveringVisitStart(100L, LocalDateTime.of(2026, 11, 9, 14, 0),
+                LocalDateTime.of(2026, 11, 9, 17, 0), LocalDateTime.of(2026, 11, 9, 18, 0)))
+                .thenReturn(LocalDateTime.of(2026, 11, 9, 15, 30));
+        when(sessions.countByGymClassIdAndStatusNot(5L, "cancelled")).thenReturn(9L);
+        when(attendance.countAbsences(100L, 5L)).thenReturn(0L);
+
+        service.markMissedSessions();
+
+        ArgumentCaptor<SessionAttendance> saved = ArgumentCaptor.forClass(SessionAttendance.class);
+        verify(attendance).save(saved.capture());
+        assertEquals("present", saved.getValue().getStatus());
+        assertEquals(LocalDateTime.of(2026, 11, 9, 15, 30), saved.getValue().getCheckedInAt());
+    }
+
+    @Test
     void sessionsThatHaveNotEndedRecordedOrBeforeTheEnrollmentAreSkipped() {
         ClassSession running = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(19, 0), LocalTime.of(21, 0));
         ClassSession recorded = session(2, LocalDate.of(2026, 11, 8), LocalTime.of(17, 0), LocalTime.of(18, 0));

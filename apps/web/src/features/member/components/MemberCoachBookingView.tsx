@@ -1181,6 +1181,14 @@ export function MemberCoachBookingView({
                           <span className="badge badge-success" style={{ fontSize: 11 }}>
                             {memberText("Sắp diễn ra")}</span>
                         )}
+                        {!isCancelled && b.attendedAt && (
+                          <span className="badge badge-success" data-testid={`pt-attended-${b.id}`} style={{ fontSize: 11 }}>
+                            {memberText("Đã có mặt", "Attended")}</span>
+                        )}
+                        {!isCancelled && !b.attendedAt && hasEnded && (
+                          <span className="badge badge-warning" data-testid={`pt-missed-${b.id}`} style={{ fontSize: 11 }}>
+                            {memberText("Không có mặt", "Did not attend")}</span>
+                        )}
                         {!isCancelled && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && (
                           <span className="badge badge-warning" style={{ fontSize: 11 }}>
                             {memberText("Chờ thanh toán", "Awaiting payment")}</span>

@@ -46,6 +46,11 @@ public class CourseAttendanceService {
     private com.swp391.scms.notifications.NotificationService notifications;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.common.i18n.MessageService messages;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.attendance.repository.CenterCheckinRepository checkins;
+
+    /** A visit that began up to this long before a session still covers it (the member came early and stayed). */
+    private static final int STAY_BEFORE_HOURS = 3;
 
     public CourseAttendanceService(SessionAttendanceRepository attendance, ClassSessionRepository sessions,
                                    ClassEnrollmentRepository enrollments, MemberRepository members, Clock clock) {
@@ -83,9 +88,17 @@ public class CourseAttendanceService {
                 SessionAttendance row = new SessionAttendance();
                 row.setSession(session);
                 row.setMember(member);
-                row.setStatus("absent");
                 row.setRecordedBy(session.getGymClass().getCoach());
-                row.setNotes("auto: not attended");
+                LocalDateTime visit = coveringVisit(member.getUserId(), session);
+                if (visit != null) {
+                    // Came in early and stayed through the session: present, not absent.
+                    row.setStatus("present");
+                    row.setCheckedInAt(visit);
+                    row.setNotes("auto: visit covered the session");
+                } else {
+                    row.setStatus("absent");
+                    row.setNotes("auto: not attended");
+                }
                 attendance.save(row);
                 created++;
                 touched.add(member.getUserId() + ":" + classId);
@@ -96,6 +109,14 @@ public class CourseAttendanceService {
             evaluate(Long.valueOf(parts[0]), Long.valueOf(parts[1]));
         }
         return created;
+    }
+
+    /** Start of a granted visit that was inside the center while the session ran, or null. */
+    private LocalDateTime coveringVisit(Long memberId, ClassSession session) {
+        if (checkins == null || session.getSessionDate() == null) return null;
+        LocalDateTime start = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
+        LocalDateTime end = LocalDateTime.of(session.getSessionDate(), session.getEndTime());
+        return checkins.findCoveringVisitStart(memberId, start.minusHours(STAY_BEFORE_HOURS), start, end);
     }
 
     /**
