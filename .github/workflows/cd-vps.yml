@@ -1,0 +1,158 @@
+# CD cho VPS tự host (Docker Compose): sau khi CI xanh trên main, GitHub Actions SSH vào VPS,
+# kéo đúng commit đã qua CI rồi chạy `docker compose up -d --build --wait`.
+#
+# Luồng chạy:
+#   push vào main -> CI xanh -> SSH VPS -> git merge --ff-only <commit> -> compose build + up --wait -> health check
+# Nếu bản mới không khỏe, tự quay về commit đang chạy trước đó và dựng lại; job vẫn báo đỏ để nhóm biết.
+#
+# Chưa có secret VPS_HOST / VPS_USER / VPS_SSH_KEY / VPS_HOST_KEY thì workflow tự bỏ qua (không báo lỗi).
+# Hướng dẫn cài đặt: docs/DOCKER_COMPOSE.md, mục "Tự động deploy lên VPS (CD qua SSH)".
+# Chạy song song với cd.yml (Render/Vercel); hai workflow độc lập nhau.
+name: CD VPS
+
+on:
+  workflow_run:
+    workflows: [CI]        # phải trùng với "name" trong ci.yml
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:       # bấm chạy tay để deploy lại commit mới nhất của main
+    inputs:
+      ref:
+        description: Commit SHA cần deploy (để trống = đầu nhánh main)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# Chỉ một lần deploy lên VPS tại một thời điểm; lần mới đợi lần đang chạy xong.
+concurrency:
+  group: vps-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS over SSH
+    # Chỉ nhận CI xanh của push/chạy tay trên chính repo này (không nhận PR hay fork), hoặc chạy tay ở nhánh main.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       contains(fromJSON('["push", "workflow_dispatch"]'), github.event.workflow_run.event))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST_KEY: ${{ secrets.VPS_HOST_KEY }}
+      # Thư mục repo trên VPS (nơi có compose.yml và .env). Đổi bằng Variable VPS_APP_DIR.
+      VPS_APP_DIR: ${{ vars.VPS_APP_DIR || '/opt/scms' }}
+      # Commit cần deploy: commit CI vừa kiểm tra, hoặc commit nhập tay, hoặc đầu main.
+      COMMIT: ${{ github.event.workflow_run.head_sha || inputs.ref || github.sha }}
+    steps:
+      - name: Check VPS secrets
+        id: cfg
+        shell: bash
+        run: |
+          missing=""
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_HOST_KEY; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice::Chưa cấu hình secret:$missing. Bỏ qua deploy VPS."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare SSH
+        if: steps.cfg.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          # Ghim host key của VPS (từ secret) để tránh bị giả mạo máy chủ; không dùng StrictHostKeyChecking=no.
+          printf '%s\n' "$VPS_HOST_KEY" > ~/.ssh/known_hosts
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Deploy on VPS (with rollback)
+        if: steps.cfg.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Script chạy trên VPS qua stdin; tham số: $1 = commit, $2 = thư mục app.
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "$VPS_USER@$VPS_HOST" bash -s -- "$COMMIT" "$VPS_APP_DIR" <<'REMOTE'
+          set -euo pipefail
+          commit=$1
+          dir=$2
+          cd "$dir"
+
+          # Không ghi đè thay đổi tay trên VPS: có file đã theo dõi bị sửa thì dừng để người quản trị xử lý.
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "::error::Repo trên VPS có thay đổi chưa commit, dừng deploy"
+            git status --short --untracked-files=no
+            exit 1
+          fi
+
+          prev=$(git rev-parse HEAD)
+          echo "Commit đang chạy: ${prev:0:7}; commit cần deploy: ${commit:0:7}"
+          git fetch --prune origin
+          # Chỉ tiến lên (fast-forward). Nếu commit cũ hơn HEAD thì không làm gì, tránh deploy lùi khi hai lần chạy chồng nhau.
+          git merge --ff-only "$commit"
+
+          # Build image, thay container và đợi healthcheck của api + web (tối đa 5 phút),
+          # rồi gọi thử API qua Nginx để chắc proxy /api/v1 hoạt động.
+          # Không dùng `docker compose down`: nó xóa mạng và làm mất kết nối tới container PostgreSQL 1Panel.
+          deploy() {
+            docker compose config --quiet &&
+            docker compose up -d --build --remove-orphans --wait --wait-timeout 300 &&
+            docker compose exec -T web wget -q -O /dev/null http://127.0.0.1/api/v1/health
+          }
+
+          if deploy; then
+            docker compose ps
+            # Dọn image cũ không còn dùng cho đỡ đầy ổ đĩa.
+            docker image prune -f >/dev/null || true
+            echo "Deploy thành công commit $(git rev-parse --short HEAD)"
+            exit 0
+          fi
+
+          echo "::error::Bản mới không khỏe, log gần nhất:"
+          docker compose logs --tail=80 api web || true
+
+          now=$(git rev-parse HEAD)
+          if [ "$prev" != "$now" ]; then
+            echo "::warning::Rollback VPS về commit ${prev:0:7}"
+            git reset --hard "$prev"
+            if deploy; then
+              echo "Đã rollback về ${prev:0:7} và dịch vụ khỏe lại"
+            else
+              echo "::error::Rollback xong nhưng dịch vụ vẫn không khỏe, cần vào VPS kiểm tra"
+            fi
+          fi
+          exit 1
+          REMOTE
+
+      # Tùy chọn: đặt Variable VPS_HEALTH_URL (vd https://ten-mien.example/api/v1/health) để kiểm tra từ bên ngoài.
+      - name: Check public URL
+        if: steps.cfg.outputs.ready == 'true' && vars.VPS_HEALTH_URL != ''
+        env:
+          VPS_HEALTH_URL: ${{ vars.VPS_HEALTH_URL }}
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 15 "$VPS_HEALTH_URL" | jq -e '.status == "UP"' >/dev/null; then
+              echo "VPS khỏe: $VPS_HEALTH_URL"; exit 0
+            fi
+            echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
+          done
+          echo "::error::VPS không phản hồi $VPS_HEALTH_URL"; exit 1
+
+      - name: Remove SSH key
+        if: always() && steps.cfg.outputs.ready == 'true'
+        run: rm -f ~/.ssh/deploy_key

@@ -76,6 +76,36 @@ Chỉ áp dụng cho VPS tự chạy `docker compose`; push lên GitHub vẫn d�
 - Container `1Panel-postgresql-SFES` không do `compose.yml` quản lý. Hiện nó được nối vào mạng `scms_default` của stack để API phân giải được tên. Không chạy `docker compose down` (xóa mạng) rồi `up` mà không kiểm tra lại; nếu container Postgres bị tạo lại hoặc mạng bị tạo lại thì nối lại bằng `docker network connect scms_default 1Panel-postgresql-SFES`, rồi `docker compose restart api`.
 - Hibernate `ddl-auto: update` sẽ tạo/cập nhật bảng và nạp trigger trên Postgres cục bộ giống Supabase.
 
+## Tự động deploy lên VPS (CD qua SSH)
+
+Workflow `.github/workflows/cd-vps.yml` chạy sau khi `CI` xanh trên `main` (hoặc bấm **Run workflow** trong tab Actions): SSH vào VPS, `git merge --ff-only` đúng commit đã qua CI, rồi `docker compose up -d --build --wait` và gọi thử `/api/v1/health` qua Nginx. Bản mới không khỏe thì tự `git reset --hard` về commit trước và dựng lại; job vẫn báo đỏ. Có thay đổi chưa commit ở file đã theo dõi trên VPS thì dừng, không ghi đè. Không dùng `docker compose down` nên mạng `scms_default` và kết nối tới container PostgreSQL 1Panel được giữ nguyên.
+
+Cài đặt một lần:
+
+1. Trên VPS, repo đã clone ở `/opt/scms` (hoặc đường dẫn khác), nhánh `main`, có `.env` và đã chạy được `docker compose up` bằng tay. User SSH phải dùng được `docker` (thuộc group `docker`) và `git fetch` không cần nhập mật khẩu (repo public, hoặc deploy key chỉ đọc).
+2. Tạo khóa SSH riêng cho deploy, dùng trên máy bất kỳ:
+
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C github-deploy -f deploy_key
+   ssh-copy-id -i deploy_key.pub USER@YOUR_VPS_IP
+   ssh-keyscan -p 22 YOUR_VPS_IP
+   ```
+
+   Dòng cuối in ra host key của VPS (dùng làm `VPS_HOST_KEY`). Sau khi nhập vào GitHub, xóa file `deploy_key` ở máy cục bộ.
+3. Vào GitHub → Settings → Secrets and variables → Actions, thêm:
+
+   | Loại | Tên | Giá trị |
+   | --- | --- | --- |
+   | Secret | `VPS_HOST` | IP hoặc domain của VPS |
+   | Secret | `VPS_USER` | User SSH |
+   | Secret | `VPS_SSH_KEY` | Nội dung file `deploy_key` (khóa riêng) |
+   | Secret | `VPS_HOST_KEY` | Kết quả `ssh-keyscan` ở trên |
+   | Secret (tùy chọn) | `VPS_PORT` | Cổng SSH, mặc định 22 |
+   | Variable (tùy chọn) | `VPS_APP_DIR` | Thư mục repo trên VPS, mặc định `/opt/scms` |
+   | Variable (tùy chọn) | `VPS_HEALTH_URL` | Ví dụ `https://your-domain/api/v1/health` để kiểm tra từ bên ngoài |
+
+Chưa đặt đủ bốn secret bắt buộc thì workflow tự bỏ qua. Nên bật **Required reviewers** cho môi trường nếu muốn duyệt tay trước khi deploy, và chỉ cấp cho khóa này quyền của user chạy Docker.
+
 ## Kiểm chứng cấu hình (06/11/2026)
 
 - Compose parse bằng biến giả: pass; đã kiểm tra port override, client ID công khai, profile/TLS, API không mở cổng host và bốn biến bắt buộc.
