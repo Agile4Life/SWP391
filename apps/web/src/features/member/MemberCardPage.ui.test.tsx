@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberCardPage } from './MemberCardPage';
 import { getProfile } from './profileApi';
 import { getMembershipHistory, getMySubscription, getDynamicQr } from './memberCardApi';
+import { centerNowParts, parseCenterTime } from '../../shared/lib/centerTime';
 import QRCode from 'qrcode';
 import html2canvas from 'html2canvas';
 
@@ -28,6 +29,12 @@ async function finishQrLoading() {
   const image = host.querySelector('img[alt="Mã QR check-in của hội viên"]');
   expect(image).not.toBeNull();
   await act(async () => { image?.dispatchEvent(new Event('load')); });
+}
+
+function offsetCenterDate(offsetDays: number): string {
+  const base = parseCenterTime(centerNowParts().date)!;
+  base.setDate(base.getDate() + offsetDays);
+  return centerNowParts(base).date;
 }
 
 beforeEach(() => {
@@ -62,8 +69,7 @@ describe('MemberCardPage', () => {
   });
 
   it('avoids an expiry warning when a contiguous renewal has been paid', async () => {
-    const today = new Date();
-    const key = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const key = offsetCenterDate(0);
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, endDate: key, paidThroughDate: '2099-12-31' } as never);
     await renderPage();
     expect(host.textContent).toContain('Gói tập đang hoạt động');
@@ -105,9 +111,7 @@ describe('MemberCardPage', () => {
   });
 
   it.each([0, -1])('allows QR when the start date is today or earlier (%i)', async (offset) => {
-    const start = new Date();
-    start.setDate(start.getDate() + offset);
-    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const startDate = offsetCenterDate(offset);
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, startDate } as never);
     await renderPage();
     expect(QRCode.toDataURL).toHaveBeenCalledWith('backend-qr', expect.anything());
@@ -115,9 +119,7 @@ describe('MemberCardPage', () => {
   });
 
   it('hides QR, copy and download when an active subscription starts tomorrow', async () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const startDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    const startDate = offsetCenterDate(1);
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, startDate } as never);
     await renderPage();
     expect(QRCode.toDataURL).not.toHaveBeenCalled();
@@ -278,9 +280,7 @@ describe('MemberCardPage', () => {
   });
 
   it('shows a warning when fewer than seven days remain', async () => {
-    const soon = new Date();
-    soon.setDate(soon.getDate() + 6);
-    const date = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
+    const date = offsetCenterDate(6);
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, endDate: date } as never);
     await renderPage();
     expect(host.textContent).toContain('Gói tập sắp hết hạn');

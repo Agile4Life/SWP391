@@ -799,6 +799,7 @@ export const englishShopPublicLabels: Readonly<Record<string, string>> = {
   "{0} / lần dùng": "{0} / serving",
   "Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.": "A verification code was sent to {0}. Enter it to activate your account.",
   "Mã xác nhận đã được gửi đến {0}": "Verification code sent to {0}",
+  "THỬ LẠI SAU ({0}s)": "RETRY IN ({0}s)",
   "Gửi lại mã sau ({0}s)": "Resend code in ({0}s)",
   "Mã OTP đã được gửi tới {0}": "OTP sent to {0}",
   "Nhập mã gồm 6 chữ số đã gửi tới {0}.": "Enter the 6-digit code sent to {0}.",

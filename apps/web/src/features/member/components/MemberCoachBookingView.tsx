@@ -1897,8 +1897,8 @@ export function MemberCoachBookingView({
               <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
                 {paymentModalBooking.paymentStatus === 'paid' ? (
                   <>
-                    <div>{memberText("Trạng thái thanh toán: ")}<strong style={{ color: 'var(--portal-success)' }}>{memberText("Đã thanh toán", "Paid")}</strong></div>
-                    <div>{memberText("Số tiền đã thanh toán: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                    <div>{memberText("Trạng thái thanh toán: ", "Payment status: ")}<strong style={{ color: 'var(--portal-success)' }}>{memberText("Đã thanh toán", "Paid")}</strong></div>
+                    <div>{memberText("Số tiền đã thanh toán: ", "Amount paid: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                   </>
                 ) : (
                   <>
