@@ -96,6 +96,51 @@ public class EntitlementRevocationService {
         return cancelled;
     }
 
+    /**
+     * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). Course seats are
+     * kept by the caller, which marks their sessions excused instead.
+     */
+    @Transactional
+    public int releaseBookingsBetween(Long memberId, LocalDate from, LocalDate to, String reason) {
+        if (memberId == null || from == null || to == null) return 0;
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDate today = now.toLocalDate();
+        LocalTime nowTime = now.toLocalTime();
+        String cancelReason = reason == null || reason.isBlank() ? null
+                : reason.length() > 255 ? reason.substring(0, 255) : reason;
+        Predicate<LocalDate> outside = date -> date.isBefore(from) || date.isAfter(to);
+        int cancelled = 0;
+        for (CoachBooking booking : coachBookings.findFutureConfirmedByMember(memberId, today)) {
+            if (started(booking.getBookingDate(), booking.getStartTime(), today, nowTime)
+                    || outside.test(booking.getBookingDate())) continue;
+            booking.setStatus("cancelled");
+            booking.setCancelledAt(now);
+            booking.setCancelReason(cancelReason);
+            cancelled++;
+            notifyReleased(memberId, "notifications.membership.pt_released.body", booking.getId(),
+                    booking.getBookingDate(), booking.getStartTime());
+            if (booking.getCoach() != null) {
+                notify(booking.getCoach().getUserId(), "notifications.coaching.booking.cancelled.title",
+                        msg("notifications.coaching.booking.cancelled.body",
+                                booking.getMember() != null && booking.getMember().getUser() != null
+                                        ? booking.getMember().getUser().getFullName() : "",
+                                booking.getBookingDate(), hhmm(booking.getStartTime()), hhmm(booking.getEndTime())),
+                        booking.getId());
+            }
+        }
+        for (CourtBooking booking : courtBookings.findUpcomingBookedByMember(memberId, today)) {
+            if (started(booking.getBookingDate(), booking.getStartTime(), today, nowTime)
+                    || outside.test(booking.getBookingDate())) continue;
+            booking.setStatus("cancelled");
+            booking.setCancelledAt(now);
+            booking.setCancelReason(cancelReason);
+            cancelled++;
+            notifyReleased(memberId, "notifications.membership.court_released.body", booking.getId(),
+                    booking.getBookingDate(), booking.getStartTime());
+        }
+        return cancelled;
+    }
+
     /** Members holding a class booking, an upcoming 1:1 session or an upcoming court; the daily sweep checks each. */
     @Transactional(readOnly = true)
     public java.util.Set<Long> membersWithUpcomingBookings() {

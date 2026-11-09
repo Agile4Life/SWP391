@@ -49,6 +49,14 @@ public class MembershipSubscriptionService {
     private static final String HOLD_APPROVED = "APPROVED";
     /** Longest a membership may stay frozen; later it resumes on its own with this many days added back. */
     public static final int MAX_HOLD_DAYS = 90;
+    /** Shortest hold a member may request. */
+    public static final int MIN_HOLD_DAYS = 3;
+    /** A hold request must be filed at least this long before its first day. */
+    public static final int HOLD_NOTICE_HOURS = 24;
+    public static final long MAX_HOLD_DOCUMENT_BYTES = 5L * 1024 * 1024;
+    public static final int MAX_HOLD_DOCUMENTS = 5;
+    private static final java.util.Set<String> HOLD_DOCUMENT_TYPES =
+            java.util.Set.of("image/jpeg", "image/png", "application/pdf");
     private static final String HOLD_REJECTED = "REJECTED";
 
     private final MembershipSubscriptionRepository subscriptions;
@@ -69,6 +77,12 @@ public class MembershipSubscriptionService {
 
     @Autowired(required = false)
     private EntitlementRevocationService entitlementRevocation;
+
+    @Autowired(required = false)
+    private com.swp391.scms.membership.repository.MembershipHoldDocumentRepository holdDocuments;
+
+    @Autowired(required = false)
+    private com.swp391.scms.attendance.service.CourseAttendanceService courseAttendance;
 
     @Autowired(required = false)
     private MembershipCancellationRequestRepository cancellationRequests;
@@ -554,6 +568,17 @@ public class MembershipSubscriptionService {
      */
     @Transactional
     public SubscriptionDto requestHold(AuthenticatedPrincipal principal, Long subscriptionId, SubscriptionRequests.HoldRequest request) {
+        return requestHold(principal, subscriptionId, request, null);
+    }
+
+    /**
+     * Files a hold request (spec 2026-11-09, section 1.6): the package must allow holds and not have used its one hold,
+     * the dates must start at least 24 hours away and last between 3 days and the package allowance, and medical
+     * paperwork must be attached.
+     */
+    @Transactional
+    public SubscriptionDto requestHold(AuthenticatedPrincipal principal, Long subscriptionId,
+                                       SubscriptionRequests.HoldRequest request, List<HoldDocumentUpload> documents) {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
 
@@ -607,6 +632,9 @@ public class MembershipSubscriptionService {
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
+        validateHoldWindow(subscription, request, documents, now);
+        subscription.setHoldStartDate(request.startDate());
+        subscription.setHoldEndDate(request.endDate());
         subscription.setHoldStatus(HOLD_PENDING);
         subscription.setHoldReason(reason);
         subscription.setHoldRequestedAt(now);
@@ -614,7 +642,83 @@ public class MembershipSubscriptionService {
         subscription.setHoldResolvedBy(null);
         subscription.setUpdatedAt(now);
 
-        return toDto(subscriptions.saveAndFlush(subscription));
+        MembershipSubscription saved = subscriptions.saveAndFlush(subscription);
+        storeHoldDocuments(saved, principal, documents);
+        return toDto(saved);
+    }
+
+    /** Bytes of one uploaded medical document, already read from the multipart request. */
+    public record HoldDocumentUpload(String fileName, String contentType, byte[] content) {}
+
+    private void validateHoldWindow(MembershipSubscription subscription, SubscriptionRequests.HoldRequest request,
+                                    List<HoldDocumentUpload> documents, LocalDateTime now) {
+        int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription.getMembershipPackage());
+        if (maxDays <= 0) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_NOT_ALLOWED", "error.membership.hold_not_allowed", null,
+                    "This package cannot be put on hold");
+        }
+        if (subscription.isHoldUsed()) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_USED", "error.membership.hold_already_used", null,
+                    "A package can be put on hold only once");
+        }
+        LocalDate start = request == null ? null : request.startDate();
+        LocalDate end = request == null ? null : request.endDate();
+        if (start == null || end == null || end.isBefore(start)) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_DATES_INVALID", "error.membership.hold_dates_invalid", null,
+                    "Hold start and end dates are required and the end cannot be before the start");
+        }
+        if (start.atStartOfDay().isBefore(now.plusHours(HOLD_NOTICE_HOURS))) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_TOO_LATE", "error.membership.hold_too_late",
+                    new Object[]{HOLD_NOTICE_HOURS}, "A hold must be requested at least 24 hours before it starts");
+        }
+        long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+        if (days < MIN_HOLD_DAYS || days > maxDays) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_DURATION_INVALID", "error.membership.hold_duration_invalid",
+                    new Object[]{MIN_HOLD_DAYS, maxDays}, "A hold must last between 3 days and the package allowance");
+        }
+        if (subscription.getStartDate() == null || subscription.getEndDate() == null
+                || start.isBefore(subscription.getStartDate()) || end.isAfter(subscription.getEndDate())) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_OUT_OF_PERIOD", "error.membership.hold_out_of_period", null,
+                    "The hold must fall inside the membership period");
+        }
+        if (documents == null || documents.isEmpty()) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_REQUIRED", "error.membership.hold_document_required",
+                    null, "Medical paperwork is required for a hold request");
+        }
+        if (documents.size() > MAX_HOLD_DOCUMENTS) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_INVALID", "error.membership.hold_document_invalid",
+                    new Object[]{MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)}, "Too many documents");
+        }
+        for (HoldDocumentUpload document : documents) {
+            if (document == null || document.content() == null || document.content().length == 0
+                    || document.content().length > MAX_HOLD_DOCUMENT_BYTES
+                    || document.contentType() == null
+                    || !HOLD_DOCUMENT_TYPES.contains(document.contentType().toLowerCase(java.util.Locale.ROOT))) {
+                throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_INVALID", "error.membership.hold_document_invalid",
+                        new Object[]{MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)},
+                        "Documents must be JPG, PNG or PDF files of at most 5 MB");
+            }
+        }
+    }
+
+    private void storeHoldDocuments(MembershipSubscription subscription, AuthenticatedPrincipal principal,
+                                    List<HoldDocumentUpload> documents) {
+        if (holdDocuments == null || documents == null) return;
+        holdDocuments.deleteBySubscriptionId(subscription.getId());
+        for (HoldDocumentUpload upload : documents) {
+            var document = new com.swp391.scms.membership.entity.MembershipHoldDocument();
+            document.setSubscription(subscription);
+            String name = upload.fileName() == null || upload.fileName().isBlank() ? "document" : upload.fileName().trim();
+            document.setFileName(name.length() > 255 ? name.substring(name.length() - 255) : name);
+            document.setContentType(upload.contentType().toLowerCase(java.util.Locale.ROOT));
+            document.setSizeBytes(upload.content().length);
+            document.setContent(upload.content());
+            document.setUploadedAt(LocalDateTime.now(clock));
+            if (principal != null && principal.id() != null && userRepository != null) {
+                userRepository.findById(principal.id()).ifPresent(document::setUploadedBy);
+            }
+            holdDocuments.save(document);
+        }
     }
 
     private void ensureNoPendingOrCancellationHoldConflicts(Long memberId, Long subscriptionId, LocalDate today) {
@@ -647,8 +751,8 @@ public class MembershipSubscriptionService {
         if (entityManager != null) entityManager.refresh(subscription);
         ensureOwner(subscription, principal);
         LocalDate today = LocalDate.now(clock);
-        LocalDate heldOn = subscription.getHoldResolvedAt() == null ? null
-                : subscription.getHoldResolvedAt().toLocalDate();
+        LocalDate heldOn = subscription.getHoldStartDate() != null ? subscription.getHoldStartDate()
+                : subscription.getHoldResolvedAt() == null ? null : subscription.getHoldResolvedAt().toLocalDate();
         if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
                 || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
                 || heldOn == null || heldOn.isAfter(today) || !validPeriod(subscription)
@@ -674,7 +778,41 @@ public class MembershipSubscriptionService {
     public List<Long> findHoldsDueForResume() {
         LocalDateTime cutoff = LocalDateTime.now(clock).minusDays(MAX_HOLD_DAYS);
         return subscriptions.findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(STATUS_FROZEN, HOLD_APPROVED, cutoff)
-                .stream().map(MembershipSubscription::getId).toList();
+                .stream().filter(sub -> sub.getHoldEndDate() == null).map(MembershipSubscription::getId).toList();
+    }
+
+    /** Frozen memberships whose dated hold ended before today. */
+    @Transactional(readOnly = true)
+    public List<Long> findDatedHoldsDueForResume() {
+        return subscriptions.findDatedHoldsDueForResume(LocalDate.now(clock));
+    }
+
+    /** Approved holds whose first day has arrived but are still counted as active memberships. */
+    @Transactional(readOnly = true)
+    public List<Long> findHoldsDueToStart() {
+        return subscriptions.findHoldsDueToStart(LocalDate.now(clock));
+    }
+
+    /** Freezes an approved hold on its first day; the bookings of the window were already released at approval. */
+    @Transactional
+    public boolean startHold(Long subscriptionId) {
+        MembershipSubscription lookup = subscriptions.findById(subscriptionId).orElse(null);
+        if (lookup == null || lookup.getMember() == null) return false;
+        members.findByUserIdForUpdate(lookup.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", lookup.getMember().getUserId()));
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId).orElse(null);
+        if (subscription == null) return false;
+        if (entityManager != null) entityManager.refresh(subscription);
+        LocalDate today = LocalDate.now(clock);
+        if (!STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
+                || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
+                || subscription.getHoldStartDate() == null || subscription.getHoldStartDate().isAfter(today)) {
+            return false;
+        }
+        subscription.setStatus(STATUS_FROZEN);
+        subscription.setUpdatedAt(LocalDateTime.now(clock));
+        subscriptions.saveAndFlush(subscription);
+        return true;
     }
 
     /** Ends a hold that reached MAX_HOLD_DAYS: the membership runs again with those days added to its expiry. */
@@ -688,14 +826,28 @@ public class MembershipSubscriptionService {
         if (subscription == null) return false;
         if (entityManager != null) entityManager.refresh(subscription);
         LocalDateTime now = LocalDateTime.now(clock);
-        if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
-                || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
-                || subscription.getHoldResolvedAt() == null || subscription.getEndDate() == null
-                || subscription.getHoldResolvedAt().isAfter(now.minusDays(MAX_HOLD_DAYS))) {
-            return false;
+        long heldDays;
+        if (subscription.getHoldEndDate() != null) {
+            // Dated hold: it covers its first to last day inclusive and ends the day after.
+            if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
+                    || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
+                    || subscription.getEndDate() == null
+                    || !subscription.getHoldEndDate().isBefore(now.toLocalDate())) {
+                return false;
+            }
+            LocalDate from = subscription.getHoldStartDate() != null ? subscription.getHoldStartDate()
+                    : subscription.getHoldEndDate();
+            heldDays = java.time.temporal.ChronoUnit.DAYS.between(from, subscription.getHoldEndDate()) + 1;
+        } else {
+            if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
+                    || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
+                    || subscription.getHoldResolvedAt() == null || subscription.getEndDate() == null
+                    || subscription.getHoldResolvedAt().isAfter(now.minusDays(MAX_HOLD_DAYS))) {
+                return false;
+            }
+            heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(
+                    subscription.getHoldResolvedAt().toLocalDate(), now.toLocalDate()), MAX_HOLD_DAYS);
         }
-        long heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(
-                subscription.getHoldResolvedAt().toLocalDate(), now.toLocalDate()), MAX_HOLD_DAYS);
         subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
@@ -705,7 +857,7 @@ public class MembershipSubscriptionService {
             String pkgName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
             notificationService.send(subscription.getMember().getUserId(),
                     msg("notifications.membership.hold_auto_resumed.title"),
-                    msg("notifications.membership.hold_auto_resumed.body", pkgName, MAX_HOLD_DAYS, subscription.getEndDate()),
+                    msg("notifications.membership.hold_auto_resumed.body", pkgName, heldDays, subscription.getEndDate()),
                     "system", "membership_subscription", subscription.getId());
         }
         return true;
@@ -724,6 +876,73 @@ public class MembershipSubscriptionService {
                         && isActiveOn(s, today))
                 .map(s -> toHoldRequestDto(s, 0))
                 .toList();
+    }
+
+    /** Every hold request and hold history row for the desk screens; {@code status} filters PENDING/APPROVED/REJECTED/COMPLETED. */
+    @Transactional(readOnly = true)
+    public List<HoldRequestDto> listHolds(String status) {
+        String wanted = status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)
+                ? null : status.trim().toUpperCase(java.util.Locale.ROOT);
+        return subscriptions.findAllWithHoldHistory().stream()
+                .filter(s -> s.getMember() != null && s.getMember().getUser() != null
+                        && s.getMember().getUser().getDeletedAt() == null)
+                .filter(s -> wanted == null || wanted.equals(effectiveHoldStatus(s)))
+                .map(s -> toHoldRequestDto(s, 0))
+                .toList();
+    }
+
+    /** Hold details of one subscription for its owner or desk staff. */
+    @Transactional(readOnly = true)
+    public HoldRequestDto getHold(AuthenticatedPrincipal principal, Long subscriptionId) {
+        MembershipSubscription subscription = subscriptions.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        ensureOwnerOrDesk(subscription, principal);
+        return toHoldRequestDto(subscription, 0);
+    }
+
+    /** A document of a hold request, for its owner or desk staff only. */
+    @Transactional(readOnly = true)
+    public com.swp391.scms.membership.entity.MembershipHoldDocument getHoldDocument(
+            AuthenticatedPrincipal principal, Long subscriptionId, Long documentId) {
+        MembershipSubscription subscription = subscriptions.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        ensureOwnerOrDesk(subscription, principal);
+        if (holdDocuments == null) throw new ResourceNotFoundException("resource.hold_document", documentId);
+        return holdDocuments.findById(documentId)
+                .filter(document -> document.getSubscription() != null
+                        && subscriptionId.equals(document.getSubscription().getId()))
+                .orElseThrow(() -> new ResourceNotFoundException("resource.hold_document", documentId));
+    }
+
+    /** The member withdraws a hold request that has not been decided yet. */
+    @Transactional
+    public SubscriptionDto cancelHoldRequest(AuthenticatedPrincipal principal, Long subscriptionId) {
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        ensureOwner(subscription, principal);
+        if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_NOT_PENDING", "error.membership.hold_not_pending", null,
+                    "Subscription does not have a pending hold request");
+        }
+        if (holdDocuments != null) holdDocuments.deleteBySubscriptionId(subscriptionId);
+        subscription.setHoldStatus(null);
+        subscription.setHoldReason(null);
+        subscription.setHoldRequestedAt(null);
+        subscription.setHoldStartDate(null);
+        subscription.setHoldEndDate(null);
+        subscription.setUpdatedAt(LocalDateTime.now(clock));
+        return toDto(subscriptions.saveAndFlush(subscription));
+    }
+
+    private void ensureOwnerOrDesk(MembershipSubscription subscription, AuthenticatedPrincipal principal) {
+        String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
+        if ("RECEPTIONIST".equals(role) || "CENTER_MANAGER".equals(role) || "MANAGER".equals(role)) return;
+        ensureOwner(subscription, principal);
+    }
+
+    private static String effectiveHoldStatus(MembershipSubscription s) {
+        if (s.getHoldStatus() != null) return s.getHoldStatus().toUpperCase(java.util.Locale.ROOT);
+        return s.isHoldUsed() ? "COMPLETED" : null;
     }
 
     /**
@@ -755,7 +974,13 @@ public class MembershipSubscriptionService {
         ensureNoPendingOrCancellationHoldConflicts(memberId, subscriptionId, today);
 
         LocalDateTime now = LocalDateTime.now(clock);
-        subscription.setStatus(STATUS_FROZEN);
+        LocalDate holdStart = subscription.getHoldStartDate();
+        LocalDate holdEnd = subscription.getHoldEndDate();
+        // A dated hold stays active until its first day; the daily sweep freezes it then.
+        if (holdStart == null || !holdStart.isAfter(today)) {
+            subscription.setStatus(STATUS_FROZEN);
+        }
+        subscription.setHoldUsed(true);
         subscription.setHoldStatus(HOLD_APPROVED);
         subscription.setHoldResolvedAt(now);
         if (principal != null && principal.id() != null && userRepository != null) {
@@ -768,7 +993,16 @@ public class MembershipSubscriptionService {
         int cancelledCount = 0;
         if (saved.getMember() != null && saved.getMember().getUserId() != null) {
             String cancelReason = msg("scheduling.enrollment.cancelled_by_hold");
-            if (entitlementRevocation != null) {
+            if (holdStart != null && holdEnd != null) {
+                // Only the held window is released; course seats are kept and their sessions become excused.
+                if (entitlementRevocation != null) {
+                    cancelledCount = entitlementRevocation.releaseBookingsBetween(
+                            saved.getMember().getUserId(), holdStart, holdEnd, cancelReason);
+                }
+                if (courseAttendance != null) {
+                    courseAttendance.excuseSessionsBetween(saved.getMember().getUserId(), holdStart, holdEnd);
+                }
+            } else if (entitlementRevocation != null) {
                 // A frozen period covers no date, so classes, 1:1 sessions and courts are all released.
                 cancelledCount = entitlementRevocation.revokeUncoveredBookings(saved.getMember().getUserId(), cancelReason);
             } else if (enrollmentService != null) {
@@ -1008,6 +1242,14 @@ public class MembershipSubscriptionService {
                 s.getCreatedAt());
     }
 
+    private List<com.swp391.scms.membership.dto.SubscriptionResponses.HoldDocumentDto> holdDocumentDtos(MembershipSubscription s) {
+        if (holdDocuments == null || s.getId() == null) return List.of();
+        return holdDocuments.findBySubscriptionIdOrderByIdAsc(s.getId()).stream()
+                .map(d -> new com.swp391.scms.membership.dto.SubscriptionResponses.HoldDocumentDto(
+                        d.getId(), d.getFileName(), d.getContentType(), d.getSizeBytes(), d.getUploadedAt()))
+                .toList();
+    }
+
     private HoldRequestDto toHoldRequestDto(MembershipSubscription s, int cancelledEnrollmentsCount) {
         Member m = s.getMember();
         com.swp391.scms.users.entity.User u = m != null ? m.getUser() : null;
@@ -1024,11 +1266,14 @@ public class MembershipSubscriptionService {
                 s.getStartDate(),
                 s.getEndDate(),
                 s.getStatus(),
-                s.getHoldStatus(),
+                effectiveHoldStatus(s),
                 s.getHoldReason(),
                 s.getHoldRequestedAt(),
                 s.getHoldResolvedAt(),
-                cancelledEnrollmentsCount);
+                cancelledEnrollmentsCount,
+                s.getHoldStartDate(),
+                s.getHoldEndDate(),
+                holdDocumentDtos(s));
     }
 
     private boolean isTrialSubscription(MembershipSubscription sub) {

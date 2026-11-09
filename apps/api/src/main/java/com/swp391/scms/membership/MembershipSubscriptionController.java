@@ -11,12 +11,20 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -108,13 +116,62 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.resumed"), service.resume(principal, id));
     }
 
-    @Operation(summary = "Request a hold/freeze on an active membership subscription")
-    @PostMapping("/{id}/hold")
+    @Operation(summary = "Request a hold on an active subscription (multipart: reason, startDate, endDate, documents)")
+    @PostMapping(value = "/{id}/hold", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<SubscriptionDto> requestHold(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id,
-            @Valid @RequestBody SubscriptionRequests.HoldRequest request) {
-        return ApiResponse.ok(msg("membership.subscription.hold_requested"), service.requestHold(principal, id, request));
+            @RequestParam(value = "reason", required = false) String reason,
+            @RequestParam(value = "startDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(value = "documents", required = false) List<MultipartFile> documents) throws IOException {
+        List<MembershipSubscriptionService.HoldDocumentUpload> uploads = new ArrayList<>();
+        if (documents != null) {
+            for (MultipartFile file : documents) {
+                if (file == null || file.isEmpty()) continue;
+                uploads.add(new MembershipSubscriptionService.HoldDocumentUpload(
+                        file.getOriginalFilename(), file.getContentType(), file.getBytes()));
+            }
+        }
+        var request = new SubscriptionRequests.HoldRequest(reason == null ? "" : reason, startDate, endDate);
+        return ApiResponse.ok(msg("membership.subscription.hold_requested"),
+                service.requestHold(principal, id, request, uploads));
+    }
+
+    @Operation(summary = "Withdraw a hold request that is still pending")
+    @DeleteMapping("/{id}/hold")
+    public ApiResponse<SubscriptionDto> cancelHold(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.hold_withdrawn"), service.cancelHoldRequest(principal, id));
+    }
+
+    @Operation(summary = "Hold request details and document list (owner or desk staff)")
+    @GetMapping("/{id}/hold")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<HoldRequestDto> getHold(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.hold_detail"), service.getHold(principal, id));
+    }
+
+    @Operation(summary = "Download a medical document of a hold request (owner or desk staff)")
+    @GetMapping("/{id}/hold/documents/{documentId}")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    public ResponseEntity<byte[]> downloadHoldDocument(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id,
+            @PathVariable Long documentId) {
+        var document = service.getHoldDocument(principal, id, documentId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(document.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
+                        .filename(document.getFileName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(document.getContent());
     }
 
     @Operation(summary = "Get the authenticated member's current active subscription (or null if none)")
@@ -150,6 +207,13 @@ public class MembershipSubscriptionController {
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<List<HoldRequestDto>> getPendingHolds() {
         return ApiResponse.ok(msg("membership.subscription.hold_list"), service.listPendingHolds());
+    }
+
+    @Operation(summary = "List hold requests and hold history for the desk (status: ALL, PENDING, APPROVED, REJECTED, COMPLETED)")
+    @GetMapping("/holds")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<List<HoldRequestDto>> listHolds(@RequestParam(value = "status", required = false) String status) {
+        return ApiResponse.ok(msg("membership.subscription.hold_list"), service.listHolds(status));
     }
 
     @Operation(summary = "Approve a hold request and cancel future booked class schedules")

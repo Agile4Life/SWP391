@@ -129,6 +129,14 @@ public class SecurityConfig {
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
                             "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers(HttpMethod.GET,
+                            "/api/v1/memberships/subscriptions/holds", "/api/v1/subscriptions/holds")
+                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    // The owner and desk staff read a hold and its medical documents; the service re-checks ownership.
+                    .requestMatchers(HttpMethod.GET,
+                            "/api/v1/memberships/subscriptions/*/hold", "/api/v1/subscriptions/*/hold",
+                            "/api/v1/memberships/subscriptions/*/hold/documents/*", "/api/v1/subscriptions/*/hold/documents/*")
+                            .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/hold/approve", "/api/v1/subscriptions/*/hold/approve",
                             "/api/v1/memberships/subscriptions/*/hold/reject", "/api/v1/subscriptions/*/hold/reject")

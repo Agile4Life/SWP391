@@ -63,3 +63,56 @@ paths:
         count as present and `excused` sessions are not absences.
       responses:
         '200': { description: Quota with optional enrollBlockedUntil }
+  /subscriptions/{id}/hold:
+    post:
+      summary: Request a hold (multipart/form-data)
+      description: |
+        Parts: `reason` (required, max 500), `startDate`, `endDate` (ISO dates, inclusive), `documents` (1 to 5 files,
+        JPG/PNG/PDF, at most 5 MB each). Rules: the package must allow holds (3-month Silver 7 days, Gold 15,
+        Platinum 30; 1-month Platinum 7; 1-month Silver/Gold and the trial cannot be held); one hold per package;
+        the start is at least 24 hours away; length is 3 days up to the allowance; the window lies inside the
+        membership period. Errors: MEMBERSHIP_HOLD_NOT_ALLOWED, MEMBERSHIP_HOLD_ALREADY_USED,
+        MEMBERSHIP_HOLD_DATES_INVALID, MEMBERSHIP_HOLD_TOO_LATE, MEMBERSHIP_HOLD_DURATION_INVALID,
+        MEMBERSHIP_HOLD_OUT_OF_PERIOD, MEMBERSHIP_HOLD_DOCUMENT_REQUIRED, MEMBERSHIP_HOLD_DOCUMENT_INVALID.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+                documents: { type: array, items: { type: string, format: binary } }
+      responses:
+        '200': { description: Pending hold request }
+    delete:
+      summary: Withdraw a pending hold request (owner)
+      responses:
+        '200': { description: Hold withdrawn }
+    get:
+      summary: Hold details with document metadata (owner, receptionist, manager)
+      responses:
+        '200': { description: HoldRequestDto with holdStartDate, holdEndDate, documents }
+  /subscriptions/{id}/hold/documents/{documentId}:
+    get:
+      summary: Download a medical document (owner, receptionist, manager). Served inline, private, no-store.
+      responses:
+        '200': { description: File bytes }
+        '404': { description: Not found or not attached to this subscription }
+  /subscriptions/holds:
+    get:
+      summary: Hold requests and history for the desk (receptionist, manager)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [ALL, PENDING, APPROVED, REJECTED, COMPLETED] } }
+      responses:
+        '200': { description: List of HoldRequestDto }
+  /subscriptions/{id}/hold/approve:
+    post:
+      summary: Approve a hold
+      description: |
+        Marks the package as held once. 1:1 sessions and courts inside the window are cancelled; course seats are
+        kept and their sessions in the window become `excused`. The membership freezes on the first day (at once
+        when it is today) and resumes the day after the last day with the held days added to its end date.
+      responses:
+        '200': { description: Approved }

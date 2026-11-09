@@ -98,6 +98,33 @@ public class CourseAttendanceService {
         return created;
     }
 
+    /**
+     * Marks the member's course sessions inside {@code from..to} as excused (an approved hold) so the hold never counts
+     * as an absence. Sessions already recorded are left alone. Returns how many rows were created.
+     */
+    @Transactional
+    public int excuseSessionsBetween(Long memberId, LocalDate from, LocalDate to) {
+        if (memberId == null || from == null || to == null) return 0;
+        int created = 0;
+        for (ClassSession session : sessions.findNotCancelledBetween(from, to)) {
+            if (session.getGymClass() == null || session.getGymClass().getCoach() == null) continue;
+            for (ClassEnrollment enrollment : enrollments.findByGymClassIdAndStatus(session.getGymClass().getId(), "booked")) {
+                Member member = enrollment.getMember();
+                if (member == null || !memberId.equals(member.getUserId())
+                        || attendance.existsBySessionIdAndMemberUserId(session.getId(), memberId)) continue;
+                SessionAttendance row = new SessionAttendance();
+                row.setSession(session);
+                row.setMember(member);
+                row.setStatus("excused");
+                row.setRecordedBy(session.getGymClass().getCoach());
+                row.setNotes("auto: membership hold");
+                attendance.save(row);
+                created++;
+            }
+        }
+        return created;
+    }
+
     /** True when the member missed more than half of the course and was blocked now. */
     @Transactional
     public boolean evaluate(Long memberId, Long classId) {

@@ -2,6 +2,7 @@ package com.swp391.scms.membership.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class SubscriptionResponses {
 
@@ -105,7 +106,28 @@ public final class SubscriptionResponses {
             String holdReason,
             LocalDateTime holdRequestedAt,
             LocalDateTime holdResolvedAt,
-            int cancelledEnrollmentsCount
+            int cancelledEnrollmentsCount,
+            LocalDate holdStartDate,
+            LocalDate holdEndDate,
+            List<HoldDocumentDto> documents
+    ) {
+        public HoldRequestDto(Long id, Long memberId, String membershipCode, String memberName, String memberEmail,
+                String memberPhone, Long packageId, String packageName, LocalDate startDate, LocalDate endDate,
+                String status, String holdStatus, String holdReason, LocalDateTime holdRequestedAt,
+                LocalDateTime holdResolvedAt, int cancelledEnrollmentsCount) {
+            this(id, memberId, membershipCode, memberName, memberEmail, memberPhone, packageId, packageName, startDate,
+                    endDate, status, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, cancelledEnrollmentsCount,
+                    null, null, List.of());
+        }
+    }
+
+    /** Metadata of a medical document attached to a hold request; the bytes are fetched through the download endpoint. */
+    public record HoldDocumentDto(
+            Long id,
+            String fileName,
+            String contentType,
+            long sizeBytes,
+            LocalDateTime uploadedAt
     ) {}
 
     public record DynamicQrDto(

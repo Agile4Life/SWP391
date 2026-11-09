@@ -21,6 +21,14 @@ public final class SubscriptionRequests {
     public record HoldRequest(
             @NotBlank(message = "{validation.membership.hold_reason.not_blank}")
             @Size(max = 500, message = "{validation.membership.hold_reason.size}")
-            String reason
-    ) {}
+            String reason,
+            /** First day of the hold; must be at least 24 hours away. */
+            java.time.LocalDate startDate,
+            /** Last day of the hold, inclusive. */
+            java.time.LocalDate endDate
+    ) {
+        public HoldRequest(String reason) {
+            this(reason, null, null);
+        }
+    }
 }

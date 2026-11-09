@@ -83,6 +83,17 @@ public class MembershipSubscription {
     @JoinColumn(name = "hold_resolved_by")
     private User holdResolvedBy;
 
+    /** First and last day of the requested hold; both inclusive. Null on holds created before dated holds. */
+    @Column(name = "hold_start_date")
+    private LocalDate holdStartDate;
+
+    @Column(name = "hold_end_date")
+    private LocalDate holdEndDate;
+
+    /** A package may be held once; set when a hold is approved and never cleared. */
+    @Column(name = "hold_used")
+    private Boolean holdUsed = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -137,6 +148,12 @@ public class MembershipSubscription {
     public void setHoldRequestedAt(LocalDateTime holdRequestedAt) { this.holdRequestedAt = holdRequestedAt; }
     public LocalDateTime getHoldResolvedAt() { return holdResolvedAt; }
     public void setHoldResolvedAt(LocalDateTime holdResolvedAt) { this.holdResolvedAt = holdResolvedAt; }
+    public LocalDate getHoldStartDate() { return holdStartDate; }
+    public void setHoldStartDate(LocalDate holdStartDate) { this.holdStartDate = holdStartDate; }
+    public LocalDate getHoldEndDate() { return holdEndDate; }
+    public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
+    public boolean isHoldUsed() { return Boolean.TRUE.equals(holdUsed); }
+    public void setHoldUsed(boolean holdUsed) { this.holdUsed = holdUsed; }
     public User getHoldResolvedBy() { return holdResolvedBy; }
     public void setHoldResolvedBy(User holdResolvedBy) { this.holdResolvedBy = holdResolvedBy; }
     public User getCreatedBy() { return createdBy; }

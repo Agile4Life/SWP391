@@ -107,6 +107,29 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     List<MembershipSubscription> findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(
             String status, String holdStatus, java.time.LocalDateTime resolvedBefore);
 
+    /** Approved holds that begin today or earlier but are still running as active memberships. */
+    @Query("""
+            select s.id from MembershipSubscription s
+            where s.status = 'active' and s.holdStatus = 'APPROVED'
+              and s.holdStartDate is not null and s.holdStartDate <= :today
+            """)
+    List<Long> findHoldsDueToStart(@Param("today") LocalDate today);
+
+    /** Frozen memberships whose dated hold has ended before {@code today}. */
+    @Query("""
+            select s.id from MembershipSubscription s
+            where s.status = 'frozen' and s.holdStatus = 'APPROVED'
+              and s.holdEndDate is not null and s.holdEndDate < :today
+            """)
+    List<Long> findDatedHoldsDueForResume(@Param("today") LocalDate today);
+
+    @Query("""
+            select s from MembershipSubscription s
+            where s.holdStatus is not null or s.holdUsed = true
+            order by s.holdRequestedAt desc nulls last, s.id desc
+            """)
+    List<MembershipSubscription> findAllWithHoldHistory();
+
     boolean existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
             Long memberId, java.util.Collection<String> statuses, LocalDate date);
 }

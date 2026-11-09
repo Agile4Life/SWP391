@@ -146,22 +146,43 @@ class MembershipSubscriptionControllerTest {
     }
 
     @Test
-    void requestHold_returnsOk() throws Exception {
-        SubscriptionRequests.HoldRequest request = new SubscriptionRequests.HoldRequest("Đi công tác");
+    void requestHold_acceptsMultipartWithDatesAndDocuments() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
                 100L, 10L, 1L, "Gói 1 tháng", null,
                 LocalDate.now(), LocalDate.now().plusDays(30), "active", "QR-SUB-100", LocalDateTime.now(),
                 "PENDING", "Đi công tác", LocalDateTime.now(), null
         );
-        when(service.requestHold(any(), eq(100L), any())).thenReturn(dto);
+        when(service.requestHold(any(), eq(100L), any(), any())).thenReturn(dto);
 
-        mockMvc.perform(post("/api/v1/memberships/subscriptions/100/hold")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .multipart("/api/v1/memberships/subscriptions/100/hold")
+                        .file(new org.springframework.mock.web.MockMultipartFile(
+                                "documents", "giay-ra-vien.pdf", "application/pdf", new byte[]{1, 2, 3}))
+                        .param("reason", "Đi công tác")
+                        .param("startDate", "2026-10-14")
+                        .param("endDate", "2026-10-20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(100L))
                 .andExpect(jsonPath("$.data.holdStatus").value("PENDING"))
                 .andExpect(jsonPath("$.data.holdReason").value("Đi công tác"));
+        org.mockito.ArgumentCaptor<SubscriptionRequests.HoldRequest> captured =
+                org.mockito.ArgumentCaptor.forClass(SubscriptionRequests.HoldRequest.class);
+        org.mockito.ArgumentCaptor<java.util.List<MembershipSubscriptionService.HoldDocumentUpload>> docs =
+                org.mockito.ArgumentCaptor.forClass(java.util.List.class);
+        org.mockito.Mockito.verify(service).requestHold(any(), eq(100L), captured.capture(), docs.capture());
+        org.assertj.core.api.Assertions.assertThat(captured.getValue().startDate()).isEqualTo(LocalDate.of(2026, 10, 14));
+        org.assertj.core.api.Assertions.assertThat(captured.getValue().endDate()).isEqualTo(LocalDate.of(2026, 10, 20));
+        org.assertj.core.api.Assertions.assertThat(docs.getValue()).hasSize(1);
+        org.assertj.core.api.Assertions.assertThat(docs.getValue().get(0).fileName()).isEqualTo("giay-ra-vien.pdf");
+    }
+
+    @Test
+    void listHolds_passesTheStatusFilterToTheService() throws Exception {
+        when(service.listHolds("PENDING")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/memberships/subscriptions/holds").param("status", "PENDING"))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.verify(service).listHolds("PENDING");
     }
 
     @Test

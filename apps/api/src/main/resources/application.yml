@@ -22,6 +22,11 @@ server:
         same-site: lax
 
 spring:
+  servlet:
+    multipart:
+      # Hold requests carry up to five medical documents of at most 5 MB each.
+      max-file-size: 6MB
+      max-request-size: 32MB
   profiles:
     default: supabase
   application:

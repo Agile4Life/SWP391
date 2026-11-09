@@ -12,6 +12,7 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipCancellationRequestRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.membership.service.DynamicQrService;
+import com.swp391.scms.membership.service.EntitlementRevocationService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
 import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.repository.PaymentRepository;
@@ -621,40 +622,31 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
-    void requestHold_and_approveHold_freezesSubscriptionAndCancelsFutureEnrollments() {
-        Member member = new Member();
-        member.setUserId(10L);
+    void requestHold_and_approveHold_releasesOnlyTheHeldWindow() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        EntitlementRevocationService revocation = org.mockito.Mockito.mock(EntitlementRevocationService.class);
+        com.swp391.scms.attendance.service.CourseAttendanceService attendance =
+                org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "entitlementRevocation", revocation);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", attendance);
+        when(revocation.releaseBookingsBetween(eq(10L), any(), any(), any())).thenReturn(3);
 
-        MembershipPackage pack = new MembershipPackage();
-        pack.setId(1L);
-        pack.setName("Gói 1 tháng");
-        pack.setDurationDays(30);
-
-        MembershipSubscription sub = new MembershipSubscription();
-        sub.setId(100L);
-        sub.setMember(member);
-        sub.setMembershipPackage(pack);
-        sub.setStatus("active");
-        sub.setStartDate(LocalDate.now(clock).minusDays(5));
-        sub.setEndDate(LocalDate.now(clock).plusDays(25));
-
-        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
-        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any())).thenReturn(3);
-
-        SubscriptionDto holdRequested = service.requestHold(
-                principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác nước ngoài"));
-
-        assertThat(holdRequested.holdStatus()).isEqualTo("PENDING");
-        assertThat(holdRequested.holdReason()).isEqualTo("Đi công tác nước ngoài");
-        assertThat(holdRequested.status()).isEqualTo("active");
+        SubscriptionDto requested = service.requestHold(principal, 100L,
+                new SubscriptionRequests.HoldRequest("Đi công tác nước ngoài", today.plusDays(2), today.plusDays(8)),
+                medicalDocument());
+        assertThat(requested.holdStatus()).isEqualTo("PENDING");
+        assertThat(requested.holdReason()).isEqualTo("Đi công tác nước ngoài");
+        assertThat(requested.status()).isEqualTo("active");
 
         HoldRequestDto approved = service.approveHold(staffPrincipal, 100L);
 
-        assertThat(approved.status()).isEqualTo("frozen");
         assertThat(approved.holdStatus()).isEqualTo("APPROVED");
         assertThat(approved.cancelledEnrollmentsCount()).isEqualTo(3);
-        verify(enrollmentService).cancelFutureEnrollmentsForMember(eq(10L), any());
+        assertThat(approved.holdStartDate()).isEqualTo(today.plusDays(2));
+        verify(revocation).releaseBookingsBetween(eq(10L), eq(today.plusDays(2)), eq(today.plusDays(8)), any());
+        verify(attendance).excuseSessionsBetween(10L, today.plusDays(2), today.plusDays(8));
+        verify(revocation, org.mockito.Mockito.never()).revokeUncoveredBookings(any(), any());
     }
 
     @Test
@@ -1190,18 +1182,169 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    private MembershipPackage holdablePackage(String tier, int days) {
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setName(tier + " " + (days / 30) + " THÁNG");
+        pack.setTier(tier);
+        pack.setDurationDays(days);
+        return pack;
+    }
+
+    private List<MembershipSubscriptionService.HoldDocumentUpload> medicalDocument() {
+        return List.of(new MembershipSubscriptionService.HoldDocumentUpload(
+                "giay-kham.pdf", "application/pdf", new byte[]{1, 2, 3}));
+    }
+
+    private MembershipSubscription holdableSubscription(String tier, int days) {
+        Member member = new Member(); member.setUserId(10L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = period(100L, member, holdablePackage(tier, days), null,
+                today.minusDays(5), today.plusDays(days - 6L));
+        org.mockito.Mockito.lenient().when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+        org.mockito.Mockito.lenient().when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        return sub;
+    }
+
+    private SubscriptionRequests.HoldRequest holdDays(int startOffset, int length) {
+        LocalDate today = LocalDate.now(clock);
+        return new SubscriptionRequests.HoldRequest("Phẫu thuật", today.plusDays(startOffset),
+                today.plusDays(startOffset + length - 1L));
+    }
+
+    @Test
+    void requestHold_followsThePackageAllowanceNoticeAndPaperworkRules() {
+        // 1-month Silver and Gold cannot be held at all.
+        holdableSubscription("SILVER", 30);
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), medicalDocument()))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("cannot be put on hold");
+
+        MembershipSubscription gold = holdableSubscription("GOLD", 90);
+        // Gold 3 months: at most 15 days, at least 3 days.
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 2), medicalDocument()))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("between 3 days");
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 16), medicalDocument()))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("between 3 days");
+        // Less than 24 hours of notice (the clock is 10:00, so a start tomorrow is only 14 hours away).
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(1, 3), medicalDocument()))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("24 hours");
+        // Outside the membership period.
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(gold.getEndDate().compareTo(LocalDate.now(clock)) , 3), medicalDocument()))
+                .isInstanceOf(BadRequestException.class);
+        // Paperwork is mandatory and limited to JPG, PNG or PDF.
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), List.of()))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("paperwork");
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), List.of(
+                new MembershipSubscriptionService.HoldDocumentUpload("x.exe", "application/octet-stream", new byte[]{1}))))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("JPG, PNG or PDF");
+
+        // A valid request: 15 days is allowed for Gold 3 months.
+        SubscriptionDto ok = service.requestHold(principal, 100L, holdDays(2, 15), medicalDocument());
+        assertThat(ok.holdStatus()).isEqualTo("PENDING");
+        assertThat(gold.getHoldStartDate()).isEqualTo(LocalDate.now(clock).plusDays(2));
+        assertThat(gold.getHoldEndDate()).isEqualTo(LocalDate.now(clock).plusDays(16));
+    }
+
+    @Test
+    void requestHold_allowsOnlyOneHoldPerPackage() {
+        MembershipSubscription platinum = holdableSubscription("PLATINUM", 90);
+        platinum.setHoldUsed(true);
+        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 5), medicalDocument()))
+                .isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void approvingAFutureHoldKeepsTheMembershipActiveUntilItsFirstDay() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        sub.setHoldStatus("PENDING");
+        sub.setHoldStartDate(LocalDate.now(clock).plusDays(3));
+        sub.setHoldEndDate(LocalDate.now(clock).plusDays(12));
+
+        HoldRequestDto approved = service.approveHold(staffPrincipal, 100L);
+
+        assertThat(approved.status()).isEqualTo("active");
+        assertThat(approved.holdStatus()).isEqualTo("APPROVED");
+        assertThat(sub.isHoldUsed()).isTrue();
+        // On its first day the sweep freezes it...
+        sub.setHoldStartDate(LocalDate.now(clock));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        assertThat(service.startHold(100L)).isTrue();
+        assertThat(sub.getStatus()).isEqualTo("frozen");
+    }
+
+    @Test
+    void aHoldThatStartsTodayFreezesAtOnce() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        sub.setHoldStatus("PENDING");
+        sub.setHoldStartDate(LocalDate.now(clock));
+        sub.setHoldEndDate(LocalDate.now(clock).plusDays(6));
+
+        assertThat(service.approveHold(staffPrincipal, 100L).status()).isEqualTo("frozen");
+    }
+
+    @Test
+    void aDatedHoldResumesTheDayAfterItsLastDayAndAddsTheHeldDays() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalEnd = sub.getEndDate();
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.minusDays(7));
+        sub.setHoldEndDate(today.minusDays(1));
+        sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+
+        assertThat(service.autoResumeHold(100L)).isTrue();
+
+        assertThat(sub.getStatus()).isEqualTo("active");
+        assertThat(sub.getEndDate()).isEqualTo(originalEnd.plusDays(7));
+        assertThat(sub.isHoldUsed()).isTrue();
+    }
+
+    @Test
+    void aDatedHoldStillRunningIsNotResumedYet() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldStartDate(today.minusDays(2));
+        sub.setHoldEndDate(today);
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+
+        assertThat(service.autoResumeHold(100L)).isFalse();
+        assertThat(sub.getStatus()).isEqualTo("frozen");
+    }
+
+    @Test
+    void theMemberCanWithdrawAPendingHoldButNotADecidedOne() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        sub.setHoldStatus("PENDING");
+        sub.setHoldReason("Phẫu thuật");
+        sub.setHoldStartDate(LocalDate.now(clock).plusDays(3));
+        sub.setHoldEndDate(LocalDate.now(clock).plusDays(8));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+
+        SubscriptionDto result = service.cancelHoldRequest(principal, 100L);
+
+        assertThat(result.holdStatus()).isNull();
+        assertThat(sub.getHoldStartDate()).isNull();
+        assertThatThrownBy(() -> service.cancelHoldRequest(principal, 100L)).isInstanceOf(BadRequestException.class);
+    }
+
     @Test
     void requestHold_succeedsAfterRejectedHoldAndClearsResolutionMetadata() {
         Member member = new Member(); member.setUserId(10L);
-        MembershipPackage pack = new MembershipPackage(); pack.setId(1L);
+        MembershipPackage pack = holdablePackage("SILVER", 90);
         LocalDate today = LocalDate.now(clock);
-        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(5), today.plusDays(24));
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(5), today.plusDays(84));
         sub.setHoldStatus("REJECTED");
         sub.setHoldResolvedAt(today.minusDays(1).atStartOfDay());
         when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        SubscriptionDto result = service.requestHold(principal, 100L, new SubscriptionRequests.HoldRequest("Đi công tác mới"));
+        SubscriptionDto result = service.requestHold(principal, 100L,
+                new SubscriptionRequests.HoldRequest("Đi công tác mới", today.plusDays(2), today.plusDays(4)), medicalDocument());
 
         assertThat(result.holdStatus()).isEqualTo("PENDING");
         assertThat(result.holdReason()).isEqualTo("Đi công tác mới");
