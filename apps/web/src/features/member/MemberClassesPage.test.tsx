@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   quota: vi.fn(),
   checkout: vi.fn(),
   enroll: vi.fn(),
+  classes: vi.fn(),
 }));
 
 vi.mock('./memberClassesApi', async (importOriginal) => {
@@ -45,6 +46,7 @@ vi.mock('./memberClassesApi', async (importOriginal) => {
     getMyQuota: mocks.quota,
     enrollCourse: mocks.enroll,
     checkoutCourse: mocks.checkout,
+    getClasses: mocks.classes,
   };
 });
 
@@ -99,6 +101,7 @@ describe('MemberClassesPage', () => {
     mocks.quota.mockReset().mockResolvedValue(null);
     mocks.checkout.mockReset();
     mocks.enroll.mockReset();
+    mocks.classes.mockReset().mockResolvedValue([]);
     mocks.enrollments.mockResolvedValue([]);
     mocks.coaches.mockResolvedValue([]);
     mocks.coachSlots.mockResolvedValue([]);
@@ -567,6 +570,95 @@ describe('MemberClassesPage', () => {
       expect(quotaBanner).not.toBeNull();
       expect(quotaBanner?.textContent).toContain('Còn 0/2 khóa học miễn phí');
       expect(quotaBanner?.textContent).toContain('Nâng cấp gói tập');
+    });
+
+    it('displays course duration, frequency badge on session cards and opens course detail modal', async () => {
+      mocks.classes.mockResolvedValue([
+        {
+          id: 3,
+          name: 'Yoga Flow',
+          disciplineName: 'Yoga',
+          coachName: 'An',
+          roomName: 'Studio',
+          capacity: 12,
+          startDate: '2099-10-01',
+          endDate: '2099-10-29',
+          recurringDays: 'MONDAY,WEDNESDAY,FRIDAY',
+          startTime: '08:00:00',
+          endTime: '09:00:00',
+          price: 500000,
+          level: 'Beginner',
+          description: 'Lớp học yoga tăng cường dẻo dai',
+        },
+      ]);
+      mocks.sessions.mockResolvedValue([
+        { ...session, id: 8, classId: 3, className: 'Yoga Flow', bookedCount: 1 },
+      ]);
+      mocks.quota.mockResolvedValue({
+        tier: 'GOLD',
+        totalCredits: 3,
+        usedCredits: 1,
+        remainingCredits: 2,
+        unlimited: false,
+      });
+
+      await render();
+
+      // Check course duration and frequency badge on the session card
+      expect(host.textContent).toContain('Khóa 4 tuần (3 buổi/tuần)');
+      expect(host.textContent).toContain('Thứ 2, Thứ 4, Thứ 6');
+
+      // Click "Chi tiết khóa học & Gói tập" button to open modal
+      await clickText('Chi tiết khóa học & Gói tập');
+
+      expect(host.textContent).toContain('Thông tin khóa học & Gói tập');
+      expect(host.textContent).toContain('THỜI LƯỢNG KHÓA HỌC');
+      expect(host.textContent).toContain('4 tuần (12 buổi học)');
+      expect(host.textContent).toContain('3 buổi / tuần');
+      expect(host.textContent).toContain('QUYỀN LỢI GÓI TẬP CỦA BẠN');
+      expect(host.textContent).toContain('Bạn còn 2/3 khóa học miễn phí theo hạn mức gói');
+      expect(host.textContent).toContain('0 VNĐ (Miễn phí theo gói)');
+      expect(host.textContent).toContain('Xác nhận đăng ký (Miễn phí theo gói)');
+    });
+
+    it('allows switching to recurring course view and shows syllabus and package options', async () => {
+      mocks.classes.mockResolvedValue([
+        {
+          id: 5,
+          name: 'Pilates Mastery',
+          disciplineName: 'Pilates',
+          coachName: 'Bảo',
+          roomName: 'Studio B',
+          capacity: 15,
+          startDate: '2099-11-01',
+          endDate: '2099-12-27',
+          recurringDays: 'TUESDAY,THURSDAY',
+          startTime: '10:00:00',
+          endTime: '11:00:00',
+          price: 600000,
+          level: 'Intermediate',
+          description: 'Khóa học pilates 8 tuần cốt lõi',
+        },
+      ]);
+      mocks.sessions.mockResolvedValue([]);
+      mocks.quota.mockResolvedValue({
+        tier: 'BRONZE',
+        totalCredits: 1,
+        usedCredits: 1,
+        remainingCredits: 0,
+        unlimited: false,
+      });
+
+      await render();
+
+      // Switch to recurring course view
+      await clickText('Khóa học định kỳ (Trọn gói)');
+
+      expect(host.textContent).toContain('Pilates Mastery');
+      expect(host.textContent).toContain('Khóa 8 tuần (2 buổi / tuần)');
+      expect(host.textContent).toContain('16 buổi trọn gói');
+      expect(host.textContent).toContain('Học phí ngoài gói: 600.000 VNĐ');
+      expect(host.textContent).toContain('Đăng ký & Thanh toán');
     });
   });
 });
