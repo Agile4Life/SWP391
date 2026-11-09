@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { SceneDoc, Vec3 } from '../../scene/schema';
+import type { RiggedHandPropSpec } from './riggedHandProps';
 import type { LevelMode } from '../../state/exploreStore';
 import {
   getActorWorldAnchor,
@@ -26,6 +27,8 @@ export interface RiggedClipSpec {
   timeScale: number;
   /** Local offset (x right, y up, z forward, in the actor's yaw frame), e.g. to sit on a bike saddle. */
   offset?: readonly [number, number, number];
+  /** Prop parented to a hand bone; replaces the procedural prop of the same activity. */
+  handProp?: RiggedHandPropSpec;
   /** Optional procedural tweak layered over the clip each frame. */
   tweakBones?: (phase: number) => RiggedBoneTweaks;
 }
@@ -43,13 +46,20 @@ function hashString(value: string): number {
   return hash;
 }
 
+/**
+ * Hand position and arm direction in the right-arm bone's space (model units). Measured
+ * from the skin weights: the Kenney arm runs along the bone's -X axis, hand at about -0.25.
+ */
+const HAND_TIP = [-0.22, 0, 0] as const;
+const ALONG_ARM = [0, 0, -Math.PI / 2] as const;
+
 const punchClip = (actorId: string) =>
   hashString(actorId) % 2 === 0 ? 'attack-melee-right' : 'attack-melee-left';
 
 /**
  * Activities drawn with a skinned, animated character instead of the procedural
- * jointed body. Activities with hand-held props that must line up with the hands
- * (barbell, dumbbells, rackets, tablet) and swimming stay procedural for now.
+ * jointed body. Rackets and the coach's tablet are attached to the hand bone; barbell,
+ * dumbbells and swimming need knees, elbows or a prone pose and stay procedural.
  */
 export const RIGGED_ACTIVITY_CLIPS: Partial<Record<ActorActivityKind, RiggedClipSpec>> = {
   'treadmill-run': { clip: 'walk', timeScale: 1.7 },
@@ -77,11 +87,40 @@ export const RIGGED_ACTIVITY_CLIPS: Partial<Record<ActorActivityKind, RiggedClip
     },
   },
   'inbody-scan': { clip: 'idle', timeScale: 0.8 },
+  'badminton-player': {
+    clip: 'attack-melee-right',
+    timeScale: 0.5,
+    handProp: { kind: 'racket', bone: 'arm-right', position: HAND_TIP, rotation: ALONG_ARM, size: 1.1 },
+  },
+  'tennis-player': {
+    clip: 'attack-melee-right',
+    timeScale: 0.4,
+    handProp: { kind: 'racket', bone: 'arm-right', position: HAND_TIP, rotation: ALONG_ARM, size: 1.3 },
+  },
+  'pt-coach-tablet': {
+    clip: 'holding-both',
+    timeScale: 1,
+    handProp: {
+      kind: 'tablet',
+      bone: 'arm-right',
+      // Past the blunt arm end so the tablet is not buried inside the thick arm mesh.
+      position: [-0.33, 0, 0],
+      rotation: [Math.PI / 2, 0, 0],
+      size: 1.2,
+    },
+  },
   'receptionist-greet': { clip: 'interact-right', timeScale: 0.8 },
   'lounge-chat': { clip: 'emote-yes', timeScale: 0.7 },
 };
 
-/** Procedural parts that make up the human body; hand-held props are not in this list. */
+/** Procedural hand-held props that the rigged characters replace with bone-attached ones. */
+export const PROCEDURAL_HAND_PROP_NAMES: ReadonlySet<string> = new Set([
+  'racketShaft',
+  'racketHead',
+  'coachTablet',
+]);
+
+/** Procedural parts that make up the human body; props are not in this list. */
 export const PROCEDURAL_BODY_PART_NAMES: ReadonlySet<string> = new Set([
   'torso',
   'hips',

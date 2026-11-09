@@ -31,6 +31,7 @@ import {
 import type { LevelCode, SceneDoc } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
+import { buildHandProp } from '../renderers/actors/riggedHandProps';
 import { useActorMotion } from './useActorMotion';
 
 export interface RiggedActorsProps {
@@ -163,6 +164,11 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
           if (bone) bones.push({ name, bone, clipPose: bone.quaternion.clone() });
         }
       }
+      if (spec.handProp) {
+        const handBone = model.getObjectByName(spec.handProp.bone);
+        handBone?.add(buildHandProp(spec.handProp, scale));
+      }
+
       const instance: RiggedInstance = { def, spec, holder, mixer, bones };
       // Poses the character once so reduced-motion / low-power states show a sensible frame.
       stepInstance(instance, 0, STATIC_POSE_TIME_SEC);

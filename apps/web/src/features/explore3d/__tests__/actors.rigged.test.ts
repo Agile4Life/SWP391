@@ -1,15 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type * as THREE from 'three';
 import {
   buildLiveActorDefinitions,
   evaluateActorPartsAtTime,
   getActorWorldAnchor,
-  getPartCountForActivity,
   resolveLevelWorldYMap,
 } from '../renderers/actors/liveActorsConfig';
+import { buildHandProp } from '../renderers/actors/riggedHandProps';
 import {
   PROCEDURAL_BODY_PART_NAMES,
+  PROCEDURAL_HAND_PROP_NAMES,
   RIGGED_ACTIVITY_CLIPS,
   RIGGED_CHARACTER_MODELS,
   computeRiggedPlacement,
@@ -26,16 +28,19 @@ afterEach(() => {
   setRiggedActorIds([]);
 });
 
-function readGlbClipNames(url: string): string[] {
+function readGlbJson(url: string): {
+  animations?: { name: string }[];
+  nodes?: { name?: string }[];
+} {
   // Public assets are served from apps/web/public; read the GLB's JSON chunk directly.
   const file = resolve(process.cwd(), 'public', url.replace(/^\//, ''));
   const data = readFileSync(file);
   const jsonLength = data.readUInt32LE(12);
-  const json = JSON.parse(data.subarray(20, 20 + jsonLength).toString('utf8')) as {
-    animations?: { name: string }[];
-  };
-  return (json.animations ?? []).map(animation => animation.name);
+  return JSON.parse(data.subarray(20, 20 + jsonLength).toString('utf8'));
 }
+
+const readGlbClipNames = (url: string): string[] =>
+  (readGlbJson(url).animations ?? []).map(animation => animation.name);
 
 describe('rigged actors', () => {
   const defs = buildLiveActorDefinitions(SOL_CENTER_SCENE);
@@ -53,24 +58,24 @@ describe('rigged actors', () => {
       'inbody-scan',
       'receptionist-greet',
       'lounge-chat',
+      'badminton-player',
+      'tennis-player',
+      'pt-coach-tablet',
     ] as const) {
       expect(isRiggedActivity(activity)).toBe(true);
     }
-    // Props must line up with procedural hands, so these keep the procedural figure.
+    // These need knees, elbows or a prone pose the Kenney skeleton cannot show.
     for (const activity of [
       'barbell-squat',
       'bench-press',
       'dumbbell-curl',
-      'badminton-player',
-      'tennis-player',
-      'pt-coach-tablet',
       'swim-freestyle',
       'heavy-bag-sway',
       'fountain-plume',
     ] as const) {
       expect(isRiggedActivity(activity)).toBe(false);
     }
-    expect(rigged.length).toBe(30);
+    expect(rigged.length).toBe(40);
   });
 
   it('only references clips that exist in every character GLB', () => {
@@ -94,7 +99,7 @@ describe('rigged actors', () => {
     }
     expect(rigged.map(d => pickRiggedModelIndex(d.id, count))).toEqual(picks);
     expect(pickRiggedModelIndex('anything', 0)).toBe(0);
-    // All four looks get used across the 30 actors.
+    // All four looks get used across the rigged actors.
     expect(new Set(picks).size).toBe(count);
   });
 
@@ -154,18 +159,52 @@ describe('rigged actors', () => {
     expect(getActorPhase(def, 2)).toBeCloseTo(2 * def.speed * 3.2 + def.phaseOffset, 10);
   });
 
-  it('keeps props visible: procedural body parts are named, props are not', () => {
+  it('keeps barbell and dumbbell props visible while hiding body and replaced hand props', () => {
     for (const name of ['torso', 'hips', 'head', 'hair', 'leftShin', 'rightForearm']) {
       expect(PROCEDURAL_BODY_PART_NAMES.has(name)).toBe(true);
     }
-    for (const prop of ['barbellShaft', 'dumbbellLeft', 'racketHead', 'coachTablet']) {
+    for (const name of ['racketShaft', 'racketHead', 'coachTablet']) {
+      expect(PROCEDURAL_HAND_PROP_NAMES.has(name)).toBe(true);
+    }
+    for (const prop of ['barbellShaft', 'dumbbellLeft', 'dumbbellRight']) {
       expect(PROCEDURAL_BODY_PART_NAMES.has(prop)).toBe(false);
+      expect(PROCEDURAL_HAND_PROP_NAMES.has(prop)).toBe(false);
     }
-    // Every rigged activity is a plain 12-part human, so nothing but the body is hidden.
-    for (const activity of Object.keys(RIGGED_ACTIVITY_CLIPS)) {
-      expect(getPartCountForActivity(activity as never)).toBe(12);
+    // Nothing a rigged actor still draws procedurally may be left visible: every part is hidden.
+    const sample = evaluateActorPartsAtTime(rigged, 1.25, { scene: SOL_CENTER_SCENE });
+    for (const part of sample) {
+      expect(
+        PROCEDURAL_BODY_PART_NAMES.has(part.partName) || PROCEDURAL_HAND_PROP_NAMES.has(part.partName),
+        `${part.actorId} would leave "${part.partName}" floating`,
+      ).toBe(true);
     }
-    const sample = evaluateActorPartsAtTime(rigged.slice(0, 1), 1.25, { scene: SOL_CENTER_SCENE });
-    expect(sample.every(part => PROCEDURAL_BODY_PART_NAMES.has(part.partName))).toBe(true);
+  });
+
+  it('only parents hand props and tweaks to bones that exist in every character GLB', () => {
+    for (const model of RIGGED_CHARACTER_MODELS) {
+      const nodes = new Set((readGlbJson(model.url).nodes ?? []).map(node => node.name));
+      for (const spec of Object.values(RIGGED_ACTIVITY_CLIPS)) {
+        if (spec.handProp) expect(nodes.has(spec.handProp.bone)).toBe(true);
+        for (const bone of Object.keys(spec.tweakBones?.(0) ?? {})) {
+          expect(nodes.has(bone), `${model.url} has no bone "${bone}"`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('builds hand props sized in world units regardless of model scale', () => {
+    const racket = RIGGED_ACTIVITY_CLIPS['badminton-player']!.handProp!;
+    const small = buildHandProp(racket, 1);
+    const scaled = buildHandProp(racket, 2.5);
+    expect(small.children.length).toBeGreaterThanOrEqual(3);
+    expect(scaled.scale.x * 2.5).toBeCloseTo(small.scale.x * 1, 6);
+    // Geometry and materials are shared between props.
+    const a = small.children[0] as THREE.Mesh;
+    const b = scaled.children[0] as THREE.Mesh;
+    expect(a.geometry).toBe(b.geometry);
+    expect(a.material).toBe(b.material);
+
+    const tablet = buildHandProp(RIGGED_ACTIVITY_CLIPS['pt-coach-tablet']!.handProp!, 2);
+    expect(tablet.children.length).toBe(2);
   });
 });

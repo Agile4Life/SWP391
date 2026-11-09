@@ -14,6 +14,7 @@ import {
 } from '../renderers/actors/liveActorsConfig';
 import {
   PROCEDURAL_BODY_PART_NAMES,
+  PROCEDURAL_HAND_PROP_NAMES,
   useRiggedActorIds,
 } from '../renderers/actors/riggedActors';
 import { useActorMotion } from './useActorMotion';
@@ -48,7 +49,9 @@ function applyPartsToInstancedMesh(
     const sz = part.scale[2];
 
     if (
-      (sx === 0 && sy === 0 && sz === 0) || (hiddenActorIds.has(part.actorId) && PROCEDURAL_BODY_PART_NAMES.has(part.partName))
+      (sx === 0 && sy === 0 && sz === 0) || (hiddenActorIds.has(part.actorId) &&
+        (PROCEDURAL_BODY_PART_NAMES.has(part.partName) ||
+          PROCEDURAL_HAND_PROP_NAMES.has(part.partName)))
     ) {
       mesh.setMatrixAt(i, HIDDEN_MATRIX);
     } else {

@@ -47,7 +47,7 @@ Bản license gốc của gói Kenney nằm ở `apps/web/public/models/explore3
 
 ## Nhân vật có skeleton
 
-30 trong khoảng 50 người trong cảnh dùng nhân vật rig từ [Kenney Mini Characters](https://kenney.nl/assets/mini-characters) (CC0); các hoạt động còn lại vẫn dùng người dựng bằng code.
+40 trong khoảng 50 người trong cảnh dùng nhân vật rig từ [Kenney Mini Characters](https://kenney.nl/assets/mini-characters) (CC0); các hoạt động còn lại vẫn dùng người dựng bằng code.
 
 | Hoạt động | Clip | Ghi chú |
 | --- | --- | --- |
@@ -58,14 +58,18 @@ Bản license gốc của gói Kenney nằm ở `apps/web/public/models/explore3
 | `boxing-spar`, `heavy-bag-boxer` | `attack-melee-right` hoặc `-left` | chọn theo actor |
 | `yoga-flow` | `idle` + tay giơ qua đầu | |
 | `inbody-scan`, `receptionist-greet`, `lounge-chat` | `idle`, `interact-right`, `emote-yes` | |
+| `badminton-player`, `tennis-player` | `attack-melee-right` chậm | vợt gắn vào xương `arm-right`, vung theo clip |
+| `pt-coach-tablet` | `holding-both` | tablet gắn vào xương `arm-right` |
 
-Chưa chuyển sang rig (vẫn là người dựng bằng code): `barbell-squat`, `bench-press`, `dumbbell-curl`, `badminton-player`, `tennis-player`, `pt-coach-tablet`, `swim-freestyle`. Nhóm đầu cần gập gối/khuỷu mà bộ xương Kenney không có (mỗi tay, chân chỉ một khớp); các nhóm cầm vợt, tạ, tablet cần gắn dụng cụ vào xương tay để khớp với tay nhân vật.
+Chưa chuyển sang rig (vẫn là người dựng bằng code): `barbell-squat`, `bench-press`, `dumbbell-curl` (cần gập gối và khuỷu, mà bộ xương Kenney chỉ có một khớp cho mỗi tay và chân) và `swim-freestyle` (tư thế nằm sấp, không có clip phù hợp).
+
+Dụng cụ cầm tay: khai báo `handProp` trong `RIGGED_ACTIVITY_CLIPS` (vợt, tablet; dựng ở `renderers/actors/riggedHandProps.ts`, dùng chung geometry và vật liệu). Dụng cụ được gắn vào xương nên đi theo clip. Cánh tay Kenney chạy dọc trục -X của xương `arm-right`, đầu tay ở khoảng x = -0,25 (đo từ skin weight) và cánh tay rất dày nên dụng cụ lớn phải đặt ra ngoài đầu tay. Phần procedural cùng tên (`racketShaft`, `racketHead`, `coachTablet`) bị ẩn khi nhân vật rig đã nạp xong.
 
 - Cấu hình ở `renderers/actors/riggedActors.ts` (`RIGGED_ACTIVITY_CLIPS`: clip, tốc độ, `offset`, `tweakBones`), render ở `canvas/RiggedActors.tsx`.
 - Vị trí, hướng đi, lắc lư lấy từ `solveHumanPose` (`liveActorsConfig.ts`), dùng chung với người dựng bằng code. Nhân vật Kenney quay mặt về +Z khi yaw = 0, cùng quy ước.
-- Thêm hoạt động mới vào rig: khai báo clip trong `RIGGED_ACTIVITY_CLIPS`, chạy `actors.rigged.test.ts` (test kiểm tra clip có thật trong từng GLB). Hoạt động có dụng cụ cầm tay thì chưa hỗ trợ: dụng cụ procedural sẽ không khớp tay nhân vật.
+- Thêm hoạt động mới vào rig: khai báo clip trong `RIGGED_ACTIVITY_CLIPS`, chạy `actors.rigged.test.ts` (kiểm tra clip và xương có thật trong từng GLB, và không còn bộ phận procedural nào bị bỏ sót lơ lửng).
 - File: `apps/web/public/models/explore3d/characters/` gồm 4 nhân vật (`character-male-a`, `character-female-a`, `character-male-c`, `character-female-c`), texture dùng chung `Textures/colormap.png` (GLB tham chiếu theo đường dẫn tương đối nên phải giữ nguyên thư mục) và license gốc.
-- Mỗi nhân vật khoảng 800–900 tam giác, 14 khớp, hai `SkinnedMesh` (thân, đầu), không instancing. Với 30 người: khoảng 105.000 tam giác trong cảnh, 174 draw call, chi phí CPU khoảng 1,2 ms mỗi khung cho đặt vị trí và mixer.
+- Mỗi nhân vật khoảng 800–900 tam giác, 14 khớp, hai `SkinnedMesh` (thân, đầu), không instancing. Với 30 người (trước khi thêm nhóm cầm vợt/tablet): khoảng 105.000 tam giác trong cảnh, 174 draw call, chi phí CPU khoảng 1,2 ms mỗi khung cho đặt vị trí và mixer; chưa đo lại với 40 người.
 - Nhân vật chỉ thay phần thân người dựng bằng code sau khi nạp xong; nạp lỗi, tier `low` hoặc `prefers-reduced-motion` thì giữ người cũ (reduced motion dùng một tư thế đứng yên).
 - Quaternius Universal Base Characters (~13.000 tam giác mỗi người) đã được cân nhắc nhưng quá nặng cho ~55 người trong cảnh.
 
