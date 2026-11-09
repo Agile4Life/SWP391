@@ -69,15 +69,15 @@ class SessionBookingSecurityTest {
 
     @Test
     void memberReachesTheBookingEndpoints() throws Exception {
-        when(service.bookMany(any(), any())).thenReturn(new BulkBookResult(List.of(), List.of()));
+        // Booking single sessions is retired: members are authorized but the policy answers 400.
         mvc.perform(post("/api/v1/classes/sessions/1/bookings").with(authentication(actor("MEMBER"))))
-                .andExpect(status().isCreated());
+                .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/classes/session-bookings/bulk").with(authentication(actor("MEMBER")))
                         .contentType(MediaType.APPLICATION_JSON).content(BULK))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/classes/session-bookings/my").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isOk());
-        verify(service).book(any(), any());
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never()).book(any(), any());
         verify(service).myBookings(any(), any(), any(), any());
     }
 

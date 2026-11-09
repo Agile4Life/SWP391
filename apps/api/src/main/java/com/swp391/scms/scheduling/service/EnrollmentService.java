@@ -435,10 +435,11 @@ public class EnrollmentService {
         Integer creditLimit = pkg.getClassCreditLimit();
         boolean unlimited = (creditLimit == null);
 
+        // After an upgrade the credits already spent on the earlier plan still count against the new allowance.
         long used = enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(
                 member.getUserId(),
                 BOOKED,
-                currentSub.getStartDate(),
+                creditWindowStart(currentSub),
                 currentSub.getEndDate()
         );
 
@@ -446,6 +447,17 @@ public class EnrollmentService {
         int remaining = unlimited ? 999999 : Math.max(0, creditLimit - (int) used);
 
         return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited);
+    }
+
+    /** Start of the period whose credits are shared: an upgrade continues the plan it replaced. */
+    private static LocalDate creditWindowStart(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        var current = sub;
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        while (current.getUpgradeCharge() != null && current.getPreviousSubscription() != null
+                && current.getId() != null && seen.add(current.getId())) {
+            current = current.getPreviousSubscription();
+        }
+        return current.getStartDate();
     }
 
     @Transactional
@@ -461,6 +473,7 @@ public class EnrollmentService {
 
         LocalDate startDate = gymClass.getStartDate() != null ? gymClass.getStartDate() : SessionEligibility.today(clock);
         SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), startDate, clock);
+        SessionEligibility.ensureMembershipCoversCourse(subscriptions, member.getUserId(), startDate, gymClass.getEndDate());
         SessionEligibility.ensurePlatinumRoomAccess(subscriptions, member.getUserId(), gymClass.getRoom(), startDate);
 
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED).isPresent()) {
@@ -520,6 +533,8 @@ public class EnrollmentService {
         }
 
         SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), gymClass.getStartDate() != null ? gymClass.getStartDate() : today, clock);
+        SessionEligibility.ensureMembershipCoversCourse(subscriptions, member.getUserId(),
+                gymClass.getStartDate() != null ? gymClass.getStartDate() : today, gymClass.getEndDate());
 
         if (enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), member.getUserId(), BOOKED).isPresent()) {
             throw new ConflictException("SCHEDULING_ALREADY_ENROLLED", "error.scheduling.already_enrolled", null,

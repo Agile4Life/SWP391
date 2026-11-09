@@ -50,12 +50,12 @@ public class ClassController {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
-    @Operation(summary = "Create a class (CENTER_MANAGER only)")
+    @Operation(summary = "Retired: one-off classes are no longer created; use /recurring", deprecated = true)
     @PostMapping
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ResponseEntity<ApiResponse<GymClassDto>> createClass(@Valid @RequestBody CreateClassRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(msg("scheduling.class.created"), service.createClass(request)));
+        // One-off classes are retired; use POST /classes/recurring.
+        throw SingleSessionPolicy.rejection();
     }
 
     @Operation(summary = "Create a recurring course (CENTER_MANAGER only)")

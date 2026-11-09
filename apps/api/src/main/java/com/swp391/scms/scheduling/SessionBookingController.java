@@ -44,8 +44,7 @@ public class SessionBookingController {
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<SessionBookingDto>> book(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                                               @PathVariable Long id) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(msg("scheduling.booking.created"), service.book(principal, id)));
+        throw SingleSessionPolicy.rejection();
     }
 
     @Operation(summary = "Book many sessions at once (a week, a month or a hand-picked set); failures are reported per session")
@@ -53,11 +52,7 @@ public class SessionBookingController {
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<BulkBookResult>> bookMany(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                                                @Valid @RequestBody BulkBookRequest request) {
-        BulkBookResult result = service.bookMany(principal, request.sessionIds());
-        String message = msg("scheduling.booking.bulk_done");
-        return result.booked().isEmpty()
-                ? ResponseEntity.ok(ApiResponse.ok(message, result))
-                : ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(message, result));
+        throw SingleSessionPolicy.rejection();
     }
 
     @Operation(summary = "List the authenticated member's session bookings, optionally by status and date range")

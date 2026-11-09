@@ -58,21 +58,16 @@ class ClassControllerTest {
     }
 
     @Test
-    void createClass_returnsCreated() throws Exception {
+    void createClass_isRetiredInFavourOfRecurringCourses() throws Exception {
         CreateClassRequest request = new CreateClassRequest(
                 "Yoga Cơ Bản", 1L, 2L, 3L, 20, "beginner", "Lớp học yoga cho người mới"
         );
-        GymClassDto dto = new GymClassDto(
-                1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101", 20, "beginner", "Lớp học yoga cho người mới", "active"
-        );
-        when(classService.createClass(any())).thenReturn(dto);
-
         mockMvc.perform(post("/api/v1/classes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.id").value(1L))
-                .andExpect(jsonPath("$.data.name").value("Yoga Cơ Bản"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("SCHEDULING_SINGLE_SESSION_DISABLED"));
+        org.mockito.Mockito.verify(classService, org.mockito.Mockito.never()).createClass(any());
     }
 
     @Test

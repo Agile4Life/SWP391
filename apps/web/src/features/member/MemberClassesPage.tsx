@@ -14,7 +14,6 @@ import { getMySubscription, type CardSubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
 import { DISCIPLINES, matchesDiscipline } from '../../shared/lib/disciplines';
 import {
-  bookSession,
   cancelBooking,
   cancelEnrollment,
   currentWeek,
@@ -572,52 +571,6 @@ export function MemberClassesPage() {
     return () => { active = false; };
   }, [myScheduleRetry]);
 
-  /** Every seat the member holds: class-wide enrollments and per-session bookings. */
-  function currentSeats(): EnrollmentDto[] {
-    return [
-      ...enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled'),
-      ...bookings.filter((item) => item.status === 'booked').map(bookingAsEnrollment),
-    ];
-  }
-
-  async function handleBook(session: ClassSessionDto) {
-    const key = `session-${session.id}`;
-    if (busyRef.current || !myScheduleReady) return;
-    const overlap = findOverlappingEnrollment(
-      session,
-      currentSeats(),
-      sessions,
-    );
-    if (overlap) {
-      
-      setActionError(
-        memberMessage(`Trùng giờ học: Bạn đã đặt chỗ lớp "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) ngày ${formatShortDate(session.sessionDate)}. Không thể đặt hai lớp học chồng chéo thời gian.`, `Time conflict: You booked "${overlap.className}" (${overlap.startTime}–${overlap.endTime}) on ${formatShortDate(session.sessionDate)}. Overlapping classes cannot be booked.`),
-      );
-      return;
-    }
-    busyRef.current = key;
-    setBusyKey(key);
-    const gen = ++actionGenRef.current;
-    
-    setActionError('');
-    try {
-      await bookSession(session.id);
-      if (actionGenRef.current === gen) {
-        memberNotify(memberMessage(`Đã đặt chỗ lớp "${session.className}" (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)}) thành công!`, `Class "${session.className}" booked (${formatShortDate(session.sessionDate)} • ${session.startTime.slice(0, 5)})!`), 'success', { record: true });
-      }
-      setRetry((v) => v + 1);
-      setMyScheduleRetry((v) => v + 1);
-    } catch (cause) {
-      if (actionGenRef.current === gen) {
-        setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
-      }
-    } finally {
-      busyRef.current = null;
-      setBusyKey(null);
-    }
-  }
-
   async function handleCancelEnrollment(enrollmentId: number, className: string) {
     const key = `enroll-${enrollmentId}`;
     if (busyRef.current || !myScheduleReady) return;
@@ -1125,7 +1078,7 @@ export function MemberClassesPage() {
                 const myEnrollment = activeEnrollments.find(
                   (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
                 );
-                const isBusy = busyKey === `session-${item.id}` ||
+                const isBusy = busyKey === `session-${item.id}` || busyKey === `course-${item.classId}` ||
                   (myBooking ? busyKey === `booking-${myBooking.id}` : false) ||
                   (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false);
 
@@ -1233,13 +1186,7 @@ export function MemberClassesPage() {
                               aria-label={`${isBusy ? memberText("Đang đặt chỗ") : memberText("Đặt chỗ ngay")}: ${item.className}`}
                               title={memberText(`Đặt chỗ ngay: ${item.className}`, `Book now: ${item.className}`)}
                               disabled={isBusy}
-                              onClick={() => {
-                                if (quota && quota.remainingCredits > 0) {
-                                  void handleEnrollCourse(item.classId, item.className);
-                                } else {
-                                  void handleBook(item);
-                                }
-                              }}
+                              onClick={() => void handleEnrollCourse(item.classId, item.className)}
                             >
                               <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đặt chỗ...") : memberText("Đặt chỗ ngay")}</span>
                             </button>

@@ -42,14 +42,13 @@ public class EnrollmentController {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
-    @Operation(summary = "Enroll the authenticated member in a class session")
+    @Operation(summary = "Retired: enroll in a recurring course instead", deprecated = true)
     @PostMapping("/sessions/{id}/enroll")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<EnrollmentDto>> enroll(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(msg("scheduling.enrollment.created"), service.enroll(principal, id)));
+        throw SingleSessionPolicy.rejection();
     }
 
     @Operation(summary = "Cancel a class enrollment (owner or staff)")

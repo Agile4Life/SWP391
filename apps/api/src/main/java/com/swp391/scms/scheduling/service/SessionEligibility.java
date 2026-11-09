@@ -58,6 +58,43 @@ final class SessionEligibility {
         }
     }
 
+    /**
+     * A course must finish inside the membership: the active period covering its start plus any paid renewal that
+     * follows it without a gap. Otherwise the member has to renew first (spec 2026-11-09, section 1.3).
+     */
+    static void ensureMembershipCoversCourse(MembershipSubscriptionRepository subscriptions,
+                                            Long memberId, LocalDate startDate, LocalDate endDate) {
+        if (endDate == null) {
+            return;
+        }
+        LocalDate coveredUntil = coverageEnd(subscriptions, memberId, startDate);
+        if (coveredUntil == null || coveredUntil.isBefore(endDate)) {
+            throw new ForbiddenException("SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP",
+                    "error.scheduling.course_exceeds_membership", new Object[]{endDate.toString(), String.valueOf(coveredUntil)},
+                    "Khóa học kết thúc ngày " + endDate + " nhưng gói tập chỉ có hiệu lực đến "
+                            + coveredUntil + ". Vui lòng gia hạn gói trước khi đăng ký khóa học này.");
+        }
+    }
+
+    /** Last day of the unbroken run of paid periods that covers {@code from}; null when nothing covers it. */
+    static LocalDate coverageEnd(MembershipSubscriptionRepository subscriptions, Long memberId, LocalDate from) {
+        var paid = subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
+                .filter(s -> s.getStartDate() != null && s.getEndDate() != null)
+                .sorted(java.util.Comparator.comparing(com.swp391.scms.membership.entity.MembershipSubscription::getStartDate))
+                .toList();
+        LocalDate end = null;
+        for (var sub : paid) {
+            if (end == null) {
+                if (!sub.getStartDate().isAfter(from) && !sub.getEndDate().isBefore(from)) {
+                    end = sub.getEndDate();
+                }
+            } else if (!sub.getStartDate().isAfter(end.plusDays(1)) && sub.getEndDate().isAfter(end)) {
+                end = sub.getEndDate();
+            }
+        }
+        return end;
+    }
+
     /** Phòng hạng PLATINUM chỉ cho phép hội viên có gói PLATINUM đang hiệu lực bao phủ ngày học. */
     static void ensurePlatinumRoomAccess(MembershipSubscriptionRepository subscriptions,
                                          Long memberId, com.swp391.scms.facilities.entity.Room room, LocalDate sessionDate) {
@@ -67,10 +104,7 @@ final class SessionEligibility {
         boolean hasPlatinum = subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
                 .anyMatch(sub -> !sub.getStartDate().isAfter(sessionDate)
                         && !sub.getEndDate().isBefore(sessionDate)
-                        && sub.getMembershipPackage() != null
-                        && sub.getMembershipPackage().getName() != null
-                        && sub.getMembershipPackage().getName().toUpperCase(java.util.Locale.ROOT)
-                                .contains(com.swp391.scms.facilities.CatalogSeeder.PLATINUM_NAME));
+                        && com.swp391.scms.facilities.PackageBenefits.hasVipRoomAccess(sub.getMembershipPackage()));
         if (!hasPlatinum) {
             throw new ForbiddenException("SCHEDULING_ROOM_PLATINUM_REQUIRED",
                     "error.scheduling.room_platinum_required", null,

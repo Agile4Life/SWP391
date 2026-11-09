@@ -21,13 +21,14 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String TRIAL_PACKAGE_NAME = "Gói Trải Nghiệm 3 Ngày";
     public static final String TRIAL_PACKAGE_DESC = "GÓI TRẢI NGHIỆM – Khám phá SÖL Fitness trong 3 ngày\n"
             + "Quyền lợi:\n"
+            + "- Nhận các dịch vụ của gói Gold (không gồm phòng VIP).\n"
             + "- Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.\n"
             + "- 01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.\n"
             + "- Sử dụng tủ khóa và tiện ích phòng thay đồ.\n"
-            + "- Không áp dụng chính sách bảo lưu.";
+            + "- Không đăng ký lớp Group Fitness và không áp dụng chính sách bảo lưu.";
     public static final BigDecimal TRIAL_PACKAGE_PRICE = BigDecimal.ZERO;
     public static final int TRIAL_PACKAGE_DURATION = 3;
-    public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 3;
+    public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 0;
     public static final String TRIAL_PACKAGE_TIER = "GOLD";
 
     // --- 1 THÁNG (30 NGÀY) ---
@@ -38,11 +39,11 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Sử dụng khu vực tập luyện tiêu chuẩn.\n"
             + "- Sử dụng phòng thay đồ và tủ khóa chung.\n"
             + "- Miễn phí nước uống.\n"
-            + "- 2 lượt đăng ký lớp Group Fitness cơ bản theo lịch.\n"
+            + "- 1 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
             + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
     public static final BigDecimal SILVER_PRICE = new BigDecimal("199000");
     public static final int SILVER_DURATION = 30;
-    public static final Integer SILVER_CREDIT_LIMIT = 2;
+    public static final Integer SILVER_CREDIT_LIMIT = 1;
 
     public static final String GOLD_NAME = "GOLD";
     public static final String GOLD_DESC = "STANDARD – Trung cấp\n"
@@ -53,11 +54,11 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Tủ khóa cá nhân cố định.\n"
             + "- Được đánh giá thể trạng định kỳ mỗi tháng.\n"
             + "- Xây dựng kế hoạch tập luyện cá nhân cơ bản.\n"
-            + "- 5 lượt đặt chỗ trong các lớp Group Fitness.\n"
+            + "- 2 lượt đăng ký khóa Group Fitness.\n"
             + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
     public static final BigDecimal GOLD_PRICE = new BigDecimal("299000");
     public static final int GOLD_DURATION = 30;
-    public static final Integer GOLD_CREDIT_LIMIT = 5;
+    public static final Integer GOLD_CREDIT_LIMIT = 2;
 
     public static final String PLATINUM_NAME = "PLATINUM";
     public static final String PLATINUM_DESC = "VIP – Cao cấp\n"
@@ -72,12 +73,12 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Đánh giá chỉ số cơ thể chuyên sâu: BMI, Body Fat, Muscle Mass.\n"
             + "- Thiết kế giáo án tập luyện riêng theo mục tiêu.\n"
             + "- Tư vấn dinh dưỡng cơ bản cùng huấn luyện viên.\n"
-            + "- Ưu tiên đặt lịch PT và lớp học.\n"
+            + "- 4 lượt đăng ký khóa Group Fitness.\n"
             + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.\n"
             + "- Được mời tham gia các sự kiện và chương trình độc quyền.";
     public static final BigDecimal PLATINUM_PRICE = new BigDecimal("599000");
     public static final int PLATINUM_DURATION = 30;
-    public static final Integer PLATINUM_CREDIT_LIMIT = null;
+    public static final Integer PLATINUM_CREDIT_LIMIT = 4;
 
     // --- 3 THÁNG (90 NGÀY) - ĐỒNG HÀNH DÀI HẠN (giá thấp hơn mua 3 lần gói 1 tháng) ---
     public static final String SILVER_3M_NAME = "SILVER 3 THÁNG";
@@ -86,11 +87,11 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Tập luyện không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
             + "- Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.\n"
             + "- Miễn phí nước uống.\n"
-            + "- 6 lượt đăng ký lớp Group Fitness cơ bản theo lịch.\n"
+            + "- 3 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
             + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
     public static final BigDecimal SILVER_3M_PRICE = new BigDecimal("549000");
     public static final int SILVER_3M_DURATION = 90;
-    public static final Integer SILVER_3M_CREDIT_LIMIT = 6;
+    public static final Integer SILVER_3M_CREDIT_LIMIT = 3;
 
     public static final String GOLD_3M_NAME = "GOLD 3 THÁNG";
     public static final String GOLD_3M_DESC = "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
@@ -98,11 +99,11 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- 09 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
             + "- Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.\n"
             + "- Tủ khóa cá nhân cố định.\n"
-            + "- 15 lượt đặt chỗ trong các lớp Group Fitness.\n"
+            + "- 6 lượt đăng ký khóa Group Fitness.\n"
             + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
     public static final BigDecimal GOLD_3M_PRICE = new BigDecimal("799000");
     public static final int GOLD_3M_DURATION = 90;
-    public static final Integer GOLD_3M_CREDIT_LIMIT = 15;
+    public static final Integer GOLD_3M_CREDIT_LIMIT = 6;
 
     public static final String PLATINUM_3M_NAME = "PLATINUM 3 THÁNG";
     public static final String PLATINUM_3M_DESC = "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
@@ -111,11 +112,11 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Đặc quyền sử dụng phòng tập VIP riêng biệt và phòng xông hơi.\n"
             + "- Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.\n"
             + "- Giáo án tập luyện riêng và tư vấn dinh dưỡng cơ bản.\n"
-            + "- Ưu tiên đặt lịch PT và lớp học.\n"
+            + "- 12 lượt đăng ký khóa Group Fitness.\n"
             + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
     public static final BigDecimal PLATINUM_3M_PRICE = new BigDecimal("1599000");
     public static final int PLATINUM_3M_DURATION = 90;
-    public static final Integer PLATINUM_3M_CREDIT_LIMIT = null;
+    public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
 
     // --- 6 và 12 THÁNG: đã ngừng bán ---
     // Chỉ giữ tên để chuyển gói đã có trong CSDL về inactive; không xóa vì hội viên có thể đang dùng.
@@ -175,6 +176,15 @@ public class CatalogSeeder implements ApplicationRunner {
         upsertPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT);
         upsertPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT);
         upsertPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT);
+
+        // Đồng bộ quyền lợi mới (spec 2026-11-09) vào các gói đã seed từ trước.
+        alignBenefits(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, 3);
+        alignBenefits(SILVER_NAME, SILVER_DESC, SILVER_CREDIT_LIMIT, "SILVER", 2);
+        alignBenefits(GOLD_NAME, GOLD_DESC, GOLD_CREDIT_LIMIT, "GOLD", 5);
+        alignBenefits(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_CREDIT_LIMIT, "PLATINUM", null);
+        alignBenefits(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_CREDIT_LIMIT, "SILVER", 6);
+        alignBenefits(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_CREDIT_LIMIT, "GOLD", 15);
+        alignBenefits(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM", null);
 
         // Ngừng bán các gói 6 và 12 tháng đã seed trước đây
         for (String retired : new String[] {SILVER_6M_NAME, GOLD_6M_NAME, PLATINUM_6M_NAME,
@@ -260,6 +270,27 @@ public class CatalogSeeder implements ApplicationRunner {
             if (name.equalsIgnoreCase(pkg.name()) && "active".equals(pkg.status())) {
                 packages.updateStatus(pkg.id(), "inactive");
             }
+        }
+    }
+
+    /**
+     * Chuyển gói seed cũ sang quyền lợi mới (spec 2026-11-09). Chỉ đụng vào gói còn nguyên mô tả và hạn mức seed cũ;
+     * gói mà Manager đã chỉnh sửa thì giữ nguyên, kể cả giá.
+     */
+    private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
+        String marker = desc.substring(0, desc.indexOf('\n'));
+        for (var pkg : packages.list()) {
+            if (!name.equalsIgnoreCase(pkg.name())) continue;
+            boolean untouched = pkg.description() != null && pkg.description().startsWith(marker)
+                    && java.util.Objects.equals(legacyCreditLimit, pkg.classCreditLimit());
+            boolean upToDate = java.util.Objects.equals(desc, pkg.description())
+                    && java.util.Objects.equals(creditLimit, pkg.classCreditLimit())
+                    && tier.equalsIgnoreCase(pkg.tier());
+            if (untouched && !upToDate) {
+                packages.update(pkg.id(), new PackageRequest(pkg.name(), desc, pkg.price(), pkg.durationDays(),
+                        creditLimit, pkg.status(), tier));
+            }
+            return;
         }
     }
 

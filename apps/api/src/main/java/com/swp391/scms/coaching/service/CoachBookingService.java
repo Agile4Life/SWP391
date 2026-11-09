@@ -10,6 +10,7 @@ import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
+import com.swp391.scms.facilities.PackageBenefits;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
@@ -215,6 +216,12 @@ public class CoachBookingService {
         return consecutive > 3;
     }
 
+    /** Free 1:1 sessions per 30-day cycle, from the package tier (spec 2026-11-09). */
+    private int ptQuotaOf(MembershipSubscription sub, boolean trial) {
+        if (trial) return 1;
+        return PackageBenefits.ptSessionsPerCycle(sub.getMembershipPackage());
+    }
+
     private boolean isTrialSubscription(MembershipSubscription sub) {
         if (sub == null) return false;
         if (sub.getMembershipPackage() != null) {
@@ -245,26 +252,14 @@ public class CoachBookingService {
         }
         MembershipSubscription sub = activeSubs.get(0);
         boolean isTrial = isTrialSubscription(sub);
-        String pkgName;
-        int monthlyQuota = 0;
-
-        if (isTrial) {
-            pkgName = "Gói Trải Nghiệm 3 Ngày";
-            monthlyQuota = 1;
-        } else {
-            pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
-                    ? sub.getMembershipPackage().getName() : "";
-            String upper = pkgName.toUpperCase();
-            if (upper.contains("PLATINUM")) {
-                monthlyQuota = 6;
-            } else if (upper.contains("GOLD")) {
-                monthlyQuota = 3;
-            }
-        }
+        String pkgName = isTrial ? "Gói Trải Nghiệm 3 Ngày"
+                : sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
+                        ? sub.getMembershipPackage().getName() : "";
+        int monthlyQuota = ptQuotaOf(sub, isTrial);
 
         LocalDate now = LocalDate.now(clock);
-        LocalDate startMonth = now.withDayOfMonth(1);
-        LocalDate endMonth = now.withDayOfMonth(now.lengthOfMonth());
+        LocalDate startMonth = PackageBenefits.cycleStart(sub.getStartDate(), now);
+        LocalDate endMonth = PackageBenefits.cycleEnd(sub.getStartDate(), sub.getEndDate(), now);
         long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
 
         int remaining = Math.max(0, monthlyQuota - (int) usedQuota);
@@ -391,18 +386,7 @@ public class CoachBookingService {
 
             MembershipSubscription sub = activeSubs.get(0);
             boolean isTrial = isTrialSubscription(sub);
-            int monthlyQuota = 0;
-            if (isTrial) {
-                monthlyQuota = 1;
-            } else {
-                String pkgName = sub.getMembershipPackage() != null && sub.getMembershipPackage().getName() != null
-                        ? sub.getMembershipPackage().getName().toUpperCase() : "";
-                if (pkgName.contains("PLATINUM")) {
-                    monthlyQuota = 6;
-                } else if (pkgName.contains("GOLD")) {
-                    monthlyQuota = 3;
-                }
-            }
+            int monthlyQuota = ptQuotaOf(sub, isTrial);
 
             if (monthlyQuota == 0) {
                 throw new BadRequestException(
@@ -413,8 +397,8 @@ public class CoachBookingService {
                 );
             }
 
-            LocalDate startMonth = request.bookingDate().withDayOfMonth(1);
-            LocalDate endMonth = request.bookingDate().withDayOfMonth(request.bookingDate().lengthOfMonth());
+            LocalDate startMonth = PackageBenefits.cycleStart(sub.getStartDate(), request.bookingDate());
+            LocalDate endMonth = PackageBenefits.cycleEnd(sub.getStartDate(), sub.getEndDate(), request.bookingDate());
             long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(member.getUserId(), startMonth, endMonth, "package_quota");
 
             if (usedQuota >= monthlyQuota) {

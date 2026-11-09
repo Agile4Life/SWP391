@@ -90,12 +90,10 @@ class EnrollmentControllerTest {
     }
 
     @Test
-    void enrollReturnsCreated() throws Exception {
-        when(enrollmentService.enroll(any(), anyLong())).thenReturn(sampleDto());
-
+    void perSessionEnrollIsRetired() throws Exception {
         mockMvc.perform(post("/api/v1/classes/sessions/9/enroll"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verify(enrollmentService, org.mockito.Mockito.never()).enroll(any(), anyLong());
     }
 
     @Test

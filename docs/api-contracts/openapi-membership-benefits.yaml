@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: Membership benefits, courses and holds
+  version: 2026-11-09
+  description: |
+    Contract changes from docs/superpowers/specs/2026-11-09-membership-benefits-design.md.
+    Sections are added per delivery part (P1 quotas and courses, P2 absences and holds, P3 tier services).
+servers:
+  - url: /api/v1
+paths:
+  /classes:
+    post:
+      deprecated: true
+      summary: Retired - one-off classes are no longer created; use POST /classes/recurring
+      responses:
+        '400':
+          description: SCHEDULING_SINGLE_SESSION_DISABLED
+  /classes/sessions/{id}/enroll:
+    post:
+      deprecated: true
+      summary: Retired - enroll in the whole course with POST /classes/{id}/enroll
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '400':
+          description: SCHEDULING_SINGLE_SESSION_DISABLED
+  /classes/sessions/{id}/bookings:
+    post:
+      deprecated: true
+      summary: Retired - per-session booking; enroll in the whole course instead
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '400':
+          description: SCHEDULING_SINGLE_SESSION_DISABLED
+  /classes/session-bookings/bulk:
+    post:
+      deprecated: true
+      summary: Retired - bulk per-session booking
+      responses:
+        '400':
+          description: SCHEDULING_SINGLE_SESSION_DISABLED
+  /classes/{id}/enroll:
+    post:
+      summary: Enroll the member in a recurring course
+      description: |
+        Consumes one course credit of the active package. The course must end on or before the last day of the
+        unbroken run of paid membership periods that covers its start date, otherwise
+        403 SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP (renew first). After an upgrade, credits already spent on the
+        previous plan still count against the new allowance.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '201': { description: Enrolled }
+        '403': { description: SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP or SCHEDULING_COURSE_QUOTA_EXCEEDED }

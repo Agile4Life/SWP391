@@ -107,8 +107,9 @@ class OperationsSecurityRegressionTest {
     void mergedMatchersAllowMemberBookingAndReceptionistScanning() throws Exception {
         when(checkins.scan(any(), any())).thenReturn(new CheckinDto(1L, 10L, "Member",
                 LocalDateTime.of(2026, 10, 17, 10, 0), null, "qr", null, "GRANTED"));
+        // Per-session enrollment is retired: a member still passes authorization and gets a 400 from the policy.
         mvc.perform(post("/api/v1/classes/sessions/1/enroll").with(authentication(actor("MEMBER"))))
-                .andExpect(status().isCreated());
+                .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/classes/enrollments/my").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isOk());
         mvc.perform(post("/api/v1/check-in/scan").with(authentication(actor("RECEPTIONIST")))

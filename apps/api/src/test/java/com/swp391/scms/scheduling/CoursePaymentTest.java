@@ -76,7 +76,7 @@ class CoursePaymentTest {
         sub.setMembershipPackage(silver);
         sub.setStatus("active");
         sub.setStartDate(LocalDate.of(2026, 11, 1));
-        sub.setEndDate(LocalDate.of(2026, 11, 30));
+        sub.setEndDate(LocalDate.of(2026, 12, 31));
 
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);

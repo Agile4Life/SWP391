@@ -3,6 +3,7 @@ package com.swp391.scms.courts.service;
 import com.swp391.scms.common.exception.*;
 import com.swp391.scms.common.RecurrenceDates;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.facilities.PackageBenefits;
 import com.swp391.scms.courts.dto.CourtBookingRequests.BookRequest;
 import com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest;
 import com.swp391.scms.courts.dto.CourtBookingResponses.*;
@@ -213,16 +214,20 @@ public class CourtBookingService {
                 .filter(s -> s.getStartDate() != null && s.getEndDate() != null
                         && !s.getStartDate().isAfter(date) && !s.getEndDate().isBefore(date))
                 .max(Comparator.comparingInt(s -> s.getMembershipPackage() == null ? -1
-                        : CourtPricing.monthlyQuota(s.getMembershipPackage().getName())))
+                        : CourtPricing.cycleQuota(s.getMembershipPackage())))
                 .orElse(null);
     }
     private int monthlyQuota(Long memberId, LocalDate date) {
         MembershipSubscription subscription = activeSubscription(memberId, date);
         return subscription == null || subscription.getMembershipPackage() == null ? 0
-                : CourtPricing.monthlyQuota(subscription.getMembershipPackage().getName());
+                : CourtPricing.cycleQuota(subscription.getMembershipPackage());
     }
     private long quotaUsed(Long memberId, LocalDate date) {
-        return bookings.countQuotaUsage(memberId, date.withDayOfMonth(1), date.withDayOfMonth(date.lengthOfMonth()),
+        MembershipSubscription subscription = activeSubscription(memberId, date);
+        if (subscription == null) return 0;
+        return bookings.countQuotaUsage(memberId,
+                PackageBenefits.cycleStart(subscription.getStartDate(), date),
+                PackageBenefits.cycleEnd(subscription.getStartDate(), subscription.getEndDate(), date),
                 CourtPricing.PACKAGE_QUOTA);
     }
 
@@ -233,7 +238,7 @@ public class CourtBookingService {
         MembershipSubscription subscription = activeSubscription(principal.id(), day);
         String name = subscription == null || subscription.getMembershipPackage() == null ? null
                 : subscription.getMembershipPackage().getName();
-        int total = CourtPricing.monthlyQuota(name);
+        int total = subscription == null ? 0 : CourtPricing.cycleQuota(subscription.getMembershipPackage());
         int used = (int) quotaUsed(principal.id(), day);
         return new QuotaDto(name, total, used, Math.max(0, total - used));
     }

@@ -2,9 +2,8 @@ package com.swp391.scms.courts.service;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
-import java.util.Locale;
 
-/** Court fees and the number of court bookings each membership plan includes per month. */
+/** Court fees and the number of court bookings each membership plan includes per 30-day cycle. */
 public final class CourtPricing {
     public static final String PACKAGE_QUOTA = "package_quota";
     /** One-hour slot, any of the three court types. */
@@ -19,12 +18,8 @@ public final class CourtPricing {
         return start.isBefore(EVENING_FROM) ? STANDARD_PRICE : EVENING_PRICE;
     }
 
-    /** Court bookings included per calendar month across Tennis, Badminton and Swimming together. */
-    public static int monthlyQuota(String packageName) {
-        String name = packageName == null ? "" : packageName.toUpperCase(Locale.ROOT);
-        if (name.contains("PLATINUM")) return 3;
-        if (name.contains("GOLD")) return 2;
-        if (name.contains("SILVER")) return 1;
-        return 0;
+    /** Court bookings included per 30-day cycle across Tennis, Badminton and Swimming together, from the package tier. */
+    public static int cycleQuota(com.swp391.scms.facilities.entity.MembershipPackage pkg) {
+        return com.swp391.scms.facilities.PackageBenefits.courtBookingsPerCycle(pkg);
     }
 }
