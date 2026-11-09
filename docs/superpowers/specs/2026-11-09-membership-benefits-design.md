@@ -138,3 +138,24 @@
 - T11: Giảm giá 10/20% theo hạng khi thanh toán PT bổ sung, học phí khóa, shop (G11) — làm trong đợt này.
 
 Mọi ticket phải thêm message key vào `messages_vi.properties` và `messages_en.properties`, và cập nhật `docs/api-contracts/` nếu đổi API.
+
+## 5. Trạng thái triển khai (2026-11-10)
+
+Đã làm trên `main`, mỗi phần một commit; backend 1324 test, frontend 1153 test đều xanh.
+
+| Ticket | Kết quả |
+|---|---|
+| T1 | `PackageBenefits` là nguồn quyền lợi theo hạng; seeder 1/2/4 và 3/6/12, trial 0; chỉ migrate gói còn nguyên mô tả và hạn mức seed cũ. Quota PT và sân tính theo chu kỳ 30 ngày. Không thêm cột quota trên gói: giá trị suy ra từ `tier` và thời hạn. |
+| T2 | `POST /classes`, đăng ký từng buổi và `session-bookings` trả 400 `SCHEDULING_SINGLE_SESSION_DISABLED`. Giai đoạn 2 (xóa hẳn code cũ) chưa làm. |
+| T3 | Khóa phải kết thúc trong chuỗi gói đã thanh toán liền kề; nâng cấp giữ số lượt đã dùng. |
+| T4 | Tự đánh vắng mỗi 30 phút, vắng quá 50% thì khóa đăng ký khóa mới 30 ngày. |
+| T5, T6 | Bảo lưu theo ngày, giấy tờ lưu trong `membership_hold_documents`. Duyệt xong gói chỉ đóng băng từ ngày bắt đầu; chỉ hủy PT và sân trong giai đoạn bảo lưu, buổi khóa học trong giai đoạn đó thành `excused`. |
+| T7, T8 | `/member/hold` và `/staff/holds` (lễ tân, quản lý). |
+| T9 | Coach đánh giá lần đầu cho hội viên đã có tài khoản; Body Fat và Muscle Mass chỉ Platinum; Silver không có đánh giá định kỳ. Chưa ép "một lần mỗi tháng" cho Gold. |
+| T10 | Silver không thấy giáo án (danh sách rỗng, chi tiết 403). |
+| T11 | Giảm 10% / 20% cho shop, học phí khóa và PT thêm. Đơn shop lưu `subtotal` sau giảm để giữ ràng buộc `total = subtotal + shipping_fee`. |
+
+Điểm cần lưu ý khi vận hành:
+- Cột và bảng mới do Hibernate `ddl-auto: update` tạo: `members.course_enroll_blocked_until`, `membership_subscriptions.hold_start_date/hold_end_date/hold_used`, `product_orders.member_discount_percent/amount`, `membership_hold_documents`.
+- Giấy tờ y tế lưu dạng bytea trong database; dung lượng tối đa 5 MB mỗi tệp, 5 tệp mỗi đơn.
+- Bảo lưu cũ (trước thay đổi) không có ngày vẫn chạy theo luật cũ: tự mở lại sau 90 ngày.
