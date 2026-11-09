@@ -67,7 +67,9 @@ Các điểm giúp mẫu chạy được ở dự án chưa đầy đủ:
 - Bước kiểm tra Supabase chỉ chạy khi có `scripts/test-database-config.ps1` (riêng dự án này).
 - Chưa thêm secret Render hoặc Vercel thì phần deploy tương ứng tự bỏ qua, CD không báo đỏ.
   CI vẫn chạy bình thường nên có thể dùng CI trước, thêm CD sau.
-- Nếu hosting khác Render/Vercel (Railway, Fly.io, VPS...), giữ nguyên CI và thay nội dung job
+- VPS tự host chạy Docker Compose đã có sẵn `cd-vps.yml` (SSH rồi `docker compose up`); cách cài
+  đặt ở `docs/DOCKER_COMPOSE.md`, mục "Tự động deploy lên VPS (CD qua SSH)".
+- Nếu hosting khác Render/Vercel (Railway, Fly.io...), giữ nguyên CI và thay nội dung job
   `backend` / `frontend` trong `cd.yml` bằng lệnh deploy của nền tảng đó.
 
 ## 1. GitHub Secrets và Variables
