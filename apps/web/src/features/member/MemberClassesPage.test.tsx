@@ -24,6 +24,9 @@ const mocks = vi.hoisted(() => ({
   coaches: vi.fn(),
   coachSlots: vi.fn(),
   myCoachBookings: vi.fn(),
+  quota: vi.fn(),
+  checkout: vi.fn(),
+  enroll: vi.fn(),
 }));
 
 vi.mock('./memberClassesApi', async (importOriginal) => {
@@ -39,6 +42,9 @@ vi.mock('./memberClassesApi', async (importOriginal) => {
     cancelBooking: mocks.cancelBooking,
     cancelBookings: mocks.cancelBookings,
     cancelEnrollment: mocks.cancelEnrollment,
+    getMyQuota: mocks.quota,
+    enrollCourse: mocks.enroll,
+    checkoutCourse: mocks.checkout,
   };
 });
 
@@ -90,6 +96,9 @@ describe('MemberClassesPage', () => {
     mocks.coaches.mockReset();
     mocks.coachSlots.mockReset();
     mocks.myCoachBookings.mockReset();
+    mocks.quota.mockReset().mockResolvedValue(null);
+    mocks.checkout.mockReset();
+    mocks.enroll.mockReset();
     mocks.enrollments.mockResolvedValue([]);
     mocks.coaches.mockResolvedValue([]);
     mocks.coachSlots.mockResolvedValue([]);
@@ -524,6 +533,40 @@ describe('MemberClassesPage', () => {
       expect(host.textContent).toContain('Hủy buổi này');
       expect(host.querySelector('[data-testid="overlap-btn-9"]')).not.toBeNull();
       expect(host.querySelector('.member-class-enroll')).toBeNull();
+    });
+
+    it('displays membership course quota banner with tier and remaining credits', async () => {
+      mocks.quota.mockResolvedValue({
+        tier: 'SILVER',
+        totalCredits: 2,
+        usedCredits: 1,
+        remainingCredits: 1,
+        unlimited: false,
+      });
+      mocks.sessions.mockResolvedValue([]);
+      await render();
+
+      const quotaBanner = host.querySelector('[data-testid="course-quota-banner"]');
+      expect(quotaBanner).not.toBeNull();
+      expect(quotaBanner?.textContent).toContain('GÓI SILVER');
+      expect(quotaBanner?.textContent).toContain('Còn 1/2 khóa học miễn phí');
+    });
+
+    it('shows upgrade link when member course quota is exhausted', async () => {
+      mocks.quota.mockResolvedValue({
+        tier: 'SILVER',
+        totalCredits: 2,
+        usedCredits: 2,
+        remainingCredits: 0,
+        unlimited: false,
+      });
+      mocks.sessions.mockResolvedValue([]);
+      await render();
+
+      const quotaBanner = host.querySelector('[data-testid="course-quota-banner"]');
+      expect(quotaBanner).not.toBeNull();
+      expect(quotaBanner?.textContent).toContain('Còn 0/2 khóa học miễn phí');
+      expect(quotaBanner?.textContent).toContain('Nâng cấp gói tập');
     });
   });
 });

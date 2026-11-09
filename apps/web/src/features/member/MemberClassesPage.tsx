@@ -22,9 +22,13 @@ import {
   getMyBookings,
   getMyEnrollments,
   getSessions,
+  getMyQuota,
+  enrollCourse,
+  checkoutCourse,
   type ClassSessionDto,
   type EnrollmentDto,
   type SessionBookingDto,
+  type QuotaDto,
 } from './memberClassesApi';
 import { weekRangeLabel } from '../schedule/timetable';
 import '../schedule/timetable.css';
@@ -160,6 +164,10 @@ export function MemberClassesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | SourceMessage>('');
   const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string; kind: 'enrollment' | 'booking' } | null>(null);
+  const [quota, setQuota] = useState<QuotaDto | null>(null);
+  const [courseCheckoutTarget, setCourseCheckoutTarget] = useState<{ classId: number; className: string; price: number } | null>(null);
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'online_wallet' | 'vnpay' | 'cash'>('online_wallet');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const cancelFocusRef = useRef<HTMLButtonElement | null>(null);
   const busyRef = useRef<string | null>(null);
   const actionGenRef = useRef(0);
@@ -210,6 +218,16 @@ export function MemberClassesPage() {
     params.set('week', String(next));
     setSearchParams(params, { replace: true });
   }
+
+  useEffect(() => {
+    let active = true;
+    void getMyQuota()
+      .then((q) => {
+        if (active) setQuota(q);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [retry, myScheduleRetry]);
 
   useEffect(() => {
     let active = true;
@@ -360,6 +378,61 @@ export function MemberClassesPage() {
     }
   }
 
+  async function handleEnrollCourse(classId: number, className: string) {
+    const key = `course-${classId}`;
+    if (busyRef.current) return;
+    busyRef.current = key;
+    setBusyKey(key);
+    setActionError('');
+    try {
+      await enrollCourse(classId);
+      memberNotify(memberMessage(`Đã đăng ký khóa học "${className}" thành công!`, `Course "${className}" enrolled successfully!`), 'success', { record: true });
+      setRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      busyRef.current = null;
+      setBusyKey(null);
+    }
+  }
+
+  async function handleConfirmCourseCheckout() {
+    if (!courseCheckoutTarget || isCheckingOut) return;
+    setIsCheckingOut(true);
+    setActionError('');
+    try {
+      const res = await checkoutCourse(courseCheckoutTarget.classId, checkoutPaymentMethod);
+      if (res.paymentUrl) {
+        window.location.href = res.paymentUrl;
+        return;
+      }
+      if (checkoutPaymentMethod === 'cash') {
+        memberNotify(
+          memberMessage(
+            `Đã đăng ký khóa học "${courseCheckoutTarget.className}". Vui lòng thanh toán ${res.amount ? Number(res.amount).toLocaleString('vi-VN') : ''} đ tại quầy lễ tân trước ngày khai giảng.`,
+            `Registered for "${courseCheckoutTarget.className}". Please pay ${res.amount ? Number(res.amount).toLocaleString('vi-VN') : ''} VND at the reception before the course starts.`
+          ),
+          'success',
+          { record: true }
+        );
+      } else {
+        memberNotify(
+          memberMessage(`Thanh toán và đăng ký khóa học "${courseCheckoutTarget.className}" thành công!`, `Payment & enrollment for "${courseCheckoutTarget.className}" successful!`),
+          'success',
+          { record: true }
+        );
+      }
+      setCourseCheckoutTarget(null);
+      setRetry((v) => v + 1);
+      setMyScheduleRetry((v) => v + 1);
+    } catch (cause) {
+      setActionError(errorMessage(cause));
+    } finally {
+      setIsCheckingOut(false);
+    }
+  }
+
   const weekRange = currentWeek(weekOffset);
   const disciplines = DISCIPLINES.map(item => item.name);
   const visible = filterSessions(sessions, discipline, day)
@@ -375,6 +448,51 @@ export function MemberClassesPage() {
         eyebrow={text("Hội viên", 'Member')}
         title={text("Lịch học & đặt chỗ", 'Classes & bookings')}
       /></div>
+
+      {/* Quota Banner: Hiển thị số lượt đăng ký khóa học còn lại của gói */}
+      {quota && (
+        <div
+          className="portal-card"
+          data-testid="course-quota-banner"
+          style={{
+            padding: '14px 18px',
+            marginBottom: 18,
+            backgroundColor: 'var(--color-bg-warm, #1e1e1e)',
+            border: '1px solid var(--color-salmon, #eb7e6b)',
+            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span className="badge badge-info" style={{ fontWeight: 700 }}>
+                {quota.tier ? `GÓI ${quota.tier.toUpperCase()}` : 'GÓI HỘI VIÊN'}
+              </span>
+              <strong style={{ fontSize: '0.96rem', color: 'var(--color-salmon, #eb7e6b)' }}>
+                {quota.unlimited
+                  ? memberText("Đăng ký khóa học: Không giới hạn", "Course Enrollment: Unlimited")
+                  : memberText(`Hạn mức: Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí`)}
+              </strong>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+              {quota.unlimited
+                ? memberText("Bạn được đăng ký miễn phí không giới hạn tất cả các khóa học fitness định kỳ.", "You have unlimited free enrollment for all recurring fitness courses.")
+                : quota.remainingCredits > 0
+                ? memberText("1 lượt học = 1 khóa học trọn gói. Đăng ký để giữ chỗ cho toàn bộ các buổi học trong khóa.", "1 credit = 1 full course. Enroll to reserve your spot for all course sessions.")
+                : memberText("Bạn đã sử dụng hết lượt đăng ký theo gói tập. Các khóa học đăng ký thêm sẽ thanh toán học phí ngoài gói.", "You have used all credits in your plan. Additional courses can be purchased with tuition fee.")}
+            </p>
+          </div>
+          {quota.remainingCredits <= 0 && !quota.unlimited && (
+            <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
+              {text('Nâng cấp gói tập', 'Upgrade membership')}
+            </Link>
+          )}
+        </div>
+      )}
 
       <div className="portal-tabs" data-i18n-managed role="tablist" aria-label={text("Lịch học", "Class schedule")} style={{ marginBottom: 18 }}>
         <button
@@ -613,16 +731,34 @@ export function MemberClassesPage() {
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             {memberText("Không thể đặt")}</button>
                         ) : item.bookedCount < item.capacity ? (
-                          <button
-                            type="button"
-                            className="btn-primary member-class-enroll"
-                            aria-label={`${isBusy ? memberText("Đang đặt chỗ") : memberText("Đặt chỗ ngay")}: ${item.className}`}
-                            title={memberText(`Đặt chỗ ngay: ${item.className}`, `Book now: ${item.className}`)}
-                            disabled={isBusy}
-                            onClick={() => void handleBook(item)}
-                          >
-                            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đặt chỗ...") : memberText("Đặt chỗ ngay")}</span>
-                          </button>
+                          quota && !quota.unlimited && quota.remainingCredits <= 0 ? (
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              data-testid={`pay-course-${item.classId}`}
+                              disabled={isBusy}
+                              onClick={() => setCourseCheckoutTarget({ classId: item.classId, className: item.className, price: 500000 })}
+                            >
+                              {text("Thanh toán học phí", "Pay course fee")}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-primary member-class-enroll"
+                              aria-label={`${isBusy ? memberText("Đang đặt chỗ") : memberText("Đặt chỗ ngay")}: ${item.className}`}
+                              title={memberText(`Đặt chỗ ngay: ${item.className}`, `Book now: ${item.className}`)}
+                              disabled={isBusy}
+                              onClick={() => {
+                                if (quota && quota.remainingCredits > 0) {
+                                  void handleEnrollCourse(item.classId, item.className);
+                                } else {
+                                  void handleBook(item);
+                                }
+                              }}
+                            >
+                              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đặt chỗ...") : memberText("Đặt chỗ ngay")}</span>
+                            </button>
+                          )
                         ) : (
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             {memberText("Buổi đã đầy")}</button>
@@ -650,6 +786,87 @@ export function MemberClassesPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
             <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>{memberText("Giữ đặt chỗ")}</button>
             <button type="button" className="btn-danger" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>{memberText("Xác nhận hủy")}</button>
+          </div>
+        </Modal>
+      )}
+
+      {courseCheckoutTarget && (
+        <Modal
+          title={text("Thanh toán học phí khóa học", "Course fee payment")}
+          onClose={() => setCourseCheckoutTarget(null)}
+        >
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem' }}>{courseCheckoutTarget.className}</h3>
+              <p className="row-card__meta" style={{ margin: 0 }}>
+                {text("Học phí khóa học trọn gói:", "Full course tuition fee:")}{' '}
+                <strong style={{ color: 'var(--color-salmon, #eb7e6b)', fontSize: '1.1rem' }}>
+                  {lang === 'en'
+                    ? `${courseCheckoutTarget.price?.toLocaleString('en-US')} VND`
+                    : `${courseCheckoutTarget.price?.toLocaleString('vi-VN')} đ`}
+                </strong>
+              </p>
+            </div>
+
+            <div className="portal-form-group">
+              <label className="portal-label">{text("Phương thức thanh toán", "Payment method")}</label>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                  <input
+                    type="radio"
+                    name="coursePaymentMethod"
+                    value="online_wallet"
+                    checked={checkoutPaymentMethod === 'online_wallet'}
+                    onChange={() => setCheckoutPaymentMethod('online_wallet')}
+                  />
+                  <div>
+                    <strong>{text("Ví điện tử SÖL", "SÖL Member Wallet")}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Thanh toán trừ số dư ví tức thì", "Instant wallet debit")}</div>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                  <input
+                    type="radio"
+                    name="coursePaymentMethod"
+                    value="vnpay"
+                    checked={checkoutPaymentMethod === 'vnpay'}
+                    onChange={() => setCheckoutPaymentMethod('vnpay')}
+                  />
+                  <div>
+                    <strong>{text("Cổng thanh toán VNPay (Thẻ ATM / QR)", "VNPay Gateway (ATM / QR)")}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Chuyển sang trang thanh toán bảo mật VNPay", "Redirect to VNPay portal")}</div>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                  <input
+                    type="radio"
+                    name="coursePaymentMethod"
+                    value="cash"
+                    checked={checkoutPaymentMethod === 'cash'}
+                    onChange={() => setCheckoutPaymentMethod('cash')}
+                  />
+                  <div>
+                    <strong>{text("Tiền mặt tại quầy lễ tân", "Cash at reception")}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Giữ chỗ trước và nộp tiền tại quầy trước khai giảng", "Hold seat and pay at counter")}</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+              <button type="button" className="btn-secondary" onClick={() => setCourseCheckoutTarget(null)} disabled={isCheckingOut}>
+                {text("Hủy bỏ", "Cancel")}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void handleConfirmCourseCheckout()}
+                disabled={isCheckingOut}
+                data-testid="confirm-course-checkout-btn"
+              >
+                {isCheckingOut ? text("Đang xử lý...", "Processing...") : text("Xác nhận thanh toán", "Confirm payment")}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

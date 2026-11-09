@@ -150,9 +150,11 @@ public class VnpayPaymentService {
                         ? "/member/courts"
                         : payment.getCoachBookingId() != null
                                 ? "/member/classes?tab=pt"
-                                : payment.getSubscriptionId() != null
-                                        ? "/member/packages"
-                                        : "/member/invoices";
+                                : payment.getClassEnrollmentId() != null
+                                        ? "/member/classes"
+                                        : payment.getSubscriptionId() != null
+                                                ? "/member/packages"
+                                                : "/member/invoices";
         String desc = payment.getProductOrderId() != null
                 ? orderWalletDescription(payment)
                 : payment.getSubscriptionId() != null
@@ -161,7 +163,9 @@ public class VnpayPaymentService {
                                 ? "Thanh toán lịch PT 1:1 (#" + payment.getId() + ")"
                                 : payment.getCourtBookingId() != null
                                         ? "Thanh toán đặt sân (#" + payment.getId() + ")"
-                                        : "Thanh toán dịch vụ (#" + payment.getId() + ")";
+                                        : payment.getClassEnrollmentId() != null
+                                                ? "Thanh toán học phí khóa học (#" + payment.getId() + ")"
+                                                : "Thanh toán dịch vụ (#" + payment.getId() + ")";
 
         com.swp391.scms.wallet.WalletDto updatedWallet = walletService.debitForPayment(
                 principal.id(),
@@ -291,11 +295,13 @@ public class VnpayPaymentService {
                         ? "/member/courts"
                         : p.getCoachBookingId()!=null
                                 ? "/member/classes?tab=pt"
-                                : p.getSubscriptionId()!=null
-                                        ? "/member/packages"
-                                        : isWalletTopup(p)
+                                : p.getClassEnrollmentId()!=null
+                                        ? "/member/classes"
+                                        : p.getSubscriptionId()!=null
                                                 ? "/member/packages"
-                                                : "/member/invoices";
+                                                : isWalletTopup(p)
+                                                        ? "/member/packages"
+                                                        : "/member/invoices";
         return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
     }
     public String ipn(Map<String,String> fields) {

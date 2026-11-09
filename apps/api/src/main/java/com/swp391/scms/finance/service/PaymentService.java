@@ -68,6 +68,7 @@ public class PaymentService {
     private InvoiceService invoiceService;
 
     @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
     private com.swp391.scms.scheduling.service.EnrollmentService enrollmentService;
 
     @Autowired(required = false)

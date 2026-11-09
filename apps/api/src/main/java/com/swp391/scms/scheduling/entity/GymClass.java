@@ -5,7 +5,10 @@ import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import org.hibernate.Length;
 
 /** Entity mapping table classes (schema is generated code-first by Hibernate). */
@@ -46,6 +49,24 @@ public class GymClass {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "active";
 
+    @Column(name = "price", precision = 12, scale = 2)
+    private BigDecimal price = BigDecimal.ZERO;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "recurring_days", length = 100)
+    private String recurringDays;
+
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -79,6 +100,18 @@ public class GymClass {
     public void setDescription(String description) { this.description = description; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public String getRecurringDays() { return recurringDays; }
+    public void setRecurringDays(String recurringDays) { this.recurringDays = recurringDays; }
+    public LocalTime getStartTime() { return startTime; }
+    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
+    public LocalTime getEndTime() { return endTime; }
+    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }

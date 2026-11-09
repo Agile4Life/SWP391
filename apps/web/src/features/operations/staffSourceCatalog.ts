@@ -1521,5 +1521,20 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Số hiệp phải là số nguyên từ 1 trở lên.": "Sets must be an integer of at least 1.",
   "Số reps phải là số nguyên từ 1 trở lên.": "Repetitions must be an integer of at least 1.",
   "Thời lượng phải là số nguyên từ 1 trở lên.": "Duration must be an integer of at least 1.",
-  "Thời gian nghỉ phải là số nguyên từ 0 trở lên.": "Rest time must be an integer of at least 0."
+  "Thời gian nghỉ phải là số nguyên từ 0 trở lên.": "Rest time must be an integer of at least 0.",
+  "Đã tạo khóa học định kỳ và xếp lịch toàn bộ các buổi học thành công!": "Recurring course created and all sessions scheduled successfully!",
+  "Lịch khóa học định kỳ & Khai giảng": "Recurring Course Schedule & Start Date",
+  "Lên lịch trước:": "Schedule ahead:",
+  "tuần": "weeks",
+  "Ngày Khai Giảng (Bắt đầu) *": "Course Start Date *",
+  "Thời Lượng Khóa Học": "Course Duration",
+  "2 tuần": "2 weeks",
+  "3 tuần": "3 weeks",
+  "4 tuần (1 tháng)": "4 weeks (1 month)",
+  "8 tuần (2 tháng)": "8 weeks (2 months)",
+  "Các buổi học trong tuần *": "Days of the week *",
+  "Tổng cộng:": "Total:",
+  "buổi học": "sessions",
+  "Học phí ngoài gói (VNĐ)": "Tuition fee outside plan (VND)",
+  "Áp dụng khi hội viên vượt hạn mức gói hoặc mua lẻ.": "Applied when member exceeds plan quota or buys separately."
 };

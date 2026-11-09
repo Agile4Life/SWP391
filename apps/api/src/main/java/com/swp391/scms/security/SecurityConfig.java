@@ -163,9 +163,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/session-bookings/cancel").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/session-bookings/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/cancel").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasRole("CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/sessions", "/api/v1/classes", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/classes/*/sessions/*", "/api/v1/classes/*", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
                     // Court booking roles are enforced here and at controller boundaries.

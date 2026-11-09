@@ -74,4 +74,15 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             """)
     boolean existsUpcomingBookedForMember(@org.springframework.data.repository.query.Param("memberId") Long memberId,
                                           @org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
+
+    @org.springframework.data.jpa.repository.Query("""
+            select count(e) from ClassEnrollment e
+            where e.member.userId = :memberId and e.status = :status
+              and coalesce(e.gymClass.startDate, cast(e.enrolledAt as date)) between :startDate and :endDate
+            """)
+    long countByMemberUserIdAndStatusAndGymClassStartDateBetween(
+            @org.springframework.data.repository.query.Param("memberId") Long memberId,
+            @org.springframework.data.repository.query.Param("status") String status,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 }

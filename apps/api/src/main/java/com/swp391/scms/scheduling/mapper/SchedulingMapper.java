@@ -23,7 +23,13 @@ public class SchedulingMapper {
                 gymClass.getCapacity(),
                 gymClass.getLevel(),
                 gymClass.getDescription(),
-                gymClass.getStatus()
+                gymClass.getStatus(),
+                gymClass.getPrice(),
+                gymClass.getStartDate(),
+                gymClass.getEndDate(),
+                gymClass.getRecurringDays(),
+                gymClass.getStartTime(),
+                gymClass.getEndTime()
         );
     }
 

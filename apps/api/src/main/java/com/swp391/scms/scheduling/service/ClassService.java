@@ -18,6 +18,7 @@ import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.notifications.event.SessionCancelledEvent;
 import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest;
@@ -207,6 +208,115 @@ public class ClassService {
             initialSession.setCreatedAt(LocalDateTime.now(clock));
             initialSession.setUpdatedAt(LocalDateTime.now(clock));
             sessions.saveAndFlush(initialSession);
+        }
+
+        return mapper.toDto(savedClass != null ? savedClass : gymClass);
+    }
+
+    /**
+     * Create a recurring course: generates all sessions within [startDate, endDate]
+     * for the selected days of the week, validating room/coach conflicts across every session.
+     */
+    @Transactional
+    @Audited(action = "CLASS_CREATE_RECURRING", entity = "classes")
+    public GymClassDto createRecurringClass(CreateRecurringClassRequest request) {
+        Discipline discipline = disciplines.findById(request.disciplineId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
+
+        Coach coach = coaches.findById(request.coachId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
+        if (!COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_COACH_INACTIVE",
+                    "error.scheduling.coach_inactive",
+                    null,
+                    "Coach is not active");
+        }
+
+        Room room = rooms.findById(request.roomId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.room", request.roomId()));
+        if (!ROOM_AVAILABLE.equalsIgnoreCase(room.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_ROOM_UNAVAILABLE",
+                    "error.scheduling.room_unavailable",
+                    null,
+                    "Room is not available for scheduling");
+        }
+
+        if (request.startDate() == null || request.endDate() == null) {
+            throw new BadRequestException("SCHEDULING_INVALID_DATES", "error.scheduling.invalid_dates", null, "Ngày bắt đầu và ngày kết thúc không được để trống");
+        }
+        if (request.endDate().isBefore(request.startDate())) {
+            throw new BadRequestException("SCHEDULING_INVALID_DATE_RANGE", "error.scheduling.invalid_date_range", null, "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        }
+        if (!request.endTime().isAfter(request.startTime())) {
+            throw new BadRequestException(
+                    "SCHEDULING_INVALID_TIME_RANGE",
+                    "error.scheduling.invalid_time_range",
+                    null,
+                    "End time must be after start time");
+        }
+        SessionEligibility.ensureFuture(request.startDate(), request.startTime(), clock);
+
+        if (request.recurringDays() == null || request.recurringDays().isEmpty()) {
+            throw new BadRequestException("SCHEDULING_NO_RECURRING_DAYS", "error.scheduling.no_recurring_days", null, "Vui lòng chọn ít nhất một ngày trong tuần");
+        }
+
+        java.util.Set<java.time.DayOfWeek> selectedDays = request.recurringDays().stream()
+                .map(String::toUpperCase)
+                .map(java.time.DayOfWeek::valueOf)
+                .collect(java.util.stream.Collectors.toSet());
+
+        List<LocalDate> sessionDates = new ArrayList<>();
+        for (LocalDate d = request.startDate(); !d.isAfter(request.endDate()); d = d.plusDays(1)) {
+            if (selectedDays.contains(d.getDayOfWeek())) {
+                sessionDates.add(d);
+            }
+        }
+        if (sessionDates.isEmpty()) {
+            throw new BadRequestException("SCHEDULING_NO_SESSIONS_MATCHED", "error.scheduling.no_sessions_matched", null, "Không có buổi học nào phù hợp với các thứ trong tuần đã chọn");
+        }
+
+        for (LocalDate sessionDate : sessionDates) {
+            ensureNoSessionConflict(
+                    coach.getUserId(),
+                    room.getId(),
+                    sessionDate,
+                    request.startTime(),
+                    request.endTime(),
+                    null,
+                    null);
+        }
+
+        GymClass gymClass = new GymClass();
+        gymClass.setName(request.name());
+        gymClass.setDiscipline(discipline);
+        gymClass.setCoach(coach);
+        gymClass.setRoom(room);
+        gymClass.setCapacity(request.capacity());
+        gymClass.setLevel(request.level() != null ? request.level() : "all");
+        gymClass.setDescription(request.description());
+        gymClass.setStatus(CLASS_ACTIVE);
+        gymClass.setPrice(request.price() != null ? request.price() : java.math.BigDecimal.ZERO);
+        gymClass.setStartDate(request.startDate());
+        gymClass.setEndDate(request.endDate());
+        gymClass.setRecurringDays(String.join(",", request.recurringDays()));
+        gymClass.setStartTime(request.startTime());
+        gymClass.setEndTime(request.endTime());
+
+        GymClass savedClass = gymClasses.save(gymClass);
+
+        LocalDateTime now = LocalDateTime.now(clock);
+        for (LocalDate sessionDate : sessionDates) {
+            ClassSession session = new ClassSession();
+            session.setGymClass(savedClass != null ? savedClass : gymClass);
+            session.setSessionDate(sessionDate);
+            session.setStartTime(request.startTime());
+            session.setEndTime(request.endTime());
+            session.setStatus(SESSION_SCHEDULED);
+            session.setCreatedAt(now);
+            session.setUpdatedAt(now);
+            sessions.saveAndFlush(session);
         }
 
         return mapper.toDto(savedClass != null ? savedClass : gymClass);

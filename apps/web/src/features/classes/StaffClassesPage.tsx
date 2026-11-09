@@ -36,6 +36,11 @@ interface FormState {
   level: string;
   description: string;
   sessionDate: string;
+  startDate: string;
+  endDate: string;
+  durationWeeks: number;
+  recurringDays: string[];
+  price: number;
   startTime: string;
   endTime: string;
 }
@@ -66,18 +71,56 @@ const getTodayString = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-const defaultFormData = (): FormState => ({
-  name: '',
-  disciplineId: '',
-  coachId: '',
-  roomId: '',
-  capacity: 20,
-  level: 'all',
-  description: '',
-  sessionDate: getTodayString(),
-  startTime: '08:00',
-  endTime: '09:00',
-});
+const getAdvanceDateString = (weeksAhead = 2): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + weeksAhead * 7);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+function addWeeksToDate(dateStr: string, weeks: number): string {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + weeks * 7);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const RECURRING_DAYS_OPTIONS = [
+  { value: 'MONDAY', label: 'T2', fullLabel: 'Thứ 2' },
+  { value: 'TUESDAY', label: 'T3', fullLabel: 'Thứ 3' },
+  { value: 'WEDNESDAY', label: 'T4', fullLabel: 'Thứ 4' },
+  { value: 'THURSDAY', label: 'T5', fullLabel: 'Thứ 5' },
+  { value: 'FRIDAY', label: 'T6', fullLabel: 'Thứ 6' },
+  { value: 'SATURDAY', label: 'T7', fullLabel: 'Thứ 7' },
+  { value: 'SUNDAY', label: 'CN', fullLabel: 'Chủ Nhật' },
+];
+
+const defaultFormData = (): FormState => {
+  const advance2 = getAdvanceDateString(2);
+  return {
+    name: '',
+    disciplineId: '',
+    coachId: '',
+    roomId: '',
+    capacity: 20,
+    level: 'all',
+    description: '',
+    sessionDate: advance2,
+    startDate: advance2,
+    endDate: addWeeksToDate(advance2, 4),
+    durationWeeks: 4,
+    recurringDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+    price: 500000,
+    startTime: '08:00',
+    endTime: '09:00',
+  };
+};
 
 export function StaffClassesPage() {
   const { t } = useStaffI18n();
@@ -105,8 +148,6 @@ export function StaffClassesPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [modalError, setModalError] = useState<StaffMessage | null>(null);
   const [formData, setFormData] = useState<FormState>(defaultFormData);
-  const [pendingClassId, setPendingClassId] = useState<number | null>(null);
-  const [pendingClassSignature, setPendingClassSignature] = useState<string | null>(null);
 
   // SCRUM-131: State Modal Sửa thông tin lớp
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
@@ -142,19 +183,6 @@ export function StaffClassesPage() {
   const [cancelSessionReason, setCancelSessionReason] = useState<string>('');
   const [cancelSessionError, setCancelSessionError] = useState<StaffMessage | null>(null);
 
-  // Kiểm tra trùng tên lớp học theo thời gian thực (không phân biệt hoa thường)
-  const normalizedInputName = formData.name.trim().toLowerCase();
-  const isDuplicateClassName =
-    normalizedInputName.length > 0 &&
-    classes.some((cls) => cls.name.trim().toLowerCase() === normalizedInputName);
-
-  const normalizedEditName = editFormData.name.trim().toLowerCase();
-  const isDuplicateEditClassName =
-    editingClass !== null &&
-    normalizedEditName.length > 0 &&
-    classes.some(
-      (cls) => cls.id !== editingClass.id && cls.name.trim().toLowerCase() === normalizedEditName,
-    );
 
   // SCRUM-132: Phát hiện trùng lịch phòng tập hoặc HLV theo thời gian thực ngay trên form
   const detectRoomOrCoachConflict = useCallback(
@@ -347,25 +375,26 @@ export function StaffClassesPage() {
     setModalError(null);
     setCreateMode('new');
     setExistingClassId('');
-    setPendingClassId(null);
-    setPendingClassSignature(null);
-    setFormData((prev) => ({
-      ...prev,
-      disciplineId: prev.disciplineId || (disciplines[0] ? String(disciplines[0].id) : ''),
-      roomId: prev.roomId || (rooms[0] ? String(rooms[0].id) : ''),
-      coachId: prev.coachId || (coaches[0] ? String(coaches[0].id) : ''),
-      sessionDate: slot?.date ?? (prev.sessionDate || getTodayString()),
-      startTime: slot?.startTime ?? prev.startTime,
-      endTime: slot?.endTime ?? prev.endTime,
-    }));
+    setFormData((prev) => {
+      const targetDate = slot?.date ?? prev.startDate ?? getAdvanceDateString(2);
+      return {
+        ...prev,
+        disciplineId: prev.disciplineId || (disciplines[0] ? String(disciplines[0].id) : ''),
+        roomId: prev.roomId || (rooms[0] ? String(rooms[0].id) : ''),
+        coachId: prev.coachId || (coaches[0] ? String(coaches[0].id) : ''),
+        sessionDate: targetDate,
+        startDate: targetDate,
+        endDate: addWeeksToDate(targetDate, prev.durationWeeks || 4),
+        startTime: slot?.startTime ?? prev.startTime,
+        endTime: slot?.endTime ?? prev.endTime,
+      };
+    });
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     if (isSubmitting) return;
     setModalError(null);
-    setPendingClassId(null);
-    setPendingClassSignature(null);
     setShowModal(false);
   };
 
@@ -381,11 +410,6 @@ export function StaffClassesPage() {
       return;
     }
 
-    if (isDuplicateClassName) {
-      const msg = staffMessage(`Tên lớp học "${formData.name.trim()}" đã tồn tại trong hệ thống. Vui lòng chọn tên khác.`, `Class name "${formData.name.trim()}" already exists. Please choose another name.`);
-      setModalError(msg);
-      return;
-    }
 
     if (!formData.disciplineId) {
       const msg = 'Vui lòng chọn bộ môn thể thao.';
@@ -432,7 +456,14 @@ export function StaffClassesPage() {
 
     setIsSubmitting(true);
     try {
-      const currentClassSignature = JSON.stringify({
+      const startDateVal = formData.startDate || formData.sessionDate;
+      const durationWeeksVal = formData.durationWeeks || 4;
+      const endDateVal = formData.endDate || addWeeksToDate(startDateVal, durationWeeksVal);
+      const recurringDaysVal = formData.recurringDays && formData.recurringDays.length > 0
+        ? formData.recurringDays
+        : ['MONDAY', 'WEDNESDAY', 'FRIDAY'];
+
+      await classesApi.createRecurringClass({
         name: formData.name.trim(),
         disciplineId: Number(formData.disciplineId),
         coachId: Number(formData.coachId),
@@ -440,47 +471,18 @@ export function StaffClassesPage() {
         capacity: capacityNum,
         level: formData.level,
         description: formData.description.trim() || undefined,
+        price: Number(formData.price) || 0,
+        startDate: startDateVal,
+        endDate: endDateVal,
+        recurringDays: recurringDaysVal,
+        startTime: formData.startTime.length === 5 ? formData.startTime + ':00' : formData.startTime,
+        endTime: formData.endTime.length === 5 ? formData.endTime + ':00' : formData.endTime,
       });
 
-      let targetClassId =
-        pendingClassId && pendingClassSignature === currentClassSignature ? pendingClassId : null;
-      const reusedPendingClass = Boolean(targetClassId);
-
-      if (!targetClassId) {
-        const createdClass = await classesApi.createClass({
-          name: formData.name.trim(),
-          disciplineId: Number(formData.disciplineId),
-          coachId: Number(formData.coachId),
-          roomId: Number(formData.roomId),
-          capacity: capacityNum,
-          level: formData.level,
-          description: formData.description.trim() || undefined,
-          sessionDate: formData.sessionDate,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
-        });
-        targetClassId = createdClass?.id ?? null;
-        if (targetClassId) {
-          setPendingClassId(targetClassId);
-          setPendingClassSignature(currentClassSignature);
-        }
-      }
-
-      if (reusedPendingClass && targetClassId && formData.sessionDate && formData.startTime && formData.endTime) {
-        await classesApi.createSession({
-          classId: targetClassId,
-          sessionDate: formData.sessionDate,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
-        });
-      }
-
-      notify('Đã tạo lớp học và xếp lịch thành công!', 'success');
+      notify(t('Đã tạo khóa học định kỳ và xếp lịch toàn bộ các buổi học thành công!', 'Recurring course created and all sessions scheduled successfully!'), 'success');
       setShowModal(false);
       setFormData(defaultFormData());
       setModalError(null);
-      setPendingClassId(null);
-      setPendingClassSignature(null);
       await loadData();
     } catch (err: unknown) {
       const apiErr = err as { code?: string; message?: string; status?: number };
@@ -587,11 +589,6 @@ export function StaffClassesPage() {
       return;
     }
 
-    if (isDuplicateEditClassName) {
-      const msg = staffMessage(`Tên lớp học "${editFormData.name.trim()}" đã tồn tại trong hệ thống.`, `Class name "${editFormData.name.trim()}" already exists in the system.`);
-      setEditModalError(msg);
-      return;
-    }
 
     const capacityNum = Number(editFormData.capacity);
     if (isNaN(capacityNum) || capacityNum <= 0) {
@@ -1258,10 +1255,6 @@ export function StaffClassesPage() {
                 onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                 disabled={isSubmitting}
               />
-              {isDuplicateEditClassName && (
-                <div data-i18n-managed style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.84rem', marginTop: 4 }}>
-                  {t("Tên lớp học này đã tồn tại trong hệ thống.")}</div>
-              )}
             </div>
 
             <div className="grid-2">
@@ -1407,7 +1400,7 @@ export function StaffClassesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting || isDuplicateEditClassName || Boolean(editConflictWarning)}
+                disabled={isSubmitting || Boolean(editConflictWarning)}
                 data-testid="submit-edit-class-button"
               >
                 {isSubmitting ? t('Đang lưu...') : t('Lưu thay đổi')}
@@ -1733,11 +1726,6 @@ export function StaffClassesPage() {
                 autoFocus
                 placeholder={t("Ví dụ: Gym cơ bản, Bơi sải nâng cao...")}
                 className="portal-input"
-                style={
-                  isDuplicateClassName
-                    ? { borderColor: 'var(--portal-danger, #fca5a5)', backgroundColor: 'var(--portal-raised)' }
-                    : undefined
-                }
                 value={formData.name}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value });
@@ -1745,25 +1733,6 @@ export function StaffClassesPage() {
                 }}
                 disabled={isSubmitting}
               />
-              {isDuplicateClassName && (
-                <div data-i18n-managed
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    marginTop: '5px',
-                    color: 'var(--portal-danger, #fca5a5)',
-                    fontSize: '0.84rem',
-                    fontWeight: 600,
-                  }}
-                  role="alert"
-                  data-testid="duplicate-class-warning"
-                >
-                  <span style={{ fontWeight: 700 }}>!</span>
-                  <span>
-                    {t("Tên lớp \"")}{formData.name.trim()}{t("\" đã tồn tại trong hệ thống. Vui lòng đặt tên khác!")}</span>
-                </div>
-              )}
             </div>
 
             <div className="grid-2">
@@ -1853,43 +1822,136 @@ export function StaffClassesPage() {
               </Select>
             </div>
 
-            {/* Khung giờ và ngày học */}
-            <div style={{ padding: '12px', backgroundColor: 'var(--color-bg-warm)', borderRadius: 8, border: '1px solid var(--color-border-subtle)' }}>
-              <strong style={{ display: 'block', marginBottom: 10, fontSize: '0.9rem', color: 'var(--color-text-main)' }}>
-                {t("Xếp lịch buổi học đầu tiên")}</strong>
+            {/* Khung xếp lịch Khóa học định kỳ (2-3 tuần nữa, các thứ trong tuần, thời lượng) */}
+            <div style={{ padding: '14px', backgroundColor: 'var(--color-bg-warm)', borderRadius: 8, border: '1px solid var(--color-border-subtle)', display: 'grid', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <strong style={{ fontSize: '0.92rem', color: 'var(--color-text-main)' }}>
+                  {t("Lịch khóa học định kỳ & Khai giảng", "Recurring Course Schedule & Start Date")}
+                </strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{t("Lên lịch trước:", "Schedule ahead:")}</span>
+                  <button
+                    type="button"
+                    className="filter-chip"
+                    style={{ padding: '3px 8px', fontSize: '0.78rem' }}
+                    onClick={() => {
+                      const newStart = getAdvanceDateString(2);
+                      setFormData({ ...formData, sessionDate: newStart, startDate: newStart, endDate: addWeeksToDate(newStart, formData.durationWeeks || 4) });
+                    }}
+                  >
+                    +2 {t("tuần", "weeks")}
+                  </button>
+                  <button
+                    type="button"
+                    className="filter-chip"
+                    style={{ padding: '3px 8px', fontSize: '0.78rem' }}
+                    onClick={() => {
+                      const newStart = getAdvanceDateString(3);
+                      setFormData({ ...formData, sessionDate: newStart, startDate: newStart, endDate: addWeeksToDate(newStart, formData.durationWeeks || 4) });
+                    }}
+                  >
+                    +3 {t("tuần", "weeks")}
+                  </button>
+                  <button
+                    type="button"
+                    className="filter-chip"
+                    style={{ padding: '3px 8px', fontSize: '0.78rem' }}
+                    onClick={() => {
+                      const newStart = getAdvanceDateString(4);
+                      setFormData({ ...formData, sessionDate: newStart, startDate: newStart, endDate: addWeeksToDate(newStart, formData.durationWeeks || 4) });
+                    }}
+                  >
+                    +4 {t("tuần", "weeks")}
+                  </button>
+                </div>
+              </div>
 
-              <div className="grid-2" style={{ marginBottom: 10 }}>
+              <div className="grid-2">
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-date">
-                    {t("Ngày Học *")}</label>
+                    {t("Ngày Khai Giảng (Bắt đầu) *", "Course Start Date *")}</label>
                   <DatePicker
                     id="session-date"
                     required
                     min={getTodayString()}
-                    value={formData.sessionDate}
-                    onChange={(e) => setFormData({ ...formData, sessionDate: e.target.value })}
+                    value={formData.startDate || formData.sessionDate}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData({
+                        ...formData,
+                        sessionDate: newStart,
+                        startDate: newStart,
+                        endDate: addWeeksToDate(newStart, formData.durationWeeks || 4),
+                      });
+                    }}
                     disabled={isSubmitting}
                   />
                 </div>
 
                 <div className="portal-form-group">
-                  <label className="portal-label" htmlFor="class-level">
-                    {t("Cấp Độ")}</label>
+                  <label className="portal-label" htmlFor="course-duration">
+                    {t("Thời Lượng Khóa Học", "Course Duration")}</label>
                   <Select
-                    id="class-level"
+                    id="course-duration"
                     className="portal-select"
-                    value={formData.level}
-                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                    value={String(formData.durationWeeks || 4)}
+                    onChange={(e) => {
+                      const w = Number(e.target.value);
+                      const start = formData.startDate || formData.sessionDate;
+                      setFormData({
+                        ...formData,
+                        durationWeeks: w,
+                        endDate: addWeeksToDate(start, w),
+                      });
+                    }}
                     disabled={isSubmitting}
                   >
-                    <option value="all">{t("Mọi cấp độ (All levels)")}</option>
-                    <option value="beginner">{t("Người mới bắt đầu (Beginner)")}</option>
-                    <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
-                    <option value="advanced">{t("Nâng cao (Advanced)")}</option>
+                    <option value="2">{t("2 tuần", "2 weeks")}</option>
+                    <option value="3">{t("3 tuần", "3 weeks")}</option>
+                    <option value="4">{t("4 tuần (1 tháng)", "4 weeks (1 month)")}</option>
+                    <option value="8">{t("8 tuần (2 tháng)", "8 weeks (2 months)")}</option>
                   </Select>
                 </div>
               </div>
 
+              {/* Các thứ lặp lại trong tuần */}
+              <div className="portal-form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label className="portal-label" style={{ margin: 0 }}>
+                    {t("Các buổi học trong tuần *", "Days of the week *")}</label>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-salmon, #eb7e6b)', fontWeight: 600 }}>
+                    {t("Tổng cộng:", "Total:")} {formData.recurringDays.length * (formData.durationWeeks || 4)} {t("buổi học", "sessions")}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {RECURRING_DAYS_OPTIONS.map((day) => {
+                    const isSelected = formData.recurringDays.includes(day.value);
+                    return (
+                      <button
+                        key={day.value}
+                        type="button"
+                        className={`filter-chip ${isSelected ? 'is-active' : ''}`}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 16,
+                          fontWeight: 600,
+                          fontSize: '0.82rem',
+                        }}
+                        onClick={() => {
+                          const next = isSelected
+                            ? formData.recurringDays.filter((d) => d !== day.value)
+                            : [...formData.recurringDays, day.value];
+                          setFormData({ ...formData, recurringDays: next });
+                        }}
+                      >
+                        {day.fullLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Khung giờ học */}
               <div className="grid-2">
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor="session-start">
@@ -1915,6 +1977,45 @@ export function StaffClassesPage() {
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                     disabled={isSubmitting}
                   />
+                </div>
+              </div>
+
+              {/* Học phí ngoài gói & Cấp độ */}
+              <div className="grid-2">
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="course-price">
+                    {t("Học phí ngoài gói (VNĐ)", "Tuition fee outside plan (VND)")}</label>
+                  <input
+                    id="course-price"
+                    type="number"
+                    min={0}
+                    step={10000}
+                    className="portal-input"
+                    placeholder="500000"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                    disabled={isSubmitting}
+                  />
+                  <span style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+                    {t("Áp dụng khi hội viên vượt hạn mức gói hoặc mua lẻ.", "Applied when member exceeds plan quota or buys separately.")}
+                  </span>
+                </div>
+
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor="class-level">
+                    {t("Cấp Độ")}</label>
+                  <Select
+                    id="class-level"
+                    className="portal-select"
+                    value={formData.level}
+                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                    disabled={isSubmitting}
+                  >
+                    <option value="all">{t("Mọi cấp độ (All levels)")}</option>
+                    <option value="beginner">{t("Người mới bắt đầu (Beginner)")}</option>
+                    <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
+                    <option value="advanced">{t("Nâng cao (Advanced)")}</option>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -1969,7 +2070,7 @@ export function StaffClassesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isSubmitting || isDuplicateClassName || Boolean(createScheduleConflictWarning)}
+                disabled={isSubmitting || Boolean(createScheduleConflictWarning)}
                 data-testid="submit-class-button"
               >
                 {isSubmitting ? (
