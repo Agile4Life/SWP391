@@ -287,6 +287,7 @@ public class PaymentService {
             markPaidIfSuccess(payment, normalizedStatus);
             if ("pending".equals(currentStatus) && "failed".equals(normalizedStatus)) {
                 cancelFailedRenewal(payment);
+                cancelEnrollmentOfFailedPayment(payment);
             }
             if ("pending".equals(currentStatus) && "success".equals(normalizedStatus)) {
                 activateLinkedTargetsOnSuccess(payment);
@@ -627,6 +628,18 @@ public class PaymentService {
             entityManager.refresh(payment);
             entityManager.refresh(target);
         }
+    }
+    /** A course fee that failed never secured the seat: release it so the class and the member's quota are freed. */
+    private void cancelEnrollmentOfFailedPayment(Payment payment) {
+        if (payment.getClassEnrollmentId() == null || classEnrollmentRepository == null) return;
+        classEnrollmentRepository.findById(payment.getClassEnrollmentId()).ifPresent(enrollment -> {
+            if ("booked".equalsIgnoreCase(enrollment.getStatus())) {
+                enrollment.setStatus("cancelled");
+                enrollment.setCancelledAt(LocalDateTime.now(clock));
+                enrollment.setCancelReason("Course payment failed");
+                classEnrollmentRepository.save(enrollment);
+            }
+        });
     }
     private void cancelFailedRenewal(Payment payment) {
         if (payment.getSubscriptionId() == null || membershipSubscriptionRepository == null) return;

@@ -79,6 +79,10 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             select count(e) from ClassEnrollment e
             where e.member.userId = :memberId and e.status = :status
               and coalesce(e.gymClass.startDate, cast(e.enrolledAt as date)) between :startDate and :endDate
+              and not exists (
+                select 1 from Payment p
+                where p.classEnrollmentId = e.id and p.status in ('pending', 'success')
+              )
             """)
     long countByMemberUserIdAndStatusAndGymClassStartDateBetween(
             @org.springframework.data.repository.query.Param("memberId") Long memberId,

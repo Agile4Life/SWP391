@@ -131,4 +131,72 @@ class CoursePaymentTest {
         assertEquals("cash", captured.getMethod());
         assertEquals(777L, captured.getClassEnrollmentId());
     }
+
+    @Test
+    void testCancelBeforeStartFailsThePendingCoursePayment() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
+        Member member = new Member();
+        member.setUserId(100L);
+        User user = new User();
+        user.setId(100L);
+        member.setUser(user);
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(member));
+
+        GymClass gymClass = new GymClass();
+        gymClass.setId(50L);
+        gymClass.setName("Yoga Advanced");
+        gymClass.setStartDate(LocalDate.of(2026, 11, 20));
+
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setId(777L);
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.of(enrollment));
+        when(enrollments.save(any(ClassEnrollment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Payment pending = new Payment();
+        pending.setId(888L);
+        pending.setClassEnrollmentId(777L);
+        pending.setStatus("pending");
+        when(paymentRepository.findByClassEnrollmentId(777L)).thenReturn(Optional.of(pending));
+
+        enrollmentService.cancelCourseEnrollment(principal, 50L);
+
+        assertEquals("cancelled", enrollment.getStatus());
+        assertEquals("failed", pending.getStatus());
+        verify(paymentRepository).save(pending);
+    }
+
+    @Test
+    void testCancelKeepsASettledCoursePaymentForTheRefundFlow() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
+        Member member = new Member();
+        member.setUserId(100L);
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(member));
+
+        GymClass gymClass = new GymClass();
+        gymClass.setId(50L);
+        gymClass.setStartDate(LocalDate.of(2026, 11, 20));
+
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setId(777L);
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.of(enrollment));
+        when(enrollments.save(any(ClassEnrollment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Payment paid = new Payment();
+        paid.setId(888L);
+        paid.setClassEnrollmentId(777L);
+        paid.setStatus("success");
+        when(paymentRepository.findByClassEnrollmentId(777L)).thenReturn(Optional.of(paid));
+
+        enrollmentService.cancelCourseEnrollment(principal, 50L);
+
+        assertEquals("cancelled", enrollment.getStatus());
+        assertEquals("success", paid.getStatus());
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
 }

@@ -582,7 +582,10 @@ public class EnrollmentService {
                             "127.0.0.1"
                     );
                     paymentUrl = checkout.paymentUrl();
-                } catch (Exception ignored) {
+                } catch (Exception ex) {
+                    // The payment stays pending so reception can still collect it; the member can retry online.
+                    org.slf4j.LoggerFactory.getLogger(EnrollmentService.class)
+                            .warn("VNPay checkout could not be created for course payment {}", savedPayment.getId(), ex);
                 }
             }
         }
@@ -616,6 +619,17 @@ public class EnrollmentService {
         enrollment.setCancelledAt(LocalDateTime.now(clock));
         enrollment.setCancelledBy(member.getUser());
         enrollment.setCancelReason("Member requested cancellation");
+
+        // An unpaid course fee must not stay payable once the seat is released; a settled payment is refunded
+        // through the finance refund flow, which keeps the enrollment cancelled.
+        if (paymentRepository != null) {
+            paymentRepository.findByClassEnrollmentId(enrollment.getId())
+                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
+                    .ifPresent(payment -> {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                    });
+        }
 
         ClassEnrollment saved = enrollments.save(enrollment);
         return toDto(saved, resolveSessionForClass(gymClass));
