@@ -61,7 +61,6 @@ export function StaffReceptionPage() {
   // Danh sách yêu cầu bảo lưu gói tập đang chờ xử lý
   const [holdList, setHoldList] = useState<HoldRequestItem[]>([]);
   const [loadingHolds, setLoadingHolds] = useState(true);
-  const [processingHoldId, setProcessingHoldId] = useState<number | null>(null);
 
   // Buổi PT 1:1 trả phí chờ thu tiền
   const [unpaidPt, setUnpaidPt] = useState<UnpaidCoachBooking[]>([]);
@@ -360,23 +359,6 @@ export function StaffReceptionPage() {
     }
   };
 
-  const handleApproveHold = async (item: HoldRequestItem) => {
-    if (processingHoldId !== null) return;
-    setProcessingHoldId(item.id);
-    try {
-      const res = await receptionApi.approveHoldRequest(item.id);
-      notify(
-        staffMessage(`Đã xác nhận bảo lưu gói "${item.packageName}" cho ${item.memberName}. Đã tự động hủy ${res.cancelledEnrollmentsCount} lịch sắp tới.`, `Confirmed freeze of membership "${item.packageName}" cho ${item.memberName}. Automatically cancelled ${res.cancelledEnrollmentsCount} upcoming bookings.`),
-        'success', { record: true },
-      );
-      await loadPendingHolds();
-    } catch (err: unknown) {
-      const msg = errorMessage(err, 'Xác nhận bảo lưu thất bại.'); await loadPendingHolds();
-      notify(msg, 'error');
-    } finally {
-      setProcessingHoldId(null);
-    }
-  };
 
   const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
     if (processingPtId !== null) return;
@@ -394,20 +376,6 @@ export function StaffReceptionPage() {
     }
   };
 
-  const handleRejectHold = async (item: HoldRequestItem) => {
-    if (processingHoldId !== null) return;
-    setProcessingHoldId(item.id);
-    try {
-      await receptionApi.rejectHoldRequest(item.id);
-      notify(staffMessage(`Đã từ chối yêu cầu bảo lưu của hội viên ${item.memberName}.`, `Rejected freeze request for member ${item.memberName}.`), 'success', { record: true });
-      await loadPendingHolds();
-    } catch (err: unknown) {
-      const msg = errorMessage(err, 'Từ chối yêu cầu bảo lưu thất bại.'); await loadPendingHolds();
-      notify(msg, 'error');
-    } finally {
-      setProcessingHoldId(null);
-    }
-  };
 
   const handleApproveTrial = async (item: ReceptionTrialItem) => {
     if (processingTrialId !== null) return;
@@ -1172,7 +1140,6 @@ export function StaffReceptionPage() {
         ) : (
           <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {holdList.map((item) => {
-              const isBusy = processingHoldId === item.id;
               return (
                 <div data-i18n-managed
                   key={item.id}
@@ -1225,22 +1192,9 @@ export function StaffReceptionPage() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      disabled={processingHoldId !== null}
-                      onClick={() => void handleRejectHold(item)}
-                    >
-                      {isBusy ? t('Đang xử lý...') : t('Từ chối')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary btn-sm"
-                      disabled={processingHoldId !== null}
-                      onClick={() => void handleApproveHold(item)}
-                    >
-                      {isBusy ? t('Đang xử lý...') : t('Xác nhận bảo lưu & hủy lịch sắp tới')}
-                    </button>
+                    <Link to="/staff/holds" className="btn-primary btn-sm">
+                      {t('Xem giấy tờ y tế & xử lý', 'Review documents & decide')}
+                    </Link>
                   </div>
                 </div>
               );

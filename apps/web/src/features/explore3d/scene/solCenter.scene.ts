@@ -2024,6 +2024,8 @@ addHotspot(zoneB1Thermal, {
     type: 'navigate',
     to: '/member/packages',
     ctaLabel: { vi: 'Xem Quyền lợi Platinum', en: 'View Platinum Perks' },
+    secondaryTo: '/member/hold',
+    secondaryLabel: { vi: 'Bảo lưu gói tập', en: 'Membership Hold' },
   },
 });
 

@@ -121,6 +121,17 @@ public final class SubscriptionResponses {
         }
     }
 
+    /** What a member may ask for when putting this subscription on hold; drives the request form. */
+    public record HoldPolicyDto(
+            boolean allowed,
+            boolean alreadyUsed,
+            int minDays,
+            int maxDays,
+            int noticeHours,
+            int maxDocuments,
+            long maxDocumentBytes
+    ) {}
+
     /** Metadata of a medical document attached to a hold request; the bytes are fetched through the download endpoint. */
     public record HoldDocumentDto(
             Long id,

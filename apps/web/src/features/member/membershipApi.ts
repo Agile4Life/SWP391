@@ -131,18 +131,6 @@ export const upgradeMembershipSubscription = (
     },
   );
 
-export const requestMembershipHold = (
-  subscriptionId: number,
-  reason: string,
-) =>
-  apiFetch<MemberSubscription>(
-    `/memberships/subscriptions/${subscriptionId}/hold`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    },
-  );
-
 export const resumeMembershipSubscription = (subscriptionId: number) =>
   apiFetch<MemberSubscription>(`/memberships/subscriptions/${subscriptionId}/resume`, { method: 'POST' });
 

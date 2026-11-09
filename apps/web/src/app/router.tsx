@@ -66,6 +66,10 @@ export const router = createBrowserRouter([
           },
           { path: '/member/payments/vnpay/return', lazy: async () => ({ Component: (await import('../features/payments/VnpayReturnPage')).VnpayReturnPage }) },
           {
+            path: '/member/hold',
+            lazy: async () => ({ Component: (await import('../features/member/MemberHoldPage')).MemberHoldPage }),
+          },
+          {
             path: '/member/card',
             lazy: async () => ({ Component: (await import('../features/member/MemberCardPage')).MemberCardPage }),
           },
@@ -204,6 +208,10 @@ export const router = createBrowserRouter([
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
         children: [
+          {
+            path: '/staff/holds',
+            lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
+          },
           {
             path: '/staff/classes',
             lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),

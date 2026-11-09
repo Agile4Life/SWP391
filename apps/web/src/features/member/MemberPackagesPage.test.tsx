@@ -23,7 +23,7 @@ vi.mock('./membershipRealtime', () => ({ subscribeMembershipChanges: realtime.su
 
 const api = vi.hoisted(() => ({
   packages: vi.fn(), current: vi.fn(), history: vi.fn(), payments: vi.fn(),
-  create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), requestHold: vi.fn(), cancelPending: vi.fn(), createPayment: vi.fn(),
+  create: vi.fn(), renew: vi.fn(), upgrade: vi.fn(), cancelPending: vi.fn(), createPayment: vi.fn(),
   cancellations: vi.fn(), requestCancellation: vi.fn(), resume: vi.fn(),
 }));
 vi.mock('./membershipApi', () => ({
@@ -36,7 +36,6 @@ vi.mock('./membershipApi', () => ({
   createMembershipSubscription: api.create,
   renewMembershipSubscription: api.renew,
   upgradeMembershipSubscription: api.upgrade,
-  requestMembershipHold: api.requestHold,
   resumeMembershipSubscription: api.resume,
   cancelPendingMembershipSubscription: api.cancelPending,
   createPaymentRequest: api.createPayment,
@@ -365,46 +364,14 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('[role="dialog"]')?.textContent).toMatch(/1\.234\.000/);
   });
 
-  it('allows an active member to submit a hold request with a reason', async () => {
-    const heldPending = {
-      ...active,
-      holdStatus: 'PENDING',
-      holdReason: 'Đi công tác dài ngày tại Nhật Bản',
-    };
+  it('sends the member to the dedicated hold page to file a pause request', async () => {
     api.current.mockResolvedValue(active);
     api.history.mockResolvedValue([active]);
-    api.requestHold.mockResolvedValue(heldPending);
 
     await render();
 
-    const holdBtn = button('Bảo lưu gói tập');
-    expect(holdBtn).toBeDefined();
-    expect(holdBtn?.disabled).toBe(false);
-
-    await act(async () => {
-      holdBtn?.click();
-    });
-
-    const textarea = host.querySelector('#hold-reason-input') as HTMLTextAreaElement;
-    expect(textarea).not.toBeNull();
-
-    await act(async () => {
-      const nativeValueSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype,
-        'value',
-      )?.set;
-      nativeValueSetter?.call(textarea, 'Đi công tác dài ngày tại Nhật Bản');
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      textarea.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    await act(async () => {
-      button('Gửi yêu cầu bảo lưu')?.click();
-    });
-
-    expect(api.requestHold).toHaveBeenCalledExactlyOnceWith(1, 'Đi công tác dài ngày tại Nhật Bản');
-    expect(noticeText()).toContain('Đã gửi yêu cầu bảo lưu gói tập');
-    expect(button('Đang chờ duyệt bảo lưu')?.disabled).toBe(true);
+    const link = [...host.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Bảo lưu gói tập'));
+    expect(link?.getAttribute('href')).toBe('/member/hold');
   });
 
   it('does not offer package cancellation request for active membership', async () => {
@@ -889,25 +856,6 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
     await act(async () => setLanguage('vi'));
     expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
-  });
-
-  it('keeps hold error provenance when the visible language changes', async () => {
-    api.current.mockResolvedValue(active);
-    api.history.mockResolvedValue([active]);
-    api.requestHold.mockRejectedValue(Object.assign(new Error('Mất kết nối kiểm thử.'), {
-      translation: sourceMessage('Mất kết nối kiểm thử.', 'Test connection lost.'),
-    }));
-    await render();
-    await act(async () => button('Bảo lưu gói tập')?.click());
-    const textarea = host.querySelector<HTMLTextAreaElement>('#hold-reason-input')!;
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'Đi công tác');
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    await act(async () => button('Gửi yêu cầu bảo lưu')?.click());
-    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Mất kết nối kiểm thử.');
-    await act(async () => setLanguage('en'));
-    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Test connection lost.');
   });
 
   it('offers direct checkout KYC link when first-time subscription creation requires KYC verification', async () => {

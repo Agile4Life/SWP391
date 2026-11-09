@@ -914,6 +914,19 @@ public class MembershipSubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.hold_document", documentId));
     }
 
+    /** The hold allowance of a subscription of the authenticated member. */
+    @Transactional(readOnly = true)
+    public com.swp391.scms.membership.dto.SubscriptionResponses.HoldPolicyDto holdPolicy(
+            AuthenticatedPrincipal principal, Long subscriptionId) {
+        MembershipSubscription subscription = subscriptions.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        ensureOwner(subscription, principal);
+        int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription.getMembershipPackage());
+        return new com.swp391.scms.membership.dto.SubscriptionResponses.HoldPolicyDto(
+                maxDays > 0, subscription.isHoldUsed(), MIN_HOLD_DAYS, maxDays, HOLD_NOTICE_HOURS,
+                MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES);
+    }
+
     /** The member withdraws a hold request that has not been decided yet. */
     @Transactional
     public SubscriptionDto cancelHoldRequest(AuthenticatedPrincipal principal, Long subscriptionId) {

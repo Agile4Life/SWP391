@@ -116,3 +116,9 @@ paths:
         when it is today) and resumes the day after the last day with the held days added to its end date.
       responses:
         '200': { description: Approved }
+  /subscriptions/{id}/hold/policy:
+    get:
+      summary: Hold allowance of the member's subscription (drives the request form)
+      responses:
+        '200':
+          description: "{allowed, alreadyUsed, minDays, maxDays, noticeHours, maxDocuments, maxDocumentBytes}"

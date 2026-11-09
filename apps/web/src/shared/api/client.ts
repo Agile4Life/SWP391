@@ -121,7 +121,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     res = await fetch(`/api/v1${path}`, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        // A FormData body needs the browser's multipart boundary, so no JSON content type then.
+        ...(typeof FormData !== 'undefined' && init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         'Accept-Language': getLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init.headers,
@@ -163,6 +164,27 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
   }
   if (!res.headers.get('Content-Type')?.toLowerCase().startsWith('application/pdf')) {
     throw new ApiError('Máy chủ không trả về file PDF hợp lệ.', res.status, undefined, sourceMessage('Máy chủ không trả về file PDF hợp lệ.', 'The server did not return a valid PDF file.'));
+  }
+  return res.blob();
+}
+
+/** Authenticated binary download (for example a medical document); the caller turns the blob into an object URL. */
+export async function apiFetchBlob(path: string): Promise<Blob> {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1${path}`, {
+      headers: { 'Accept-Language': getLanguage(), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+  } catch {
+    throw new ApiError('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 0, undefined, sourceMessage('Không thể kết nối tới máy chủ. Vui lòng thử lại.', 'Unable to connect to the server. Please try again.'));
+  }
+  if (res.status === 401 && token) {
+    if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED', sourceMessage(SESSION_REPLACED_MESSAGE, 'Your login session has changed. Please reload the page.'));
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code, body?.message ? undefined : sourceMessage(`Yêu cầu thất bại (HTTP ${res.status})`, `Request failed (HTTP ${res.status})`));
   }
   return res.blob();
 }

@@ -22,7 +22,6 @@ import {
   getMyMembershipCancellations,
   getMyPayments,
   renewMembershipSubscription,
-  requestMembershipHold,
   resumeMembershipSubscription,
   upgradeMembershipSubscription,
   type MemberSubscription,
@@ -117,9 +116,6 @@ export function MemberPackagesPage() {
     useState<RequestResult | null>(null);
 
   // Bảo lưu gói tập modal state
-  const [isHoldModalOpen, setIsHoldModalOpen] = useState(false);
-  const [holdReason, setHoldReason] = useState('');
-  const [holdError, setHoldError] = useState<string | Error | null | SourceMessage>(null);
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
   const [trialDocType, setTrialDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
@@ -223,7 +219,6 @@ export function MemberPackagesPage() {
     }
   };
 
-  const [isSubmittingHold, setIsSubmittingHold] = useState(false);
   const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
@@ -590,36 +585,6 @@ export function MemberPackagesPage() {
     }
   }
 
-  async function handleSubmitHold(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current || isSubmittingHold || requestBusy.current) return;
-    const trimmed = holdReason.trim();
-    if (!trimmed) {
-      setHoldError(memberMessage("Vui lòng nhập lý do bảo lưu gói tập."));
-      return;
-    }
-
-    setIsSubmittingHold(true);
-    requestBusy.current = true;
-    syncVersion.current += 1;
-    setHoldError(null);
-    setActionError(null);
-    try {
-      const updated = await requestMembershipHold(current.id, trimmed);
-      setCurrentState({ status: 'success', data: updated });
-      setIsHoldModalOpen(false);
-      setHoldReason('');
-      notify(t("Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.", "Pause request submitted. Reception will process it as soon as possible."), 'success', { translation: sourceMessage("Đã gửi yêu cầu bảo lưu gói tập. Lễ tân sẽ xử lý yêu cầu của bạn trong thời gian sớm nhất.", "Pause request submitted. Reception will process it as soon as possible."),  record: true });
-      await loadHistory();
-    } catch (error) {
-      await Promise.all([loadCurrent(), loadHistory(), loadCancellations()]);
-      setHoldError(localizableError(error, 'Không thể gửi yêu cầu bảo lưu. Vui lòng thử lại.'));
-    } finally {
-      setIsSubmittingHold(false);
-      requestBusy.current = false;
-      if (refreshQueued.current) refreshNow.current();
-    }
-  }
 
   async function handleCancelPending(subscriptionId: number) {
     if (returnSyncing || syncError || isStatusSyncing || isCancellingPending || requestBusy.current) return;
@@ -853,18 +818,9 @@ export function MemberPackagesPage() {
                 <details className="package-manage">
                   <summary className="btn-secondary btn-sm">{t("Quản lý gói", "Manage membership")}</summary>
                   <div className="package-manage__menu">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      disabled={current.holdStatus === 'PENDING'}
-                      onClick={() => {
-                        setHoldError(null);
-                        setHoldReason(current.holdReason && current.holdStatus !== 'REJECTED' ? current.holdReason : '');
-                        setIsHoldModalOpen(true);
-                      }}
-                    >
+                    <Link to="/member/hold" className="btn-secondary btn-sm">
                       {current.holdStatus === 'PENDING' ? t("Đang chờ duyệt bảo lưu", "Pause approval pending") : t("Bảo lưu gói tập", "Pause membership")}
-                    </button>
+                    </Link>
                   </div>
                 </details>
               )}
@@ -1252,7 +1208,7 @@ export function MemberPackagesPage() {
         </>
       ))}
 
-      {paymentResult && !blockedMessage && !pendingToCancel && !isHoldModalOpen && (
+      {paymentResult && !blockedMessage && !pendingToCancel && (
         <Modal returnFocusRef={membershipFocus} title={t("Thanh toán thành công", "Payment successful")} onClose={() => setPaymentResult(null)}>
           <div className="package-result">
             <h3>{paymentResult.packageName}</h3>
@@ -1532,56 +1488,6 @@ export function MemberPackagesPage() {
         </Modal>
       )}
 
-      {isHoldModalOpen && current && (
-        <Modal returnFocusRef={membershipFocus} title={t(`Bảo lưu ${current.packageName}`, `Pause ${current.packageName}`)} onClose={() => setIsHoldModalOpen(false)} busy={isSubmittingHold}>
-            <div className="meta-label">
-              {t(" Yêu cầu bảo lưu gói tập ", "Membership pause request")}</div>
-
-<p className="row-card__meta" style={{ marginTop: 8 }}>
-              {t(" Khi Lễ tân xác nhận bảo lưu, gói tập hiện tại của bạn sẽ tạm dừng hoạt động và toàn bộ các lịch học bạn đã đặt trong tương lai sẽ được hủy tự động. ", "Once reception approves the pause, your current membership will pause and all future class bookings will be cancelled automatically.")}</p>
-
-            <form onSubmit={(e) => void handleSubmitHold(e)} style={{ marginTop: 18 }}>
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="hold-reason-input">
-                  {t(" Lý do bảo lưu gói tập * ", "Reason for pausing membership *")}</label>
-                <textarea
-                  id="hold-reason-input"
-                  className="portal-input"
-                  rows={4}
-                  maxLength={500}
-                  placeholder={t("Nhập lý do bảo lưu (ví dụ: Đi công tác dài ngày, chấn thương cần nghỉ ngơi...)", "Enter your reason (e.g. extended business travel or injury recovery…)")}
-                  value={holdReason}
-                  onChange={(e) => setHoldReason(e.target.value)}
-                  disabled={isSubmittingHold}
-                  style={{ width: '100%', resize: 'vertical' }}
-                />
-              </div>
-
-              {holdError && (
-                <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.86rem', marginTop: 8 }}>
-                  {t(holdError)}
-                </p>
-              )}
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={isSubmittingHold}
-                  onClick={() => setIsHoldModalOpen(false)}
-                >
-                  {t(" Hủy ", "Cancel")}</button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={isSubmittingHold}
-                >
-                  {isSubmittingHold ? t("Đang gửi yêu cầu…", "Submitting request…") : t("Gửi yêu cầu bảo lưu", "Submit pause request")}
-                </button>
-              </div>
-            </form>
-        </Modal>
-      )}
 
 
     </div>

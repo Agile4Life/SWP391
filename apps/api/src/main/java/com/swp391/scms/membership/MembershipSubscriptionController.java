@@ -148,6 +148,14 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.hold_withdrawn"), service.cancelHoldRequest(principal, id));
     }
 
+    @Operation(summary = "Hold allowance of a subscription: allowed, used, min/max days, notice, document limits")
+    @GetMapping("/{id}/hold/policy")
+    public ApiResponse<com.swp391.scms.membership.dto.SubscriptionResponses.HoldPolicyDto> holdPolicy(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.hold_detail"), service.holdPolicy(principal, id));
+    }
+
     @Operation(summary = "Hold request details and document list (owner or desk staff)")
     @GetMapping("/{id}/hold")
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
