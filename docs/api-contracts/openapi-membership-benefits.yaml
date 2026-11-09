@@ -209,3 +209,13 @@ paths:
         - { name: outcome, in: query, schema: { type: string, enum: [ALL, ATTENDED, MISSED, UPCOMING] } }
       responses:
         '200': { description: List of CoachBookingDto }
+  /coach-bookings/{id}/mark-attended:
+    post:
+      summary: Record that the member attended a 1:1 session (forgot to scan)
+      description: |
+        Coach (own sessions only), receptionist or manager. The session must have started (400 COACH_BOOKING_NOT_STARTED)
+        and not be cancelled (409). Sets `attendedAt` to now; marking again keeps the first time. Audited as PT_ATTENDANCE_MARK.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: The booking with attendedAt }

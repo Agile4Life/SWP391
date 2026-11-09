@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as clientModule from '../../shared/api/client';
 import { PtAttendancePage } from './PtAttendancePage';
 
-const mocks = vi.hoisted(() => ({ load: vi.fn() }));
-vi.mock('./ptAttendanceApi', () => ({ getPtAttendance: mocks.load }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), mark: vi.fn() }));
+vi.mock('./ptAttendanceApi', () => ({ getPtAttendance: mocks.load, markPtAttended: mocks.mark }));
 
 const base = {
   memberId: 10, memberName: 'Khoa Hội Viên', coachId: 20, coachName: 'HLV Hùng', coachSpecialization: 'Gym',
@@ -55,5 +55,20 @@ describe('PtAttendancePage', () => {
     mocks.load.mockRejectedValueOnce(new Error('Không có quyền'));
     await act(async () => { const input = host.querySelector<HTMLInputElement>('#pt-to')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '2020-02-01'); input.dispatchEvent(new Event('input', { bubbles: true })); });
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không có quyền');
+  });
+
+  it('lets staff mark a started, unrecorded session as attended and reloads the list', async () => {
+    mocks.load.mockResolvedValue([upcoming, missed, attended]);
+    mocks.mark.mockResolvedValue({});
+    await render();
+    const markButtons = (id: number) => [...(host.querySelector(`[data-testid="pt-row-${id}"]`)?.querySelectorAll('button') ?? [])]
+      .filter((button) => button.textContent === 'Đánh dấu có mặt');
+    // Only the finished, unrecorded session offers the action: not the attended one, not the future one.
+    expect(markButtons(1)).toHaveLength(0);
+    expect(markButtons(3)).toHaveLength(0);
+    expect(markButtons(2)).toHaveLength(1);
+    await act(async () => markButtons(2)[0].click());
+    expect(mocks.mark).toHaveBeenCalledWith(2);
+    expect(mocks.load).toHaveBeenCalledTimes(2);
   });
 });

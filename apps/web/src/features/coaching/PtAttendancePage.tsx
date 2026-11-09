@@ -6,7 +6,8 @@ import { getCurrentUser } from '../../shared/api/client';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import type { CoachBookingDto } from '../member/coachBookingApi';
-import { getPtAttendance, type PtOutcome } from './ptAttendanceApi';
+import { notify } from '../../shared/lib/portalNotices';
+import { getPtAttendance, markPtAttended, type PtOutcome } from './ptAttendanceApi';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
@@ -34,6 +35,7 @@ export function PtAttendancePage() {
   const [rows, setRows] = useState<CoachBookingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +68,21 @@ export function PtAttendancePage() {
   };
   const badge: Record<Exclude<PtOutcome, 'ALL'>, string> = { ATTENDED: 'badge-success', MISSED: 'badge-warning', UPCOMING: 'badge-info' };
   const invalidRange = from > to;
+
+  async function markAttended(row: CoachBookingDto) {
+    if (busyId !== null) return;
+    setBusyId(row.id);
+    setError(null);
+    try {
+      await markPtAttended(row.id);
+      notify(t('Đã ghi nhận hội viên có mặt.', 'The member has been marked as attended.'), 'success');
+      await load();
+    } catch (cause) {
+      setError(localizableError(cause, 'Không thể ghi nhận có mặt. Vui lòng thử lại.'));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div data-i18n-managed className="portal-container pt-attendance">
@@ -105,7 +122,14 @@ export function PtAttendancePage() {
                   <div>{t('Hội viên', 'Member')}: {row.memberName}{!isCoach && <> · {t('HLV', 'Coach')}: {row.coachName}</>}</div>
                   {row.attendedAt && <small>{t('Có mặt lúc', 'Arrived')} {formatCenterDateTime(row.attendedAt)}</small>}
                 </div>
-                <span className={`badge ${badge[outcome]}`}>{filterLabel[outcome]}</span>
+                <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span className={`badge ${badge[outcome]}`}>{filterLabel[outcome]}</span>
+                  {outcome !== 'ATTENDED' && (row.bookingDate < now.date || (row.bookingDate === now.date && row.startTime.slice(0, 5) <= now.time)) && (
+                    <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row)}>
+                      {t('Đánh dấu có mặt', 'Mark as attended')}
+                    </button>
+                  )}
+                </span>
               </li>
             );
           })}

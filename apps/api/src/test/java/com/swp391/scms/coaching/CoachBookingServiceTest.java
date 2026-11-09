@@ -789,4 +789,39 @@ class CoachBookingServiceTest {
         assertThatThrownBy(() -> service.getAttendance(desk, LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1), "ALL"))
                 .isInstanceOf(BadRequestException.class);
     }
+
+    @Test
+    void aCoachDeskOrManagerCanMarkAStartedSessionAttendedButOnlyTheOwnCoach() {
+        // The clock is 2026-10-31 08:00; this session started at 07:00.
+        var started = ptSession(7, LocalDate.of(2026, 10, 31), LocalTime.of(7, 0), LocalTime.of(8, 0), null);
+        when(coachBookingRepository.findById(7L)).thenReturn(Optional.of(started));
+        var otherCoach = new AuthenticatedPrincipal(99L, "other", "COACH");
+        assertThatThrownBy(() -> service.markAttended(otherCoach, 7L))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+        assertThatThrownBy(() -> service.markAttended(principal, 7L))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+
+        var dto = service.markAttended(new AuthenticatedPrincipal(20L, "hung", "COACH"), 7L);
+
+        assertThat(dto.attendedAt()).isEqualTo(LocalDateTime.of(2026, 10, 31, 8, 0));
+        verify(coachBookingRepository).save(started);
+        // A second mark by the desk keeps the first time and saves nothing more.
+        var again = service.markAttended(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 7L);
+        assertThat(again.attendedAt()).isEqualTo(LocalDateTime.of(2026, 10, 31, 8, 0));
+        verify(coachBookingRepository, times(1)).save(started);
+    }
+
+    @Test
+    void aFutureOrCancelledSessionCannotBeMarkedAttended() {
+        var future = ptSession(8, LocalDate.of(2026, 10, 31), LocalTime.of(17, 0), LocalTime.of(18, 0), null);
+        var cancelled = ptSession(9, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), null);
+        cancelled.setStatus("cancelled");
+        when(coachBookingRepository.findById(8L)).thenReturn(Optional.of(future));
+        when(coachBookingRepository.findById(9L)).thenReturn(Optional.of(cancelled));
+        var desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+
+        assertThatThrownBy(() -> service.markAttended(desk, 8L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.markAttended(desk, 9L)).isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
+        verify(coachBookingRepository, never()).save(any());
+    }
 }

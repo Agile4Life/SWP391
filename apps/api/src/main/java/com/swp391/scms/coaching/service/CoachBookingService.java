@@ -574,6 +574,39 @@ public class CoachBookingService {
                 .toList();
     }
 
+    /**
+     * A coach (for their own sessions), the desk or a manager records that the member did attend: for a member who
+     * forgot to scan. The session must have started. Marking an already marked session changes nothing.
+     */
+    @Transactional
+    @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_MARK", entity = "coach_bookings")
+    public CoachBookingDto markAttended(AuthenticatedPrincipal principal, Long bookingId) {
+        String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
+        boolean coach = "COACH".equals(role);
+        if (!coach && !DESK_ROLES.contains(role) && !"MANAGER".equals(role)) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only coaches, the front desk and managers can mark attendance.");
+        }
+        CoachBooking booking = coachBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
+        if (coach && (booking.getCoach() == null || !principal.id().equals(booking.getCoach().getUserId()))) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "A coach can mark only their own sessions.");
+        }
+        if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
+            throw new ConflictException("COACH_BOOKING_CANCELLED", "error.coach_booking.already_cancelled", null,
+                    "A cancelled session has no attendance.");
+        }
+        LocalDateTime now = LocalDateTime.now(clock.withZone(com.swp391.scms.common.CenterTime.ZONE));
+        if (LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(now)) {
+            throw new BadRequestException("COACH_BOOKING_NOT_STARTED", "error.coach_booking.attendance_not_started", null,
+                    "Attendance can be marked once the session has started.");
+        }
+        if (booking.getAttendedAt() == null) {
+            booking.setAttendedAt(now);
+            coachBookingRepository.save(booking);
+        }
+        return mapToDto(booking);
+    }
+
     private static String attendanceOutcome(CoachBooking booking, LocalDateTime now) {
         if (booking.getAttendedAt() != null) return "ATTENDED";
         LocalDateTime end = LocalDateTime.of(booking.getBookingDate(), booking.getEndTime());
