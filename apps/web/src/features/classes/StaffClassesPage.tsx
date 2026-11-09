@@ -40,6 +40,9 @@ interface FormState {
   endDate: string;
   durationWeeks: number;
   recurringDays: string[];
+  /** `weekly` repeats on weekdays, `monthly` on days of the month. */
+  repeatType: 'weekly' | 'monthly';
+  monthDays: number[];
   price: number;
   startTime: string;
   endTime: string;
@@ -91,6 +94,23 @@ function addWeeksToDate(dateStr: string, weeks: number): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Sessions of a monthly course: each chosen day of each month in the range, a short month using its last day. */
+function countMonthlySessions(startDate: string, endDate: string, monthDays: number[]): number {
+  if (!startDate || !endDate || monthDays.length === 0) return 0;
+  const from = new Date(`${startDate}T00:00:00`);
+  const to = new Date(`${endDate}T00:00:00`);
+  const dates = new Set<string>();
+  for (let y = from.getFullYear(), m = from.getMonth(); y < to.getFullYear() || (y === to.getFullYear() && m <= to.getMonth()); m += 1) {
+    if (m > 11) { m = 0; y += 1; }
+    const last = new Date(y, m + 1, 0).getDate();
+    for (const day of monthDays) {
+      const date = new Date(y, m, Math.min(day, last));
+      if (date >= from && date <= to) dates.add(date.toDateString());
+    }
+  }
+  return dates.size;
+}
+
 const RECURRING_DAYS_OPTIONS = [
   { value: 'MONDAY', label: 'T2', fullLabel: 'Thứ 2' },
   { value: 'TUESDAY', label: 'T3', fullLabel: 'Thứ 3' },
@@ -116,6 +136,8 @@ const defaultFormData = (): FormState => {
     endDate: addWeeksToDate(advance2, 4),
     durationWeeks: 4,
     recurringDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+    repeatType: 'weekly',
+    monthDays: [],
     price: 500000,
     startTime: '08:00',
     endTime: '09:00',
@@ -459,9 +481,14 @@ export function StaffClassesPage() {
       const startDateVal = formData.startDate || formData.sessionDate;
       const durationWeeksVal = formData.durationWeeks || 4;
       const endDateVal = formData.endDate || addWeeksToDate(startDateVal, durationWeeksVal);
+      const monthly = formData.repeatType === 'monthly';
       const recurringDaysVal = formData.recurringDays && formData.recurringDays.length > 0
         ? formData.recurringDays
         : ['MONDAY', 'WEDNESDAY', 'FRIDAY'];
+      // A monthly course with no day picked meets on the day of its start date.
+      const monthDaysVal = formData.monthDays.length > 0
+        ? [...formData.monthDays].sort((a, b) => a - b)
+        : [Number(startDateVal.slice(8, 10))];
 
       await classesApi.createRecurringClass({
         name: formData.name.trim(),
@@ -474,7 +501,8 @@ export function StaffClassesPage() {
         price: Number(formData.price) || 0,
         startDate: startDateVal,
         endDate: endDateVal,
-        recurringDays: recurringDaysVal,
+        repeatType: monthly ? 'monthly' : 'weekly',
+        ...(monthly ? { monthDays: monthDaysVal } : { recurringDays: recurringDaysVal }),
         startTime: formData.startTime.length === 5 ? formData.startTime + ':00' : formData.startTime,
         endTime: formData.endTime.length === 5 ? formData.endTime + ':00' : formData.endTime,
       });
@@ -1914,7 +1942,63 @@ export function StaffClassesPage() {
                 </div>
               </div>
 
-              {/* Các thứ lặp lại trong tuần */}
+              {/* Kiểu lặp lại: theo tuần hoặc theo tháng */}
+              <div className="portal-form-group">
+                <label className="portal-label">{t("Lặp lại *", "Repeats *")}</label>
+                <div role="group" aria-label={t("Kiểu lặp lại", "Repeat type")} style={{ display: 'flex', gap: 6 }}>
+                  {(['weekly', 'monthly'] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      aria-pressed={formData.repeatType === kind}
+                      className={`filter-chip ${formData.repeatType === kind ? 'is-active' : ''}`}
+                      style={{ padding: '5px 14px', borderRadius: 16, fontWeight: 600, fontSize: '0.82rem' }}
+                      onClick={() => setFormData({ ...formData, repeatType: kind })}
+                      disabled={isSubmitting}
+                    >
+                      {kind === 'weekly' ? t('Theo tuần', 'Weekly') : t('Theo tháng', 'Monthly')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {formData.repeatType === 'monthly' ? (
+                <div className="portal-form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="portal-label" style={{ margin: 0 }}>
+                      {t("Các ngày học trong tháng *", "Days of the month *")}</label>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-salmon, #eb7e6b)', fontWeight: 600 }}>
+                      {t("Tổng cộng:", "Total:")} {countMonthlySessions(
+                        formData.startDate || formData.sessionDate,
+                        formData.endDate,
+                        formData.monthDays.length > 0 ? formData.monthDays : [Number((formData.startDate || formData.sessionDate).slice(8, 10))],
+                      )} {t("buổi học", "sessions")}
+                    </span>
+                  </div>
+                  <div data-testid="month-days" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => {
+                      const isSelected = formData.monthDays.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          aria-pressed={isSelected}
+                          className={`filter-chip ${isSelected ? 'is-active' : ''}`}
+                          style={{ padding: '4px 0', width: 38, borderRadius: 16, fontWeight: 600, fontSize: '0.8rem' }}
+                          onClick={() => setFormData({
+                            ...formData,
+                            monthDays: isSelected ? formData.monthDays.filter((d) => d !== day) : [...formData.monthDays, day],
+                          })}
+                          disabled={isSubmitting}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <small>{t("Tháng không có ngày đã chọn (ví dụ 31) thì học vào ngày cuối tháng. Không chọn ngày nào thì học vào ngày khai giảng mỗi tháng.", "A month without the chosen day (for example 31) uses its last day. With no day chosen the course meets on the start date's day each month.")}</small>
+                </div>
+              ) : (
               <div className="portal-form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label className="portal-label" style={{ margin: 0 }}>
@@ -1950,6 +2034,8 @@ export function StaffClassesPage() {
                   })}
                 </div>
               </div>
+
+              )}
 
               {/* Khung giờ học */}
               <div className="grid-2">

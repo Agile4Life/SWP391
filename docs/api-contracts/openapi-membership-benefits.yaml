@@ -174,3 +174,14 @@ paths:
         more than 15 minutes after the start); a coach's own record is never overwritten.
       responses:
         '200': { description: Enrollments with totalSessions, attendedSessions, remainingSessions }
+  /classes/recurring:
+    post:
+      summary: Create a recurring course that repeats weekly or monthly
+      description: |
+        `repeatType` is `weekly` (default) or `monthly`. A weekly course needs `recurringDays` (MONDAY...) and meets on
+        those weekdays between `startDate` and `endDate`. A monthly course takes `monthDays` (1-31; the day of the
+        start date when empty) and meets on each chosen day of every month in the range; a month without the chosen
+        day uses its last day. Responses carry `repeatType` and `monthDays` (for example "5,20"); `recurringDays` is
+        null for monthly courses. Invalid days answer 400 SCHEDULING_INVALID_MONTH_DAYS.
+      responses:
+        '201': { description: Course with all its sessions }

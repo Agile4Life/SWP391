@@ -91,15 +91,30 @@ public final class SchedulingRequests {
             @NotNull(message = "{validation.scheduling.end_date.not_null}")
             java.time.LocalDate endDate,
 
-            @jakarta.validation.constraints.NotEmpty(message = "{validation.scheduling.recurring_days.not_empty}")
+            /** Weekdays (MONDAY...) of a weekly course; required when {@code repeatType} is weekly. */
             java.util.List<String> recurringDays,
 
             @NotNull(message = "{validation.scheduling.start_time.not_null}")
             java.time.LocalTime startTime,
 
             @NotNull(message = "{validation.scheduling.end_time.not_null}")
-            java.time.LocalTime endTime
+            java.time.LocalTime endTime,
+
+            /** {@code weekly} (default) or {@code monthly}. */
+            @Pattern(regexp = "weekly|monthly", message = "{validation.scheduling.repeat_type.pattern}")
+            String repeatType,
+
+            /** Days of the month (1-31) of a monthly course; defaults to the day of the start date. */
+            java.util.List<@jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(31) Integer> monthDays
     ) {
+        public CreateRecurringClassRequest(String name, Long disciplineId, Long coachId, Long roomId, Integer capacity,
+                                           String level, String description, java.math.BigDecimal price,
+                                           java.time.LocalDate startDate, java.time.LocalDate endDate,
+                                           java.util.List<String> recurringDays, java.time.LocalTime startTime,
+                                           java.time.LocalTime endTime) {
+            this(name, disciplineId, coachId, roomId, capacity, level, description, price, startDate, endDate,
+                    recurringDays, startTime, endTime, "weekly", null);
+        }
     }
 
     /**

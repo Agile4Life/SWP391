@@ -29,7 +29,9 @@ public class SchedulingMapper {
                 gymClass.getEndDate(),
                 gymClass.getRecurringDays(),
                 gymClass.getStartTime(),
-                gymClass.getEndTime()
+                gymClass.getEndTime(),
+                gymClass.getRepeatType() != null ? gymClass.getRepeatType() : "weekly",
+                gymClass.getMonthDays()
         );
     }
 
