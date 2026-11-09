@@ -34,10 +34,17 @@ public final class EnrollmentResponses {
             int usedCredits,
             int remainingCredits,
             boolean unlimited,
-            java.time.LocalDateTime enrollBlockedUntil
+            java.time.LocalDateTime enrollBlockedUntil,
+            /** Tier discount on the fee of a course beyond the free credits (0, 10 or 20). */
+            int discountPercent
     ) {
         public QuotaDto(String tier, Integer totalCredits, int usedCredits, int remainingCredits, boolean unlimited) {
-            this(tier, totalCredits, usedCredits, remainingCredits, unlimited, null);
+            this(tier, totalCredits, usedCredits, remainingCredits, unlimited, null, 0);
+        }
+
+        public QuotaDto(String tier, Integer totalCredits, int usedCredits, int remainingCredits, boolean unlimited,
+                        java.time.LocalDateTime enrollBlockedUntil) {
+            this(tier, totalCredits, usedCredits, remainingCredits, unlimited, enrollBlockedUntil, 0);
         }
     }
 

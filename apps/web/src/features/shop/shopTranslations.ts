@@ -34,6 +34,7 @@ export const englishShopPublicLabels: Readonly<Record<string, string>> = {
   "Sửa giỏ hàng": "Edit cart",
   "Tạm tính": "Subtotal",
   "Phí giao": "Delivery fee",
+  "Giảm giá hạng thẻ": "Membership tier discount",
   "Tổng cộng": "Total",
   "Họ tên người nhận cần từ 2 đến 80 ký tự.": "Recipient name must be 2–80 characters.",
   "Số điện thoại di động Việt Nam không hợp lệ.": "Invalid Vietnamese mobile number.",

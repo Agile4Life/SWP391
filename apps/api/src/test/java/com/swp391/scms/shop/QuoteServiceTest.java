@@ -74,6 +74,27 @@ class QuoteServiceTest {
     }
 
     @Test
+    void memberDiscountComesOffTheProductsButNeverOffShippingAndKeepsFreeShippingOnTheListPrice() {
+        when(variants.findAllById(anyCollection())).thenReturn(new ArrayList<>(List.of(variant(1L, "100000", 10, true))));
+
+        var gold = service.quote(new QuoteRequest(List.of(new QuoteLineRequest(1L, 2)), "delivery"), 10);
+
+        // 200,000 list price, 10% off = 20,000; shipping is added on top and is not discounted.
+        assertThat(gold.subtotal()).isEqualByComparingTo("200000");
+        assertThat(gold.discountPercent()).isEqualTo(10);
+        assertThat(gold.discountAmount()).isEqualByComparingTo("20000");
+        assertThat(gold.total()).isEqualByComparingTo(gold.subtotal().subtract(gold.discountAmount()).add(gold.shippingFee()));
+
+        var platinum = service.quote(new QuoteRequest(List.of(new QuoteLineRequest(1L, 2)), "pickup"), 20);
+        assertThat(platinum.discountAmount()).isEqualByComparingTo("40000");
+        assertThat(platinum.total()).isEqualByComparingTo("160000");
+
+        var silver = service.quote(new QuoteRequest(List.of(new QuoteLineRequest(1L, 2)), "pickup"));
+        assertThat(silver.discountPercent()).isZero();
+        assertThat(silver.total()).isEqualByComparingTo("200000");
+    }
+
+    @Test
     void quoteRejectsOversizedCarts() {
         assertThatThrownBy(() -> service.quote(new QuoteRequest(List.of(), "pickup")))
                 .isInstanceOf(BadRequestException.class)

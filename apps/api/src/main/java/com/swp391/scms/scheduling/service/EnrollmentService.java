@@ -1,6 +1,7 @@
 package com.swp391.scms.scheduling.service;
 
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.membership.service.MemberDiscountService;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -71,6 +72,13 @@ public class EnrollmentService {
 
     @Autowired(required = false)
     private PaymentRepository paymentRepository;
+
+    @Autowired(required = false)
+    private MemberDiscountService memberDiscounts;
+
+    public void setMemberDiscounts(MemberDiscountService memberDiscounts) {
+        this.memberDiscounts = memberDiscounts;
+    }
 
     @Autowired(required = false)
     @org.springframework.context.annotation.Lazy
@@ -430,7 +438,7 @@ public class EnrollmentService {
                 && member.getCourseEnrollBlockedUntil().isAfter(SessionEligibility.now(clock))
                 ? member.getCourseEnrollBlockedUntil() : null;
         if (currentSub == null || currentSub.getMembershipPackage() == null) {
-            return new QuotaDto(null, 0, 0, 0, false, blockedUntil);
+            return new QuotaDto(null, 0, 0, 0, false, blockedUntil, 0);
         }
 
         var pkg = currentSub.getMembershipPackage();
@@ -449,7 +457,8 @@ public class EnrollmentService {
         int total = unlimited ? 999999 : creditLimit;
         int remaining = unlimited ? 999999 : Math.max(0, creditLimit - (int) used);
 
-        return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited, blockedUntil);
+        return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited, blockedUntil,
+                com.swp391.scms.facilities.PackageBenefits.discountPercent(pkg));
     }
 
     /** Start of the period whose credits are shared: an upgrade continues the plan it replaced. */
@@ -576,7 +585,10 @@ public class EnrollmentService {
             );
         }
 
-        BigDecimal price = gymClass.getPrice() != null ? gymClass.getPrice() : BigDecimal.ZERO;
+        BigDecimal listPrice = gymClass.getPrice() != null ? gymClass.getPrice() : BigDecimal.ZERO;
+        // Gold and Platinum members get 10% / 20% off the course fee once their free credits are used up.
+        int discountPercent = memberDiscounts != null ? memberDiscounts.percentFor(member.getUserId()) : 0;
+        BigDecimal price = MemberDiscountService.apply(listPrice, discountPercent);
         String normalizedMethod = method != null ? method.toLowerCase() : "cash";
         if (!List.of("cash", "online_wallet", "vnpay").contains(normalizedMethod)) {
             normalizedMethod = "cash";
@@ -600,7 +612,8 @@ public class EnrollmentService {
             payment.setAmount(price);
             payment.setMethod("vnpay".equals(normalizedMethod) ? "online_wallet" : normalizedMethod);
             payment.setStatus("pending");
-            payment.setNote("Học phí khóa học: " + gymClass.getName());
+            payment.setNote("Học phí khóa học: " + gymClass.getName()
+                    + (discountPercent > 0 ? " (giảm " + discountPercent + "%, giá gốc " + listPrice.toPlainString() + ")" : ""));
             Payment savedPayment = paymentRepository.save(payment);
             paymentId = savedPayment.getId();
 

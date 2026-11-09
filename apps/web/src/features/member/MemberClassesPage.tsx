@@ -69,6 +69,11 @@ function weekFromQuery(value: string | null): -1 | 0 | 1 {
   return value === '-1' ? -1 : value === '1' ? 1 : 0;
 }
 
+/** Course fee after the member's tier discount (the server applies the same rule when it charges). */
+function discountedPrice(price: number, percent?: number): number {
+  return percent && percent > 0 ? Math.round((price * (100 - percent)) / 100) : price;
+}
+
 function formatShortDate(iso: string): string {
   const [y, m, d] = iso.split('-');
   return d && m && y ? `${d}/${m}/${y}` : iso;
@@ -353,7 +358,7 @@ function MemberCourseDetailModal({
             <div style={{ textAlign: 'right' }}>
               <div className="meta-label">{memberText("CHI PHÍ ĐĂNG KÝ", "TUITION FEE")}</div>
               <strong style={{ fontSize: '1.15rem', color: hasQuota ? '#4ade80' : 'var(--color-salmon, #eb7e6b)' }}>
-                {hasQuota ? memberText("0 VNĐ (Miễn phí theo gói)", "0 VND (Free with plan)") : `${priceNum.toLocaleString('vi-VN')} ${memberText("VNĐ", "VND")}`}
+                {hasQuota ? memberText("0 VNĐ (Miễn phí theo gói)", "0 VND (Free with plan)") : `${discountedPrice(priceNum, quota?.discountPercent).toLocaleString('vi-VN')} ${memberText("VNĐ", "VND")}${quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''}`}
               </strong>
             </div>
           </div>
@@ -998,7 +1003,7 @@ export function MemberClassesPage() {
                           </span>
                         ) : (
                           <span style={{ color: 'var(--color-text-muted)' }}>
-                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--color-salmon, #eb7e6b)' }}>{priceNum.toLocaleString('vi-VN')} {memberText("VNĐ", "VND")}</strong> {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
+                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--color-salmon, #eb7e6b)' }}>{discountedPrice(priceNum, quota?.discountPercent).toLocaleString('vi-VN')} {memberText("VNĐ", "VND")}</strong>{quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''} {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
                           </span>
                         )}
                       </div>
@@ -1274,8 +1279,8 @@ export function MemberClassesPage() {
                 {text("Học phí khóa học trọn gói:", "Full course tuition fee:")}{' '}
                 <strong style={{ color: 'var(--color-salmon, #eb7e6b)', fontSize: '1.1rem' }}>
                   {lang === 'en'
-                    ? `${courseCheckoutTarget.price?.toLocaleString('en-US')} VND`
-                    : `${courseCheckoutTarget.price?.toLocaleString('vi-VN')} đ`}
+                    ? `${discountedPrice(courseCheckoutTarget.price, quota?.discountPercent).toLocaleString('en-US')} VND`
+                    : `${discountedPrice(courseCheckoutTarget.price, quota?.discountPercent).toLocaleString('vi-VN')} đ`}
                 </strong>
               </p>
             </div>

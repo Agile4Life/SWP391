@@ -40,6 +40,13 @@ public final class QuoteDtos {
             BigDecimal subtotal,
             BigDecimal shippingFee,
             BigDecimal total,
-            boolean valid
-    ) {}
+            boolean valid,
+            /** Member tier discount on the products, 0 for anonymous shoppers and Silver; already inside {@code total}. */
+            int discountPercent,
+            BigDecimal discountAmount
+    ) {
+        public QuoteDto(List<QuoteLineDto> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid) {
+            this(lines, subtotal, shippingFee, total, valid, 0, BigDecimal.ZERO);
+        }
+    }
 }

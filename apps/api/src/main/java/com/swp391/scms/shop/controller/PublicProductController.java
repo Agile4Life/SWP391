@@ -27,6 +27,9 @@ import java.util.concurrent.TimeUnit;
 public class PublicProductController {
     private final ProductCatalogService catalog;
     private final QuoteService quotes;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.membership.service.MemberDiscountService discounts;
     private final MessageService messages;
 
     public PublicProductController(ProductCatalogService catalog, QuoteService quotes) {
@@ -90,7 +93,11 @@ public class PublicProductController {
     }
 
     @PostMapping("/shop/quote")
-    public ApiResponse<QuoteDto> quote(@Valid @RequestBody QuoteRequest request) {
-        return ApiResponse.ok(msg("success.shop.quote"), quotes.quote(request));
+    public ApiResponse<QuoteDto> quote(@Valid @RequestBody QuoteRequest request,
+                                       @org.springframework.security.core.annotation.AuthenticationPrincipal
+                                       com.swp391.scms.security.AuthenticatedPrincipal principal) {
+        int discount = principal != null && "MEMBER".equals(principal.role()) && discounts != null
+                ? discounts.percentFor(principal.id()) : 0;
+        return ApiResponse.ok(msg("success.shop.quote"), quotes.quote(request, discount));
     }
 }

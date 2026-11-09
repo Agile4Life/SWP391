@@ -25,7 +25,13 @@ public class QuoteService {
     public static final BigDecimal MAX_ORDER_TOTAL = new BigDecimal("100000000");
 
     public record PricedLine(ProductVariant variant, int quantity, BigDecimal lineTotal, String problem) {}
-    public record Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid) {}
+    /** {@code subtotal} is the list price of the lines; {@code total = subtotal - discountAmount + shippingFee}. */
+    public record Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid,
+                         int discountPercent, BigDecimal discountAmount) {
+        public Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid) {
+            this(lines, subtotal, shippingFee, total, valid, 0, BigDecimal.ZERO);
+        }
+    }
 
     private final ProductVariantRepository variants;
     private final ShopPricing pricing;
@@ -57,6 +63,11 @@ public class QuoteService {
     }
 
     public QuoteDto quote(QuoteRequest request) {
+        return quote(request, 0);
+    }
+
+    /** Quote with the shopper's tier discount applied to the products (shipping is never discounted). */
+    public QuoteDto quote(QuoteRequest request, int discountPercent) {
         if (request == null) {
             throw new BadRequestException("CART_EMPTY", "error.shop.cart_empty", null, "Cart is empty");
         }
@@ -65,10 +76,15 @@ public class QuoteService {
                 : request.fulfillment().trim();
         LinkedHashMap<Long, Integer> merged = merge(request.items());
         List<ProductVariant> loaded = variants.findAllById(merged.keySet());
-        return buildQuote(merged, loaded, fulfillment);
+        return buildQuote(merged, loaded, fulfillment, discountPercent);
     }
 
     public Priced price(List<QuoteLineRequest> items, List<ProductVariant> lockedVariants, String fulfillment) {
+        return price(items, lockedVariants, fulfillment, 0);
+    }
+
+    public Priced price(List<QuoteLineRequest> items, List<ProductVariant> lockedVariants, String fulfillment,
+                        int discountPercent) {
         LinkedHashMap<Long, Integer> merged = merge(items);
         Map<Long, ProductVariant> byId = new HashMap<>();
         if (lockedVariants != null) {
@@ -121,19 +137,22 @@ public class QuoteService {
         if (subtotal.compareTo(MAX_ORDER_TOTAL) > 0) {
             throw new BadRequestException("CART_TOO_LARGE", "error.shop.cart_too_large", null, "Order exceeds maximum total");
         }
+        // Free shipping is judged on the list price so a member discount never costs the shipping perk.
         BigDecimal shippingFee = pricing.shippingFee(fulfillment, subtotal);
-        BigDecimal total = subtotal.add(shippingFee);
+        BigDecimal discount = com.swp391.scms.membership.service.MemberDiscountService.discountOf(subtotal, discountPercent);
+        BigDecimal total = subtotal.subtract(discount).add(shippingFee);
         if (total.compareTo(MAX_ORDER_TOTAL) > 0) {
             throw new BadRequestException("CART_TOO_LARGE", "error.shop.cart_too_large", null, "Order exceeds maximum total");
         }
-        return new Priced(List.copyOf(lines), subtotal, shippingFee, total, valid);
+        return new Priced(List.copyOf(lines), subtotal, shippingFee, total, valid, Math.max(0, discountPercent), discount);
     }
 
-    private QuoteDto buildQuote(LinkedHashMap<Long, Integer> merged, List<ProductVariant> loaded, String fulfillment) {
+    private QuoteDto buildQuote(LinkedHashMap<Long, Integer> merged, List<ProductVariant> loaded, String fulfillment,
+                                int discountPercent) {
         List<QuoteLineRequest> normalizedRequests = merged.entrySet().stream()
                 .map(e -> new QuoteLineRequest(e.getKey(), e.getValue()))
                 .toList();
-        Priced priced = price(normalizedRequests, loaded, fulfillment);
+        Priced priced = price(normalizedRequests, loaded, fulfillment, discountPercent);
 
         List<QuoteLineDto> dtoLines = new ArrayList<>();
         int index = 0;
@@ -161,6 +180,7 @@ public class QuoteService {
                     pl.problem()
             ));
         }
-        return new QuoteDto(List.copyOf(dtoLines), priced.subtotal(), priced.shippingFee(), priced.total(), priced.valid());
+        return new QuoteDto(List.copyOf(dtoLines), priced.subtotal(), priced.shippingFee(), priced.total(), priced.valid(),
+                priced.discountPercent(), priced.discountAmount());
     }
 }

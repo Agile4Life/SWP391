@@ -140,6 +140,9 @@ export interface QuoteDto {
   shippingFee: number;
   total: number;
   valid: boolean;
+  /** Member tier discount already inside `total` (0 for guests and Silver). */
+  discountPercent?: number;
+  discountAmount?: number;
 }
 
 export interface GeoRegion {

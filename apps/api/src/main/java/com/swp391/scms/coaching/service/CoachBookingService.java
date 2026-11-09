@@ -11,6 +11,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.facilities.PackageBenefits;
+import com.swp391.scms.membership.service.MemberDiscountService;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.notifications.NotificationService;
@@ -221,6 +222,9 @@ public class CoachBookingService {
         if (trial) return 1;
         return PackageBenefits.ptSessionsPerCycle(sub.getMembershipPackage());
     }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private MemberDiscountService memberDiscounts;
 
     private boolean isTrialSubscription(MembershipSubscription sub) {
         if (sub == null) return false;
@@ -438,7 +442,10 @@ public class CoachBookingService {
         booking.setBookingDate(request.bookingDate());
         booking.setStartTime(request.startTime());
         booking.setEndTime(request.endTime());
-        booking.setHourlyRate(DEFAULT_HOURLY_RATE);
+        // Extra 1:1 sessions are discounted for Gold (10%) and Platinum (20%); the discounted rate is what gets charged.
+        int ptDiscount = "package_quota".equalsIgnoreCase(paymentMethod) || memberDiscounts == null
+                ? 0 : memberDiscounts.percentFor(member.getUserId());
+        booking.setHourlyRate(MemberDiscountService.apply(DEFAULT_HOURLY_RATE, ptDiscount));
         booking.setPaymentMethod(paymentMethod);
         booking.setPaymentStatus(paymentStatus);
         booking.setStatus("confirmed");
@@ -453,7 +460,8 @@ public class CoachBookingService {
             pendingPayment.setAmount(saved.getHourlyRate() != null ? saved.getHourlyRate() : DEFAULT_HOURLY_RATE);
             pendingPayment.setMethod(paymentMethod);
             pendingPayment.setStatus("pending");
-            pendingPayment.setNote("PT #" + saved.getId());
+            pendingPayment.setNote("PT #" + saved.getId()
+                    + (ptDiscount > 0 ? " (giảm " + ptDiscount + "%, giá gốc " + DEFAULT_HOURLY_RATE.toPlainString() + ")" : ""));
             pendingPayment.setCoachBookingId(saved.getId());
             com.swp391.scms.finance.entity.Payment savedPayment = paymentRepository.save(pendingPayment);
             if (savedPayment != null) {

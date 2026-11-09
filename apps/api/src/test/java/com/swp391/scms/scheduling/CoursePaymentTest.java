@@ -133,6 +133,55 @@ class CoursePaymentTest {
     }
 
     @Test
+    void testCheckoutChargesTheTierDiscountOnTheCourseFee() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
+        Member member = new Member();
+        member.setUserId(100L);
+        User user = new User();
+        user.setId(100L);
+        member.setUser(user);
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(member));
+        MembershipPackage gold = new MembershipPackage();
+        gold.setName("GOLD");
+        gold.setTier("GOLD");
+        gold.setDurationDays(30);
+        gold.setClassCreditLimit(2);
+        MembershipSubscription sub = new MembershipSubscription();
+        sub.setMembershipPackage(gold);
+        sub.setStatus("active");
+        sub.setStartDate(LocalDate.of(2026, 11, 1));
+        sub.setEndDate(LocalDate.of(2026, 12, 31));
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
+        when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
+        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any())).thenReturn(2L);
+        GymClass gymClass = new GymClass();
+        gymClass.setId(50L);
+        gymClass.setName("Yoga Advanced");
+        gymClass.setStatus("active");
+        gymClass.setStartDate(LocalDate.of(2026, 11, 20));
+        gymClass.setEndDate(LocalDate.of(2026, 12, 20));
+        gymClass.setCapacity(20);
+        gymClass.setPrice(new BigDecimal("500000.00"));
+        when(gymClasses.findByIdForUpdate(50L)).thenReturn(Optional.of(gymClass));
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.empty());
+        when(enrollments.countByGymClassIdAndStatus(50L, "booked")).thenReturn(1L);
+        ClassEnrollment saved = new ClassEnrollment();
+        saved.setId(9L);
+        when(enrollments.save(any(ClassEnrollment.class))).thenReturn(saved);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        enrollmentService.setMemberDiscounts(new com.swp391.scms.membership.service.MemberDiscountService(subscriptions, clock));
+
+        CourseCheckoutDto result = enrollmentService.checkoutCourse(principal, 50L, "cash");
+
+        assertEquals(0, new BigDecimal("450000").compareTo(result.amount()));
+        ArgumentCaptor<Payment> payment = ArgumentCaptor.forClass(Payment.class);
+        verify(paymentRepository).save(payment.capture());
+        assertEquals(0, new BigDecimal("450000").compareTo(payment.getValue().getAmount()));
+        assertTrue(payment.getValue().getNote().contains("giảm 10%"));
+    }
+
+    @Test
     void testCancelBeforeStartFailsThePendingCoursePayment() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
         Member member = new Member();

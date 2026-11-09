@@ -61,6 +61,9 @@ public class ProductOrderService {
     private final ShopProperties props;
     private final Clock clock;
 
+    @Autowired(required = false)
+    private com.swp391.scms.membership.service.MemberDiscountService memberDiscounts;
+
     private VnpayPaymentGuard guard;
     private PaymentRepository payments;
     private ProductOrderRefunds refunds;
@@ -181,7 +184,8 @@ public class ProductOrderService {
         validateFulfillment(request);
         Map<Long, Integer> qty = QuoteService.merge(request.items());
         List<ProductVariant> locked = variants.findAllByIdInForUpdate(qty.keySet());
-        Priced priced = quotes.price(request.items(), locked, request.fulfillment());
+        int discountPercent = memberDiscounts != null ? memberDiscounts.percentFor(principal.id()) : 0;
+        Priced priced = quotes.price(request.items(), locked, request.fulfillment(), discountPercent);
         if (priced.lines().stream().anyMatch(l -> l.problem() != null)) {
             throw new ConflictException("PRODUCT_OUT_OF_STOCK", "error.shop.product_out_of_stock", null, "Out of stock");
         }
@@ -207,7 +211,10 @@ public class ProductOrderService {
         order.setStatus(OrderStatus.pending_payment.name());
         order.setFulfillment(request.fulfillment());
         order.setPaymentMethod(request.paymentMethod());
-        order.setSubtotal(priced.subtotal());
+        // subtotal is what the member pays for the products, so total = subtotal + shipping still holds.
+        order.setSubtotal(priced.subtotal().subtract(priced.discountAmount()));
+        order.setMemberDiscountPercent(priced.discountPercent() > 0 ? priced.discountPercent() : null);
+        order.setMemberDiscountAmount(priced.discountPercent() > 0 ? priced.discountAmount() : null);
         order.setShippingFee(priced.shippingFee());
         order.setTotal(priced.total());
         order.applyShipping(ship);

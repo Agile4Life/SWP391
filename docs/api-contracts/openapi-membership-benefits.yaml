@@ -122,3 +122,19 @@ paths:
       responses:
         '200':
           description: "{allowed, alreadyUsed, minDays, maxDays, noticeHours, maxDocuments, maxDocumentBytes}"
+  /shop/quote:
+    post:
+      summary: Quote a cart; a signed-in Gold or Platinum member gets the tier discount on the products
+      description: |
+        The response adds `discountPercent` (0, 10, 20) and `discountAmount`. `subtotal` stays the list price and
+        `total = subtotal - discountAmount + shippingFee`. Shipping is never discounted and free shipping is judged on
+        the list price. Creating the order applies the same percentage; the order stores
+        `subtotal = list - discount` plus memberDiscountPercent/memberDiscountAmount so `total = subtotal + shippingFee` holds.
+      responses:
+        '200': { description: Quote with discountPercent and discountAmount }
+  /classes/{id}/checkout:
+    post:
+      summary: Pay the fee of a course beyond the free credits
+      description: The fee is reduced by the tier discount of the active package (Gold 10%, Platinum 20%); the payment note records the percentage and the list price. `GET /classes/my-quota` returns `discountPercent`.
+      responses:
+        '201': { description: Checkout with the discounted amount }

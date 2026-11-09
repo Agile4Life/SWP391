@@ -57,6 +57,13 @@ public class ProductOrder {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
 
+    /** Tier discount already taken off {@code subtotal}; kept for reconciliation (list price = subtotal + amount). */
+    @Column(name = "member_discount_percent")
+    private Integer memberDiscountPercent;
+
+    @Column(name = "member_discount_amount", precision = 12, scale = 2)
+    private BigDecimal memberDiscountAmount;
+
     @Column(name = "ship_recipient_name", length = 80)
     private String shipRecipientName;
 
@@ -173,6 +180,10 @@ public class ProductOrder {
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
+    public Integer getMemberDiscountPercent() { return memberDiscountPercent; }
+    public void setMemberDiscountPercent(Integer value) { this.memberDiscountPercent = value; }
+    public BigDecimal getMemberDiscountAmount() { return memberDiscountAmount; }
+    public void setMemberDiscountAmount(BigDecimal value) { this.memberDiscountAmount = value; }
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
 

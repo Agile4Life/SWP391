@@ -19,6 +19,8 @@ export interface QuotaDto {
   unlimited: boolean;
   /** Set while the member cannot join a new course after missing most of one. */
   enrollBlockedUntil?: string | null;
+  /** Tier discount on a course fee beyond the free credits: 0, 10 (Gold) or 20 (Platinum). */
+  discountPercent?: number;
 }
 
 export interface CourseCheckoutResult {

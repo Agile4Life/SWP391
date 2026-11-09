@@ -497,6 +497,12 @@ export function CheckoutPage() {
                     <span>{sourceText("Tạm tính")}</span>
                     <span>{quote && !quoting ? formatVnd(quote.subtotal) : '—'}</span>
                   </div>
+                  {quote && !quoting && (quote.discountAmount ?? 0) > 0 && (
+                    <div className="shop-checkout-row" data-testid="checkout-member-discount">
+                      <span>{sourceText("Giảm giá hạng thẻ")} ({quote.discountPercent}%)</span>
+                      <span>−{formatVnd(quote.discountAmount ?? 0)}</span>
+                    </div>
+                  )}
                   <div className="shop-checkout-row">
                     <span>{sourceText("Phí giao")}</span>
                     <span>{quote && !quoting ? formatVnd(quote.shippingFee) : '—'}</span>
