@@ -304,7 +304,7 @@ function sphere(
   );
 }
 
-function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec3): THREE.BufferGeometry {
+export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec3): THREE.BufferGeometry {
   let totalVertices = 0;
   let totalIndices = 0;
 
@@ -1423,10 +1423,66 @@ function buildLowDetailGeometry(kind: ItemKind): THREE.BufferGeometry {
 
 const geometryCache = new Map<string, THREE.BufferGeometry>();
 
+const geometryOverrides = new Map<ItemKind, THREE.BufferGeometry>();
+const geometryListeners = new Set<() => void>();
+let geometryRevision = 0;
+
+function notifyGeometryChange(): void {
+  geometryRevision += 1;
+  for (const listener of geometryListeners) listener();
+}
+
+/** useSyncExternalStore subscription so instanced batches rebuild when a model is swapped. */
+export function subscribeItemGeometries(listener: () => void): () => void {
+  geometryListeners.add(listener);
+  return () => {
+    geometryListeners.delete(listener);
+  };
+}
+
+export function getItemGeometryRevision(): number {
+  return geometryRevision;
+}
+
+/**
+ * Replace the high-detail geometry of an item kind (for example with a model
+ * loaded from a .glb). Low detail proxies and the procedural builder stay
+ * available as the fallback.
+ */
+export function registerItemGeometryOverride(
+  kind: ItemKind,
+  geometry: THREE.BufferGeometry,
+): void {
+  const previous = geometryOverrides.get(kind);
+  if (previous && previous !== geometry) previous.dispose();
+  geometry.name = `item-geom-${kind}-override`;
+  geometryOverrides.set(kind, geometry);
+  notifyGeometryChange();
+}
+
+export function unregisterItemGeometryOverride(
+  kind: ItemKind,
+  geometry?: THREE.BufferGeometry,
+): void {
+  const current = geometryOverrides.get(kind);
+  if (!current || (geometry && current !== geometry)) return;
+  current.dispose();
+  geometryOverrides.delete(kind);
+  notifyGeometryChange();
+}
+
+export function hasItemGeometryOverride(kind: ItemKind): boolean {
+  return geometryOverrides.has(kind);
+}
+
 export function getItemGeometry(
   kind: ItemKind,
   detail: ItemDetailLevel = 'high',
 ): THREE.BufferGeometry {
+  if (detail === 'high') {
+    const override = geometryOverrides.get(kind);
+    if (override) return override;
+  }
   const key = `${kind}:${detail}`;
   const cached = geometryCache.get(key);
   if (cached) {
@@ -1474,6 +1530,10 @@ export function clearItemGeometryCache(): void {
     geom.dispose();
   }
   geometryCache.clear();
+  for (const geom of geometryOverrides.values()) {
+    geom.dispose();
+  }
+  geometryOverrides.clear();
 }
 
 export function warmAllItemGeometries(): void {
