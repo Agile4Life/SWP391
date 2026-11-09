@@ -543,6 +543,43 @@ public class CoachBookingService {
                 .toList();
     }
 
+    /** Longest range the attendance screen may read at once. */
+    public static final int MAX_ATTENDANCE_DAYS = 62;
+
+    /**
+     * 1:1 sessions with their arrival for the attendance screen. A coach sees their own sessions; the desk and
+     * managers see everyone's. {@code outcome} is ATTENDED, MISSED (finished without an arrival), UPCOMING or ALL.
+     */
+    @Transactional(readOnly = true)
+    public List<CoachBookingDto> getAttendance(AuthenticatedPrincipal principal, LocalDate from, LocalDate to, String outcome) {
+        String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
+        boolean coach = "COACH".equals(role);
+        if (!coach && !DESK_ROLES.contains(role) && !"CENTER_MANAGER".equals(role) && !"MANAGER".equals(role)) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only coaches, the front desk and managers can read attendance.");
+        }
+        LocalDateTime now = LocalDateTime.now(clock.withZone(com.swp391.scms.common.CenterTime.ZONE));
+        LocalDate end = to != null ? to : now.toLocalDate();
+        LocalDate start = from != null ? from : end.minusDays(13);
+        if (start.isAfter(end) || java.time.temporal.ChronoUnit.DAYS.between(start, end) > MAX_ATTENDANCE_DAYS) {
+            throw new BadRequestException("COACH_BOOKING_ATTENDANCE_RANGE", "error.coach_booking.attendance_range",
+                    new Object[]{MAX_ATTENDANCE_DAYS}, "The date range is invalid or longer than " + MAX_ATTENDANCE_DAYS + " days.");
+        }
+        String wanted = outcome == null || outcome.isBlank() ? "ALL" : outcome.trim().toUpperCase(java.util.Locale.ROOT);
+        List<CoachBooking> rows = coach
+                ? coachBookingRepository.findForAttendanceByCoach(principal.id(), start, end)
+                : coachBookingRepository.findForAttendance(start, end);
+        return rows.stream()
+                .filter(b -> "ALL".equals(wanted) || wanted.equals(attendanceOutcome(b, now)))
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    private static String attendanceOutcome(CoachBooking booking, LocalDateTime now) {
+        if (booking.getAttendedAt() != null) return "ATTENDED";
+        LocalDateTime end = LocalDateTime.of(booking.getBookingDate(), booking.getEndTime());
+        return end.isAfter(now) ? "UPCOMING" : "MISSED";
+    }
+
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getCoachSchedule(Long coachUserId) {
         return coachBookingRepository.findByCoachId(coachUserId).stream()

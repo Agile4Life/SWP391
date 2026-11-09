@@ -74,6 +74,25 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             @Param("endDate") LocalDate endDate,
             @Param("paymentMethod") String paymentMethod
     );
+    /** Non-cancelled 1:1 sessions of every coach between two dates, newest first (desk view). */
+    @Query("""
+            select cb from CoachBooking cb
+            where cb.status <> 'cancelled' and cb.bookingDate between :fromDate and :toDate
+            order by cb.bookingDate desc, cb.startTime desc
+            """)
+    List<CoachBooking> findForAttendance(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
+    /** Non-cancelled 1:1 sessions of one coach between two dates, newest first. */
+    @Query("""
+            select cb from CoachBooking cb
+            where cb.status <> 'cancelled' and cb.coach.userId = :coachId
+              and cb.bookingDate between :fromDate and :toDate
+            order by cb.bookingDate desc, cb.startTime desc
+            """)
+    List<CoachBooking> findForAttendanceByCoach(@Param("coachId") Long coachId,
+                                                @Param("fromDate") LocalDate fromDate,
+                                                @Param("toDate") LocalDate toDate);
+
     /** The member's confirmed sessions on {@code date} that have no arrival recorded yet. */
     @Query("""
             select cb from CoachBooking cb

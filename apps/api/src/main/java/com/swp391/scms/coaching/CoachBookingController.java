@@ -106,6 +106,19 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, schedule));
     }
 
+    @GetMapping("/attendance")
+    public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getAttendance(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @RequestParam(value = "from", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @RequestParam(value = "to", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
+            @RequestParam(value = "outcome", required = false) String outcome) {
+        List<CoachBookingDto> rows = coachBookingService.getAttendance(principal, from, to, outcome);
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.attendance_list", "Danh sách điểm danh buổi 1:1")
+                : "Danh sách điểm danh buổi 1:1";
+        return ResponseEntity.ok(ApiResponse.ok(msg, rows));
+    }
+
     @GetMapping("/unpaid")
     public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getUnpaidBookings(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {

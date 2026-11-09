@@ -742,4 +742,51 @@ class CoachBookingServiceTest {
         }).toList();
     }
 
+
+    private com.swp391.scms.coaching.entity.CoachBooking ptSession(long id, LocalDate date, LocalTime start, LocalTime end,
+                                                                    LocalDateTime attendedAt) {
+        com.swp391.scms.coaching.entity.CoachBooking b = new com.swp391.scms.coaching.entity.CoachBooking();
+        org.springframework.test.util.ReflectionTestUtils.setField(b, "id", id);
+        b.setMember(member);
+        b.setCoach(coach);
+        b.setBookingDate(date);
+        b.setStartTime(start);
+        b.setEndTime(end);
+        b.setStatus("confirmed");
+        b.setAttendedAt(attendedAt);
+        return b;
+    }
+
+    @Test
+    void attendanceScreenSplitsSessionsIntoAttendedMissedAndUpcomingAndScopesCoachesToTheirOwn() {
+        // The clock is 2026-10-31 08:00.
+        var attended = ptSession(1, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), LocalDateTime.of(2026, 10, 30, 8, 50));
+        var missed = ptSession(2, LocalDate.of(2026, 10, 30), LocalTime.of(15, 0), LocalTime.of(16, 0), null);
+        var upcoming = ptSession(3, LocalDate.of(2026, 10, 31), LocalTime.of(17, 0), LocalTime.of(18, 0), null);
+        var rows = List.of(upcoming, missed, attended);
+        when(coachBookingRepository.findForAttendance(any(), any())).thenReturn(rows);
+        when(coachBookingRepository.findForAttendanceByCoach(eq(20L), any(), any())).thenReturn(rows);
+        var desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+        var coachPrincipal = new AuthenticatedPrincipal(20L, "hung", "COACH");
+
+        assertThat(service.getAttendance(desk, null, null, "ALL")).extracting(d -> d.id()).containsExactly(3L, 2L, 1L);
+        assertThat(service.getAttendance(desk, null, null, "MISSED")).extracting(d -> d.id()).containsExactly(2L);
+        assertThat(service.getAttendance(desk, null, null, "attended")).extracting(d -> d.id()).containsExactly(1L);
+        assertThat(service.getAttendance(desk, null, null, "UPCOMING")).extracting(d -> d.id()).containsExactly(3L);
+        assertThat(service.getAttendance(coachPrincipal, null, null, null)).hasSize(3);
+        verify(coachBookingRepository).findForAttendanceByCoach(eq(20L), any(), any());
+        // A coach never reads the desk-wide query.
+        verify(coachBookingRepository, org.mockito.Mockito.times(4)).findForAttendance(any(), any());
+    }
+
+    @Test
+    void attendanceScreenRejectsMembersAndRangesLongerThanTwoMonths() {
+        assertThatThrownBy(() -> service.getAttendance(principal, null, null, "ALL"))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+        var desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+        assertThatThrownBy(() -> service.getAttendance(desk, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 10, 31), "ALL"))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.getAttendance(desk, LocalDate.of(2026, 10, 31), LocalDate.of(2026, 10, 1), "ALL"))
+                .isInstanceOf(BadRequestException.class);
+    }
 }

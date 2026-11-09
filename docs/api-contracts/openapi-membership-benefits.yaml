@@ -195,3 +195,17 @@ paths:
         `attendedAt` is a no-show; its quota stays used.
       responses:
         '200': { description: Bookings with attendedAt }
+  /coach-bookings/attendance:
+    get:
+      summary: 1:1 sessions with their arrival (coach, receptionist, manager)
+      description: |
+        A coach reads their own sessions; a receptionist or manager reads everyone's. Query: `from`, `to` (ISO dates;
+        default the last 14 days; at most 62 days, otherwise 400 COACH_BOOKING_ATTENDANCE_RANGE) and `outcome`
+        (ALL, ATTENDED, MISSED, UPCOMING). Cancelled sessions are never returned. MISSED is a finished session without
+        `attendedAt`. Members get 403.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: outcome, in: query, schema: { type: string, enum: [ALL, ATTENDED, MISSED, UPCOMING] } }
+      responses:
+        '200': { description: List of CoachBookingDto }

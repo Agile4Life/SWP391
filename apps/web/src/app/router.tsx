@@ -179,6 +179,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/CoachFirstAssessmentPage')).CoachFirstAssessmentPage }),
           },
           {
+            path: '/coach/pt-attendance',
+            lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
+          },
+          {
             path: '/staff/attendance',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
           },
@@ -212,6 +216,10 @@ export const router = createBrowserRouter([
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
         children: [
+          {
+            path: '/staff/pt-attendance',
+            lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
+          },
           {
             path: '/staff/holds',
             lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
