@@ -100,6 +100,58 @@ class CourseAttendanceServiceTest {
         verify(attendance, never()).save(any());
     }
 
+    private void bookedInCourse() {
+        when(members.findById(100L)).thenReturn(Optional.of(member));
+        when(enrollments.findByGymClassIdAndStatus(5L, "booked")).thenReturn(List.of(enrollment(LocalDateTime.of(2026, 11, 1, 9, 0))));
+    }
+
+    @Test
+    void scanningAtTheGateOnACourseDayMarksTheSessionAttended() {
+        // The clock is 2026-11-09 20:00; the session runs 20:00-21:30, so the member arrives exactly on time.
+        ClassSession today = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(20, 0), LocalTime.of(21, 30));
+        when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(today));
+        bookedInCourse();
+        when(attendance.existsBySessionIdAndMemberUserId(1L, 100L)).thenReturn(false);
+
+        assertEquals(1, service.markPresentOnEntry(100L, LocalDateTime.of(2026, 11, 9, 19, 50)));
+
+        ArgumentCaptor<SessionAttendance> saved = ArgumentCaptor.forClass(SessionAttendance.class);
+        verify(attendance).save(saved.capture());
+        assertEquals("present", saved.getValue().getStatus());
+        assertEquals(LocalDateTime.of(2026, 11, 9, 19, 50), saved.getValue().getCheckedInAt());
+    }
+
+    @Test
+    void aScanMoreThanFifteenMinutesAfterTheStartIsLateButStillAttended() {
+        ClassSession today = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(18, 0), LocalTime.of(21, 30));
+        when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(today));
+        bookedInCourse();
+        when(attendance.existsBySessionIdAndMemberUserId(1L, 100L)).thenReturn(false);
+
+        assertEquals(1, service.markPresentOnEntry(100L, LocalDateTime.of(2026, 11, 9, 18, 40)));
+
+        ArgumentCaptor<SessionAttendance> saved = ArgumentCaptor.forClass(SessionAttendance.class);
+        verify(attendance).save(saved.capture());
+        assertEquals("late", saved.getValue().getStatus());
+    }
+
+    @Test
+    void aScanOutsideTheSessionWindowOrAlreadyRecordedOrNotBookedChangesNothing() {
+        ClassSession later = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(22, 0), LocalTime.of(23, 0));
+        ClassSession finished = session(2, LocalDate.of(2026, 11, 9), LocalTime.of(8, 0), LocalTime.of(9, 0));
+        ClassSession recorded = session(3, LocalDate.of(2026, 11, 9), LocalTime.of(19, 0), LocalTime.of(21, 0));
+        when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(later, finished, recorded));
+        bookedInCourse();
+        when(attendance.existsBySessionIdAndMemberUserId(3L, 100L)).thenReturn(true);
+
+        assertEquals(0, service.markPresentOnEntry(100L, LocalDateTime.of(2026, 11, 9, 20, 0)));
+        verify(attendance, never()).save(any());
+
+        // A member who is not booked in the course is not marked.
+        when(enrollments.findByGymClassIdAndStatus(5L, "booked")).thenReturn(List.of());
+        assertEquals(0, service.markPresentOnEntry(100L, LocalDateTime.of(2026, 11, 9, 20, 0)));
+    }
+
     @Test
     void missingMoreThanHalfBlocksNewCoursesForThirtyDays() {
         when(sessions.countByGymClassIdAndStatusNot(5L, "cancelled")).thenReturn(9L);

@@ -30,6 +30,20 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
 
     long countBySessionIdAndStatus(Long sessionId, String status);
 
+    /** Sessions of a course the member actually came to (present or late). */
+    @Query("""
+            select count(a) from SessionAttendance a
+            where a.member.userId = :memberId and a.session.gymClass.id = :classId and a.status in ('present', 'late')
+            """)
+    long countAttended(@Param("memberId") Long memberId, @Param("classId") Long classId);
+
+    /** Sessions of a course whose outcome is known: attended, missed or excused. */
+    @Query("""
+            select count(a) from SessionAttendance a
+            where a.member.userId = :memberId and a.session.gymClass.id = :classId
+            """)
+    long countRecorded(@Param("memberId") Long memberId, @Param("classId") Long classId);
+
     @Query("""
             select count(a) from SessionAttendance a
             where a.member.userId = :memberId and a.session.gymClass.id = :classId and a.status = 'absent'

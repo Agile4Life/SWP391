@@ -41,6 +41,10 @@ import java.time.temporal.TemporalAdjusters;
 @Service
 public class CenterCheckinService {
 
+    @Autowired(required = false)
+    private CourseAttendanceService courseAttendance;
+
+
     public static final int ANTI_PASSBACK_TIMEOUT_HOURS = 12;
     public static final int MAX_HISTORY_DAYS = 31;
     public static final String AUTO_CHECKOUT_NOTE = "SYSTEM_AUTO_CHECKOUT";
@@ -258,6 +262,15 @@ public class CenterCheckinService {
         checkin.setDenialReason(null);
 
         CheckinDto result = toDto(checkins.saveAndFlush(checkin));
+        if (courseAttendance != null) {
+            try {
+                // Coming to the center on a course day counts the session as attended.
+                courseAttendance.markPresentOnEntry(member.getUserId(), now);
+            } catch (RuntimeException ex) {
+                org.slf4j.LoggerFactory.getLogger(CenterCheckinService.class)
+                        .warn("Could not mark course attendance for member {}", member.getUserId(), ex);
+            }
+        }
         return new CheckinDto(result.id(), result.memberId(), result.memberName(), result.checkInTime(),
                 result.checkOutTime(), result.method(), result.gate(), result.status(), result.denialReason(),
                 memberUser.getAvatarUrl(), sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null,

@@ -24,8 +24,20 @@ public final class EnrollmentResponses {
             String status,
             LocalDateTime enrolledAt,
             LocalDateTime cancelledAt,
-            String cancelReason
+            String cancelReason,
+            /** Sessions of the course that are not cancelled; null when unknown. */
+            Integer totalSessions,
+            /** Sessions the member came to (present or late). */
+            Integer attendedSessions,
+            /** Sessions not yet used up: total minus attended, missed and excused; a missed session is not made up. */
+            Integer remainingSessions
     ) {
+        public EnrollmentDto(Long id, Long classId, String className, Long memberId, Long sessionId,
+                             LocalDate sessionDate, LocalTime startTime, LocalTime endTime, String status,
+                             LocalDateTime enrolledAt, LocalDateTime cancelledAt, String cancelReason) {
+            this(id, classId, className, memberId, sessionId, sessionDate, startTime, endTime, status, enrolledAt,
+                    cancelledAt, cancelReason, null, null, null);
+        }
     }
 
     public record QuotaDto(

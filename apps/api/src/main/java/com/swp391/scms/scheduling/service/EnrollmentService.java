@@ -722,6 +722,7 @@ public class EnrollmentService {
 
     private EnrollmentDto toDto(ClassEnrollment enrollment, ClassSession session) {
         GymClass gymClass = enrollment.getGymClass();
+        Integer[] progress = courseProgress(enrollment);
         return new EnrollmentDto(
                 enrollment.getId(),
                 gymClass != null ? gymClass.getId() : null,
@@ -734,7 +735,25 @@ public class EnrollmentService {
                 enrollment.getStatus(),
                 enrollment.getEnrolledAt(),
                 enrollment.getCancelledAt(),
-                enrollment.getCancelReason()
+                enrollment.getCancelReason(),
+                progress[0], progress[1], progress[2]
         );
     }
+
+    /** {total, attended, remaining} sessions of the member's course, or nulls when the course has no schedule data. */
+    private Integer[] courseProgress(ClassEnrollment enrollment) {
+        GymClass gymClass = enrollment.getGymClass();
+        if (sessions == null || attendanceRepository == null || gymClass == null || gymClass.getId() == null
+                || enrollment.getMember() == null || enrollment.getMember().getUserId() == null) {
+            return new Integer[]{null, null, null};
+        }
+        long total = sessions.countByGymClassIdAndStatusNot(gymClass.getId(), "cancelled");
+        Long memberId = enrollment.getMember().getUserId();
+        long attended = attendanceRepository.countAttended(memberId, gymClass.getId());
+        long recorded = attendanceRepository.countRecorded(memberId, gymClass.getId());
+        return new Integer[]{(int) total, (int) attended, (int) Math.max(0, total - recorded)};
+    }
+
+    @Autowired(required = false)
+    private com.swp391.scms.attendance.repository.SessionAttendanceRepository attendanceRepository;
 }

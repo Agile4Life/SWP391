@@ -975,6 +975,14 @@ export function MemberClassesPage() {
                           {memberText(`Khóa ${sched.durationWeeks} tuần (${sched.daysPerWeek} buổi / tuần)`, `${sched.durationWeeks}-week course (${sched.daysPerWeek} sessions / week)`)}
                         </span>
                         {isEnrolled && <span className="badge badge-success">{memberText("Đã đăng ký trọn gói", "Enrolled full course")}</span>}
+                        {myEnrollment?.totalSessions != null && myEnrollment.remainingSessions != null && (
+                          <span className="badge" data-testid={`course-progress-${c.id}`}>
+                            {memberText(
+                              `Còn ${myEnrollment.remainingSessions}/${myEnrollment.totalSessions} buổi (đã học ${myEnrollment.attendedSessions ?? 0})`,
+                              `${myEnrollment.remainingSessions}/${myEnrollment.totalSessions} sessions left (${myEnrollment.attendedSessions ?? 0} attended)`,
+                            )}
+                          </span>
+                        )}
                       </div>
                       <h3 className="row-card__title" style={{ fontSize: '1.2rem', marginBottom: 6 }}>{c.name}</h3>
                       <div className="row-card__meta row-card__meta--inline" style={{ marginBottom: 6 }}>

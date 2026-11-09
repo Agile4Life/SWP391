@@ -138,6 +138,34 @@ class CourseMembershipRulesTest {
     }
 
     @Test
+    void theMyCoursesListShowsHowManySessionsAreLeftAfterAttendedMissedAndExcusedOnes() {
+        com.swp391.scms.scheduling.repository.ClassSessionRepository sessionRepo =
+                mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
+        com.swp391.scms.attendance.repository.SessionAttendanceRepository attendanceRepo =
+                mock(com.swp391.scms.attendance.repository.SessionAttendanceRepository.class);
+        EnrollmentService withProgress = new EnrollmentService(enrollments, sessionRepo, gymClasses, subscriptions, members, null, null, clock);
+        org.springframework.test.util.ReflectionTestUtils.setField(withProgress, "attendanceRepository", attendanceRepo);
+        GymClass course = course(LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 22));
+        Member owner = new Member();
+        owner.setUserId(100L);
+        com.swp391.scms.scheduling.entity.ClassEnrollment enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setGymClass(course);
+        enrollment.setMember(owner);
+        enrollment.setStatus("booked");
+        when(enrollments.findByMemberUserId(100L)).thenReturn(List.of(enrollment));
+        // 9 sessions; the member attended 3, missed 1 and 1 was excused: 5 are left.
+        when(sessionRepo.countByGymClassIdAndStatusNot(50L, "cancelled")).thenReturn(9L);
+        when(attendanceRepo.countAttended(100L, 50L)).thenReturn(3L);
+        when(attendanceRepo.countRecorded(100L, 50L)).thenReturn(5L);
+
+        var item = withProgress.myEnrollments(principal).get(0);
+
+        assertEquals(Integer.valueOf(9), item.totalSessions());
+        assertEquals(Integer.valueOf(3), item.attendedSessions());
+        assertEquals(Integer.valueOf(4), item.remainingSessions());
+    }
+
+    @Test
     void aRenewalStartsAFreshAllowance() {
         MembershipSubscription first = sub(1, "GOLD", 2, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 30));
         MembershipSubscription renewal = sub(2, "GOLD", 2, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30));

@@ -46,6 +46,8 @@ export interface EnrollmentDto {
   sessionId: number | null; sessionDate: string | null; startTime: string | null;
   endTime: string | null; status: string; enrolledAt: string;
   cancelledAt: string | null; cancelReason: string | null;
+  /** Course progress: sessions not cancelled, sessions attended, sessions left (missed ones are not made up). */
+  totalSessions?: number | null; attendedSessions?: number | null; remainingSessions?: number | null;
 }
 
 /** One seat in one session (the per-session booking feature, as opposed to a class-wide enrollment). */

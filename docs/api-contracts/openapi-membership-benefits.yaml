@@ -164,3 +164,13 @@ paths:
       description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches and managers still see and write plans, which appear after an upgrade.
       responses:
         '200': { description: Plans (empty for Silver) }
+  /classes/enrollments/my:
+    get:
+      summary: The member's course enrollments with progress
+      description: |
+        Each item adds `totalSessions` (not cancelled), `attendedSessions` (present or late) and `remainingSessions`
+        (total minus attended, missed and excused: a missed session is not made up). Entering the center through the
+        gate from 30 minutes before a booked course session until its end marks it `present` (`late` when the scan is
+        more than 15 minutes after the start); a coach's own record is never overwritten.
+      responses:
+        '200': { description: Enrollments with totalSessions, attendedSessions, remainingSessions }
