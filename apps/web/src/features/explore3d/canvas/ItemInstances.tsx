@@ -195,16 +195,20 @@ export function ItemInstances({
 
   const grouped = useMemo(() => groupItemsByKind(scene), [scene]);
 
+  const useClearcoat = tier !== 'low';
   const sharedMaterial = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshPhysicalMaterial({
         name: 'sol-instanced-items-vertex-colored',
         color: '#ffffff',
         vertexColors: true,
-        roughness: 0.46,
-        metalness: 0.32,
+        roughness: 0.4,
+        metalness: 0.36,
+        // Lacquered-paint sheen on powder-coated frames and padded surfaces.
+        clearcoat: useClearcoat ? 0.35 : 0,
+        clearcoatRoughness: 0.3,
       }),
-    [],
+    [useClearcoat],
   );
 
   useEffect(() => {

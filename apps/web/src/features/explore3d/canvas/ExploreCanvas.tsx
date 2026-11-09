@@ -11,6 +11,7 @@ import { Courts } from './Courts';
 import { Cutaway } from './Cutaway';
 import { Environment } from './Environment';
 import { Hotspots } from './Hotspots';
+import { ImageBasedLighting } from './ImageBasedLighting';
 import { ItemInstances } from './ItemInstances';
 import { LevelStack } from './LevelStack';
 import { Lights } from './Lights';
@@ -116,6 +117,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       onPointerMissed={handleCanvasPointerMissed}
     >
       <Environment />
+      <ImageBasedLighting />
       <Lights />
       <CameraRig />
       <Cutaway />
