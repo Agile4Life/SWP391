@@ -43,6 +43,7 @@ function ItemGlbKind({ kind, entry }: { kind: ItemKind; entry: ItemGlbEntry }) {
     try {
       geometry = buildItemGeometryFromObject(gltf.scene, DEFAULT_ITEM_DIMENSIONS[kind], {
         rotationY: entry.rotationY,
+        materialColors: entry.materialColors,
       });
     } catch (error) {
       console.warn(`[explore3d] Skipping GLB for "${kind}".`, error);
@@ -54,7 +55,7 @@ function ItemGlbKind({ kind, entry }: { kind: ItemKind; entry: ItemGlbEntry }) {
       unregisterItemGeometryOverride(kind, geometry);
       invalidate();
     };
-  }, [gltf, kind, entry.rotationY, invalidate]);
+  }, [gltf, kind, entry.rotationY, entry.materialColors, invalidate]);
 
   return null;
 }

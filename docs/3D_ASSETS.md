@@ -31,6 +31,7 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 - Tất cả mesh trong file được gộp thành một geometry, thu phóng đều (không méo) vào kích thước `DEFAULT_ITEM_DIMENSIONS[kind]`, đáy chạm y = 0, căn giữa theo X/Z. Hướng "mặt trước" là +Z.
 - Màu lấy từ thuộc tính `COLOR_0` hoặc màu cơ bản của material. **Texture không được mang theo**, nên dùng model màu phẳng hoặc vertex color (phong cách low-poly).
 - Vì vẫn đi qua instancing, màu trạng thái (hoạt động, bảo trì, hỏng), hover, chọn và picking hoạt động như cũ.
+- `materialColors` trong manifest đổi màu theo tên material (ví dụ `carpet`, `wood`, `metal` của Kenney) để model khớp bảng màu charcoal–salmon.
 - Giới hạn `GLB_ITEM_TRIANGLE_BUDGET` = 8000 tam giác mỗi model; vượt ngưỡng sẽ bị bỏ qua kèm cảnh báo trong console.
 - Tier chất lượng `low` không tải GLB.
 
@@ -38,4 +39,8 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 
 | Thiết bị (`ItemKind`) | File | Tác giả | Nguồn | License |
 | --- | --- | --- | --- | --- |
-| _(chưa có model nào)_ | | | | |
+| `lounge-sofa` | `lounge-sofa.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`loungeSofaLong`) | CC0 |
+| `juice-bar` | `juice-bar.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`kitchenBar`) | CC0 |
+| `planter-tree` | `planter-tree.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`pottedPlant`) | CC0 |
+
+Bản license gốc của gói Kenney nằm ở `apps/web/public/models/explore3d/LICENSE-kenney-furniture-kit.txt`.

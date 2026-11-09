@@ -66,6 +66,25 @@ describe('buildItemGeometryFromObject', () => {
     expect(geometry.getAttribute('normal').count).toBe(geometry.getAttribute('position').count);
   });
 
+  it('recolors meshes by material name and keeps unlisted materials', () => {
+    const root = makeModel();
+    (root.children[0] as THREE.Mesh).material = Object.assign(
+      new THREE.MeshStandardMaterial({ color: '#ff0000' }),
+      { name: 'carpet' },
+    );
+    const geometry = buildItemGeometryFromObject(root, [2, 2, 2], {
+      materialColors: { carpet: '#00ff00' },
+    });
+    const colors = geometry.getAttribute('color');
+    const seen = new Set<string>();
+    for (let i = 0; i < colors.count; i++) {
+      seen.add(`${colors.getX(i).toFixed(2)},${colors.getY(i).toFixed(2)},${colors.getZ(i).toFixed(2)}`);
+    }
+    expect(seen).toContain('0.00,1.00,0.00');
+    expect(seen).not.toContain('1.00,0.00,0.00');
+    expect(seen).toContain('0.00,0.00,1.00');
+  });
+
   it('rotates around Y before fitting', () => {
     const plain = bounds(buildItemGeometryFromObject(makeModel(), [4, 4, 4]));
     const turned = bounds(

@@ -16,6 +16,8 @@ export interface GlbItemFitOptions {
   /** Radians. Rotate the model so its front matches the procedural item (front faces +Z). */
   rotationY?: number;
   maxTriangles?: number;
+  /** Recolor by material name (hex), so third-party models can match the SOL palette. */
+  materialColors?: Readonly<Record<string, string>>;
 }
 
 function triangleCount(geometry: THREE.BufferGeometry): number {
@@ -37,7 +39,7 @@ export function buildItemGeometryFromObject(
   dimensions: Vec3,
   options: GlbItemFitOptions = {},
 ): THREE.BufferGeometry {
-  const { rotationY = 0, maxTriangles = GLB_ITEM_TRIANGLE_BUDGET } = options;
+  const { rotationY = 0, maxTriangles = GLB_ITEM_TRIANGLE_BUDGET, materialColors } = options;
 
   root.updateWorldMatrix(true, true);
   const rootInverse = new THREE.Matrix4().copy(root.matrixWorld).invert();
@@ -63,8 +65,13 @@ export function buildItemGeometryFromObject(
 
     if (!geometry.getAttribute('color')) {
       const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-      const baseColor = (material as THREE.MeshStandardMaterial | undefined)?.color;
-      color.copy(baseColor ?? new THREE.Color('#b8bac2'));
+      const override = material?.name ? materialColors?.[material.name] : undefined;
+      if (override) {
+        color.set(override);
+      } else {
+        const baseColor = (material as THREE.MeshStandardMaterial | undefined)?.color;
+        color.copy(baseColor ?? new THREE.Color('#b8bac2'));
+      }
       const count = geometry.getAttribute('position').count;
       const colors = new Float32Array(count * 3);
       for (let i = 0; i < count; i++) {
