@@ -426,8 +426,11 @@ public class EnrollmentService {
                 .or(() -> activeSubs.stream().findFirst())
                 .orElse(null);
 
+        var blockedUntil = member.getCourseEnrollBlockedUntil() != null
+                && member.getCourseEnrollBlockedUntil().isAfter(SessionEligibility.now(clock))
+                ? member.getCourseEnrollBlockedUntil() : null;
         if (currentSub == null || currentSub.getMembershipPackage() == null) {
-            return new QuotaDto(null, 0, 0, 0, false);
+            return new QuotaDto(null, 0, 0, 0, false, blockedUntil);
         }
 
         var pkg = currentSub.getMembershipPackage();
@@ -446,7 +449,7 @@ public class EnrollmentService {
         int total = unlimited ? 999999 : creditLimit;
         int remaining = unlimited ? 999999 : Math.max(0, creditLimit - (int) used);
 
-        return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited);
+        return new QuotaDto(tier, creditLimit, (int) used, remaining, unlimited, blockedUntil);
     }
 
     /** Start of the period whose credits are shared: an upgrade continues the plan it replaced. */
@@ -460,9 +463,20 @@ public class EnrollmentService {
         return current.getStartDate();
     }
 
+    /** A member who missed more than half of a course cannot join another one until the block ends. */
+    private void ensureNotBlocked(Member member) {
+        var until = member.getCourseEnrollBlockedUntil();
+        if (until != null && until.isAfter(SessionEligibility.now(clock))) {
+            throw new ForbiddenException("SCHEDULING_COURSE_ENROLL_BLOCKED", "error.scheduling.course_enroll_blocked",
+                    new Object[]{until.toLocalDate().toString()},
+                    "Đăng ký khóa học tạm khóa đến " + until.toLocalDate() + " do vắng quá 50% số buổi của một khóa trước.");
+        }
+    }
+
     @Transactional
     public EnrollmentDto enrollCourse(AuthenticatedPrincipal principal, Long classId) {
         Member member = lockMember(principal.id());
+        ensureNotBlocked(member);
         GymClass gymClass = gymClasses.findByIdForUpdate(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
 
@@ -519,6 +533,7 @@ public class EnrollmentService {
     @Transactional
     public CourseCheckoutDto checkoutCourse(AuthenticatedPrincipal principal, Long classId, String method) {
         Member member = lockMember(principal.id());
+        ensureNotBlocked(member);
         GymClass gymClass = gymClasses.findByIdForUpdate(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
 

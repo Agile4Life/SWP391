@@ -53,3 +53,13 @@ paths:
       responses:
         '201': { description: Enrolled }
         '403': { description: SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP or SCHEDULING_COURSE_QUOTA_EXCEEDED }
+  /classes/my-quota:
+    get:
+      summary: Course credits of the member's active package
+      description: |
+        Adds `enrollBlockedUntil` (date-time, nullable). It is set when the member missed more than 50% of the
+        sessions of a course; enrolling or checking out a new course answers 403 SCHEDULING_COURSE_ENROLL_BLOCKED
+        until then (30 days). Finished sessions nobody recorded are marked `absent` automatically; late arrivals
+        count as present and `excused` sessions are not absences.
+      responses:
+        '200': { description: Quota with optional enrollBlockedUntil }

@@ -59,6 +59,13 @@ public class Member {
     @Column(name = "identity_verified_at")
     private java.time.LocalDateTime identityVerifiedAt;
 
+    /** Set when the member missed more than half of a course; no new course can be joined until then. */
+    @Column(name = "course_enroll_blocked_until")
+    private java.time.LocalDateTime courseEnrollBlockedUntil;
+
+    public java.time.LocalDateTime getCourseEnrollBlockedUntil() { return courseEnrollBlockedUntil; }
+    public void setCourseEnrollBlockedUntil(java.time.LocalDateTime value) { this.courseEnrollBlockedUntil = value; }
+
     // Capability for data-free Realtime invalidations; never serialized in member DTOs.
     @Column(name = "payment_realtime_topic")
     private java.util.UUID paymentRealtimeTopic;

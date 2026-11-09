@@ -148,4 +148,27 @@ class CourseMembershipRulesTest {
 
         assertEquals(2, service.getMemberCourseQuota(principal).remainingCredits());
     }
+
+    @Test
+    void aMemberBlockedForMissingMostOfACourseCannotEnrollUntilTheBlockEnds() {
+        Member blocked = new Member();
+        blocked.setUserId(100L);
+        blocked.setCourseEnrollBlockedUntil(java.time.LocalDateTime.of(2026, 12, 1, 8, 0));
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(blocked));
+
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () -> service.enrollCourse(principal, 50L));
+        assertEquals("SCHEDULING_COURSE_ENROLL_BLOCKED", ex.getErrorCode());
+        assertThrows(ForbiddenException.class, () -> service.checkoutCourse(principal, 50L, "cash"));
+    }
+
+    @Test
+    void theQuotaReportsTheBlockSoTheMemberSeesWhyEnrollingIsOff() {
+        Member blocked = new Member();
+        blocked.setUserId(100L);
+        blocked.setCourseEnrollBlockedUntil(java.time.LocalDateTime.of(2026, 12, 1, 8, 0));
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(blocked));
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of());
+
+        assertEquals(java.time.LocalDateTime.of(2026, 12, 1, 8, 0), service.getMemberCourseQuota(principal).enrollBlockedUntil());
+    }
 }

@@ -62,6 +62,14 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 
     long countByGymClassIdAndStatus(Long classId, String status);
 
+    long countByGymClassIdAndStatusNot(Long classId, String status);
+
+    @Query("""
+            select s from ClassSession s join fetch s.gymClass
+            where s.status <> 'cancelled' and s.sessionDate between :fromDate and :toDate
+            """)
+    List<ClassSession> findNotCancelledBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
     @Query("""
             select s from ClassSession s
             join fetch s.gymClass c

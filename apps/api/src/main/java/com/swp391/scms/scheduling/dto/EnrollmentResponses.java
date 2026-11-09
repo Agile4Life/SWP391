@@ -33,8 +33,12 @@ public final class EnrollmentResponses {
             Integer totalCredits,
             int usedCredits,
             int remainingCredits,
-            boolean unlimited
+            boolean unlimited,
+            java.time.LocalDateTime enrollBlockedUntil
     ) {
+        public QuotaDto(String tier, Integer totalCredits, int usedCredits, int remainingCredits, boolean unlimited) {
+            this(tier, totalCredits, usedCredits, remainingCredits, unlimited, null);
+        }
     }
 
     public record CourseCheckoutDto(

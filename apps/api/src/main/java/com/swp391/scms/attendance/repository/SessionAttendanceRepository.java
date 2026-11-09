@@ -29,4 +29,10 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
     List<SessionAttendance> findByMemberUserId(Long memberId);
 
     long countBySessionIdAndStatus(Long sessionId, String status);
+
+    @Query("""
+            select count(a) from SessionAttendance a
+            where a.member.userId = :memberId and a.session.gymClass.id = :classId and a.status = 'absent'
+            """)
+    long countAbsences(@Param("memberId") Long memberId, @Param("classId") Long classId);
 }

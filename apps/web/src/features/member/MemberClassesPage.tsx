@@ -703,6 +703,18 @@ export function MemberClassesPage() {
         title={text("Lịch học & đặt chỗ", 'Classes & bookings')}
       /></div>
 
+      {quota?.enrollBlockedUntil && (
+        <div className="portal-card" role="status" data-testid="course-enroll-blocked" style={{ marginBottom: 16 }}>
+          <strong>{memberText("Tạm khóa đăng ký khóa học mới", "New course enrollment paused")}</strong>
+          <p style={{ margin: '6px 0 0' }}>
+            {memberText(
+              `Bạn đã vắng quá 50% số buổi của một khóa học trước nên chưa thể đăng ký khóa mới đến ${formatShortDate(quota.enrollBlockedUntil.slice(0, 10))}. Các khóa đang học vẫn diễn ra bình thường.`,
+              `You missed more than half of a previous course, so you cannot join a new course until ${formatShortDate(quota.enrollBlockedUntil.slice(0, 10))}. Your current courses continue as normal.`,
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Quota Banner: Hiển thị số lượt đăng ký khóa học còn lại của gói */}
       {quota && (
         <div

@@ -1,0 +1,135 @@
+package com.swp391.scms.attendance.service;
+
+import com.swp391.scms.attendance.entity.SessionAttendance;
+import com.swp391.scms.attendance.repository.SessionAttendanceRepository;
+import com.swp391.scms.common.CenterTime;
+import com.swp391.scms.scheduling.entity.ClassEnrollment;
+import com.swp391.scms.scheduling.entity.ClassSession;
+import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
+import com.swp391.scms.scheduling.repository.ClassSessionRepository;
+import com.swp391.scms.users.MemberRepository;
+import com.swp391.scms.users.entity.Member;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Absence rules for recurring courses (spec 2026-11-09, section 1.4).
+ * <ul>
+ *   <li>A booked member with no attendance row for a finished session is marked {@code absent}.</li>
+ *   <li>Missing more than half of a course's sessions blocks joining a new course for {@link #BLOCK_DAYS} days.</li>
+ *   <li>Late arrivals count as present; excused sessions (an approved hold) are not absences.</li>
+ * </ul>
+ */
+@Service
+public class CourseAttendanceService {
+    public static final int BLOCK_DAYS = 30;
+    /** How far back a sweep looks for finished sessions nobody recorded. */
+    private static final int LOOKBACK_DAYS = 7;
+    private static final Logger log = LoggerFactory.getLogger(CourseAttendanceService.class);
+
+    private final SessionAttendanceRepository attendance;
+    private final ClassSessionRepository sessions;
+    private final ClassEnrollmentRepository enrollments;
+    private final MemberRepository members;
+    private final Clock clock;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.notifications.NotificationService notifications;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.common.i18n.MessageService messages;
+
+    public CourseAttendanceService(SessionAttendanceRepository attendance, ClassSessionRepository sessions,
+                                   ClassEnrollmentRepository enrollments, MemberRepository members, Clock clock) {
+        this.attendance = attendance;
+        this.sessions = sessions;
+        this.enrollments = enrollments;
+        this.members = members;
+        this.clock = clock;
+    }
+
+    @Scheduled(cron = "${app.attendance.auto-absent.cron:0 */30 * * * ?}")
+    public void sweep() {
+        try {
+            int marked = markMissedSessions();
+            if (marked > 0) log.info("[CourseAttendance] marked {} missed session(s) as absent", marked);
+        } catch (RuntimeException ex) {
+            log.warn("[CourseAttendance] sweep failed", ex);
+        }
+    }
+
+    /** Marks every unrecorded, finished course session as absent and applies the 50% rule. Returns rows created. */
+    @Transactional
+    public int markMissedSessions() {
+        LocalDateTime now = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
+        LocalDate today = now.toLocalDate();
+        int created = 0;
+        Set<String> touched = new HashSet<>();
+        for (ClassSession session : sessions.findNotCancelledBetween(today.minusDays(LOOKBACK_DAYS), today)) {
+            if (!hasEnded(session, now) || session.getGymClass() == null || session.getGymClass().getCoach() == null) continue;
+            Long classId = session.getGymClass().getId();
+            for (ClassEnrollment enrollment : enrollments.findByGymClassIdAndStatus(classId, "booked")) {
+                Member member = enrollment.getMember();
+                if (member == null || joinedAfter(enrollment, session)
+                        || attendance.existsBySessionIdAndMemberUserId(session.getId(), member.getUserId())) continue;
+                SessionAttendance row = new SessionAttendance();
+                row.setSession(session);
+                row.setMember(member);
+                row.setStatus("absent");
+                row.setRecordedBy(session.getGymClass().getCoach());
+                row.setNotes("auto: not attended");
+                attendance.save(row);
+                created++;
+                touched.add(member.getUserId() + ":" + classId);
+            }
+        }
+        for (String key : touched) {
+            String[] parts = key.split(":");
+            evaluate(Long.valueOf(parts[0]), Long.valueOf(parts[1]));
+        }
+        return created;
+    }
+
+    /** True when the member missed more than half of the course and was blocked now. */
+    @Transactional
+    public boolean evaluate(Long memberId, Long classId) {
+        long total = sessions.countByGymClassIdAndStatusNot(classId, "cancelled");
+        if (total <= 0) return false;
+        long absent = attendance.countAbsences(memberId, classId);
+        if (absent * 2 <= total) return false;
+        Member member = members.findById(memberId).orElse(null);
+        if (member == null) return false;
+        LocalDateTime now = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
+        if (member.getCourseEnrollBlockedUntil() != null && member.getCourseEnrollBlockedUntil().isAfter(now)) return true;
+        member.setCourseEnrollBlockedUntil(now.plusDays(BLOCK_DAYS));
+        members.save(member);
+        if (notifications != null && messages != null) {
+            try {
+                notifications.send(memberId, messages.getMessage("notifications.course.enroll_blocked.title"),
+                        messages.getMessage("notifications.course.enroll_blocked.body", BLOCK_DAYS),
+                        "system", "member", memberId);
+            } catch (RuntimeException ex) {
+                log.debug("Could not notify member {} about the enrollment block", memberId, ex);
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasEnded(ClassSession session, LocalDateTime now) {
+        return session.getSessionDate() != null && session.getEndTime() != null
+                && !LocalDateTime.of(session.getSessionDate(), session.getEndTime()).isAfter(now);
+    }
+
+    private static boolean joinedAfter(ClassEnrollment enrollment, ClassSession session) {
+        return enrollment.getEnrolledAt() != null && session.getSessionDate() != null
+                && enrollment.getEnrolledAt().toLocalDate().isAfter(session.getSessionDate());
+    }
+}

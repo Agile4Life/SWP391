@@ -17,6 +17,8 @@ export interface QuotaDto {
   usedCredits: number;
   remainingCredits: number;
   unlimited: boolean;
+  /** Set while the member cannot join a new course after missing most of one. */
+  enrollBlockedUntil?: string | null;
 }
 
 export interface CourseCheckoutResult {

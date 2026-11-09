@@ -60,6 +60,9 @@ public class SessionAttendanceService {
     @Autowired(required = false)
     private SessionEvaluationRepository evaluationRepository;
 
+    @Autowired(required = false)
+    private CourseAttendanceService courseAttendance;
+
     private final com.swp391.scms.notifications.NotificationService notificationService;
 
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
@@ -355,6 +358,15 @@ public class SessionAttendanceService {
                     new Object[]{sessionId},
                     "Attendance duplicate entry constraint violated for this session"
             );
+        }
+
+        if (courseAttendance != null) {
+            // A manual "absent" can tip a member over the 50% line of the course.
+            for (BatchAttendanceRequest.AttendanceItem item : request.records()) {
+                if ("absent".equalsIgnoreCase(item.status().trim())) {
+                    courseAttendance.evaluate(item.memberId(), session.getGymClass().getId());
+                }
+            }
         }
 
         log.info("Batch attendance recorded successfully for session {} with {} records by coach/user {}",
