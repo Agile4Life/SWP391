@@ -336,7 +336,7 @@ function MemberCourseDetailModal({
           <div className="meta-label" style={{ color: 'var(--color-salmon, #eb7e6b)', marginBottom: 6 }}>
             {memberText("QUYỀN LỢI GÓI TẬP CỦA BẠN", "YOUR MEMBERSHIP BENEFITS")}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'gap', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 700 }}>
                 {subscription?.packageName || (quota?.tier ? `${memberText("Gói ", "Plan ")}${quota.tier.toUpperCase()}` : memberText("Chưa có gói tập", "No active plan"))}
