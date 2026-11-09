@@ -44,3 +44,18 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 | `planter-tree` | `planter-tree.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`pottedPlant`) | CC0 |
 
 Bản license gốc của gói Kenney nằm ở `apps/web/public/models/explore3d/LICENSE-kenney-furniture-kit.txt`.
+
+## Nhân vật có skeleton (bản thử)
+
+Người chạy bộ (`treadmill-run`) dùng nhân vật rig từ [Kenney Mini Characters](https://kenney.nl/assets/mini-characters) (CC0), các hoạt động khác vẫn dùng người dựng bằng code.
+
+- Cấu hình: `renderers/actors/riggedActors.ts` (`RIGGED_ACTIVITY_CLIPS`, `RIGGED_CHARACTER_MODELS`), render ở `canvas/RiggedActors.tsx`.
+- File: `apps/web/public/models/explore3d/characters/` gồm 4 nhân vật (`character-male-a`, `character-female-a`, `character-male-c`, `character-female-c`), texture dùng chung `Textures/colormap.png` (GLB tham chiếu theo đường dẫn tương đối nên phải giữ nguyên thư mục) và license gốc.
+- Mỗi nhân vật khoảng 800–900 tam giác, 14 khớp; cảnh có 6 người rig, mỗi người một `SkinnedMesh` riêng (không instancing).
+- Dùng clip `walk` tăng tốc thay vì `sprint` vì `sprint` của Kenney nghiêng người quá mạnh để đặt trên máy chạy.
+- Nhân vật chỉ thay thế người dựng bằng code sau khi nạp xong; nạp lỗi, tier `low` hoặc `prefers-reduced-motion` thì giữ người cũ (reduced motion dùng một tư thế đứng yên).
+- Quaternius Universal Base Characters (~13.000 tam giác mỗi người) đã được cân nhắc nhưng quá nặng cho ~55 người trong cảnh.
+
+| Nhân vật | File | Tác giả | Nguồn | License |
+| --- | --- | --- | --- | --- |
+| `character-male-a`, `character-female-a`, `character-male-c`, `character-female-c` | `characters/*.glb` | Kenney | [Mini Characters](https://kenney.nl/assets/mini-characters) | CC0 |

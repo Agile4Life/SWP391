@@ -18,6 +18,7 @@ import { Lights } from './Lights';
 import { LiveActivityActors } from './LiveActivityActors';
 import { Picking, handleCanvasPointerMissed } from './Picking';
 import { Pool } from './Pool';
+import { RiggedActors } from './RiggedActors';
 import { SelectionHighlight } from './SelectionHighlight';
 
 export interface ExploreCanvasProps {
@@ -128,6 +129,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
         <ItemInstances resolvedItems={bindings?.items} />
       </Picking>
       <LiveActivityActors benchEnabled={benchEnabled} />
+      <RiggedActors benchEnabled={benchEnabled} />
       <SelectionHighlight />
       <Hotspots />
       <WalkController />

@@ -961,6 +961,36 @@ function rotateLocalToWorld(
   ];
 }
 
+export function resolveLevelWorldYMap(
+  scene: SceneDoc,
+  levelMode: LevelMode,
+): Record<LevelCode, number> {
+  const map: Record<LevelCode, number> = {
+    B1: -4.5,
+    L1: 0,
+    L2: 4.5,
+    RF: 9.0,
+    OUT: 0,
+  };
+  for (const code of ['B1', 'L1', 'L2', 'RF', 'OUT'] as const) {
+    const lvlNode = getLevelByCode(scene, code);
+    if (lvlNode) {
+      map[code] = getLevelWorldY(lvlNode, levelMode);
+    }
+  }
+  return map;
+}
+
+/** World position of an actor's anchor (feet) for the current level layout. */
+export function getActorWorldAnchor(
+  actor: LiveActorDefinition,
+  scene: SceneDoc,
+  levelMode: LevelMode,
+): Vec3 {
+  const levelY = resolveLevelWorldYMap(scene, levelMode)[actor.level];
+  return [actor.anchorPosition[0], levelY + actor.anchorPosition[1], actor.anchorPosition[2]];
+}
+
 /**
  * Evaluates all instanced part transforms at `timeSec` for a given set of actor definitions.
  */
@@ -977,19 +1007,7 @@ export function evaluateActorPartsAtTime(
   const levelMode = options?.levelMode ?? 'stacked';
   const focusLevel = options?.focusLevel ?? 'ALL';
 
-  const levelWorldYMap: Record<LevelCode, number> = {
-    B1: -4.5,
-    L1: 0,
-    L2: 4.5,
-    RF: 9.0,
-    OUT: 0,
-  };
-  for (const code of ['B1', 'L1', 'L2', 'RF', 'OUT'] as const) {
-    const lvlNode = getLevelByCode(scene, code);
-    if (lvlNode) {
-      levelWorldYMap[code] = getLevelWorldY(lvlNode, levelMode);
-    }
-  }
+  const levelWorldYMap = resolveLevelWorldYMap(scene, levelMode);
 
   const out: EvaluatedPartTransform[] = [];
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { SceneDoc } from '../scene/schema';
@@ -10,9 +10,10 @@ import {
   createActorPartGeometry,
   evaluateActorPartsAtTime,
   getTotalActorInstanceCount,
-  prefersReducedMotion,
   type EvaluatedPartTransform,
 } from '../renderers/actors/liveActorsConfig';
+import { useRiggedActorIds } from '../renderers/actors/riggedActors';
+import { useActorMotion } from './useActorMotion';
 
 export interface LiveActivityActorsProps {
   scene?: SceneDoc;
@@ -29,21 +30,11 @@ const tempQuaternion = new THREE.Quaternion();
 const tempScale = new THREE.Vector3();
 const tempColor = new THREE.Color();
 
-function isBenchmarkActive(benchEnabledProp?: boolean): boolean {
-  if (benchEnabledProp) return true;
-  if (typeof window !== 'undefined' && typeof window.location?.search === 'string') {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('bench') === '1') {
-      return true;
-    }
-  }
-  return false;
-}
-
 function applyPartsToInstancedMesh(
   mesh: THREE.InstancedMesh,
   parts: readonly EvaluatedPartTransform[],
   writeColors: boolean,
+  hiddenActorIds: ReadonlySet<string>,
 ): void {
   let anyVisible = false;
 
@@ -53,7 +44,7 @@ function applyPartsToInstancedMesh(
     const sy = part.scale[1];
     const sz = part.scale[2];
 
-    if (sx === 0 && sy === 0 && sz === 0) {
+    if ((sx === 0 && sy === 0 && sz === 0) || hiddenActorIds.has(part.actorId)) {
       mesh.setMatrixAt(i, HIDDEN_MATRIX);
     } else {
       anyVisible = true;
@@ -86,21 +77,10 @@ export function LiveActivityActors({
   const colorsWrittenRef = useRef(false);
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
-  const viewMode = useExploreStore(s => s.viewMode);
-  const tier = useExploreStore(s => s.tier);
   const invalidate = useThree(s => s.invalidate);
-
-  const [reducedMotion, setReducedMotion] = useState<boolean>(() => prefersReducedMotion());
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
+  // Actors drawn as skinned characters are hidden here once their model has loaded.
+  const riggedActorIds = useRiggedActorIds();
+  const { reducedMotion, shouldAnimate } = useActorMotion(benchEnabled);
 
   const actorDefs = useMemo(() => buildLiveActorDefinitions(scene), [scene]);
   const totalInstances = useMemo(() => getTotalActorInstanceCount(actorDefs), [actorDefs]);
@@ -124,9 +104,6 @@ export function LiveActivityActors({
     };
   }, [sharedMaterial]);
 
-  const benchActive = isBenchmarkActive(benchEnabled);
-  const shouldAnimate = !reducedMotion && !benchActive && viewMode === '3d' && tier !== 'low';
-
   useLayoutEffect(() => {
     colorsWrittenRef.current = false;
   }, [actorDefs, totalInstances]);
@@ -142,10 +119,10 @@ export function LiveActivityActors({
         focusLevel,
       });
       const writeColors = !colorsWrittenRef.current;
-      applyPartsToInstancedMesh(mesh, parts, writeColors);
+      applyPartsToInstancedMesh(mesh, parts, writeColors, riggedActorIds);
       colorsWrittenRef.current = true;
     },
-    [actorDefs, totalInstances, scene, levelMode, focusLevel],
+    [actorDefs, totalInstances, scene, levelMode, focusLevel, riggedActorIds],
   );
 
   // Apply initial / static pose immediately whenever definitions or level visibility changes
