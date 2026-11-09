@@ -138,3 +138,29 @@ paths:
       description: The fee is reduced by the tier discount of the active package (Gold 10%, Platinum 20%); the payment note records the percentage and the list price. `GET /classes/my-quota` returns `discountPercent`.
       responses:
         '201': { description: Checkout with the discounted amount }
+  /health/first-assessment/candidates:
+    get:
+      summary: Registered, active members with no measurements matching `q` (at least 2 characters, max 20 results)
+      description: |
+        Coach and manager only. Lets any coach take the first assessment of a member. While a member has no measurements,
+        or only ones this coach took today, POST /health/metrics and /members/{id}/health-metrics succeed without a coach
+        assignment; afterwards only the assigned coach may add measurements. Guests without an account cannot be assessed.
+      parameters:
+        - { name: q, in: query, schema: { type: string, minLength: 2 } }
+      responses:
+        '200': { description: "[{memberId, membershipCode, fullName, phone}]" }
+  /health/metrics:
+    post:
+      summary: Record a measurement (tier rules)
+      description: |
+        body_fat and muscle_mass need an active Platinum package (403 HEALTH_DEEP_ASSESSMENT_PLATINUM). A member whose
+        active package is Silver gets the first assessment only: a measurement after the day of the first one answers
+        403 HEALTH_PERIODIC_ASSESSMENT_GOLD. Members without an active package are not restricted.
+      responses:
+        '201': { description: Recorded }
+  /coaching/training-plans/my:
+    get:
+      summary: The member's active training plans
+      description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches and managers still see and write plans, which appear after an upgrade.
+      responses:
+        '200': { description: Plans (empty for Silver) }

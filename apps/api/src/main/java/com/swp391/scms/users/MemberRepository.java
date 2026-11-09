@@ -16,6 +16,17 @@ import jakarta.persistence.LockModeType;
 public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByMembershipCode(String membershipCode);
 
+    /** Registered, active members nobody has measured yet: the people a coach may give a first assessment. */
+    @Query("""
+            select m from Member m join fetch m.user u
+            where u.deletedAt is null and u.status = 'active'
+              and not exists (select 1 from MemberProgressLog l where l.member = m)
+              and (lower(m.membershipCode) like :pattern or lower(u.fullName) like :pattern
+                   or lower(u.email) like :pattern or u.phone like :pattern)
+            order by u.fullName
+            """)
+    List<Member> searchWithoutMeasurements(@Param("pattern") String pattern, Pageable pageable);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select m from Member m where m.userId = :memberId")
     Optional<Member> findByUserIdForUpdate(@Param("memberId") Long memberId);

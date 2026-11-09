@@ -224,8 +224,30 @@ public class TrainingPlanService {
         trainingPlanRepository.delete(plan);
     }
 
+    @Autowired(required = false)
+    private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
+
+    /**
+     * Silver members do not see the plans their coach writes (spec 2026-11-09): the coach may still create them and
+     * they appear as soon as the member moves to Gold or Platinum. A member with no active package keeps the old
+     * behaviour, and the trial follows Gold.
+     */
+    boolean memberMaySeePlans(Long memberId) {
+        if (subscriptionRepository == null || memberId == null) return true;
+        java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        var current = subscriptionRepository.findByMemberUserIdAndStatus(memberId, "active").stream()
+                .filter(s -> s.getStartDate() != null && s.getEndDate() != null
+                        && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
+                .toList();
+        return current.isEmpty() || current.stream()
+                .anyMatch(s -> com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
+    }
+
     @Transactional(readOnly = true)
     public List<TrainingPlanDto> getMyActivePlans(Long memberId) {
+        if (!memberMaySeePlans(memberId)) {
+            return List.of();
+        }
         return trainingPlanRepository.findByMemberUserIdAndStatusOrderByCreatedAtDesc(memberId, "active")
                 .stream()
                 .map(plan -> toDto(plan, trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(plan.getId())))
@@ -246,6 +268,10 @@ public class TrainingPlanService {
             if (currentUserId == null || !currentUserId.equals(ownerId)) {
                 throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                         "You do not have permission to view this training plan");
+            }
+            if (!memberMaySeePlans(ownerId)) {
+                throw new ForbiddenException("COACHING_PLAN_TIER_REQUIRED", "coaching.plan.tier_required", null,
+                        "Training plans are available from the Gold package");
             }
         }
 

@@ -98,6 +98,16 @@ public final class PackageBenefits {
         return "PLATINUM".equals(paidTier(pkg));
     }
 
+    /** Body Fat and Muscle Mass (the in-depth assessment) are a Platinum service; the trial is not Platinum. */
+    public static boolean allowsDeepAssessment(MembershipPackage pkg) {
+        return hasVipRoomAccess(pkg);
+    }
+
+    /** Monthly follow-up assessments start at Gold; Silver gets the first assessment only. The trial follows Gold. */
+    public static boolean allowsPeriodicAssessment(MembershipPackage pkg) {
+        return pkg != null && !"SILVER".equals(tierOf(pkg));
+    }
+
     /** Silver members do not see the workout plans their coach writes. The trial follows Gold. */
     public static boolean canViewWorkoutPlan(MembershipPackage pkg) {
         return pkg != null && !"SILVER".equals(tierOf(pkg));

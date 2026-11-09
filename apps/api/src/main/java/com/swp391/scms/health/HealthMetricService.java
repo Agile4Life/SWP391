@@ -80,6 +80,7 @@ public class HealthMetricService {
         ensureCanModify(memberId, currentUserId, currentUserRole, true);
         String metricName = validateAndNormalizeMetricName(request.metricName());
         validatedUnit(metricName, request.metricValue(), request.unit());
+        enforceAssessmentTier(memberId, metricName);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
@@ -157,6 +158,20 @@ public class HealthMetricService {
         progressLogRepository.delete(log);
     }
 
+    /** Registered members with no measurements matching {@code query} (at least two characters), at most 20. */
+    @Transactional(readOnly = true)
+    public List<com.swp391.scms.health.dto.FirstAssessmentCandidateDto> firstAssessmentCandidates(String query) {
+        String trimmed = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
+        if (trimmed.length() < 2) return List.of();
+        String pattern = "%" + trimmed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        return memberRepository.searchWithoutMeasurements(pattern, org.springframework.data.domain.PageRequest.of(0, 20))
+                .stream()
+                .map(m -> new com.swp391.scms.health.dto.FirstAssessmentCandidateDto(m.getUserId(), m.getMembershipCode(),
+                        m.getUser() != null ? m.getUser().getFullName() : null,
+                        m.getUser() != null ? m.getUser().getPhone() : null))
+                .toList();
+    }
+
     @Transactional
     public HealthMetricDto recordMetric(HealthMetricCreateDto request, Long currentUserId, String currentUserRole) {
         Long targetMemberId = request.memberId() != null ? request.memberId() : currentUserId;
@@ -172,7 +187,61 @@ public class HealthMetricService {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
                     "Only assigned coaches and managers may record measurements.");
         }
-        if (isCoach(role)) requireAssignedCoach(currentUserId, memberId);
+        // Every registered member gets a first assessment from any coach; later ones belong to the assigned coach.
+        if (isCoach(role) && !(append && isFirstAssessmentBy(memberId, currentUserId))) {
+            requireAssignedCoach(currentUserId, memberId);
+        }
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions;
+
+    /** True while the member has no measurements, or only ones this coach took today (an assessment in progress). */
+    private boolean isFirstAssessmentBy(Long memberId, Long coachId) {
+        if (memberId == null || coachId == null) return false;
+        var member = memberRepository.findById(memberId).orElse(null);
+        if (member == null || member.getUser() == null || member.getUser().getDeletedAt() != null) return false;
+        List<MemberProgressLog> history = progressLogRepository.findByMemberUserIdOrderByRecordedAtDesc(memberId);
+        if (history == null || history.isEmpty()) return true;
+        java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        return history.stream().allMatch(row -> row.getRecordedBy() != null && coachId.equals(row.getRecordedBy().getId())
+                && row.getRecordedAt() != null && row.getRecordedAt().toLocalDate().equals(today));
+    }
+
+    /** The active packages of the member today. */
+    private List<com.swp391.scms.facilities.entity.MembershipPackage> currentPackages(Long memberId) {
+        if (subscriptions == null) return List.of();
+        java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        return subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
+                .filter(s -> s.getStartDate() != null && s.getEndDate() != null
+                        && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
+                .map(com.swp391.scms.membership.entity.MembershipSubscription::getMembershipPackage)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
+    /**
+     * Service levels (spec 2026-11-09): Body Fat and Muscle Mass only for Platinum members; Silver members get the
+     * first assessment but no follow-up. Members without an active package are not restricted.
+     */
+    private void enforceAssessmentTier(Long memberId, String metricName) {
+        List<com.swp391.scms.facilities.entity.MembershipPackage> packages = currentPackages(memberId);
+        if (packages.isEmpty()) return;
+        if (("body_fat".equals(metricName) || "muscle_mass".equals(metricName))
+                && packages.stream().noneMatch(com.swp391.scms.facilities.PackageBenefits::allowsDeepAssessment)) {
+            throw new ForbiddenException("HEALTH_DEEP_ASSESSMENT_PLATINUM", "health.metrics.platinum_required", null,
+                    "Body Fat and Muscle Mass assessments are part of the Platinum package");
+        }
+        if (packages.stream().noneMatch(com.swp391.scms.facilities.PackageBenefits::allowsPeriodicAssessment)) {
+            java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+            List<MemberProgressLog> history = progressLogRepository.findByMemberUserIdOrderByRecordedAtDesc(memberId);
+            boolean earlier = history != null && history.stream()
+                    .anyMatch(row -> row.getRecordedAt() != null && row.getRecordedAt().toLocalDate().isBefore(today));
+            if (earlier) {
+                throw new ForbiddenException("HEALTH_PERIODIC_ASSESSMENT_GOLD", "health.metrics.gold_required", null,
+                        "Periodic assessments are part of the Gold package and above");
+            }
+        }
     }
 
     private void requireAssignedCoach(Long coachId, Long memberId) {

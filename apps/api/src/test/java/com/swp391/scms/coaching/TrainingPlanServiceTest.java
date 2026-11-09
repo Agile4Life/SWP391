@@ -228,6 +228,50 @@ class TrainingPlanServiceTest {
         assertEquals("Plank Hold", plans.get(0).getItems().get(0).getExerciseName());
     }
 
+    private com.swp391.scms.membership.entity.MembershipSubscription activeSubscription(String tier) {
+        com.swp391.scms.facilities.entity.MembershipPackage pkg = new com.swp391.scms.facilities.entity.MembershipPackage();
+        pkg.setName(tier);
+        pkg.setTier(tier);
+        pkg.setDurationDays(30);
+        com.swp391.scms.membership.entity.MembershipSubscription sub = new com.swp391.scms.membership.entity.MembershipSubscription();
+        sub.setMembershipPackage(pkg);
+        sub.setStatus("active");
+        java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        sub.setStartDate(today.minusDays(2));
+        sub.setEndDate(today.plusDays(20));
+        return sub;
+    }
+
+    @Test
+    @DisplayName("Silver members do not see plans; Gold and Platinum do; the coach can still create them")
+    void silverMembersDoNotSeeTrainingPlans() {
+        com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions =
+                org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
+        ReflectionTestUtils.setField(service, "subscriptionRepository", subscriptions);
+        TrainingPlan plan = new TrainingPlan();
+        ReflectionTestUtils.setField(plan, "id", 100L);
+        Member owner = new Member();
+        owner.setUserId(10L);
+        plan.setMember(owner);
+        plan.setStatus("active");
+        lenient().when(trainingPlanRepository.findByMemberUserIdAndStatusOrderByCreatedAtDesc(10L, "active")).thenReturn(List.of(plan));
+        lenient().when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+        lenient().when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(100L)).thenReturn(List.of());
+
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("SILVER")));
+        assertTrue(service.getMyActivePlans(10L).isEmpty());
+        assertThrows(ForbiddenException.class, () -> service.getPlanById(100L, 10L, "MEMBER"));
+        // The coach keeps access so the plan is ready when the member upgrades.
+        assertDoesNotThrow(() -> service.getPlanById(100L, 20L, "CENTER_MANAGER"));
+
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("GOLD")));
+        assertEquals(1, service.getMyActivePlans(10L).size());
+        assertDoesNotThrow(() -> service.getPlanById(100L, 10L, "MEMBER"));
+
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("PLATINUM")));
+        assertEquals(1, service.getMyActivePlans(10L).size());
+    }
+
     @Test
     @DisplayName("Should mark AI recommendation as applied when creating plan with aiRecommendationId")
     void shouldMarkAiRecommendationAppliedOnCreate() {

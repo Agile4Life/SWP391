@@ -83,6 +83,14 @@ public class HealthMetricController {
                 healthMetricService.recordMetric(request, principal.id(), principal.role()));
     }
 
+    @Operation(summary = "Search registered members who have not been measured yet (first assessment)")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @GetMapping("/api/v1/health/first-assessment/candidates")
+    public ApiResponse<List<com.swp391.scms.health.dto.FirstAssessmentCandidateDto>> firstAssessmentCandidates(
+            @RequestParam(value = "q", required = false) String query) {
+        return ApiResponse.ok(msg("health.metrics.candidates"), healthMetricService.firstAssessmentCandidates(query));
+    }
+
     @Operation(summary = "Chuỗi dữ liệu lịch sử chỉ số sức khỏe cá nhân (SCRUM-119)", description = "Trả về lịch sử chỉ số sức khỏe sắp xếp tăng dần theo recorded_at để vẽ biểu đồ tiến độ (Line Chart)")
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('MEMBER')")
     @GetMapping("/api/v1/health/metrics/my")

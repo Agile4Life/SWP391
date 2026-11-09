@@ -175,6 +175,10 @@ export const router = createBrowserRouter([
         element: <RoleGuard allowedRoles={['COACH']} />,
         children: [
           {
+            path: '/coach/first-assessment',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachFirstAssessmentPage')).CoachFirstAssessmentPage }),
+          },
+          {
             path: '/staff/attendance',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
           },
