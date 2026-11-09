@@ -11,8 +11,8 @@ import {
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {
+  STATIC_POSE_TIME_SEC,
   buildLiveActorDefinitions,
-  getActorWorldAnchor,
   isActorLevelVisible,
   type LiveActorDefinition,
 } from '../renderers/actors/liveActorsConfig';
@@ -20,10 +20,13 @@ import {
   RIGGED_ACTIVITY_CLIPS,
   RIGGED_CHARACTER_HEIGHT,
   RIGGED_CHARACTER_MODELS,
-  RIGGED_FACING_OFFSET,
+  computeRiggedPlacement,
+  getActorPhase,
   isRiggedActivity,
   pickRiggedModelIndex,
   setRiggedActorIds,
+  type RiggedBoneName,
+  type RiggedClipSpec,
 } from '../renderers/actors/riggedActors';
 import type { LevelCode, SceneDoc } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
@@ -39,11 +42,23 @@ const NOOP_RAYCAST = () => null;
 /** Longest step fed to the mixers, so a long idle gap in the demand loop does not skip the pose. */
 const MAX_STEP_SEC = 0.1;
 
+interface TweakedBone {
+  name: RiggedBoneName;
+  bone: THREE.Object3D;
+  /** Clip output before the procedural tweak, so tweaks never accumulate between frames. */
+  clipPose: THREE.Quaternion;
+}
+
 interface RiggedInstance {
   def: LiveActorDefinition;
+  spec: RiggedClipSpec;
   holder: THREE.Group;
   mixer: THREE.AnimationMixer;
+  bones: TweakedBone[];
 }
+
+const tweakEuler = new THREE.Euler();
+const tweakQuaternion = new THREE.Quaternion();
 
 class RiggedErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -66,11 +81,28 @@ function placeInstance(
   scene: SceneDoc,
   levelMode: LevelMode,
   focusLevel: LevelCode | 'ALL',
+  timeSec: number,
 ): void {
-  const anchor = getActorWorldAnchor(def, scene, levelMode);
-  holder.position.set(anchor[0], anchor[1], anchor[2]);
-  holder.rotation.set(0, def.rotationY + RIGGED_FACING_OFFSET, 0);
+  const placement = computeRiggedPlacement(def, scene, levelMode, timeSec);
+  holder.position.set(placement.position[0], placement.position[1], placement.position[2]);
+  holder.rotation.set(0, placement.yaw, 0);
   holder.visible = isActorLevelVisible(def.level, levelMode, focusLevel);
+}
+
+/** Steps the clip, then layers the activity's procedural bone tweaks on top. */
+function stepInstance(instance: RiggedInstance, deltaSec: number, timeSec: number): void {
+  const { def, spec, mixer, bones } = instance;
+  for (const { bone, clipPose } of bones) bone.quaternion.copy(clipPose);
+  mixer.update(deltaSec);
+  if (!spec.tweakBones || bones.length === 0) return;
+  const tweaks = spec.tweakBones(getActorPhase(def, timeSec));
+  for (const { name, bone, clipPose } of bones) {
+    clipPose.copy(bone.quaternion);
+    const tweak = tweaks[name];
+    if (!tweak) continue;
+    tweakEuler.set(tweak[0], tweak[1], tweak[2]);
+    bone.quaternion.multiply(tweakQuaternion.setFromEuler(tweakEuler));
+  }
 }
 
 function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: RiggedActorsProps) {
@@ -100,7 +132,8 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
       const spec = RIGGED_ACTIVITY_CLIPS[def.activity];
       const modelIndex = pickRiggedModelIndex(def.id, gltfs.length);
       const gltf = gltfs[modelIndex];
-      const clip = spec && gltf?.animations.find(a => a.name === spec.clip);
+      const clipName = spec && (typeof spec.clip === 'function' ? spec.clip(def.id) : spec.clip);
+      const clip = gltf?.animations.find(a => a.name === clipName);
       if (!spec || !gltf || !clip) continue;
 
       const model = cloneSkinned(gltf.scene) as THREE.Object3D;
@@ -122,10 +155,19 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
       action.timeScale = Math.max(0.2, def.speed * spec.timeScale);
       action.play();
       action.time = (def.phaseOffset / (Math.PI * 2)) * clip.duration;
-      // Poses the character once so reduced-motion / low-power states show a sensible frame.
-      mixer.update(0);
 
-      result.push({ def, holder, mixer });
+      const bones: TweakedBone[] = [];
+      if (spec.tweakBones) {
+        for (const name of Object.keys(spec.tweakBones(0)) as RiggedBoneName[]) {
+          const bone = model.getObjectByName(name);
+          if (bone) bones.push({ name, bone, clipPose: bone.quaternion.clone() });
+        }
+      }
+      const instance: RiggedInstance = { def, spec, holder, mixer, bones };
+      // Poses the character once so reduced-motion / low-power states show a sensible frame.
+      stepInstance(instance, 0, STATIC_POSE_TIME_SEC);
+
+      result.push(instance);
     }
     return result;
   }, [scene, gltfs, modelScales]);
@@ -133,7 +175,7 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
   // Keep each character on its level, even as the stack explodes or collapses.
   useLayoutEffect(() => {
     for (const instance of instances) {
-      placeInstance(instance, scene, levelMode, focusLevel);
+      placeInstance(instance, scene, levelMode, focusLevel, STATIC_POSE_TIME_SEC);
     }
     invalidate();
   }, [instances, scene, levelMode, focusLevel, invalidate]);
@@ -156,11 +198,14 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
     };
   }, [instances]);
 
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     if (!shouldAnimate || instances.length === 0) return;
     const step = Math.min(delta, MAX_STEP_SEC);
-    for (const { mixer, holder } of instances) {
-      if (holder.visible) mixer.update(step);
+    const timeSec = STATIC_POSE_TIME_SEC + clock.getElapsedTime();
+    for (const instance of instances) {
+      if (!instance.holder.visible) continue;
+      placeInstance(instance, scene, levelMode, focusLevel, timeSec);
+      stepInstance(instance, step, timeSec);
     }
     invalidate();
   });

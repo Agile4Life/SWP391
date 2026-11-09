@@ -12,7 +12,10 @@ import {
   getTotalActorInstanceCount,
   type EvaluatedPartTransform,
 } from '../renderers/actors/liveActorsConfig';
-import { useRiggedActorIds } from '../renderers/actors/riggedActors';
+import {
+  PROCEDURAL_BODY_PART_NAMES,
+  useRiggedActorIds,
+} from '../renderers/actors/riggedActors';
 import { useActorMotion } from './useActorMotion';
 
 export interface LiveActivityActorsProps {
@@ -44,7 +47,9 @@ function applyPartsToInstancedMesh(
     const sy = part.scale[1];
     const sz = part.scale[2];
 
-    if ((sx === 0 && sy === 0 && sz === 0) || hiddenActorIds.has(part.actorId)) {
+    if (
+      (sx === 0 && sy === 0 && sz === 0) || (hiddenActorIds.has(part.actorId) && PROCEDURAL_BODY_PART_NAMES.has(part.partName))
+    ) {
       mesh.setMatrixAt(i, HIDDEN_MATRIX);
     } else {
       anyVisible = true;

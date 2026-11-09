@@ -45,15 +45,28 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 
 Bản license gốc của gói Kenney nằm ở `apps/web/public/models/explore3d/LICENSE-kenney-furniture-kit.txt`.
 
-## Nhân vật có skeleton (bản thử)
+## Nhân vật có skeleton
 
-Người chạy bộ (`treadmill-run`) dùng nhân vật rig từ [Kenney Mini Characters](https://kenney.nl/assets/mini-characters) (CC0), các hoạt động khác vẫn dùng người dựng bằng code.
+30 trong khoảng 50 người trong cảnh dùng nhân vật rig từ [Kenney Mini Characters](https://kenney.nl/assets/mini-characters) (CC0); các hoạt động còn lại vẫn dùng người dựng bằng code.
 
-- Cấu hình: `renderers/actors/riggedActors.ts` (`RIGGED_ACTIVITY_CLIPS`, `RIGGED_CHARACTER_MODELS`), render ở `canvas/RiggedActors.tsx`.
+| Hoạt động | Clip | Ghi chú |
+| --- | --- | --- |
+| `treadmill-run` | `walk` x1.7 | `sprint` của Kenney nghiêng người quá mạnh |
+| `walking-patrol` | `walk` | đi theo đúng đường đi của bộ giải tư thế |
+| `elliptical-stride` | `walk` x0.8 | |
+| `upright-bike` | `drive` + chân đạp | nâng lên ngang yên xe (`offset`) |
+| `boxing-spar`, `heavy-bag-boxer` | `attack-melee-right` hoặc `-left` | chọn theo actor |
+| `yoga-flow` | `idle` + tay giơ qua đầu | |
+| `inbody-scan`, `receptionist-greet`, `lounge-chat` | `idle`, `interact-right`, `emote-yes` | |
+
+Chưa chuyển sang rig (vẫn là người dựng bằng code): `barbell-squat`, `bench-press`, `dumbbell-curl`, `badminton-player`, `tennis-player`, `pt-coach-tablet`, `swim-freestyle`. Nhóm đầu cần gập gối/khuỷu mà bộ xương Kenney không có (mỗi tay, chân chỉ một khớp); các nhóm cầm vợt, tạ, tablet cần gắn dụng cụ vào xương tay để khớp với tay nhân vật.
+
+- Cấu hình ở `renderers/actors/riggedActors.ts` (`RIGGED_ACTIVITY_CLIPS`: clip, tốc độ, `offset`, `tweakBones`), render ở `canvas/RiggedActors.tsx`.
+- Vị trí, hướng đi, lắc lư lấy từ `solveHumanPose` (`liveActorsConfig.ts`), dùng chung với người dựng bằng code. Nhân vật Kenney quay mặt về +Z khi yaw = 0, cùng quy ước.
+- Thêm hoạt động mới vào rig: khai báo clip trong `RIGGED_ACTIVITY_CLIPS`, chạy `actors.rigged.test.ts` (test kiểm tra clip có thật trong từng GLB). Hoạt động có dụng cụ cầm tay thì chưa hỗ trợ: dụng cụ procedural sẽ không khớp tay nhân vật.
 - File: `apps/web/public/models/explore3d/characters/` gồm 4 nhân vật (`character-male-a`, `character-female-a`, `character-male-c`, `character-female-c`), texture dùng chung `Textures/colormap.png` (GLB tham chiếu theo đường dẫn tương đối nên phải giữ nguyên thư mục) và license gốc.
-- Mỗi nhân vật khoảng 800–900 tam giác, 14 khớp; cảnh có 6 người rig, mỗi người một `SkinnedMesh` riêng (không instancing).
-- Dùng clip `walk` tăng tốc thay vì `sprint` vì `sprint` của Kenney nghiêng người quá mạnh để đặt trên máy chạy.
-- Nhân vật chỉ thay thế người dựng bằng code sau khi nạp xong; nạp lỗi, tier `low` hoặc `prefers-reduced-motion` thì giữ người cũ (reduced motion dùng một tư thế đứng yên).
+- Mỗi nhân vật khoảng 800–900 tam giác, 14 khớp, hai `SkinnedMesh` (thân, đầu), không instancing. Với 30 người: khoảng 105.000 tam giác trong cảnh, 174 draw call, chi phí CPU khoảng 1,2 ms mỗi khung cho đặt vị trí và mixer.
+- Nhân vật chỉ thay phần thân người dựng bằng code sau khi nạp xong; nạp lỗi, tier `low` hoặc `prefers-reduced-motion` thì giữ người cũ (reduced motion dùng một tư thế đứng yên).
 - Quaternius Universal Base Characters (~13.000 tam giác mỗi người) đã được cân nhắc nhưng quá nặng cho ~55 người trong cảnh.
 
 | Nhân vật | File | Tác giả | Nguồn | License |
