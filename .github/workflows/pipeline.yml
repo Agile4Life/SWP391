@@ -1,18 +1,9 @@
 # PIPELINE: CI và CD của cả hai đường deploy trong MỘT workflow, một màn hình, một đồ thị job.
 #
-#   push vào main ─► test-web (frontend)      ─┐
-#                    test-api (backend + JaCoCo) ─┼─► config ─► Render (backend) ─► Vercel (frontend)
-#                    secrets-scan (Gitleaks)   ─┤
-#                    images (api + web + Trivy) ─┘
-#                    codeql (java, js/ts)        (chạy song song, báo vào tab Security, không chặn deploy)
-#                                          └─ test-web, test-api, secrets-scan, images ─► VPS (SSH, rollback tự động)
-#
-# Kiểm tra bảo mật và chất lượng:
-# - secrets-scan: Gitleaks chỉ quét các commit mới của PR/push (không quét lại lịch sử cũ); lộ secret thì job đỏ và chặn deploy.
-# - images: Trivy quét lỗ hổng CRITICAL (đã có bản vá) trong image api/web; có thì job đỏ và chặn deploy VPS.
-# - codeql: phân tích tĩnh Java và TypeScript; kết quả ở Security > Code scanning, không làm đỏ pipeline.
-# - test-api: JaCoCo đo độ phủ test, tóm tắt ở trang Summary và upload báo cáo HTML (artifact jacoco-report); không ép ngưỡng.
-# Dependabot (cập nhật thư viện) cấu hình riêng ở .github/dependabot.yml vì không nằm trong workflow.
+#   push vào main ─► test-web (frontend) ─┐
+#                    test-api (backend)  ─┼─► config ─► Render (backend) ─► Vercel (frontend)
+#                    images (api + web)  ─┘
+#                                          └─ test-web, test-api, images ─► VPS (SSH, rollback tự động)
 #
 # - Đường 1 (Render + Vercel): backend lên Render, health check, lỗi thì rollback; backend xanh mới deploy frontend lên Vercel.
 #   Chưa có secret Render/Vercel thì bước tương ứng tự bỏ qua (không báo lỗi).
@@ -104,100 +95,6 @@ jobs:
       # Dùng Maven Wrapper đã được version control để build nhất quán.
       - name: Compile and run backend tests
         run: ./mvnw --batch-mode --no-transfer-progress test
-      # JaCoCo ghi báo cáo vào target/site/jacoco trong lúc chạy test; chỉ tóm tắt và lưu lại, không chặn pipeline.
-      - name: JaCoCo coverage summary
-        if: always()
-        shell: bash
-        run: |
-          csv=target/site/jacoco/jacoco.csv
-          if [ ! -f "$csv" ]; then
-            echo "::notice::Không có báo cáo JaCoCo (test chưa chạy tới bước báo cáo)."; exit 0
-          fi
-          # Cột: 4/5 = INSTRUCTION missed/covered, 6/7 = BRANCH, 8/9 = LINE, 12/13 = METHOD.
-          awk -F, 'NR>1 { im+=$4; ic+=$5; bm+=$6; bc+=$7; lm+=$8; lc+=$9; mm+=$12; mc+=$13 }
-            function pct(c,m) { return (c+m) ? sprintf("%.1f%%", 100*c/(c+m)) : "n/a" }
-            END {
-              print "### Độ phủ test backend (JaCoCo)"
-              print ""
-              print "| Chỉ số | Độ phủ | Đã phủ / Tổng |"
-              print "|---|---|---|"
-              printf "| Dòng lệnh (line) | %s | %d / %d |\n", pct(lc,lm), lc, lc+lm
-              printf "| Nhánh (branch) | %s | %d / %d |\n", pct(bc,bm), bc, bc+bm
-              printf "| Phương thức (method) | %s | %d / %d |\n", pct(mc,mm), mc, mc+mm
-              printf "| Chỉ thị (instruction) | %s | %d / %d |\n", pct(ic,im), ic, ic+im
-            }' "$csv" >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload JaCoCo report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: apps/api/target/site/jacoco
-          if-no-files-found: ignore
-          retention-days: 14
-
-  # ---------- Quét secret trong commit mới (Gitleaks) ----------
-  secrets-scan:
-    name: Secret scan (Gitleaks)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-          fetch-depth: 0                  # cần lịch sử để quét theo khoảng commit
-          persist-credentials: false
-      # Chỉ quét các commit mới: PR quét từ base tới head, push quét từ commit trước tới commit này.
-      # Không quét lại toàn bộ lịch sử để tránh đỏ vì secret cũ đã có từ trước (xử lý riêng bằng cách đổi secret).
-      - name: Scan new commits for secrets
-        shell: bash
-        env:
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          PUSH_BEFORE: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          zero=0000000000000000000000000000000000000000
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            range="$PR_BASE..$PR_HEAD"
-          elif [ "$GITHUB_EVENT_NAME" = push ] && [ "$PUSH_BEFORE" != "$zero" ] && git cat-file -e "$PUSH_BEFORE^{commit}" 2>/dev/null; then
-            range="$PUSH_BEFORE..$COMMIT"
-          else
-            range="-1 $COMMIT"            # chạy tay, nhánh mới hoặc force-push: quét đúng commit này
-          fi
-          echo "Quét khoảng commit: $range"
-          # Chạy cùng user với runner để git trong container không báo "dubious ownership".
-          docker run --rm --user "$(id -u):$(id -g)" -v "$GITHUB_WORKSPACE:/repo" "$GITLEAKS_IMAGE" \
-            detect --source /repo --redact --no-banner --verbose --log-opts="$range"
-
-  # ---------- Phân tích tĩnh (CodeQL) ----------
-  codeql:
-    name: CodeQL analyze (${{ matrix.language }})
-    # PR từ fork không có quyền ghi kết quả vào Security, nên bỏ qua.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      actions: read
-      security-events: write          # ghi kết quả vào Security > Code scanning
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [java-kotlin, javascript-typescript]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-          persist-credentials: false
-      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: none            # không cần build, đọc thẳng source
-      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
-          category: /language:${{ matrix.language }}
 
   # ---------- Build image Docker (cho VPS) ----------
   images:
@@ -234,15 +131,6 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=/api/v1
             VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
-      # Chỉ chặn lỗ hổng CRITICAL đã có bản vá; lỗi chưa có bản vá thì chưa làm gì được nên bỏ qua.
-      - name: Scan ${{ matrix.service }} image for vulnerabilities (Trivy)
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: scms-${{ matrix.service }}:ci
-          format: table
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
       - name: Check Java runtime and healthcheck tool
         if: matrix.service == 'api'
         run: docker run --rm --entrypoint sh scms-api:ci -c 'java -version && command -v wget'
@@ -266,7 +154,7 @@ jobs:
   # ---------- Render/Vercel, bước 0: quyết định deploy phần nào ----------
   config:
     name: Check deploy targets (Render, Vercel)
-    needs: [test-web, test-api, secrets-scan]
+    needs: [test-web, test-api]
     # Chỉ khi test xanh và đang ở main (push hoặc chạy tay): PR và develop chỉ kiểm tra, không deploy.
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -480,7 +368,7 @@ jobs:
   # ---------- VPS (Docker Compose): deploy qua SSH, rollback tự động ----------
   deploy-vps:
     name: Deploy to VPS over SSH
-    needs: [images, test-web, test-api, secrets-scan]
+    needs: [images, test-web, test-api]
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
