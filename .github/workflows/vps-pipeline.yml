@@ -12,7 +12,7 @@
 # - Tên job build giữ nguyên ("Build and check <api|web> image") để các Ruleset đang yêu cầu check này vẫn đúng.
 # Hướng dẫn cài đặt: docs/DOCKER_COMPOSE.md, mục "Tự động deploy lên VPS (CD qua SSH)".
 # Workflow "CI" (ci.yml) và "CD" (cd.yml, Render/Vercel) vẫn chạy riêng như cũ.
-name: VPS Pipeline
+name: VPS CI/CD ssh tunnel workflow
 
 on:
   pull_request:
