@@ -170,7 +170,7 @@ describe('MemberCoachBookingView Review Logic', () => {
 });
 
 describe('MemberCoachBookingView membership notice', () => {
-  const NO_PACKAGE_NOTICE = 'Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt';
+  const NO_PACKAGE_NOTICE = 'Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.';
   let host: HTMLDivElement;
   let root: Root;
 

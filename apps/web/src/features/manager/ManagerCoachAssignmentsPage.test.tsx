@@ -173,7 +173,7 @@ describe('ManagerCoachAssignmentsPage', () => {
   it('renders the header and summary stats correctly', async () => {
     await renderComponent();
 
-    expect(host.textContent).toContain('Quản lý HLV & Học viên phụ trách');
+    expect(host.textContent).toContain('HLV & học viên phụ trách');
     expect(host.textContent).toContain('Tổng số Huấn luyện viên');
     expect(host.textContent).toContain('Tổng học viên đang theo kèm');
     expect(host.textContent).toContain('Học viên tập 1:1 (PT)');

@@ -9,6 +9,6 @@ export const verifyVnpayReturn = (params: Record<string, string>) =>
   apiFetch<VnpayStatus>('/payments/vnpay/verify-return', { method: 'POST', body: JSON.stringify(params) });
 export function navigateToVnpay(paymentUrl: string) {
   const url = new URL(paymentUrl);
-  if (url.origin !== 'https://sandbox.vnpayment.vn' || url.pathname !== '/paymentv2/vpcpay.html') throw new Error('Địa chỉ VNPay Sandbox không hợp lệ.');
+  if (url.origin !== 'https://sandbox.vnpayment.vn' || url.pathname !== '/paymentv2/vpcpay.html') throw new Error('Địa chỉ VNPay không hợp lệ.');
   window.location.assign(url.href);
 }

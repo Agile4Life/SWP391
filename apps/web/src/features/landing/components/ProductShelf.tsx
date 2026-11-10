@@ -61,7 +61,7 @@ export function ProductShelf() {
         <span className="fit-kicker">{sourceText("FUEL THE WORK")}</span>
         <SplitHeading id="products-title" lines={['Fuel &', 'Recovery']} />
         <p className="fit-catalog-caption">
-          {sourceText("Thực phẩm bổ sung chọn cho lịch tập của bạn. Nhận tại quầy hoặc giao tận nơi.")}</p>
+          {sourceText("Thực phẩm bổ sung. Nhận tại quầy hoặc giao tận nơi.")}</p>
       </div>
 
       <GoalChips value={goal} onChange={next => setGoal((next ?? '') as ProductGoal | '')} />

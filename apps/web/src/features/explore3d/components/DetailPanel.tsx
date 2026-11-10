@@ -160,8 +160,8 @@ export function DetailPanel({
               {error
                 ? error
                 : t(
-                    'Đang hiển thị cấu trúc không gian tĩnh; không tạo số liệu giả.',
-                    'Showing static spatial layout; no fabricated metrics.',
+                    'Chưa có dữ liệu trực tiếp.',
+                    'No live data yet.',
                   )}
             </span>
           </div>
@@ -499,7 +499,7 @@ export function DetailPanel({
         {zoneHotspots.length > 0 && (
           <div className="explore3d-subsection" data-testid="detail-zone-hotspots">
             <h3 className="explore3d-subsection-title">
-              {t('Tác vụ & Điều hướng nhanh', 'Quick actions & portal links')}
+              {t('Lối tắt', 'Shortcuts')}
             </h3>
             <div className="explore3d-hotspot-list">
               {zoneHotspots.map(hs => renderHotspotCard(hs))}
@@ -783,8 +783,8 @@ export function DetailPanel({
             </h2>
             <p className="explore3d-detail-desc">
               {t(
-                'Chọn bất kỳ tầng, khu vực hoặc thiết bị trên mô hình để xem trạng thái trực tiếp và đi thẳng tới tính năng tương ứng.',
-                'Select any floor, zone or equipment in the model to inspect live telemetry and jump directly to member features.',
+                'Chọn một tầng, khu vực hoặc thiết bị trên mô hình.',
+                'Select a floor, zone or device on the model.',
               )}
             </p>
           </>
@@ -868,7 +868,7 @@ export function DetailPanel({
         {/* Complete Member Feature Quick Directory (100% of hotspots) */}
         <div className="explore3d-subsection" data-testid="detail-feature-directory">
           <h3 className="explore3d-subsection-title">
-            {t('Danh bạ Tính năng Hội viên', 'Member Feature Quick Directory')}
+            {t('Tính năng hội viên', 'Member features')}
           </h3>
           <div className="explore3d-hotspot-list">
             {hotspots.map(hs => renderHotspotCard(hs))}
@@ -882,7 +882,7 @@ export function DetailPanel({
     <aside
       className="explore3d-detail-panel"
       data-testid="explore3d-detail-panel"
-      aria-label={t('Chi tiết khu vực và trạng thái trực tiếp', 'Zone details and live status')}
+      aria-label={t('Chi tiết khu vực', 'Area details')}
     >
       <div className="explore3d-detail-panel__top">
         <span

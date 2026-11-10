@@ -521,7 +521,7 @@
   align-items: center;
   padding: 4px 6px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.2;
@@ -545,7 +545,7 @@
 }
 
 .portal-v2 .shop-card__kicker {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.35;
@@ -661,7 +661,7 @@
   border-radius: 999px;
   background: var(--portal-salmon);
   color: var(--portal-on-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;

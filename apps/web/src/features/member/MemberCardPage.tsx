@@ -246,7 +246,7 @@ export function MemberCardPage() {
 
   return (
     <div data-i18n-managed className="portal-container">
-      <PageHeader eyebrow={memberText("Hội viên")} title={memberText("Thẻ thành viên & Mã QR")} />
+      <PageHeader title={memberText("Thẻ thành viên & Mã QR")} />
       {loading && (
         <div className="portal-card" role="status" aria-busy="true" style={{ maxWidth: 620 }}>
           <span className="sr-only">{memberText("Đang tải thẻ hội viên…")}</span>

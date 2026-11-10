@@ -126,8 +126,7 @@ export function ManagerCoachReviewsPage() {
   return (
     <div data-i18n-managed className="portal-container" style={{ display: 'grid', gap: 20 }}>
       <PageHeader
-        eyebrow={t("Quản lý Trung tâm")}
-        title={t("Bảng xếp hạng & đánh giá huấn luyện viên tháng")}
+        title={t("Đánh giá huấn luyện viên")}
       />
 
       {/* Bar điều khiển Tháng / Năm & Thao tác */}
@@ -365,7 +364,7 @@ export function ManagerCoachReviewsPage() {
                 <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--portal-paper, #202020)', lineHeight: 1.5 }}>
                   "{mr.comment || t('Không có nhận xét chi tiết.')}"
                 </p>
-                <span className="row-card__meta" style={{ display: 'block', marginTop: 6, fontSize: 11 }}>
+                <span className="row-card__meta" style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
                   {t("Gửi lúc: ")}{formatCenterDateTime(mr.createdAt)}
                 </span>
               </div>
@@ -400,7 +399,7 @@ export function ManagerCoachReviewsPage() {
               <input
                 type="text"
                 className="portal-input"
-                placeholder={t("Ví dụ: Top 1: Coach of the Month 🏆")}
+                placeholder={t("Ví dụ: Top 1: Coach of the Month")}
                 value={editBadge}
                 onChange={(e) => setEditBadge(e.target.value)}
               />

@@ -14,7 +14,7 @@
 .member-support-ticket:hover, .member-support-ticket.is-active { border-color: var(--portal-salmon); background: var(--portal-tint); }
 .member-support-ticket-top { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 8px; }
 .member-support-ticket-top strong { font-size: 14px; overflow-wrap: anywhere; }
-.member-support-status { padding: 4px 9px; border-radius: 20px; background: var(--portal-raised); font-size: 11px; white-space: nowrap; }
+.member-support-status { padding: 4px 9px; border-radius: 20px; background: var(--portal-raised); font-size: 12px; white-space: nowrap; }
 .member-support-status--open { color: var(--portal-salmon); background: var(--portal-surface); box-shadow: inset 0 0 0 1px var(--portal-border); }
 .member-support-status--in_progress { color: var(--portal-paper); background: var(--portal-tint); }
 .member-support-status--resolved { color: var(--portal-success, var(--member-support-success)); }
@@ -27,7 +27,7 @@
 .member-support-messages li.is-member { justify-self: end; background: var(--portal-tint); }
 .member-support-messages strong { font-size: 12px; }
 .member-support-messages p { margin: 8px 0; white-space: pre-wrap; font-size: 13px; }
-.member-support-messages time { color: var(--portal-muted); font-size: 11px; }
+.member-support-messages time { color: var(--portal-muted); font-size: 12px; }
 .member-support-error { color: var(--portal-danger, #e99090); }
 .member-support-notice { color: var(--portal-success, var(--member-support-success)); }
 .member-support button:not(.ui-select__trigger):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }

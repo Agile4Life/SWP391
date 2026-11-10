@@ -222,8 +222,7 @@ export function ManagerEquipmentPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Vận hành cơ sở vật chất")}
-        title={t("Quản lý máy móc & thiết bị phòng gym")}
+        title={t("Thiết bị phòng gym")}
         actions={
           <button
             type="button"
@@ -407,7 +406,7 @@ export function ManagerEquipmentPage() {
           <div className="portal-state">
             <h3 className="portal-state__title">{t("Không tìm thấy thiết bị nào")}</h3>
             <p style={{ color: 'var(--color-text-muted)' }}>
-              {t("Chưa có máy móc thiết bị nào phù hợp với bộ lọc hoặc cơ sở dữ liệu đang trống.")}</p>
+              {t("Chưa có thiết bị.")}</p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
               <button type="button" className="btn-primary" disabled={!!error} onClick={() => openEditor(null)}>
                 {t("Thêm thiết bị mới")}</button>

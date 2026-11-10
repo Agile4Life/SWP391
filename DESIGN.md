@@ -243,6 +243,18 @@ Các nguyên tắc bắt buộc:
 
 Đồng bộ landing–portal (23/10/2026): bảng giá, thời hạn, mô tả/quyền lợi gói tập, lịch lớp và HLV công khai lấy từ `GET /api/v1/public/catalog`, dùng cùng Entity với portal. Chỉ công khai gói active, HLV active có tài khoản active chưa xóa và buổi học scheduled còn trong tương lai trong 7 ngày tới. Không lấy giá, tên HLV hay lịch cố định từ dữ liệu minh họa; không suy đoán quyền vào hồ bơi/Tennis từ thời hạn gói. Dùng chung `membershipPresentation.ts` để định dạng tiền/quyền lợi với portal. Tải lại khi quay về tab và mỗi 60 giây; khi lỗi phải ẩn giá/lịch cũ, hiện thông báo và nút thử lại. Trang HLV dùng ID thực tế; ảnh bộ môn mới dùng chung qua `coachIllustration.ts`.
 
+## Quy tắc trình bày nội dung — 10/11/2026
+
+Kết quả audit "AI-slop" về nội dung chữ; áp dụng cho mọi màn hình công khai và portal:
+
+- Chữ người dùng phải đọc có cỡ tối thiểu **12px** (kể cả badge, nhãn bảng, nút nhỏ, chú thích). Không dùng 7–11px.
+- Mỗi thông điệp chỉ xuất hiện một lần, tại nơi người dùng ra quyết định (ví dụ lưu ý thanh toán tiền mặt chỉ nằm ở bước chọn phương thức).
+- Một khối tối đa một nhãn, một tiêu đề và một hành động; không thêm nhãn lặp lại tên cột/tiêu đề.
+- Empty state và lỗi: một câu ngắn kèm một nút/hành động. Không giải thích cơ chế hệ thống.
+- Không hiển thị tên role tiếng Anh, "Sandbox", "xóa mềm", emoji trang trí hoặc số liệu minh họa trông như dữ liệu thật; widget minh họa gắn nhãn "Minh họa".
+- Tiêu đề trang một chức năng, khoảng 2–5 từ. Kicker tiếng Anh trang trí không dùng; landing chỉ giữ một khẩu hiệu hero.
+- Thông báo mới vẫn phải có đủ bản vi/en theo quy tắc i18n; thay chữ tiếng Việt thì cập nhật cả từ điển/chuỗi tiếng Anh tương ứng.
+
 ## Nguồn hiện hành và nguồn lịch sử
 
 Thứ tự tra cứu khi làm UI: yêu cầu mới nhất của người dùng → `AGENTS.md` và tài liệu này → component/CSS đang được route sử dụng → ảnh chụp kiểm chứng mới.

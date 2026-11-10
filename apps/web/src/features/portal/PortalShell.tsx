@@ -154,7 +154,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
     }
     return { ...item, label: getNavLabel(item.to, item.label, lang) };
   });
-  const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? t('Không gian của bạn', 'Your Workspace');
+  const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? t('SÖL Fitness', 'SÖL Fitness');
   const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
   const mobileItems = MOBILE_PRIMARY_NAV[user.role].flatMap(item => {
     const authorizedItem = navItems.find(candidate => candidate.to === item.to);
@@ -427,7 +427,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user.name}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--portal-muted, #bcb8b5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted, #bcb8b5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {profileEmail || user.identifier}
                       </div>
                     </div>
@@ -493,8 +493,8 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       const ok = await confirm({
                         title: { vi: 'Đăng xuất khỏi SÖL?', en: 'Sign out of SÖL?' },
                         message: {
-                          vi: 'Bạn có thể đăng nhập lại bất cứ lúc nào để tiếp tục hành trình.',
-                          en: 'You can sign back in anytime to continue your journey.',
+                          vi: 'Bạn cần đăng nhập lại để vào portal.',
+                          en: 'You will need to sign in again to open the portal.',
                         },
                         cancelLabel: { vi: 'Ở lại', en: 'Stay' },
                         confirmLabel: { vi: 'Đăng xuất', en: 'Sign out' },
@@ -532,7 +532,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           <div key={location.pathname} className="route-fade" hidden={navigating}><Outlet /></div>
         </main>
         <footer className="portal-workspace-footer">
-          <span>{t('SÖL Fitness · Không gian của bạn', 'SÖL Fitness · Your Workspace')}</span>
+          <span>SÖL Fitness</span>
           <LanguageSetting variant="footer" />
         </footer>
       </div>
@@ -585,7 +585,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                 marginBottom: 16,
               }}
             >
-              <div className="portal-label" style={{ marginBottom: 0 }}>{t('Nạp tiền vào Ví qua VNPay Sandbox', 'Top up Wallet via VNPay Sandbox')}</div>
+              <div className="portal-label" style={{ marginBottom: 0 }}>{t('Nạp tiền vào Ví qua VNPay', 'Top up wallet via VNPay')}</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {[100000, 200000, 500000, 1000000].map((amt) => (
                   <button
@@ -659,7 +659,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                         <div className="row-card__meta" style={{ fontSize: 12 }}>{tx.description}</div>
                       )}
                       {tx.createdAt && (
-                        <div className="row-card__meta" style={{ fontSize: 11 }}>{formatCenterDateTime(tx.createdAt, tx.createdAt)}</div>
+                        <div className="row-card__meta" style={{ fontSize: 12 }}>{formatCenterDateTime(tx.createdAt, tx.createdAt)}</div>
                       )}
                     </div>
                     <div
@@ -683,7 +683,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           </div>
         </Modal>
       )}
-      {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? t('Không gian của bạn', 'Your Workspace') : t('Tìm màn hình', 'Find Screen')} onClose={() => setDialog(null)} returnFocusRef={dialog === 'menu' ? moreRef : undefined}>
+      {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? t('Điều hướng', 'Navigation') : t('Tìm màn hình', 'Find Screen')} onClose={() => setDialog(null)} returnFocusRef={dialog === 'menu' ? moreRef : undefined}>
         <label className="portal-label" htmlFor="portal-screen-search">{t('Tên màn hình', 'Screen name')}</label>
         <input id="portal-screen-search" className="portal-input" type="search" placeholder={t('Ví dụ: lịch học, gói tập…', 'e.g. classes, memberships…')} value={query} onChange={(event) => setQuery(event.target.value)} />
         <nav className="portal-screen-results" aria-label={t('Các màn hình của bạn', 'Your screens')}>

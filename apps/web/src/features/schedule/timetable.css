@@ -47,7 +47,7 @@
 .tt__now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--portal-danger); z-index: 3; }
 
 /* Khối buổi học: tên lớp, nhãn trạng thái, phòng. Giờ đọc theo cột giờ bên trái; nội dung tự rút gọn theo bề rộng thật của khối. */
-.tt__event { container: tt-event / size; position: absolute; z-index: 2; display: block; min-width: 0; overflow: hidden; padding: 4px 6px; text-align: left; font: inherit; font-size: 11px; line-height: 1.25; cursor: pointer;
+.tt__event { container: tt-event / size; position: absolute; z-index: 2; display: block; min-width: 0; overflow: hidden; padding: 4px 6px; text-align: left; font: inherit; font-size: 12px; line-height: 1.25; cursor: pointer;
   color: var(--portal-paper); border: 1px solid var(--portal-info); border-left-width: 3px; border-radius: 6px;
   background: color-mix(in srgb, var(--portal-info) 22%, var(--portal-surface));
   box-shadow: 0 1px 2px color-mix(in srgb, var(--portal-ink) 35%, transparent); }
@@ -58,7 +58,7 @@
 .tt__event:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 1px; z-index: 5; }
 .tt__event-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .tt__event-title { font-size: 12.5px; font-weight: 700; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: normal; word-break: normal; }
-.tt__event-badge { align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; border-radius: 999px; font-size: 10.5px; font-weight: 700; box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 45%, transparent); }
+.tt__event-badge { align-self: flex-start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; border-radius: 999px; font-size: 12px; font-weight: 700; box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 45%, transparent); }
 .tt__event-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 @container tt-event (max-width: 84px) {
@@ -67,7 +67,7 @@
 }
 @container tt-event (max-width: 56px) {
   .tt__event-badge { display: none; }
-  .tt__event-title { font-size: 11px; letter-spacing: -.01em; -webkit-line-clamp: 4; line-clamp: 4; }
+  .tt__event-title { font-size: 12px; letter-spacing: -.01em; -webkit-line-clamp: 4; line-clamp: 4; }
 }
 
 /* Khung khớp màn hình làm giờ thấp lại: bỏ dòng phòng trước, rồi gom tên + trạng thái về một hàng */
@@ -102,9 +102,9 @@
 
 /* Màn hẹp: chọn ngày ở dải trên, bảng hiển thị một ngày rộng toàn màn hình */
 .tt__daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-.tt__daychip { display: grid; justify-items: center; gap: 0; min-height: 56px; padding: 4px 2px; border: 1px solid var(--portal-border); border-radius: 10px; background: var(--portal-surface); color: var(--portal-muted); font: inherit; font-size: 11px; cursor: pointer; }
+.tt__daychip { display: grid; justify-items: center; gap: 0; min-height: 56px; padding: 4px 2px; border: 1px solid var(--portal-border); border-radius: 10px; background: var(--portal-surface); color: var(--portal-muted); font: inherit; font-size: 12px; cursor: pointer; }
 .tt__daychip strong { font-size: 16px; color: var(--portal-paper); }
-.tt__daychip small { font-size: 10px; white-space: nowrap; }
+.tt__daychip small { font-size: 12px; white-space: nowrap; }
 .tt__daychip.is-today { border-color: var(--portal-salmon); }
 .tt__daychip.is-active { background: var(--portal-salmon); border-color: var(--portal-salmon); color: var(--portal-on-accent); }
 .tt__daychip.is-active strong { color: var(--portal-on-accent); }

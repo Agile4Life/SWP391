@@ -28,8 +28,8 @@ export function PortalRouteError() {
   return <section className="portal-container portal-route-error" role="alert">
     <h1 className="portal-title">{network ? t("Không thể tải màn hình này", "Unable to load this screen") : t("Màn hình gặp lỗi khi hiển thị", "Screen could not be displayed")}</h1>
     <p className="portal-subtitle">{network
-      ? t("Kiểm tra kết nối mạng rồi tải lại. Các màn hình khác vẫn dùng được từ thanh điều hướng.", "Check your connection and reload. Other screens remain available in the navigation.")
-      : t("Dữ liệu nhận được không như mong đợi. Hãy tải lại; nếu lỗi lặp lại, vui lòng báo cho quản trị viên.", "The received data was unexpected. Reload the page; if the problem persists, contact your administrator.")}</p>
+      ? t("Kiểm tra kết nối mạng rồi tải lại.", "Check your connection and reload.")
+      : t("Dữ liệu không hợp lệ. Hãy tải lại; nếu lỗi lặp lại, báo cho quản trị viên.", "Invalid data. Reload; if it keeps happening, tell an administrator.")}</p>
     <button type="button" className="btn-primary" onClick={() => window.location.reload()}>{t("Tải lại trang", "Reload page")}</button>
   </section>;
 }

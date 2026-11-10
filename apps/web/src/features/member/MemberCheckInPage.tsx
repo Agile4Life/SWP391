@@ -65,7 +65,7 @@ export function MemberCheckInPage() {
   const checkedOut = mode === 'out' && granted && !!result?.checkOutTime;
 
   return <div data-i18n-managed className="portal-container">
-    <PageHeader eyebrow={memberText("Hội viên")} title={mode === 'out' ? memberText("Quét QR check-out") : memberText("Quét QR check-in")} />
+    <PageHeader title={mode === 'out' ? memberText("Quét QR check-out") : memberText("Quét QR check-in")} />
     <div className="qr-checkin-layout">
       <div className="portal-card">
         {!online && <p className="qr-checkin-error" role="alert">{memberText("Bạn đang mất mạng. Check-in cần kết nối với trung tâm.")}</p>}

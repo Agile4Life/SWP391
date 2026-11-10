@@ -226,7 +226,7 @@ export function MemberSupportPage() {
   }
 
   return <div data-i18n-managed className="portal-container member-support" >
-    <PageHeader eyebrow={t("Hội viên", "Member")} title={t("Hỗ trợ & khiếu nại", "Support & Tickets")} />
+    <PageHeader title={t("Hỗ trợ & khiếu nại", "Support & Tickets")} />
     <div className="member-support-grid">
       <section data-i18n-managed className="portal-card" aria-labelledby="support-create-title">
         <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">{t("Gửi yêu cầu", "Submit request")}</h2></div>
@@ -259,7 +259,7 @@ export function MemberSupportPage() {
         {loading && <LoadingSkeleton label={t("Đang kiểm tra trạng thái phiếu…", "Checking ticket status…")} count={1} />}
         {listError && <p role="alert" className="member-support-error">{t("Không thể kiểm tra trạng thái phiếu. Hãy làm mới hội thoại để thử lại.", "Unable to check ticket status. Refresh the conversation to retry.")}</p>}
         {selected.description && <p className="member-support-description">{selected.description}</p>}
-        <p className="member-support-context" role="status">{connection === 'connected' ? t("Đã kết nối trực tiếp", "Live connection established") : connection === 'connecting' ? t("Đang kết nối…", "Connecting…") : connection === 'reconnecting' ? t("Đang kết nối lại… Hội thoại sẽ được tải bù khi kết nối trở lại.", "Reconnecting… Conversation history will refresh when connected.") : t("Tự động đồng bộ hội thoại", "Auto-syncing conversation")}</p>
+        {(connection === 'connecting' || connection === 'reconnecting') && <p className="member-support-context" role="status">{connection === 'connecting' ? t("Đang kết nối…", "Connecting…") : t("Đang kết nối lại…", "Reconnecting…")}</p>}
         {sentIds.includes(selected.id) && !sendError && <p role="status" className="member-support-notice">{t("Đã gửi tin nhắn.", "Message sent.")}</p>}
         <button type="button" className="member-support-link" disabled={messagesLoading || loading} onClick={() => { void loadMessages(selected.id); void loadTickets(page); }}>{t("Làm mới hội thoại", "Refresh conversation")}</button>
         {messagesLoading ? <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversation…")} count={3} /> : messagesError ? <div role="alert"><p>{t(messagesError)}</p><button type="button" className="member-support-link" onClick={() => void loadMessages(selected.id)}>{t("Thử lại", "Retry")}</button></div> : messages.length === 0 ? <p className="portal-empty">{t("Chưa có tin nhắn. Hãy bắt đầu trao đổi.", "No messages yet. Start a conversation.")}</p> : <ol className="member-support-messages" tabIndex={0} aria-label={t(`Tin nhắn phiếu #${selected.id}`, `Messages for ticket #${selected.id}`)}>{messages.map((message) => <li key={message.id} className={message.senderRole === 'MEMBER' ? 'is-member' : 'is-staff'}><strong>{message.senderRole === 'MEMBER' ? t("Bạn", "You") : (message.senderName || t("Nhân viên", "Staff"))}</strong><p>{message.message}</p><time dateTime={message.createdAt}>{dateTime(message.createdAt)}</time></li>)}</ol>}

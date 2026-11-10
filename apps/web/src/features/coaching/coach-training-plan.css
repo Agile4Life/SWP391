@@ -66,7 +66,7 @@
   color: var(--portal-muted);
   padding: 2px 7px;
   border-radius: 10px;
-  font-size: 0.72rem;
+  font-size: 12px;
 }
 
 .plan-day-tab.is-active .plan-day-badge {
@@ -215,7 +215,7 @@
 
 .ai-member-stat-label {
   color: var(--portal-muted);
-  font-size: 0.72rem;
+  font-size: 12px;
   text-transform: uppercase;
   margin-bottom: 2px;
 }

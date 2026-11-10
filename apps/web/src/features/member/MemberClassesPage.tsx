@@ -49,7 +49,7 @@ function errorMessage(error: unknown): string | SourceMessage {
     if (['SCHEDULING_CLASS_FULL', 'CLASS_CAPACITY_EXCEEDED', 'SCHEDULING_CAPACITY_EXCEEDED'].includes(error.code ?? ''))
       return memberMessage('Lớp đã đầy chỗ. Hãy chọn buổi hoặc lớp khác.');
     if (['SCHEDULING_MEMBERSHIP_INVALID', 'MEMBERSHIP_INACTIVE_OR_EXPIRED', 'SCHEDULING_NO_ACTIVE_SUBSCRIPTION'].includes(error.code ?? ''))
-      return memberMessage('Bạn chưa đăng ký gói tập, gói tập chưa kích hoạt hoặc đã hết hạn. Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch.');
+      return memberMessage('Cần có gói tập đang hoạt động để đặt lịch.');
     return error.message;
   }
   return memberMessage('Không thể tải lịch học. Vui lòng thử lại.');
@@ -387,12 +387,12 @@ function MemberCourseDetailModal({
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
                 {quota?.unlimited
-                  ? memberText("Gói tập Platinum: Không giới hạn số lượng khóa học thể thao định kỳ.", "Platinum membership: Unlimited recurring sports courses.")
+                  ? memberText("Platinum: không giới hạn khóa học định kỳ.", "Platinum: unlimited recurring courses.")
                   : quota && quota.remainingCredits > 0
                   ? memberText(`Bạn còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí theo hạn mức gói.`, `You have ${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses remaining in your plan.`)
                   : hasActivePackage
-                  ? memberText("Bạn đã dùng hết hạn mức khóa học miễn phí của gói. Đăng ký thêm tính theo học phí ngoài gói.", "You have used all free course credits in your plan. Additional courses are charged standard tuition.")
-                  : memberText("Bạn chưa có gói hội viên. Vui lòng thanh toán học phí hoặc mua gói tập để hưởng ưu đãi.", "You do not have an active membership. Please pay tuition fee or purchase a membership plan.")}
+                  ? memberText("Đã hết lượt khóa học miễn phí; khóa thêm tính học phí.", "You have used all free course credits in your plan. Additional courses are charged standard tuition.")
+                  : memberText("Chưa có gói hội viên: khóa học tính học phí.", "You do not have an active membership. Please pay tuition fee or purchase a membership plan.")}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -744,7 +744,6 @@ export function MemberClassesPage() {
   return (
     <div data-i18n-managed className="portal-container member-classes">
       <div data-i18n-managed><PageHeader
-        eyebrow={text("Hội viên", 'Member')}
         title={text("Lịch học & đặt chỗ", 'Classes & bookings')}
       /></div>
 
@@ -791,10 +790,10 @@ export function MemberClassesPage() {
             </div>
             <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
               {quota.unlimited
-                ? memberText("Bạn được đăng ký miễn phí không giới hạn tất cả các khóa học fitness định kỳ.", "You have unlimited free enrollment for all recurring fitness courses.")
+                ? memberText("Khóa fitness định kỳ miễn phí không giới hạn.", "Unlimited free recurring fitness courses.")
                 : quota.remainingCredits > 0
-                ? memberText("1 lượt học = 1 khóa học trọn gói. Đăng ký để giữ chỗ cho toàn bộ các buổi học trong khóa.", "1 credit = 1 full course. Enroll to reserve your spot for all course sessions.")
-                : memberText("Bạn đã sử dụng hết lượt đăng ký theo gói tập. Các khóa học đăng ký thêm sẽ thanh toán học phí ngoài gói.", "You have used all credits in your plan. Additional courses can be purchased with tuition fee.")}
+                ? memberText("1 lượt = 1 khóa học trọn gói.", "1 credit = 1 full course.")
+                : memberText("Đã hết lượt theo gói; khóa thêm tính học phí.", "Plan credits used; extra courses are charged.")}
             </p>
           </div>
           {quota.remainingCredits <= 0 && !quota.unlimited && (
@@ -1110,7 +1109,7 @@ export function MemberClassesPage() {
             {sessions.length === 0 ? (
               <div data-i18n-managed className="portal-card portal-empty">
                 <h3>{text("Chưa có lịch học", "No classes scheduled")}</h3>
-                <p>{text("Chưa có buổi học nào trong tuần này. Bạn có thể chuyển sang xem lịch tuần sau.", "There are no classes this week. You can view next week instead.")}</p>
+                <p>{text("Tuần này chưa có buổi học.", "No sessions this week.")}</p>
                 {weekOffset === 0 && (
                   <button
                     type="button"

@@ -74,7 +74,7 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     // Verify footer language setting is rendered in portal workspace footer
     const footerSetting = host.querySelector('[data-testid="footer-language-setting"]');
     expect(footerSetting).not.toBeNull();
-    expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness · Không gian của bạn');
+    expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
     // Open user avatar menu
     const avatarTrigger = host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]');
@@ -101,7 +101,7 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     expect(host.querySelector('[data-testid="avatar-menu-wallet"]')?.textContent).toContain('My Wallet');
     expect(host.querySelector('[data-testid="avatar-menu-profile"]')?.textContent).toContain('Personal Profile');
     expect(host.querySelector('[data-testid="avatar-menu-logout"]')?.textContent).toContain('Sign out');
-    expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness · Your Workspace');
+    expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
     // Switch back to Vietnamese via footer language setting
     const viFooterBtn = host.querySelector<HTMLButtonElement>('[data-testid="footer-lang-vi"]');
@@ -112,7 +112,7 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
 
     expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('vi');
     expect(document.documentElement.lang).toBe('vi');
-    expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness · Không gian của bạn');
+    expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
     await act(async () => {
       root.unmount();

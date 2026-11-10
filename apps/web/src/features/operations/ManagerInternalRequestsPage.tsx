@@ -125,8 +125,7 @@ export function ManagerInternalRequestsPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Quản lý trung tâm")}
-        title={t("Phê duyệt đơn từ nội bộ")}
+        title={t("Duyệt đơn từ nội bộ")}
       />
 
       {/* Filter and controls bar */}
@@ -180,7 +179,7 @@ export function ManagerInternalRequestsPage() {
                     style={{
                       background: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-warning)',
                       color: isActive ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-on-accent)',
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 800,
                       padding: '1px 7px',
                       borderRadius: 99,
@@ -262,7 +261,7 @@ export function ManagerInternalRequestsPage() {
           <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
             {t("Không có đơn từ nào cần xử lý")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-            {t("Toàn bộ đơn từ của nhân sự đã được xem xét hoặc không có bản ghi phù hợp.")}</span>
+            {t("Không có đơn từ cần duyệt.")}</span>
         </div>
       ) : (
         <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
@@ -326,7 +325,7 @@ export function ManagerInternalRequestsPage() {
                         </span>
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             padding: '2px 8px',
                             borderRadius: 99,
                             background: roleInfo.bg,

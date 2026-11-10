@@ -78,11 +78,10 @@ export function MemberInvoicesPage() {
 
   return (
     <div data-i18n-managed className="portal-container member-invoices">
-      <PageHeader eyebrow={memberText("Hội viên")} title={memberText("Giao dịch & hóa đơn")} />
+      <PageHeader title={memberText("Giao dịch & hóa đơn")} />
       {!loading && !error && pending.length > 0 && <section data-i18n-managed className="portal-card stack" aria-label={memberText("Khoản chờ thanh toán")}>
         <h2 className="portal-card-title">{memberText("Khoản chờ thanh toán")}</h2>
         {pending.map(payment => <div className="row-card" key={payment.id}><span>{memberText("Giao dịch #")}{payment.id} · {formatPrice(payment.amount)}</span><VnpayPayButton target={{ paymentId: payment.id }} onPaid={() => setReload((n) => n + 1)} /></div>)}
-        <p className="row-card__meta" style={{ margin: 0 }}>{memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.")}</p>
       </section>}
       <section data-i18n-managed className="portal-card member-invoices__card" aria-label={memberText("Lịch sử giao dịch")}>
         {loading ? <LoadingSkeleton label={memberText("Đang tải giao dịch…")} variant="table" count={4} /> : error ? (

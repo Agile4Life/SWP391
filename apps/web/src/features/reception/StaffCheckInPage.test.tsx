@@ -82,7 +82,7 @@ it('checks out through the real API client and removes the visit from the open l
   await act(async () => checkoutButtons()[0].click());
   expect(fetch).toHaveBeenCalledWith('/api/v1/check-in/1/checkout', expect.objectContaining({ method: 'POST' }));
   expect(checkoutButtons()).toHaveLength(0);
-  expect(host.textContent).toContain('Không có hội viên đang trong trung tâm');
+  expect(host.textContent).toContain('Hiện không có hội viên trong trung tâm');
   expect(document.querySelector('.sol-toast--success')?.textContent).toContain('thành công');
 });
 

@@ -178,9 +178,9 @@ describe('SCRUM-86 packages', () => {
       .mockResolvedValueOnce([{ ...payment, status: 'success' }]);
     const reload = button('Tải lại trạng thái')!;
     await act(async () => { reload.click(); reload.click(); });
-    expect(host.textContent).toContain('gói chưa active');
+    expect(host.textContent).toContain('gói chưa kích hoạt');
     await act(async () => resolveOld([payment]));
-    expect(host.textContent).toContain('gói chưa active');
+    expect(host.textContent).toContain('gói chưa kích hoạt');
     expect(host.textContent).not.toContain('Đã gửi thông báo chuyển khoản');
   });
 
@@ -402,7 +402,7 @@ describe('SCRUM-86 packages', () => {
     expect(button('Cần kiểm tra gia hạn')?.disabled).toBe(false);
     expect(host.querySelector('[role="dialog"]')).toBeNull();
     await act(async () => button('Cần kiểm tra gia hạn')?.click());
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('chuỗi gia hạn bất thường');
+    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Lịch sử gói bất thường');
     expect(api.renew).not.toHaveBeenCalled();
   });
 
@@ -508,7 +508,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     await render();
     expect(host.textContent).toContain('Yêu cầu #12');
-    expect(host.textContent).toContain('Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.');
+    expect(host.textContent).toContain('Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(button('Hủy yêu cầu đăng ký')).toBeDefined();
     expect(host.querySelector('img')).toBeNull();
@@ -565,7 +565,7 @@ describe('SCRUM-86 packages', () => {
     expect(dialog?.textContent).toContain('Essential');
     expect(dialog?.textContent).toContain('500.000');
     expect(dialog?.textContent).toContain('#12');
-    expect(dialog?.textContent).toContain('Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.');
+    expect(dialog?.textContent).toContain('Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.');
     expect(dialog?.textContent).not.toContain('Số tài khoản');
     expect(dialog?.textContent).not.toContain('Tên người nhận');
     expect(dialog?.querySelector('img, canvas')).toBeNull();
@@ -612,7 +612,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     api.payments.mockResolvedValue([{ ...payment, status: 'success' }]);
     await render();
-    expect(host.textContent).toContain('gói chưa active');
+    expect(host.textContent).toContain('gói chưa kích hoạt');
     expect(host.textContent).not.toContain('Gói hiện tại');
   });
 
@@ -722,7 +722,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     api.payments.mockResolvedValue([{ ...payment, status }]);
     await render();
-    expect(host.textContent).toContain(status === 'failed' ? 'giao dịch thất bại' : 'đã hoàn tiền');
+    expect(host.textContent).toContain(status === 'failed' ? 'Giao dịch thất bại' : 'đã hoàn tiền');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
   });

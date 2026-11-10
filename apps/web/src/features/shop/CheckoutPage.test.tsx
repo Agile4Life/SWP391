@@ -215,7 +215,7 @@ it('delivery requires an address; saved default is preselected', async () => {
   });
 
   const vnpayBtn = [...host.querySelectorAll('button')].find(b =>
-    b.textContent?.includes('Thanh toán VNPay Sandbox'),
+    b.textContent?.includes('Thanh toán VNPay'),
   )!;
   await act(async () => {
     vnpayBtn.click();
@@ -269,7 +269,7 @@ it('placing an order reuses one clientRequestId across retries', async () => {
   await renderCheckout();
 
   const vnpayBtn = [...host.querySelectorAll('button')].find(b =>
-    b.textContent?.includes('Thanh toán VNPay Sandbox'),
+    b.textContent?.includes('Thanh toán VNPay'),
   )!;
   await act(async () => {
     vnpayBtn.click();
@@ -324,7 +324,7 @@ it('ORDER_PRICE_CHANGED refreshes the quote, shows the inline message and keeps 
   await renderCheckout();
 
   const vnpayBtn = [...host.querySelectorAll('button')].find(b =>
-    b.textContent?.includes('Thanh toán VNPay Sandbox'),
+    b.textContent?.includes('Thanh toán VNPay'),
   )!;
   await act(async () => {
     vnpayBtn.click();
@@ -361,7 +361,7 @@ it('the cart is cleared once the order exists, even before VNPay returns', async
   await renderCheckout();
 
   const vnpayBtn = [...host.querySelectorAll('button')].find(b =>
-    b.textContent?.includes('Thanh toán VNPay Sandbox'),
+    b.textContent?.includes('Thanh toán VNPay'),
   )!;
   await act(async () => {
     vnpayBtn.click();

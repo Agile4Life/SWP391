@@ -186,7 +186,7 @@ export function CoachAttendancePage() {
           setLoadedSessionId(selectedSessionId);
         }
       } catch {if (mounted) {
-          setRosterError('Không thể tải danh sách học viên của buổi học. Vui lòng chọn lại buổi học.');
+          setRosterError('Không thể tải danh sách học viên. Hãy chọn lại buổi học.');
         }
       } finally {
         if (mounted) setLoading(false);
@@ -350,7 +350,7 @@ export function CoachAttendancePage() {
   // Xoá điểm danh buổi hiện tại
   const confirmHide = () => confirm({
     title: staffMessage('Ẩn bản ghi?', staffTranslation('Ẩn bản ghi?')),
-    message: staffMessage('Bản ghi chỉ bị ẩn trên trình duyệt này. Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.', staffTranslation('Bản ghi chỉ bị ẩn trên trình duyệt này. Dữ liệu đã lưu trên hệ thống vẫn được giữ nguyên.')),
+    message: staffMessage('Chỉ ẩn trên trình duyệt này; dữ liệu vẫn được giữ.', staffTranslation('Chỉ ẩn trên trình duyệt này; dữ liệu vẫn được giữ.')),
     confirmLabel: staffMessage('Ẩn bản ghi', staffTranslation('Ẩn bản ghi')),
   });
 
@@ -547,7 +547,6 @@ export function CoachAttendancePage() {
   return (
     <div data-i18n-managed className="coach-attendance-page portal-container">
       <PageHeader
-        eyebrow={t("Huấn luyện viên")}
         title={
           activeTab === 'evaluation'
             ? t('Đánh giá tiến bộ học viên')
@@ -884,7 +883,7 @@ export function CoachAttendancePage() {
                           id={`notes-${student.id}`}
                           className="eval-comment-textarea"
                           rows={2}
-                          placeholder={t("Ví dụ: Kiểm soát cơ lõi tốt, giữ thẳng lưng khi thực hiện động tác kéo cáp...")}
+                          placeholder={t("Ví dụ: giữ thẳng lưng khi kéo cáp")}
                           value={student.notes}
                           onChange={(e) => handleUpdateNotes(student.id, e.target.value)}
                           aria-label={t(`Nhận xét kỹ thuật của ${student.fullName}`, `Technical feedback for ${student.fullName}`)}

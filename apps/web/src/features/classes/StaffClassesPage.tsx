@@ -381,9 +381,9 @@ export function StaffClassesPage() {
               403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              {t("403 - Quyền truy cập bị từ chối")}</h2>
+              {t("Không có quyền truy cập")}</h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              {t("Chỉ Quản lý trung tâm (Center Manager) và Nhân viên được cấp quyền mới có thể truy cập và xem lịch lớp học.")}</p>
+              {t("Bạn không có quyền xem lịch lớp.")}</p>
             <Link to="/portal" className="btn-secondary">
               {t("Về trang chủ Portal")}</Link>
           </div>
@@ -507,7 +507,7 @@ export function StaffClassesPage() {
         endTime: formData.endTime.length === 5 ? formData.endTime + ':00' : formData.endTime,
       });
 
-      notify(t('Đã tạo khóa học định kỳ và xếp lịch toàn bộ các buổi học thành công!', 'Recurring course created and all sessions scheduled successfully!'), 'success');
+      notify(t('Đã tạo khóa học và xếp lịch.', 'Course created and scheduled.'), 'success');
       setShowModal(false);
       setFormData(defaultFormData());
       setModalError(null);
@@ -533,7 +533,7 @@ export function StaffClassesPage() {
       const errMessage = hasSpecificConflictMsg
         ? new Error(apiErr.message!)
         : isConflict
-          ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.'
+          ? 'Trùng lịch: HLV hoặc phòng đã có lịch trong khung giờ này.'
           : apiErr?.message ? new Error(apiErr.message) : 'Có lỗi xảy ra khi tạo lớp học.';
 
       setModalError(errMessage);
@@ -663,7 +663,7 @@ export function StaffClassesPage() {
       const errMessage = hasSpecificConflictMsg
         ? new Error(apiErr.message!)
         : isConflict
-          ? 'Trùng lịch: Huấn luyện viên hoặc phòng tập mới đã có lịch dạy trùng với buổi học của lớp này.'
+          ? 'Trùng lịch: HLV hoặc phòng mới đã có lịch dạy trùng.'
           : apiErr?.message ? new Error(apiErr.message) : 'Không thể cập nhật thông tin lớp học.';
       setEditModalError(errMessage);
     } finally {
@@ -759,7 +759,7 @@ export function StaffClassesPage() {
       const errMessage = hasSpecificConflictMsg
         ? new Error(apiErr.message!)
         : isConflict
-          ? 'Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này. Vui lòng chọn giờ khác.'
+          ? 'Trùng lịch: HLV hoặc phòng đã có lịch trong khung giờ này.'
           : apiErr?.message ? new Error(apiErr.message) : 'Không thể đổi lịch buổi học.';
       setRescheduleModalError(errMessage);
     } finally {
@@ -919,8 +919,7 @@ export function StaffClassesPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Huấn luyện")}
-        title={isManager ? t('Quản lý lớp học & xếp lịch') : t('Lịch học trung tâm')}
+        title={isManager ? t('Quản lý lớp học') : t('Lịch học trung tâm')}
         actions={
           isManager ? (
             <button data-i18n-managed
@@ -1044,7 +1043,7 @@ export function StaffClassesPage() {
               {t("Chưa có lớp học nào")}</h3>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: 460, margin: '0 auto 16px auto' }}>
               {isManager
-                ? t('Hiện chưa có lớp học nào trong hệ thống. Hãy tạo lớp học mới để bắt đầu sắp xếp lịch tập cho hội viên và huấn luyện viên.')
+                ? t('Chưa có lớp học nào.')
                 : t('Hiện chưa có lớp học nào được xếp lịch trong hệ thống.')}
             </p>
             {isManager && (
@@ -1996,7 +1995,7 @@ export function StaffClassesPage() {
                       );
                     })}
                   </div>
-                  <small>{t("Tháng không có ngày đã chọn (ví dụ 31) thì học vào ngày cuối tháng. Không chọn ngày nào thì học vào ngày khai giảng mỗi tháng.", "A month without the chosen day (for example 31) uses its last day. With no day chosen the course meets on the start date's day each month.")}</small>
+                  <small>{t("Tháng thiếu ngày đã chọn thì học vào ngày cuối tháng; không chọn thì theo ngày khai giảng.", "A month without the chosen day (for example 31) uses its last day. With no day chosen the course meets on the start date's day each month.")}</small>
                 </div>
               ) : (
               <div className="portal-form-group">

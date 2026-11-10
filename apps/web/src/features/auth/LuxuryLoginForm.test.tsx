@@ -230,7 +230,7 @@ it('renders active session role label in English without recording missing trans
   clearMissingTranslations();
   setLanguage('en');
   await renderForm();
-  expect(host.textContent).toContain('Active sign-in session');
+  expect(host.textContent).toContain('You are signed in');
   expect(host.textContent).toContain('System administrator');
   expect(getMissingTranslations()).toEqual([]);
   setLanguage('vi');

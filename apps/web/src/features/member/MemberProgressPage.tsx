@@ -52,7 +52,7 @@ export function MemberProgressPage() {
   return () => { window.clearInterval(timer); window.removeEventListener('focus', update); };
  }, []);
  return <div data-i18n-managed className="portal-container member-progress">
-   <PageHeader eyebrow={memberText("Hội viên")} title={memberText("Tiến độ thể lực")} />
+   <PageHeader title={memberText("Tiến độ thể lực")} />
    <div className="workout-tabs" role="group" aria-label={memberText("Nội dung tiến độ")}>
      <button type="button" className={tab === 'progress' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'progress'} onClick={() => setTab('progress')}>{memberText("Tiến độ & Giáo án")}</button>
      <button type="button" className={tab === 'history' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'history'} onClick={() => setTab('history')}>{memberText("Lịch sử tập luyện")}</button>

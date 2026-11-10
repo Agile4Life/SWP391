@@ -129,7 +129,7 @@ export function CoachTrainingPlanPage() {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiSelectedMemberId, setAiSelectedMemberId] = useState<number | null>(null);
   const [aiCoachPrompt, setAiCoachPrompt] = useState(
-    'Học viên bận việc văn phòng, chỉ tập được tối đa 3-4 buổi/tuần. Chú ý tiền sử cơ xương khớp để bảo đảm an toàn.'
+    'Ví dụ: tối đa 3-4 buổi/tuần, chú ý tiền sử xương khớp'
   );
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiResult, setAiResult] = useState<AiWorkoutPlanResult | null>(null);
@@ -307,7 +307,7 @@ export function CoachTrainingPlanPage() {
     const invalid =
       exercises.length === 0 ? 'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.'
         : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
-          : !selectedMember ? 'Chưa xác minh được học viên từ hệ thống. Vui lòng tải lại danh sách học viên.'
+          : !selectedMember ? 'Chưa xác minh được học viên. Tải lại danh sách.'
             : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
               : null;
     setPlanError(invalid);
@@ -369,7 +369,7 @@ export function CoachTrainingPlanPage() {
   if (!hasAccess) {
     return (
       <div data-i18n-managed className="portal-container">
-        <PageHeader eyebrow={t("Huấn luyện")} title={t("Soạn giáo án bài tập")} />
+        <PageHeader title={t("Soạn giáo án bài tập")} />
         <div className="portal-card" style={{ padding: '36px', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <StatusMark type="error" size={56} />
@@ -386,7 +386,7 @@ export function CoachTrainingPlanPage() {
 
   if (membersLoading || membersError) {
     return <div data-i18n-managed className="portal-container plan-editor-page">
-      <PageHeader eyebrow={t("Huấn luyện &amp; Bài tập")} title={t("Bàn làm việc: Soạn giáo án bài tập")} />
+      <PageHeader title={t("Soạn giáo án")} />
       {membersLoading ? <LoadingSkeleton label={t("Đang tải học viên và thông tin giáo án…")} variant="profile" />
         : <div className="portal-card" role="alert"><p>{t(membersError)}</p><button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>{t("Thử lại")}</button></div>}
     </div>;
@@ -394,10 +394,10 @@ export function CoachTrainingPlanPage() {
 
   if (!selectedMember || !aiSelectedMember) {
     return <div data-i18n-managed className="portal-container plan-editor-page">
-      <PageHeader eyebrow={t("Huấn luyện &amp; Bài tập")} title={t("Bàn làm việc: Soạn giáo án bài tập")} />
+      <PageHeader title={t("Soạn giáo án")} />
       <div className="portal-card" role="status">
         <p><strong>{t("Chưa có học viên để soạn giáo án.")}</strong></p>
-        <p>{t("Danh sách học viên lấy từ các lớp đã có hội viên ghi danh. Khi có hội viên đăng ký lớp, họ sẽ xuất hiện ở đây.")}</p>
+        <p>{t("Học viên lấy từ các lớp đã có hội viên ghi danh.")}</p>
         <button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>{t("Tải lại danh sách")}</button>
       </div>
       <SavedTrainingPlans refreshKey={plansRefresh} />
@@ -407,8 +407,7 @@ export function CoachTrainingPlanPage() {
   return (
     <div data-i18n-managed className="portal-container plan-editor-page">
       <PageHeader
-        eyebrow={t("Huấn luyện &amp; Bài tập")}
-        title={t("Bàn làm việc: Soạn giáo án bài tập")}
+        title={t("Soạn giáo án")}
         actions={
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {AI_UI_ENABLED && <button
@@ -822,13 +821,13 @@ export function CoachTrainingPlanPage() {
 
             <div>
               <label className="portal-label" htmlFor="ai-prompt-input">
-                {t("Yêu cầu bổ sung của HLV gửi tới AI (Số buổi tập, trọng tâm, lưu ý đặc biệt...)")}</label>
+                {t("Yêu cầu bổ sung (số buổi, trọng tâm, lưu ý)")}</label>
               <textarea
                 id="ai-prompt-input"
                 className="ai-prompt-textarea"
                 value={aiCoachPrompt}
                 onChange={(e) => setAiCoachPrompt(e.target.value)}
-                placeholder={t("Ví dụ: Hội viên tập 4 buổi/tuần, muốn tăng kích thước cơ ngực và mông, tránh tạ đè nén khớp gối...")}
+                placeholder={t("Ví dụ: 4 buổi/tuần, tăng cơ ngực và mông, tránh tạ đè nén khớp gối")}
                 disabled={isGeneratingAi}
               />
             </div>

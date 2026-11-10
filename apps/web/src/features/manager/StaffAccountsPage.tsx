@@ -116,7 +116,7 @@ export function StaffAccountsPage() {
   }
 
   return <div data-i18n-managed className="portal-container">
-    <PageHeader eyebrow={t("Quản lý")} title={t("Tài khoản nhân sự")} />
+    <PageHeader title={t("Tài khoản nhân sự")} />
     <section className="portal-card" aria-labelledby="staff-create-heading">
       <h2 id="staff-create-heading" className="portal-card-title">{t("Thêm nhân sự")}</h2>
       <form onSubmit={event => void submit(event)}>

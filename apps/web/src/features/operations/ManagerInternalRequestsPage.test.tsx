@@ -9,7 +9,7 @@ vi.mock('./staffRequestApi', () => ({
   reviewStaffRequest: vi.fn(),
 }));
 
-describe('ManagerInternalRequestsPage (Phê duyệt đơn từ nội bộ)', () => {
+describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
   let host: HTMLDivElement;
   let root: Root;
 
@@ -87,7 +87,7 @@ describe('ManagerInternalRequestsPage (Phê duyệt đơn từ nội bộ)', () 
   it('renders manager review page with pending requests and approve/reject actions', async () => {
     await render();
 
-    expect(host.textContent).toContain('Phê duyệt đơn từ nội bộ');
+    expect(host.textContent).toContain('Duyệt đơn từ nội bộ');
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
     expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
     expect(host.textContent).toContain('Phê duyệt đơn');

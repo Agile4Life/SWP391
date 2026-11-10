@@ -237,7 +237,7 @@ export function MemberProfilePage() {
     return (
       <div data-i18n-managed className="portal-container" role="status" aria-busy="true">
         <span className="sr-only">{memberText("Đang tải thông tin hồ sơ...")}</span>
-        <PageHeader eyebrow={isMember ? memberText("Hội viên") : memberText("Tài khoản")} title={memberText("Hồ sơ cá nhân")} />
+        <PageHeader title={memberText("Hồ sơ cá nhân")} />
         <div className="profile-grid profile-grid--single" aria-hidden="true">
           <div className="portal-card">
             <div className="portal-skeleton-line" style={{ width: '45%', height: 22, marginBottom: 20 }} />
@@ -267,7 +267,6 @@ export function MemberProfilePage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={isMember ? memberText("Hội viên") : memberText("Tài khoản")}
         title={memberText("Hồ sơ cá nhân")}
       />
 

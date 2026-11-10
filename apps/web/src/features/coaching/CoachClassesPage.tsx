@@ -397,8 +397,7 @@ export function CoachClassesPage() {
   return (
     <div data-i18n-managed className="portal-container coach-page">
       <PageHeader
-        eyebrow={t("Huấn luyện viên")}
-        title={t("Thời khóa biểu & học viên phụ trách")}
+        title={t("Lịch dạy & học viên")}
       />
 
       {/* Phân hệ Tab: Thời khóa biểu vs Học viên phụ trách */}
@@ -666,7 +665,7 @@ export function CoachClassesPage() {
             </div>
 
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-              {t("Bảng xếp hạng và mức thưởng được Ban Quản Lý phê duyệt và công bố định kỳ.")}</span>
+              {t("Do Ban Quản Lý công bố định kỳ.")}</span>
           </div>
 
           {rankingLoading && (
@@ -779,7 +778,7 @@ export function CoachClassesPage() {
                         {currentMonthReview.averageRating.toFixed(1)}
                         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}>/ 5.0</span>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                         {t("từ ")}{currentMonthReview.totalReviews} {t(" lượt đánh giá")}</div>
                     </div>
 
@@ -797,7 +796,7 @@ export function CoachClassesPage() {
                         {currentMonthReview.totalSessions}
                         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--portal-muted)' }}> {t(" buổi")}</span>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2 }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 2 }}>
                         {t("Lớp nhóm & kèm riêng 1:1")}</div>
                     </div>
 
@@ -821,7 +820,7 @@ export function CoachClassesPage() {
                       >
                         {formatPrice(currentMonthReview.bonusAmount)}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--portal-muted)', marginTop: 2 }}>
+                      <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 2 }}>
                         {t("Được duyệt bởi Ban Quản Lý")}</div>
                     </div>
                   </div>
@@ -889,7 +888,7 @@ export function CoachClassesPage() {
                     {t("Bảng vinh danh top huấn luyện viên tháng ")}{reviewMonth}/{reviewYear}
                   </h3>
                   <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                    {t("Danh sách các HLV có điểm đánh giá xuất sắc nhất toàn hệ thống")}</span>
+                    {t("HLV có điểm đánh giá cao nhất")}</span>
                 </div>
 
                 {leaderboard.length === 0 ? (
@@ -950,7 +949,7 @@ export function CoachClassesPage() {
                                 {isMe && (
                                   <span data-i18n-managed
                                     style={{
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: 750,
                                       padding: '2px 8px',
                                       borderRadius: 99,
@@ -980,7 +979,7 @@ export function CoachClassesPage() {
                               <div style={{ fontWeight: 800, color: 'var(--portal-star)', fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
                                 {item.averageRating.toFixed(1)}
                               </div>
-                              <div style={{ fontSize: 11, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                              <div style={{ fontSize: 12, color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
                                 {item.totalReviews} {t(" đánh giá")}</div>
                             </div>
                             <div>
@@ -994,7 +993,7 @@ export function CoachClassesPage() {
                               >
                                 {formatPrice(item.bonusAmount)}
                               </div>
-                              <div style={{ fontSize: 11, color: 'var(--portal-muted)' }}>{t("Thưởng tháng")}</div>
+                              <div style={{ fontSize: 12, color: 'var(--portal-muted)' }}>{t("Thưởng tháng")}</div>
                             </div>
                           </div>
                         </div>
@@ -1017,7 +1016,7 @@ export function CoachClassesPage() {
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     {t("Đánh giá & nhận xét trực tiếp từ học viên")}</h3>
                   <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                    {t("Phản hồi thực tế từ hội viên sau các buổi học và buổi kèm riêng PT 1:1")}</span>
+                    {t("Phản hồi từ hội viên sau buổi học")}</span>
                 </div>
 
                 {studentReviews.length === 0 ? (
@@ -1050,7 +1049,7 @@ export function CoachClassesPage() {
                             </span>
                             <span
                               style={{
-                                fontSize: 11,
+                                fontSize: 12,
                                 padding: '2px 8px',
                                 borderRadius: 99,
                                 background: rev.bookingId

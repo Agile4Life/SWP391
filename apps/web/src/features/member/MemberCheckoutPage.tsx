@@ -76,7 +76,7 @@ export function MemberCheckoutPage() {
         if (subscriptionId) {
           const subscription = history.find((item) => item.id === subscriptionId);
           if (!subscription || subscription.status !== 'pending_payment' || (parsedPackageId && subscription.packageId !== parsedPackageId)) {
-            setError(memberMessage("Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục."));
+            setError(memberMessage("Yêu cầu gói không còn hợp lệ. Hãy quay lại danh mục."));
             return;
           }
           const quoted = subscription.upgradeCharge ?? subscription.quotedPrice;
@@ -182,7 +182,7 @@ export function MemberCheckoutPage() {
       });
       setProfile(updated);
       window.dispatchEvent(new Event('profile-updated'));
-      setKycSuccess('Đã gửi hồ sơ định danh. Lễ tân sẽ kiểm tra giấy tờ của bạn; sau khi được duyệt bạn có thể đăng ký gói tập.');
+      setKycSuccess('Đã gửi hồ sơ. Lễ tân sẽ kiểm tra giấy tờ của bạn.');
     } catch (err) {
       setKycError(localizableError(err, 'Không thể gửi xác minh danh tính. Vui lòng kiểm tra lại.'));
     } finally {
@@ -196,8 +196,8 @@ export function MemberCheckoutPage() {
     if (preparedSubscriptionId.current) {
       const subscription = history.find(item => item.id === preparedSubscriptionId.current);
       if (!subscription || subscription.status !== 'pending_payment' || subscription.packageId !== selectedPackage.id) {
-        throw Object.assign(new Error('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.'), {
-          translation: sourceMessage('Yêu cầu gói tập không còn hợp lệ để thanh toán. Vui lòng quay lại danh mục.', 'This membership request is no longer available for payment. Please return to the catalog.'),
+        throw Object.assign(new Error('Yêu cầu gói không còn hợp lệ. Hãy quay lại danh mục.'), {
+          translation: sourceMessage('Yêu cầu gói không còn hợp lệ. Hãy quay lại danh mục.', 'This plan request is no longer valid. Return to the catalog.'),
         });
       }
     }
@@ -241,7 +241,7 @@ export function MemberCheckoutPage() {
         <span style={{ color: 'var(--portal-paper, var(--color-text-main, #202020))', fontWeight: 600 }}>{t("Thanh toán", "Payment")}</span>
       </div>
 
-      <PageHeader eyebrow={t("Thanh toán", "Payment")} title={t("Thanh toán gói tập", "Membership payment")} />
+      <PageHeader title={t("Thanh toán gói tập", "Membership payment")} />
 
       <div className="checkout-layout">
         <div className="stack" data-i18n-managed>
@@ -249,18 +249,17 @@ export function MemberCheckoutPage() {
             <section data-i18n-managed className="portal-card stack" role="status" data-testid="kyc-pending" aria-label={t("Hồ sơ định danh đang chờ duyệt", "Identity document awaiting review")}>
               <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Hồ sơ định danh đang chờ lễ tân duyệt", "Your identity document is waiting for review")}</h2>
               <p className="row-card__meta" style={{ margin: 0 }}>
-                {t("Bạn có thể đăng ký gói tập ngay sau khi hồ sơ được duyệt. Chúng tôi sẽ gửi thông báo cho bạn.", "You can register a package as soon as it is approved. We will notify you.")}</p>
+                {t("Bạn có thể đăng ký gói sau khi hồ sơ được duyệt.", "You can choose a plan once your documents are approved.")}</p>
               {kycSuccess && <p role="status">{t(kycSuccess)}</p>}
             </section>
           ) : !isKycVerified ? (
             <section data-i18n-managed className="portal-card stack" aria-label={t("Xác minh CCCD hoặc Hộ chiếu trước khi đăng ký gói tập đầu tiên", "Verify your citizen ID or passport before your first membership")}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: '1.25rem' }}>🪪</span>
                 <h2 className="portal-card-title" style={{ margin: 0 }}>
-                  {t(" Xác minh danh tính trước khi đăng ký gói tập đầu tiên ", "Verify your identity before your first membership")}</h2>
+                  {t("Xác minh danh tính trước khi đăng ký gói tập đầu tiên", "Verify your identity before your first membership")}</h2>
               </div>
               <p className="row-card__meta" style={{ margin: 0, color: '#f59e0b' }}>
-                {t(" Hội viên mới cần cập nhật CCCD (hoặc Hộ chiếu cho người nước ngoài) để xác thực hợp đồng hội viên. Họ tên tài khoản sẽ được đồng bộ chính xác theo họ tên trên giấy tờ này. ", "New members must provide a citizen ID (or passport for foreign nationals) to verify their membership agreement. Your account name will match your identity document.")}</p>
+                {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify a citizen ID (or passport for foreign nationals). Your account name will match the document.")}</p>
 
               {profile?.kycStatus === 'REJECTED' && (
                 <div role="alert" data-testid="kyc-rejected" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem' }}>
@@ -408,7 +407,7 @@ export function MemberCheckoutPage() {
             <h2 className="portal-card-title">{t("Thanh toán qua VNPay hoặc Ví điện tử SÖL", "Pay via VNPay or SÖL Wallet")}</h2>
             {!isKycVerified && (
               <p style={{ color: '#f59e0b', fontSize: '0.9rem', margin: 0 }}>
-                {t(" ⚠️ Vui lòng hoàn tất biểu mẫu xác minh danh tính ở trên để mở khóa các nút thanh toán. ", "⚠️ Complete identity verification above to enable payment.")}</p>
+                {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
             )}
             <VnpayPayButton
               disabled={!isKycVerified}
@@ -420,7 +419,7 @@ export function MemberCheckoutPage() {
           <section data-i18n-managed className="portal-card stack" aria-label={t("Lưu ý thanh toán tiền mặt", "Cash payment information")}>
             <h3 className="portal-card-title">{t("Thanh toán tiền mặt", "Cash payment")}</h3>
             <p className="row-card__meta" style={{ margin: 0 }}>
-              {t(" Lưu ý: Nếu bạn muốn thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy để được hỗ trợ thu tiền và kích hoạt gói tập. ", "For cash payment, visit reception for payment assistance and membership activation.")}</p>
+              {t("Thanh toán tiền mặt tại quầy Lễ tân.", "Pay in cash at the front desk.")}</p>
           </section>
         </div>
 

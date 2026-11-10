@@ -130,7 +130,6 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         <div className="fit-footer-main">
           <div>
             <Link to="/" className="fit-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>{"SÖL"}</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
-            <p>{t('Mạnh mẽ hơn mỗi ngày.', 'Stronger every day.')}<br />{t('Cân bằng theo cách của bạn.', 'Balanced your way.')}</p>
           </div>
           <nav aria-label={t('Điều hướng chân trang', 'Footer navigation')}>{links.map(({ to, hash: target, label, labelEn }) => <Link
             key={label}
@@ -172,8 +171,7 @@ export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'log
             ? (lang === 'en' ? <>Return to<br /><em>your training schedule.</em></> : <>{sourceText("Trở lại")}<br /><em>{sourceText("lịch tập của bạn.")}</em></>)
             : (lang === 'en' ? <>Begin<br /><em>{"with SÖL."}</em></> : <>{sourceText("Bắt đầu")}<br /><em>{sourceText("cùng SÖL.")}</em></>)}
         </h1>
-        <p>{mode === 'login' ? t('Đăng nhập để xem gói tập, đặt lịch lớp và theo dõi lịch tập của bạn.', 'Sign in to view your memberships, book classes, and track your schedule.') : t('Tạo tài khoản và xác thực email để bắt đầu chọn gói tập.', 'Create an account and verify your email to start choosing a membership.')}</p>
-        <div className="fit-auth-photo"><LoadingImage src="/images/fitness/strength-session.jpg" alt={t('Vận động viên tập luyện sức mạnh với tạ tại phòng gym', 'Athlete performing strength training in the gym')} /><span>{sourceText("SHOW UP FOR YOURSELF.")}<RoundArrow diagonal /></span></div>
+        <div className="fit-auth-photo"><LoadingImage src="/images/fitness/strength-session.jpg" alt={t('Vận động viên tập luyện sức mạnh với tạ tại phòng gym', 'Athlete performing strength training in the gym')} /></div>
       </div>
       <div className="fit-auth-form" data-reveal="lift">{children}</div>
     </main>

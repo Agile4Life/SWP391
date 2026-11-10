@@ -152,7 +152,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   it('renders plan editor workspace with day tabs (Thứ 2 -> Chủ Nhật)', async () => {
     await renderComponent();
 
-    expect(host.textContent).toContain('Bàn làm việc: Soạn giáo án bài tập');
+    expect(host.textContent).toContain('Soạn giáo án');
     expect(host.textContent).toContain('Gợi ý giáo án bằng AI');
     expect(host.textContent).toContain('Lưu & Kích hoạt giáo án');
 

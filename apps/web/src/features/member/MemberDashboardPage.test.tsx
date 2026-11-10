@@ -132,7 +132,6 @@ describe('SCRUM-85 dashboard', () => {
     await renderDashboard();
     expect(host.textContent).toContain('Không thể tải thông tin gói tập');
     expect(host.textContent).toContain('Yoga');
-    expect(host.textContent).toContain('Xem lịch lớp để kiểm tra buổi học.');
     expect(host.textContent).toContain('17/10/2026');
     expect(host.textContent).toContain('08:00–09:00');
     expect(host.textContent).toContain('A');
@@ -158,10 +157,8 @@ describe('SCRUM-85 dashboard', () => {
   it('switches the mounted dashboard and preserves server membership names', async () => {
     await renderDashboard();
     await act(async () => setLanguage('en'));
-    expect(host.textContent).toContain('My overview');
     expect(host.textContent).toContain('My membership');
     expect(host.textContent).toContain('Essential');
     await act(async () => setLanguage('vi'));
-    expect(host.textContent).toContain('Tổng quan của tôi');
   });
 });

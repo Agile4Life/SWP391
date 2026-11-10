@@ -167,7 +167,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    expect(host.textContent).toContain('Thời khóa biểu & học viên phụ trách');
+    expect(host.textContent).toContain('Lịch dạy & học viên');
     expect(host.textContent).toContain('Thời khóa biểu');
     expect(host.textContent).toContain('Học viên phụ trách');
     expect(host.querySelector('[aria-label="Tuần trước"]')).not.toBeNull();

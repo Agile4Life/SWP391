@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import type QrScanner from 'qr-scanner';
 import './qr-checkin.css';
 
-const DEFAULT_HINT = 'Quét mã QR cổng trên màn hình lễ tân. Camera chỉ dùng để đọc mã và không lưu hình ảnh.';
+const DEFAULT_HINT = 'Quét mã QR cổng tại quầy lễ tân.';
 
 export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT }: { onScan: (code: string) => void; disabled?: boolean; hint?: string }) {
   const { lang } = useLanguage();
@@ -44,8 +44,8 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
   async function start() {
     if (disabled || phase === 'starting' || phase === 'scanning') return;
     setError('');
-    if (!window.isSecureContext) { setError(memberMessage("Camera cần kết nối HTTPS. Hãy mở trang bằng địa chỉ bảo mật của trung tâm.")); return; }
-    if (!navigator.mediaDevices?.getUserMedia) { setError(memberMessage("Trình duyệt chưa hỗ trợ camera. Hãy mở bằng Safari hoặc Chrome và cho phép truy cập camera.")); return; }
+    if (!window.isSecureContext) { setError(memberMessage("Camera cần kết nối bảo mật (HTTPS).")); return; }
+    if (!navigator.mediaDevices?.getUserMedia) { setError(memberMessage("Trình duyệt chưa hỗ trợ camera. Hãy dùng Safari hoặc Chrome.")); return; }
     release();
     const current = run.current;
     setPhase('starting');
@@ -73,7 +73,7 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
     } catch {
       if (run.current !== current) return;
       release(); setPhase('ready');
-      setError(memberMessage("Không thể mở camera. Cho phép quyền camera trong cài đặt trình duyệt, đóng ứng dụng đang dùng camera rồi thử lại."));
+      setError(memberMessage("Không thể mở camera. Hãy cấp quyền camera và thử lại."));
     }
   }
 

@@ -165,7 +165,7 @@ it('pending online order shows VnpayPayButton targeting the order and the hold d
 
   await renderOrder(42);
   expect(host.textContent).toContain('Giữ hàng đến 14:35 05/11/2026');
-  await click('Thanh toán VNPay Sandbox');
+  await click('Thanh toán VNPay');
   expect(createVnpayCheckout).toHaveBeenCalledWith({ productOrderId: 42 });
 });
 

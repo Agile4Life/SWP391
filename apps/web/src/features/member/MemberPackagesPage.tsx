@@ -46,7 +46,7 @@ interface RequestResult {
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
 const LONG_TERM_DAYS = 60;
-const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay Sandbox hoặc tới quầy lễ tân.';
+const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.';
 
 // The backend VNPay guard decides whether a pending online attempt can still settle.
 // Cash receipts under review, settled payments and unknown states must remain blocked here.
@@ -204,7 +204,7 @@ export function MemberPackagesPage() {
         frontImageUrl: trialFrontImage,
         backImageUrl: trialBackImage || undefined,
       });
-      notify(t("Đã gửi đơn đăng ký Gói Trải Nghiệm 3 Ngày! Vui lòng mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Your 3-day trial application was submitted! Bring your original identity document to reception to activate it."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký Gói Trải Nghiệm 3 Ngày! Vui lòng mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Your 3-day trial application was submitted! Bring your original identity document to reception to activate it."),  record: true });
+      notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."),  record: true });
       setIsTrialModalOpen(false);
       setTrialDocumentNumber('');
       setTrialNationality('');
@@ -477,7 +477,7 @@ export function MemberPackagesPage() {
 
   useEffect(() => {
     if (syncError) {
-      notify(t("Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.", "Unable to sync the latest status or verify purchase eligibility. We will retry when the connection returns."), 'error', { translation: sourceMessage("Không thể đồng bộ trạng thái mới nhất. Chưa thể xác minh điều kiện mua gói; hệ thống sẽ thử lại khi kết nối được khôi phục.", "Unable to sync the latest status or verify purchase eligibility. We will retry when the connection returns."),
+      notify(t("Không thể cập nhật trạng thái mới nhất. Sẽ thử lại khi có kết nối.", "Could not refresh the latest status. We will retry when you are back online."), 'error', { translation: sourceMessage("Không thể cập nhật trạng thái mới nhất. Sẽ thử lại khi có kết nối.", "Could not refresh the latest status. We will retry when you are back online."),
         key: 'packages-sync', silent: true, record: true, action: { label: t('Thử đồng bộ lại', "Retry synchronization"), translation: sourceMessage('Thử đồng bộ lại', "Retry synchronization"), run: () => refreshNow.current() },
       });
     } else resolveNotice('packages-sync');
@@ -575,7 +575,7 @@ export function MemberPackagesPage() {
       setHistoryState((previous) => previous.status === 'success'
         ? { status: 'success', data: previous.data.map((item) => item.id === resumed.id ? resumed : item) }
         : previous);
-      notify(t("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.", "Membership resumed. Your remaining time is preserved at no extra charge."), 'success', { translation: sourceMessage("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên, không phát sinh phí.", "Membership resumed. Your remaining time is preserved at no extra charge."),  record: true });
+      notify(t("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên.", "Membership resumed. Your remaining time is unchanged."), 'success', { translation: sourceMessage("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên.", "Membership resumed. Your remaining time is unchanged."),  record: true });
     } catch (error) {
       setActionError(localizableError(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
     } finally {
@@ -648,7 +648,6 @@ export function MemberPackagesPage() {
         </div>
       </Modal>}
       <PageHeader
-        eyebrow={t("Hội viên", "Member")}
         title={t("Gói tập", "Memberships")}
       />
       {returnSyncing && <p role="status">{t("Đang đồng bộ thông tin gói tập…", 'Synchronizing membership information…')}</p>}
@@ -724,7 +723,7 @@ export function MemberPackagesPage() {
           <h3 style={{ margin: '10px 0 6px', fontSize: 18, fontWeight: 700 }}>
             {t(" Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý ", "Your 3-day trial application is being processed")}</h3>
           <p className="row-card__meta" style={{ margin: 0, lineHeight: 1.5 }}>
-            {t(" Hệ thống đã ghi nhận thông tin (", "We have received your details (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}{t("). Vui lòng mang theo ", "). Please bring")}<strong>{t("giấy tờ bản gốc (", "original identity document (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'})</strong> {t(" đến quầy Lễ tân để nhân viên đối chiếu và kích hoạt 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí. ", "to reception for verification and activation of 3 training days and one free personal training session.")}</p>
+            {t("Đã ghi nhận (", "Received (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}{t("). Mang theo ", "). Bring")}<strong>{t("giấy tờ bản gốc (", "original identity document (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'})</strong> {t(" đến quầy Lễ tân để kích hoạt gói. ", "to the front desk to activate your trial.")}</p>
         </section>
       )}
 
@@ -852,8 +851,8 @@ export function MemberPackagesPage() {
             </p>
           )}
           <p className="row-card__meta" style={{ marginTop: 6 }}>
-            {t(" Gói tập của bạn đã được Lễ tân xác nhận bảo lưu. Các lịch lớp học đặt trước trong tương lai đã được hủy tự động. ", "Reception approved your membership pause. Future class bookings were automatically cancelled.")}</p>
-          <p className="row-card__meta">{t("Mở lại để tiếp tục sử dụng số ngày còn lại, không cần thanh toán lại. Bạn có thể đặt lại lịch học sau khi mở gói.", "Resume to use your remaining days at no extra cost. You can book classes again after resuming.")}</p>
+            {t(" Gói tập đang được bảo lưu. Các lịch lớp đã đặt đã bị hủy. ", "Your membership is on hold. Booked classes have been cancelled.")}</p>
+          <p className="row-card__meta">{t("Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.", "Resume to use your remaining days; no new payment needed.")}</p>
           <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
             onClick={() => void handleResume()}>
             {isResuming ? t("Đang mở lại…", "Resuming…") : t("Mở lại gói tập miễn phí", "Resume membership for free")}
@@ -887,16 +886,16 @@ export function MemberPackagesPage() {
             <p className="row-card__meta" role="status">{t(paymentInstructionsNotice)}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') && (
-            <p role="alert">{t("Thanh toán đã ghi nhận nhưng gói chưa active. Vui lòng yêu cầu nhân viên kiểm tra.", "Payment recorded, but membership is not active. Please ask staff to check.")}</p>
+            <p role="alert">{t("Đã nhận thanh toán nhưng gói chưa kích hoạt. Liên hệ nhân viên để kiểm tra.", "Payment received but the plan is not active yet. Contact staff to check.")}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending' && payment.method === 'online_wallet') && (
-            <p role="status">{t("VNPay đang chờ xác nhận. Quay lại website không đồng nghĩa thanh toán thất bại. Hệ thống sẽ kiểm tra giao dịch trước khi cho phép hủy yêu cầu.", 'VNPay is awaiting confirmation. Returning to the website does not mean payment failed. The system checks the transaction before allowing cancellation.')}</p>
+            <p role="status">{t("VNPay đang chờ xác nhận giao dịch. Chưa thể hủy yêu cầu lúc này.", 'VNPay is still confirming the transaction. The request cannot be cancelled yet.')}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'failed') && (
-            <p role="alert">{t("Có giao dịch thất bại. Bạn có thể chọn lại phương thức thanh toán hoặc hủy yêu cầu nếu chưa có khoản thanh toán thành công.", 'A transaction failed. You may choose a payment method again or cancel the request if no payment has succeeded.')}</p>
+            <p role="alert">{t("Giao dịch thất bại. Chọn lại phương thức thanh toán hoặc hủy yêu cầu.", 'The transaction failed. Choose another payment method or cancel the request.')}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'refunded') && (
-            <p role="alert">{t("Giao dịch đã hoàn tiền. Vui lòng liên hệ nhân viên để xác nhận cách thanh toán tiếp theo.", "The transaction was refunded. Contact staff to confirm the next payment method.")}</p>
+            <p role="alert">{t("Giao dịch đã hoàn tiền. Liên hệ nhân viên để thanh toán lại.", "The transaction was refunded. Contact staff to pay again.")}</p>
           )}
           {paymentsState.status === 'success' && relatedPayments.length === 0 && !pendingPackage && (
             <p role="alert">{t("Không tìm thấy giá gói để gửi yêu cầu. Vui lòng thử lại sau.", "Package pricing is unavailable. Please try again later.")}</p>
@@ -1063,11 +1062,11 @@ export function MemberPackagesPage() {
               : currentState.status === 'error' || historyState.status === 'error' || paymentsState.status === 'error'
                 ? memberText("Không thể xác minh trạng thái. Vui lòng thử tải lại.")
               : pendingItems.length > 0 ? current ? memberText("Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.") : memberText("Yêu cầu đang chờ thanh toán.")
-              : hasPaidFutureUpgrade ? memberText("Kỳ tiếp theo đã thanh toán. Vui lòng liên hệ nhân viên trước khi nâng cấp.")
+              : hasPaidFutureUpgrade ? memberText("Kỳ tiếp theo đã thanh toán. Liên hệ nhân viên để nâng cấp.")
               : nextRenewals > 0 ? memberText("Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.")
               : frozenSubscription ? memberText("Mở lại gói bảo lưu trước khi tiếp tục.")
               : hasLowerOrNonUpgradableCurrentPackage ? memberText("Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn.")
-              : upgradeCovered ? memberText("Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này. Hãy chọn gói cao hơn hoặc gia hạn khi gói sắp hết.")
+              : upgradeCovered ? memberText("Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này.")
               : ambiguousRenewal ? memberText("Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên.") : null;
 
             let buttonText = historyState.status === 'success' && historyState.data.length === 0
@@ -1187,8 +1186,8 @@ export function MemberPackagesPage() {
                     onClick={() => {
                       if (disabled) {
                         setBlockedMessage(blockedReason ?? (renewalConflict || nextRenewals > 1
-                          ? memberText("Lịch sử gói có kỳ trùng, chồng ngày hoặc chuỗi gia hạn bất thường. Vui lòng liên hệ nhân viên để kiểm tra.")
-                          : memberText("Chưa thể thực hiện thao tác với gói tập này. Vui lòng tải lại trạng thái hoặc liên hệ lễ tân.")));
+                          ? memberText("Lịch sử gói bất thường. Liên hệ nhân viên để kiểm tra.")
+                          : memberText("Chưa thể thao tác với gói này. Tải lại trang hoặc liên hệ lễ tân.")));
                         return;
                       }
                       void handleMembershipAction(
@@ -1228,10 +1227,10 @@ export function MemberPackagesPage() {
             <p>{requestResult.action === 'upgrade' ? t("Nâng cấp gói tập", "Upgrade membership") : requestResult.action === 'renew' ? t("Gia hạn gói tập", "Renew membership") : t("Đăng ký gói tập", "Register membership")} · #{requestResult.subscription.id}</p>
             <p>{t("Yêu cầu của bạn đang chờ xử lý.", "Your request is pending.")}</p>
             {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
-              ? <p className="row-card__meta">{t("Số tiền cần thanh toán để nâng cấp: ", "Upgrade amount due:")}<strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> {t(" (giá gói mới ", "(new plan price")}{formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? t(`, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại`, `, less ${formatPrice(requestResult.subscription.creditApplied)} remaining value from your current membership`) : ''}{t("). Số tiền này đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán. Gói hiện tại kết thúc khi thanh toán được xác nhận.", "). This amount is locked even if the plan price changes before payment. Your current membership ends when payment is confirmed.")}</p>
+              ? <p className="row-card__meta">{t("Số tiền cần thanh toán để nâng cấp: ", "Upgrade amount due:")}<strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> {t(" (giá gói mới ", "(new plan price")}{formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? t(`, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại`, `, less ${formatPrice(requestResult.subscription.creditApplied)} remaining value from your current membership`) : ''}{t("). Giá đã được chốt. Gói hiện tại kết thúc khi thanh toán được xác nhận.", "). This amount is locked even if the plan price changes before payment. Your current membership ends when payment is confirmed.")}</p>
               : requestResult.subscription.quotedPrice != null
-                ? <p className="row-card__meta">{t("Số tiền cần thanh toán: ", "Amount due:")}<strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>{t(". Giá đã được chốt, kể cả khi giá gói thay đổi trước lúc bạn thanh toán.", ". This price is locked even if the plan price changes before payment.")}</p>
-                : <p className="row-card__meta">{t("Giá catalog tham khảo: ", "Reference catalog price:")}{formatPrice(requestResult.membershipPackage.price)}{t(". Số tiền thanh toán được hệ thống xác nhận khi mở VNPay hoặc tại quầy.", ". The payment amount is confirmed when opening VNPay or at reception.")}</p>}
+                ? <p className="row-card__meta">{t("Số tiền cần thanh toán: ", "Amount due:")}<strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>{t(". Giá đã được chốt.", ". This price is locked.")}</p>
+                : <p className="row-card__meta">{t("Giá catalog tham khảo: ", "Reference catalog price:")}{formatPrice(requestResult.membershipPackage.price)}.</p>}
             <p className="row-card__meta">{t(paymentInstructionsNotice)}</p>
             <div className="package-result__actions">
               <Link
@@ -1278,7 +1277,7 @@ export function MemberPackagesPage() {
         >
           <div className="meta-label">{t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify citizen ID / passport")}</div>
           <p className="row-card__meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
-            {t(" Mỗi hội viên chỉ được nhận Gói Trải Nghiệm 3 Ngày một lần duy nhất. Gói bao gồm 01 buổi tập 1:1 cùng HLV cá nhân và không hỗ trợ bảo lưu. Họ tên tài khoản sẽ được tự động đồng bộ theo giấy tờ sau khi Lễ tân đối chiếu bản gốc tại quầy. ", "Each member can claim the 3-day trial once. It includes one personal training session and cannot be paused. Your account name will match your identity document after reception verifies the original.")}</p>
+            {t("Mỗi hội viên nhận Gói Trải Nghiệm 1 lần. Gồm 1 buổi PT 1:1, không bảo lưu.", "One trial per member. Includes one 1:1 PT session; cannot be paused.")}</p>
 
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
             {/* Chọn loại giấy tờ */}
@@ -1394,7 +1393,7 @@ export function MemberPackagesPage() {
                       padding: 8,
                     }}
                   >
-                    <span>{t("📷 Chọn ảnh mặt trước", "📷 Choose front image")}</span>
+                    <span>{t("Chọn ảnh mặt trước", "Choose front image")}</span>
                     <span style={{ fontSize: '0.72rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
                     <input
                       type="file"
@@ -1445,7 +1444,7 @@ export function MemberPackagesPage() {
                       padding: 8,
                     }}
                   >
-                    <span>{t("📷 Chọn ảnh mặt sau", "📷 Choose back image")}</span>
+                    <span>{t("Chọn ảnh mặt sau", "Choose back image")}</span>
                     <span style={{ fontSize: '0.72rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
                     <input
                       type="file"

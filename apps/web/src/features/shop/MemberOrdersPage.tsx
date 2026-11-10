@@ -89,7 +89,6 @@ export function MemberOrdersPage({
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow={sourceText("Hội viên")}
         title={activeTab === 'shop' ? sourceText('Sản phẩm') : sourceText('Đơn hàng')}
         actions={
           <button

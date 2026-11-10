@@ -14,7 +14,7 @@
 .is-enhanced .fit-sport-story-step:focus-within { transition: none; }
 .fit-sport-story-number { display: block; color: var(--fit-salmon); font-size: 64px; font-weight: 800; letter-spacing: normal; line-height: 1; margin-bottom: 14px; transition: transform 500ms var(--sport-story-ease), opacity 500ms var(--sport-story-ease); }
 .is-enhanced .fit-sport-story-step:not(.is-active) .fit-sport-story-number { transform: translateX(-6px); opacity: .35; }
-.fit-sport-story-kicker { color: var(--fit-muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; }
+.fit-sport-story-kicker { color: var(--fit-muted); font-size: 12px; font-weight: 700; letter-spacing: .1em; }
 .fit-sport-story-tier { display: block; color: var(--fit-muted); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 .fit-sport-story-step h3 { margin: 10px 0 14px; font-size: clamp(28px, 3vw, 40px); line-height: 1.08; text-transform: uppercase; }
 .fit-site .fit-sport-story-summary { margin: 0 0 18px; color: var(--fit-muted); font-size: 17px; line-height: 1.6; }
@@ -30,19 +30,19 @@
 .fit-sport-story-audience strong { display: block; color: var(--fit-paper); font-size: 14px; margin-bottom: 4px; }
 .fit-sport-story-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 24px; }
 .fit-sport-story-footer .fit-pill { font-size: 13px; }
-.fit-sport-story-footer > span { flex: 1 1 140px; color: var(--fit-muted); font-size: 11px; line-height: 1.7; }
+.fit-sport-story-footer > span { flex: 1 1 140px; color: var(--fit-muted); font-size: 12px; line-height: 1.7; }
 .fit-sport-story-sticky { position: sticky; top: var(--sport-story-top); min-width: 0; }
 .fit-sport-story-panel { position: relative; display: grid; align-items: center; min-height: min(540px, calc(100svh - var(--sport-story-top) - 24px)); padding: 32px 32px 52px; border-radius: 8px; overflow: hidden; background: var(--fit-salmon); }
 .fit-sport-story-visual { display: none; grid-area: 1 / 1; min-width: 0; margin: 0; }
 .fit-sport-story-visual.is-active { display: block; animation: fit-sport-story-enter 500ms var(--sport-story-ease) both; }
 .fit-sport-story-visual.is-active.is-leaving { animation: fit-sport-story-exit 500ms var(--sport-story-ease) both; }
 .fit-sport-story-visual img, .fit-sport-story-inline img { display: block; width: 100%; aspect-ratio: 1.5; object-fit: cover; border-radius: 6px; }
-.fit-sport-story-visual figcaption { margin-top: 12px; color: var(--fit-ink); font-size: 11px; }
+.fit-sport-story-visual figcaption { margin-top: 12px; color: var(--fit-ink); font-size: 12px; }
 .fit-sport-story-dots { position: absolute; bottom: 16px; left: 32px; display: flex; gap: 6px; }
 .fit-sport-story-dots i { display: block; width: 22px; height: 3px; background: #20202040; transition: background 300ms; }
 .fit-sport-story-dots i.is-active { background: var(--fit-ink); }
 .fit-sport-story-inline { margin: 24px 0 0; }
-.fit-sport-story-inline figcaption { margin-top: 10px; font-size: 11px; color: var(--fit-muted); }
+.fit-sport-story-inline figcaption { margin-top: 10px; font-size: 12px; color: var(--fit-muted); }
 /* Progressive enhancement: without an observer, all illustrations stay in the document. */
 .fit-sport-story:not(.is-enhanced) .fit-sport-story-layout { grid-template-columns: 1fr; gap: 0; }
 .fit-sport-story:not(.is-enhanced) .fit-sport-story-rail { display: none; }

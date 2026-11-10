@@ -195,8 +195,7 @@ export function ManagerAuditLogsPage() {
   return (
     <div data-i18n-managed className="audit-page portal-container">
       <PageHeader
-        eyebrow={t("Quản trị trung tâm")}
-        title={t("Giám sát audit log & báo cáo lấp đầy lớp")}
+        title={t("Nhật ký & lấp đầy lớp")}
       />
 
       {/* Navigation Tabs */}

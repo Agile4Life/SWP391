@@ -138,7 +138,7 @@ export function StaffSupportPage() {
     void actOnTicket(async () => { const updated = await escalateSupportTicket(ticket.id, reason); if (alive.current) { setEscalating(false); setEscalationReason(''); } return updated; }, undefined, 'Đã chuyển khiếu nại lên quản lý.');
   }
   return <div data-i18n-managed className="portal-container member-support staff-support">
-    <PageHeader eyebrow={isManager ? t('Quản lý') : t('Lễ tân')} title={isManager ? t('Khiếu nại chuyển lên quản lý') : t('Hộp thư hỗ trợ')} />
+    <PageHeader title={isManager ? t('Khiếu nại chuyển lên quản lý') : t('Hộp thư hỗ trợ')} />
     <p role="status" className="member-support-context">{t(connections[connection])}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">{t("Trạng thái")}</label><Select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">{t("Tất cả")}</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</Select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>
@@ -160,7 +160,7 @@ export function StaffSupportPage() {
     </div></Modal>}
     {escalating && ticket && <Modal title={t(`Chuyển lên quản lý · Phiếu #${ticket.id}`, `Escalate to management · Ticket #${ticket.id}`)} busy={isBusy} onClose={() => { if (!isBusy) setEscalating(false); }}>
       <form className="member-support-compose" onSubmit={submitEscalation}>
-        <p className="member-support-context">{t("Quản lý sẽ tiếp nhận và phản hồi hội viên. Sau khi chuyển, lễ tân không xử lý phiếu này nữa.")}</p>
+        <p className="member-support-context">{t("Sau khi chuyển, Quản lý sẽ xử lý phiếu này.")}</p>
         <label className="portal-label" htmlFor="staff-support-escalation">{t("Lý do chuyển lên quản lý")}</label>
         <textarea id="staff-support-escalation" className="portal-textarea" rows={3} maxLength={500} required value={escalationReason} onChange={event => setEscalationReason(event.target.value)} />
         {actionErrors[ticket.id] && <p role="alert" className="member-support-error">{t(actionErrors[ticket.id])}</p>}

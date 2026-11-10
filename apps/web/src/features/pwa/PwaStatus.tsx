@@ -59,7 +59,7 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
       <p className="portal-subtitle">{sourceText("Mở nhanh portal từ màn hình chính và dùng camera để check-in.")}</p>
       {ios ? <ol className="pwa-install-steps"><li>{sourceText("Mở website này bằng Safari.")}</li><li>{sourceText("Chọn Chia sẻ, rồi Thêm vào MH chính.")}</li><li>{sourceText("Nếu có tùy chọn Mở dưới dạng ứng dụng web, hãy bật và chọn Thêm.")}</li></ol>
         : <ol className="pwa-install-steps"><li>{sourceText("Mở website này bằng Chrome trên Android.")}</li><li>{sourceText("Mở menu ⋮, chọn Cài đặt ứng dụng hoặc Thêm vào màn hình chính.")}</li><li>{sourceText("Xác nhận cài đặt, rồi mở biểu tượng SÖL.")}</li></ol>}
-      <p className="portal-subtitle">{sourceText("Ứng dụng mở thẳng portal. Bạn cần đăng nhập nếu phiên đã hết hạn; check-in cần kết nối mạng.")}</p>
+      <p className="portal-subtitle">{sourceText("Check-in cần kết nối mạng.")}</p>
     </Modal>}
   </div>;
 }

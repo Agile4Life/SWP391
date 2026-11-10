@@ -211,48 +211,45 @@ const memberBenefits = [
     tag: 'Bộ môn',
     idx: '01',
     get title() { return sourceText('Đặt lịch tập trên Portal'); },
-    get description() { return sourceText('Xem lịch lớp theo bộ môn trong Portal. Bạn có thể đặt lớp khi gói tập đang hoạt động, còn hạn và còn lượt đặt theo quy định của gói.'); },
+    get description() { return sourceText('Xem lịch lớp theo bộ môn và đặt chỗ khi gói còn hiệu lực.'); },
     perks: [
       'Gym · Bơi lội · Boxing · Tennis · Cầu lông · Yoga',
-      'Khu Strength Floor, Free Weights & Movement Studio',
-      'Thấy ngay khung giờ nào đang thoáng',
-      'Vào cửa bằng mã QR, không cần giấy tờ',
+      'Thấy ngay khung giờ còn chỗ',
+      'See open time slots at a glance',
     ],
   },
   {
     get tag() { return sourceText('Lớp'); },
     idx: '02',
     get title() { return sourceText('Lớp nhóm theo gói tập'); },
-    get description() { return sourceText('Xem bộ môn, huấn luyện viên và chỗ trống trên lịch lớp. Số lượt đặt lớp phụ thuộc vào gói tập bạn đã kích hoạt.'); },
+    get description() { return sourceText('Xem huấn luyện viên, giờ học và chỗ trống. Số lượt đặt tùy gói tập.'); },
     perks: [
-      'Lịch lớp sáng — chiều — tối mỗi ngày',
-      'Biết trước HLV, studio, giờ, còn bao nhiêu chỗ',
-      'Điểm danh bằng mã QR thành viên',
-      'Đổi lớp nếu lịch cá nhân thay đổi',
+      'Lịch lớp sáng, chiều, tối mỗi ngày',
+      'Morning, afternoon and evening classes daily',
+      'Điểm danh bằng mã QR',
+      'Check in with your QR code',
     ],
   },
   {
     tag: 'HLV',
     idx: '03',
     get title() { return sourceText('HLV theo dõi từng buổi tập'); },
-    get description() { return sourceText('Mỗi buổi HLV ghi lại chỉ số của bạn — mức tạ, số lần tập, thời gian và tiến độ. Bạn xem lại tiến độ cá nhân bất cứ lúc nào.'); },
+    get description() { return sourceText('HLV ghi lại mức tạ, số lần tập và tiến độ sau mỗi buổi.'); },
     perks: [
       'HLV có chứng chỉ đúng từng bộ môn',
-      'Kết quả từng buổi, lưu trên Portal',
-      'Theo dõi chuỗi ngày tập theo tuần / tháng',
-      'Đánh giá định kỳ từ HLV',
+      'Xem kết quả từng buổi trên Portal',
+      'See each session’s results in the portal',
     ],
   },
   {
     get tag() { return sourceText('Kế hoạch'); },
     idx: '04',
     get title() { return sourceText('Kế hoạch tuần cho riêng bạn'); },
-    get description() { return sourceText('Dựa trên chỉ số BMI và mục tiêu cá nhân, hệ thống đề xuất lịch tập tuần cân bằng giữa Gym, Bơi và Tennis; có trợ lý giải đáp 24/7.'); },
+    get description() { return sourceText('Gợi ý lịch tuần theo BMI và mục tiêu, có trợ lý hỏi đáp.'); },
     perks: [
-      'Kế hoạch theo mục tiêu: giảm mỡ, tăng cơ, sức bền',
-      'HLV định hướng lộ trình đa bộ môn',
-      'Nhắc lịch tập và lịch sân trực tuyến',
-      'Hỏi đáp bài tập & bảo lưu (Freeze) dễ dàng',
+      'Mục tiêu: giảm mỡ, tăng cơ, sức bền',
+      'Goals: fat loss, muscle gain, endurance',
+      'Bảo lưu (Freeze) ngay trên Portal',
     ],
   },
 ] as const;
@@ -263,7 +260,7 @@ const faqs = [
   },
   {
     get question() { return sourceText('Gói hội viên đã bao gồm những bộ môn nào?'); },
-    get answer() { return sourceText('Quyền lợi, thời hạn và số lượt đặt lớp được hiển thị theo từng gói tại bảng giá và Portal. Hãy xem mô tả gói hoặc liên hệ lễ tân để xác nhận phạm vi sử dụng.'); },
+    get answer() { return sourceText('Tùy gói. Quyền lợi từng gói hiển thị tại bảng giá.'); },
   },
   {
     get question() { return sourceText('Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?'); },
@@ -271,7 +268,7 @@ const faqs = [
   },
   {
     get question() { return sourceText('Làm sao để đặt lớp học hoặc đặt sân?'); },
-    get answer() { return sourceText('Đăng nhập vào Portal để xem lịch lớp và chỗ trống. Để đặt lớp, bạn cần có gói tập đang hoạt động, còn hạn và còn lượt đặt theo gói.'); },
+    get answer() { return sourceText('Đăng nhập Portal để xem lịch và đặt chỗ khi gói còn hiệu lực.'); },
   },
 ];
 
@@ -454,7 +451,7 @@ export function FitnessLanding() {
       <div className="fit-hero-lines" aria-hidden="true" />
       <h1 id="hero-title" className="fit-hero-title"><span>{sourceText("BUILD YOUR")}</span><span>{sourceText("BODY SHAPES")}<span className="fit-title-dot">.</span></span></h1>
       <div className="fit-hero-copy"><p>{sourceText("Mạnh mẽ từ thể chất.")}<br />{sourceText("Tự tin từ bên trong.")}</p>
-        <a href="#trainers" className="fit-reviews"><span>{sourceText("Cùng nhau tiến bộ")}</span><span className="fit-avatar-row">{coachAvatars.map((coach) => <LoadingImage key={coach.name} src={`/images/fitness/${coach.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span><span className="fit-review-label">{sourceText("Đội ngũ đồng hành")}</span></a>
+        <a href="#trainers" className="fit-reviews"><span>{sourceText("Cùng nhau tiến bộ")}</span><span className="fit-avatar-row">{coachAvatars.map((coach) => <LoadingImage key={coach.name} src={`/images/fitness/${coach.image}`} alt="" />)}<span className="fit-review-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></span></a>
       </div>
       <LoadingImage
         className="fit-hero-athlete"
@@ -554,7 +551,6 @@ export function FitnessLanding() {
           onFocus={() => activateMuscle(activeMuscle.id)}
           onBlur={scheduleClearMuscle}
         >
-          <span className="fit-muscle-zone-badge">{activeMuscle.zone}</span>
           <h3>{activeMuscle.name}</h3>
           <p className="fit-muscle-goal"><strong>{sourceText("Mục tiêu:")}</strong> {activeMuscle.goal}</p>
           <ul className="fit-muscle-exercises">
@@ -565,8 +561,7 @@ export function FitnessLanding() {
           </Link>
         </aside>}
       </div>
-      <div className="fit-hero-action"><Link to={joinPath} className="fit-pill">{sourceText("Bắt đầu ngay")}<RoundArrow /></Link><span>{sourceText("YOUR BODY. YOUR JOURNEY.")}</span></div>
-      <span className="fit-hero-index" aria-hidden="true">{sourceText("01 / THE BEGINNING")}</span>
+      <div className="fit-hero-action"><Link to={joinPath} className="fit-pill">{sourceText("Bắt đầu ngay")}<RoundArrow /></Link></div>
     </section>
     <section className="fit-services" id="disciplines" aria-label={sourceText("Các hình thức tập luyện")}>
       <div className="fit-services-glow" aria-hidden="true" />
@@ -606,7 +601,6 @@ export function FitnessLanding() {
       <div className="fit-rhythm-explorer" data-reveal="lift" aria-label={sourceText("Nhịp sinh hoạt trong ngày tại câu lạc bộ")}>
         <div className="fit-rhythm-head">
           <div>
-            <span className="fit-kicker">{sourceText("NHỊP TẬP TRONG NGÀY")}</span>
             <h3>{sourceText("Các khung giờ trong ngày")}</h3>
           </div>
           <div className="fit-rhythm-tabs" role="tablist" aria-label={sourceText("Chọn khung giờ trong ngày")}>
@@ -634,13 +628,11 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
       <SportStack classPath={classPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">{"SÖL SPORTS CLUB"}</span>
         <SplitHeading id="multisport-title" lines={[sourceText('Các bộ môn')]} />
       </div>} />
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
       <div className="fit-section-heading" data-reveal="soft">
-        <span className="fit-kicker">{sourceText("BETTER WITH A COACH")}</span>
         <SplitHeading id="trainers-title" lines={[sourceText('Our Trainers')]} />
       </div>
       <div>{catalog ? <CatalogTrainers catalog={catalog} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="trainers" />}</div>
@@ -648,7 +640,6 @@ export function FitnessLanding() {
     <section className="fit-section fit-journey" id="journey" aria-labelledby="journey-title">
       <div className="fit-journey-steps" data-reveal="soft">
         <div className="fit-section-heading">
-          <span className="fit-kicker">{sourceText("HOW YOUR ROUTINE BEGINS")}</span>
           <SplitHeading id="journey-title" lines={[sourceText('Your First Week'), sourceText('At SÖL')]} />
         </div>
         <ol className="fit-step-list" style={{ '--active-step': activeStep } as CSSProperties}>
@@ -669,8 +660,7 @@ export function FitnessLanding() {
         <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label={sourceText("Minh họa trực quan theo từng bước")}>
           {activeStep === 0 ? <div className="fit-preview-widget fit-preview-qr">
             <div className="fit-preview-head">
-              <span className="fit-kicker">{sourceText("01 · DIGITAL PASS & SLOT CHECK")}</span>
-              <span className="fit-preview-live"><i />{sourceText("QR Active")}</span>
+              <span className="fit-preview-live"><i />{sourceText("Minh họa")}</span>
             </div>
             <div className="fit-preview-slots" aria-hidden="true">
               {['06:30', '08:00', '09:30', '12:00', '16:00', '17:30', '18:30', '19:30'].map((slot, idx) => <span
@@ -683,8 +673,7 @@ export function FitnessLanding() {
             </div>
           </div> : activeStep === 1 ? <div className="fit-preview-widget fit-preview-ai">
             <div className="fit-preview-head">
-              <span className="fit-kicker">{sourceText("02 · WEEKLY MULTI-SPORT PLAN")}</span>
-              <span className="fit-preview-live"><i />{sourceText("Gợi ý mẫu")}</span>
+              <span className="fit-preview-live"><i />{sourceText("Minh họa")}</span>
             </div>
             <div className="fit-preview-chat" aria-hidden="true">
               <div className="fit-chat-user">{sourceText("Mục tiêu săn chắc · 4 buổi/tuần sau 17:30")}</div>
@@ -699,8 +688,7 @@ export function FitnessLanding() {
             </div>
           </div> : <div className="fit-preview-widget fit-preview-chart">
             <div className="fit-preview-head">
-              <span className="fit-kicker">{sourceText("03 · CONSISTENCY CURVE")}</span>
-              <span className="fit-preview-live"><i />{sourceText("85% hoàn thành")}</span>
+              <span className="fit-preview-live"><i />{sourceText("Minh họa")}</span>
             </div>
             <svg className="fit-progress-svg" viewBox="0 0 320 92" fill="none" aria-hidden="true">
               <defs>
@@ -724,7 +712,6 @@ export function FitnessLanding() {
         </div>
       </div>
       <div className="fit-bmi-card" data-reveal="tilt" aria-labelledby="bmi-title">
-        <span className="fit-kicker">{sourceText("BODY METRIC & GOAL CHECK")}</span>
         <h3 id="bmi-title">{sourceText("Tính Nhanh BMI & Lộ Trình")}<span className="fit-title-dot">.</span></h3>
         <div className="fit-bmi-inputs">
           <label htmlFor="fit-bmi-height">
@@ -753,13 +740,12 @@ export function FitnessLanding() {
       </div>
     </section>
     <section className="fit-section fit-pricing" id="packages" aria-labelledby="pricing-title">
-      <div className="fit-section-heading fit-centered" data-reveal="soft"><span className="fit-kicker">{sourceText("MAKE TIME FOR YOURSELF")}</span><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
+      <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
       {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
     <ProductShelf />
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <span className="fit-kicker">{sourceText("FAQ")}</span>
         <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />
       </div>
       <div className="fit-faq-list">
@@ -813,7 +799,7 @@ export function FitnessLanding() {
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
             <h3>{sourceText("Chưa có gói vẫn trải nghiệm được")}</h3>
-            <p>{sourceText("Tạo tài khoản miễn phí để xem lịch lớp và chọn gói phù hợp. Thanh toán tại quầy lễ tân để kích hoạt gói trước khi đặt lớp và check-in.")}</p>
+            <p>{sourceText("Tạo tài khoản miễn phí để xem lịch lớp và chọn gói. Gói được kích hoạt tại quầy lễ tân.")}</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
               {sourceText(accountLabel)}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -825,7 +811,7 @@ export function FitnessLanding() {
         </div>
       </div>
     </section>
-    <section className="fit-final-cta" data-reveal="soft"><span className="fit-kicker">{sourceText("ONE SMALL STEP. A STRONGER YOU.")}</span><h2>{sourceText("READY WHEN")}<br /><em>{sourceText("YOU ARE.")}</em></h2><Link to={joinPath} className="fit-pill">{sourceText("Bắt đầu hành trình")}<RoundArrow diagonal /></Link><span className="fit-cta-star" aria-hidden="true">✳</span></section>
+    <section className="fit-final-cta" data-reveal="soft"><h2>{sourceText("READY WHEN")}<br /><em>{sourceText("YOU ARE.")}</em></h2><Link to={joinPath} className="fit-pill">{sourceText("Bắt đầu hành trình")}<RoundArrow diagonal /></Link><span className="fit-cta-star" aria-hidden="true">✳</span></section>
   </main>;
 }
 

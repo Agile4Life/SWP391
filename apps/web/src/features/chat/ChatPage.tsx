@@ -183,7 +183,7 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
                 </span>
               </span>
             </button></li>)}</ul>}
-        {!loading && conversations.length === 0 && !listError && <p className="direct-chat__empty direct-chat__empty--inbox">{member ? t('Chưa có hội thoại với lễ tân hoặc huấn luyện viên. Chọn “Cuộc trò chuyện mới” để bắt đầu.', 'No conversations with receptionists or coaches yet. Choose “New conversation” to start.') : t('Chưa có hội thoại. Tin nhắn của hội viên gửi cho bạn sẽ xuất hiện tại đây.', 'No conversations yet. Messages from members will appear here.')}</p>}
+        {!loading && conversations.length === 0 && !listError && <p className="direct-chat__empty direct-chat__empty--inbox">{t('Chưa có hội thoại.', 'No conversations yet.')}</p>}
         {!loading && totalPages > 1 && <nav className="direct-chat__pagination" aria-label={t("Trang hội thoại", "Conversation pages")}>
           <button type="button" className="direct-chat__link" disabled={page === 0} onClick={() => void loadInbox(page - 1)}>{t("Trước", "Previous")}</button><span>{page + 1}/{totalPages}</span>
           <button type="button" className="direct-chat__link" disabled={page + 1 >= totalPages} onClick={() => void loadInbox(page + 1)}>{t("Sau", "Next")}</button>

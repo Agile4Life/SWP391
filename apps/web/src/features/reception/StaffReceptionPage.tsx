@@ -436,9 +436,9 @@ export function StaffReceptionPage() {
               403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              {t("403 - Quyền truy cập bị từ chối")}</h2>
+              {t("Không có quyền truy cập")}</h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              {t("Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền truy cập quầy lễ tân & thu ngân.")}</p>
+              {t("Chỉ Lễ tân và Quản lý trung tâm mới truy cập được quầy này.")}</p>
             <Link to="/portal" className="btn-secondary">
               {t("Về trang chủ Portal")}</Link>
           </div>
@@ -543,7 +543,6 @@ export function StaffReceptionPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Lễ tân &amp; Thu ngân")}
         title={t("Quầy lễ tân")}
       />
 
@@ -645,7 +644,7 @@ export function StaffReceptionPage() {
               </div>
             ) : pendingList.length === 0 ? (
               <div data-i18n-managed style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                {t("Hiện không có yêu cầu đăng ký gói tập nào đang ở trạng thái chờ thanh toán.")}</div>
+                {t("Không có yêu cầu chờ thanh toán.")}</div>
             ) : (
               <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
                 {pendingList.map((item) => {
@@ -839,7 +838,7 @@ export function StaffReceptionPage() {
               {!selectedPending && (activeCandidate || selectedMember.status?.toUpperCase() === 'ACTIVE') && (
                 <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                   <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
-                    {t("Hội viên yêu cầu hủy gói tại quầy? Trình Quản lý phê duyệt hoàn tiền về Ví:")}</span>
+                    {t("Hủy gói & hoàn tiền về Ví (Quản lý duyệt):")}</span>
                   <button
                     type="button"
                     className="btn-secondary btn-sm"
@@ -860,7 +859,7 @@ export function StaffReceptionPage() {
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
                   ? t(`Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`, `No results match "${searchQuery}". Please check the phone number, membership code or national ID.`)
-                  : t('Hãy ấn vào một Yêu cầu đang chờ ở danh sách trên hoặc tra cứu SĐT hội viên.')}
+                  : t('Chọn một yêu cầu hoặc tra cứu hội viên.')}
               </p>
             </div>
           )}
@@ -1005,7 +1004,7 @@ export function StaffReceptionPage() {
           </div>
         ) : trialList.length === 0 ? (
           <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            {t("Hiện không có đơn đăng ký Gói Trải Nghiệm 3 Ngày nào đang chờ duyệt.")}</div>
+            {t("Không có đơn trải nghiệm chờ duyệt.")}</div>
         ) : (
           <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
             {trialList.map((item) => {
@@ -1084,7 +1083,7 @@ export function StaffReceptionPage() {
                       className="btn-secondary btn-sm"
                       onClick={() => setInspectingTrial(item)}
                     >
-                      {t("👁️ Xem giấy tờ & Ảnh")}</button>
+                      {t("Xem giấy tờ & ảnh")}</button>
                     <button
                       type="button"
                       className="btn-primary btn-sm"
@@ -1417,7 +1416,7 @@ export function StaffReceptionPage() {
                 rows={4}
                 maxLength={500}
                 required
-                placeholder={t("Nhập rõ lý do hội viên yêu cầu hủy gói tập (ví dụ: Chuyển nơi ở, chấn thương có xác nhận y tế...)")}
+                placeholder={t("Lý do hủy gói (ví dụ: chuyển nơi ở)")}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 disabled={isSubmittingCancel}
@@ -1583,7 +1582,7 @@ export function StaffReceptionPage() {
         >
           <form onSubmit={(e) => void handleSubmitRejectTrial(e)} style={{ display: 'grid', gap: '14px' }}>
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-              {t("Vui lòng nhập lý do từ chối để hội viên nhận thông báo và chỉnh sửa nộp lại giấy tờ phù hợp.")}</p>
+              {t("Nhập lý do từ chối để hội viên nộp lại giấy tờ.")}</p>
 
             <div className="portal-form-group" style={{ margin: 0 }}>
               <label className="portal-label" htmlFor="trial-reject-reason">
@@ -1594,7 +1593,7 @@ export function StaffReceptionPage() {
                 rows={3}
                 maxLength={500}
                 required
-                placeholder={t("Vd: Ảnh chụp mờ không đọc được thông tin, số CCCD không khớp bản gốc, v.v.")}
+                placeholder={t("Vd: ảnh mờ, số CCCD không khớp bản gốc")}
                 value={trialRejectReason}
                 onChange={(e) => setTrialRejectReason(e.target.value)}
                 disabled={isSubmittingTrialReject}

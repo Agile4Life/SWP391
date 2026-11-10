@@ -90,8 +90,8 @@ export function ExploreBreadcrumb() {
           className="explore3d-sim-badge"
           data-testid="explore3d-sim-badge"
           title={t(
-            'Mô hình kiến trúc 3D minh hoạ kết hợp trạng thái dữ liệu trực tiếp từ hệ thống',
-            'Illustrative 3D architectural model combined with live system telemetry',
+            'Mô hình 3D của trung tâm',
+            '3D model of the center',
           )}
         >
           {t('Mô phỏng minh hoạ', 'Illustrative simulation')}

@@ -138,7 +138,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       const msg = sourceError(err, 'Đăng nhập Google thất bại.');
       // BR-04 & BR-05: Chặn nhân sự (403) và tài khoản bị khóa
       if (msg.message.includes('nhân sự') || msg.message.toLowerCase().includes('staff') || msg.message.includes('403')) {
-        fail('Vai trò này chưa hỗ trợ đăng nhập Google. Vui lòng đăng nhập bằng email và mật khẩu.');
+        fail('Vai trò này chưa hỗ trợ đăng nhập Google.');
       } else if (msg.message.toLowerCase().includes('khóa') || msg.message.toLowerCase().includes('locked')) {
         fail('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
       } else {
@@ -473,7 +473,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             color: 'var(--color-text-main)',
           }}
         >
-          {sourceText("Phiên đăng nhập đang hoạt động")}</h2>
+          {sourceText("Bạn đã đăng nhập")}</h2>
 
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '24px' }}>
           {sourceText("Đang đăng nhập với tài khoản ")}<strong>{currentUser.name}</strong> ({ROLE_NAMES[currentUser.role]})
@@ -516,18 +516,6 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       }}
     >
       <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-        <span
-          style={{
-            fontSize: '0.72rem',
-            letterSpacing: '0.24em',
-            textTransform: 'uppercase',
-            color: 'var(--color-accent-gold)',
-            display: 'block',
-            marginBottom: '6px',
-            fontWeight: 600,
-          }}
-        >
-          {sourceText("SÖL SANCTUARY PORTAL")}</span>
         <h3
           style={{
             fontFamily: 'var(--fit-font, var(--font-sans))',
@@ -546,13 +534,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
       {isExpired && (
         <div role="status" className="portal-alert portal-alert--info" style={{ marginBottom: '18px' }}>
-          <span>{sourceText("Phiên đăng nhập đã hết hạn để đảm bảo an toàn. Vui lòng đăng nhập lại.")}</span>
+          <span>{sourceText("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.")}</span>
         </div>
       )}
 
       {formError && (
         <div role="alert" className="portal-alert anim-fade-up" style={{ marginBottom: '18px' }}>
-          ⚠️ {sourceText(formError)}
+          {sourceText(formError)}
         </div>
       )}
 
@@ -822,7 +810,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>📩</div>
+            
             <div style={{ fontSize: '0.92rem', color: '#1B5E20', fontWeight: 600, lineHeight: 1.4 }}>
               {sourceText(otpMessage)}
             </div>

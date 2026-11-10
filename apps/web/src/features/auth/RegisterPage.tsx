@@ -191,8 +191,8 @@ export function RegisterPage() {
           <details>
             <summary className="fit-auth-link">{sourceText("Thông tin tài khoản đã tạo")}</summary>
             <p className="row-card__meta">{pendingAccount?.username} · {pendingAccount?.email}</p>
-            <p className="row-card__meta">{sourceText("Tài khoản đã được tạo. Xác thực email trước khi cập nhật thông tin trong hồ sơ.")}</p>
-            <p className="row-card__meta">{sourceText("Nếu email chưa đúng, bạn có thể tạo tài khoản khác với tên đăng nhập và email mới. Tài khoản đã tạo vẫn được giữ trên hệ thống.")}</p>
+            <p className="row-card__meta">{sourceText("Tài khoản đã được tạo. Hãy xác thực email.")}</p>
+            <p className="row-card__meta">{sourceText("Sai email? Tạo tài khoản mới với tên đăng nhập và email khác.")}</p>
             <button type="button" className="fit-auth-link" disabled={busy || success} onClick={() => {
               savePendingRegistration(null); setPendingAccount(null); setError(''); setOtp(''); setDebugOtp(''); setCountdown(0);
               setForm({ username: '', email: '', phone: '', password: '' }); setFieldErrors({});

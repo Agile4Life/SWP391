@@ -166,7 +166,6 @@ export function ManagerProductsPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow={sourceText("Quản trị trung tâm")}
         title={sourceText("Sản phẩm & Đơn hàng")}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -324,7 +323,7 @@ export function ManagerProductsPage() {
             <div className="portal-alert stack" role="alert" style={{ gap: 8 }}>
               <p style={{ margin: 0 }}>{sourceText(deleteBlockedProduct.message)}</p>
               <p className="muted" style={{ margin: 0 }}>
-                {sourceText("Sản phẩm đã phát sinh đơn hàng không thể xóa. Bạn có thể chọn Ngừng bán để ẩn khỏi kệ hàng.")}</p>
+                {sourceText("Sản phẩm đã có đơn hàng không thể xóa. Chọn Ngừng bán để ẩn.")}</p>
               {deleteBlockedProduct.product.active && (
                 <div>
                   <button

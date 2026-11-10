@@ -43,8 +43,8 @@ export function CoachFirstAssessmentPage() {
       <PageHeader title={t('Đánh giá thể trạng lần đầu', 'First fitness assessment')} />
       <form className="portal-card stack" onSubmit={(event) => void onSearch(event)} aria-label={t('Tìm hội viên chưa được đánh giá', 'Find members awaiting an assessment')}>
         <p>{t(
-          'Hội viên đến trung tâm lần đầu được đo thể trạng và BMI để tư vấn gói tập và lộ trình. Chỉ hiện hội viên đã có tài khoản và chưa có số đo nào.',
-          'Members visiting for the first time are measured (fitness and BMI) so you can advise on a package and a roadmap. Only registered members with no measurements are listed.',
+          'Chỉ hiện hội viên chưa có số đo nào.',
+          'Only members with no measurements are listed.',
         )}</p>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="first-assessment-search">{t('Tên, mã hội viên, email hoặc số điện thoại', 'Name, member code, email or phone')}</label>

@@ -47,15 +47,9 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
           <div key={sport.id} className="fit-trainer-hero-grid fit-blur-morph">
             <div className="fit-trainer-portrait-card" data-reveal="image">
               <LoadingImage src={sport.image} alt={sport.title} />
-              <div className="fit-trainer-portrait-badge">
-                <span className="fit-kicker">{sport.kicker}</span>
-                <strong>{sport.title}</strong>
-                <span>{sport.subtitle}</span>
-              </div>
             </div>
 
             <div className="fit-trainer-hero-copy" data-reveal="soft">
-              <span className="fit-kicker">{sport.kicker}</span>
               <h1 id="sport-page-title">
                 {sport.title}
                 <span className="fit-title-dot">.</span>

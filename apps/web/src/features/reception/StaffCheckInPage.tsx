@@ -74,9 +74,9 @@ export function StaffCheckInPage() {
               403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              {t("403 - Quyền truy cập bị từ chối")}</h2>
+              {t("Không có quyền truy cập")}</h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              {t("Chỉ Lễ tân (Receptionist) và Quản lý trung tâm (Center Manager) mới có quyền vận hành cổng kiểm soát QR Check-in.")}</p>
+              {t("Chỉ Lễ tân và Quản lý trung tâm mới vận hành được cổng check-in.")}</p>
             <Link to="/portal" className="btn-secondary">
               {t("Về trang chủ Portal")}</Link>
           </div>
@@ -94,7 +94,7 @@ export function StaffCheckInPage() {
     if (isScanning) return;
     // The gate QR is what members scan themselves; staff scan the member's own card.
     if (trimmed.startsWith('SOL:GATE:')) {
-      setScanError('Đây là mã QR cổng, không phải thẻ hội viên. Hãy quét mã QR trong thẻ hội viên của học viên.');
+      setScanError('Đây là mã QR cổng. Hãy quét mã trên thẻ hội viên.');
       return;
     }
     setScanError(null);
@@ -159,7 +159,6 @@ export function StaffCheckInPage() {
   return (
     <div data-i18n-managed className="portal-container checkin-page">
       <PageHeader
-        eyebrow={t("Lễ tân")}
         title="Check-in & checkout"
         actions={
           <RefreshButton label={t("Làm mới nhật ký")} onClick={() => void loadHistory()} disabled={loadingHistory} />
@@ -227,7 +226,7 @@ export function StaffCheckInPage() {
               <QrCameraScanner
                 onScan={(code) => void executeScan(code)}
                 disabled={isScanning}
-                hint={t("Đưa mã QR trên thẻ hội viên của học viên vào khung. Mỗi lần quét xong, bấm “Quét lại” cho học viên kế tiếp.")}
+                hint={t("Đưa mã QR trên thẻ hội viên vào khung. Bấm “Quét lại” cho người kế tiếp.")}
               />
             )}
           </div>
@@ -341,7 +340,7 @@ export function StaffCheckInPage() {
           ) : visibleVisits.length === 0 ? (
             <div data-i18n-managed style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }} data-testid="checkin-history-empty">
               {historyView === 'inside'
-                ? t('Không có hội viên đang trong trung tâm từ các lượt vào hôm nay. Chọn “10 lượt gần nhất” để xem nhật ký.')
+                ? t('Hiện không có hội viên trong trung tâm.')
                 : t('Chưa có lượt check-in nào được ghi nhận.')}
             </div>
           ) : (

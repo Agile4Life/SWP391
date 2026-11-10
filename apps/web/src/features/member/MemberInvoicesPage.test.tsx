@@ -35,7 +35,7 @@ describe('MemberInvoicesPage', () => {
     expect(host.textContent).toContain('#12');
     expect(host.querySelector('.member-invoices__table')?.textContent).not.toContain('#13');
     expect(host.querySelector('[aria-label="Khoản chờ thanh toán"]')?.textContent).toContain('#13');
-    expect(host.textContent).toContain('Thanh toán VNPay Sandbox');
+    expect(host.textContent).toContain('Thanh toán VNPay');
   });
 
   it('shows an invoice skeleton until the detail request settles without a display delay', async () => {

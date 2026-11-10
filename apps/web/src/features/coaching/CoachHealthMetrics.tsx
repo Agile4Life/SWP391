@@ -72,7 +72,7 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly, onMetricsChange }
  }
  return <section data-i18n-managed className="portal-card" aria-label={t("Chỉ số sức khỏe học viên")}>
   <h2 className="portal-card-title">{t("Chỉ số sức khỏe · ")}{memberName}</h2>
-  {intakeOnly && <p className="muted">{t("Chỉ thêm số đo cho hội viên do bạn check-in hôm nay, chưa checkout. Không xem hoặc sửa lịch sử.")}</p>}
+  {intakeOnly && <p className="muted">{t("Chỉ thêm số đo cho hội viên đang check-in hôm nay.")}</p>}
   {loading ? <LoadingSkeleton label={t("Đang tải số đo")} count={2} /> : loadError ? <div role="alert">{t(loadError)} <button type="button" className="btn-secondary" onClick={() => setAttempt(n => n + 1)}>{t("Thử lại")}</button></div> : <>
    <form data-i18n-managed onSubmit={event => void submit(event)}>
     <div className="grid-2">
@@ -82,7 +82,7 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly, onMetricsChange }
     {saveError && <p role="alert" className="form-error">{t(saveError)}</p>}
     <button type="submit" className="btn-primary" disabled={saving}>{saving ? t('Đang lưu…') : t('Thêm số đo')}</button>
    </form>
-   <p data-i18n-managed className="muted">{t("Ngày ghi nhận là thời điểm lưu tại trung tâm. Chỉ số BMI được tự động tính từ chiều cao và cân nặng.")}{!intakeOnly && summary.bmi != null ? ` (${t("Chỉ số BMI")}: ${summary.bmi})` : ''}</p>
+   <p data-i18n-managed className="muted">{t("BMI được tính tự động từ chiều cao và cân nặng.")}{!intakeOnly && summary.bmi != null ? ` (${t("Chỉ số BMI")}: ${summary.bmi})` : ''}</p>
    {intakeOnly ? null : rows.length === 0 ? <p>{t("Chưa có số đo được ghi nhận.")}</p> : <div className="portal-table-wrapper"><table className="portal-table"><thead><tr><th scope="col">{t("Ngày ghi nhận")}</th><th scope="col">{t("Chỉ số")}</th><th scope="col">{t("Giá trị")}</th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td>{formatCenterDateTime(row.recordedAt)}</td><td>{t(fields[row.metricName as keyof typeof fields]?.label) || row.metricName}</td><td>{row.metricValue} {row.unit}</td></tr>)}</tbody></table></div>}
   </>}
  </section>;

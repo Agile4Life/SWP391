@@ -155,10 +155,10 @@ describe('MemberCheckoutPage Component', () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
     expect(host.querySelector('#receipt-image')).toBeNull();
-    expect(host.textContent).toContain('Thanh toán VNPay Sandbox');
+    expect(host.textContent).toContain('Thanh toán VNPay');
     expect(host.textContent).toContain('Thanh toán bằng Ví SÖL');
     expect(host.textContent).not.toContain('Nạp thêm tiền');
-    expect(host.textContent).toContain('Lưu ý: Nếu bạn muốn thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy');
+    expect(host.textContent).toContain('Thanh toán tiền mặt tại quầy Lễ tân.');
   });
 
   it('creates the subscription request when opened without one and pays with Wallet', async () => {
@@ -283,9 +283,9 @@ describe('MemberCheckoutPage Component', () => {
     vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
     await act(async () => setLanguage('en'));
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!.click());
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('This membership request is no longer available');
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('This plan request is no longer valid');
     await act(async () => setLanguage('vi'));
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Yêu cầu gói tập không còn hợp lệ');
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Yêu cầu gói không còn hợp lệ');
     expect(walletApi.payWithWallet).not.toHaveBeenCalled();
   });
 

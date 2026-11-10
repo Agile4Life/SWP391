@@ -559,7 +559,7 @@ body:has(.portal-backdrop) .click-ripple {
 .portal-wordmark span {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .04em;
   color: var(--portal-muted);
@@ -579,7 +579,7 @@ body:has(.portal-backdrop) .click-ripple {
   border: 1px solid var(--portal-border);
   border-radius: 24px;
   background: var(--portal-surface);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -641,7 +641,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 
 .portal-account-name small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--portal-muted);
 }
@@ -756,7 +756,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .portal-v2 .portal-eyebrow {
   margin: 0 0 7px;
   color: var(--portal-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: .04em;
   text-transform: none;
@@ -782,7 +782,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   justify-content: space-between;
   gap: 8px;
   padding: 16px 24px 6px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--portal-muted);
 }
 
@@ -985,7 +985,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .membership-periods__dates dt {
   margin-bottom: 5px;
   color: var(--portal-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .membership-periods__dates dd {
@@ -1068,7 +1068,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   background: var(--portal-raised);
   color: var(--portal-muted);
   border-bottom-color: var(--portal-border);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .02em;
   text-transform: none;
 }
@@ -1113,7 +1113,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .portal-v2 .portal-label,
 .portal-v2 .meta-label,
 .portal-v2 .metric-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .02em;
   text-transform: none;
@@ -1244,13 +1244,13 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .portal-v2 .btn-sm {
   min-height: 36px;
   padding: 7px 12px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .portal-v2 .filter-chip {
   min-height: 38px;
   padding: 7px 15px;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -1265,7 +1265,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .portal-v2 .badge {
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -1391,7 +1391,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 }
 
 .portal-v2 .metric-trend {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .portal-v2 .kv-row {
@@ -1399,7 +1399,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 }
 
 .portal-v2 .kv-row>span:first-child {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -1433,7 +1433,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   padding: 8px 12px;
   letter-spacing: 0;
   text-transform: none;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .portal-v2 .portal-dialog {
@@ -1672,7 +1672,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   }
 
   .portal-wordmark span {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .portal-topbar-actions {
@@ -1950,7 +1950,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   background: var(--portal-raised);
   color: var(--portal-muted);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 }
 
@@ -1989,7 +1989,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   justify-content: center;
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -2041,7 +2041,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 .portal-v2 .profile-metric-editing-bar button {
   padding: 4px 10px;
   min-height: 28px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .portal-v2 .profile-metric-form-btns {

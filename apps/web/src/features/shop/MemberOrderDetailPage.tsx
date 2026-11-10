@@ -76,7 +76,6 @@ export function MemberOrderDetailPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow={sourceText("Đơn hàng của tôi")}
         title={order ? order.code : sourceText('Chi tiết đơn hàng')}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

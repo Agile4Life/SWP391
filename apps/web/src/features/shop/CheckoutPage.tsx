@@ -489,7 +489,7 @@ export function CheckoutPage() {
                     ))}
                   </ul>
                 )}
-                {quote && !quote.valid && <p className="form-error" role="alert">{sourceText("Giỏ hàng có sản phẩm không còn bán hoặc không đủ tồn kho. Vui lòng sửa giỏ hàng để tiếp tục.")}</p>}
+                {quote && !quote.valid && <p className="form-error" role="alert">{sourceText("Giỏ hàng có sản phẩm hết hàng hoặc ngừng bán.")}</p>}
                 <button ref={cartFocusRef} type="button" className="btn-secondary" onClick={() => setCartOpen(true)}>{sourceText("Sửa giỏ hàng")}</button>
 
                 <div className="shop-checkout-totals">

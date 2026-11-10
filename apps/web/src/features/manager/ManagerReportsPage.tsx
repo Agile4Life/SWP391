@@ -195,12 +195,12 @@ export function ManagerReportsPage() {
 
       // 2. Tạo nội dung file CSV có BOM UTF-8 (\uFEFF) mở chuẩn trong Excel tiếng Việt
       let csv = '\uFEFF';
-      csv += t('TRUNG TÂM THỂ THAO SCMS - BÁO CÁO DOANH THU & THỐNG KÊ TÀI CHÍNH\n', "SCMS SPORTS CENTER - REVENUE REPORT & FINANCIAL STATISTICS\n");
+      csv += t('SÖL FITNESS - BÁO CÁO DOANH THU\n', "SÖL FITNESS - REVENUE REPORT\n");
       csv += t(`Kỳ Báo Cáo: Từ ngày ${appliedRange.startDate} đến ngày ${appliedRange.endDate}\n`, `Report period: From ${appliedRange.startDate} to ${appliedRange.endDate}
 `);
       csv += t(`Thời gian Xuất: ${new Date().toLocaleString(staffLocale())}\n`, `Exported at: ${new Date().toLocaleString(staffLocale())}
 `);
-      csv += t(`Người Xuất: Quản lý trung tâm (Center Manager)\n\n`, "Exported by: Center Manager\n\n");
+      csv += t(`Người xuất: Quản lý trung tâm\n\n`, "Exported by: Center manager\n\n");
 
       csv += t('1. TỔNG QUAN CHỈ SỐ KPI\n', "1. KPI OVERVIEW\n");
       csv += t(`Doanh Thu Kỳ Lọc,${summary.periodRevenue} VNĐ\n`, `Period Revenue,${summary.periodRevenue} VND
@@ -272,9 +272,9 @@ export function ManagerReportsPage() {
               403
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-              {t("403 - Quyền truy cập bị từ chối")}</h2>
+              {t("Không có quyền truy cập")}</h2>
             <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
-              {t("Chỉ Quản lý trung tâm (Center Manager) mới có quyền truy cập báo cáo tài chính & doanh thu.")}</p>
+              {t("Chỉ Quản lý trung tâm mới xem được báo cáo doanh thu.")}</p>
             <Link to="/portal" className="btn-secondary">
               {t("Về trang chủ Portal")}</Link>
           </div>
@@ -290,7 +290,6 @@ export function ManagerReportsPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Quản lý trung tâm")}
         title={t("Báo cáo doanh thu")}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -518,21 +517,16 @@ export function ManagerReportsPage() {
           <div className="metric-card">
             <div className="metric-label">{t("Doanh thu hôm nay")}</div>
             <div className="metric-value">{vnd(summary.todayRevenue)}</div>
-            <div className="metric-trend" style={{ color: summary.todayRevenue > 0 ? 'var(--portal-success, #86efac)' : 'var(--color-text-muted)' }}>
-              {summary.todayRevenue > 0 ? t('↑ Giao dịch phát sinh trong ngày') : t('Chưa có giao dịch hôm nay')}
-            </div>
           </div>
 
           <div className="metric-card">
             <div className="metric-label">{t("Doanh thu trong kỳ")}</div>
             <div className="metric-value">{vnd(summary.periodRevenue)}</div>
-            <div className="metric-trend">{t("Từ ")}{formatCenterDate(appliedRange.startDate)} {t(" đến ")}{formatCenterDate(appliedRange.endDate)}</div>
           </div>
 
           <div className="metric-card">
             <div className="metric-label">{t("Gói đã bán")}</div>
             <div className="metric-value">{summary.packagesSoldCount}</div>
-            <div className="metric-trend">{t("Gói dịch vụ đã thanh toán")}</div>
           </div>
 
           <div className="metric-card">

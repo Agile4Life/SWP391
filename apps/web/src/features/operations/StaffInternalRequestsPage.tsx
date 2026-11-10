@@ -105,7 +105,7 @@ export function StaffInternalRequestsPage() {
         targetShift: createTargetShift.trim() || null,
       });
 
-      notify('Gửi đơn từ nội bộ thành công! Ban Quản Lý sẽ sớm xem xét và phản hồi.', 'success');
+      notify('Đã gửi đơn từ.', 'success');
       setShowCreateModal(false);
       resetForm();
       await loadData();
@@ -143,8 +143,7 @@ export function StaffInternalRequestsPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Vận hành nội bộ")}
-        title={t("Đơn từ & đề xuất nội bộ")}
+        title={t("Đơn từ nội bộ")}
       />
 
       {/* Top action row */}
@@ -272,7 +271,7 @@ export function StaffInternalRequestsPage() {
           <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
             {t("Không có đơn từ nào trong danh sách")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-            {t("Bạn chưa gửi đơn từ nào hoặc không có đơn phù hợp với bộ lọc hiện tại.")}</span>
+            {t("Chưa có đơn từ nào.")}</span>
         </div>
       ) : (
         <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
@@ -519,7 +518,7 @@ export function StaffInternalRequestsPage() {
                   id="internal-request-shift"
                   type="text"
                   className="portal-input"
-                  placeholder={t("Ví dụ: Ca sáng (06:00 - 14:00) đổi sang Ca tối, hoặc Lớp Boxing 18:00...")}
+                  placeholder={t("Ví dụ: đổi Ca sáng sang Ca tối")}
                   value={createTargetShift}
                   onChange={(e) => setCreateTargetShift(e.target.value)}
                   style={{ width: '100%', padding: '10px 14px', borderRadius: 10 }}

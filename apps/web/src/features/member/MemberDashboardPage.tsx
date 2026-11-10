@@ -1,5 +1,5 @@
 import { memberText } from './memberI18n';
-import { getIntlLocale, useLanguage } from '../../shared/i18n/language';
+import { useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -144,15 +144,9 @@ export function MemberDashboardPage() {
   return (
     <div data-i18n-managed className="portal-container member-overview">
       <PageHeader
-        eyebrow={memberText("Hội viên")}
         title={memberText(`Xin chào, ${userName}`, `Hello, ${userName}`)}
         actions={<Link className="btn-primary" to="/member/classes">{memberText("Khám phá lịch học")}</Link>}
       />
-
-      <div className="member-board-toolbar">
-        <div className="member-board-view"><span>{memberText("Tổng quan của tôi")}</span></div>
-        <span className="member-board-date">{today.toLocaleDateString(getIntlLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-      </div>
 
       <div className="member-board" aria-label={memberText("Tổng quan hội viên")}>
         <section data-i18n-managed className="member-board-column member-board-column--pink" aria-labelledby="board-membership">
@@ -191,8 +185,6 @@ export function MemberDashboardPage() {
                   <div className="member-card-body">
                     <Link className="member-card-details-link" to="/member/packages" aria-label={memberText("Xem chi tiết gói tập của tôi")}>
                     <span className="badge badge-success">{memberText("Đang hoạt động")}</span>
-                    <div className="meta-label" style={{ marginTop: 14 }}>{memberText("Gói tập hiện tại")}</div>
-
                     <h2
                       id="membership-title"
                       className="portal-card-title"
@@ -242,8 +234,6 @@ export function MemberDashboardPage() {
                   className="portal-card portal-card--feature portal-empty"
                   aria-labelledby="membership-empty-title"
                 >
-
-                  <div className="meta-label">SÖL FITNESS</div>
 
                   <h2
                     id="membership-empty-title"
@@ -310,8 +300,6 @@ export function MemberDashboardPage() {
             {classesState.status === 'success' &&
               classes.length > 0 && (
                 <div className="stack">
-                  <p className="row-card__meta">
-                    {memberText("Xem lịch lớp để kiểm tra buổi học.")}</p>
                   {classes.map((item) => (
                     <div key={item.id} className="row-card member-booking-row">
                       <div>
@@ -336,16 +324,15 @@ export function MemberDashboardPage() {
           <div className="member-column-heading"><h2 id="board-card">{memberText("Thẻ & thanh toán")}</h2><Link to="/member/card" aria-label={memberText("Xem thẻ hội viên")}><PortalIcon name="arrow" size={16} /></Link></div>
           <Link className="member-digital-card" to="/member/card">
             <div className="member-digital-card-top"><span>SÖL</span><PortalIcon name="scan" size={24} /></div>
-            <span className="member-digital-card-label">{memberText("THẺ HỘI VIÊN", "FITNESS MEMBERSHIP")}</span>
             <strong>{userName}</strong>
-            <div className="member-digital-card-bottom"><span>{memberText("Thẻ hội viên điện tử")}</span><PortalIcon name="arrow" size={17} /></div>
+            <div className="member-digital-card-bottom"><span>{memberText("Xem thẻ & mã QR")}</span><PortalIcon name="arrow" size={17} /></div>
           </Link>
-          <Link className="member-board-note" to="/member/invoices"><span>{memberText("Giao dịch & hóa đơn")}<small>{memberText("Xem các khoản đã thanh toán")}</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/invoices"><span>{memberText("Giao dịch & hóa đơn")}</span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
-          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Sức khỏe & cân bằng")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ và sức khỏe")}><PortalIcon name="arrow" size={16} /></Link></div>
-          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ sức khỏe")}</h3><p>{memberText("Cập nhật thông tin cá nhân và chỉ số cơ thể.")}</p><span className="member-text-link">{memberText("Hồ sơ & sức khỏe")}<PortalIcon name="arrow" size={14} /></span></Link>
+          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Sức khỏe")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ và sức khỏe")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ sức khỏe")}</h3><span className="member-text-link">{memberText("Cập nhật chỉ số cơ thể")}<PortalIcon name="arrow" size={14} /></span></Link>
         </section>
       </div>
     </div>

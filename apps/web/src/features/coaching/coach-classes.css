@@ -121,7 +121,7 @@
 }
 
 .coach-day-name {
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -137,7 +137,7 @@
 
 .coach-day-badge,
 .coach-day-count {
-  font-size: 0.7rem;
+  font-size: 12px;
   background: var(--portal-raised);
   color: var(--portal-muted);
   padding: 2px 6px;
@@ -293,7 +293,7 @@
 
 .status-pill,
 .coach-session-badge {
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 6px;
@@ -656,7 +656,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 
 .fitness-level-badge,
 .roster-level-badge {
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 4px;

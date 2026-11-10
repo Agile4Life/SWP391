@@ -364,7 +364,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display
 }
 
 .intro-tagline {
-  font-size: .68rem;
+  font-size: 12px;
   letter-spacing: .42em;
   text-transform: uppercase;
   color: var(--color-accent-sand);
@@ -400,7 +400,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display
   display: flex;
   justify-content: space-between;
   width: 100%;
-  font-size: .66rem;
+  font-size: 12px;
   letter-spacing: .3em;
   text-transform: uppercase;
   color: rgba(250, 248, 245, .5);

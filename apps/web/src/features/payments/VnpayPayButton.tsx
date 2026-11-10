@@ -50,7 +50,7 @@ export function VnpayPayButton({
       const checkout = await createVnpayCheckout(order);
       navigateToVnpay(checkout.paymentUrl);
     } catch (reason) {
-      setError(localizableError(reason, 'Không thể mở thanh toán VNPay Sandbox. Vui lòng thử lại.'));
+      setError(localizableError(reason, 'Không thể mở thanh toán VNPay. Vui lòng thử lại.'));
       setBusy(false);
       sending.current = false;
     }
@@ -81,7 +81,7 @@ export function VnpayPayButton({
     <div className="stack" data-i18n-managed>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className="btn-primary" disabled={busy || walletBusy || disabled} onClick={() => void pay()}>
-          {busy ? t("Đang chuyển tới VNPay…", "Redirecting to VNPay…") : t("Thanh toán VNPay Sandbox", "Pay with VNPay Sandbox")}
+          {busy ? t("Đang chuyển tới VNPay…", "Redirecting to VNPay…") : t("Thanh toán VNPay", "Pay with VNPay")}
         </button>
         <button
           type="button"

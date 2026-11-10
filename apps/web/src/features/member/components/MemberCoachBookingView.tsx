@@ -44,13 +44,13 @@ import {
 function coachBookingErrorMessage(err: unknown): string | SourceMessage {
   if (err instanceof ApiError) {
     if (err.code === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') {
-      return memberMessage('Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.');
+      return memberMessage('Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.');
     }
     if (err.code === 'COACH_BOOKING_PACKAGE_NO_QUOTA') {
-      return memberMessage('Gói tập hiện tại không bao gồm lượt tập PT 1:1 miễn phí. Vui lòng chọn hình thức thanh toán theo giờ.');
+      return memberMessage('Gói hiện tại không có lượt PT 1:1 miễn phí. Chọn thanh toán theo giờ.');
     }
     if (err.code === 'COACH_BOOKING_QUOTA_EXCEEDED') {
-      return memberMessage('Bạn đã sử dụng hết lượt tập PT 1:1 miễn phí trong tháng này của gói tập. Vui lòng chọn thanh toán theo giờ.');
+      return memberMessage('Đã hết lượt PT 1:1 miễn phí của tháng. Chọn thanh toán theo giờ.');
     }
     return err.message;
   }
@@ -578,7 +578,7 @@ export function MemberCoachBookingView({
                       {quotaStatus.remainingQuota}{memberText(" lượt")}</strong>).
                   </>
                 )}
-                {quotaStatus && quotaStatus.remainingQuota <= 0 && memberText(" Khi đã sử dụng hết buổi trải nghiệm 1:1, bạn có thể đăng ký thêm HLV theo giờ (200.000 đ / giờ).")}
+                {quotaStatus && quotaStatus.remainingQuota <= 0 && memberText(" Hết buổi trải nghiệm 1:1? Đặt thêm HLV theo giờ (200.000 đ / giờ).")}
               </>
             ) : quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
               <>
@@ -590,7 +590,7 @@ export function MemberCoachBookingView({
               </>
             ) : (
               <>
-                {hasNoPackage ? memberText("Bạn chưa đăng ký gói tập hoặc gói tập chưa được kích hoạt (cần có gói tập đang hoạt động để đặt lịch HLV 1:1).") : memberText(`Gói ${displayedPackageName} không bao gồm lượt tập PT 1:1 miễn phí.`, `Membership ${displayedPackageName} does not include free 1:1 PT sessions.`)}{memberText(" Phí đặt lịch HLV kèm riêng là")}{' '}
+                {hasNoPackage ? memberText("Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.") : memberText(`Gói ${displayedPackageName} không bao gồm lượt tập PT 1:1 miễn phí.`, `Membership ${displayedPackageName} does not include free 1:1 PT sessions.`)}{memberText(" Phí đặt lịch HLV kèm riêng là")}{' '}
                 <strong style={{ color: 'var(--portal-salmon)' }}>{memberText("200.000 đ / giờ")}</strong>{memberText(". (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).")}</>
             )}
           </p>
@@ -719,14 +719,14 @@ export function MemberCoachBookingView({
                         {c.fullName}
                       </h4>
                       {isSelected && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-salmon)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--portal-salmon)' }}>
                           {memberText("Đang chọn")}</span>
                       )}
                     </div>
                     <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
                       {c.specialization || memberText("Huấn luyện cá nhân")}
                     </p>
-                    <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--portal-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--portal-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {c.bio || memberText("Chuyên gia huấn luyện thể hình và phục hồi thể lực.")}
                     </p>
                   </div>
@@ -972,7 +972,7 @@ export function MemberCoachBookingView({
                       </span>
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 500,
                           color: isSelected ? 'color-mix(in srgb, var(--portal-on-accent) 80%, transparent)' : 'var(--portal-muted)',
                           lineHeight: 1,
@@ -992,7 +992,7 @@ export function MemberCoachBookingView({
               onChange={setRecurrence}
               disabled={submitting}
               allowedPeriods={['once', 'week']}
-              hint={memberText("Đặt các thứ đã chọn trong 7 ngày kể từ ngày bắt đầu. Thứ đã qua trong tuần này được tính sang tuần sau; ngày trùng lịch hoặc hết quyền lợi sẽ được báo riêng.")}
+              hint={memberText("Đặt các thứ đã chọn trong 7 ngày từ ngày bắt đầu; ngày không đặt được sẽ được báo lại.")}
             />
             <p className="row-card__meta" style={{ margin: 0 }}>
               {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')} {memberText(" · HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.")}</p>
@@ -1006,7 +1006,7 @@ export function MemberCoachBookingView({
             ) : slots.length === 0 ? (
               <div style={{ padding: '24px 0', textAlign: 'center' }}>
                 <p className="row-card__meta" style={{ margin: 0 }}>
-                  {memberText("Huấn luyện viên không có khung giờ nào trong ngày này. Vui lòng chọn ngày khác!")}</p>
+                  {memberText("HLV không có khung giờ trong ngày này.")}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1111,7 +1111,7 @@ export function MemberCoachBookingView({
         {myBookings.length === 0 ? (
           <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
             <p className="row-card__meta" style={{ margin: 0 }}>
-              {memberText("Bạn chưa có lịch hẹn 1:1 nào với Huấn luyện viên. Hãy chọn HLV và khung giờ ở trên để bắt đầu!")}</p>
+              {memberText("Chưa có lịch hẹn 1:1.")}</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
@@ -1164,13 +1164,13 @@ export function MemberCoachBookingView({
                           {memberText("Tập 1:1 cùng HLV ")}{coachDisplayName}
                         </h4>
                         {isCancelled ? (
-                          <span className="badge badge-danger" style={{ fontSize: 11 }}>
+                          <span className="badge badge-danger" style={{ fontSize: 12 }}>
                             {memberText("Đã hủy")}</span>
                         ) : hasEnded ? (
                           <span
                             className="badge badge-info"
                             style={{
-                              fontSize: 11,
+                              fontSize: 12,
                               background: 'color-mix(in srgb, var(--portal-info) 12%, transparent)',
                               borderColor: 'color-mix(in srgb, var(--portal-info) 30%, transparent)',
                               color: 'var(--portal-info)',
@@ -1178,27 +1178,27 @@ export function MemberCoachBookingView({
                           >
                             {memberText("Đã kết thúc buổi")}</span>
                         ) : (
-                          <span className="badge badge-success" style={{ fontSize: 11 }}>
+                          <span className="badge badge-success" style={{ fontSize: 12 }}>
                             {memberText("Sắp diễn ra")}</span>
                         )}
                         {!isCancelled && b.attendedAt && (
-                          <span className="badge badge-success" data-testid={`pt-attended-${b.id}`} style={{ fontSize: 11 }}>
+                          <span className="badge badge-success" data-testid={`pt-attended-${b.id}`} style={{ fontSize: 12 }}>
                             {memberText("Đã có mặt", "Attended")}</span>
                         )}
                         {!isCancelled && !b.attendedAt && hasEnded && (
-                          <span className="badge badge-warning" data-testid={`pt-missed-${b.id}`} style={{ fontSize: 11 }}>
+                          <span className="badge badge-warning" data-testid={`pt-missed-${b.id}`} style={{ fontSize: 12 }}>
                             {memberText("Không có mặt", "Did not attend")}</span>
                         )}
                         {!isCancelled && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && (
-                          <span className="badge badge-warning" style={{ fontSize: 11 }}>
+                          <span className="badge badge-warning" style={{ fontSize: 12 }}>
                             {memberText("Chờ thanh toán", "Awaiting payment")}</span>
                         )}
                         {!isCancelled && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'paid' && (
-                          <span className="badge badge-success" style={{ fontSize: 11 }}>
+                          <span className="badge badge-success" style={{ fontSize: 12 }}>
                             {memberText("Đã thanh toán", "Paid")}</span>
                         )}
                         {existingReview && (
-                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--portal-star)' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--portal-star)' }}>
                             {memberText("Đã đánh giá (")}{existingReview.rating} {memberText(" sao)", " stars)")}</span>
                         )}
                       </div>
@@ -1237,7 +1237,7 @@ export function MemberCoachBookingView({
                         <span
                           className="badge badge-neutral"
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             color: 'var(--portal-muted)',
                             padding: '4px 8px',
                             display: 'inline-flex',
@@ -1350,7 +1350,7 @@ export function MemberCoachBookingView({
                 rows={4}
                 className="portal-input"
                 style={{ width: '100%', resize: 'vertical', color: 'var(--portal-paper)' }}
-                placeholder={memberText("Chia sẻ về tác phong, chuyên môn, sự nhiệt tình hoặc điểm cần cải thiện của HLV...")}
+                placeholder={memberText("Nhận xét về HLV...")}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
               />
@@ -1362,7 +1362,7 @@ export function MemberCoachBookingView({
                 checked={reviewAnonymous}
                 onChange={(e) => setReviewAnonymous(e.target.checked)}
               />
-              <span>{memberText("Đánh giá ẩn danh (Không hiển thị họ tên của tôi với Huấn luyện viên)")}</span>
+              <span>{memberText("Đánh giá ẩn danh")}</span>
             </label>
 
             {/* Review modal is for already completed sessions; no active package alert needed here */}
@@ -1467,7 +1467,7 @@ export function MemberCoachBookingView({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 900,
                     }}
                   >
@@ -1588,13 +1588,13 @@ export function MemberCoachBookingView({
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                       <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
                         {isTrial
-                          ? memberText("Sử dụng đặc quyền PT 1:1 trong Gói Trải Nghiệm (01 buổi miễn phí)")
+                          ? memberText("Dùng buổi PT 1:1 miễn phí của gói trải nghiệm")
                           : memberText(`Sử dụng quyền lợi PT trong gói tập (${displayedPackageName})`, `Use membership PT benefit (${displayedPackageName})`)}
                       </strong>
                       {hasRemainingQuota ? (
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 700,
                             color: 'var(--portal-success)',
                             background: 'color-mix(in srgb, var(--portal-success) 12%, transparent)',
@@ -1606,7 +1606,7 @@ export function MemberCoachBookingView({
                       ) : (
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: 'var(--portal-salmon)',
                             background: 'var(--portal-tint)',
@@ -1620,11 +1620,11 @@ export function MemberCoachBookingView({
                     <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
                       {hasRemainingQuota
                         ? (isTrial
-                            ? memberText("Tự động áp dụng đặc quyền 01 buổi tập HLV 1:1 miễn phí của Gói Trải Nghiệm (0 đ).")
+                            ? memberText("Áp dụng buổi PT 1:1 miễn phí của gói trải nghiệm (0 đ).")
                             : memberText("Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ)."))
                         : (isTrial
-                            ? memberText("Bạn đã sử dụng buổi tập HLV 1:1 miễn phí của gói trải nghiệm. Vui lòng chọn đóng phí ") + formatPrice(selectedCoach.defaultHourlyRate || 200000) + memberText(" nếu muốn tập thêm cùng HLV.")
-                            : memberText("Gói hiện tại không có lượt PT miễn phí hoặc bạn đã dùng hết quota tháng. Vui lòng chọn đóng phí ") + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.')}
+                            ? memberText("Đã dùng buổi PT 1:1 miễn phí. Tập thêm: ") + formatPrice(selectedCoach.defaultHourlyRate || 200000) + memberText(" / giờ.")
+                            : memberText("Không còn lượt PT miễn phí. Giá theo giờ: ") + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.')}
                     </div>
                   </div>
                 </div>
@@ -1683,7 +1683,7 @@ export function MemberCoachBookingView({
                       {!hasRemainingQuota && !hasNoPackage && (
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: 'var(--portal-salmon)',
                             background: 'var(--portal-tint)',
@@ -1695,7 +1695,7 @@ export function MemberCoachBookingView({
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginTop: 4, lineHeight: 1.4 }}>
-                      {memberText("Thanh toán trực tuyến qua VNPay Sandbox hoặc Ví điện tử SÖL. Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.")}</div>
+                      {memberText("Thanh toán qua VNPay hoặc Ví SÖL; tiền mặt tại quầy Lễ tân.")}</div>
                   </div>
                 </div>
               </div>
@@ -1754,7 +1754,7 @@ export function MemberCoachBookingView({
 
             {hasNoPackage && (
               <div role="alert" style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid color-mix(in srgb, var(--portal-star) 45%, transparent)', background: 'color-mix(in srgb, var(--portal-star) 10%, transparent)', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span><strong>{memberText("Bạn chưa có gói tập đang hoạt động.")}</strong>{memberText(" Hội viên cần đăng ký và kích hoạt gói tập trước khi đặt lịch HLV 1:1.")}</span>
+                <span><strong>{memberText("Bạn chưa có gói tập đang hoạt động.")}</strong>{memberText(" Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.")}</span>
                 <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>{memberText("Đăng ký gói tập")}</button>
               </div>
             )}
@@ -1846,7 +1846,7 @@ export function MemberCoachBookingView({
             describe={(b) => `${b.bookingDate} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
           />
           {recurringOutcome.booked.some((b) => b.paymentMethod !== 'package_quota') && (
-            <p className="muted">{memberText("Các buổi trả phí theo giờ có thể thanh toán qua VNPay Sandbox hoặc Ví SÖL tại danh sách lịch tập. Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy.")}</p>
+            <p className="muted">{memberText("Thanh toán các buổi trả phí tại danh sách lịch tập.")}</p>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button type="button" className="btn-primary" onClick={() => setRecurringOutcome(null)}>{memberText("Đóng")}</button>
@@ -1910,11 +1910,9 @@ export function MemberCoachBookingView({
                   </>
                 ) : (
                   <>
-                    <div>{memberText("Chọn ")}<strong>{memberText("Thanh toán VNPay Sandbox")}</strong>{memberText(" hoặc ")}<strong>{memberText("Thanh toán bằng Ví SÖL")}</strong>{memberText(" ở trên để hoàn tất thanh toán trực tuyến.")}</div>
+                    <div>{memberText("Chọn ")}<strong>{memberText("Thanh toán VNPay")}</strong>{memberText(" hoặc ")}<strong>{memberText("Thanh toán bằng Ví SÖL")}</strong>{memberText(" ở trên để hoàn tất thanh toán trực tuyến.")}</div>
                     <div>{memberText("Số tiền cần thanh toán: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                     <div>{memberText("Nội dung chuyển khoản: ")}<strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
-                    <div style={{ marginTop: 6, fontSize: 12, color: 'var(--portal-muted)' }}>
-                      {memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.")}</div>
                   </>
                 )}
               </div>

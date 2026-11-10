@@ -76,7 +76,7 @@
   background: #ff3040;
   color: #ffffff;
   border: 2px solid #212328;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 15px;
   text-align: center;
@@ -212,14 +212,14 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0 8px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: #a8a8a8;
 }
 
 .chat-widget__status .direct-chat__link {
   min-height: 44px;
   padding: 0;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .chat-widget__header-actions {

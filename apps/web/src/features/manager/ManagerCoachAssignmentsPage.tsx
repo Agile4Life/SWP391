@@ -219,8 +219,7 @@ export function ManagerCoachAssignmentsPage() {
   return (
     <div data-i18n-managed className="coach-assignments-page">
       <PageHeader
-        eyebrow={t("Vận hành & Huấn luyện")}
-        title={t("Quản lý HLV & Học viên phụ trách")}
+        title={t("HLV & học viên phụ trách")}
         actions={
           <button
             type="button"
@@ -321,7 +320,7 @@ export function ManagerCoachAssignmentsPage() {
       ) : !data || data.coaches.length === 0 ? (
         <div data-i18n-managed className="portal-empty">
           <h3>{t("Không tìm thấy dữ liệu")}</h3>
-          <p>{t("Không có huấn luyện viên hoặc học viên nào phù hợp với bộ lọc hiện tại.")}</p>
+          <p>{t("Không có kết quả phù hợp.")}</p>
         </div>
       ) : viewMode === 'cards' ? (
         /* Card View by Coach */
@@ -337,7 +336,7 @@ export function ManagerCoachAssignmentsPage() {
                     <h3>{coach.coachName}</h3>
                     <div className="coach-meta-row">
                       <span className="coach-badge-spec">{coach.specialization}</span>
-                      {coach.coachPhone && <span>📞 {coach.coachPhone}</span>}
+                      {coach.coachPhone && <span>{coach.coachPhone}</span>}
                       {coach.coachEmail && <span>✉️ {coach.coachEmail}</span>}
                     </div>
                   </div>

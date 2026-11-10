@@ -95,7 +95,7 @@ export function CourtBookingFeature() {
   };
 
   return <div data-i18n-managed className="portal-container court-page">
-    <PageHeader eyebrow={memberText("Hội viên")} title={memberText("Đặt sân")} />
+    <PageHeader title={memberText("Đặt sân")} />
     <div className="portal-tabs" aria-label={memberText("Bộ môn có sân")}>
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
@@ -149,14 +149,14 @@ export function CourtBookingFeature() {
               </p>
               {bookedPaidItems.length > 0 && (
                 <p className="muted">
-                  {memberText("Sau khi đặt, chọn “Thanh toán VNPay Sandbox” hoặc “Thanh toán bằng Ví SÖL” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.")}
+                  {memberText("Thanh toán tại lượt đặt của bạn. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.")}
                 </p>
               )}
             </div>
           )}
         </>;
       })() : <>
-      <RecurrenceFields startDate={selection.date} value={recurrence} onChange={setRecurrence} disabled={busy} hint={memberText("Đặt định kỳ được đặt trước tối đa 1 tháng; buổi trùng lịch hoặc ngoài thời hạn gói tập sẽ được bỏ qua và báo lại.")} />
+      <RecurrenceFields startDate={selection.date} value={recurrence} onChange={setRecurrence} disabled={busy} hint={memberText("Đặt định kỳ tối đa 1 tháng; buổi trùng lịch hoặc ngoài hạn gói sẽ bị bỏ qua.")} />
       <div className="court-pricing">
         {covered && recurrence.period === 'once' ? (
           <p>{memberText("Còn ")}<strong>{remainingQuota}</strong>{memberText(" lượt đặt sân miễn phí trong tháng này; buổi này sẽ dùng 1 lượt.")}</p>
@@ -190,8 +190,7 @@ export function CourtBookingFeature() {
         )}
       </div>
       {!covered && <>
-        <p className="muted">{memberText("Sau khi đặt, chọn “Thanh toán VNPay Sandbox” hoặc “Thanh toán bằng Ví SÖL” tại lượt đặt của bạn để hoàn tất. Mỗi buổi định kỳ được thanh toán riêng. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.")}</p>
-        <p className="muted">{memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy để được hỗ trợ thu tiền.")}</p>
+        <p className="muted">{memberText("Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Mỗi buổi định kỳ thanh toán riêng; lượt chưa thanh toán sau 15 phút sẽ tự hủy.")}</p>
       </>}
       <p className="muted">{memberText("Hủy trước giờ bắt đầu ít nhất 2 giờ.")}</p></>}
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{memberRenderMessage(actionError)}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">{memberText("Xem / Đăng ký gói tập")}</Link></div>}</div>}

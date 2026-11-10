@@ -199,7 +199,7 @@ export function RecurrenceFields({ startDate, value, onChange, disabled = false,
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--portal-paper)' }}>
-              <strong>{t("Lưu ý:", "Note:")}</strong> {hint || t("Các buổi tập được đặt cùng lúc cho những ngày đã chọn. Bạn có thể hủy từng buổi trước giờ tập theo quy định của trung tâm.", "Sessions are booked together for the selected dates. You can cancel individual sessions before they start, according to center policy.")}
+              <strong>{t("Lưu ý:", "Note:")}</strong> {hint || t("Đặt cùng lúc cho các ngày đã chọn. Có thể hủy từng buổi trước giờ tập.", "Booked together for the selected days. Each session can be cancelled before it starts.")}
             </div>
           </div>
         </>

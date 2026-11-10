@@ -366,7 +366,6 @@ export function UserManagerPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Quản trị hệ thống")}
         title={t("Tài khoản & phân quyền")}
       />
 
@@ -441,7 +440,7 @@ export function UserManagerPage() {
               <button
                 type="button"
                 className="btn-secondary btn-sm"
-                title={t("Tài khoản không đăng nhập quá 6 tháng sẽ tự động xóa mềm (ngoại trừ hội viên đang bảo lưu)")}
+                title={t("Tài khoản không đăng nhập quá 6 tháng sẽ tự động bị xóa (trừ hội viên đang bảo lưu).")}
                 onClick={() => {
                   setCleanupResult(null);
                   setShowCleanupModal(true);
@@ -791,11 +790,11 @@ export function UserManagerPage() {
                   setFormData({ ...formData, role: e.target.value as SystemRole })
                 }
               >
-                <option value="COACH">{t("Huấn luyện viên (Coach)")}</option>
-                <option value="RECEPTIONIST">{t("Lễ tân (Receptionist)")}</option>
+                <option value="COACH">{t("Huấn luyện viên")}</option>
+                <option value="RECEPTIONIST">{t("Lễ tân")}</option>
                 <option value="MEMBER">{t("Hội viên (Member)")}</option>
-                <option value="CENTER_MANAGER">{t("Quản lý trung tâm (Center Manager)")}</option>
-                <option value="ADMIN">{t("Quản trị hệ thống (Admin)")}</option>
+                <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
+                <option value="ADMIN">{t("Quản trị hệ thống")}</option>
               </Select>
             </div>
 
@@ -920,11 +919,11 @@ export function UserManagerPage() {
                   setEditFormData({ ...editFormData, role: e.target.value as SystemRole })
                 }
               >
-                <option value="COACH">{t("Huấn luyện viên (Coach)")}</option>
-                <option value="RECEPTIONIST">{t("Lễ tân (Receptionist)")}</option>
+                <option value="COACH">{t("Huấn luyện viên")}</option>
+                <option value="RECEPTIONIST">{t("Lễ tân")}</option>
                 <option value="MEMBER">{t("Hội viên (Member)")}</option>
-                <option value="CENTER_MANAGER">{t("Quản lý trung tâm (Center Manager)")}</option>
-                <option value="ADMIN">{t("Quản trị hệ thống (Admin)")}</option>
+                <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
+                <option value="ADMIN">{t("Quản trị hệ thống")}</option>
               </Select>
             </div>
 
@@ -978,7 +977,7 @@ export function UserManagerPage() {
                   color: 'var(--portal-info)',
                 }}
               >
-                {t("Tài khoản này hiện đang có gói tập bảo lưu. Vui lòng cân nhắc trước khi xóa thủ công.")}</div>
+                {t("Tài khoản này đang bảo lưu gói tập.")}</div>
             )}
             <div
               style={{
@@ -990,7 +989,7 @@ export function UserManagerPage() {
                 color: 'var(--portal-danger)',
               }}
             >
-              {t("Lưu ý: Thao tác này sẽ xóa mềm tài khoản khỏi hệ thống và vô hiệu hóa quyền truy cập vĩnh viễn.")}</div>
+              {t("Tài khoản sẽ bị xóa khỏi danh sách và mất quyền truy cập.")}</div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
               <button
@@ -1026,10 +1025,10 @@ export function UserManagerPage() {
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p style={{ margin: 0, lineHeight: 1.5 }}>
-              {t("Hệ thống sẽ quét toàn bộ tài khoản và tự động xóa mềm những tài khoản thỏa mãn các điều kiện:")}</p>
+              {t("Tự động xóa các tài khoản thỏa điều kiện:")}</p>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.88rem', display: 'grid', gap: 6 }}>
               <li>{t("Không đăng nhập trong vòng ")}<strong>{t("6 tháng qua")}</strong> {t(" (hoặc tạo quá 6 tháng nhưng chưa từng đăng nhập).")}</li>
-              <li><strong>{t("Không")}</strong> {t(" xóa tài khoản Quản lý trung tâm (Center Manager).")}</li>
+              <li><strong>{t("Không")}</strong> {t(" xóa tài khoản Quản lý trung tâm.")}</li>
               <li><strong>{t("Không")}</strong> {t(" xóa tài khoản hội viên đang có gói dịch vụ trong trạng thái ")}<strong>{t("bảo lưu tập (frozen)")}</strong>.</li>
             </ul>
 

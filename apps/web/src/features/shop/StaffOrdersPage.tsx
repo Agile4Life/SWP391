@@ -191,7 +191,6 @@ export function StaffOrdersPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow={sourceText("Vận hành")}
         title={sourceText("Đơn hàng sản phẩm")}
         actions={
           <RefreshButton

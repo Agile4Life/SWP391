@@ -142,7 +142,7 @@ export function NutrientRowsEditor({
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="muted">
-                    {sourceText("Chưa có dòng thành phần. Nhấn “Thêm thành phần” để nhập bảng dinh dưỡng.")}</td>
+                    {sourceText("Chưa có thành phần.")}</td>
                 </tr>
               ) : (
                 rows.map((row, idx) => (

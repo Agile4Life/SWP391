@@ -55,13 +55,13 @@ export function VnpayReturnPage() {
   }, [params, reference, valid, retry, t]);
   const title = data?.status === 'success' ? t("Thanh toán thành công", "Payment successful") : data?.status === 'failed' ? t("Thanh toán chưa thành công", "Payment unsuccessful") : data?.status === 'refunded' ? t("Giao dịch đã hoàn tiền", "Transaction refunded") : t("Đang xác nhận thanh toán", "Confirming payment");
   return <div data-i18n-managed className="portal-container" >
-    <PageHeader eyebrow="VNPay Sandbox" title={t("Kết quả thanh toán", "Payment result")} />
+    <PageHeader title={t("Kết quả thanh toán", "Payment result")} />
     <section data-i18n-managed className="portal-card stack">
       {!valid ? <p className="form-error" role="alert">{t("Không tìm thấy mã giao dịch. Vui lòng mở từ giao dịch của bạn.", "Transaction reference missing. Open this page from your transaction.")}</p> : loading ? <LoadingSkeleton label={t("Đang kiểm tra với hệ thống…", "Checking with the system…")} count={2} /> : error ? <p className="form-error" role="alert">{t(error)}</p> : data && <>
         <h2 className="portal-card-title" aria-live="polite">{title}</h2>
         <p>{t("Mã giao dịch: ", "Transaction reference:")}{data.reference}</p><p>{t("Số tiền: ", "Amount:")}<strong>{formatPrice(data.amount)}</strong></p>
-        {data.status === 'pending' && <p>{t("Hệ thống chưa nhận xác nhận từ VNPay. Vui lòng chờ; không thanh toán thêm cho khoản này. Nếu quá thời gian chờ, liên hệ lễ tân để đối soát.", "VNPay confirmation has not arrived yet. Please wait without making another payment for this item. If the wait expires, contact reception for reconciliation.")}</p>}
-        {data.status === 'failed' && <p>{t("VNPay xác nhận giao dịch không thành công. Bạn có thể trở về khoản cần thanh toán và thử lại.", "VNPay confirmed the transaction failed. Return to your payment and try again.")}</p>}
+        {data.status === 'pending' && <p>{t("Chưa nhận được xác nhận từ VNPay. Vui lòng chờ, đừng thanh toán lại. Nếu quá lâu, liên hệ lễ tân.", "No confirmation from VNPay yet. Please wait and do not pay again. If it takes too long, contact the front desk.")}</p>}
+        {data.status === 'failed' && <p>{t("Giao dịch không thành công. Bạn có thể thử lại.", "The transaction failed. You can try again.")}</p>}
         <Link className="btn-primary" to={isAllowedDestination(data.destination) ? data.destination : '/member/invoices'}>{t("Về khoản thanh toán", "Back to payment")}</Link>
       </>}
       {valid && (error || data?.status === 'pending') && <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>{t("Kiểm tra lại", "Check again")}</button>}

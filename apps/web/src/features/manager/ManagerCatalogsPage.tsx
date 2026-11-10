@@ -212,7 +212,6 @@ export function ManagerCatalogsPage() {
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
-        eyebrow={t("Quản lý")}
         title={t("Danh mục vận hành")}
         actions={
           <div style={{ display: 'flex', gap: 10 }}>

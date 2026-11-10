@@ -295,7 +295,6 @@ export function ManagerProductEditorPage() {
   return (
     <div className="portal-container stack">
       <PageHeader
-        eyebrow={sourceText("Quản trị sản phẩm")}
         title={isEdit ? sourceFormat("Sửa sản phẩm: {0}", name || '...') : sourceText('Thêm sản phẩm mới')}
         actions={
           <Link to="/manager/products" className="btn-secondary">
