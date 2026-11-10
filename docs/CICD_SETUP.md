@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Vercel → Environment Variables → Production | [`apps/web/.env.production.example`](../apps/web/.env.production.example) | `VITE_API_BASE_URL=/api/v1` (có thể bỏ vì code đã mặc định). |
 | Render → Environment | [`apps/api/.env.render.example`](../apps/api/.env.render.example) | Kết nối Supabase, JWT secret, profile và origin frontend. |
-| GitHub → Secrets and variables → Actions | [`.github/.env.actions.example`](../.github/.env.actions.example) | 5 Repository Secrets mà `cd.yml` đang đọc. |
+| GitHub → Secrets and variables → Actions | [`.github/.env.actions.example`](../.github/.env.actions.example) | 5 Repository Secrets mà `pipeline.yml` đang đọc. |
 
 Các file chỉ là mẫu tham khảo để nhập giá trị vào dashboard; hosting/Actions không tự đọc
 file có đuôi `.example`. Không ghi credential thật vào các file này.
@@ -32,8 +32,8 @@ thì CD bỏ qua nền tảng đó. Nên đặt thêm Variable `FRONTEND_URL` đ
 
 Repo có hai workflow trong tab **Actions**:
 
-- **CI** (`ci.yml`): tự kiểm tra code mỗi khi push hoặc mở PR — test/lint/build frontend, kiểm tra cấu hình database và test backend.
-- **CD** (`cd.yml`): tự đưa code lên môi trường thật sau khi CI xanh trên `main`. PR và `develop` chỉ chạy CI.
+- **CI** (jobs `test-web`, `test-api`, `images` trong `pipeline.yml`): tự kiểm tra code mỗi khi push hoặc mở PR — test/lint/build frontend, kiểm tra cấu hình database, test backend và build image Docker.
+- **CD** (jobs `deploy-render`, `deploy-vercel`, `deploy-vps` trong cùng `pipeline.yml`): tự đưa code lên môi trường thật sau khi test xanh trên `main`. PR và `develop` chỉ chạy kiểm tra. Cả hai đường deploy hiện trên cùng một đồ thị job của một lần chạy.
 
 ```text
 push vào main ─▶ CI xanh ─▶ CD bước 1: deploy backend (Render) + kiểm tra /health
@@ -55,9 +55,9 @@ Hai file workflow viết theo dạng mẫu, copy sang dự án khác rồi sửa
 
 | Cần sửa | Ở đâu | Ghi chú |
 | --- | --- | --- |
-| Thư mục frontend / backend | `ci.yml`, các dòng có chú thích `<--` | Mặc định `apps/web` và `apps/api`. |
-| Nhánh production | `cd.yml` → `branches`; `ci.yml` → `push.branches` | Mặc định `main`. |
-| Phiên bản Node / Java | `ci.yml` | Mặc định Node 22, Java 21. |
+| Thư mục frontend / backend | `pipeline.yml`, các dòng có chú thích `<--` | Mặc định `apps/web` và `apps/api`. |
+| Nhánh production | `pipeline.yml` → `on.push.branches` và các `if` của job deploy | Mặc định `main`. |
+| Phiên bản Node / Java | `pipeline.yml` | Mặc định Node 22, Java 21. |
 | Đường dẫn health check | Variable `BACKEND_HEALTH_PATH` | Mặc định `/api/v1/health`; Spring Boot Actuator dùng `/actuator/health`. |
 
 Các điểm giúp mẫu chạy được ở dự án chưa đầy đủ:
@@ -67,10 +67,10 @@ Các điểm giúp mẫu chạy được ở dự án chưa đầy đủ:
 - Bước kiểm tra Supabase chỉ chạy khi có `scripts/test-database-config.ps1` (riêng dự án này).
 - Chưa thêm secret Render hoặc Vercel thì phần deploy tương ứng tự bỏ qua, CD không báo đỏ.
   CI vẫn chạy bình thường nên có thể dùng CI trước, thêm CD sau.
-- VPS tự host chạy Docker Compose đã có sẵn `vps-pipeline.yml` (build image, đợi CI xanh, SSH rồi `docker compose up`, tất cả trong một lần chạy); cách cài
+- VPS tự host chạy Docker Compose đã có sẵn job `deploy-vps` trong `pipeline.yml` (SSH rồi `docker compose up`, cùng một lần chạy với test và build image); cách cài
   đặt ở `docs/DOCKER_COMPOSE.md`, mục "Tự động deploy lên VPS (CD qua SSH)".
 - Nếu hosting khác Render/Vercel (Railway, Fly.io...), giữ nguyên CI và thay nội dung job
-  `backend` / `frontend` trong `cd.yml` bằng lệnh deploy của nền tảng đó.
+  `deploy-render` / `deploy-vercel` trong `pipeline.yml` bằng lệnh deploy của nền tảng đó.
 
 ## 1. GitHub Secrets và Variables
 
@@ -187,7 +187,7 @@ Lưu ý:
 
 ## 4. Đưa workflow lên GitHub
 
-Push/merge `.github/workflows/ci.yml`, `.github/workflows/cd.yml` cùng tài liệu này
+Push/merge `.github/workflows/pipeline.yml` cùng tài liệu này
 lên nhánh mặc định `main`. `workflow_run` yêu cầu file CD nằm trên nhánh mặc định.
 Sau đó push/merge thay đổi vào `main`, hoặc mở **Actions → CI → Run workflow → main**.
 CI thành công sẽ kích hoạt CD; bên trái Actions sẽ có **CI** và **CD**.

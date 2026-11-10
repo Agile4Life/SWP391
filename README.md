@@ -2,8 +2,7 @@
 
 # 🏛️ SÖL Wellness Sanctuary — Sports Center Management System (SCMS)
 
-[![CD](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/cd.yml)
-[![CI](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/ci.yml)
+[![Pipeline](https://github.com/Agile4Life/SWP391/actions/workflows/pipeline.yml/badge.svg)](https://github.com/Agile4Life/SWP391/actions/workflows/pipeline.yml)
 ![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot 3](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=springboot&logoColor=white)
 ![React](https://img.shields.io/badge/React-TypeScript-61DAFB?logo=react&logoColor=black)
@@ -29,7 +28,7 @@
 - **CI/CD Tự động hóa:** Xem [Hướng dẫn GitHub Actions → Vercel + Render](docs/CICD_SETUP.md) để cấu hình Secrets và theo dõi toàn bộ luồng kiểm thử (CI) lẫn triển khai Production (CD) trong tab **Actions**.
 - **Cơ sở dữ liệu đám mây:** Sử dụng duy nhất profile `supabase` (**Supabase PostgreSQL** qua TLS), tự động ánh xạ schema từ JPA Entity và nạp trigger nghiệp vụ khi khởi chạy. Xem chi tiết tại [Hướng dẫn Supabase](docs/SUPABASE_SETUP.md).
 - **Docker Compose trên server:** [Hướng dẫn chạy web + API](docs/DOCKER_COMPOSE.md), dùng [compose.yml](compose.yml) và [compose.env.example](compose.env.example); database tiếp tục nằm trên Supabase.
-- **VPS song song Render/Vercel:** [Quy trình cập nhật code, GitHub checks và build/deploy trong 1Panel](docs/VPS_CICD_SETUP.md). `VPS Pipeline` (build image + CI + deploy trên một màn hình) tự chạy khi push/PR; triển khai VPS bằng tay, không thay thế CD Render/Vercel.
+- **VPS song song Render/Vercel:** [Quy trình cập nhật code, GitHub checks và build/deploy trong 1Panel](docs/VPS_CICD_SETUP.md). `Pipeline` (test + build image + deploy Render/Vercel và VPS trên một màn hình) tự chạy khi push/PR; triển khai VPS bằng tay, không thay thế CD Render/Vercel.
 
 ---
 
@@ -147,7 +146,7 @@ SWP391/
 ├── db/             Tài liệu cấu trúc & lịch sử dữ liệu (chỉ tham chiếu, không dùng bootstrap DB)
 ├── docs/           Tài liệu dự án (Master Guide, Plans, Diagrams, Rules, API Contracts, QA)
 ├── scripts/        Script tự động hóa khởi chạy local (run-local, stop-local, init-db)
-└── .github/        GitHub Actions workflows cho CI (ci.yml) và CD (cd.yml)
+└── .github/        GitHub Actions: một workflow Pipeline (pipeline.yml) gồm CI, CD Render/Vercel và CD VPS
 ```
 
 ---

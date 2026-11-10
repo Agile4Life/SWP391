@@ -1,0 +1,520 @@
+# PIPELINE: CI và CD của cả hai đường deploy trong MỘT workflow, một màn hình, một đồ thị job.
+#
+#   push vào main ─► test-web (frontend) ─┐
+#                    test-api (backend)  ─┼─► config ─► Render (backend) ─► Vercel (frontend)
+#                    images (api + web)  ─┘
+#                                          └─ test-web, test-api, images ─► VPS (SSH, rollback tự động)
+#
+# - Đường 1 (Render + Vercel): backend lên Render, health check, lỗi thì rollback; backend xanh mới deploy frontend lên Vercel.
+#   Chưa có secret Render/Vercel thì bước tương ứng tự bỏ qua (không báo lỗi).
+# - Đường 2 (VPS Docker Compose): cần test xanh VÀ build image xanh; SSH vào VPS, `git merge --ff-only`,
+#   `docker compose up -d --build --wait`, health check, lỗi thì quay về commit cũ. Thiếu secret VPS_* thì tự bỏ qua.
+# - PR và nhánh develop: chỉ chạy test + build image, KHÔNG deploy. Chỉ main (push hoặc chạy tay) mới deploy.
+# - Bấm "Run workflow" để chạy lại commit mới nhất của main hoặc một commit chỉ định (ô "ref").
+# - Tên các job test/build giữ nguyên như trước (Frontend test, lint and build / Backend compile and test /
+#   Build and check <api|web> image) để Ruleset đang yêu cầu các check này vẫn khớp.
+# Hướng dẫn secrets/variables: docs/CICD_SETUP.md (Render, Vercel) và docs/DOCKER_COMPOSE.md (VPS).
+# MẪU: dự án khác sửa thư mục apps/web, apps/api, nhánh ở `on.push.branches`, phiên bản Node/Java.
+name: Pipeline
+
+on:
+  pull_request:            # mở/cập nhật PR
+  push:
+    branches: [main, develop]
+  workflow_dispatch:       # chạy tay trong tab Actions
+    inputs:
+      ref:
+        description: Commit SHA cần chạy và deploy (để trống = đầu nhánh được chọn)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# PR mới hủy lần chạy cũ của PR đó. Trên main không hủy giữa chừng để không cắt ngang lúc deploy.
+concurrency:
+  group: pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Mã commit mà mọi job deploy dùng: commit đang chạy, hoặc commit nhập tay.
+  COMMIT: ${{ inputs.ref || github.sha }}
+  # Đường dẫn health check của backend Render (ghi đè bằng Variable BACKEND_HEALTH_PATH).
+  HEALTH_PATH: ${{ vars.BACKEND_HEALTH_PATH || '/api/v1/health' }}
+
+jobs:
+  # ---------- Kiểm tra ----------
+  # Job 1: giao diện React
+  test-web:
+    name: Frontend test, lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web                       # <-- thư mục frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}   # đúng commit đang kiểm tra
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json   # <-- thư mục frontend
+      - run: npm ci                                       # cài thư viện đúng theo package-lock
+      - run: npm test                                     # test là bắt buộc trong repo này
+        env:
+          CI: true                                        # để Jest/Vitest không chạy chế độ watch
+      - run: npm run lint
+      - run: npm run build                                # build lỗi nghĩa là không deploy được
+
+
+  # Job 2: API Spring Boot
+  test-api:
+    name: Backend compile and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api                       # <-- thư mục backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml         # <-- thư mục backend
+      # Chính sách database là kiểm tra bắt buộc của dự án.
+      - name: Verify Supabase runner configuration
+        shell: pwsh
+        working-directory: .
+        run: ./scripts/test-database-config.ps1
+      # Dùng Maven Wrapper đã được version control để build nhất quán.
+      - name: Compile and run backend tests
+        run: ./mvnw --batch-mode --no-transfer-progress test
+
+  # ---------- Build image Docker (cho VPS) ----------
+  images:
+    name: Build and check ${{ matrix.service }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, web]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Validate Compose with dummy settings
+        if: matrix.service == 'api'
+        run: |
+          set -euo pipefail
+          compose_dir=$(mktemp -d)
+          trap 'rm -rf -- "$compose_dir"' EXIT
+          printf 'SPRING_DATASOURCE_URL=jdbc:postgresql://example.invalid:5432/postgres\nSPRING_DATASOURCE_USERNAME=test\nSPRING_DATASOURCE_PASSWORD=test-only\nAPP_JWT_SECRET=test-only\n' > "$compose_dir/.env"
+          docker compose --project-directory "$compose_dir" \
+            -f "$GITHUB_WORKSPACE/compose.yml" config --quiet
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v7
+        with:
+          context: apps/${{ matrix.service }}
+          file: apps/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: scms-${{ matrix.service }}:ci
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+            VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
+      - name: Check Java runtime and healthcheck tool
+        if: matrix.service == 'api'
+        run: docker run --rm --entrypoint sh scms-api:ci -c 'java -version && command -v wget'
+      - name: Check Nginx config and React routes
+        if: matrix.service == 'web'
+        run: |
+          set -euo pipefail
+          docker run --rm scms-web:ci nginx -t
+          docker run -d --name scms-web-check scms-web:ci
+          trap 'docker rm -f scms-web-check >/dev/null' EXIT
+          for _ in $(seq 1 15); do
+            if docker exec scms-web-check wget -q -O /dev/null http://127.0.0.1/index.html; then
+              docker exec scms-web-check wget -qO- http://127.0.0.1/login | grep -q 'id="root"'
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs scms-web-check
+          exit 1
+
+  # ---------- Render/Vercel, bước 0: quyết định deploy phần nào ----------
+  config:
+    name: Check deploy targets (Render, Vercel)
+    needs: [test-web, test-api]
+    # Chỉ khi test xanh và đang ở main (push hoặc chạy tay): PR và develop chỉ kiểm tra, không deploy.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      render: ${{ steps.targets.outputs.render }}
+      vercel: ${{ steps.targets.outputs.vercel }}
+    steps:
+      - id: targets
+        run: |
+          echo "render=${{ secrets.RENDER_API_KEY != '' && secrets.RENDER_SERVICE_ID != '' }}" >> "$GITHUB_OUTPUT"
+          echo "vercel=${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}" >> "$GITHUB_OUTPUT"
+
+  # ---------- Render/Vercel, bước 1: backend lên Render ----------
+  deploy-render:
+    name: Deploy backend to Render
+    needs: [config]
+    # Chỉ một lần deploy production tại một thời điểm; lần mới đợi lần đang chạy xong.
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    if: needs.config.outputs.render == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+    steps:
+      - name: Trigger Render deploy and wait until live
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Gọi Render API; nếu lỗi thì in mã HTTP và lời nhắn của Render để biết nguyên nhân.
+          api() {
+            local out code; out=$(mktemp)
+            code=$(curl -sS -o "$out" -w '%{http_code}' -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" "$@") || code=000
+            if [[ ! "$code" =~ ^2 ]]; then
+              echo "::error::Render API trả HTTP $code: $(jq -r '.message // empty' "$out" 2>/dev/null | head -c 300)" >&2
+              return 1
+            fi
+            cat "$out"
+          }
+          service="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
+
+          # Ghi lại deploy đang chạy tốt (mới nhất có trạng thái live) để quay về nếu bản mới lỗi.
+          prev=$(api "$service/deploys?limit=20" | jq -r '[.[] | (.deploy // .) | select(.status == "live")][0].id // empty')
+          echo "PREV_DEPLOY=$prev" >> "$GITHUB_ENV"
+          echo "Deploy đang chạy tốt: ${prev:-không có (sẽ không rollback được)}"
+
+          # Yêu cầu Render deploy đúng commit mà CI vừa kiểm tra.
+          # Render trả 201 kèm deploy, hoặc 202 "xếp hàng" KHÔNG có nội dung (khi đang có deploy khác chạy).
+          resp=$(api -X POST "$service/deploys" -d "{\"commitId\":\"$COMMIT\"}")
+          deploy_id=$(jq -r '(.deploy // .) | .id // empty' <<<"${resp:-null}")
+
+          # Tìm deploy của đúng commit này trong danh sách deploy gần nhất (mới nhất đứng đầu).
+          find_deploy() {
+            api "$service/deploys?limit=20" | jq -r --arg c "$COMMIT" \
+              '[.[] | (.deploy // .) | select((.commit.id // "") == $c)][0].id // empty'
+          }
+
+          # Hỏi mỗi 15 giây, tối đa 30 phút. Nếu Render chỉ xếp hàng thì chờ tới khi deploy của commit này xuất hiện.
+          status=""
+          for _ in $(seq 1 120); do
+            [ -n "$deploy_id" ] || deploy_id=$(find_deploy)
+            if [ -n "$deploy_id" ]; then
+              status=$(api "$service/deploys/$deploy_id" | jq -r '(.deploy // .).status // empty')
+              echo "Deploy ${deploy_id} (commit ${COMMIT:0:7}) trạng thái: $status"
+              case "$status" in
+                live) break ;;
+                build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                  echo "::error::Render deploy kết thúc với trạng thái $status"; exit 1 ;;
+              esac
+            else
+              echo "Render đang xếp hàng, chưa thấy deploy của commit ${COMMIT:0:7}"
+            fi
+            sleep 15
+          done
+          [ "$status" = "live" ] || { echo "::error::Quá 30 phút mà Render chưa live"; exit 1; }
+          # Từ đây bản mới đang phục vụ người dùng; nếu health check lỗi thì bước rollback bên dưới sẽ chạy.
+          echo "NEW_LIVE=true" >> "$GITHUB_ENV"
+
+      # "live" chỉ là Render báo xong; gọi thử health check để chắc API thật sự trả lời.
+      - name: Check backend health
+        shell: bash
+        run: |
+          set -euo pipefail
+          api() { curl -sS --fail-with-body -H "Authorization: Bearer $RENDER_API_KEY" "$@"; }
+          url=$(api "https://api.render.com/v1/services/$RENDER_SERVICE_ID" | jq -er '(.service // .).serviceDetails.url')
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 15 "${url%/}$HEALTH_PATH" | jq -e '.status == "UP"' >/dev/null; then
+              echo "Backend khỏe: $url"; exit 0
+            fi
+            echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
+          done
+          echo "::error::Backend không phản hồi $HEALTH_PATH"; exit 1
+
+      # Bản mới đã live nhưng health check lỗi: quay về deploy chạy tốt trước đó.
+      # Build/deploy lỗi thì Render tự giữ bản cũ nên không vào bước này.
+      # Job vẫn báo đỏ (bước trước đã lỗi) nên frontend không được deploy.
+      - name: Roll back backend to the previous live deploy
+        if: failure() && env.NEW_LIVE == 'true' && env.PREV_DEPLOY != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          api() {
+            local out code; out=$(mktemp)
+            code=$(curl -sS -o "$out" -w '%{http_code}' -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" "$@") || code=000
+            if [[ ! "$code" =~ ^2 ]]; then
+              echo "::error::Render API trả HTTP $code: $(jq -r '.message // empty' "$out" 2>/dev/null | head -c 300)" >&2
+              return 1
+            fi
+            cat "$out"
+          }
+          service="https://api.render.com/v1/services/$RENDER_SERVICE_ID"
+          echo "::warning::Bản mới không khỏe, rollback backend về deploy $PREV_DEPLOY"
+
+          resp=$(api -X POST "$service/rollback" -d "{\"deployId\":\"$PREV_DEPLOY\"}")
+          deploy_id=$(jq -r '(.deploy // .) | .id // empty' <<<"$resp")
+          [ -n "$deploy_id" ] || { echo "::error::Render không trả ID deploy của rollback"; exit 1; }
+
+          # Hỏi mỗi 15 giây, tối đa 10 phút.
+          status=""
+          for _ in $(seq 1 40); do
+            status=$(api "$service/deploys/$deploy_id" | jq -r '(.deploy // .).status // empty')
+            echo "Rollback ${deploy_id} trạng thái: $status"
+            case "$status" in
+              live) break ;;
+              build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                echo "::error::Rollback kết thúc với trạng thái $status"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          [ "$status" = "live" ] || { echo "::error::Quá 10 phút mà rollback chưa live"; exit 1; }
+
+          # Chắc chắn bản cũ trả lời được sau khi quay về.
+          url=$(api "$service" | jq -er '(.service // .).serviceDetails.url')
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 15 "${url%/}$HEALTH_PATH" | jq -e '.status == "UP"' >/dev/null; then
+              echo "Đã rollback backend về $PREV_DEPLOY và health check UP: $url"
+              echo "Backend đã rollback về deploy \`$PREV_DEPLOY\` vì bản mới (commit \`${COMMIT:0:7}\`) không qua health check." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
+          done
+          echo "::error::Đã rollback nhưng backend vẫn không phản hồi $HEALTH_PATH"; exit 1
+
+  # ---------- Render/Vercel, bước 2: frontend lên Vercel ----------
+  deploy-vercel:
+    name: Deploy frontend to Vercel
+    needs: [config, deploy-render]
+    concurrency:
+      group: production-deployment-web
+      cancel-in-progress: false
+    # Chạy khi: có cấu hình Vercel, và backend hoặc thành công hoặc không được dùng (bị bỏ qua).
+    # Backend lỗi thì frontend không chạy.
+    if: >-
+      !cancelled() && needs.config.result == 'success' && needs.config.outputs.vercel == 'true' &&
+      (needs.deploy-render.result == 'success' || needs.deploy-render.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}   # đúng commit đã qua test
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Ghim phiên bản x.y.z qua Variable VERCEL_CLI_VERSION để mỗi lần chạy giống nhau.
+      # Chưa đặt thì dùng bản mới nhất (tiện cho dự án mới, nhưng nên ghim khi lên production).
+      - name: Install Vercel CLI
+        env:
+          VERCEL_CLI_VERSION: ${{ vars.VERCEL_CLI_VERSION || 'latest' }}
+        run: npm install --global "vercel@$VERCEL_CLI_VERSION"
+      # Chạy từ gốc repo; Root Directory của project Vercel (vd apps/web) cấu hình trên Vercel.
+      - name: Deploy to production
+        run: |
+          vercel pull --yes --environment=production   # lấy cấu hình production từ Vercel
+          vercel build --prod                          # build giao diện
+          vercel deploy --prebuilt --prod              # đưa bản build lên production
+      # Tùy chọn: đặt Variable FRONTEND_URL (vd https://ten-mien.vercel.app) để kiểm tra trang chủ sau deploy.
+      - name: Check frontend responds
+        id: check
+        if: vars.FRONTEND_URL != ''
+        env:
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsSL --max-time 15 "$FRONTEND_URL" | grep -q 'id="root"'; then
+              echo "Frontend khỏe: $FRONTEND_URL"; exit 0
+            fi
+            echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
+          done
+          echo "::error::Frontend không phản hồi"; exit 1
+      # Trang lỗi sau khi deploy: quay về bản production trước đó của Vercel (gói Hobby chỉ lùi được 1 bản).
+      # Cần đặt Variable FRONTEND_URL; nếu không có thì không có tín hiệu lỗi để kích hoạt bước này.
+      # Job vẫn báo đỏ vì bước kiểm tra phía trên đã lỗi.
+      - name: Roll back frontend to the previous production deployment
+        if: failure() && steps.check.conclusion == 'failure'
+        run: |
+          echo "::warning::Trang chủ không phản hồi, rollback frontend về bản production trước"
+          vercel rollback --timeout 5m
+          echo "Frontend đã rollback về bản production trước vì bản mới (commit \`${COMMIT:0:7}\`) không phản hồi." >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------- VPS (Docker Compose): deploy qua SSH, rollback tự động ----------
+  deploy-vps:
+    name: Deploy to VPS over SSH
+    needs: [images, test-web, test-api]
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    # Chỉ một lần deploy lên VPS tại một thời điểm; lần mới đợi lần đang chạy xong.
+    concurrency:
+      group: vps-deployment
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST_KEY: ${{ secrets.VPS_HOST_KEY }}
+      # Thư mục repo trên VPS (nơi có compose.yml và .env). Đổi bằng Variable VPS_APP_DIR.
+      VPS_APP_DIR: ${{ vars.VPS_APP_DIR || '/opt/scms' }}
+    steps:
+      - name: Check VPS secrets
+        id: cfg
+        shell: bash
+        run: |
+          missing=""
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY VPS_HOST_KEY; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice::Chưa cấu hình secret:$missing. Bỏ qua deploy VPS."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare SSH
+        if: steps.cfg.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          # Ghim host key của VPS (từ secret) để tránh bị giả mạo máy chủ; không dùng StrictHostKeyChecking=no.
+          printf '%s\n' "$VPS_HOST_KEY" > ~/.ssh/known_hosts
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Deploy on VPS (with rollback)
+        if: steps.cfg.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Script chạy trên VPS qua stdin; tham số: $1 = commit, $2 = thư mục app.
+          # tee giữ lại toàn bộ log trong deploy.log để bước tóm tắt bên dưới dùng khi lỗi.
+          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "$VPS_USER@$VPS_HOST" bash -s -- "$COMMIT" "$VPS_APP_DIR" 2>&1 <<'REMOTE' | tee "$RUNNER_TEMP/deploy.log"
+          set -euo pipefail
+          commit=$1
+          dir=$2
+          # Lệnh nào lỗi bất ngờ thì báo rõ dòng và lệnh đó (thông báo gốc của lệnh nằm ngay phía trên).
+          trap 'echo "::error::Lệnh bị lỗi (dòng $LINENO): $BASH_COMMAND"' ERR
+
+          # Kiểm tra môi trường trước, lỗi thì nói rõ cách sửa thay vì để git/docker báo lỗi khó hiểu.
+          preflight_fail() { echo "::error::$1"; echo "Cách sửa: $2"; exit 1; }
+          [ -d "$dir/.git" ] || preflight_fail "Không thấy repo git tại $dir trên VPS" "clone repo vào đó hoặc đặt Variable VPS_APP_DIR đúng đường dẫn"
+          cd "$dir"
+          [ -f compose.yml ] || preflight_fail "Không có compose.yml trong $dir" "kiểm tra lại VPS_APP_DIR"
+          [ -f .env ] || preflight_fail "Thiếu file .env trong $dir" "tạo từ compose.env.example theo docs/DOCKER_COMPOSE.md"
+          [ -w .git/objects ] || preflight_fail "User $(id -un) không có quyền ghi vào $dir/.git (owner: $(stat -c %U .git))" "sudo chown -R $(id -un):$(id -gn) $dir"
+          docker info >/dev/null 2>&1 || preflight_fail "User $(id -un) không dùng được docker" "sudo usermod -aG docker $(id -un) rồi đăng nhập lại"
+          docker compose version >/dev/null 2>&1 || preflight_fail "Chưa cài plugin Docker Compose v2" "cài docker-compose-plugin"
+          echo "Còn trống $(df -h --output=avail "$dir" | tail -1 | tr -d ' ') ổ đĩa tại $dir"
+
+          # Không ghi đè thay đổi tay trên VPS: có file đã theo dõi bị sửa thì dừng để người quản trị xử lý.
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "::error::Repo trên VPS có thay đổi chưa commit, dừng deploy"
+            git status --short --untracked-files=no
+            exit 1
+          fi
+
+          prev=$(git rev-parse HEAD)
+          echo "Commit đang chạy: ${prev:0:7}; commit cần deploy: ${commit:0:7}"
+          git fetch --prune origin
+          # Chỉ tiến lên (fast-forward). Nếu commit cũ hơn HEAD thì không làm gì, tránh deploy lùi khi hai lần chạy chồng nhau.
+          git merge --ff-only "$commit"
+
+          # Build image, thay container và đợi healthcheck của api + web (tối đa 5 phút),
+          # rồi gọi thử API qua Nginx để chắc proxy /api/v1 hoạt động.
+          # Không dùng `docker compose down`: nó xóa mạng và làm mất kết nối tới container PostgreSQL 1Panel.
+          deploy() {
+            docker compose config --quiet &&
+            docker compose up -d --build --remove-orphans --wait --wait-timeout 300 &&
+            docker compose exec -T web wget -q -O /dev/null http://127.0.0.1/api/v1/health
+          }
+
+          if deploy; then
+            docker compose ps
+            # Dọn image cũ không còn dùng cho đỡ đầy ổ đĩa.
+            docker image prune -f >/dev/null || true
+            echo "Deploy thành công commit $(git rev-parse --short HEAD)"
+            exit 0
+          fi
+
+          echo "::error::Bản mới không khỏe (build lỗi hoặc container không qua healthcheck). Trạng thái và log gần nhất:"
+          docker compose ps -a || true
+          docker compose logs --tail=80 api web || true
+
+          now=$(git rev-parse HEAD)
+          if [ "$prev" != "$now" ]; then
+            echo "::warning::Rollback VPS về commit ${prev:0:7}"
+            git reset --hard "$prev"
+            if deploy; then
+              echo "Đã rollback về ${prev:0:7} và dịch vụ khỏe lại"
+            else
+              echo "::error::Rollback xong nhưng dịch vụ vẫn không khỏe, cần vào VPS kiểm tra"
+            fi
+          fi
+          exit 1
+          REMOTE
+
+      # Deploy lỗi: đưa phần cuối log từ VPS lên trang tóm tắt của job để xem nhanh nguyên nhân.
+      - name: Summarize VPS error
+        if: failure() && steps.cfg.outputs.ready == 'true'
+        shell: bash
+        run: |
+          {
+            echo "### Deploy VPS lỗi (commit \`${COMMIT:0:7}\`)"
+            if [ -s "$RUNNER_TEMP/deploy.log" ]; then
+              echo '```'; tail -n 60 "$RUNNER_TEMP/deploy.log"; echo '```'
+            else
+              echo "Không nhận được log từ VPS. Kiểm tra kết nối SSH, VPS_HOST_KEY và VPS_SSH_KEY."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Tùy chọn: đặt Variable VPS_HEALTH_URL (vd https://ten-mien.example/api/v1/health) để kiểm tra từ bên ngoài.
+      - name: Check public URL
+        if: steps.cfg.outputs.ready == 'true' && vars.VPS_HEALTH_URL != ''
+        env:
+          VPS_HEALTH_URL: ${{ vars.VPS_HEALTH_URL }}
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 15 "$VPS_HEALTH_URL" | jq -e '.status == "UP"' >/dev/null; then
+              echo "VPS khỏe: $VPS_HEALTH_URL"; exit 0
+            fi
+            echo "Lần $i/12 chưa ổn, thử lại sau 5 giây"; sleep 5
+          done
+          echo "::error::VPS không phản hồi $VPS_HEALTH_URL"; exit 1
+
+      - name: Remove SSH key
+        if: always() && steps.cfg.outputs.ready == 'true'
+        run: rm -f ~/.ssh/deploy_key

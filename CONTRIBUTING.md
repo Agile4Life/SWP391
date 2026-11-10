@@ -29,5 +29,5 @@ Test DB thật chỉ dùng Supabase dev/test với schema biệt lập và biế
 - Chạy checks phù hợp với thay đổi; ghi đúng kết quả, kể cả test skip hoặc chưa chạy Docker/browser.
 - Kiểm tra `git diff --check` và `git diff --cached` trước khi commit.
 - Không commit secret, `.env` thật, Graphify, dependencies hoặc build output. Mẫu `.env.example` phải dùng placeholder.
-- Giữ nguyên các luồng Render/Vercel và VPS Pipeline khi thay đổi cấu trúc; cập nhật tài liệu đường dẫn nếu có di chuyển file.
+- Giữ nguyên các luồng Render/Vercel và VPS (workflow Pipeline) khi thay đổi cấu trúc; cập nhật tài liệu đường dẫn nếu có di chuyển file.
 - Không tự ý xóa ảnh QA, SQL lịch sử hoặc tài liệu đang được tham chiếu như một cách giảm kích thước repo.

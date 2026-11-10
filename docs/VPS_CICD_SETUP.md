@@ -1,14 +1,14 @@
 # SCRUM-110: CI tự động, build/deploy VPS bằng tay trong 1Panel
 
-Giữ nguyên `.github/workflows/ci.yml` và `cd.yml` cho Render + Vercel.
-Workflow bổ sung `vps-pipeline.yml` (**VPS Pipeline**) kiểm tra Docker và, trên `main`, đợi CI xanh rồi deploy qua SSH, tất cả trong một lần chạy; không publish GHCR,
+Một workflow `.github/workflows/pipeline.yml` chứa cả CI, CD Render + Vercel và CD VPS.
+Job `images` của `pipeline.yml` kiểm tra Docker và, trên `main`, job `deploy-vps` deploy qua SSH sau khi test xanh, tất cả trong một lần chạy; không publish GHCR,
 không SSH vào VPS và không tự thay containers. Không cần secrets VPS trên GitHub.
 
 ## Mỗi lần sửa code
 
 1. Sửa trên Mac, commit/push lên branch và mở PR vào main.
-2. Trong GitHub > Actions hoặc PR > Checks, chờ **CI** và **VPS Pipeline** xanh (job "Build and check ... image").
-   CI kiểm tra frontend/backend; VPS Pipeline kiểm tra Compose, build hai image,
+2. Trong GitHub > Actions hoặc PR > Checks, chờ workflow **Pipeline** xanh (các job test và "Build and check ... image").
+   Job test kiểm tra frontend/backend; job images kiểm tra Compose, build hai image,
    kiểm tra Java và Nginx/React routes. Lỗi ở job nào thì sửa và push lại.
 3. Merge main, chờ checks của merge commit xanh. CD Render/Vercel tự chạy như cũ.
 4. Trong Terminal 1Panel, cập nhật source:
@@ -85,13 +85,13 @@ Không cần file CD VPS trên GitHub hay callback/token từ VPS về GitHub.
 - Không cần clone lại. Không sửa/commit source trên VPS để tránh lệch lịch sử GitHub.
 - `.env` được giữ riêng trên VPS, không commit; các biến sẽ được cấu hình sau.
 - Chưa mở cổng Azure thì chỉ xem qua tunnel; CI không tự sửa firewall hoặc DNS.
-- Có thể đặt Ruleset trên main yêu cầu CI và VPS Pipeline xanh trước khi merge.
+- Có thể đặt Ruleset trên main yêu cầu các job test và build image của Pipeline xanh trước khi merge.
   Workflow không tự tạo Ruleset trong GitHub Settings.
 
 ## Luồng thuyết trình
 
 ```text
-Push/PR -> CI + VPS Pipeline tự động kiểm tra
+Push/PR -> Pipeline tự động kiểm tra
 Merge main -> CD tự động Render -> Vercel
            -> git pull trên VPS -> build/deploy trong 1Panel -> health check
 ```
