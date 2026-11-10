@@ -47,7 +47,8 @@ beforeEach(() => {
   vi.mocked(getProfile).mockResolvedValue(profile as never);
   vi.mocked(getMySubscription).mockResolvedValue(subscription as never);
   vi.mocked(getMembershipHistory).mockResolvedValue([]);
-  vi.mocked(getDynamicQr).mockRejectedValue(new Error('no dynamic qr'));
+  // Only the rotating signed code is a scannable QR; the static identifier is never rendered.
+  vi.mocked(getDynamicQr).mockResolvedValue({ qrCode: 'DYN:9:1:123:signed', expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' });
   vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,AA' as never);
 });
 
@@ -65,7 +66,7 @@ describe('MemberCardPage', () => {
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, paidThroughDate: '2100-03-01' } as never);
     await renderPage();
     expect(host.textContent).toContain('Ngày hết hạn: 01/03/2100');
-    expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('backend-qr');
+    expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('DYN:9:1:123:signed');
   });
 
   it('avoids an expiry warning when a contiguous renewal has been paid', async () => {
@@ -90,7 +91,7 @@ describe('MemberCardPage', () => {
     expect(host.textContent).toContain('Nguyễn Minh');
     expect(host.textContent).toContain('SÖL Gold');
     expect(host.textContent).toContain('Ngày bắt đầu: 01/01/2026');
-    expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('backend-qr');
+    expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('DYN:9:1:123:signed');
     expect(getMembershipHistory).not.toHaveBeenCalled();
     expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).not.toBeNull();
     expect(host.querySelector('button')?.disabled).toBe(true);
@@ -114,7 +115,7 @@ describe('MemberCardPage', () => {
     const startDate = offsetCenterDate(offset);
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, startDate } as never);
     await renderPage();
-    expect(QRCode.toDataURL).toHaveBeenCalledWith('backend-qr', expect.anything());
+    expect(QRCode.toDataURL).toHaveBeenCalledWith('DYN:9:1:123:signed', expect.anything());
     expect(host.querySelector('img')).not.toBeNull();
   });
 
@@ -144,13 +145,11 @@ describe('MemberCardPage', () => {
     expect(host.querySelector('button')?.disabled).toBe(true);
   });
 
-  it.each(['backend-qr', 'DYN:9:1:123:signed'])('copies the displayed QR %s and waits for clipboard completion', async (qrCode) => {
+  it.each(['DYN:9:1:123:signed', 'DYN:9:1:456:other'])('copies the displayed QR %s and waits for clipboard completion', async (qrCode) => {
     let resolveWrite!: () => void;
     const writeText = vi.fn(() => new Promise<void>((resolve) => { resolveWrite = resolve; }));
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
-    if (qrCode.startsWith('DYN:')) {
-      vi.mocked(getDynamicQr).mockResolvedValue({ qrCode, expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' });
-    }
+    vi.mocked(getDynamicQr).mockResolvedValue({ qrCode, expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' });
     await renderPage();
     await act(async () => { host.querySelector<HTMLButtonElement>('button.btn-secondary')?.click(); });
     expect(writeText).toHaveBeenCalledWith(qrCode);
@@ -164,7 +163,7 @@ describe('MemberCardPage', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     await renderPage();
     await act(async () => { host.querySelector<HTMLButtonElement>('button.btn-secondary')?.click(); });
-    expect(writeText).toHaveBeenCalledWith('backend-qr');
+    expect(writeText).toHaveBeenCalledWith('DYN:9:1:123:signed');
     expect(document.querySelector('.sol-toast--error')?.textContent).toContain('Không thể sao chép');
     expect(document.querySelector('.sol-toast--success')).toBeNull();
   });

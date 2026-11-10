@@ -203,7 +203,9 @@ public class CenterCheckinService {
                 return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid");
             }
         } else {
-            subOpt = subscriptions.findByQrCode(rawQr);
+            // A static code never expires, so a shared photo of a card would open the gate forever. Only the rotating
+            // signed code (60 seconds) is accepted; the member opens their card to get a fresh one.
+            return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.static_qr_rejected");
         }
 
         // Trường hợp 1: Mã QR không tồn tại

@@ -162,6 +162,21 @@ class CenterCheckinServiceTest {
         return member;
     }
 
+    private final java.util.Map<String, String> codes = new java.util.HashMap<>();
+    private long nextSubscriptionId = 500;
+
+    /** Gives the subscription an id and a valid rotating QR (the gate only accepts signed codes). */
+    private void registerQr(String label, MembershipSubscription sub) {
+        long id = nextSubscriptionId++;
+        sub.setId(id);
+        when(subscriptions.findById(id)).thenReturn(Optional.of(sub));
+        codes.put(label, qrService.generate(sub.getMember().getUserId(), id, clock.millis()));
+    }
+
+    private String qrFor(String label) {
+        return codes.get(label);
+    }
+
     private MembershipSubscription mockSubscription(Member member, String status, LocalDate start, LocalDate end) {
         MembershipSubscription sub = new MembershipSubscription();
         sub.setMember(member);
@@ -278,7 +293,6 @@ class CenterCheckinServiceTest {
     @DisplayName("BR-02 & BR-03: Mã QR không tồn tại -> Lưu bản ghi DENIED vào center_checkins")
     void br02_qrNotFound_logsDeniedRecord() {
         CheckinRequests.Scan request = new CheckinRequests.Scan("NON-EXISTENT", "Gate A");
-        when(subscriptions.findByQrCode("NON-EXISTENT")).thenReturn(Optional.empty());
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> {
             CenterCheckin c = inv.getArgument(0);
             return c;
@@ -303,10 +317,10 @@ class CenterCheckinServiceTest {
         LocalDate today = LocalDate.now(clock);
         MembershipSubscription sub = mockSubscription(member, "pending_payment", today.minusDays(1), today.plusDays(30));
 
-        when(subscriptions.findByQrCode("QR-PENDING")).thenReturn(Optional.of(sub));
+        registerQr("QR-PENDING", sub);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-PENDING", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-PENDING"), "Gate A"));
 
         assertEquals("DENIED", result.status());
         assertEquals(10L, result.memberId());
@@ -326,10 +340,10 @@ class CenterCheckinServiceTest {
         LocalDate today = LocalDate.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(60), today.minusDays(1));
 
-        when(subscriptions.findByQrCode("QR-EXPIRED")).thenReturn(Optional.of(sub));
+        registerQr("QR-EXPIRED", sub);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-EXPIRED", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-EXPIRED"), "Gate A"));
 
         assertEquals("DENIED", result.status());
         ArgumentCaptor<CenterCheckin> captor = ArgumentCaptor.forClass(CenterCheckin.class);
@@ -349,11 +363,11 @@ class CenterCheckinServiceTest {
         membershipPackage.setName("Gói tập 30 ngày");
         sub.setMembershipPackage(membershipPackage);
 
-        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        registerQr("QR-VALID", sub);
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(true);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
         assertEquals("DENIED", result.status());
         assertNull(result.avatarUrl());
@@ -369,10 +383,10 @@ class CenterCheckinServiceTest {
         Member member = mockMember(10L, "Hội viên");
         LocalDate today = LocalDate.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today);
-        when(subscriptions.findByQrCode("QR-LAST-DAY")).thenReturn(Optional.of(sub));
+        registerQr("QR-LAST-DAY", sub);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-LAST-DAY", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-LAST-DAY"), "Gate A"));
         assertEquals("GRANTED", result.status());
         assertEquals(0L, result.remainingDays());
         assertNull(result.avatarUrl());
@@ -380,11 +394,24 @@ class CenterCheckinServiceTest {
     }
 
     @Test
+    void aStaticQrIsRejectedEvenWhenItMatchesAnActiveSubscription() {
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-STATIC-UUID", "Gate A"));
+
+        assertEquals("DENIED", result.status());
+        ArgumentCaptor<CenterCheckin> record = ArgumentCaptor.forClass(CenterCheckin.class);
+        verify(checkins).saveAndFlush(record.capture());
+        assertEquals("error.attendance.static_qr_rejected", record.getValue().getDenialReason());
+        verify(subscriptions, never()).findByQrCode(any());
+    }
+
+    @Test
     void aGrantedEntryAlsoMarksTodaysCourseAndOneToOneSessions() {
         Member member = mockMember(10L, "Nguyễn Văn E");
         LocalDate today = LocalDate.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
-        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        registerQr("QR-VALID", sub);
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
         var course = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
@@ -392,7 +419,7 @@ class CenterCheckinServiceTest {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", course);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "ptAttendance", pt);
 
-        CheckinDto granted = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+        CheckinDto granted = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
         assertEquals("GRANTED", granted.status());
         verify(course).markPresentOnEntry(eq(10L), any(LocalDateTime.class));
@@ -400,7 +427,7 @@ class CenterCheckinServiceTest {
 
         // A failure of the attendance hook never blocks the member from entering.
         org.mockito.Mockito.doThrow(new IllegalStateException("boom")).when(pt).markArrivedOnEntry(any(), any());
-        assertEquals("GRANTED", service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A")).status());
+        assertEquals("GRANTED", service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A")).status());
     }
 
     @Test
@@ -414,11 +441,11 @@ class CenterCheckinServiceTest {
         membershipPackage.setName("Gói tập 30 ngày");
         sub.setMembershipPackage(membershipPackage);
 
-        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        registerQr("QR-VALID", sub);
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
         assertEquals("GRANTED", result.status());
         assertNull(result.denialReason());
@@ -432,7 +459,7 @@ class CenterCheckinServiceTest {
         assertEquals("GRANTED", captor.getValue().getStatus());
         assertNull(captor.getValue().getDenialReason());
         InOrder locksBeforeInsert = inOrder(subscriptions, members, checkins);
-        locksBeforeInsert.verify(subscriptions).findByQrCode("QR-VALID");
+        locksBeforeInsert.verify(subscriptions).findById(org.mockito.ArgumentMatchers.anyLong());
         locksBeforeInsert.verify(members).findByUserIdForUpdate(10L);
         locksBeforeInsert.verify(checkins).existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED");
         locksBeforeInsert.verify(checkins).saveAndFlush(any());
@@ -507,10 +534,10 @@ class CenterCheckinServiceTest {
         Member member = mockMember(10L, "Deleted member");
         member.getUser().setDeletedAt(LocalDateTime.now(clock));
         MembershipSubscription sub = mockSubscription(member, "active", LocalDate.now(clock), LocalDate.now(clock).plusDays(1));
-        when(subscriptions.findByQrCode("QR-DELETED")).thenReturn(Optional.of(sub));
+        registerQr("QR-DELETED", sub);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-DELETED", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-DELETED"), "Gate A"));
 
         assertEquals("DENIED", result.status());
         ArgumentCaptor<CenterCheckin> record = ArgumentCaptor.forClass(CenterCheckin.class);
@@ -523,15 +550,14 @@ class CenterCheckinServiceTest {
         Member member = mockMember(10L, "Locked member");
         member.getUser().setStatus("locked");
         MembershipSubscription sub = mockSubscription(member, "active", LocalDate.now(clock), LocalDate.now(clock).plusDays(1));
-        when(subscriptions.findByQrCode("QR-LOCKED")).thenReturn(Optional.of(sub));
+        registerQr("QR-LOCKED", sub);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        assertEquals("DENIED", service.scan(receptionist, new CheckinRequests.Scan("QR-LOCKED", "Gate A")).status());
+        assertEquals("DENIED", service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-LOCKED"), "Gate A")).status());
     }
 
     @Test
     void denialStoresStableKeyAndHistoryUsesCurrentRequestLanguage() {
-        when(subscriptions.findByQrCode("QR-INVALID")).thenReturn(Optional.empty());
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
         Locale original = LocaleContextHolder.getLocale();
         try {
@@ -539,13 +565,13 @@ class CenterCheckinServiceTest {
             CheckinDto scanned = service.scan(receptionist, new CheckinRequests.Scan("QR-INVALID", "Gate A"));
             ArgumentCaptor<CenterCheckin> record = ArgumentCaptor.forClass(CenterCheckin.class);
             verify(checkins).saveAndFlush(record.capture());
-            assertEquals("error.attendance.qr_invalid", record.getValue().getDenialReason());
-            assertEquals(messageService.getMessage("error.attendance.qr_invalid"), scanned.denialReason());
+            assertEquals("error.attendance.static_qr_rejected", record.getValue().getDenialReason());
+            assertEquals(messageService.getMessage("error.attendance.static_qr_rejected"), scanned.denialReason());
             when(checkins.findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any()))
                     .thenReturn(List.of(record.getValue()));
 
             LocaleContextHolder.setLocale(Locale.forLanguageTag("vi"));
-            assertEquals(messageService.getMessage("error.attendance.qr_invalid"), service.history(receptionist).getFirst().denialReason());
+            assertEquals(messageService.getMessage("error.attendance.static_qr_rejected"), service.history(receptionist).getFirst().denialReason());
             assertNotEquals(scanned.denialReason(), service.history(receptionist).getFirst().denialReason());
         } finally {
             LocaleContextHolder.setLocale(original);
@@ -571,10 +597,10 @@ class CenterCheckinServiceTest {
         LocalDate today = LocalDate.now(clock);
         LocalDateTime now = LocalDateTime.now(clock);
         MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(2), today.plusDays(30));
-        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        registerQr("QR-VALID", sub);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+        service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
         verify(checkins).findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
                 eq(10L), eq("GRANTED"), eq(now.minusHours(8)));
@@ -594,14 +620,14 @@ class CenterCheckinServiceTest {
         staleCheckin.setCheckInTime(now.minusHours(9));
         staleCheckin.setCheckOutTime(null);
 
-        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        registerQr("QR-VALID", sub);
         when(checkins.findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
                 eq(10L), eq("GRANTED"), any(LocalDateTime.class)))
                 .thenReturn(List.of(staleCheckin));
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+        CheckinDto result = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A"));
 
         assertEquals("GRANTED", result.status());
         assertNotNull(staleCheckin.getCheckOutTime());

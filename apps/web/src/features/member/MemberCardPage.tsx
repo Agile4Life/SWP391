@@ -59,7 +59,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
           setDynamicQr(res.qrCode);
         }
       } catch {
-        // Fallback to static QR
+        // Keep the last rotating code; a static code is no longer accepted at the gate.
       }
     }
 
@@ -74,7 +74,8 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     };
   }, [canShowQr]);
 
-  const activeQrCode = dynamicQr || subscription.qrCode;
+  // Only the rotating signed code works at the gate; the static identifier is never shown as a scannable QR.
+  const activeQrCode = dynamicQr;
 
   useEffect(() => {
     let cancelled = false;
