@@ -132,14 +132,16 @@ public class ClassController {
     @Operation(summary = "Get enrolled students and health notes for a class")
     @GetMapping("/{id}/students")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
-    public ApiResponse<List<EnrolledStudentDto>> getClassStudents(@PathVariable Long id) {
-        return ApiResponse.ok(msg("scheduling.class.list"), service.getClassStudents(id));
+    public ApiResponse<List<EnrolledStudentDto>> getClassStudents(@PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("scheduling.class.list"), service.getClassStudents(id, principal));
     }
 
     @Operation(summary = "Get enrolled students and health notes for a class session")
     @GetMapping("/sessions/{sessionId}/students")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
-    public ApiResponse<List<EnrolledStudentDto>> getSessionStudents(@PathVariable Long sessionId) {
-        return ApiResponse.ok(msg("scheduling.session.list"), service.getSessionStudents(sessionId));
+    public ApiResponse<List<EnrolledStudentDto>> getSessionStudents(@PathVariable Long sessionId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("scheduling.session.list"), service.getSessionStudents(sessionId, principal));
     }
 }

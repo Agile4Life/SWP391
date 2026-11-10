@@ -936,6 +936,43 @@ public class ClassService {
         return students;
     }
 
+    /**
+     * Students of a class for the caller: a coach only for their own class, the desk without the health notes
+     * (medical data is for the coach who trains the member and for managers).
+     */
+    @Transactional(readOnly = true)
+    public List<EnrolledStudentDto> getClassStudents(Long classId, com.swp391.scms.security.AuthenticatedPrincipal principal) {
+        GymClass gymClass = gymClasses.findById(classId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", classId));
+        return scopeStudents(getClassStudents(classId), gymClass, principal);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EnrolledStudentDto> getSessionStudents(Long sessionId, com.swp391.scms.security.AuthenticatedPrincipal principal) {
+        ClassSession session = sessions.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
+        return scopeStudents(getSessionStudents(sessionId), session.getGymClass(), principal);
+    }
+
+    private static List<EnrolledStudentDto> scopeStudents(List<EnrolledStudentDto> students, GymClass gymClass,
+                                                          com.swp391.scms.security.AuthenticatedPrincipal principal) {
+        String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
+        if ("COACH".equals(role)) {
+            if (gymClass == null || gymClass.getCoach() == null || !principal.id().equals(gymClass.getCoach().getUserId())) {
+                throw new com.swp391.scms.common.exception.ForbiddenException("SCHEDULING_CLASS_NOT_OWNED",
+                        "error.forbidden", null, "A coach can see the students of their own classes only.");
+            }
+            return students;
+        }
+        if ("CENTER_MANAGER".equals(role) || "MANAGER".equals(role)) {
+            return students;
+        }
+        // Front desk: contact details are needed, medical notes are not.
+        return students.stream().map(s -> new EnrolledStudentDto(s.id(), s.memberId(), s.membershipCode(), s.fullName(),
+                s.email(), s.phone(), s.avatarUrl(), s.fitnessGoal(), "", s.fitnessLevel(), s.emergencyContactName(),
+                s.emergencyContactPhone(), s.enrolledAt(), s.status())).toList();
+    }
+
     @Transactional(readOnly = true)
     public List<EnrolledStudentDto> getSessionStudents(Long sessionId) {
         ClassSession session = sessions.findById(sessionId)
