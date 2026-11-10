@@ -15,7 +15,7 @@
 #   Build and check <api|web> image) để Ruleset đang yêu cầu các check này vẫn khớp.
 # Hướng dẫn secrets/variables: docs/CICD_SETUP.md (Render, Vercel) và docs/DOCKER_COMPOSE.md (VPS).
 # MẪU: dự án khác sửa thư mục apps/web, apps/api, nhánh ở `on.push.branches`, phiên bản Node/Java.
-name: Pipeline
+name: CI/CD VPS and Vercel + Render one workflow only
 
 on:
   pull_request:            # mở/cập nhật PR
