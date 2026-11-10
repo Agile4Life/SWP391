@@ -104,6 +104,9 @@ app:
       cron: ${APP_SCHEDULER_PACKAGE_EXPIRY_CRON:0 0 8 * * ?}
     class-reminder:
       cron: ${APP_SCHEDULER_CLASS_REMINDER_CRON:0 */30 * * * ?}
+  demo:
+    seed-enabled: ${APP_DEMO_SEED_ENABLED:false}
+    password: ${APP_DEMO_PASSWORD:Demo@12345}
   shop:
     shipping-fee: ${APP_SHOP_SHIPPING_FEE_VND:30000}
     free-shipping-threshold: ${APP_SHOP_FREE_SHIPPING_THRESHOLD_VND:500000}
