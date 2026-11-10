@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', '**/graphify-out/**', '**/.graphify/**', 'coverage', 'playwright-report', 'test-results'] },
+  { ignores: ['dist', 'node_modules', '**/graphify-out/**', '**/.graphify/**', 'coverage', 'playwright-report', 'test-results', 'e2e/.results', 'e2e/.report'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -16,5 +16,11 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'react-hooks/set-state-in-effect': 'off',
     },
+  },
+  {
+    // E2E dùng dữ liệu JSON từ API thật nên cho phép any và không áp dụng quy tắc React.
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: { globals: globals.node },
+    rules: { '@typescript-eslint/no-explicit-any': 'off', 'react-hooks/rules-of-hooks': 'off' },
   },
 );

@@ -443,7 +443,8 @@ public class EnrollmentService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
+    // Không dùng readOnly: lockMember lấy khóa ghi (SELECT ... FOR NO KEY UPDATE), PostgreSQL từ chối trong giao dịch chỉ đọc (HTTP 500).
+    @Transactional
     public QuotaDto getMemberCourseQuota(AuthenticatedPrincipal principal) {
         Member member = lockMember(principal.id());
         LocalDate today = SessionEligibility.today(clock);

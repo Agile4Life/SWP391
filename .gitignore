@@ -46,3 +46,10 @@ inspect_original.js
 # SCRUM-126 screenshots are attached to PR #59.
 /docs/qa/scrum126-desktop.png
 /docs/qa/scrum126-mobile.png
+
+# Playwright e2e artefacts
+apps/web/e2e/.auth/
+apps/web/e2e/.results/
+apps/web/e2e/.report/
+apps/web/test-results/
+apps/web/playwright-report/
