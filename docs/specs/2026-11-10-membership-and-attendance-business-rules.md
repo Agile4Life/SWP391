@@ -170,7 +170,7 @@ Có ba lớp, từ cổng trung tâm đến từng buổi.
 
 - Nhân viên check-out một lượt vào; hội viên tự check-out bằng cách quét QR cổng.
 - Không check-out bản ghi `DENIED` hoặc bản ghi đã có giờ ra.
-- **Tự đóng phiên treo:** lượt `GRANTED` chưa check-out quá **12 giờ** bị đóng tự động với ghi chú `SYSTEM_AUTO_CHECKOUT` (giờ ra = giờ vào + 4 giờ, hoặc hiện tại nếu sớm hơn). Chạy lúc hội viên quét lại và bằng job 03:00 hằng ngày.
+- **Tự đóng phiên treo:** lượt `GRANTED` chưa check-out quá **8 giờ** bị đóng tự động với ghi chú `SYSTEM_AUTO_CHECKOUT` (giờ ra = giờ vào + 4 giờ, hoặc hiện tại nếu sớm hơn). Chạy lúc hội viên quét lại và bằng job 03:00 hằng ngày.
 
 ### 2.3 Lịch sử và chuỗi ngày tập
 

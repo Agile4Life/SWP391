@@ -48,7 +48,7 @@ public class CenterCheckinService {
     private com.swp391.scms.coaching.service.PtAttendanceService ptAttendance;
 
 
-    public static final int ANTI_PASSBACK_TIMEOUT_HOURS = 12;
+    public static final int ANTI_PASSBACK_TIMEOUT_HOURS = 8;
     public static final int MAX_HISTORY_DAYS = 31;
     public static final String AUTO_CHECKOUT_NOTE = "SYSTEM_AUTO_CHECKOUT";
 
@@ -177,7 +177,7 @@ public class CenterCheckinService {
      *   Nếu không thỏa: result = 'DENIED' kèm denial_reason.
      * - BR-03: MỌI lượt quét (GRANTED hay DENIED) bắt buộc lưu 1 bản ghi vào center_checkins với server time.
      * - BR-04: Anti-passback: Nếu hội viên đã GRANTED mà chưa checkout, chặn GRANTED thứ hai và log DENIED.
-     *   Tự động đóng phiên treo quá 12 tiếng để tránh kẹt quyền vào cửa ngày hôm sau.
+     *   Tự động đóng phiên treo quá 8 tiếng để tránh kẹt quyền vào cửa ngày hôm sau.
      */
     @Transactional
     public CheckinDto scan(AuthenticatedPrincipal principal, CheckinRequests.Scan request) {
@@ -246,7 +246,7 @@ public class CenterCheckinService {
             return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_expired");
         }
 
-        // Tự động đóng các lượt check-in GRANTED bị treo quá 12 tiếng của hội viên (giải phóng bẫy anti-passback)
+        // Tự động đóng các lượt check-in GRANTED bị treo quá 8 tiếng của hội viên (giải phóng bẫy anti-passback)
         autoCheckoutStaleVisitsForMember(member.getUserId(), now);
 
         // Trường hợp 5 (BR-04 Anti-passback): Hội viên đang ở trong phòng tập chưa checkout
@@ -289,7 +289,7 @@ public class CenterCheckinService {
     }
 
     /**
-     * Tự động checkout các lượt check-in GRANTED của member bị treo quá 12 tiếng.
+     * Tự động checkout các lượt check-in GRANTED của member bị treo quá 8 tiếng.
      */
     @Transactional
     public void autoCheckoutStaleVisitsForMember(Long memberUserId, LocalDateTime now) {

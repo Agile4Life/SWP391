@@ -564,8 +564,25 @@ class CenterCheckinServiceTest {
     }
 
     @Test
-    @DisplayName("Anti-passback: Lượt check-in cũ quá 12 tiếng được tự động check-out (SYSTEM_AUTO_CHECKOUT) và lượt quét hôm sau được GRANTED")
-    void antiPassback_staleCheckinOlderThan12Hours_isAutoCheckedOutAndSubsequentScanGranted() {
+    @DisplayName("Lượt check-in chỉ bị coi là treo sau 8 tiếng")
+    void staleVisitCutoffIsEightHoursBeforeTheScan() {
+        assertEquals(8, CenterCheckinService.ANTI_PASSBACK_TIMEOUT_HOURS);
+        Member member = mockMember(10L, "Nguyễn Văn F");
+        LocalDate today = LocalDate.now(clock);
+        LocalDateTime now = LocalDateTime.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(2), today.plusDays(30));
+        when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.scan(receptionist, new CheckinRequests.Scan("QR-VALID", "Gate A"));
+
+        verify(checkins).findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
+                eq(10L), eq("GRANTED"), eq(now.minusHours(8)));
+    }
+
+    @Test
+    @DisplayName("Anti-passback: Lượt check-in cũ quá 8 tiếng được tự động check-out (SYSTEM_AUTO_CHECKOUT) và lượt quét hôm sau được GRANTED")
+    void antiPassback_staleCheckinOlderThan8Hours_isAutoCheckedOutAndSubsequentScanGranted() {
         Member member = mockMember(10L, "Nguyễn Văn F");
         LocalDate today = LocalDate.now(clock);
         LocalDateTime now = LocalDateTime.now(clock);
@@ -574,7 +591,7 @@ class CenterCheckinServiceTest {
         CenterCheckin staleCheckin = new CenterCheckin();
         staleCheckin.setMember(member);
         staleCheckin.setStatus("GRANTED");
-        staleCheckin.setCheckInTime(now.minusHours(14));
+        staleCheckin.setCheckInTime(now.minusHours(9));
         staleCheckin.setCheckOutTime(null);
 
         when(subscriptions.findByQrCode("QR-VALID")).thenReturn(Optional.of(sub));
@@ -593,8 +610,8 @@ class CenterCheckinServiceTest {
     }
 
     @Test
-    @DisplayName("Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 12 tiếng")
-    void autoCheckoutStaleVisitsCronJob_closesAllVisitsOlderThan12Hours() {
+    @DisplayName("Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 8 tiếng")
+    void autoCheckoutStaleVisitsCronJob_closesAllVisitsOlderThan8Hours() {
         Member member = new Member();
         member.setUserId(10L);
         LocalDateTime now = LocalDateTime.now(clock);
