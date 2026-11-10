@@ -1,3 +1,4 @@
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -26,6 +27,7 @@ export function HoldManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,6 +54,13 @@ export function HoldManagementPage() {
 
   async function decide(item: HoldDetail, approve: boolean) {
     if (busyId !== null) return;
+    if (!approve && !(await confirm({
+      title: { vi: 'Từ chối đơn bảo lưu?', en: 'Reject this hold request?' },
+      message: { vi: 'Hội viên sẽ được báo là đơn bị từ chối và có thể nộp đơn mới. Thao tác này không thể hoàn tác.', en: 'The member will be told the request was rejected and may submit a new one. This cannot be undone.' },
+      confirmLabel: { vi: 'Từ chối', en: 'Reject' },
+      cancelLabel: { vi: 'Giữ lại', en: 'Keep' },
+      danger: true,
+    }))) return;
     setBusyId(item.id);
     setError(null);
     try {
@@ -95,6 +104,7 @@ export function HoldManagementPage() {
 
   return (
     <div data-i18n-managed className="portal-container hold-management">
+      {confirmDialog}
       <PageHeader title={t('Quản lý bảo lưu', 'Hold management')} />
       <div role="tablist" className="portal-tabs" aria-label={t('Lọc theo trạng thái', 'Filter by status')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {FILTERS.map((value) => (

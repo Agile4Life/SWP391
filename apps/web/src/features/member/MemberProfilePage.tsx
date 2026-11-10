@@ -10,6 +10,7 @@ import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
+import { isValidPhoneNumber } from '../auth/authValidation';
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const MIN_AVATAR_DIMENSION = 100;
@@ -169,6 +170,10 @@ export function MemberProfilePage() {
     e.preventDefault();
     if (!profile || saving) return;
     setError('');
+    if ((profile.phone ?? '').trim() && !isValidPhoneNumber(profile.phone ?? '')) {
+      setError(memberMessage('Số điện thoại không hợp lệ (vd: 0912345678).'));
+      return;
+    }
     setSaving(true);
     try {
       const updated = await updateProfile(profile);

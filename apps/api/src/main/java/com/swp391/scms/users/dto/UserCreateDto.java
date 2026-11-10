@@ -16,6 +16,7 @@ public class UserCreateDto {
     @Size(max = 150, message = "{validation.users.email.size}")
     private String email;
 
+    @jakarta.validation.constraints.Pattern(regexp = "^\\s*$|^(0|\\+84)(3|5|7|8|9)[0-9]{8}$", message = "{validation.users.phone.invalid}")
     @Size(max = 20, message = "{validation.users.phone.size}")
     private String phone;
 

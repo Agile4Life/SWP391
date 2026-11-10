@@ -35,6 +35,14 @@ describe('MemberHoldPage', () => {
     element.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
+  async function pickDate(id: string, iso: string) {
+    await act(async () => host.querySelector<HTMLButtonElement>(`button#${id}`)!.click());
+    for (let i = 0; i < 3 && !document.querySelector(`button[aria-label="${iso}"]`); i++) {
+      await act(async () => document.querySelector<HTMLButtonElement>('button[aria-label="Tháng sau"]')?.click());
+    }
+    await act(async () => document.querySelector<HTMLButtonElement>(`button[aria-label="${iso}"]`)!.click());
+  }
+
   it('shows the allowance and the request form for a package that can be held', async () => {
     mocks.history.mockResolvedValue([subscription]);
     mocks.policy.mockResolvedValue(policy);
@@ -57,13 +65,10 @@ describe('MemberHoldPage', () => {
     mocks.history.mockResolvedValue([subscription]);
     mocks.policy.mockResolvedValue(policy);
     await render();
-    await act(async () => setValue(host.querySelector<HTMLInputElement>('#hold-start')!, isoOffset(1)));
-    await act(async () => setValue(host.querySelector<HTMLInputElement>('#hold-end')!, isoOffset(5)));
+    // bộ chọn ngày không cho chọn ngày trước hạn 24 giờ nên chỉ còn lỗi thiếu giấy tờ
+    await pickDate('hold-start', isoOffset(3));
+    await pickDate('hold-end', isoOffset(6));
     await act(async () => setValue(host.querySelector<HTMLTextAreaElement>('#hold-reason')!, 'Phẫu thuật'));
-    await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('ít nhất 24 giờ');
-    await act(async () => setValue(host.querySelector<HTMLInputElement>('#hold-start')!, isoOffset(3)));
-    await act(async () => setValue(host.querySelector<HTMLInputElement>('#hold-end')!, isoOffset(6)));
     await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('giấy tờ y tế');
     expect(mocks.submit).not.toHaveBeenCalled();

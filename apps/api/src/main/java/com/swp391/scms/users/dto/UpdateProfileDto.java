@@ -11,6 +11,7 @@ public record UpdateProfileDto(
     String fullName,
     @Email(message = "{validation.users.email.invalid}")
     String email,
+    @jakarta.validation.constraints.Pattern(regexp = "^\\s*$|^(0|\\+84)(3|5|7|8|9)[0-9]{8}$", message = "{validation.users.phone.invalid}")
     @Size(max = 20, message = "{validation.users.phone.size}")
     String phone,
     LocalDate dob,

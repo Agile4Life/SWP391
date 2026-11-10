@@ -37,7 +37,6 @@ test.describe('Đơn từ nội bộ (HLV/lễ tân -> quản lý)', () => {
     });
 
     test('dữ liệu xấu: đơn nghỉ phép thiếu ngày kết thúc không gửi được', async ({ page }) => {
-      test.fail(true, 'BUG: đơn nghỉ phép thiếu ngày kết thúc được frontend gửi và backend chấp nhận (LEAVE chỉ có startDate)');
       await page.goto('/staff/requests');
       await settled(page);
       let posted = 0;
@@ -95,7 +94,6 @@ test.describe('Đơn từ nội bộ (HLV/lễ tân -> quản lý)', () => {
 
 test.describe('Đơn từ: kiểm tra API', () => {
   test('ngày kết thúc trước ngày bắt đầu bị 400 với thông báo tiếng Việt, không lộ khóa i18n', async () => {
-    test.fail(true, 'BUG: message trả về là khóa thô "error.operations.request.invalid_date_range" (thiếu trong messages_vi/en.properties)');
     const { api } = await import('../helpers/api');
     const res = await api('coach', 'POST', '/operations/requests', { requestType: 'LEAVE', title: 'e2e', reason: 'e2e', startDate: '2026-12-22', endDate: '2026-12-21' });
     expect(res.status).toBe(400);

@@ -80,7 +80,6 @@ test.describe('Chưa có gói', () => {
 
 test.describe('Thanh toán học phí bằng ví', () => {
   test('ví 0đ: không được xếp chỗ khi chọn Ví SÖL (và không hiện trong lịch cá nhân)', async () => {
-    test.fail(true, 'BUG #2/#4 (audit): checkout tạo enrollment trạng thái booked ngay, không kiểm tra số dư ví ở bước đăng ký');
     const m = await memberWithPlan(PACKAGES.SILVER, 199000); // 1 lượt
     await apiWith(m.token, 'POST', `/classes/${(await createCourse({ startInDays: 3 })).id}/enroll`, {});
     const extra = await createCourse({ startInDays: 6, price: 700000 });
@@ -90,31 +89,37 @@ test.describe('Thanh toán học phí bằng ví', () => {
     expect((mine.data as any[]).filter((e) => String(e.status).toLowerCase() === 'booked' && e.className === extra.raw?.name)).toHaveLength(0);
   });
 
-  test('thanh toán khoản học phí bằng ví 0đ qua /wallet/pay phải bị từ chối', async () => {
-    const m = await memberWithPlan(PACKAGES.SILVER, 199000);
+  test('ví không đủ số dư: checkout bằng Ví SÖL bị từ chối với mã INSUFFICIENT_WALLET_BALANCE', async () => {
+    const m = await memberWithPlan(PACKAGES.SILVER, 199000, { topup: 100_000 });
     await apiWith(m.token, 'POST', `/classes/${(await createCourse({ startInDays: 3 })).id}/enroll`, {});
     const extra = await createCourse({ startInDays: 6, price: 700000 });
     const co = await apiWith(m.token, 'POST', `/classes/${extra.id}/checkout`, { method: 'online_wallet' });
-    expect(co.status).toBe(201);
-    const pay = await apiWith(m.token, 'POST', '/wallet/pay', { paymentId: co.data.paymentId });
-    expect(pay.status).toBeGreaterThanOrEqual(400);
+    expect(co.status).toBe(400);
+    expect(co.body.code).toBe('INSUFFICIENT_WALLET_BALANCE');
   });
 
-  test('enrollment trả phí chưa thanh toán không được tính là đã đặt chỗ', async () => {
-    test.fail(true, 'BUG #2 (audit): enrollment booked (hiện trong lịch cá nhân, chiếm sức chứa) dù payment còn pending');
+  test('ví đủ số dư: checkout, thanh toán bằng ví thành công', async () => {
+    const m = await memberWithPlan(PACKAGES.SILVER, 199000, { topup: 1_000_000 });
+    await apiWith(m.token, 'POST', `/classes/${(await createCourse({ startInDays: 3 })).id}/enroll`, {});
+    const extra = await createCourse({ startInDays: 6, price: 400000 });
+    const co = await apiWith(m.token, 'POST', `/classes/${extra.id}/checkout`, { method: 'online_wallet' });
+    expect(co.status).toBe(201);
+    expect((await apiWith(m.token, 'POST', '/wallet/pay', { paymentId: co.data.paymentId })).status).toBeLessThan(300);
+  });
+
+  test('đăng ký trả phí qua tiền mặt: payment chờ thanh toán kèm hạn giữ chỗ (đến khi khóa bắt đầu)', async () => {
     const m = await memberWithPlan(PACKAGES.SILVER, 199000);
     await apiWith(m.token, 'POST', `/classes/${(await createCourse({ startInDays: 3 })).id}/enroll`, {});
     const extra = await createCourse({ startInDays: 6, price: 400000 });
-    expect((await apiWith(m.token, 'POST', `/classes/${extra.id}/checkout`, { method: 'cash' })).status).toBe(201);
-    const mine = await apiWith(m.token, 'GET', '/classes/my-enrollments');
-    const enr = (mine.data as any[]).find((e) => e.className === extra.raw?.name);
-    expect(String(enr?.status).toLowerCase()).not.toBe('booked');
+    const r = await apiWith(m.token, 'POST', `/classes/${extra.id}/checkout`, { method: 'cash' });
+    expect(r.status).toBe(201);
+    expect(r.data.paymentStatus).toBe('pending');
+    expect(r.data.expiresAt).toBeTruthy();
   });
 });
 
 test.describe('Giữ chỗ khi chưa thanh toán', () => {
   test('chỗ giữ cho khoản chưa thanh toán phải có hạn', async () => {
-    test.fail(true, 'BUG #5 (audit): "giữ chỗ ảo" vĩnh viễn — không có hạn/scheduler nhả chỗ cho enrollment khóa học chưa thanh toán (đặt sân, đơn hàng, VNPay đều có)');
     const m = await memberWithPlan(PACKAGES.SILVER, 199000);
     await apiWith(m.token, 'POST', `/classes/${(await createCourse({ startInDays: 3 })).id}/enroll`, {});
     const extra = await createCourse({ startInDays: 6, capacity: 1 });
@@ -126,7 +131,6 @@ test.describe('Giữ chỗ khi chưa thanh toán', () => {
 
 test.describe('Hủy khóa học đã trả tiền', () => {
   test('hủy khóa đã thanh toán bằng ví phải hoàn học phí về ví', async () => {
-    test.fail(true, 'BUG #6 (audit): cancelCourseEnrollment chỉ vô hiệu khoản pending; khoản đã thanh toán không tạo phiếu hoàn trả học phí');
     const m = await memberWithPlan(PACKAGES.SILVER, 199000, { topup: 1_000_000 });
     await apiWith(m.token, 'POST', `/classes/${(await createCourse({ startInDays: 3 })).id}/enroll`, {});
     const extra = await createCourse({ startInDays: 6, price: 400000 });

@@ -562,8 +562,8 @@ export function CoachClassesPage() {
             </div>
           ) : (
             <div data-i18n-managed className="coach-students-grid">
-              {filteredAllStudents.map((st) => (
-                <div data-i18n-managed key={st.id} className="student-card-item">
+              {filteredAllStudents.map((st, index) => (
+                <div data-i18n-managed key={`${st.id}-${index}`} className="student-card-item">
                   <div className="student-card-header">
                     <div className="student-avatar-col">
                       <div className="student-avatar-fallback">
@@ -1152,8 +1152,8 @@ export function CoachClassesPage() {
                     <p>{t("Không tìm thấy bản ghi điểm danh nào phù hợp.")}</p>
                   </div>
                 ) : (
-                  filteredAttendanceStudents.map((st: StoredAttendanceStudent) => (
-                    <div data-i18n-managed key={st.id} className="history-record-card">
+                  filteredAttendanceStudents.map((st: StoredAttendanceStudent, index: number) => (
+                    <div data-i18n-managed key={`${st.id}-${index}`} className="history-record-card">
                       <div className="history-record-header">
                         <div className="student-card-header">
                           <div className="student-avatar-col">
@@ -1201,8 +1201,8 @@ export function CoachClassesPage() {
                     <p>{t("Không tìm thấy bản ghi đánh giá nào phù hợp.")}</p>
                   </div>
                 ) : (
-                  filteredEvalStudents.map((st: StoredEvaluationStudent) => (
-                    <div data-i18n-managed key={st.id} className="history-record-card">
+                  filteredEvalStudents.map((st: StoredEvaluationStudent, index: number) => (
+                    <div data-i18n-managed key={`${st.id}-${index}`} className="history-record-card">
                       <div className="history-record-header">
                         <div className="student-card-header">
                           <div className="student-avatar-col">
@@ -1252,8 +1252,8 @@ export function CoachClassesPage() {
               </div>
             ) : (
               <div data-i18n-managed className="students-list-wrap">
-                {filteredStudents.map((st) => (
-                  <div data-i18n-managed key={st.id} className="student-card-item">
+                {filteredStudents.map((st, index) => (
+                  <div data-i18n-managed key={`${st.id}-${index}`} className="student-card-item">
                     <div className="student-card-header">
                       <div className="student-avatar-col">
                         <div className="student-avatar-fallback">

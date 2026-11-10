@@ -84,8 +84,8 @@ export function StaffInternalRequestsPage() {
       setFormError('Vui lòng nhập lý do cụ thể.');
       return;
     }
-    if (createType === 'LEAVE' && !createStartDate) {
-      setFormError('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu.');
+    if (createType === 'LEAVE' && (!createStartDate || !createEndDate)) {
+      setFormError('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu và Ngày kết thúc.');
       return;
     }
     if (createStartDate && createEndDate && createEndDate < createStartDate) {

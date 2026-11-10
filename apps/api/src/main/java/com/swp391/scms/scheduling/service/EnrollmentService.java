@@ -76,6 +76,13 @@ public class EnrollmentService {
     @Autowired(required = false)
     private MemberDiscountService memberDiscounts;
 
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private com.swp391.scms.wallet.WalletService wallets;
+
+    /** Online (wallet/VNPay) course fees hold the seat this long; cash fees hold it until the course starts. */
+    private static final long ONLINE_HOLD_MINUTES = 15;
+
     public void setMemberDiscounts(MemberDiscountService memberDiscounts) {
         this.memberDiscounts = memberDiscounts;
     }
@@ -596,6 +603,7 @@ public class EnrollmentService {
                     BigDecimal.ZERO,
                     "free_quota",
                     "success",
+                    null,
                     null
             );
         }
@@ -609,12 +617,26 @@ public class EnrollmentService {
             normalizedMethod = "cash";
         }
 
+        // Paying from the wallet needs the money up front: no seat is held for a fee the wallet cannot cover.
+        if ("online_wallet".equals(normalizedMethod) && wallets != null && price.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal balance = wallets.getMyWallet(member.getUserId()).balance();
+            BigDecimal available = balance != null ? balance : BigDecimal.ZERO;
+            if (available.compareTo(price) < 0) {
+                throw new BadRequestException("INSUFFICIENT_WALLET_BALANCE", "error.wallet.insufficient_balance",
+                        new Object[]{available.toPlainString()},
+                        "Số dư Ví không đủ để thanh toán học phí (hiện có " + available.toPlainString() + " đ, cần " + price.toPlainString() + " đ).");
+            }
+        }
+
         ClassEnrollment enrollment = new ClassEnrollment();
         enrollment.setGymClass(gymClass);
         enrollment.setMember(member);
         enrollment.setStatus(BOOKED);
         enrollment.setEnrolledAt(LocalDateTime.now(clock));
         ClassEnrollment savedEnrollment = enrollments.save(enrollment);
+        LocalDateTime holdUntil = "cash".equals(normalizedMethod) && gymClass.getStartDate() != null
+                ? gymClass.getStartDate().atStartOfDay()
+                : LocalDateTime.now(clock).plusMinutes(ONLINE_HOLD_MINUTES);
 
         Long paymentId = null;
         String paymentStatus = "pending";
@@ -656,7 +678,8 @@ public class EnrollmentService {
                 price,
                 normalizedMethod,
                 paymentStatus,
-                paymentUrl
+                paymentUrl,
+                paymentId != null ? holdUntil : null
         );
     }
 
@@ -678,19 +701,67 @@ public class EnrollmentService {
         enrollment.setCancelledBy(member.getUser());
         enrollment.setCancelReason("Member requested cancellation");
 
-        // An unpaid course fee must not stay payable once the seat is released; a settled payment is refunded
-        // through the finance refund flow, which keeps the enrollment cancelled.
+        // An unpaid course fee must not stay payable once the seat is released; a settled fee is refunded to the wallet.
         if (paymentRepository != null) {
-            paymentRepository.findByClassEnrollmentId(enrollment.getId())
-                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
-                    .ifPresent(payment -> {
-                        payment.setStatus("failed");
+            paymentRepository.findByClassEnrollmentId(enrollment.getId()).ifPresent(payment -> {
+                if ("pending".equalsIgnoreCase(payment.getStatus())) {
+                    payment.setStatus("failed");
+                    paymentRepository.save(payment);
+                } else if ("success".equalsIgnoreCase(payment.getStatus())) {
+                    BigDecimal refundable = payment.netAmount();
+                    if (refundable.compareTo(BigDecimal.ZERO) > 0) {
+                        payment.setRefundedAmount(payment.getAmount());
+                        payment.setStatus("refunded");
                         paymentRepository.save(payment);
-                    });
+                        if (wallets != null) {
+                            wallets.creditCourseRefund(member.getUserId(), refundable,
+                                    "COURSE_REFUND_" + enrollment.getId(), "Member requested cancellation");
+                        }
+                    }
+                }
+            });
         }
 
         ClassEnrollment saved = enrollments.save(enrollment);
         return toDto(saved, resolveSessionForClass(gymClass));
+    }
+
+    /**
+     * Frees seats held for course fees that were never paid: an online (wallet/VNPay) fee after {@value #ONLINE_HOLD_MINUTES}
+     * minutes, and a counter (cash) fee once the course starts. Fees a payment gateway may still confirm are left alone.
+     */
+    @Transactional
+    public int expireUnpaidCourseEnrollments() {
+        if (paymentRepository == null) {
+            return 0;
+        }
+        LocalDateTime current = LocalDateTime.now(clock);
+        LocalDate today = current.toLocalDate();
+        int released = 0;
+        for (Payment payment : paymentRepository.findPendingCourseFeesCreatedBefore(current)) {
+            ClassEnrollment enrollment = enrollments.findById(payment.getClassEnrollmentId()).orElse(null);
+            if (enrollment == null || !BOOKED.equals(enrollment.getStatus())) {
+                payment.setStatus("failed");
+                paymentRepository.save(payment);
+                continue;
+            }
+            boolean cash = "cash".equalsIgnoreCase(payment.getMethod());
+            GymClass gymClass = enrollment.getGymClass();
+            boolean due = cash
+                    ? gymClass != null && gymClass.getStartDate() != null && !gymClass.getStartDate().isAfter(today)
+                    : payment.getCreatedAt() != null && payment.getCreatedAt().isBefore(current.minusMinutes(ONLINE_HOLD_MINUTES));
+            if (!due) {
+                continue;
+            }
+            payment.setStatus("failed");
+            paymentRepository.save(payment);
+            enrollment.setStatus(CANCELLED);
+            enrollment.setCancelledAt(current);
+            enrollment.setCancelReason("Tự động hủy do chưa thanh toán học phí.");
+            enrollments.save(enrollment);
+            released++;
+        }
+        return released;
     }
 
     @Transactional(readOnly = true)

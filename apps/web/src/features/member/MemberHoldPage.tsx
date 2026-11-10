@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { DatePicker } from '../../shared/ui/DatePicker';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { formatCenterDate } from '../../shared/lib/centerTime';
@@ -240,12 +241,12 @@ export function MemberHoldPage() {
               <h2 className="portal-card-title">{t('Làm đơn bảo lưu', 'File a hold request')}</h2>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-start">{t('Ngày bắt đầu', 'Start date')}</label>
-                <input id="hold-start" className="portal-input" type="date" min={earliestStart} max={subscription.endDate}
+                <DatePicker id="hold-start" min={earliestStart} max={subscription.endDate}
                   value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy} />
               </div>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-end">{t('Ngày kết thúc', 'End date')}</label>
-                <input id="hold-end" className="portal-input" type="date" min={startDate || earliestStart} max={subscription.endDate}
+                <DatePicker id="hold-end" min={startDate || earliestStart} max={subscription.endDate}
                   value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy} />
               </div>
               <div className="portal-form-group">

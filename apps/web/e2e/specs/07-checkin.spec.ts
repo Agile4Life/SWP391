@@ -25,9 +25,8 @@ test.describe('Check-in / check-out tại quầy lễ tân', () => {
     await settled(page);
     await field(page, /Nhập mã QR thẻ hội viên/).fill(await dynamicQr('binh'));
     await page.getByRole('button', { name: 'Check-in', exact: true }).click();
-    await expect(page.locator('main')).toContainText(/Trần Thu Bình|check-in thành công|Cho phép/i);
-    await page.getByRole('button', { name: /Đang trong trung tâm/ }).click();
     await expect(page.locator('main')).toContainText('Trần Thu Bình');
+    await expect(page.locator('main')).toContainText(/XÁC THỰC HỢP LỆ|check-in thành công|Cho phép/i);
   });
 
   test('quét lại cùng một mã động bị từ chối (không dùng lại được)', async ({ page }) => {

@@ -68,7 +68,9 @@ public final class EnrollmentResponses {
             java.math.BigDecimal amount,
             String paymentMethod,
             String paymentStatus,
-            String paymentUrl
+            String paymentUrl,
+            /** When the seat held for an unpaid fee is released; null for free enrollments. */
+            java.time.LocalDateTime expiresAt
     ) {
     }
 }

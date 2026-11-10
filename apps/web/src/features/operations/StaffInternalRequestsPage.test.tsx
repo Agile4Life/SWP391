@@ -160,7 +160,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
       submitBtn?.click();
     });
 
-    expect(host.textContent).toContain('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu.');
+    expect(host.textContent).toContain('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu và Ngày kết thúc.');
     expect(staffRequestApi.createStaffRequest).not.toHaveBeenCalled();
   });
 });

@@ -372,6 +372,15 @@ public class WalletService {
         credit(userId, amount, referenceId, "COURT_REFUND", description, "/member/courts");
     }
 
+    /** Credits a cancelled paid course-enrollment refund to the member's wallet; idempotent per {@code referenceId}. */
+    @Transactional
+    public void creditCourseRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
+        String description = (reason != null && !reason.isBlank())
+                ? ("Hoàn học phí hủy khóa học: " + reason)
+                : "Hoàn học phí hủy khóa học về Ví";
+        credit(userId, amount, referenceId, "COURSE_REFUND", description, "/member/classes");
+    }
+
     /** Credits a cancelled paid 1:1 coach-booking refund to the member's wallet; idempotent per {@code referenceId}. */
     @Transactional
     public void creditCoachBookingRefund(Long userId, BigDecimal amount, String referenceId, String reason) {

@@ -50,6 +50,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 
+    /** Unpaid course fees (pending, tied to a class enrollment) created before the cutoff. */
+    @org.springframework.data.jpa.repository.Query("select p from Payment p where p.status = 'pending' and p.classEnrollmentId is not null and p.createdAt < :before")
+    java.util.List<Payment> findPendingCourseFeesCreatedBefore(@org.springframework.data.repository.query.Param("before") java.time.LocalDateTime before);
+
     boolean existsByClassEnrollmentGymClassId(Long classId);
 
     @EntityGraph(attributePaths = {"invoice"})

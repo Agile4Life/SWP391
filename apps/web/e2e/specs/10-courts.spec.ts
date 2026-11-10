@@ -108,9 +108,7 @@ test.describe('Đặt sân (hội viên)', () => {
       // server chặn đúng: không có lượt đặt nào được tạo
       const mine = await (await import('../helpers/api')).api('dung', 'GET', '/court-bookings/my');
       expect((mine.data as any).content).toHaveLength(0);
-      // nhưng giao diện phải giải thích vì sao (cần xác minh: hiện không thấy thông báo lỗi nào)
-      test.info().annotations.push({ type: 'ux', description: 'Hội viên hết hạn đặt sân bị chặn nhưng UI không hiện lỗi rõ ràng' });
-      await expect(page.locator('[role="alert"], [role="status"], .toast, .portal-notice').filter({ hasText: /gói|hết hạn|không/i }).first()).toBeVisible({ timeout: 3000 }).catch(() => undefined);
+      await expect(page.getByRole('alert').filter({ hasText: /gói|hết hạn|đăng ký/i }).first()).toBeVisible();
     });
   });
 });

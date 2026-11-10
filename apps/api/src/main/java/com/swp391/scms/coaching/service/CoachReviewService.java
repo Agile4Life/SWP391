@@ -85,7 +85,7 @@ public class CoachReviewService {
     @Transactional
     public CoachReviewDto createReview(Long memberUserId, CoachReviewCreateDto request) {
         if (request.rating() == null || request.rating() < 1 || request.rating() > 5) {
-            throw new BadRequestException("INVALID_RATING", "error.review.invalid_rating", "Số sao đánh giá phải từ 1 đến 5 sao.");
+            throw new BadRequestException("INVALID_RATING", "error.review.invalid_rating", null, "Số sao đánh giá phải từ 1 đến 5 sao.");
         }
 
         Member member = memberRepository.findById(memberUserId)
@@ -161,7 +161,7 @@ public class CoachReviewService {
     }
     private void validateReviewSource(Long memberId, CoachReviewCreateDto request) {
         if ((request.bookingId() == null) == (request.classSessionId() == null)) {
-            throw new BadRequestException("INVALID_REVIEW_SOURCE", "error.review.invalid_source", "Choose exactly one completed session.");
+            throw new BadRequestException("INVALID_REVIEW_SOURCE", "error.review.invalid_source", null, "Choose exactly one completed session.");
         }
         if (request.bookingId() != null) {
             var booking = bookingRepository.findById(request.bookingId())
@@ -172,7 +172,7 @@ public class CoachReviewService {
             }
             if ("cancelled".equals(booking.getStatus())
                     || !LocalDateTime.of(booking.getBookingDate(), booking.getEndTime()).isBefore(LocalDateTime.now(clock))) {
-                throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", "The session has not finished.");
+                throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", null, "The session has not finished.");
             }
             if (reviewRepository.existsByMemberUserIdAndBookingId(memberId, request.bookingId())) {
                 throw new ConflictException("DUPLICATE_REVIEW", "error.review.duplicate", null, "This session was already reviewed.");
@@ -191,7 +191,7 @@ public class CoachReviewService {
             }
             if ("cancelled".equals(session.getStatus())
                     || !LocalDateTime.of(session.getSessionDate(), session.getEndTime()).isBefore(LocalDateTime.now(clock))) {
-                throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", "The session has not finished.");
+                throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", null, "The session has not finished.");
             }
             // Being enrolled is not enough: the coach must have marked the member present or late.
             if (attendanceRepository != null && attendanceRepository.findBySessionIdAndMemberUserId(session.getId(), memberId)

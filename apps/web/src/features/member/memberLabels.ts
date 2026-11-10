@@ -609,4 +609,5 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "Thanh toán tại lượt đặt của bạn. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.": "Pay from your booking. Unpaid bookings are cancelled after 15 minutes.",
   "Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Mỗi buổi định kỳ thanh toán riêng; lượt chưa thanh toán sau 15 phút sẽ tự hủy.": "Pay with VNPay, SÖL Wallet or cash at the front desk. Each recurring session is paid separately; unpaid bookings are cancelled after 15 minutes.",
   "/ giờ.": "/ hour.",
+  "Số điện thoại không hợp lệ (vd: 0912345678).": "Invalid phone number (e.g. 0912345678).",
 };

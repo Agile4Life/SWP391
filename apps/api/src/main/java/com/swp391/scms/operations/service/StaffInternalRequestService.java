@@ -68,18 +68,16 @@ public class StaffInternalRequestService {
 
         String type = requestDto.requestType().toUpperCase().trim();
         if (!VALID_TYPES.contains(type)) {
-            throw new BadRequestException("INVALID_REQUEST_TYPE", "error.operations.request.invalid_type", "Loại đơn từ không hợp lệ.");
+            throw new BadRequestException("INVALID_REQUEST_TYPE", "error.operations.request.invalid_type", null, "Loại đơn từ không hợp lệ.");
         }
 
         if (requestDto.startDate() != null && requestDto.endDate() != null
                 && requestDto.endDate().isBefore(requestDto.startDate())) {
-            throw new BadRequestException("INVALID_DATE_RANGE", "error.operations.request.invalid_date_range",
-                    "End date must not precede start date.");
+            throw new BadRequestException("INVALID_DATE_RANGE", "error.operations.request.invalid_date_range", null, "End date must not precede start date.");
         }
 
-        if ("LEAVE".equals(type) && requestDto.startDate() == null) {
-            throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required",
-                    "A leave request needs its start date.");
+        if ("LEAVE".equals(type) && (requestDto.startDate() == null || requestDto.endDate() == null)) {
+            throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required", null, "A leave request needs its start and end dates.");
         }
 
         // A replacement must be another active staff member who can actually cover the shift.
@@ -90,8 +88,7 @@ public class StaffInternalRequestService {
                             && "active".equalsIgnoreCase(candidate.getStatus())
                             && candidate.getRole() != null
                             && REPLACEMENT_ROLES.contains(candidate.getRole().getCode().toUpperCase(java.util.Locale.ROOT)))
-                    .orElseThrow(() -> new BadRequestException("INVALID_REPLACEMENT",
-                            "error.operations.request.invalid_replacement", "Choose another active staff member."));
+                    .orElseThrow(() -> new BadRequestException("INVALID_REPLACEMENT", "error.operations.request.invalid_replacement", null, "Choose another active staff member."));
         }
 
         StaffInternalRequest req = new StaffInternalRequest();
@@ -152,7 +149,7 @@ public class StaffInternalRequestService {
         }
 
         if (!"PENDING".equalsIgnoreCase(req.getStatus())) {
-            throw new BadRequestException("CANNOT_CANCEL", "error.operations.request.cannot_cancel", "Chỉ có thể hủy đơn khi đang ở trạng thái Chờ duyệt.");
+            throw new BadRequestException("CANNOT_CANCEL", "error.operations.request.cannot_cancel", null, "Chỉ có thể hủy đơn khi đang ở trạng thái Chờ duyệt.");
         }
 
         req.setStatus("CANCELLED");
@@ -176,16 +173,16 @@ public class StaffInternalRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
 
         if (!"PENDING".equalsIgnoreCase(req.getStatus())) {
-            throw new BadRequestException("ALREADY_REVIEWED", "error.operations.request.already_reviewed", "Đơn từ này đã được xử lý trước đó.");
+            throw new BadRequestException("ALREADY_REVIEWED", "error.operations.request.already_reviewed", null, "Đơn từ này đã được xử lý trước đó.");
         }
 
         String newStatus = reviewDto.status().toUpperCase().trim();
         if (!"APPROVED".equals(newStatus) && !"REJECTED".equals(newStatus)) {
-            throw new BadRequestException("INVALID_STATUS", "error.operations.request.invalid_status", "Trạng thái phê duyệt chỉ có thể là APPROVED hoặc REJECTED.");
+            throw new BadRequestException("INVALID_STATUS", "error.operations.request.invalid_status", null, "Trạng thái phê duyệt chỉ có thể là APPROVED hoặc REJECTED.");
         }
 
         if ("REJECTED".equals(newStatus) && (reviewDto.managerNotes() == null || reviewDto.managerNotes().isBlank())) {
-            throw new BadRequestException("REJECTION_REASON_REQUIRED", "error.operations.request.rejection_reason_required", "Vui lòng nhập lý do từ chối đơn.");
+            throw new BadRequestException("REJECTION_REASON_REQUIRED", "error.operations.request.rejection_reason_required", null, "Vui lòng nhập lý do từ chối đơn.");
         }
 
         User manager = userRepository.findById(managerUserId)

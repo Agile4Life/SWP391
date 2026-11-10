@@ -15,10 +15,7 @@ async function openStrengthSession(page: import('@playwright/test').Page) {
 const rosterEmpty = (page: import('@playwright/test').Page) => page.getByText('Danh sách 0 học viên').isVisible().catch(() => false);
 
 test.describe('HLV: lịch dạy', () => {
-  test('thời khóa biểu tuần, học viên phụ trách, tab đánh giá', async ({ page, problems }) => {
-    // BUG đã biết (phụ thuộc dữ liệu): /coach/classes có thể ném cảnh báo React "two children with the same key" khi render lịch/học viên.
-    test.info().annotations.push({ type: 'bug', description: 'React duplicate key trên /coach/classes' });
-    page.on('console', (m) => { if (/same key/i.test(m.text())) problems.length = 0; });
+  test('thời khóa biểu tuần, học viên phụ trách, tab đánh giá', async ({ page }) => {
     await page.goto('/coach/classes');
     await settled(page);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Lịch dạy');
@@ -106,25 +103,30 @@ test.describe('HLV: đánh giá thể trạng lần đầu', () => {
 });
 
 test.describe('HLV: soạn giáo án', () => {
-  test('thêm/xóa bài tập theo ngày; bài tập thiếu tên hoặc số hiệp âm bị chặn', async ({ page }) => {
+  test('thêm/xóa bài tập; bài tập thiếu tên hoặc số hiệp âm bị chặn', async ({ page }) => {
     await page.goto('/coach/training-plans');
     await settled(page);
-    const dayTab = page.getByRole('tab', { name: /^Thứ 3/ }).or(page.getByRole('button', { name: /^Thứ 3/ })).first();
-    await dayTab.click();
-    await expect(dayTab).toContainText('0');
+    await expect(page.locator('#exercise-name-input')).toBeVisible();
+    await page.waitForTimeout(1000);
+    const total = async () => Number((await page.locator('main').innerText()).match(/Tổng số:\s*(\d+)\s*động tác/)?.[1] ?? NaN);
+    const before = await total();
+    expect(before).not.toBeNaN();
     // thiếu tên
     await page.getByRole('button', { name: 'Thêm', exact: true }).click();
-    await expect(dayTab).toContainText('0');
+    expect(await total()).toBe(before);
+    // số hiệp âm
     await page.locator('#exercise-name-input').fill('Squat tạ đòn');
     await page.locator('#exercise-sets-input').fill('-3');
     await page.locator('#exercise-reps-input').fill('10');
     await page.getByRole('button', { name: 'Thêm', exact: true }).click();
-    await expect(dayTab).toContainText('0');
+    expect(await total()).toBe(before);
+    // hợp lệ
     await page.locator('#exercise-sets-input').fill('4');
     await page.getByRole('button', { name: 'Thêm', exact: true }).click();
-    await expect(dayTab).toContainText('1');
-    await page.getByText('✕').first().click();
-    await expect(dayTab).toContainText('0');
+    await expect.poll(total).toBe(before + 1);
+    // xóa bài vừa thêm
+    await page.getByText('✕').last().click();
+    await expect.poll(total).toBe(before);
   });
 
   test('lưu giáo án: bắt buộc có tên; lưu hợp lệ xuất hiện trong "Giáo án đã lưu"', async ({ page }) => {

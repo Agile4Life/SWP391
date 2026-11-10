@@ -88,7 +88,6 @@ test.describe('Hồ sơ cá nhân', () => {
   test.describe('dữ liệu xấu', () => {
     test.use({ storageState: authFile('chi') });
     test('số điện thoại sai định dạng bị chặn, họ tên rỗng bị chặn', async ({ page }) => {
-      test.fail(true, 'BUG đã biết: hồ sơ chấp nhận SĐT "123"/"abc" cả ở frontend lẫn PUT /profile (đăng ký thì có validate)');
       await page.goto('/member/profile');
       await settled(page);
       await field(page, 'Vd: 0912345678').fill('123');
@@ -96,7 +95,8 @@ test.describe('Hồ sơ cá nhân', () => {
       await expect(page.getByText(/không hợp lệ|định dạng/i).first()).toBeVisible();
       await page.locator('#fullName').fill('');
       await page.getByRole('button', { name: 'Lưu hồ sơ' }).click();
-      await expect(page.getByText(/bắt buộc|không được để trống|nhập họ/i).first()).toBeVisible();
+      // họ tên dùng kiểm tra bắt buộc gốc của trình duyệt
+      expect(await page.locator('#fullName').evaluate((e: HTMLInputElement) => e.checkValidity())).toBe(false);
     });
     test('ảnh đại diện sai định dạng bị từ chối', async ({ page }) => {
       await page.goto('/member/profile');
@@ -133,6 +133,18 @@ test.describe('Hồ sơ cá nhân', () => {
     const ok = await apiWith('', 'POST', '/auth/login', { username: m.username, password: 'NewPass@456' });
     expect(ok.status).toBe(200);
     await ctx.close();
+  });
+});
+
+test.describe('Hồ sơ: kiểm tra API', () => {
+  test('PUT /profile từ chối số điện thoại sai định dạng', async () => {
+    const m = await createActiveMember('phn');
+    const s = await apiLogin(m.username, m.password);
+    for (const phone of ['123', 'abc', '09123456789012345678']) {
+      const res = await apiWith(s.token, 'PUT', '/profile', { fullName: 'Nguyen Test', phone });
+      expect(res.status, `phone=${phone}`).toBe(400);
+    }
+    expect((await apiWith(s.token, 'PUT', '/profile', { fullName: 'Nguyen Test', phone: '' })).status).toBe(200);
   });
 });
 
