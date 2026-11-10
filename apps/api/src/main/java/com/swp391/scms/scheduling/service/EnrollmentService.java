@@ -303,10 +303,30 @@ public class EnrollmentService {
                     "Only a booked enrollment can be cancelled");
         }
 
+        // A member cannot walk away from a course that has started (the credit would come back and the fee is
+        // owed); the desk can still cancel on their behalf.
+        GymClass enrolledClass = enrollment.getGymClass();
+        if (!isStaff && enrolledClass != null && enrolledClass.getStartDate() != null
+                && !enrolledClass.getStartDate().isAfter(SessionEligibility.today(clock))) {
+            throw new BadRequestException("SCHEDULING_CANNOT_CANCEL_STARTED_COURSE",
+                    "error.scheduling.cannot_cancel_started_course", null,
+                    "Không thể hủy khóa học đã hoặc đang bắt đầu");
+        }
+
         LocalDateTime now = LocalDateTime.now(clock);
         enrollment.setStatus(CANCELLED);
         enrollment.setCancelledAt(now);
         enrollment.setCancelReason(msg("scheduling.enrollment.cancelled_by_role", principal.role()));
+
+        // An unpaid course fee must not stay payable once the seat is released.
+        if (paymentRepository != null) {
+            paymentRepository.findByClassEnrollmentId(enrollment.getId())
+                    .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
+                    .ifPresent(payment -> {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                    });
+        }
 
         ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
 
@@ -463,13 +483,7 @@ public class EnrollmentService {
 
     /** Start of the period whose credits are shared: an upgrade continues the plan it replaced. */
     private static LocalDate creditWindowStart(com.swp391.scms.membership.entity.MembershipSubscription sub) {
-        var current = sub;
-        java.util.Set<Long> seen = new java.util.HashSet<>();
-        while (current.getUpgradeCharge() != null && current.getPreviousSubscription() != null
-                && current.getId() != null && seen.add(current.getId())) {
-            current = current.getPreviousSubscription();
-        }
-        return current.getStartDate();
+        return com.swp391.scms.facilities.PackageBenefits.cycleAnchor(sub);
     }
 
     /** A member who missed more than half of a course cannot join another one until the block ends. */
