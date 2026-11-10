@@ -1,0 +1,157 @@
+/*
+ * Chuyển động portal: reveal từng component theo viewport (usePortalMotion) và vi tương tác bằng CSS.
+ * Chỉ dùng opacity/transform, không đổi bố cục; toàn bộ nằm trong no-preference nên reduced motion
+ * hiện nội dung đầy đủ và tĩnh.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .portal-v2 {
+    --portal-motion-ease: cubic-bezier(.22, 1, .36, 1);
+  }
+
+  /* Reveal component: hook gắn .portal-reveal-ready, vào viewport thì thêm .is-visible. */
+  .portal-v2 .portal-reveal-ready:not(.is-visible) {
+    opacity: 0;
+  }
+
+  .portal-v2 .portal-reveal-ready.is-visible {
+    animation: portal-reveal 460ms var(--portal-motion-ease) var(--portal-reveal-delay, 0ms) backwards;
+  }
+
+  .portal-v2 .portal-reveal-ready[data-reveal-direction='up'] {
+    --portal-reveal-shift: -14px;
+  }
+
+  .portal-v2 :is(.portal-header, .portal-tabs, [data-reveal='soft']).portal-reveal-ready {
+    --portal-reveal-shift: 8px;
+  }
+
+  .portal-v2 :is(.portal-header, .portal-tabs, [data-reveal='soft']).portal-reveal-ready[data-reveal-direction='up'] {
+    --portal-reveal-shift: -8px;
+  }
+
+  /* Phần nhỏ bên trong khối (tiêu đề, dòng thông tin, nhãn, nút…): nối tiếp sau khối cha, lệch 45ms. */
+  .portal-v2 .portal-reveal-ready.is-visible [data-reveal-part] {
+    animation: portal-part-in 420ms var(--portal-motion-ease)
+      calc(var(--portal-reveal-delay, 0ms) + 90ms + var(--portal-part, 0) * 45ms) backwards;
+  }
+
+  .portal-v2 .portal-reveal-ready[data-reveal-direction='up'] [data-reveal-part] {
+    --portal-part-shift: -8px;
+  }
+
+  /* Hàng bảng hiện lệch nhịp khi bảng vừa có dữ liệu; chỉ opacity để không ảnh hưởng layout bảng. */
+  .portal-v2 .portal-table tbody tr {
+    animation: portal-enter 320ms ease-out calc(min(var(--portal-row, 0), 8) * 28ms) backwards;
+  }
+
+  .portal-v2 .portal-table tbody tr:nth-child(2) { --portal-row: 1; }
+  .portal-v2 .portal-table tbody tr:nth-child(3) { --portal-row: 2; }
+  .portal-v2 .portal-table tbody tr:nth-child(4) { --portal-row: 3; }
+  .portal-v2 .portal-table tbody tr:nth-child(5) { --portal-row: 4; }
+  .portal-v2 .portal-table tbody tr:nth-child(6) { --portal-row: 5; }
+  .portal-v2 .portal-table tbody tr:nth-child(7) { --portal-row: 6; }
+  .portal-v2 .portal-table tbody tr:nth-child(8) { --portal-row: 7; }
+  .portal-v2 .portal-table tbody tr:nth-child(n + 9) { --portal-row: 8; }
+
+  /* Điều hướng: icon mục đang chọn bật nhẹ khi đổi màn hình. */
+  .portal-v2 :is(.portal-rail-link, .portal-mobile-nav__item).active > svg {
+    animation: portal-nav-pop 360ms var(--portal-motion-ease);
+  }
+
+  .portal-v2 .portal-tab {
+    transition: color 180ms var(--portal-motion-ease), background-color 180ms var(--portal-motion-ease),
+      border-color 180ms var(--portal-motion-ease), box-shadow 180ms var(--portal-motion-ease);
+  }
+
+  /* Lớp nổi: mở từ phía nút kích hoạt. */
+  .portal-v2 .portal-avatar-dropdown,
+  .portal-v2 .notification-popover {
+    transform-origin: top right;
+    animation: portal-pop-in 200ms var(--portal-motion-ease);
+  }
+
+  .action-menu[open] > .action-menu__list {
+    transform-origin: top right;
+    animation: portal-pop-in 180ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .action-menu[open] > .action-menu__list--up {
+    transform-origin: bottom right;
+  }
+
+  .portal-v2 .member-notification-badge {
+    animation: portal-badge-pop 360ms var(--portal-motion-ease) backwards;
+  }
+
+  .portal-dialog[open]::backdrop {
+    animation: portal-enter 240ms ease-out;
+  }
+}
+
+@keyframes portal-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--portal-reveal-shift, 14px), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes portal-part-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--portal-part-shift, 8px), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes portal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes portal-nav-pop {
+  from {
+    transform: scale(.72);
+  }
+
+  60% {
+    transform: scale(1.08);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+@keyframes portal-badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media print {
+  .portal-v2 .portal-reveal-ready:not(.is-visible) {
+    opacity: 1;
+  }
+}

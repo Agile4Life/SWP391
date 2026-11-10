@@ -10,6 +10,8 @@ import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
+import { usePortalMotion } from './usePortalMotion';
+import './portal-motion.css';
 import { getMobileNavLabel, getNavLabel, getRoleLabel, MOBILE_PRIMARY_NAV, PORTAL_NAV } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
 import { subscribeMembershipChanges } from '../member/membershipRealtime';
@@ -140,6 +142,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const previousPath = useRef(location.pathname);
   const mainRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
+  usePortalMotion(mainRef);
   const isMember = user.role === 'MEMBER';
   // Mọi vai trò đều mở được hộp thư server và thông báo thao tác tại client.
   const hasServerNotifications = true;

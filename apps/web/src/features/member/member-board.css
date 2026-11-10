@@ -7,7 +7,7 @@
 .member-board-column--blue { --column-color: #879da5; }
 .member-board-column--green { --column-color: #8c9f87; }
 .member-column-heading { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 44px; margin-bottom: 12px; }
-.member-column-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; font-weight: 650; line-height: 1.5; }
+.member-column-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 650; line-height: 1.5; }
 .member-column-heading > a { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 36px; line-height: 1; color: var(--portal-salmon); border-radius: 10px; transition: color 160ms ease, background-color 160ms ease; }
 .member-column-heading > a:hover { color: var(--portal-salmon); background: var(--portal-surface); }
 .portal-v2 .member-board .portal-card { margin-bottom: 14px; padding: 18px; border: 0; border-radius: 18px; }
@@ -31,7 +31,7 @@
 .member-board-empty { padding-top: 4px; }
 .member-board-empty-icon { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; line-height: 1; margin-bottom: 16px; border-radius: 14px; background: var(--portal-tint); color: var(--portal-salmon); }
 .portal-v2 .member-board .member-booking-row { justify-content: flex-start; padding: 12px; gap: 9px; flex-wrap: nowrap; align-items: flex-start; }
-.portal-v2 .member-booking-row .row-card__title { font-size: 12px; margin-bottom: 4px; }
+.portal-v2 .member-booking-row .row-card__title { font-size: 13px; margin-bottom: 4px; }
 .portal-v2 .member-booking-row .row-card__meta { font-size: 12px; }
 .member-discover-card { display: grid; grid-template-columns: minmax(0, 1fr) 18px; gap: 12px 6px; padding: 10px 10px 16px; border-radius: 18px; background: var(--portal-surface); box-shadow: 0 6px 22px -16px #00000030; }
 .member-discover-card > img { grid-column: 1 / -1; width: 100%; height: 116px; border-radius: 12px; object-fit: cover; }
@@ -45,7 +45,7 @@
 .member-digital-card-label { margin-top: 23px; font-size: 12px; letter-spacing: .14em; }
 .member-digital-card > strong { margin-top: 7px; font-size: 15px; font-weight: 650; overflow-wrap: anywhere; }
 .member-digital-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 20px; font-size: 12px; }
-.member-board-info h3, .member-profile-card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 650; }
+.member-board-info h3, .member-profile-card h3 { margin: 0 0 8px; font-size: 14px; font-weight: 650; }
 .member-board-info p, .member-profile-card p { margin: 0; color: var(--portal-muted); font-size: 12px; line-height: 1.9; }
 .member-profile-card { display: block; margin-bottom: 14px; padding: 20px 18px 12px; border-radius: 18px; background: var(--portal-surface); box-shadow: 0 6px 22px -16px #00000030; }
 .member-profile-card .member-info-icon { background: #86b99b20; color: #86b99b; }
@@ -58,10 +58,10 @@
 .member-board-loading { color: var(--portal-muted); font-size: 12px; }
 .member-skeleton { border-radius: 10px; background: var(--portal-raised); }
 .member-skeleton--image { height: 115px; margin-bottom: 18px; }
-.member-board-column > :not(.member-column-heading) { animation: portal-enter 300ms cubic-bezier(.2,.7,.3,1) both; }
-.member-board-column:nth-child(2) > :not(.member-column-heading) { animation-delay: 35ms; }
-.member-board-column:nth-child(3) > :not(.member-column-heading) { animation-delay: 70ms; }
-.member-board-column:nth-child(4) > :not(.member-column-heading) { animation-delay: 105ms; }
+.member-board-column > :not(.member-column-heading) { animation: portal-reveal 460ms cubic-bezier(.22,1,.36,1) backwards; }
+.member-board-column:nth-child(2) > :not(.member-column-heading) { animation-delay: 60ms; }
+.member-board-column:nth-child(3) > :not(.member-column-heading) { animation-delay: 120ms; }
+.member-board-column:nth-child(4) > :not(.member-column-heading) { animation-delay: 180ms; }
 .member-discover-card, .member-profile-card, .member-sanctuary-card, .member-digital-card { transition: transform 180ms ease, box-shadow 180ms ease; }
 @media (hover: hover) {
   .member-discover-card:hover, .member-profile-card:hover, .member-sanctuary-card:hover, .member-digital-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -14px #00000030; }
@@ -76,7 +76,7 @@
   .member-board-toolbar { padding-bottom: 16px; margin-bottom: 14px; }
   .member-board-date { font-size: 12px; }
   .member-column-heading { margin-bottom: 8px; }
-  .member-column-heading h2 { font-size: 13px; }
+  .member-column-heading h2 { font-size: 14px; }
   .member-card-cover, .member-discover-card > img, .member-sanctuary-card > img { height: 170px; }
   .member-card-body { padding-inline: 10px; }
   .member-board-info p, .member-profile-card p { font-size: 12px; }
