@@ -78,7 +78,7 @@ Chỉ áp dụng cho VPS tự chạy `docker compose`; push lên GitHub vẫn d�
 
 ## Tự động deploy lên VPS (CD qua SSH)
 
-Workflow `.github/workflows/cd-vps.yml` chạy sau khi `CI` xanh trên `main` (hoặc bấm **Run workflow** trong tab Actions): SSH vào VPS, `git merge --ff-only` đúng commit đã qua CI, rồi `docker compose up -d --build --wait` và gọi thử `/api/v1/health` qua Nginx. Bản mới không khỏe thì tự `git reset --hard` về commit trước và dựng lại; job vẫn báo đỏ. Có thay đổi chưa commit ở file đã theo dõi trên VPS thì dừng, không ghi đè. Không dùng `docker compose down` nên mạng `scms_default` và kết nối tới container PostgreSQL 1Panel được giữ nguyên.
+Workflow `.github/workflows/vps-pipeline.yml` (**VPS Pipeline**, gộp CI và CD của VPS trên một màn hình: build image api/web, đợi `CI` của đúng commit xanh, rồi deploy) chạy trên `main` (hoặc bấm **Run workflow** trong tab Actions): SSH vào VPS, `git merge --ff-only` đúng commit đã qua CI, rồi `docker compose up -d --build --wait` và gọi thử `/api/v1/health` qua Nginx. Bản mới không khỏe thì tự `git reset --hard` về commit trước và dựng lại; job vẫn báo đỏ. Có thay đổi chưa commit ở file đã theo dõi trên VPS thì dừng, không ghi đè. Không dùng `docker compose down` nên mạng `scms_default` và kết nối tới container PostgreSQL 1Panel được giữ nguyên.
 
 Cài đặt một lần:
 

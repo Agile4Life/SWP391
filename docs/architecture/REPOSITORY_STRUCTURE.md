@@ -78,7 +78,7 @@ Root giữ lockfile nhỏ cho metadata của `package.json`; `apps/web` giữ lo
 
 - **CI:** test, lint, type checking/build frontend; chính sách database và test backend.
 - **CD:** giữ luồng đã qua CI → Render → Vercel.
-- **CI VPS:** build và kiểm tra hai Docker image. Deploy VPS thủ công trong 1Panel, sau đó health check theo [hướng dẫn VPS](../VPS_CICD_SETUP.md).
+- **VPS Pipeline:** build và kiểm tra hai Docker image, đợi CI xanh rồi deploy VPS qua SSH (một màn hình). Deploy VPS thủ công trong 1Panel, sau đó health check theo [hướng dẫn VPS](../VPS_CICD_SETUP.md).
 - Không gom thành npm workspaces hoặc đổi build context trong lần cleanup này: Dockerfile, Maven và Vercel đang dựa trên đường dẫn hiện tại.
 
 Xem [audit cleanup](2026-11-06-codebase-cleanup.md) để biết các mục đã xử lý và phần còn cần refactor riêng.
