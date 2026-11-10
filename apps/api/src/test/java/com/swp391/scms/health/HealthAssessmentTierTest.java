@@ -1,6 +1,8 @@
 package com.swp391.scms.health;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -152,6 +154,29 @@ class HealthAssessmentTierTest {
 
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("GOLD", 30)));
         assertThat(service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("weight");
+    }
+
+    @Test
+    void goldAndPlatinumGetOneAssessmentDayPerThirtyDayCycle() {
+        // Gold started 2 days ago: the cycle is today-2 .. today+27, so another day of it is already used.
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("GOLD", 30)));
+        when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(1).atTime(9, 0))));
+
+        ForbiddenException ex = assertThrows(ForbiddenException.class,
+                () -> service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER"));
+        assertEquals("HEALTH_ASSESSMENT_CYCLE_USED", ex.getErrorCode());
+
+        // Several measurements on the same day are one assessment.
+        when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(8, 0))));
+        assertThat(service.addMetric(10L, metric("height", "172", "cm"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("height");
+
+        // Measurements from before the cycle (the first assessment, an earlier plan) do not use it up.
+        when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(40).atTime(9, 0))));
+        assertThat(service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("weight");
+
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("PLATINUM", 90)));
+        when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(1).atTime(9, 0))));
+        assertThrows(ForbiddenException.class, () -> service.addMetric(10L, metric("body_fat", "18", "%"), 30L, "CENTER_MANAGER"));
     }
 
     @Test

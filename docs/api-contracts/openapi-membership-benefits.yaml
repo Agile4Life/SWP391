@@ -264,3 +264,19 @@ paths:
       description: A member cannot cancel once the course has started (400 SCHEDULING_CANNOT_CANCEL_STARTED_COURSE), so the credit is not handed back; the desk can. Cancelling before the start voids the unpaid fee.
       responses:
         '200': { description: Cancelled }
+  /health/metrics#cycle:
+    post:
+      summary: One assessment day per 30-day cycle (Gold, Platinum, trial)
+      description: |
+        Measurements taken on one day are one assessment. Once a day of the current cycle (counted from the plan, an
+        upgrade keeps the original start) has measurements, another day answers 403 HEALTH_ASSESSMENT_CYCLE_USED with the
+        day used and the start of the next cycle. Measurements from before the cycle, such as the first assessment, do
+        not count.
+      responses:
+        '403': { description: HEALTH_ASSESSMENT_CYCLE_USED }
+  /subscriptions/{id}/resume:
+    post:
+      summary: Resume a frozen membership early
+      description: Course sessions that the hold had excused from the resume day on become ordinary sessions again.
+      responses:
+        '200': { description: Resumed }

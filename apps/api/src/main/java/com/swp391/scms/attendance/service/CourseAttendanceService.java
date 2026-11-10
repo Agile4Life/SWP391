@@ -111,6 +111,18 @@ public class CourseAttendanceService {
         return created;
     }
 
+    /**
+     * The member resumed before the hold ended: sessions that were excused for the hold from {@code from} on are
+     * ordinary sessions again, so they count as attended or missed like any other.
+     */
+    @Transactional
+    public int releaseHoldExcuses(Long memberId, LocalDate from) {
+        if (memberId == null || from == null) return 0;
+        List<SessionAttendance> rows = attendance.findHoldExcuses(memberId, from);
+        attendance.deleteAll(rows);
+        return rows.size();
+    }
+
     /** Start of a granted visit that was inside the center while the session ran, or null. */
     private LocalDateTime coveringVisit(Long memberId, ClassSession session) {
         if (checkins == null || session.getSessionDate() == null) return null;

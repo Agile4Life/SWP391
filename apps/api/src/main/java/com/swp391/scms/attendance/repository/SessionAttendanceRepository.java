@@ -30,6 +30,14 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
 
     long countBySessionIdAndStatus(Long sessionId, String status);
 
+    /** Sessions excused automatically by a membership hold, from {@code fromDate} on. */
+    @Query("""
+            select a from SessionAttendance a
+            where a.member.userId = :memberId and a.status = 'excused' and a.notes = 'auto: membership hold'
+              and a.session.sessionDate >= :fromDate
+            """)
+    List<SessionAttendance> findHoldExcuses(@Param("memberId") Long memberId, @Param("fromDate") java.time.LocalDate fromDate);
+
     /** Sessions of a course the member actually came to (present or late). */
     @Query("""
             select count(a) from SessionAttendance a

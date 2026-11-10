@@ -208,15 +208,13 @@ public class HealthMetricService {
                 && row.getRecordedAt() != null && row.getRecordedAt().toLocalDate().equals(today));
     }
 
-    /** The active packages of the member today. */
-    private List<com.swp391.scms.facilities.entity.MembershipPackage> currentPackages(Long memberId) {
+    /** The active subscriptions of the member today. */
+    private List<com.swp391.scms.membership.entity.MembershipSubscription> currentSubscriptions(Long memberId) {
         if (subscriptions == null) return List.of();
         java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
         return subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
-                .filter(s -> s.getStartDate() != null && s.getEndDate() != null
+                .filter(s -> s.getStartDate() != null && s.getEndDate() != null && s.getMembershipPackage() != null
                         && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
-                .map(com.swp391.scms.membership.entity.MembershipSubscription::getMembershipPackage)
-                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
@@ -225,7 +223,9 @@ public class HealthMetricService {
      * first assessment but no follow-up. Members without an active package are not restricted.
      */
     private void enforceAssessmentTier(Long memberId, String metricName) {
-        List<com.swp391.scms.facilities.entity.MembershipPackage> packages = currentPackages(memberId);
+        List<com.swp391.scms.membership.entity.MembershipSubscription> current = currentSubscriptions(memberId);
+        List<com.swp391.scms.facilities.entity.MembershipPackage> packages = current.stream()
+                .map(com.swp391.scms.membership.entity.MembershipSubscription::getMembershipPackage).toList();
         if (packages.isEmpty()) return;
         if (("body_fat".equals(metricName) || "muscle_mass".equals(metricName))
                 && packages.stream().noneMatch(com.swp391.scms.facilities.PackageBenefits::allowsDeepAssessment)) {
@@ -241,6 +241,37 @@ public class HealthMetricService {
                 throw new ForbiddenException("HEALTH_PERIODIC_ASSESSMENT_GOLD", "health.metrics.gold_required", null,
                         "Periodic assessments are part of the Gold package and above");
             }
+            return;
+        }
+        enforceOneAssessmentPerCycle(memberId, current);
+    }
+
+    /**
+     * Gold and Platinum include one follow-up assessment per 30-day cycle (spec 2026-11-09): once measurements were
+     * taken on one day of the cycle, other days wait for the next cycle. Several measurements on the same day are
+     * one assessment.
+     */
+    private void enforceOneAssessmentPerCycle(Long memberId, List<com.swp391.scms.membership.entity.MembershipSubscription> current) {
+        java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        List<MemberProgressLog> history = progressLogRepository.findByMemberUserIdOrderByRecordedAtDesc(memberId);
+        if (history == null || history.isEmpty()) return;
+        com.swp391.scms.membership.entity.MembershipSubscription sub = current.stream()
+                .filter(s -> com.swp391.scms.facilities.PackageBenefits.allowsPeriodicAssessment(s.getMembershipPackage()))
+                .findFirst().orElse(null);
+        if (sub == null) return;
+        java.time.LocalDate anchor = com.swp391.scms.facilities.PackageBenefits.cycleAnchor(sub);
+        java.time.LocalDate cycleStart = com.swp391.scms.facilities.PackageBenefits.cycleStart(anchor, today);
+        java.time.LocalDate nextCycle = cycleStart.plusDays(com.swp391.scms.facilities.PackageBenefits.CYCLE_DAYS);
+        java.time.LocalDate otherDay = history.stream()
+                .map(MemberProgressLog::getRecordedAt)
+                .filter(java.util.Objects::nonNull)
+                .map(java.time.LocalDateTime::toLocalDate)
+                .filter(day -> !day.isBefore(cycleStart) && !day.isAfter(today) && !day.equals(today))
+                .findFirst().orElse(null);
+        if (otherDay != null) {
+            throw new ForbiddenException("HEALTH_ASSESSMENT_CYCLE_USED", "health.metrics.cycle_used",
+                    new Object[]{otherDay.toString(), nextCycle.toString()},
+                    "This cycle's assessment was already taken on " + otherDay + "; the next one is from " + nextCycle);
         }
     }
 

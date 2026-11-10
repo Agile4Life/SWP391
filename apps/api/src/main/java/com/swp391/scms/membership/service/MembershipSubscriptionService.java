@@ -774,7 +774,10 @@ public class MembershipSubscriptionService {
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
-        return toDto(subscriptions.saveAndFlush(subscription));
+        MembershipSubscription resumed = subscriptions.saveAndFlush(subscription);
+        // Coming back early: the rest of the hold window no longer excuses course sessions.
+        if (courseAttendance != null) courseAttendance.releaseHoldExcuses(principal.id(), today);
+        return toDto(resumed);
     }
 
     /** Frozen memberships whose hold reached MAX_HOLD_DAYS. */

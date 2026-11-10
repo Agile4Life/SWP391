@@ -177,6 +177,16 @@ class CourseAttendanceServiceTest {
     }
 
     @Test
+    void resumingEarlyReleasesTheHoldExcusesFromThatDayOn() {
+        SessionAttendance excused = new SessionAttendance();
+        when(attendance.findHoldExcuses(100L, LocalDate.of(2026, 11, 12))).thenReturn(List.of(excused));
+
+        assertEquals(1, service.releaseHoldExcuses(100L, LocalDate.of(2026, 11, 12)));
+
+        verify(attendance).deleteAll(List.of(excused));
+    }
+
+    @Test
     void missingMoreThanHalfBlocksNewCoursesForThirtyDays() {
         when(sessions.countByGymClassIdAndStatusNot(5L, "cancelled")).thenReturn(9L);
         when(attendance.countAbsences(100L, 5L)).thenReturn(5L);
