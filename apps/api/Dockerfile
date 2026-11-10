@@ -1,5 +1,5 @@
 # Giai đoạn 1: dùng Maven 3.9 và JDK 21 để build ứng dụng; đặt tên là "build".
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-26 AS build
 # Đặt thư mục làm việc trong image; tự tạo nếu chưa tồn tại.
 WORKDIR /build
 
