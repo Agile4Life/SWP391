@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as clientModule from '../../shared/api/client';
 import { PtAttendancePage } from './PtAttendancePage';
 
-const mocks = vi.hoisted(() => ({ load: vi.fn(), mark: vi.fn() }));
-vi.mock('./ptAttendanceApi', () => ({ getPtAttendance: mocks.load, markPtAttended: mocks.mark }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), mark: vi.fn(), unmark: vi.fn() }));
+vi.mock('./ptAttendanceApi', () => ({ getPtAttendance: mocks.load, markPtAttended: mocks.mark, unmarkPtAttended: mocks.unmark }));
 
 const base = {
   memberId: 10, memberName: 'Khoa Hội Viên', coachId: 20, coachName: 'HLV Hùng', coachSpecialization: 'Gym',
@@ -69,6 +69,16 @@ describe('PtAttendancePage', () => {
     expect(markButtons(2)).toHaveLength(1);
     await act(async () => markButtons(2)[0].click());
     expect(mocks.mark).toHaveBeenCalledWith(2);
+    expect(mocks.load).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets staff remove the mark of an attended session and reloads the list', async () => {
+    mocks.load.mockResolvedValue([attended]);
+    mocks.unmark.mockResolvedValue({});
+    await render();
+    const remove = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="pt-row-1"] button')].find((button) => button.textContent === 'Bỏ đánh dấu có mặt')!;
+    await act(async () => remove.click());
+    expect(mocks.unmark).toHaveBeenCalledWith(1);
     expect(mocks.load).toHaveBeenCalledTimes(2);
   });
 });

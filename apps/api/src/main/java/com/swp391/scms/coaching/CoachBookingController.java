@@ -130,6 +130,17 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, marked));
     }
 
+    @PostMapping("/{id}/unmark-attended")
+    public ResponseEntity<ApiResponse<CoachBookingDto>> unmarkAttended(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable("id") Long id) {
+        CoachBookingDto result = coachBookingService.unmarkAttended(principal, id);
+        String msg = messageService != null
+                ? messageService.getMessage("message.coach_booking.attendance_unmarked", "Đã bỏ ghi nhận có mặt")
+                : "Đã bỏ ghi nhận có mặt";
+        return ResponseEntity.ok(ApiResponse.ok(msg, result));
+    }
+
     @GetMapping("/unpaid")
     public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getUnpaidBookings(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {

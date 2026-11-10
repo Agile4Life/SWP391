@@ -70,6 +70,10 @@ public class CoachBooking {
     @Column(name = "attended_at")
     private LocalDateTime attendedAt;
 
+    /** Set when staff removed the arrival: gate scans and the sweep must not record it again. */
+    @Column(name = "attendance_locked")
+    private Boolean attendanceLocked = false;
+
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
 
@@ -117,6 +121,8 @@ public class CoachBooking {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    public boolean isAttendanceLocked() { return Boolean.TRUE.equals(attendanceLocked); }
+    public void setAttendanceLocked(boolean attendanceLocked) { this.attendanceLocked = attendanceLocked; }
     public LocalDateTime getAttendedAt() { return attendedAt; }
     public void setAttendedAt(LocalDateTime attendedAt) { this.attendedAt = attendedAt; }
     public LocalDateTime getCancelledAt() { return cancelledAt; }

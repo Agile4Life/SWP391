@@ -7,7 +7,7 @@ import { localizableError } from '../../shared/lib/errorMessage';
 import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import type { CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
-import { getPtAttendance, markPtAttended, type PtOutcome } from './ptAttendanceApi';
+import { getPtAttendance, markPtAttended, unmarkPtAttended, type PtOutcome } from './ptAttendanceApi';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
@@ -69,13 +69,13 @@ export function PtAttendancePage() {
   const badge: Record<Exclude<PtOutcome, 'ALL'>, string> = { ATTENDED: 'badge-success', MISSED: 'badge-warning', UPCOMING: 'badge-info' };
   const invalidRange = from > to;
 
-  async function markAttended(row: CoachBookingDto) {
+  async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busyId !== null) return;
     setBusyId(row.id);
     setError(null);
     try {
-      await markPtAttended(row.id);
-      notify(t('Đã ghi nhận hội viên có mặt.', 'The member has been marked as attended.'), 'success');
+      if (attended) await markPtAttended(row.id); else await unmarkPtAttended(row.id);
+      notify(attended ? t('Đã ghi nhận hội viên có mặt.', 'The member has been marked as attended.') : t('Đã bỏ ghi nhận có mặt.', 'The attendance mark has been removed.'), 'success');
       await load();
     } catch (cause) {
       setError(localizableError(cause, 'Không thể ghi nhận có mặt. Vui lòng thử lại.'));
@@ -124,8 +124,13 @@ export function PtAttendancePage() {
                 </div>
                 <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span className={`badge ${badge[outcome]}`}>{filterLabel[outcome]}</span>
+                  {outcome === 'ATTENDED' && (
+                    <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row, false)}>
+                      {t('Bỏ đánh dấu có mặt', 'Remove attended mark')}
+                    </button>
+                  )}
                   {outcome !== 'ATTENDED' && (row.bookingDate < now.date || (row.bookingDate === now.date && row.startTime.slice(0, 5) <= now.time)) && (
-                    <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row)}>
+                    <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row, true)}>
                       {t('Đánh dấu có mặt', 'Mark as attended')}
                     </button>
                   )}

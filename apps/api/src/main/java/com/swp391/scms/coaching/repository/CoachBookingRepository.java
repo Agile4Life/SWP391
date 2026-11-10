@@ -98,6 +98,7 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             select cb from CoachBooking cb
             where cb.member.userId = :memberId and cb.bookingDate = :date
               and cb.status = 'confirmed' and cb.attendedAt is null
+              and (cb.attendanceLocked is null or cb.attendanceLocked = false)
             """)
     List<CoachBooking> findOpenForDay(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
@@ -106,6 +107,7 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             select cb from CoachBooking cb
             where cb.bookingDate between :fromDate and :toDate
               and cb.status = 'confirmed' and cb.attendedAt is null
+              and (cb.attendanceLocked is null or cb.attendanceLocked = false)
             """)
     List<CoachBooking> findOpenBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 

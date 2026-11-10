@@ -602,6 +602,37 @@ public class CoachBookingService {
         }
         if (booking.getAttendedAt() == null) {
             booking.setAttendedAt(now);
+            booking.setAttendanceLocked(false);
+            coachBookingRepository.save(booking);
+        }
+        return mapToDto(booking);
+    }
+
+    /**
+     * Staff remove an arrival that was recorded by mistake (a scan during the session by someone passing through, or a
+     * wrong manual mark). The session is locked so neither a gate scan nor the sweep records it again; marking it by hand
+     * unlocks it. Same people and same limits as {@link #markAttended}, except the session may be any past one.
+     */
+    @Transactional
+    @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_UNMARK", entity = "coach_bookings")
+    public CoachBookingDto unmarkAttended(AuthenticatedPrincipal principal, Long bookingId) {
+        String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
+        boolean coach = "COACH".equals(role);
+        if (!coach && !DESK_ROLES.contains(role) && !"MANAGER".equals(role)) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only coaches, the front desk and managers can change attendance.");
+        }
+        CoachBooking booking = coachBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
+        if (coach && (booking.getCoach() == null || !principal.id().equals(booking.getCoach().getUserId()))) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "A coach can change only their own sessions.");
+        }
+        if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
+            throw new ConflictException("COACH_BOOKING_CANCELLED", "error.coach_booking.already_cancelled", null,
+                    "A cancelled session has no attendance.");
+        }
+        if (booking.getAttendedAt() != null || !booking.isAttendanceLocked()) {
+            booking.setAttendedAt(null);
+            booking.setAttendanceLocked(true);
             coachBookingRepository.save(booking);
         }
         return mapToDto(booking);

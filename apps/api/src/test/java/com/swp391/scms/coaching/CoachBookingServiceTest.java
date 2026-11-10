@@ -824,4 +824,37 @@ class CoachBookingServiceTest {
         assertThatThrownBy(() -> service.markAttended(desk, 9L)).isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
         verify(coachBookingRepository, never()).save(any());
     }
+
+    @Test
+    void unmarkingRemovesTheArrivalAndLocksTheSessionAgainstTheScanAndTheSweep() {
+        var attended = ptSession(11, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), LocalDateTime.of(2026, 10, 30, 8, 55));
+        when(coachBookingRepository.findById(11L)).thenReturn(Optional.of(attended));
+        var otherCoach = new AuthenticatedPrincipal(99L, "other", "COACH");
+        assertThatThrownBy(() -> service.unmarkAttended(otherCoach, 11L))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+        assertThatThrownBy(() -> service.unmarkAttended(principal, 11L))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+
+        var dto = service.unmarkAttended(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 11L);
+
+        assertThat(dto.attendedAt()).isNull();
+        assertThat(attended.isAttendanceLocked()).isTrue();
+        verify(coachBookingRepository).save(attended);
+        // Unmarking again changes nothing; marking by hand unlocks it.
+        service.unmarkAttended(new AuthenticatedPrincipal(20L, "hung", "COACH"), 11L);
+        verify(coachBookingRepository, times(1)).save(attended);
+        service.markAttended(new AuthenticatedPrincipal(20L, "hung", "COACH"), 11L);
+        assertThat(attended.getAttendedAt()).isNotNull();
+        assertThat(attended.isAttendanceLocked()).isFalse();
+    }
+
+    @Test
+    void aCancelledSessionCannotBeUnmarked() {
+        var cancelled = ptSession(12, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), null);
+        cancelled.setStatus("cancelled");
+        when(coachBookingRepository.findById(12L)).thenReturn(Optional.of(cancelled));
+
+        assertThatThrownBy(() -> service.unmarkAttended(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 12L))
+                .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
+    }
 }
