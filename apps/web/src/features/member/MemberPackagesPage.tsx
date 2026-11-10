@@ -1394,7 +1394,7 @@ export function MemberPackagesPage() {
                     }}
                   >
                     <span>{t("Chọn ảnh mặt trước", "Choose front image")}</span>
-                    <span style={{ fontSize: '0.72rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
+                    <span style={{ fontSize: '0.75rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1445,7 +1445,7 @@ export function MemberPackagesPage() {
                     }}
                   >
                     <span>{t("Chọn ảnh mặt sau", "Choose back image")}</span>
-                    <span style={{ fontSize: '0.72rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
+                    <span style={{ fontSize: '0.75rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
                     <input
                       type="file"
                       accept="image/*"

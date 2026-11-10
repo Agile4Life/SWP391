@@ -1049,7 +1049,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   min-height: 44px;
   padding: 11px 16px;
   border-radius: 10px 10px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -1075,6 +1075,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
 
 .portal-v2 .portal-table td {
   color: var(--portal-paper);
+  font-size: 14px;
   padding: 14px 16px;
   border-bottom-color: var(--portal-border);
 }
@@ -1203,7 +1204,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
   min-height: 42px;
   padding: 10px 18px;
   border-radius: 12px;
-  font: 600 12px/1.6 var(--font-sans);
+  font: 600 13px/1.6 var(--font-sans);
   letter-spacing: 0;
   text-transform: none;
   box-shadow: none;
@@ -1852,7 +1853,7 @@ body:has(.portal-backdrop) .sol-toast__icon {
     border-radius: 12px;
     background: transparent;
     color: var(--portal-muted);
-    font: 600 11px/1.25 var(--font-sans);
+    font: 600 12px/1.25 var(--font-sans);
     text-align: center;
     cursor: pointer;
     transition: background-color 160ms ease, color 160ms ease;
@@ -2144,14 +2145,14 @@ body:has(.portal-backdrop) .sol-toast__icon {
 }
 
 .portal-avatar-settings-kicker {
-  font: 600 11px var(--font-sans);
+  font: 600 12px var(--font-sans);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--portal-muted, #bcb8b5);
 }
 
 .portal-avatar-settings-current {
-  font: 700 10px var(--font-sans);
+  font: 700 12px var(--font-sans);
   padding: 2px 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--portal-salmon, #ce9180) 18%, transparent);

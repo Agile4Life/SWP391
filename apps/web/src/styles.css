@@ -421,7 +421,7 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display
   border-radius: 999px;
   background: none;
   color: rgba(250, 248, 245, .7);
-  font: 500 .66rem var(--font-sans);
+  font: 500 0.75rem var(--font-sans);
   letter-spacing: .28em;
   cursor: pointer;
   transition: color var(--dur-fast), border-color var(--dur-fast);
@@ -830,3 +830,6 @@ textarea:focus-visible,
 select:focus-visible {
   outline: none;
 }
+
+/* DESIGN.md: chữ người dùng đọc tối thiểu 12px; <small> mặc định của trình duyệt (smaller) sẽ co xuống ~10px */
+small { font-size: max(12px, 0.875em); }

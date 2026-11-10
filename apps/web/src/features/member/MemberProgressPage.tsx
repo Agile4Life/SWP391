@@ -36,7 +36,7 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
     {segments.map((segment, index) => <polyline key={index} points={segment.join(' ')} fill="none" stroke="var(--portal-salmon)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />)}
     {points.map((point, index) => <g key={point.weekStart}>
       {point[metric] != null && <circle cx={x(index)} cy={y(point[metric])} r="5" fill="var(--portal-salmon)"><title>{`${point.weekStart}: ${point[metric]} ${unit}`}</title></circle>}
-      <text x={x(index)} y="187" textAnchor="middle" fill="currentColor" fontSize="11">{`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</text>
+      <text x={x(index)} y="187" textAnchor="middle" fill="currentColor" fontSize="12">{`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</text>
     </g>)}
   </svg></div>;
 }

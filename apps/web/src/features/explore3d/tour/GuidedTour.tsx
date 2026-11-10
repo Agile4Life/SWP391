@@ -154,7 +154,7 @@ export function GuidedTour() {
               background: 'rgba(206, 145, 128, 0.18)',
               border: '1px solid var(--explore-border-accent)',
               color: 'var(--explore-accent)',
-              fontSize: '0.72rem',
+              fontSize: '0.75rem',
               fontWeight: 700,
               letterSpacing: '0.04em',
             }}
@@ -163,7 +163,7 @@ export function GuidedTour() {
           </span>
           <span
             style={{
-              fontSize: '0.72rem',
+              fontSize: '0.75rem',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               color: 'var(--explore-ink-muted)',
@@ -177,7 +177,7 @@ export function GuidedTour() {
           {(tourPaused || reducedMotion) && (
             <span
               style={{
-                fontSize: '0.71rem',
+                fontSize: '0.75rem',
                 color: 'var(--explore-accent)',
                 fontWeight: 600,
               }}

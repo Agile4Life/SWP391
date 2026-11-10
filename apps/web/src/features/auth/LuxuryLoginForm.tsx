@@ -576,7 +576,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                   style={{
                     background: 'none',
                     border: 'none',
-                    fontSize: '0.72rem',
+                    fontSize: '0.75rem',
                     color: 'var(--color-text-muted)',
                     cursor: 'pointer',
                     padding: 0,

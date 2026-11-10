@@ -81,7 +81,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-nav a:hover, .fit-nav a.is-active, .fit-footer a:hover { color: var(--fit-salmon); }
 .fit-nav a:hover::after, .fit-nav a.is-active::after { transform: scaleX(1); transform-origin: 0 50%; }
 .fit-header-actions { display: flex; align-items: center; gap: 16px; }
-.fit-pill { min-height: 46px; display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; color: #282321; background: var(--fit-paper); border-radius: 50px; padding: 5px 6px 5px 23px; font-size: 12px; font-weight: 600; width: max-content; }
+.fit-pill { min-height: 46px; display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; color: #282321; background: var(--fit-paper); border-radius: 50px; padding: 5px 6px 5px 23px; font-size: 13px; font-weight: 600; width: max-content; }
 .fit-pill:hover { transform: translateY(-3px); background: #ebdad3; }
 .fit-pill:active { transform: translateY(0); }
 .fit-round-arrow { display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; line-height: 1; color: #fff; background: var(--fit-salmon); transition: transform 240ms var(--fit-ease-out); }
@@ -194,7 +194,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-word { display: inline-block; overflow: hidden; vertical-align: bottom; padding: .18em 0 .16em; margin: -.18em 0 -.16em; }
 .fit-word > span { display: inline-block; }
 .fit-centered { text-align: center; }
-.fit-kicker { display: block; color: var(--fit-salmon); font-size: 12px; letter-spacing: .18em; font-weight: 600; }
+.fit-kicker { display: block; color: var(--fit-salmon); font-size: 12px; letter-spacing: .12em; font-weight: 600; }
 .fit-stories { position: relative; }
 .fit-stories::before { position: absolute; content: ''; width: 70%; height: 450px; left: 15%; top: 180px; background: radial-gradient(ellipse at center, #ffffff10, transparent 70%); pointer-events: none; }
 .fit-story-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 40px; position: relative; }
@@ -383,7 +383,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-bmi-card > p { font-size: 12px; line-height: 1.8; color: var(--fit-muted); }
 .fit-bmi-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .fit-bmi-inputs label { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: #e6e0db; font-weight: 500; min-width: 0; }
-.fit-bmi-inputs input { width: 100%; min-height: 44px; background: #202020; color: var(--fit-paper); border: 1px solid #ffffff24; border-radius: 12px; padding: 10px 14px; font: 600 13px var(--fit-font); font-variant-numeric: tabular-nums; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.fit-bmi-inputs input { width: 100%; min-height: 44px; background: #202020; color: var(--fit-paper); border: 1px solid #ffffff24; border-radius: 12px; padding: 10px 14px; font: 600 16px var(--fit-font); font-variant-numeric: tabular-nums; transition: border-color 180ms ease, box-shadow 180ms ease; }
 .fit-bmi-inputs input:hover:not(:disabled) { border-color: #ce918080; }
 .fit-bmi-inputs input:is(:focus, :focus-visible) { outline: none; outline-offset: 0; border-color: var(--fit-salmon); box-shadow: 0 0 0 3px #ce91802e; }
 .fit-bmi-goals { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -400,11 +400,11 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-faq-list { max-width: 860px; margin: 34px auto 0; display: grid; gap: 13px; }
 .fit-faq-item { border-radius: 24px; background: #2b2b2b; border: 1px solid #ffffff14; padding: 6px 24px; transition: border-color 200ms, background-color 200ms; }
 .fit-faq-item.is-open { background: #303030; border-color: #ce918066; }
-.fit-faq-trigger { width: 100%; border: none; background: transparent; color: var(--fit-paper); padding: 16px 0; display: flex; justify-content: space-between; align-items: center; gap: 18px; text-align: left; font-size: 13px; font-weight: 650; line-height: 1.45; }
+.fit-faq-trigger { width: 100%; border: none; background: transparent; color: var(--fit-paper); padding: 16px 0; display: flex; justify-content: space-between; align-items: center; gap: 18px; text-align: left; font-size: 15px; font-weight: 650; line-height: 1.45; }
 .fit-faq-icon { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; background: #202020; color: var(--fit-salmon); }
 .fit-faq-icon svg { width: 14px; height: 14px; display: block; flex-shrink: 0; }
 .fit-faq-item.is-open .fit-faq-icon { background: var(--fit-salmon); color: #281b17; }
-.fit-faq-answer { padding: 0 0 18px; font-size: 12px; line-height: 1.9; color: var(--fit-muted); max-width: 740px; }
+.fit-faq-answer { padding: 0 0 18px; font-size: 13px; line-height: 1.9; color: var(--fit-muted); max-width: 740px; }
 .fit-pricing { padding-top: 110px; }
 .fit-pricing-switch { display: flex; width: max-content; max-width: 100%; padding: 4px; background: #eeeae5; border-radius: 30px; margin: 30px auto 35px; }
 .fit-pricing-switch button { border: none; background: transparent; color: #67524b; border-radius: 24px; padding: 12px 25px; font-size: 12px; }
@@ -626,7 +626,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-sport-page-programs { display: grid; gap: 10px; }
 .fit-sport-page-program-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .fit-sport-page-program-card { padding: 16px 15px; border-radius: 16px; background: #212020; border: 1px solid #ce918040; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.fit-sport-page-program-card h2 { font-size: 14px; font-weight: 750; line-height: 1.3; color: var(--fit-paper); }
+.fit-sport-page-program-card h2 { font-size: 18px; font-weight: 750; line-height: 1.3; color: var(--fit-paper); }
 .fit-sport-page-tag { font-size: 12px; font-weight: 600; color: var(--fit-muted); }
 
 .fit-benefits { margin-top: 90px; background: #181716; border-block: 1px solid #ffffff14; color: var(--fit-paper); height: 240vh; position: relative; }

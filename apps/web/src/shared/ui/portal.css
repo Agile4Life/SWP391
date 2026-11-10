@@ -862,7 +862,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 9999px;
   background: #1A1614;
   color: #FAF8F5;
-  font: 600 0.68rem var(--font-sans);
+  font: 600 0.75rem var(--font-sans);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
@@ -1237,7 +1237,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 9999px;
   background: #FFFFFF;
   color: var(--color-text-muted);
-  font: 600 0.66rem var(--font-sans);
+  font: 600 0.75rem var(--font-sans);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
@@ -1406,7 +1406,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 9999px;
   background: #FFFFFF;
   color: var(--tone);
-  font: 600 0.64rem var(--font-sans);
+  font: 600 0.75rem var(--font-sans);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;

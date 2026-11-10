@@ -518,7 +518,7 @@ export function UserManagerPage() {
                                   background: 'color-mix(in srgb, var(--portal-info) 12%, transparent)',
                                   color: 'var(--portal-info)',
                                   border: '1px solid color-mix(in srgb, var(--portal-info) 30%, transparent)',
-                                  fontSize: '0.72rem',
+                                  fontSize: '0.75rem',
                                 }}
                                 title={t("Hội viên đang có gói bảo lưu tập (được miễn trừ tự động xóa)")}
                               >

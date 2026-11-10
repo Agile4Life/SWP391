@@ -2081,7 +2081,7 @@ export function StaffClassesPage() {
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                     disabled={isSubmitting}
                   />
-                  <span style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                     {t("Áp dụng khi hội viên vượt hạn mức gói hoặc mua lẻ.", "Applied when member exceeds plan quota or buys separately.")}
                   </span>
                 </div>

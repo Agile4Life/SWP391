@@ -608,7 +608,7 @@ export function ManagerReportsPage() {
                         />
                         <span
                           style={{
-                            fontSize: '0.65rem',
+                            fontSize: '0.75rem',
                             color: 'var(--color-text-muted)',
                             marginTop: '8px',
                             transform: 'rotate(-45deg)',

@@ -321,7 +321,7 @@ export function ManagerAuditLogsPage() {
                         <span className={`action-badge ${getActionBadgeClass(log.action)}`}>
                           {getActionLabel(log.action)}
                         </span>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--portal-muted)', marginTop: 2, fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--portal-muted)', marginTop: 2, fontFamily: 'monospace' }}>
                           {log.action}
                         </div>
                       </td>

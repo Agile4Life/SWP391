@@ -1,6 +1,6 @@
 .portal-v2 .member-streak-page { max-width: 720px; }
 .member-streak { margin: 0; padding: 0; }
-.member-streak__title { margin: 0 0 8px; color: var(--portal-paper); font-size: 12px; font-weight: 650; }
+.member-streak__title { margin: 0 0 8px; color: var(--portal-paper); font-size: 15px; font-weight: 650; }
 .member-streak__stats { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .member-streak__stats > div:first-child { display: flex; align-items: baseline; gap: 7px; }
 .member-streak__count { color: var(--portal-salmon); font-size: 34px; font-weight: 750; line-height: 1.2; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }

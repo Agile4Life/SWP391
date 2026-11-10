@@ -377,7 +377,7 @@ export function StaffCheckInPage() {
                         </td>
                         <td>
                           <div>{rec.memberName || t('Thẻ QR không xác định')}</div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                             {rec.memberId ? `HV #${rec.memberId}` : t('Chưa định danh')}
                           </div>
                         </td>
@@ -395,7 +395,7 @@ export function StaffCheckInPage() {
                             {ok ? t('Mở Cổng') : t('Từ Chối')}
                           </span>
                           {rec.denialReason && (
-                            <div data-i18n-managed style={{ fontSize: '0.72rem', color: 'var(--portal-danger)', marginTop: 2 }}>
+                            <div data-i18n-managed style={{ fontSize: '0.75rem', color: 'var(--portal-danger)', marginTop: 2 }}>
                               {rec.denialReason}
                             </div>
                           )}

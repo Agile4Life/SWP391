@@ -40,7 +40,7 @@ export function PerfOverlay({ visible }: PerfOverlayProps) {
         border: '1px solid var(--explore-border-accent)',
         color: 'var(--explore-ink)',
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-        fontSize: '0.71rem',
+        fontSize: '0.75rem',
         lineHeight: 1.45,
         boxShadow: 'var(--explore-shadow)',
         backdropFilter: 'blur(12px)',

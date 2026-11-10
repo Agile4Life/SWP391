@@ -123,7 +123,7 @@ const HUD_BTN_STYLE = {
   border: '1px solid var(--explore-border-accent)',
   background: 'var(--explore-chip-bg)',
   color: 'var(--explore-ink)',
-  fontSize: '0.72rem',
+  fontSize: '0.75rem',
   fontWeight: 700,
   cursor: 'pointer',
   lineHeight: 1,

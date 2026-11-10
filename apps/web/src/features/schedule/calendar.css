@@ -159,6 +159,7 @@
 /* Màn hẹp: dải chọn ngày + một cột */
 .mcal__daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .mcal__daychip { display: grid; justify-items: center; gap: 2px; min-height: 58px; padding: 6px 2px; border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-raised); color: var(--portal-muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.mcal__daychip small { font-size: 12px; white-space: nowrap; }
 .mcal__daychip strong { font-size: 17px; color: var(--portal-paper); }
 .mcal__daychip.is-today { border-color: var(--portal-salmon); }
 .mcal__daychip.is-active { background: var(--portal-salmon); border-color: var(--portal-salmon); color: var(--portal-on-accent); }

@@ -251,7 +251,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
               color: isSelected
                 ? 'var(--explore-on-accent, #202020)'
                 : 'var(--explore-ink, #faf9f6)',
-              fontSize: '0.73rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
               lineHeight: 1.2,
               whiteSpace: 'nowrap',
@@ -276,7 +276,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
               <span
                 className="explore3d-hotspot-badge"
                 style={{
-                  fontSize: '0.65rem',
+                  fontSize: '0.75rem',
                   fontWeight: 700,
                   letterSpacing: '0.04em',
                   color: isSelected ? '#202020' : '#ce9180',
