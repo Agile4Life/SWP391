@@ -113,6 +113,20 @@ public final class PackageBenefits {
         return pkg != null && !"SILVER".equals(tierOf(pkg));
     }
 
+    /**
+     * The date benefit cycles are counted from: the start of the subscription, or for an upgrade the start of the plan
+     * it replaced, so upgrading mid-cycle never hands out a fresh PT, court or course allowance.
+     */
+    public static LocalDate cycleAnchor(com.swp391.scms.membership.entity.MembershipSubscription subscription) {
+        var current = subscription;
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        while (current.getUpgradeCharge() != null && current.getPreviousSubscription() != null
+                && current.getId() != null && seen.add(current.getId())) {
+            current = current.getPreviousSubscription();
+        }
+        return current.getStartDate();
+    }
+
     /** Start of the 30-day cycle that contains {@code date}, counted from the subscription start. */
     public static LocalDate cycleStart(LocalDate subscriptionStart, LocalDate date) {
         long days = Math.max(0, ChronoUnit.DAYS.between(subscriptionStart, date));

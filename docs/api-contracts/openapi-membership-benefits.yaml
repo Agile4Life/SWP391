@@ -219,3 +219,48 @@ paths:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
         '200': { description: The booking with attendedAt }
+  /members/kyc/pending:
+    get:
+      summary: Identity submissions waiting for review (receptionist, manager)
+      description: |
+        A submission through POST /profile/kyc no longer verifies the member: it becomes `kycStatus` PENDING until the
+        desk approves it. The identity number is stored encrypted (AES-256-GCM, `citizen_id_encrypted`); the profile and
+        the member only ever see the masked form (`********1234`); this list decrypts it for the reviewer. Existing
+        plaintext numbers are encrypted at startup. Buying a first package while PENDING answers
+        400 MEMBERSHIP_KYC_PENDING.
+      responses:
+        '200': { description: "[{memberId, membershipCode, fullName, documentType, citizenId, nationality, frontImageUrl, backImageUrl, submittedAt}]" }
+  /members/kyc/{memberId}/approve:
+    post:
+      summary: Approve an identity submission (the member may now buy a package)
+      responses:
+        '200': { description: Approved }
+        '409': { description: KYC_NOT_PENDING }
+  /members/kyc/{memberId}/reject:
+    post:
+      summary: Reject an identity submission with a reason (the member submits again)
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { reason: { type: string, maxLength: 255 } }, required: [reason] }
+      responses:
+        '200': { description: Rejected }
+        '400': { description: KYC_REJECT_REASON_REQUIRED }
+  /classes/{classId}/students:
+    get:
+      summary: Students of a class
+      description: A coach reads only the classes they teach (403 otherwise). The front desk gets contact details with `healthNotes` blanked. Managers see everything. The same rules apply to /classes/sessions/{id}/students.
+      responses:
+        '200': { description: Students }
+  /check-in/scan:
+    post:
+      summary: Gate scan
+      description: Only rotating signed codes (`DYN:...`, 60 seconds) are accepted. A static code is recorded as DENIED with error.attendance.static_qr_rejected.
+      responses:
+        '201': { description: Check-in record (GRANTED or DENIED) }
+  /classes/enrollments/{id}:
+    delete:
+      summary: Cancel a course enrollment
+      description: A member cannot cancel once the course has started (400 SCHEDULING_CANNOT_CANCEL_STARTED_COURSE), so the credit is not handed back; the desk can. Cancelling before the start voids the unpaid fee.
+      responses:
+        '200': { description: Cancelled }

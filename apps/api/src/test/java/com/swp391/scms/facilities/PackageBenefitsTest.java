@@ -78,4 +78,26 @@ class PackageBenefitsTest {
         assertEquals(LocalDate.of(2026, 11, 30), PackageBenefits.cycleEnd(start, LocalDate.of(2027, 1, 29), LocalDate.of(2026, 11, 15)));
         assertEquals(LocalDate.of(2027, 1, 29), PackageBenefits.cycleEnd(start, LocalDate.of(2027, 1, 29), LocalDate.of(2027, 1, 20)));
     }
+
+    @Test
+    void anUpgradeKeepsCountingCyclesFromThePlanItReplacedButARenewalStartsFresh() {
+        var silver = new com.swp391.scms.membership.entity.MembershipSubscription();
+        silver.setId(1L);
+        silver.setStartDate(LocalDate.of(2026, 11, 1));
+        var gold = new com.swp391.scms.membership.entity.MembershipSubscription();
+        gold.setId(2L);
+        gold.setStartDate(LocalDate.of(2026, 11, 20));
+        gold.setPreviousSubscription(silver);
+        gold.setUpgradeCharge(new java.math.BigDecimal("100000"));
+        var renewal = new com.swp391.scms.membership.entity.MembershipSubscription();
+        renewal.setId(3L);
+        renewal.setStartDate(LocalDate.of(2026, 12, 1));
+        renewal.setPreviousSubscription(gold);
+
+        assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleAnchor(gold));
+        assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleAnchor(silver));
+        assertEquals(LocalDate.of(2026, 12, 1), PackageBenefits.cycleAnchor(renewal));
+        // On Nov 25 the upgraded member is still in the first cycle (Nov 1-30), not a new one from Nov 20.
+        assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleStart(PackageBenefits.cycleAnchor(gold), LocalDate.of(2026, 11, 25)));
+    }
 }
