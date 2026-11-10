@@ -1,0 +1,10 @@
+# Cấu hình Gitleaks cho job "Secret scan (Gitleaks)" trong .github/workflows/pipeline.yml.
+# Giữ toàn bộ rule mặc định, chỉ bỏ qua các file mẫu/test đã biết chứa token giả lập.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "File gọi thử API chứa token JWT dùng cho phát triển cục bộ"
+paths = [
+  '''apps/api/test_api\.http''',
+]

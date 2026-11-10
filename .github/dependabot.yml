@@ -1,0 +1,39 @@
+# Dependabot tự mở PR cập nhật thư viện. Không nằm trong pipeline.yml vì GitHub đọc file này riêng.
+# Mỗi PR vẫn chạy đủ test/lint/scan của pipeline trước khi merge.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: maven
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      maven-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /apps/api
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
