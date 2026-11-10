@@ -62,7 +62,8 @@ public class EntitlementRevocationService {
         LocalTime nowTime = now.toLocalTime();
         String cancelReason = reason == null || reason.isBlank() ? null
                 : reason.length() > 255 ? reason.substring(0, 255) : reason;
-        Predicate<LocalDate> covered = date -> subscriptions.hasActiveMembership(memberId, date);
+        Predicate<LocalDate> covered = date -> subscriptions.hasActiveMembership(memberId, date)
+                || coveredByDatedHold(memberId, date);
 
         int cancelled = enrollmentService.cancelFutureEnrollmentsForMember(memberId, cancelReason, covered);
         for (CoachBooking booking : coachBookings.findFutureConfirmedByMember(memberId, today)) {
@@ -94,6 +95,22 @@ public class EntitlementRevocationService {
                     booking.getBookingDate(), booking.getStartTime());
         }
         return cancelled;
+    }
+
+    /**
+     * A frozen membership with an approved, dated hold still covers its own period: the days of the hold itself
+     * (course seats are kept and excused) and the days after it, up to the end date pushed back by the held days.
+     * Without this the nightly sweep would cancel everything booked after the hold, as the member is "not active" yet.
+     */
+    private boolean coveredByDatedHold(Long memberId, LocalDate date) {
+        return subscriptions.findByMemberUserIdAndStatus(memberId, "frozen").stream()
+                .filter(sub -> "APPROVED".equalsIgnoreCase(sub.getHoldStatus())
+                        && sub.getHoldStartDate() != null && sub.getHoldEndDate() != null
+                        && sub.getStartDate() != null && sub.getEndDate() != null)
+                .anyMatch(sub -> {
+                    long heldDays = java.time.temporal.ChronoUnit.DAYS.between(sub.getHoldStartDate(), sub.getHoldEndDate()) + 1;
+                    return !date.isBefore(sub.getStartDate()) && !date.isAfter(sub.getEndDate().plusDays(heldDays));
+                });
     }
 
     /**

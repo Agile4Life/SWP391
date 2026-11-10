@@ -20,6 +20,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -54,6 +56,42 @@ class EntitlementRevocationServiceTest {
         assertEquals("confirmed", keep.getStatus());
         assertEquals("cancelled", release.getStatus());
         assertEquals("cancelled", court.getStatus());
+    }
+
+    @Test
+    void aFrozenMembershipWithADatedHoldStillCoversTheDaysAfterTheHoldSoTheNightlySweepKeepsThoseBookings() {
+        Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
+        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        // Frozen 12-18 October (7 days held); the period 1 Oct - 30 Nov becomes 1 Oct - 7 Dec once it resumes.
+        var frozen = new com.swp391.scms.membership.entity.MembershipSubscription();
+        frozen.setStatus("frozen");
+        frozen.setHoldStatus("APPROVED");
+        frozen.setStartDate(LocalDate.of(2026, 10, 1));
+        frozen.setEndDate(LocalDate.of(2026, 11, 30));
+        frozen.setHoldStartDate(LocalDate.of(2026, 10, 12));
+        frozen.setHoldEndDate(LocalDate.of(2026, 10, 18));
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "frozen")).thenReturn(List.of(frozen));
+        when(subscriptions.hasActiveMembership(eq(10L), any())).thenReturn(false);
+        CoachBooking afterHold = pt(LocalDate.of(2026, 10, 25));
+        CoachBooking lastExtendedDay = pt(LocalDate.of(2026, 12, 7));
+        CoachBooking pastTheEnd = pt(LocalDate.of(2026, 12, 8));
+        when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenAnswer(inv -> {
+            java.util.function.Predicate<LocalDate> covered = inv.getArgument(2);
+            // A course seat whose next session falls in the hold or right after it is kept.
+            assertTrue(covered.test(LocalDate.of(2026, 10, 14)));
+            assertTrue(covered.test(LocalDate.of(2026, 10, 25)));
+            assertFalse(covered.test(LocalDate.of(2026, 12, 8)));
+            return 0;
+        });
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(afterHold, lastExtendedDay, pastTheEnd));
+        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of());
+
+        assertEquals(1, service.revokeUncoveredBookings(10L, "Sweep"));
+
+        assertEquals("confirmed", afterHold.getStatus());
+        assertEquals("confirmed", lastExtendedDay.getStatus());
+        assertEquals("cancelled", pastTheEnd.getStatus());
     }
 
     private static CoachBooking pt(LocalDate date) {
