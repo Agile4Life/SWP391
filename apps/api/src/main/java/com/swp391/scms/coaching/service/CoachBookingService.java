@@ -262,8 +262,8 @@ public class CoachBookingService {
         int monthlyQuota = ptQuotaOf(sub, isTrial);
 
         LocalDate now = LocalDate.now(clock);
-        LocalDate startMonth = PackageBenefits.cycleStart(PackageBenefits.cycleAnchor(sub), now);
-        LocalDate endMonth = PackageBenefits.cycleEnd(PackageBenefits.cycleAnchor(sub), sub.getEndDate(), now);
+        LocalDate startMonth = PackageBenefits.cycleStart(sub, now);
+        LocalDate endMonth = PackageBenefits.cycleEnd(sub, now);
         long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
 
         int remaining = Math.max(0, monthlyQuota - (int) usedQuota);
@@ -401,8 +401,8 @@ public class CoachBookingService {
                 );
             }
 
-            LocalDate startMonth = PackageBenefits.cycleStart(PackageBenefits.cycleAnchor(sub), request.bookingDate());
-            LocalDate endMonth = PackageBenefits.cycleEnd(PackageBenefits.cycleAnchor(sub), sub.getEndDate(), request.bookingDate());
+            LocalDate startMonth = PackageBenefits.cycleStart(sub, request.bookingDate());
+            LocalDate endMonth = PackageBenefits.cycleEnd(sub, request.bookingDate());
             long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(member.getUserId(), startMonth, endMonth, "package_quota");
 
             if (usedQuota >= monthlyQuota) {

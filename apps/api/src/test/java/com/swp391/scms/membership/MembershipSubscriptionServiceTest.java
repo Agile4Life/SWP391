@@ -1296,6 +1296,59 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void approvingAHoldAfterItsFirstDayCountsOnlyTheDaysLeft() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setHoldStatus("PENDING");
+        // Requested for 3 days ago..+3 days but only approved today: the 3 days already lived are not held.
+        sub.setHoldStartDate(today.minusDays(3));
+        sub.setHoldEndDate(today.plusDays(3));
+
+        HoldRequestDto approved = service.approveHold(staffPrincipal, 100L);
+
+        assertThat(approved.status()).isEqualTo("frozen");
+        assertThat(sub.getHoldStartDate()).isEqualTo(today);
+        assertThat(approved.holdStartDate()).isEqualTo(today);
+    }
+
+    @Test
+    void aHoldWhoseWholePeriodHasPassedCannotBeApproved() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setHoldStatus("PENDING");
+        sub.setHoldStartDate(today.minusDays(9));
+        sub.setHoldEndDate(today.minusDays(2));
+
+        assertThatThrownBy(() -> service.approveHold(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
+        assertThat(sub.isHoldUsed()).isFalse();
+    }
+
+    @Test
+    void theMemberCanWithdrawAnApprovedHoldThatHasNotStartedAndGetsTheHoldBack() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(9));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        var attendance = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", attendance);
+
+        SubscriptionDto result = service.cancelHoldRequest(principal, 100L);
+
+        assertThat(result.holdStatus()).isNull();
+        assertThat(sub.isHoldUsed()).isFalse();
+        assertThat(sub.getHoldStartDate()).isNull();
+        assertThat(sub.getStatus()).isEqualTo("active");
+        verify(attendance).releaseHoldExcuses(10L, today.plusDays(3));
+        // Once the hold has started it is no longer something to withdraw.
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        assertThatThrownBy(() -> service.cancelHoldRequest(principal, 100L)).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
     void aHoldThatStartsTodayFreezesAtOnce() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
         sub.setHoldStatus("PENDING");

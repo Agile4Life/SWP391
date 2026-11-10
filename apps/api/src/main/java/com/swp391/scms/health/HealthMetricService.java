@@ -259,9 +259,8 @@ public class HealthMetricService {
                 .filter(s -> com.swp391.scms.facilities.PackageBenefits.allowsPeriodicAssessment(s.getMembershipPackage()))
                 .findFirst().orElse(null);
         if (sub == null) return;
-        java.time.LocalDate anchor = com.swp391.scms.facilities.PackageBenefits.cycleAnchor(sub);
-        java.time.LocalDate cycleStart = com.swp391.scms.facilities.PackageBenefits.cycleStart(anchor, today);
-        java.time.LocalDate nextCycle = cycleStart.plusDays(com.swp391.scms.facilities.PackageBenefits.CYCLE_DAYS);
+        java.time.LocalDate cycleStart = com.swp391.scms.facilities.PackageBenefits.cycleStart(sub, today);
+        java.time.LocalDate nextCycle = com.swp391.scms.facilities.PackageBenefits.cycleEnd(sub, today).plusDays(1);
         java.time.LocalDate otherDay = history.stream()
                 .map(MemberProgressLog::getRecordedAt)
                 .filter(java.util.Objects::nonNull)

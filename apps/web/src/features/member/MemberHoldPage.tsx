@@ -85,6 +85,9 @@ export function MemberHoldPage() {
 
   const earliestStart = useMemo(() => addDays(isoDate(new Date()), 2), []);
   const status = detail?.holdStatus ?? null;
+  // A pending request, or an approved hold that has not started yet, can still be withdrawn.
+  const canWithdraw = status === 'PENDING'
+    || (status === 'APPROVED' && subscription?.status === 'active' && !!detail?.holdStartDate && detail.holdStartDate > isoDate(new Date()));
   const canRequest = !!subscription && !!policy?.allowed && !policy.alreadyUsed
     && subscription.status === 'active' && status !== 'PENDING' && status !== 'APPROVED';
 
@@ -216,8 +219,13 @@ export function MemberHoldPage() {
                   ))}
                 </ul>
               )}
-              {status === 'PENDING' && (
-                <div><button type="button" className="btn-secondary" disabled={busy} onClick={() => void onWithdraw()}>{t('Rút đơn', 'Withdraw request')}</button></div>
+              {canWithdraw && (
+                <div>
+                  <button type="button" className="btn-secondary" disabled={busy} onClick={() => void onWithdraw()}>
+                    {status === 'PENDING' ? t('Rút đơn', 'Withdraw request') : t('Hủy bảo lưu chưa bắt đầu', 'Cancel the hold before it starts')}
+                  </button>
+                  {status === 'APPROVED' && <small style={{ display: 'block' }}>{t('Các lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
+                </div>
               )}
               {status === 'REJECTED' && <p>{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}</p>}
             </section>

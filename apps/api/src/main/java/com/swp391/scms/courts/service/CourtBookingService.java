@@ -226,8 +226,8 @@ public class CourtBookingService {
         MembershipSubscription subscription = activeSubscription(memberId, date);
         if (subscription == null) return 0;
         return bookings.countQuotaUsage(memberId,
-                PackageBenefits.cycleStart(PackageBenefits.cycleAnchor(subscription), date),
-                PackageBenefits.cycleEnd(PackageBenefits.cycleAnchor(subscription), subscription.getEndDate(), date),
+                PackageBenefits.cycleStart(subscription, date),
+                PackageBenefits.cycleEnd(subscription, date),
                 CourtPricing.PACKAGE_QUOTA);
     }
 

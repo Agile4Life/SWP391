@@ -280,3 +280,20 @@ paths:
       description: Course sessions that the hold had excused from the resume day on become ordinary sessions again.
       responses:
         '200': { description: Resumed }
+  /coach-bookings/{id}/unmark-attended:
+    post:
+      summary: Remove a wrong attendance mark of a 1:1 session
+      description: Coach (own sessions), receptionist or manager. Clears `attendedAt` and locks the session so a gate scan or the sweep does not record it again; marking by hand unlocks it. Audited as PT_ATTENDANCE_UNMARK.
+      responses:
+        '200': { description: The booking without attendedAt }
+  /subscriptions/{id}/hold#approval:
+    post:
+      summary: Hold approval, late approval and withdrawal
+      description: |
+        Approving after the requested first day starts the hold today: days already lived are not held and not added
+        back. A hold whose whole period has passed answers 400 MEMBERSHIP_HOLD_WINDOW_PASSED (reject it instead).
+        `DELETE /subscriptions/{id}/hold` also withdraws an approved hold that has not started: the package gets its one
+        hold back, bookings released at approval are not restored. Benefit cycles (PT, courts, the assessment) do not
+        count held days: a cycle that contains the hold is stretched by its length.
+      responses:
+        '200': { description: ok }

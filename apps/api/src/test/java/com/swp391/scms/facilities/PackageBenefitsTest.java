@@ -100,4 +100,27 @@ class PackageBenefitsTest {
         // On Nov 25 the upgraded member is still in the first cycle (Nov 1-30), not a new one from Nov 20.
         assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleStart(PackageBenefits.cycleAnchor(gold), LocalDate.of(2026, 11, 25)));
     }
+
+    @Test
+    void heldDaysDoNotEatTheBenefitCycle() {
+        var sub = new com.swp391.scms.membership.entity.MembershipSubscription();
+        sub.setId(1L);
+        sub.setStartDate(LocalDate.of(2026, 11, 1));
+        sub.setEndDate(LocalDate.of(2027, 2, 5));
+        // Nothing held yet: plain 30-day cycles (Nov 1-30, Dec 1-30, ...).
+        assertEquals(LocalDate.of(2026, 12, 1), PackageBenefits.cycleStart(sub, LocalDate.of(2026, 12, 5)));
+
+        // Held Nov 11-17 (7 days): the first cycle is stretched by the hold and ends Dec 7, the second starts Dec 8.
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(LocalDate.of(2026, 11, 11));
+        sub.setHoldEndDate(LocalDate.of(2026, 11, 17));
+        assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleStart(sub, LocalDate.of(2026, 11, 5)));
+        assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleStart(sub, LocalDate.of(2026, 11, 14)));
+        assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleStart(sub, LocalDate.of(2026, 12, 7)));
+        assertEquals(LocalDate.of(2026, 12, 7), PackageBenefits.cycleEnd(sub, LocalDate.of(2026, 11, 20)));
+        assertEquals(LocalDate.of(2026, 12, 8), PackageBenefits.cycleStart(sub, LocalDate.of(2026, 12, 8)));
+        assertEquals(LocalDate.of(2027, 1, 6), PackageBenefits.cycleEnd(sub, LocalDate.of(2026, 12, 20)));
+        // The last cycle never runs past the end of the subscription.
+        assertEquals(LocalDate.of(2027, 2, 5), PackageBenefits.cycleEnd(sub, LocalDate.of(2027, 2, 1)));
+    }
 }

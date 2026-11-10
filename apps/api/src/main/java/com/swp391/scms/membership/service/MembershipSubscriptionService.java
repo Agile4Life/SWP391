@@ -940,9 +940,18 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
         ensureOwner(subscription, principal);
-        if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())) {
+        LocalDate today = LocalDate.now(clock);
+        boolean approvedNotStarted = HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
+                && STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
+                && subscription.getHoldStartDate() != null && subscription.getHoldStartDate().isAfter(today);
+        if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus()) && !approvedNotStarted) {
             throw new BadRequestException("MEMBERSHIP_HOLD_NOT_PENDING", "error.membership.hold_not_pending", null,
-                    "Subscription does not have a pending hold request");
+                    "Subscription does not have a hold request that can still be withdrawn");
+        }
+        if (approvedNotStarted) {
+            // The hold never started, so the package gets its one hold back. Bookings released at approval stay released.
+            subscription.setHoldUsed(false);
+            if (courseAttendance != null) courseAttendance.releaseHoldExcuses(subscription.getMember().getUserId(), subscription.getHoldStartDate());
         }
         if (holdDocuments != null) holdDocuments.deleteBySubscriptionId(subscriptionId);
         subscription.setHoldStatus(null);
@@ -996,6 +1005,17 @@ public class MembershipSubscriptionService {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDate holdStart = subscription.getHoldStartDate();
         LocalDate holdEnd = subscription.getHoldEndDate();
+        if (holdStart != null && holdEnd != null) {
+            if (holdEnd.isBefore(today)) {
+                throw new BadRequestException("MEMBERSHIP_HOLD_WINDOW_PASSED", "error.membership.hold_window_passed", null,
+                        "The requested hold period has already passed");
+            }
+            if (holdStart.isBefore(today)) {
+                // Approved late: the days the member already lived through are not held, so no days are added for them.
+                holdStart = today;
+                subscription.setHoldStartDate(today);
+            }
+        }
         // A dated hold stays active until its first day; the daily sweep freezes it then.
         if (holdStart == null || !holdStart.isAfter(today)) {
             subscription.setStatus(STATUS_FROZEN);

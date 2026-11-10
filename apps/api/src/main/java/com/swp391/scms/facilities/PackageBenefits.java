@@ -127,6 +127,46 @@ public final class PackageBenefits {
         return current.getStartDate();
     }
 
+    private static boolean hasDatedHold(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        return sub.isHoldUsed() && sub.getHoldStartDate() != null && sub.getHoldEndDate() != null
+                && sub.getStartDate() != null && sub.getStartDate().equals(cycleAnchor(sub));
+    }
+
+    /** Days of the cycle clock that have run by {@code date}: held days do not count, so a hold never eats a cycle. */
+    private static long effectiveDays(LocalDate anchor, LocalDate holdStart, LocalDate holdEnd, LocalDate date) {
+        long gap = Math.max(0, ChronoUnit.DAYS.between(anchor, holdStart));
+        if (date.isBefore(holdStart)) return Math.max(0, ChronoUnit.DAYS.between(anchor, date));
+        if (!date.isAfter(holdEnd)) return gap;
+        return ChronoUnit.DAYS.between(anchor, date) - (ChronoUnit.DAYS.between(holdStart, holdEnd) + 1);
+    }
+
+    /** Real date of the effective cycle day {@code offset}: days at or after the hold are pushed back by its length. */
+    private static LocalDate realDate(LocalDate anchor, LocalDate holdStart, LocalDate holdEnd, long offset) {
+        long gap = Math.max(0, ChronoUnit.DAYS.between(anchor, holdStart));
+        long holdLength = ChronoUnit.DAYS.between(holdStart, holdEnd) + 1;
+        return offset < gap ? anchor.plusDays(offset) : anchor.plusDays(offset + holdLength);
+    }
+
+    /**
+     * Start of the benefit cycle containing {@code date} for a subscription: counted from its start (or the plan an
+     * upgrade replaced) and, once a hold has been approved, not counting the held days.
+     */
+    public static LocalDate cycleStart(com.swp391.scms.membership.entity.MembershipSubscription sub, LocalDate date) {
+        LocalDate anchor = cycleAnchor(sub);
+        if (!hasDatedHold(sub)) return cycleStart(anchor, date);
+        long cycle = effectiveDays(anchor, sub.getHoldStartDate(), sub.getHoldEndDate(), date) / CYCLE_DAYS;
+        return realDate(anchor, sub.getHoldStartDate(), sub.getHoldEndDate(), cycle * CYCLE_DAYS);
+    }
+
+    /** Last day of that cycle, never past the end of the subscription. */
+    public static LocalDate cycleEnd(com.swp391.scms.membership.entity.MembershipSubscription sub, LocalDate date) {
+        LocalDate anchor = cycleAnchor(sub);
+        if (!hasDatedHold(sub)) return cycleEnd(anchor, sub.getEndDate(), date);
+        long cycle = effectiveDays(anchor, sub.getHoldStartDate(), sub.getHoldEndDate(), date) / CYCLE_DAYS;
+        LocalDate end = realDate(anchor, sub.getHoldStartDate(), sub.getHoldEndDate(), cycle * CYCLE_DAYS + CYCLE_DAYS - 1);
+        return sub.getEndDate() != null && end.isAfter(sub.getEndDate()) ? sub.getEndDate() : end;
+    }
+
     /** Start of the 30-day cycle that contains {@code date}, counted from the subscription start. */
     public static LocalDate cycleStart(LocalDate subscriptionStart, LocalDate date) {
         long days = Math.max(0, ChronoUnit.DAYS.between(subscriptionStart, date));

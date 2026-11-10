@@ -80,4 +80,22 @@ describe('MemberHoldPage', () => {
     await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent === 'Rút đơn')!.click());
     expect(mocks.withdraw).toHaveBeenCalledWith(7);
   });
+
+  it('lets the member cancel an approved hold that has not started', async () => {
+    mocks.history.mockResolvedValue([{ ...subscription, holdStatus: 'APPROVED' }]);
+    mocks.policy.mockResolvedValue({ ...policy, alreadyUsed: true });
+    mocks.detail.mockResolvedValue({ id: 7, holdStatus: 'APPROVED', holdReason: 'Phẫu thuật', holdStartDate: isoOffset(3), holdEndDate: isoOffset(8), documents: [] });
+    mocks.withdraw.mockResolvedValue({});
+    await render();
+    await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent === 'Hủy bảo lưu chưa bắt đầu')!.click());
+    expect(mocks.withdraw).toHaveBeenCalledWith(7);
+  });
+
+  it('offers no cancellation once an approved hold has started', async () => {
+    mocks.history.mockResolvedValue([{ ...subscription, status: 'frozen', holdStatus: 'APPROVED' }]);
+    mocks.policy.mockResolvedValue({ ...policy, alreadyUsed: true });
+    mocks.detail.mockResolvedValue({ id: 7, holdStatus: 'APPROVED', holdReason: 'Phẫu thuật', holdStartDate: isoOffset(-2), holdEndDate: isoOffset(4), documents: [] });
+    await render();
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent === 'Hủy bảo lưu chưa bắt đầu')).toBe(false);
+  });
 });
