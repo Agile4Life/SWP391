@@ -26,6 +26,7 @@
 .mcal__dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--portal-muted); }
 .mcal__dot--court { background: var(--mcal-court); }
 .mcal__dot--class, .mcal__dot--mine { background: var(--mcal-class); }
+.mcal__dot--pt { background: var(--mcal-pt, #b7e3c8); }
 .mcal__dot--open { background: var(--portal-info); }
 .mcal__dot--full { background: var(--portal-warning); }
 .mcal__dot--past, .mcal__dot--neutral { background: var(--portal-muted); }

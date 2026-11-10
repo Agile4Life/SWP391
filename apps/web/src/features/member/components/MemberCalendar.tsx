@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { courtsApi, type CourtBooking } from '../../courts/courtsApi';
+import { getMyCoachBookings, type CoachBookingDto } from '../coachBookingApi';
 import {
   addDays, blockClass, fitHourRange, hhmm, hourLabel, layoutDayEvents, mondayOf, parseISODate, shortDate, toMinutes,
   weekDays, weekdayLabel, type TimetableEvent,
@@ -18,7 +19,7 @@ import '../../schedule/calendar.css';
 import './MemberCalendar.css';
 
 type View = 'week' | 'month';
-type Kind = 'court' | 'class';
+type Kind = 'court' | 'class' | 'pt';
 
 export interface CalendarEvent extends TimetableEvent {
   kind: Kind;
@@ -26,7 +27,7 @@ export interface CalendarEvent extends TimetableEvent {
   coach?: string;
   cancelled: boolean;
   /** Chỗ của hội viên để hủy: lượt đặt buổi, ghi danh lớp hoặc lượt đặt sân. */
-  seat: { type: 'booking' | 'enrollment' | 'court'; id: number };
+  seat: { type: 'booking' | 'enrollment' | 'court' | 'pt'; id: number };
 }
 
 const HOUR_PX = 76;
@@ -136,6 +137,24 @@ function courtEvent(booking: CourtBooking): CalendarEvent {
   };
 }
 
+function ptEvent(booking: CoachBookingDto): CalendarEvent {
+  const title = `Tập 1:1 cùng ${booking.coachName}`;
+  return {
+    id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
+    title, place: '', coach: booking.coachName, cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
+    ariaLabel: `${title}, ${weekdayLabel(booking.bookingDate)} ${shortDate(booking.bookingDate)}, ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`,
+  };
+}
+
+/** 1:1 sessions the member has not cancelled. A failure here must not hide the rest of the calendar. */
+async function loadPtBookings(): Promise<CoachBookingDto[]> {
+  try {
+    return ((await getMyCoachBookings()) ?? []).filter((item) => item.status !== 'cancelled');
+  } catch {
+    return [];
+  }
+}
+
 /** Buổi học của hội viên trong khoảng ngày: lượt đặt từng buổi (gồm buổi đã qua) và ghi danh cả lớp. */
 async function loadClassEvents(from: string, to: string): Promise<CalendarEvent[]> {
   const [sessions, bookings, enrollments] = await Promise.all([
@@ -156,9 +175,13 @@ async function loadClassEvents(from: string, to: string): Promise<CalendarEvent[
 
   for (const enrollment of enrollments ?? []) {
     if (enrollment.status !== 'booked' && enrollment.status !== 'enrolled') continue;
-    const matches = enrollment.sessionId !== null
-      ? [sessionById.get(enrollment.sessionId)].filter((item): item is ClassSessionDto => Boolean(item))
-      : (sessions ?? []).filter((item) => item.classId === enrollment.classId);
+    // An enrollment covers the whole course: show every session of it in the range, not just the next one.
+    const courseSessions = (sessions ?? []).filter((item) => item.classId === enrollment.classId);
+    const matches = courseSessions.length > 0
+      ? courseSessions
+      : enrollment.sessionId !== null
+        ? [sessionById.get(enrollment.sessionId)].filter((item): item is ClassSessionDto => Boolean(item))
+        : [];
     for (const session of matches) {
       if (bySession.has(session.id)) continue;
       bySession.set(session.id, classEvent(
@@ -194,8 +217,8 @@ interface MemberCalendarProps {
 export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
   const { lang } = useLanguage();
   const labels = lang === 'en'
-    ? { thisWeek: 'This week', court: 'Court / room', class: 'Class session', empty: 'No bookings this week.' }
-    : { thisWeek: 'Tuần này', court: 'Đặt sân / phòng', class: 'Buổi học', empty: 'Tuần này bạn chưa có lịch nào.' };
+    ? { thisWeek: 'This week', court: 'Court / room', class: 'Class session', pt: '1:1 session', empty: 'No bookings this week.' }
+    : { thisWeek: 'Tuần này', court: 'Đặt sân / phòng', class: 'Buổi học', pt: 'Buổi PT 1:1', empty: 'Tuần này bạn chưa có lịch nào.' };
   const english = lang === 'en';
   const text = (vi: string, en: string) => english ? en : vi;
   const dayLabel = (day: string) => english ? new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(parseISODate(day)) : weekdayLabel(day);
@@ -209,6 +232,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
   const [upcomingClasses, setUpcomingClasses] = useState<CalendarEvent[]>([]);
   const [courts, setCourts] = useState<CourtBooking[]>([]);
   const [courtError, setCourtError] = useState(false);
+  const [pts, setPts] = useState<CoachBookingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
   const [retry, setRetry] = useState(0);
@@ -257,13 +281,14 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
     loadCourtBookings()
       .then((items) => { if (active) { setCourts(items); setCourtError(false); } })
       .catch(() => { if (active) setCourtError(true); });
+    loadPtBookings().then((items) => { if (active) setPts(items); });
     loadClassEvents(today, addDays(today, 30))
       .then((events) => { if (active) setUpcomingClasses(events); })
       .catch(() => { if (active) setUpcomingClasses([]); });
     return () => { active = false; };
   }, [retry, today]);
 
-  const courtEvents = useMemo(() => courts.map(courtEvent), [courts]);
+  const courtEvents = useMemo(() => [...courts.map(courtEvent), ...pts.map(ptEvent)], [courts, pts]);
   const events = useMemo(
     () => sortEvents([...classEvents, ...courtEvents].filter((item) => item.date >= from && item.date <= to)),
     [classEvents, courtEvents, from, to],
@@ -552,6 +577,8 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
             <button type="button" className="btn-secondary" onClick={closeDialog} disabled={busy}>{text("Đóng", "Close")}</button>
             {selected.kind === 'court' ? (
               <Link to="/member/courts" className="btn-primary">{text("Quản lý đặt sân", "Manage court bookings")}</Link>
+            ) : selected.kind === 'pt' ? (
+              <Link to="/member/classes?tab=pt" className="btn-primary">{text("Quản lý lịch PT", "Manage 1:1 sessions")}</Link>
             ) : !selectedEnded && !selected.cancelled && (
               confirmCancel ? (
                 <>
