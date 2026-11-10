@@ -142,6 +142,7 @@ public class SecurityConfig {
                             "/api/v1/memberships/subscriptions/*/hold/documents/*", "/api/v1/subscriptions/*/hold/documents/*")
                             .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST,
+                            "/api/v1/memberships/subscriptions/*/hold/withdraw", "/api/v1/subscriptions/*/hold/withdraw",
                             "/api/v1/memberships/subscriptions/*/hold/approve", "/api/v1/subscriptions/*/hold/approve",
                             "/api/v1/memberships/subscriptions/*/hold/reject", "/api/v1/subscriptions/*/hold/reject")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")

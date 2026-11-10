@@ -82,3 +82,7 @@ export const rejectHold = (subscriptionId: number) =>
 /** Medical documents are private: fetch with the session token and open the blob, never link them directly. */
 export const fetchHoldDocument = (subscriptionId: number, documentId: number) =>
   apiFetchBlob(`${base}/${subscriptionId}/hold/documents/${documentId}`);
+
+/** The desk withdraws a hold for a member who asked at the counter (pending, or approved and not started). */
+export const withdrawHoldForMember = (subscriptionId: number) =>
+  apiFetch<unknown>(`${base}/${subscriptionId}/hold/withdraw`, { method: 'POST' });

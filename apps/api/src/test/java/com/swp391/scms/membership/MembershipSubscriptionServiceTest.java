@@ -1296,6 +1296,28 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void deskStaffCanWithdrawAnApprovedHoldThatHasNotStartedButMembersAndOthersCannotUseThatPath() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.plusDays(4));
+        sub.setHoldEndDate(today.plusDays(10));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        assertThatThrownBy(() -> service.withdrawHoldForMember(principal, 100L)).isInstanceOf(ForbiddenException.class);
+
+        SubscriptionDto result = service.withdrawHoldForMember(staffPrincipal, 100L);
+
+        assertThat(result.holdStatus()).isNull();
+        assertThat(sub.isHoldUsed()).isFalse();
+        // A hold that already started is not withdrawn from the desk either.
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldStartDate(today.minusDays(1));
+        assertThatThrownBy(() -> service.withdrawHoldForMember(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
     void approvingAHoldAfterItsFirstDayCountsOnlyTheDaysLeft() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
         LocalDate today = LocalDate.now(clock);

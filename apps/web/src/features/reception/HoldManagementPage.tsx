@@ -3,13 +3,14 @@ import { useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { localizableError } from '../../shared/lib/errorMessage';
-import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { notify } from '../../shared/lib/portalNotices';
 import {
   approveHold,
   fetchHoldDocument,
   listHolds,
   rejectHold,
+  withdrawHoldForMember,
   type HoldDetail,
   type HoldStatus,
 } from '../member/holdApi';
@@ -65,6 +66,22 @@ export function HoldManagementPage() {
     }
   }
 
+  async function withdraw(item: HoldDetail) {
+    if (busyId !== null) return;
+    setBusyId(item.id);
+    setError(null);
+    try {
+      await withdrawHoldForMember(item.id);
+      notify(t('Đã hủy bảo lưu cho hội viên.', 'The hold was cancelled for the member.'), 'success');
+      await load();
+    } catch (cause) {
+      setError(localizableError(cause, 'Không thể hủy bảo lưu. Vui lòng thử lại.'));
+      await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function openDocument(item: HoldDetail, documentId: number) {
     try {
       const blob = await fetchHoldDocument(item.id, documentId);
@@ -113,6 +130,13 @@ export function HoldManagementPage() {
                   ))}
                 </ul>
               ) : <small>{t('Chưa có giấy tờ đính kèm.', 'No documents attached.')}</small>}
+              {item.holdStatus === 'APPROVED' && item.status === 'active' && !!item.holdStartDate && item.holdStartDate > centerNowParts().date && (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => void withdraw(item)}>
+                    {t('Hủy bảo lưu (chưa bắt đầu)', 'Cancel hold (not started)')}
+                  </button>
+                </div>
+              )}
               {item.holdStatus === 'PENDING' && (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => void decide(item, false)}>{t('Từ chối', 'Reject')}</button>

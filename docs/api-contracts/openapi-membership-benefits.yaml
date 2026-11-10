@@ -297,3 +297,9 @@ paths:
         count held days: a cycle that contains the hold is stretched by its length.
       responses:
         '200': { description: ok }
+  /subscriptions/{id}/hold/withdraw:
+    post:
+      summary: Desk withdraws a hold on behalf of the member (receptionist, manager)
+      description: Allowed for a pending request or an approved hold that has not started (400 MEMBERSHIP_HOLD_NOT_PENDING otherwise). The package gets its one hold back, course excuses of the window are released and the member is notified.
+      responses:
+        '200': { description: Subscription without a hold }

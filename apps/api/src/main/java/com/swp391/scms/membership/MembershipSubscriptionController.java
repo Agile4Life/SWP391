@@ -156,6 +156,15 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.hold_detail"), service.holdPolicy(principal, id));
     }
 
+    @Operation(summary = "Desk withdraws a pending or not-yet-started approved hold on behalf of the member")
+    @PostMapping("/{id}/hold/withdraw")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<SubscriptionDto> withdrawHoldForMember(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id) {
+        return ApiResponse.ok(msg("membership.subscription.hold_withdrawn"), service.withdrawHoldForMember(principal, id));
+    }
+
     @Operation(summary = "Hold request details and document list (owner or desk staff)")
     @GetMapping("/{id}/hold")
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")

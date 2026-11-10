@@ -940,6 +940,34 @@ public class MembershipSubscriptionService {
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
         ensureOwner(subscription, principal);
+        return withdrawHold(subscription);
+    }
+
+    /**
+     * Desk staff withdraw a hold on behalf of a member (the member asked at the counter): a pending request, or an
+     * approved hold that has not started. The member is notified.
+     */
+    @Transactional
+    public SubscriptionDto withdrawHoldForMember(AuthenticatedPrincipal principal, Long subscriptionId) {
+        String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
+        if (!"RECEPTIONIST".equals(role) && !"CENTER_MANAGER".equals(role) && !"MANAGER".equals(role)) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only the front desk can withdraw a hold for a member");
+        }
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        Long memberId = subscription.getMember() != null ? subscription.getMember().getUserId() : null;
+        String packageName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
+        SubscriptionDto result = withdrawHold(subscription);
+        if (notificationService != null && memberId != null) {
+            notificationService.send(memberId, msg("notifications.membership.hold_withdrawn_by_desk.title"),
+                    msg("notifications.membership.hold_withdrawn_by_desk.body", packageName),
+                    "system", "membership_subscription", subscriptionId);
+        }
+        return result;
+    }
+
+    private SubscriptionDto withdrawHold(MembershipSubscription subscription) {
+        Long subscriptionId = subscription.getId();
         LocalDate today = LocalDate.now(clock);
         boolean approvedNotStarted = HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
                 && STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())

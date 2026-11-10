@@ -3,10 +3,10 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HoldManagementPage } from './HoldManagementPage';
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), approve: vi.fn(), reject: vi.fn(), document: vi.fn() }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), approve: vi.fn(), reject: vi.fn(), document: vi.fn(), withdraw: vi.fn() }));
 vi.mock('../member/holdApi', async (original) => ({
   ...await original<typeof import('../member/holdApi')>(),
-  listHolds: mocks.list, approveHold: mocks.approve, rejectHold: mocks.reject, fetchHoldDocument: mocks.document,
+  listHolds: mocks.list, approveHold: mocks.approve, rejectHold: mocks.reject, fetchHoldDocument: mocks.document, withdrawHoldForMember: mocks.withdraw,
 }));
 
 const pending = {
@@ -55,5 +55,18 @@ describe('HoldManagementPage', () => {
     mocks.list.mockRejectedValueOnce(new Error('Không có quyền'));
     await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent === 'Tất cả')!.click());
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không có quyền');
+  });
+
+  it('lets the desk cancel an approved hold that has not started, but not one that is running', async () => {
+    const future = { ...pending, id: 8, holdStatus: 'APPROVED', status: 'active', holdStartDate: '2099-01-10', holdEndDate: '2099-01-20' };
+    const running = { ...pending, id: 9, holdStatus: 'APPROVED', status: 'frozen', holdStartDate: '2020-01-10', holdEndDate: '2099-01-20' };
+    mocks.list.mockResolvedValue([future, running]);
+    mocks.withdraw.mockResolvedValue({});
+    await render();
+    const cancelFor = (id: number) => [...host.querySelectorAll<HTMLButtonElement>(`[data-testid="hold-${id}"] button`)].filter((button) => button.textContent === 'Hủy bảo lưu (chưa bắt đầu)');
+    expect(cancelFor(9)).toHaveLength(0);
+    expect(cancelFor(8)).toHaveLength(1);
+    await act(async () => cancelFor(8)[0].click());
+    expect(mocks.withdraw).toHaveBeenCalledWith(8);
   });
 });
