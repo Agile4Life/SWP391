@@ -38,6 +38,9 @@ public class ProfileService {
     private final com.swp391.scms.notifications.NotificationService notificationService;
     private final com.swp391.scms.common.i18n.MessageService messageService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private KycCrypto kycCrypto;
+
     public ProfileService(UserRepository userRepository, MemberRepository memberRepository,
                           CoachRepository coachRepository, ReceptionistRepository receptionistRepository) {
         this(userRepository, memberRepository, coachRepository, receptionistRepository, null, null, null);
@@ -344,13 +347,25 @@ public class ProfileService {
         }
 
         member.setDocumentType(docType);
-        member.setCitizenId(citizenId);
+        // The number is stored encrypted; the readable column keeps only the masked form.
+        if (kycCrypto != null) {
+            member.setCitizenIdEncrypted(kycCrypto.encrypt(citizenId));
+            member.setCitizenId(KycCrypto.mask(citizenId));
+        } else {
+            member.setCitizenId(citizenId);
+        }
         member.setFrontImageUrl(request.frontImageUrl().trim());
         if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
             member.setBackImageUrl(request.backImageUrl().trim());
         }
-        member.setIdentityVerified(true);
-        member.setIdentityVerifiedAt(java.time.LocalDateTime.now());
+        // Self-declared documents are not trusted: the desk reviews the photos before the member can buy a package.
+        member.setIdentityVerified(false);
+        member.setIdentityVerifiedAt(null);
+        member.setKycStatus("PENDING");
+        member.setKycSubmittedAt(java.time.LocalDateTime.now());
+        member.setKycReviewedAt(null);
+        member.setKycReviewedBy(null);
+        member.setKycRejectReason(null);
         memberRepository.save(member);
 
         // Đồng bộ họ tên tài khoản User theo CCCD / Hộ chiếu
@@ -393,7 +408,9 @@ public class ProfileService {
                 member != null ? member.getNationality() : null,
                 member != null ? member.getFrontImageUrl() : null,
                 member != null ? member.getBackImageUrl() : null,
-                member != null ? member.getIdentityVerified() : null
+                member != null ? member.getIdentityVerified() : null,
+                member != null ? member.getKycStatus() : null,
+                member != null ? member.getKycRejectReason() : null
         );
     }
 }

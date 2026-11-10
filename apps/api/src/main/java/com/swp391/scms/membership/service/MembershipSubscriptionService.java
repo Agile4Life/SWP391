@@ -181,6 +181,10 @@ public class MembershipSubscriptionService {
                     .orElse(false);
             boolean isIdentityVerified = Boolean.TRUE.equals(member.getIdentityVerified()) || hasApprovedTrial;
 
+            if (!hasPriorSubscriptions && !isIdentityVerified && "PENDING".equals(member.getKycStatus())) {
+                throw new BadRequestException("MEMBERSHIP_KYC_PENDING", "error.membership.kyc_pending", null,
+                        msg("error.membership.kyc_pending"));
+            }
             if (!hasPriorSubscriptions && !isIdentityVerified) {
                 throw new BadRequestException("MEMBERSHIP_KYC_REQUIRED", "error.membership.kyc_required", null,
                         msg("error.membership.kyc_required"));

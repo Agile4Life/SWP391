@@ -1,0 +1,99 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useI18n } from '../../shared/i18n';
+import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { localizableError } from '../../shared/lib/errorMessage';
+import { formatCenterDateTime } from '../../shared/lib/centerTime';
+import { notify } from '../../shared/lib/portalNotices';
+import { approveKyc, listPendingKyc, rejectKyc, type KycSubmission } from './kycReviewApi';
+
+/** Receptionists and managers compare the declared number with the document photos, then approve or reject. */
+export function KycReviewPage() {
+  const { t } = useI18n();
+  const [items, setItems] = useState<KycSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | Error | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [rejecting, setRejecting] = useState<number | null>(null);
+  const [reason, setReason] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await listPendingKyc());
+    } catch (cause) {
+      setItems([]);
+      setError(localizableError(cause, 'Không tải được hồ sơ chờ duyệt. Vui lòng thử lại.'));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  async function decide(item: KycSubmission, approve: boolean) {
+    if (busyId !== null) return;
+    if (!approve && !reason.trim()) {
+      setError(t('Vui lòng nhập lý do từ chối.', 'Please enter a reason for the rejection.'));
+      return;
+    }
+    setBusyId(item.memberId);
+    setError(null);
+    try {
+      if (approve) await approveKyc(item.memberId); else await rejectKyc(item.memberId, reason.trim());
+      notify(approve ? t('Đã duyệt hồ sơ.', 'Document approved.') : t('Đã từ chối hồ sơ.', 'Document rejected.'), 'success');
+      setRejecting(null);
+      setReason('');
+      await load();
+    } catch (cause) {
+      setError(localizableError(cause, 'Không thể xử lý hồ sơ. Vui lòng thử lại.'));
+      await load();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div data-i18n-managed className="portal-container kyc-review">
+      <PageHeader title={t('Duyệt hồ sơ định danh', 'Identity review')} />
+      {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong></div>}
+      {loading ? <LoadingSkeleton label={t('Đang tải hồ sơ chờ duyệt', 'Loading submissions')} /> : items.length === 0 ? (
+        <div className="portal-card" role="status">{t('Không có hồ sơ nào chờ duyệt.', 'No submissions are waiting for review.')}</div>
+      ) : (
+        <ul className="stack" style={{ listStyle: 'none', padding: 0 }} aria-label={t('Hồ sơ chờ duyệt', 'Submissions awaiting review')}>
+          {items.map((item) => (
+            <li key={item.memberId} className="portal-card stack" data-testid={`kyc-${item.memberId}`}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <strong>{item.fullName ?? '—'} {item.membershipCode ? `(${item.membershipCode})` : ''}</strong>
+                {item.submittedAt && <small>{t('Gửi lúc', 'Submitted')} {formatCenterDateTime(item.submittedAt)}</small>}
+              </div>
+              <div>{item.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Citizen ID')}: <strong>{item.citizenId}</strong>
+                {item.nationality ? ` · ${item.nationality}` : ''}</div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {item.frontImageUrl && <img src={item.frontImageUrl} alt={t('Mặt trước giấy tờ', 'Document front')} style={{ maxWidth: 260, borderRadius: 8 }} />}
+                {item.backImageUrl && <img src={item.backImageUrl} alt={t('Mặt sau giấy tờ', 'Document back')} style={{ maxWidth: 260, borderRadius: 8 }} />}
+              </div>
+              {rejecting === item.memberId ? (
+                <div className="portal-form-group">
+                  <label className="portal-label" htmlFor={`kyc-reason-${item.memberId}`}>{t('Lý do từ chối *', 'Reason for rejection *')}</label>
+                  <textarea id={`kyc-reason-${item.memberId}`} className="portal-input" rows={2} maxLength={255} value={reason}
+                    onChange={(event) => setReason(event.target.value)} style={{ width: '100%' }} />
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button type="button" className="btn-secondary" onClick={() => { setRejecting(null); setReason(''); }}>{t('Hủy', 'Cancel')}</button>
+                    <button type="button" className="btn-danger" disabled={busyId !== null} onClick={() => void decide(item, false)}>{t('Xác nhận từ chối', 'Confirm rejection')}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => { setRejecting(item.memberId); setReason(''); }}>{t('Từ chối', 'Reject')}</button>
+                  <button type="button" className="btn-primary" disabled={busyId !== null} onClick={() => void decide(item, true)}>{t('Duyệt', 'Approve')}</button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

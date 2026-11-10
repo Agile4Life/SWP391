@@ -182,7 +182,7 @@ export function MemberCheckoutPage() {
       });
       setProfile(updated);
       window.dispatchEvent(new Event('profile-updated'));
-      setKycSuccess('Đã xác minh danh tính và đồng bộ họ tên tài khoản thành công! Bạn có thể tiếp tục thanh toán bên dưới.');
+      setKycSuccess('Đã gửi hồ sơ định danh. Lễ tân sẽ kiểm tra giấy tờ của bạn; sau khi được duyệt bạn có thể đăng ký gói tập.');
     } catch (err) {
       setKycError(localizableError(err, 'Không thể gửi xác minh danh tính. Vui lòng kiểm tra lại.'));
     } finally {
@@ -245,7 +245,14 @@ export function MemberCheckoutPage() {
 
       <div className="checkout-layout">
         <div className="stack" data-i18n-managed>
-          {!isKycVerified ? (
+          {!isKycVerified && profile?.kycStatus === 'PENDING' ? (
+            <section data-i18n-managed className="portal-card stack" role="status" data-testid="kyc-pending" aria-label={t("Hồ sơ định danh đang chờ duyệt", "Identity document awaiting review")}>
+              <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Hồ sơ định danh đang chờ lễ tân duyệt", "Your identity document is waiting for review")}</h2>
+              <p className="row-card__meta" style={{ margin: 0 }}>
+                {t("Bạn có thể đăng ký gói tập ngay sau khi hồ sơ được duyệt. Chúng tôi sẽ gửi thông báo cho bạn.", "You can register a package as soon as it is approved. We will notify you.")}</p>
+              {kycSuccess && <p role="status">{t(kycSuccess)}</p>}
+            </section>
+          ) : !isKycVerified ? (
             <section data-i18n-managed className="portal-card stack" aria-label={t("Xác minh CCCD hoặc Hộ chiếu trước khi đăng ký gói tập đầu tiên", "Verify your citizen ID or passport before your first membership")}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: '1.25rem' }}>🪪</span>
@@ -255,6 +262,11 @@ export function MemberCheckoutPage() {
               <p className="row-card__meta" style={{ margin: 0, color: '#f59e0b' }}>
                 {t(" Hội viên mới cần cập nhật CCCD (hoặc Hộ chiếu cho người nước ngoài) để xác thực hợp đồng hội viên. Họ tên tài khoản sẽ được đồng bộ chính xác theo họ tên trên giấy tờ này. ", "New members must provide a citizen ID (or passport for foreign nationals) to verify their membership agreement. Your account name will match your identity document.")}</p>
 
+              {profile?.kycStatus === 'REJECTED' && (
+                <div role="alert" data-testid="kyc-rejected" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem' }}>
+                  {t("Hồ sơ trước bị từ chối", "Your previous submission was rejected")}{profile.kycRejectReason ? `: ${profile.kycRejectReason}` : ''}. {t("Vui lòng gửi lại.", "Please submit it again.")}
+                </div>
+              )}
               {kycError && (
                 <div role="alert" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem' }}>
                   {t(kycError)}

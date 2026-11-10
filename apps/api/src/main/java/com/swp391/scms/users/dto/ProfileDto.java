@@ -41,8 +41,23 @@ public record ProfileDto(
     String nationality,
     String frontImageUrl,
     String backImageUrl,
-    Boolean identityVerified
+    Boolean identityVerified,
+    /** PENDING, APPROVED or REJECTED; null for members verified before reviews existed. */
+    String kycStatus,
+    String kycRejectReason
 ) {
+    public ProfileDto(
+        Long userId, String fullName, String email, String phone, LocalDate dob, String gender, String avatarUrl,
+        String address, String membershipCode, String healthNotes, String fitnessGoal, String fitnessLevel,
+        String emergencyContactName, String emergencyContactPhone, String specialization, String bio,
+        String certification, String shift, String documentType, String citizenId, String nationality,
+        String frontImageUrl, String backImageUrl, Boolean identityVerified
+    ) {
+        this(userId, fullName, email, phone, dob, gender, avatarUrl, address, membershipCode, healthNotes, fitnessGoal,
+            fitnessLevel, emergencyContactName, emergencyContactPhone, specialization, bio, certification,
+            shift, documentType, citizenId, nationality, frontImageUrl, backImageUrl, identityVerified, null, null);
+    }
+
     public ProfileDto(
         Long userId,
         String fullName,

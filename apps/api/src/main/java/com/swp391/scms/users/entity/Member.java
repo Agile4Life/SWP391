@@ -59,6 +59,40 @@ public class Member {
     @Column(name = "identity_verified_at")
     private java.time.LocalDateTime identityVerifiedAt;
 
+    /** The identity number encrypted (AES-GCM); {@code citizenId} keeps only the masked form. */
+    @Column(name = "citizen_id_encrypted", columnDefinition = "TEXT")
+    private String citizenIdEncrypted;
+
+    /** PENDING (waiting for the desk), APPROVED or REJECTED; null for members verified before reviews existed. */
+    @Column(name = "kyc_status", length = 20)
+    private String kycStatus;
+
+    @Column(name = "kyc_submitted_at")
+    private java.time.LocalDateTime kycSubmittedAt;
+
+    @Column(name = "kyc_reviewed_at")
+    private java.time.LocalDateTime kycReviewedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "kyc_reviewed_by")
+    private User kycReviewedBy;
+
+    @Column(name = "kyc_reject_reason", length = 255)
+    private String kycRejectReason;
+
+    public String getCitizenIdEncrypted() { return citizenIdEncrypted; }
+    public void setCitizenIdEncrypted(String value) { this.citizenIdEncrypted = value; }
+    public String getKycStatus() { return kycStatus; }
+    public void setKycStatus(String value) { this.kycStatus = value; }
+    public java.time.LocalDateTime getKycSubmittedAt() { return kycSubmittedAt; }
+    public void setKycSubmittedAt(java.time.LocalDateTime value) { this.kycSubmittedAt = value; }
+    public java.time.LocalDateTime getKycReviewedAt() { return kycReviewedAt; }
+    public void setKycReviewedAt(java.time.LocalDateTime value) { this.kycReviewedAt = value; }
+    public User getKycReviewedBy() { return kycReviewedBy; }
+    public void setKycReviewedBy(User value) { this.kycReviewedBy = value; }
+    public String getKycRejectReason() { return kycRejectReason; }
+    public void setKycRejectReason(String value) { this.kycRejectReason = value; }
+
     /** Set when the member missed more than half of a course; no new course can be joined until then. */
     @Column(name = "course_enroll_blocked_until")
     private java.time.LocalDateTime courseEnrollBlockedUntil;

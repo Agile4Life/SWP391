@@ -25,6 +25,9 @@ export interface Profile {
   frontImageUrl?: string | null;
   backImageUrl?: string | null;
   identityVerified?: boolean | null;
+  /** PENDING (waiting for the desk), APPROVED or REJECTED; null for members verified before reviews existed. */
+  kycStatus?: string | null;
+  kycRejectReason?: string | null;
 }
 
 export interface MemberKycRequest {

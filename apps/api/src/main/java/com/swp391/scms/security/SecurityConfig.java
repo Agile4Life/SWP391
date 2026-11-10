@@ -119,6 +119,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
                     .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
 
+                    // Desk review of identity documents
+                    .requestMatchers("/api/v1/members/kyc/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+
                     // Internal Staff Requests (SCRUM-135)
                     .requestMatchers(HttpMethod.POST, "/api/v1/operations/requests").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/operations/requests/my").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")

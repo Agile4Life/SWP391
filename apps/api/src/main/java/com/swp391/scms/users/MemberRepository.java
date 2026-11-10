@@ -27,6 +27,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             """)
     List<Member> searchWithoutMeasurements(@Param("pattern") String pattern, Pageable pageable);
 
+    @Query("select m from Member m join fetch m.user where m.kycStatus = :status order by m.kycSubmittedAt asc")
+    List<Member> findByKycStatusOrderByKycSubmittedAtAsc(@Param("status") String status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select m from Member m where m.userId = :memberId")
     Optional<Member> findByUserIdForUpdate(@Param("memberId") Long memberId);

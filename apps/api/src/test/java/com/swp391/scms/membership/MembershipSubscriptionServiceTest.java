@@ -285,6 +285,29 @@ class MembershipSubscriptionServiceTest {
     }
 
     @Test
+    void create_tellsAMemberWhoseIdentityDocumentIsStillBeingReviewedToWait() {
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setIdentityVerified(false);
+        member.setKycStatus("PENDING");
+        MembershipPackage pack = new MembershipPackage();
+        pack.setId(1L);
+        pack.setStatus("active");
+        pack.setDurationDays(30);
+        com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRepo =
+                org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository.class);
+        service.setTrialRedemptionRepository(trialRepo);
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(1L)).thenReturn(Optional.of(pack));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRepo.findByMemberUserId(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(1L)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("error.membership.kyc_pending");
+    }
+
+    @Test
     void create_succeedsWhenFirstTimeSubscriptionWithVerifiedKyc() {
         Member member = new Member();
         member.setUserId(10L);
