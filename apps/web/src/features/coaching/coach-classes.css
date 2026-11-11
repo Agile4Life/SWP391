@@ -938,12 +938,6 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 @media (max-width: 760px) {
-  /* Tab xuống dòng thay vì tràn khỏi màn hình */
-  .coach-nav-tabs {
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-
   .coach-metrics-grid {
     grid-template-columns: 1fr;
   }
@@ -965,46 +959,6 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   .student-details-grid {
     grid-template-columns: 1fr;
   }
-}
-
-/* ==========================================================================
-   NAVIGATION TABS (Thời khóa biểu vs Học viên phụ trách)
-   ========================================================================== */
-.coach-nav-tabs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--portal-border);
-  padding-bottom: 12px;
-  overflow-x: auto;
-}
-
-.coach-tab-btn {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  padding: 10px 22px;
-  font-size: 0.94rem;
-  font-weight: 600;
-  color: var(--portal-muted);
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-  white-space: nowrap;
-}
-
-.coach-tab-btn:hover {
-  background: var(--portal-raised);
-  color: var(--portal-paper);
-  border-color: var(--portal-salmon);
-}
-
-.coach-tab-btn.is-active {
-  background: var(--portal-salmon);
-  color: var(--portal-ink);
-  border-color: var(--portal-salmon);
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(206, 145, 128, 0.3);
 }
 
 /* ==========================================================================

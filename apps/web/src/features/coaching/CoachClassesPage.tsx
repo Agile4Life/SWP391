@@ -401,12 +401,12 @@ export function CoachClassesPage() {
       />
 
       {/* Phân hệ Tab: Thời khóa biểu vs Học viên phụ trách */}
-      <div className="coach-nav-tabs" role="tablist" aria-label={t("Phân hệ chức năng HLV")}>
+      <div className="portal-tabs coach-nav-tabs" role="tablist" aria-label={t("Phân hệ chức năng HLV")}>
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === 'schedule'}
-          className={`coach-tab-btn ${activeTab === 'schedule' ? 'is-active' : ''}`}
+          className={`portal-tab coach-tab-btn ${activeTab === 'schedule' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
           {t("Thời khóa biểu")}</button>
@@ -414,12 +414,12 @@ export function CoachClassesPage() {
           type="button"
           role="tab"
           aria-selected={activeTab === 'students'}
-          className={`coach-tab-btn ${activeTab === 'students' ? 'is-active' : ''}`}
+          className={`portal-tab coach-tab-btn ${activeTab === 'students' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('students')}
         >
           {t("Học viên phụ trách")}</button>
         <button type="button" role="tab" aria-selected={activeTab === 'ranking'}
-          className={`coach-tab-btn ${activeTab === 'ranking' ? 'is-active' : ''}`}
+          className={`portal-tab coach-tab-btn ${activeTab === 'ranking' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('ranking')}>{t("Đánh giá & bảng xếp hạng tháng")}</button>
       </div>
 

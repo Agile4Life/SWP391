@@ -412,7 +412,7 @@ export function CoachTrainingPlanPage() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             {AI_UI_ENABLED && <button
               type="button"
-              className="btn-ai-sparkle"
+              className="btn-secondary btn-ai-sparkle"
               onClick={() => {
                 setAiSelectedMemberId(selectedMemberId);
                 setIsAiModalOpen(true);
@@ -561,7 +561,7 @@ export function CoachTrainingPlanPage() {
       {/* Main Workspace: Day Selector & Exercise Form */}
       <div className="portal-card">
         {/* AC: Tab chọn ngày trong tuần */}
-        <div className="plan-day-tabs" role="tablist" aria-label={t("Các ngày trong tuần")}>
+        <div className="portal-tabs plan-day-tabs" role="tablist" aria-label={t("Các ngày trong tuần")}>
           {DAYS_OF_WEEK.map((d) => {
             const isActive = activeDay === d.id;
             const count = countByDay[d.id] || 0;
@@ -571,11 +571,11 @@ export function CoachTrainingPlanPage() {
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                className={`plan-day-tab ${isActive ? 'is-active' : ''}`}
+                className={`portal-tab plan-day-tab ${isActive ? 'active is-active' : ''}`}
                 onClick={() => setActiveDay(d.id)}
               >
                 <span>{t(d.name)}</span>
-                <span className="plan-day-badge">{count} {t(" bài")}</span>
+                <span className="portal-tab-count plan-day-badge">{count} {t(" bài")}</span>
               </button>
             );
           })}
@@ -836,7 +836,7 @@ export function CoachTrainingPlanPage() {
             <div style={{ textAlign: 'right', marginBottom: '14px' }}>
               <button
                 type="button"
-                className="btn-ai-sparkle"
+                className="btn-primary btn-ai-sparkle"
                 onClick={() => void handleGenerateAiPlan()}
                 disabled={isGeneratingAi}
               >
@@ -883,7 +883,7 @@ export function CoachTrainingPlanPage() {
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button type="button" className="btn-secondary" onClick={() => setIsAiModalOpen(false)}>
                     {t("Hủy bỏ")}</button>
-                  <button type="button" className="btn-ai-sparkle" onClick={handleApplyAiPlan}>
+                  <button type="button" className="btn-primary btn-ai-sparkle" onClick={handleApplyAiPlan}>
                     <span>{t("Áp dụng vào giáo án")}</span>
                   </button>
                 </div>

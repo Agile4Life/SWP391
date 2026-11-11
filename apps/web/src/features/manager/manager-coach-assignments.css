@@ -1,57 +1,11 @@
-/* Manager Coach Assignments Styling - SÖL Fitness charcoal-salmon */
-.coach-assignments-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
-}
 
-.coach-assignments-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-}
-
-.coach-stat-card {
-  background: var(--portal-surface, #1e1e24);
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.coach-stat-card__label {
-  font-size: 0.85rem;
-  color: var(--portal-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-.coach-stat-card__value {
-  font-size: 1.85rem;
-  font-weight: 700;
-  color: var(--portal-paper);
-  line-height: 1;
-}
-
-.coach-stat-card__hint {
-  font-size: 0.8rem;
-  color: var(--portal-salmon);
-}
 
 .coach-assignments-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  background: var(--portal-surface, #1e1e24);
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
 }
 
 .coach-assignments-filters {
@@ -63,19 +17,8 @@
 }
 
 .coach-search-input {
-  background: var(--portal-ink);
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.12));
-  border-radius: 8px;
-  padding: 0.6rem 0.9rem;
-  color: var(--portal-paper);
-  font-size: 0.9rem;
   min-width: 240px;
   flex: 1;
-}
-
-.coach-search-input:focus {
-  outline: none;
-  border-color: var(--portal-salmon);
 }
 
 .coach-assignments-filters .ui-select {
@@ -84,53 +27,14 @@
   min-width: 200px;
 }
 
-.coach-filter-select {
-  background: var(--portal-ink);
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.12));
-  border-radius: 8px;
-  padding: 0.6rem 0.9rem;
-  color: var(--portal-paper);
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.coach-view-toggle {
-  display: flex;
-  gap: 0.35rem;
-  background: var(--portal-ink);
-  padding: 0.25rem;
-  border-radius: 8px;
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-}
-
-.coach-view-button {
-  padding: 0.4rem 0.85rem;
-  font-size: 0.85rem;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--portal-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.coach-view-button--active {
-  background: var(--portal-raised);
-  color: var(--portal-salmon);
-  font-weight: 600;
-}
-
-/* Grid & Cards */
 .coach-cards-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 20px;
 }
 
-.coach-card-panel {
-  background: var(--portal-surface, #1e1e24);
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
+.portal-v2 .coach-card-panel {
+  margin-bottom: 0;
   overflow: hidden;
 }
 
@@ -298,78 +202,6 @@
   gap: 0.5rem;
 }
 
-.coach-action-btn {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.8rem;
-  border-radius: 6px;
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.15));
-  background: var(--portal-raised);
-  color: var(--portal-paper);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.coach-action-btn:hover:not(:disabled) {
-  border-color: var(--portal-salmon);
-  color: var(--portal-salmon);
-}
-
-.coach-action-btn--primary {
-  background: var(--portal-salmon);
-  color: var(--portal-on-accent);
-  border: none;
-  font-weight: 600;
-}
-
-.coach-action-btn--primary:hover:not(:disabled) {
-  background: var(--portal-salmon);
-  color: var(--portal-on-accent);
-}
-
-.coach-action-btn--danger {
-  color: var(--portal-danger);
-}
-
-.coach-action-btn--danger:hover:not(:disabled) {
-  border-color: var(--portal-danger);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-/* Table View */
-.coach-table-container {
-  overflow-x: auto;
-  background: var(--portal-surface, #1e1e24);
-  border: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-}
-
-.coach-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.coach-table th {
-  padding: 0.9rem 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--portal-border, rgba(255, 255, 255, 0.08));
-  color: var(--portal-muted);
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-}
-
-.coach-table td {
-  padding: 0.9rem 1rem;
-  border-bottom: 1px solid var(--portal-border, rgba(255, 255, 255, 0.04));
-  color: var(--portal-paper);
-}
-
-.coach-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
 /* Modal form fields */
 .coach-modal-form {
   display: flex;
@@ -416,10 +248,9 @@
   margin-top: 1rem;
 }
 
-
 .coach-member-result { width: 100%; border: 0; background: transparent; text-align: left; }
-.coach-member-result:focus-visible, .coach-action-btn:focus-visible, .coach-view-button:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
-.coach-action-btn:disabled { opacity: .55; cursor: wait; }
+.coach-member-result:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+
 @media (max-width: 600px) {
   .coach-form-row { grid-template-columns: 1fr; }
   .coach-student-actions { flex-wrap: wrap; }

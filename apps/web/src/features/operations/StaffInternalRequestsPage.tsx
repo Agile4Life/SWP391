@@ -144,108 +144,45 @@ export function StaffInternalRequestsPage() {
     <div data-i18n-managed className="portal-container">
       <PageHeader
         title={t("Đơn từ nội bộ")}
+        actions={
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              resetForm();
+              setShowCreateModal(true);
+            }}
+          >
+            {t("Tạo đơn từ mới")}
+          </button>
+        }
       />
 
-      {/* Top action row */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        {/* Status filter tabs */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {[
-            { key: 'ALL', label: t('Tất cả') },
-            { key: 'PENDING', label: t('Chờ duyệt') },
-            { key: 'APPROVED', label: t('Đã duyệt') },
-            { key: 'REJECTED', label: t('Từ chối') },
-            { key: 'CANCELLED', label: t('Đã hủy') },
-          ].map((tab) => (
-            <button data-i18n-managed
-              key={tab.key}
-              type="button"
-              onClick={() => setStatusFilter(tab.key)}
-              style={{
-                minHeight: 44,
-                padding: '8px 16px',
-                borderRadius: 99,
-                border: statusFilter === tab.key ? 'none' : '1px solid var(--portal-border)',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-                background:
-                  statusFilter === tab.key
-                    ? 'var(--portal-salmon, #ce9180)'
-                    : 'var(--portal-surface)',
-                color: statusFilter === tab.key ? 'var(--portal-ink, #202020)' : 'var(--portal-muted)',
-                boxShadow:
-                  statusFilter === tab.key
-                    ? '0 2px 8px color-mix(in srgb, var(--portal-salmon) 25%, transparent)'
-                    : '0 1px 3px rgba(0,0,0,0.05)',
-                transition: 'background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
-              }}
-            >
-              {t(tab.label)}
-            </button>
-          ))}
-        </div>
-
-        {/* Create button */}
-        <button
-          type="button"
-          onClick={() => {
-            resetForm();
-            setShowCreateModal(true);
-          }}
-          style={{
-            minHeight: 42,
-            padding: '10px 22px',
-            borderRadius: 99,
-            border: 'none',
-            fontWeight: 750,
-            fontSize: 14,
-            cursor: 'pointer',
-            background: 'var(--portal-salmon, #ce9180)',
-            color: 'var(--portal-ink, #202020)',
-            boxShadow: '0 4px 12px color-mix(in srgb, var(--portal-salmon) 30%, transparent)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <span>＋</span> {t(" Tạo đơn từ mới")}</button>
+      {/* Lọc theo trạng thái */}
+      <div className="filter-chips" role="group" aria-label={t("Lọc theo trạng thái")} style={{ marginBottom: 20 }}>
+        {[
+          { key: 'ALL', label: t('Tất cả') },
+          { key: 'PENDING', label: t('Chờ duyệt') },
+          { key: 'APPROVED', label: t('Đã duyệt') },
+          { key: 'REJECTED', label: t('Từ chối') },
+          { key: 'CANCELLED', label: t('Đã hủy') },
+        ].map((tab) => (
+          <button data-i18n-managed
+            key={tab.key}
+            type="button"
+            className={`filter-chip${statusFilter === tab.key ? ' is-active' : ''}`}
+            aria-pressed={statusFilter === tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+          >
+            {t(tab.label)}
+          </button>
+        ))}
       </div>
 
       {error && (
-        <div data-i18n-managed
-          role="alert"
-          style={{
-            background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--portal-danger) 30%, transparent)',
-            color: 'var(--portal-danger)',
-            padding: '12px 18px',
-            borderRadius: 12,
-            marginBottom: 20,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
+        <div data-i18n-managed className="portal-alert" role="alert">
           <span>{t(error)}</span>
-          <button
-            type="button"
-            onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--portal-danger)' }}
-          >
-            ✕
-          </button>
+          <button type="button" className="portal-icon-button" aria-label={t("Đóng")} onClick={() => setError('')}>✕</button>
         </div>
       )}
 

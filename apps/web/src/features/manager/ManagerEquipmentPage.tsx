@@ -298,29 +298,29 @@ export function ManagerEquipmentPage() {
       </div>
 
       {/* Metrics overview */}
-      <div className="grid-4" style={{ marginBottom: 20 }}>
-        <div className="portal-card" style={{ padding: '16px 20px' }}>
-          <div className="muted" style={{ fontSize: '0.85rem' }}>{t("Tổng số máy móc")}</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, marginTop: 4 }}>
-            {totalQuantity} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>{t("máy (")}{items.length} {t(" loại)")}</span>
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <div className="metric-label">{t("Tổng số máy móc")}</div>
+          <div className="metric-value">
+            {totalQuantity} <span className="metric-unit">{t("máy (")}{items.length} {t(" loại)")}</span>
           </div>
         </div>
-        <div className="portal-card" style={{ padding: '16px 20px' }}>
-          <div className="muted" style={{ fontSize: '0.85rem' }}>{t("Đang hoạt động tốt")}</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--portal-success)', marginTop: 4 }}>
-            {activeCount} <span style={{ fontSize: '1rem', fontWeight: 500 }}>{t("máy")}</span>
+        <div className="metric-card">
+          <div className="metric-label">{t("Đang hoạt động tốt")}</div>
+          <div className="metric-value metric-value--success">
+            {activeCount} <span className="metric-unit">{t("máy")}</span>
           </div>
         </div>
-        <div className="portal-card" style={{ padding: '16px 20px' }}>
-          <div className="muted" style={{ fontSize: '0.85rem' }}>{t("Đang bảo trì định kỳ")}</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--portal-warning)', marginTop: 4 }}>
-            {maintenanceCount} <span style={{ fontSize: '1rem', fontWeight: 500 }}>{t("máy")}</span>
+        <div className="metric-card">
+          <div className="metric-label">{t("Đang bảo trì định kỳ")}</div>
+          <div className="metric-value metric-value--warning">
+            {maintenanceCount} <span className="metric-unit">{t("máy")}</span>
           </div>
         </div>
-        <div className="portal-card" style={{ padding: '16px 20px' }}>
-          <div className="muted" style={{ fontSize: '0.85rem' }}>{t("Hỏng hóc cần xử lý")}</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--portal-danger)', marginTop: 4 }}>
-            {brokenCount} <span style={{ fontSize: '1rem', fontWeight: 500 }}>{t("máy")}</span>
+        <div className="metric-card">
+          <div className="metric-label">{t("Hỏng hóc cần xử lý")}</div>
+          <div className="metric-value metric-value--danger">
+            {brokenCount} <span className="metric-unit">{t("máy")}</span>
           </div>
         </div>
       </div>

@@ -559,29 +559,29 @@ export function CoachAttendancePage() {
       />
 
       {/* Tabs chuyển đổi giữa 4 mục: Điểm danh, Đánh giá, Lịch sử điểm danh, Lịch sử đánh giá */}
-      <div className="attendance-nav-tabs">
+      <div className="portal-tabs attendance-nav-tabs" role="tablist">
         <button
           type="button"
-          className={`attendance-tab-btn ${activeTab === 'attendance' ? 'is-active' : ''}`}
+          role="tab" aria-selected={activeTab === 'attendance'} className={`portal-tab attendance-tab-btn ${activeTab === 'attendance' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('attendance')}
         >
           {t("Điểm danh buổi học")}</button>
         <button
           type="button"
-          className={`attendance-tab-btn ${activeTab === 'evaluation' ? 'is-active' : ''}`}
+          role="tab" aria-selected={activeTab === 'evaluation'} className={`portal-tab attendance-tab-btn ${activeTab === 'evaluation' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('evaluation')}
         >
           {t("Đánh giá học viên")}</button>
         <button
           type="button"
-          className={`attendance-tab-btn ${activeTab === 'attendance-history' ? 'is-active' : ''}`}
+          role="tab" aria-selected={activeTab === 'attendance-history'} className={`portal-tab attendance-tab-btn ${activeTab === 'attendance-history' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('attendance-history')}
         >
           {t("Lịch sử điểm danh (")}{history.length})
         </button>
         <button
           type="button"
-          className={`attendance-tab-btn ${activeTab === 'eval-history' ? 'is-active' : ''}`}
+          role="tab" aria-selected={activeTab === 'eval-history'} className={`portal-tab attendance-tab-btn ${activeTab === 'eval-history' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('eval-history')}
         >
           {t("Lịch sử đánh giá (")}{evalHistory.length})
@@ -718,7 +718,7 @@ export function CoachAttendancePage() {
             <div className="toolbar-btn-group">
               <button
                 type="button"
-                className="btn-quick-present"
+                className="btn-secondary btn-sm btn-quick-present"
                 onClick={handleMarkAllPresent}
                 disabled={!rosterReady || saving || savingEvaluation || students.length === 0}
               >
@@ -803,7 +803,7 @@ export function CoachAttendancePage() {
           <div data-i18n-managed className="attendance-bottom-actions">
             <button
               type="button"
-              className="btn-batch-save"
+              className="btn-primary btn-batch-save"
               onClick={handleSaveAttendance}
               disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
             >
@@ -900,7 +900,7 @@ export function CoachAttendancePage() {
           <div className="attendance-bottom-actions">
             <button
               type="button"
-              className="btn-batch-save"
+              className="btn-primary btn-batch-save"
               onClick={handleSaveEvaluations}
               disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
             >

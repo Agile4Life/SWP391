@@ -2,50 +2,12 @@
   padding-bottom: 60px;
 }
 
-.audit-view-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid var(--portal-border);
-  padding-bottom: 12px;
-}
-
-.audit-tab-btn {
-  background: transparent;
-  color: var(--portal-muted);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.audit-tab-btn:hover {
-  color: var(--portal-paper);
-  background: var(--portal-raised);
-}
-
-.audit-tab-btn.is-active {
-  background: var(--portal-tint);
-  border-color: var(--portal-salmon);
-  color: var(--portal-salmon);
-}
-
-/* Filter bar */
 .audit-filter-bar {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 12px;
-  padding: 16px 20px;
   margin-bottom: 20px;
+  padding: 16px 20px;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 14px;
 }
 
@@ -55,49 +17,8 @@
   gap: 4px;
 }
 
-.filter-label {
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-  color: var(--portal-muted);
-}
-
-/* Audit table */
 .audit-table-card {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 14px;
-  overflow: hidden;
   margin-bottom: 24px;
-}
-
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.88rem;
-}
-
-.audit-table th {
-  background: var(--portal-raised);
-  color: var(--portal-muted);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--portal-border);
-}
-
-.audit-table td {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--portal-border);
-  color: var(--portal-paper);
-  vertical-align: middle;
-}
-
-.audit-table tr:hover td {
-  background: var(--portal-tint);
 }
 
 .action-badge {
@@ -151,24 +72,6 @@
   color: var(--portal-muted);
 }
 
-.btn-view-diff {
-  background: var(--portal-raised);
-  color: var(--portal-paper);
-  border: 1px solid var(--portal-border);
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-}
-
-.btn-view-diff:hover {
-  background: var(--portal-tint);
-  border-color: var(--portal-salmon);
-  color: var(--portal-salmon);
-}
-
 /* Pagination bar */
 .audit-pagination-bar {
   display: flex;
@@ -184,29 +87,6 @@
 .pagination-controls {
   display: flex;
   gap: 8px;
-}
-
-.btn-page-nav {
-  background: var(--portal-raised);
-  color: var(--portal-paper);
-  border: 1px solid var(--portal-border);
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-}
-
-.btn-page-nav:hover:not(:disabled) {
-  background: var(--portal-tint);
-  border-color: var(--portal-salmon);
-  color: var(--portal-salmon);
-}
-
-.btn-page-nav:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* Diff Modal Layout */
@@ -278,37 +158,6 @@
   word-break: break-all;
   max-height: 280px;
   overflow-y: auto;
-}
-
-/* Occupancy Chart Section */
-.occupancy-summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
-}
-
-.occupancy-stat-card {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.stat-card-title {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--portal-muted);
-}
-
-.stat-card-number {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--portal-salmon);
 }
 
 .occupancy-chart-card {

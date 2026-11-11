@@ -999,6 +999,7 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Tất cả hình thức": "All types",
   "Tập 1:1 với HLV (PT)": "One-to-one coaching (PT)",
   "Bảng danh sách": "Assignment list",
+  "Cách hiển thị": "View mode",
   "Đang tải dữ liệu HLV và học viên...": "Loading coaches and members...",
   "Không tìm thấy dữ liệu": "No data found",
   "Không có kết quả phù hợp.": "No matching results.",

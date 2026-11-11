@@ -199,12 +199,12 @@ export function ManagerAuditLogsPage() {
       />
 
       {/* Navigation Tabs */}
-      <div className="audit-view-tabs" role="tablist">
+      <div className="portal-tabs audit-view-tabs" role="tablist">
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === 'audit'}
-          className={`audit-tab-btn ${activeTab === 'audit' ? 'is-active' : ''}`}
+          className={`portal-tab audit-tab-btn ${activeTab === 'audit' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
           {t("Nhật ký kiểm toán (Audit Trail)")}</button>
@@ -212,7 +212,7 @@ export function ManagerAuditLogsPage() {
           type="button"
           role="tab"
           aria-selected={activeTab === 'occupancy'}
-          className={`audit-tab-btn ${activeTab === 'occupancy' ? 'is-active' : ''}`}
+          className={`portal-tab audit-tab-btn ${activeTab === 'occupancy' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('occupancy')}
         >
           {t("Tỷ lệ lấp đầy phòng học theo bộ môn")}</button>
@@ -221,9 +221,9 @@ export function ManagerAuditLogsPage() {
       {activeTab === 'audit' ? (
         <section data-i18n-managed aria-label={t("Bảng tra cứu Audit Log")}>
           {/* Filters Bar */}
-          <div className="audit-filter-bar">
+          <div className="portal-card audit-filter-bar">
             <div className="audit-filter-group" style={{ flex: 1.2, minWidth: '220px' }}>
-              <span className="filter-label">{t("Tìm kiếm Người thực hiện")}</span>
+              <span className="portal-label filter-label">{t("Tìm kiếm Người thực hiện")}</span>
               <input
                 type="text"
                 className="portal-input"
@@ -235,7 +235,7 @@ export function ManagerAuditLogsPage() {
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '160px' }}>
-              <span className="filter-label">{t("Hành động (Action)")}</span>
+              <span className="portal-label filter-label">{t("Hành động (Action)")}</span>
               <Select
                 className="portal-select"
                 value={selectedAction}
@@ -258,7 +258,7 @@ export function ManagerAuditLogsPage() {
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '180px' }}>
-              <span className="filter-label">{t("Đối tượng (Entity Type)")}</span>
+              <span className="portal-label filter-label">{t("Đối tượng (Entity Type)")}</span>
               <Select
                 className="portal-select"
                 value={selectedEntityType}
@@ -281,7 +281,7 @@ export function ManagerAuditLogsPage() {
           </div>
 
           {/* Audit Table */}
-          <div className="audit-table-card">
+          <div className="portal-card portal-card--flush audit-table-card">
             {loadingLogs ? (
               <LoadingSkeleton label={t("Đang tải nhật ký kiểm toán…")} variant="table" count={8} />
             ) : logsError ? (
@@ -294,7 +294,7 @@ export function ManagerAuditLogsPage() {
                 <p>{t("Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.")}</p>
               </div>
             ) : (
-              <table data-i18n-managed className="audit-table" aria-label={t("Bảng nhật ký kiểm toán")}>
+              <table data-i18n-managed className="portal-table audit-table" aria-label={t("Bảng nhật ký kiểm toán")}>
                 <thead>
                   <tr>
                     <th>{t("Thời gian")}</th>
@@ -339,7 +339,7 @@ export function ManagerAuditLogsPage() {
                       <td style={{ textAlign: 'right' }}>
                         <button
                           type="button"
-                          className="btn-view-diff"
+                          className="btn-secondary btn-sm btn-view-diff"
                           onClick={() => setDiffLog(log)}
                           aria-label={t(`Xem diff bản ghi #${log.id}`, `View record diff #${log.id}`)}
                         >
@@ -358,7 +358,7 @@ export function ManagerAuditLogsPage() {
               <div className="pagination-controls">
                 <button
                   type="button"
-                  className="btn-page-nav"
+                  className="btn-secondary btn-sm btn-page-nav"
                   disabled={currentPage <= 0}
                   onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                   aria-label={t("Trang trước")}
@@ -366,7 +366,7 @@ export function ManagerAuditLogsPage() {
                   {t("Trang trước")}</button>
                 <button
                   type="button"
-                  className="btn-page-nav"
+                  className="btn-secondary btn-sm btn-page-nav"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() => setCurrentPage((p) => p + 1)}
                   aria-label="Trang sau"
@@ -385,20 +385,20 @@ export function ManagerAuditLogsPage() {
               <button type="button" className="btn-secondary btn-sm" onClick={() => setOccupancyReload((n) => n + 1)}>{t("Thử lại")}</button>
             </div>
           )}
-          {loadingOccupancy ? <LoadingSkeleton label={t("Đang tải tổng quan công suất lớp học…")} variant="cards" count={3} /> : occupancyError ? null : <div className="occupancy-summary-cards">
-            <div className="occupancy-stat-card">
-              <span className="stat-card-title">{t("Tỷ lệ lấp đầy trung bình")}</span>
-              <span className="stat-card-number">{occupancyMetrics.avgUtilization}%</span>
+          {loadingOccupancy ? <LoadingSkeleton label={t("Đang tải tổng quan công suất lớp học…")} variant="cards" count={3} /> : occupancyError ? null : <div className="metrics-grid occupancy-summary-cards">
+            <div className="metric-card occupancy-stat-card">
+              <span className="metric-label stat-card-title">{t("Tỷ lệ lấp đầy trung bình")}</span>
+              <span className="metric-value stat-card-number">{occupancyMetrics.avgUtilization}%</span>
             </div>
-            <div className="occupancy-stat-card">
-              <span className="stat-card-title">{t("Lớp công suất cao nhất")}</span>
-              <span className="stat-card-number" style={{ fontSize: '1.25rem', lineHeight: 1.3 }}>
+            <div className="metric-card occupancy-stat-card">
+              <span className="metric-label stat-card-title">{t("Lớp công suất cao nhất")}</span>
+              <span className="metric-value stat-card-number" style={{ fontSize: '1.25rem', lineHeight: 1.3 }}>
                 {occupancyMetrics.highestClass}
               </span>
             </div>
-            <div className="occupancy-stat-card">
-              <span className="stat-card-title">{t("Tổng học viên đã book / Sức chứa")}</span>
-              <span className="stat-card-number">
+            <div className="metric-card occupancy-stat-card">
+              <span className="metric-label stat-card-title">{t("Tổng học viên đã book / Sức chứa")}</span>
+              <span className="metric-value stat-card-number">
                 {occupancyMetrics.totalEnrolled} / {occupancyMetrics.totalCapacity}
               </span>
             </div>

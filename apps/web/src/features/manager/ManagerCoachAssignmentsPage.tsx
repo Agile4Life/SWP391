@@ -217,13 +217,13 @@ export function ManagerCoachAssignmentsPage() {
   }, [data]);
 
   return (
-    <div data-i18n-managed className="coach-assignments-page">
+    <div data-i18n-managed className="portal-container coach-assignments-page">
       <PageHeader
         title={t("HLV & học viên phụ trách")}
         actions={
           <button
             type="button"
-            className="coach-action-btn coach-action-btn--primary"
+            className="btn-primary coach-action-btn"
             onClick={handleOpenAssign}
             disabled={busy || loading}
           >
@@ -240,31 +240,31 @@ export function ManagerCoachAssignmentsPage() {
       )}
 
       {/* Summary KPI Cards */}
-      <section className="coach-assignments-stats" aria-label={t("Thống kê tổng quan")}>
-        <div className="coach-stat-card">
-          <span className="coach-stat-card__label">{t("Tổng số Huấn luyện viên")}</span>
-          <span className="coach-stat-card__value">{data?.stats.activeCoaches ?? 0}</span>
+      <section className="metrics-grid coach-assignments-stats" aria-label={t("Thống kê tổng quan")}>
+        <div className="metric-card coach-stat-card">
+          <span className="metric-label">{t("Tổng số Huấn luyện viên")}</span>
+          <span className="metric-value">{data?.stats.activeCoaches ?? 0}</span>
         </div>
-        <div className="coach-stat-card">
-          <span className="coach-stat-card__label">{t("Tổng học viên đang theo kèm")}</span>
-          <span className="coach-stat-card__value">{data?.stats.totalAssignedStudents ?? 0}</span>
+        <div className="metric-card coach-stat-card">
+          <span className="metric-label">{t("Tổng học viên đang theo kèm")}</span>
+          <span className="metric-value">{data?.stats.totalAssignedStudents ?? 0}</span>
         </div>
-        <div className="coach-stat-card">
-          <span className="coach-stat-card__label">{t("Học viên tập 1:1 (PT)")}</span>
-          <span className="coach-stat-card__value">{data?.stats.totalPtStudents ?? 0}</span>
+        <div className="metric-card coach-stat-card">
+          <span className="metric-label">{t("Học viên tập 1:1 (PT)")}</span>
+          <span className="metric-value">{data?.stats.totalPtStudents ?? 0}</span>
         </div>
-        <div className="coach-stat-card">
-          <span className="coach-stat-card__label">{t("Theo giáo án riêng")}</span>
-          <span className="coach-stat-card__value">{data?.stats.totalPlanStudents ?? 0}</span>
+        <div className="metric-card coach-stat-card">
+          <span className="metric-label">{t("Theo giáo án riêng")}</span>
+          <span className="metric-value">{data?.stats.totalPlanStudents ?? 0}</span>
         </div>
       </section>
 
       {/* Toolbar: Filters, Search, View switch */}
-      <section className="coach-assignments-toolbar" aria-label={t("Bộ lọc và tìm kiếm")}>
+      <section className="portal-card coach-assignments-toolbar" aria-label={t("Bộ lọc và tìm kiếm")}>
         <div className="coach-assignments-filters">
           <input
             type="search"
-            className="coach-search-input"
+            className="portal-input coach-search-input"
             placeholder={t("Tìm theo tên HLV, học viên, mã thẻ, SĐT...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -298,16 +298,16 @@ export function ManagerCoachAssignmentsPage() {
           </Select>
         </div>
 
-        <div className="coach-view-toggle">
+        <div className="portal-switch coach-view-toggle" role="group" aria-label={t("Cách hiển thị")}>
           <button
             type="button"
-            className={`coach-view-button${viewMode === 'cards' ? ' coach-view-button--active' : ''}`}
+            aria-pressed={viewMode === 'cards'}
             onClick={() => setViewMode('cards')}
           >
             {t("Theo HLV")}</button>
           <button
             type="button"
-            className={`coach-view-button${viewMode === 'table' ? ' coach-view-button--active' : ''}`}
+            aria-pressed={viewMode === 'table'}
             onClick={() => setViewMode('table')}
           >
             {t("Bảng danh sách")}</button>
@@ -326,7 +326,7 @@ export function ManagerCoachAssignmentsPage() {
         /* Card View by Coach */
         <div data-i18n-managed className="coach-cards-grid">
           {data.coaches.map((coach: CoachAssignmentOverview) => (
-            <article data-i18n-managed key={coach.coachId} className="coach-card-panel">
+            <article data-i18n-managed key={coach.coachId} className="portal-card portal-card--flush coach-card-panel">
               <header className="coach-card-header">
                 <div className="coach-info-main">
                   <div className="coach-avatar-badge" aria-hidden="true">
@@ -337,7 +337,7 @@ export function ManagerCoachAssignmentsPage() {
                     <div className="coach-meta-row">
                       <span className="coach-badge-spec">{coach.specialization}</span>
                       {coach.coachPhone && <span>{coach.coachPhone}</span>}
-                      {coach.coachEmail && <span>✉️ {coach.coachEmail}</span>}
+                      {coach.coachEmail && <span>{coach.coachEmail}</span>}
                     </div>
                   </div>
                 </div>
@@ -398,13 +398,13 @@ export function ManagerCoachAssignmentsPage() {
                       <div className="coach-student-actions">
                         <button
                           type="button"
-                          className="coach-action-btn"
+                          className="btn-secondary btn-sm coach-action-btn"
                           onClick={() => setSelectedStudentDetail(student)}
                         >
                           {t("Chi tiết")}</button>
                         {student.assignmentType !== 'CLASS' && <button
                           type="button"
-                          className="coach-action-btn"
+                          className="btn-secondary btn-sm coach-action-btn"
                           disabled={busy}
                           onClick={() => { setFormError(null); setTargetCoachId(''); setReassignReason('');
                             setReassignStudent({
@@ -417,7 +417,7 @@ export function ManagerCoachAssignmentsPage() {
                         {student.assignmentType === 'TRAINING_PLAN' && (
                           <button data-i18n-managed
                             type="button"
-                            className="coach-action-btn coach-action-btn--danger"
+                            className="btn-danger btn-sm coach-action-btn"
                             disabled={busy}
                             onClick={() => void handleRemoveAssignment(student)}
                           >
@@ -433,8 +433,8 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       ) : (
         /* Table View */
-        <div data-i18n-managed className="coach-table-container">
-          <table className="coach-table">
+        <div data-i18n-managed className="portal-card portal-card--flush portal-table-wrapper coach-table-container">
+          <table className="portal-table coach-table">
             <thead>
               <tr>
                 <th>{t("Học viên")}</th>
@@ -479,13 +479,13 @@ export function ManagerCoachAssignmentsPage() {
                     <div className="coach-student-actions">
                       <button
                         type="button"
-                        className="coach-action-btn"
+                        className="btn-secondary btn-sm coach-action-btn"
                         onClick={() => setSelectedStudentDetail(item)}
                       >
                         {t("Chi tiết")}</button>
                       {item.assignmentType !== 'CLASS' && <button
                         type="button"
-                        className="coach-action-btn"
+                        className="btn-secondary btn-sm coach-action-btn"
                         disabled={busy}
                         onClick={() => { setFormError(null); setTargetCoachId(''); setReassignReason('');
                           setReassignStudent({
@@ -495,7 +495,7 @@ export function ManagerCoachAssignmentsPage() {
                           }); }}
                       >
                         {t("Điều chuyển")}</button>}
-                      {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="coach-action-btn coach-action-btn--danger" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>{t("Kết thúc")}</button>}
+                      {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="btn-danger btn-sm coach-action-btn" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>{t("Kết thúc")}</button>}
                     </div>
                   </td>
                 </tr>
@@ -622,14 +622,14 @@ export function ManagerCoachAssignmentsPage() {
             <div className="coach-modal-actions">
               <button
                 type="button"
-                className="coach-action-btn"
+                className="btn-secondary coach-action-btn"
                 onClick={() => setIsAssignOpen(false)}
                 disabled={busy}
               >
                 {t("Hủy bỏ")}</button>
               <button
                 type="submit"
-                className="coach-action-btn coach-action-btn--primary"
+                className="btn-primary coach-action-btn"
                 disabled={busy || !selectedMember || !assignCoachId}
               >
                 {busy ? t('Đang phân công…') : t('Xác nhận phân công')}
@@ -706,14 +706,14 @@ export function ManagerCoachAssignmentsPage() {
             <div className="coach-modal-actions">
               <button
                 type="button"
-                className="coach-action-btn"
+                className="btn-secondary coach-action-btn"
                 onClick={() => setReassignStudent(null)}
                 disabled={busy}
               >
                 {t("Hủy")}</button>
               <button
                 type="submit"
-                className="coach-action-btn coach-action-btn--primary"
+                className="btn-primary coach-action-btn"
                 disabled={busy || !targetCoachId}
               >
                 {busy ? t('Đang điều chuyển…') : t('Xác nhận điều chuyển')}
@@ -785,7 +785,7 @@ export function ManagerCoachAssignmentsPage() {
             <div className="coach-modal-actions" style={{ marginTop: '0.5rem' }}>
               <button
                 type="button"
-                className="coach-action-btn coach-action-btn--primary"
+                className="btn-secondary coach-action-btn"
                 onClick={() => setSelectedStudentDetail(null)}
               >
                 {t("Đóng")}</button>

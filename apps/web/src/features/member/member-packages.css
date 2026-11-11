@@ -113,10 +113,7 @@
   }
 }
 
-.member-packages .package-term-tabs { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 18px; border: 1px solid var(--portal-border); border-radius: 999px; background: var(--portal-surface); }
-.member-packages .package-term-tabs button { min-height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: 600 13px/1 var(--font-sans); cursor: pointer; }
-.member-packages .package-term-tabs button.is-active { background: var(--portal-salmon); color: var(--portal-ink); }
-.member-packages .package-term-tabs button:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+.member-packages .package-term-tabs { margin-bottom: 18px; }
 
 /* Khối trạng thái phía trên danh mục: gọn để danh mục gói không bị đẩy xuống */
 .member-packages .package-current { padding: 16px 20px; }

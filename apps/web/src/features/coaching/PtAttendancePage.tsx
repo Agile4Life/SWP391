@@ -99,7 +99,7 @@ export function PtAttendancePage() {
         <small>{t('Tối đa 62 ngày mỗi lần xem.', 'Up to 62 days at a time.')}</small>
       </div>
       {invalidRange && <div className="portal-card" role="alert">{t('Ngày bắt đầu phải trước ngày kết thúc.', 'The start date must be before the end date.')}</div>}
-      <div role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '16px 0' }}>
+      <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ marginTop: 16 }}>
         {FILTERS.map((value) => (
           <button key={value} type="button" role="tab" aria-selected={filter === value}
             className={`portal-tab ${filter === value ? 'active' : ''}`} onClick={() => setFilter(value)}>

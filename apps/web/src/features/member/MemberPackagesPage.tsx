@@ -986,7 +986,7 @@ export function MemberPackagesPage() {
       ) : (
         <>
           {purchasablePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && purchasablePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
-            <div className="package-term-tabs" role="group" aria-label={t("Thời hạn gói tập", "Membership duration")}>
+            <div className="portal-switch package-term-tabs" role="group" aria-label={t("Thời hạn gói tập", "Membership duration")}>
               <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>{t("Gói 1 tháng", "1-month plans")}</button>
               <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>{t("Đồng hành dài hạn", "Long-term plans")}</button>
             </div>

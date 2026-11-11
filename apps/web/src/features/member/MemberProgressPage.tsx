@@ -53,9 +53,9 @@ export function MemberProgressPage() {
  }, []);
  return <div data-i18n-managed className="portal-container member-progress">
    <PageHeader title={memberText("Tiến độ thể lực")} />
-   <div className="workout-tabs" role="group" aria-label={memberText("Nội dung tiến độ")}>
-     <button type="button" className={tab === 'progress' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'progress'} onClick={() => setTab('progress')}>{memberText("Tiến độ & Giáo án")}</button>
-     <button type="button" className={tab === 'history' ? 'btn-primary' : 'btn-secondary'} aria-pressed={tab === 'history'} onClick={() => setTab('history')}>{memberText("Lịch sử tập luyện")}</button>
+   <div className="portal-tabs workout-tabs" role="tablist" aria-label={memberText("Nội dung tiến độ")}>
+     <button type="button" role="tab" className={`portal-tab${tab === 'progress' ? ' active' : ''}`} aria-selected={tab === 'progress'} onClick={() => setTab('progress')}>{memberText("Tiến độ & Giáo án")}</button>
+     <button type="button" role="tab" className={`portal-tab${tab === 'history' ? ' active' : ''}`} aria-selected={tab === 'history'} onClick={() => setTab('history')}>{memberText("Lịch sử tập luyện")}</button>
    </div>
    <div hidden={tab !== 'progress'}><DailyProgress key={date} today={date} /></div>
    {tab === 'history' && <WorkoutHistory />}
