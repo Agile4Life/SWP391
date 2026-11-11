@@ -65,10 +65,10 @@ test.describe('HLV: điểm danh buổi học', () => {
   test('lịch sử điểm danh ghi nhận buổi vừa lưu; tab đánh giá học viên mở được', async ({ page }) => {
     await page.goto('/staff/attendance');
     await settled(page);
-    await page.getByRole('button', { name: /Lịch sử điểm danh/ }).click();
+    await page.getByRole('tab', { name: /Lịch sử điểm danh/ }).click();
     // CẦN XÁC MINH: sau khi lưu điểm danh, bộ đếm "Lịch sử điểm danh (n)" vẫn là 0 -> có thể là lỗi hiển thị lịch sử.
     await expect(page.locator('main')).toContainText('Lịch sử các buổi đã điểm danh');
-    await page.getByRole('button', { name: 'Đánh giá học viên' }).click();
+    await page.getByRole('tab', { name: 'Đánh giá học viên' }).click();
     await expect(page.locator('main')).toBeVisible();
   });
 });
