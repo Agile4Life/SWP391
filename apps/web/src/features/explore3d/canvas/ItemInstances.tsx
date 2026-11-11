@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import type { ItemKind, LevelCode, SceneDoc } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
+import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
 import { ItemGlbLoader } from './ItemGlbLoader';
 import {
   computeItemInstanceMatrix,
@@ -34,11 +35,6 @@ const DEDICATED_SURFACE_KINDS = new Set<ItemKind>([
   'badminton-court',
   'tennis-court',
   'swim-lane',
-]);
-
-const SHADOW_LANDMARK_KINDS = new Set<ItemKind>([
-  'boxing-ring',
-  'planter-tree',
 ]);
 
 interface KindInstancedBatchProps {
@@ -80,6 +76,9 @@ function KindInstancedBatch({
   // geometryRevision changes when a GLB model replaces the procedural geometry.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const geometry = useMemo(() => getItemGeometry(kind, detail), [kind, detail, geometryRevision]);
+
+  // Photo-scanned GLB models bring their own PBR materials (one per geometry group).
+  const ownMaterials = geometry.userData.itemMaterials as THREE.Material[] | undefined;
 
   const hasVisibleItems = useMemo(() => {
     for (let i = 0; i < entries.length; i++) {
@@ -176,9 +175,10 @@ function KindInstancedBatch({
     <instancedMesh
       ref={meshRef}
       name={`instanced-items-${kind}`}
-      args={[geometry, material, entries.length]}
+      key={ownMaterials ? 'textured' : 'flat'}
+      args={[geometry, ownMaterials ?? material, entries.length]}
       visible={hasVisibleItems}
-      castShadow={castShadow}
+      castShadow={castShadow || Boolean(ownMaterials)}
       receiveShadow={receiveShadow}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -207,20 +207,22 @@ export function ItemInstances({
     getItemGeometryRevision,
   );
 
-  const useClearcoat = tier !== 'low';
+  // One instanced material for every item; each part's roughness/metalness comes
+  // from the `surf` vertex attribute (chrome, powder coat, rubber, vinyl, glass).
   const sharedMaterial = useMemo(
     () =>
-      new THREE.MeshPhysicalMaterial({
-        name: 'sol-instanced-items-vertex-colored',
-        color: '#ffffff',
-        vertexColors: true,
-        roughness: 0.4,
-        metalness: 0.36,
-        // Lacquered-paint sheen on powder-coated frames and padded surfaces.
-        clearcoat: useClearcoat ? 0.35 : 0,
-        clearcoatRoughness: 0.3,
-      }),
-    [useClearcoat],
+      applySurfaceDetail(
+        new THREE.MeshStandardMaterial({
+          name: 'sol-instanced-items-vertex-colored',
+          color: '#ffffff',
+          vertexColors: true,
+          roughness: 0.5,
+          metalness: 0,
+          envMapIntensity: 1.15,
+        }),
+        SURFACE_DETAIL_PRESETS.equipment,
+      ),
+    [],
   );
 
   useEffect(() => {
@@ -248,7 +250,7 @@ export function ItemInstances({
             entries={entries}
             detail={detail}
             material={sharedMaterial}
-            castShadow={tier === 'high' && SHADOW_LANDMARK_KINDS.has(kind)}
+            castShadow={tier !== 'low'}
             receiveShadow={receiveShadow}
             levelMode={levelMode}
             focusLevel={focusLevel}

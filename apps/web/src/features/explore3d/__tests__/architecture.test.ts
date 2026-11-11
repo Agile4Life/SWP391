@@ -275,7 +275,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(registry.walls.glass).toBeInstanceOf(THREE.MeshStandardMaterial);
       expect(registry.walls.glass).not.toBeInstanceOf(THREE.MeshPhysicalMaterial);
       expect(registry.walls.glass.transparent).toBe(true);
-      expect(registry.walls.glass.opacity).toBeCloseTo(0.28, 3);
+      expect(registry.walls.glass.opacity).toBeCloseTo(0.34, 3);
       expect(registry.walls.glass.depthWrite).toBe(false);
 
       registry.applyTheme('light');
@@ -297,18 +297,18 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
 
     it('matches Section 5.2 lighting budget and plaza environment geometry', () => {
       const highLight = getLightingBudgetConfig('dark', 'high');
-      expect(highLight.ambient.intensity).toBeCloseTo(0.14, 3);
-      expect(highLight.hemisphere.intensity).toBeCloseTo(0.42, 3);
-      expect(highLight.keyLight.position).toEqual([-26, 30, 40]);
-      expect(highLight.keyLight.intensity).toBeCloseTo(3.6, 3);
+      expect(highLight.ambient.intensity).toBeCloseTo(0.06, 3);
+      expect(highLight.hemisphere.intensity).toBeCloseTo(0.3, 3);
+      expect(highLight.keyLight.position).toEqual([-26, 11, 40]);
+      expect(highLight.keyLight.intensity).toBeCloseTo(3.4, 3);
       expect(highLight.keyLight.castShadow).toBe(true);
       expect(highLight.keyLight.shadowMapSize).toEqual([4096, 4096]);
       expect(highLight.keyLight.shadowBias).toBeCloseTo(-0.00012, 6);
       expect(highLight.keyLight.shadowNormalBias).toBeCloseTo(0.02, 4);
       expect(highLight.fillLight.position).toEqual([34, 18, -10]);
-      expect(highLight.fillLight.intensity).toBeCloseTo(0.42, 3);
+      expect(highLight.fillLight.intensity).toBeCloseTo(0.3, 3);
       expect(highLight.fillLight.castShadow).toBe(false);
-      expect(highLight.rimLight.intensity).toBeCloseTo(0.55, 3);
+      expect(highLight.rimLight.intensity).toBeCloseTo(0.4, 3);
 
       const lowLight = getLightingBudgetConfig('light', 'low');
       expect(lowLight.keyLight.castShadow).toBe(false);

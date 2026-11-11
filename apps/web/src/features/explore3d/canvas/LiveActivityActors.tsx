@@ -13,6 +13,7 @@ import {
   type EvaluatedPartTransform,
 } from '../renderers/actors/liveActorsConfig';
 import {
+  PROCEDURAL_BARBELL_PART_NAMES,
   PROCEDURAL_BODY_PART_NAMES,
   PROCEDURAL_HAND_PROP_NAMES,
   useRiggedActorIds,
@@ -51,7 +52,8 @@ function applyPartsToInstancedMesh(
     if (
       (sx === 0 && sy === 0 && sz === 0) || (hiddenActorIds.has(part.actorId) &&
         (PROCEDURAL_BODY_PART_NAMES.has(part.partName) ||
-          PROCEDURAL_HAND_PROP_NAMES.has(part.partName)))
+          PROCEDURAL_HAND_PROP_NAMES.has(part.partName) ||
+          PROCEDURAL_BARBELL_PART_NAMES.has(part.partName)))
     ) {
       mesh.setMatrixAt(i, HIDDEN_MATRIX);
     } else {

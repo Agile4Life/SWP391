@@ -209,57 +209,57 @@ export class MaterialRegistry {
       'rubber-dark': new THREE.MeshStandardMaterial({
         name: 'floor-rubber-dark',
         color: p.floors['rubber-dark'],
-        roughness: 0.72,
-        metalness: 0.1,
+        roughness: 0.86,
+        metalness: 0.0,
         envMapIntensity: 1.15,
       }),
       hardwood: new THREE.MeshStandardMaterial({
         name: 'floor-hardwood',
         color: p.floors.hardwood,
-        roughness: 0.44,
-        metalness: 0.14,
+        roughness: 0.38,
+        metalness: 0.0,
         envMapIntensity: 1.2,
       }),
       turf: new THREE.MeshStandardMaterial({
         name: 'floor-turf',
         color: p.floors.turf,
-        roughness: 0.78,
-        metalness: 0.06,
+        roughness: 0.95,
+        metalness: 0.0,
         envMapIntensity: 1.1,
       }),
       'tile-stone': new THREE.MeshStandardMaterial({
         name: 'floor-tile-stone',
         color: p.floors['tile-stone'],
-        roughness: 0.38,
-        metalness: 0.18,
+        roughness: 0.3,
+        metalness: 0.0,
         envMapIntensity: 1.25,
       }),
       water: new THREE.MeshStandardMaterial({
         name: 'floor-water',
         color: p.floors.water,
-        roughness: 0.14,
-        metalness: 0.22,
+        roughness: 0.06,
+        metalness: 0.0,
         envMapIntensity: 1.35,
       }),
       'acrylic-court': new THREE.MeshStandardMaterial({
         name: 'floor-acrylic-court',
         color: p.floors['acrylic-court'],
-        roughness: 0.5,
-        metalness: 0.1,
+        roughness: 0.7,
+        metalness: 0.0,
         envMapIntensity: 1.15,
       }),
       'concrete-polished': new THREE.MeshStandardMaterial({
         name: 'floor-concrete-polished',
         color: p.floors['concrete-polished'],
-        roughness: 0.36,
-        metalness: 0.2,
+        roughness: 0.32,
+        metalness: 0.0,
         envMapIntensity: 1.25,
       }),
       tatami: new THREE.MeshStandardMaterial({
         name: 'floor-tatami',
         color: p.floors.tatami,
-        roughness: 0.66,
-        metalness: 0.08,
+        roughness: 0.82,
+        metalness: 0.0,
         envMapIntensity: 1.12,
       }),
     };
@@ -268,15 +268,15 @@ export class MaterialRegistry {
     const wallConcrete = new THREE.MeshStandardMaterial({
       name: 'wall-concrete',
       color: p.walls.concrete,
-      roughness: 0.58,
-      metalness: 0.12,
+      roughness: 0.78,
+      metalness: 0.0,
       envMapIntensity: 1.15,
     });
     const wallExteriorConcrete = new THREE.MeshStandardMaterial({
       name: 'wall-exterior-concrete',
       color: p.walls.exteriorConcrete,
-      roughness: 0.62,
-      metalness: 0.14,
+      roughness: 0.82,
+      metalness: 0.0,
       envMapIntensity: 1.15,
     });
     const wallCutawayCap = new THREE.MeshBasicMaterial({
@@ -290,11 +290,11 @@ export class MaterialRegistry {
       glass: new THREE.MeshStandardMaterial({
         name: 'wall-glass',
         color: p.walls.glass,
-        roughness: 0.1,
-        metalness: 0.18,
-        envMapIntensity: 1.4,
+        roughness: 0.03,
+        metalness: 0.72,
+        envMapIntensity: 1.9,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.34,
         depthWrite: false,
         side: THREE.DoubleSide,
       }),
@@ -303,15 +303,15 @@ export class MaterialRegistry {
         color: p.walls['accent-salmon'],
         emissive: p.walls['accent-salmon'],
         emissiveIntensity: 0.08,
-        roughness: 0.38,
-        metalness: 0.22,
+        roughness: 0.5,
+        metalness: 0.0,
         envMapIntensity: 1.25,
       }),
       'wood-slat': new THREE.MeshStandardMaterial({
         name: 'wall-wood-slat',
         color: p.walls['wood-slat'],
-        roughness: 0.48,
-        metalness: 0.12,
+        roughness: 0.58,
+        metalness: 0.0,
         envMapIntensity: 1.2,
       }),
       exteriorConcrete: wallExteriorConcrete,
@@ -323,8 +323,8 @@ export class MaterialRegistry {
     this.slabBase = new THREE.MeshStandardMaterial({
       name: 'slab-base',
       color: p.slab.base,
-      roughness: 0.64,
-      metalness: 0.12,
+      roughness: 0.8,
+      metalness: 0.0,
       envMapIntensity: 1.15,
     });
 
@@ -351,8 +351,8 @@ export class MaterialRegistry {
     this.plazaGround = new THREE.MeshStandardMaterial({
       name: 'plaza-ground',
       color: p.slab.plaza,
-      roughness: 0.76,
-      metalness: 0.08,
+      roughness: 0.9,
+      metalness: 0.0,
       envMapIntensity: 1.1,
     });
 
@@ -366,8 +366,8 @@ export class MaterialRegistry {
     this.plazaWalkway = new THREE.MeshStandardMaterial({
       name: 'plaza-walkway',
       color: p.slab.walkway,
-      roughness: 0.48,
-      metalness: 0.18,
+      roughness: 0.7,
+      metalness: 0.0,
       envMapIntensity: 1.2,
     });
 
@@ -375,8 +375,8 @@ export class MaterialRegistry {
       name: 'arch-vertex-colored',
       color: '#ffffff',
       vertexColors: true,
-      roughness: 0.34,
-      metalness: 0.28,
+      roughness: 0.62,
+      metalness: 0.0,
       envMapIntensity: 1.25,
     });
 
@@ -385,8 +385,8 @@ export class MaterialRegistry {
         name: 'item-base-vertex-colored',
         color: '#ffffff',
         vertexColors: true,
-        roughness: 0.34,
-        metalness: 0.28,
+        roughness: 0.5,
+        metalness: 0.04,
         envMapIntensity: 1.25,
       }),
       selected: new THREE.MeshStandardMaterial({
@@ -410,15 +410,15 @@ export class MaterialRegistry {
       equipmentFrame: new THREE.MeshStandardMaterial({
         name: 'item-equipment-frame',
         color: p.items.equipmentFrame,
-        roughness: 0.34,
-        metalness: 0.62,
+        roughness: 0.38,
+        metalness: 0.85,
         envMapIntensity: 1.25,
       }),
       equipmentVipFrame: new THREE.MeshStandardMaterial({
         name: 'item-equipment-vip-frame',
         color: p.items.equipmentVipFrame,
-        roughness: 0.24,
-        metalness: 0.78,
+        roughness: 0.26,
+        metalness: 0.92,
         envMapIntensity: 1.35,
       }),
       salmonAccent: new THREE.MeshStandardMaterial({
@@ -433,15 +433,15 @@ export class MaterialRegistry {
       upholstery: new THREE.MeshStandardMaterial({
         name: 'item-upholstery',
         color: p.items.upholstery,
-        roughness: 0.58,
-        metalness: 0.12,
+        roughness: 0.74,
+        metalness: 0.0,
         envMapIntensity: 1.15,
       }),
       chrome: new THREE.MeshStandardMaterial({
         name: 'item-chrome',
         color: p.items.chrome,
-        roughness: 0.14,
-        metalness: 0.92,
+        roughness: 0.1,
+        metalness: 1.0,
         envMapIntensity: 1.45,
       }),
       statusMaintenance: new THREE.MeshStandardMaterial({
@@ -472,18 +472,21 @@ export class MaterialRegistry {
   /** Saltline-style world-space macro variation so flat colours catch the light unevenly. */
   private applySurfaceDetails(): void {
     const f = this.floors;
-    for (const key of ['rubber-dark', 'turf', 'tile-stone', 'acrylic-court', 'concrete-polished', 'tatami'] as const) {
-      applySurfaceDetail(f[key], SD.floor);
-    }
-    applySurfaceDetail(f.hardwood, SD.wood);
+    applySurfaceDetail(f['rubber-dark'], SD.rubber);
+    applySurfaceDetail(f['acrylic-court'], SD.court);
+    applySurfaceDetail(f.tatami, SD.tatami);
+    applySurfaceDetail(f['tile-stone'], SD.tile);
+    applySurfaceDetail(f['concrete-polished'], SD.polished);
+    applySurfaceDetail(f.turf, SD.turf);
+    applySurfaceDetail(f.hardwood, SD.parquet);
     applySurfaceDetail(this.walls.concrete, SD.wall);
     applySurfaceDetail(this.walls.exteriorConcrete, SD.wall);
     applySurfaceDetail(this.walls['wood-slat'], SD.wood);
     applySurfaceDetail(this.walls['accent-salmon'], SD.item);
-    applySurfaceDetail(this.slabBase, SD.wall);
+    applySurfaceDetail(this.slabBase, SD.plaster);
     applySurfaceDetail(this.plazaGround, SD.ground);
-    applySurfaceDetail(this.plazaWalkway, SD.floor);
-    applySurfaceDetail(this.vertexColored, SD.wall);
+    applySurfaceDetail(this.plazaWalkway, SD.walkway);
+    applySurfaceDetail(this.vertexColored, SD.campus);
     applySurfaceDetail(this.items.base, SD.item);
     applySurfaceDetail(this.items.upholstery, SD.item);
     applySurfaceDetail(this.items.equipmentFrame, SD.metal);

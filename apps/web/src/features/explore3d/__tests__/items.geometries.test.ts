@@ -70,8 +70,7 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
 
         const tris = getGeometryTriangleCount(geom);
         expect(tris).toBeGreaterThan(0);
-        expect(tris).toBeLessThanOrEqual(1500);
-        expect(tris).toBeLessThanOrEqual(900);
+        expect(tris).toBeLessThanOrEqual(ITEM_HIGH_DETAIL_TRIANGLE_BUDGET);
 
         // Verify centered on X and Z around (0, 0) with base resting at y = 0
         geom.computeBoundingBox();

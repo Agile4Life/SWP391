@@ -29,6 +29,9 @@ export interface PostFxConfig {
     /** Energy-conserving mix factor: col = mix(col, bloom, strength). */
     strength: number;
     upMix: number;
+    /** Anamorphic streak strength (0 = off) and HDR threshold. */
+    streak: number;
+    streakThreshold: number;
   };
   grade: {
     exposure: number;
@@ -70,17 +73,20 @@ export function getPostFxConfig(tier: QualityTier, theme: ExploreTheme): PostFxC
     bloom: {
       enabled: !low,
       levels: 6,
-      strength: isDark ? 0.075 : 0.05,
+      strength: isDark ? 0.085 : 0.055,
       upMix: 0.62,
+      streak: low ? 0 : isDark ? 0.05 : 0.02,
+      streakThreshold: 2.2,
     },
     grade: {
-      exposure: isDark ? 1.12 : 1.04,
+      exposure: isDark ? 1.35 : 0.8,
       agxMix: 0.25,
-      splitTone: isDark ? 0.75 : 0.45,
-      curve: isDark ? 0.2 : 0.14,
-      blackLift: isDark ? 1 : 0.6,
-      saturation: isDark ? 1.08 : 1.04,
-      vignette: isDark ? 0.22 : 0.1,
+      splitTone: isDark ? 0.7 : 0.5,
+      curve: isDark ? 0.24 : 0.2,
+      blackLift: isDark ? 1 : 0.8,
+      // Natural, slightly restrained colour: over-saturation is what reads as "cartoon".
+      saturation: isDark ? 0.96 : 0.94,
+      vignette: isDark ? 0.3 : 0.2,
       chromaticAberration: high ? 0.0011 : 0,
     },
     final: {

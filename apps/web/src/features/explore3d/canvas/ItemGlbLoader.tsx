@@ -1,7 +1,10 @@
 import { useGLTF } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { Component, Suspense, useEffect, type ReactNode } from 'react';
-import { buildItemGeometryFromObject } from '../renderers/items/glbItemGeometry';
+import {
+  buildItemGeometryFromObject,
+  buildTexturedItemGeometryFromObject,
+} from '../renderers/items/glbItemGeometry';
 import { ITEM_GLB_MANIFEST, type ItemGlbEntry } from '../renderers/items/glbManifest';
 import {
   DEFAULT_ITEM_DIMENSIONS,
@@ -41,10 +44,14 @@ function ItemGlbKind({ kind, entry }: { kind: ItemKind; entry: ItemGlbEntry }) {
   useEffect(() => {
     let geometry;
     try {
-      geometry = buildItemGeometryFromObject(gltf.scene, DEFAULT_ITEM_DIMENSIONS[kind], {
-        rotationY: entry.rotationY,
-        materialColors: entry.materialColors,
-      });
+      geometry = entry.textured
+        ? buildTexturedItemGeometryFromObject(gltf.scene, DEFAULT_ITEM_DIMENSIONS[kind], {
+            rotationY: entry.rotationY,
+          })
+        : buildItemGeometryFromObject(gltf.scene, DEFAULT_ITEM_DIMENSIONS[kind], {
+            rotationY: entry.rotationY,
+            materialColors: entry.materialColors,
+          });
     } catch (error) {
       console.warn(`[explore3d] Skipping GLB for "${kind}".`, error);
       return;
@@ -52,10 +59,12 @@ function ItemGlbKind({ kind, entry }: { kind: ItemKind; entry: ItemGlbEntry }) {
     registerItemGeometryOverride(kind, geometry);
     invalidate();
     return () => {
+      const owned = geometry.userData.itemMaterials as { dispose(): void }[] | undefined;
+      owned?.forEach(material => material.dispose());
       unregisterItemGeometryOverride(kind, geometry);
       invalidate();
     };
-  }, [gltf, kind, entry.rotationY, entry.materialColors, invalidate]);
+  }, [gltf, kind, entry.rotationY, entry.materialColors, entry.textured, invalidate]);
 
   return null;
 }

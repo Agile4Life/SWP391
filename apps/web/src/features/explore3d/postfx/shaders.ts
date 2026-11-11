@@ -255,6 +255,14 @@ uniform float uLift;
 uniform float uSat;
 uniform float uVignette;
 uniform float uCA;
+uniform sampler2D tStreak;
+uniform float uStreak;
+uniform mat4 uInvViewProj;
+uniform vec3 uCamPos;
+uniform vec3 uSunDir;
+uniform vec3 uFogColor;
+uniform vec3 uFogSun;
+uniform vec3 uFogParams; // density, height falloff, max
 ${COMMON}
 
 vec3 RRTAndODTFit(vec3 v) {
@@ -320,33 +328,45 @@ void main() {
   float d = texture2D(tDepth, vUv).r;
   vec3 bloom = uBloom > 0.0 ? texture2D(tBloom, vUv).rgb : raw;
 
-  vec3 outc;
-  if (d >= 0.99999) {
-    // Keep the backdrop identical to the portal canvas colour (no tone curve).
-    outc = toSRGB(mix(raw, bloom, uBloom));
-  } else {
-    vec3 col = raw;
-    if (uCA > 0.0) {
-      vec2 off = c * r2 * uCA * 4.0;
-      col.r = texture2D(tScene, vUv + off).r;
-      col.b = texture2D(tScene, vUv - off).b;
-    }
-    col = mix(col, bloom, uBloom);
-    col *= uExposure;
-    vec3 tm = mix(toneACES(col), toneAgX(col), uAgxMix);
-
-    float l = slLuma(tm);
-    float k = smoothstep(0.03, 0.55, l);
-    vec3 shadowTint = mix(vec3(1.0), vec3(0.80, 1.01, 1.13), uSplit);
-    vec3 highTint = mix(vec3(1.0), vec3(1.07, 1.0, 0.90), uSplit);
-    tm *= mix(shadowTint, highTint, k);
-
-    outc = toSRGB(tm);
-    outc = mix(outc, outc * outc * (3.0 - 2.0 * outc), uCurve);
-    outc = outc * mix(1.0, 0.988, uLift) + vec3(0.006, 0.0085, 0.011) * uLift;
-    float ls = slLuma(outc);
-    outc = mix(vec3(ls), outc, uSat);
+  vec3 col = raw;
+  if (uCA > 0.0) {
+    vec2 off = c * r2 * uCA * 4.0;
+    col.r = texture2D(tScene, vUv + off).r;
+    col.b = texture2D(tScene, vUv - off).b;
   }
+
+  // Aerial perspective: exponential height haze, warmer when looking toward the sun.
+  // The sky dome (d == 1) already carries its own horizon haze.
+  if (d < 0.99999 && uFogParams.x > 0.0) {
+    vec4 wp = uInvViewProj * vec4(vUv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
+    vec3 rd = wp.xyz / wp.w - uCamPos;
+    float t = length(rd);
+    rd /= max(t, 1e-4);
+    float b = uFogParams.y;
+    float ry = abs(rd.y) < 1e-3 ? 1e-3 : rd.y;
+    float od = uFogParams.x * exp(-b * max(uCamPos.y, 0.0)) * (1.0 - exp(-b * ry * t)) / (b * ry);
+    float fa = min(1.0 - exp(-max(od, 0.0)), uFogParams.z);
+    vec3 fc = mix(uFogColor, uFogSun, pow(max(dot(rd, uSunDir), 0.0), 3.0));
+    col = mix(col, fc, fa);
+  }
+
+  col = mix(col, bloom, uBloom);
+  // Anamorphic streak: cool horizontal flare off the brightest sources.
+  if (uStreak > 0.0) col += texture2D(tStreak, vUv).rgb * vec3(0.45, 0.62, 1.0) * uStreak;
+  col *= uExposure;
+  vec3 tm = mix(toneACES(col), toneAgX(col), uAgxMix);
+
+  float l = slLuma(tm);
+  float k = smoothstep(0.03, 0.55, l);
+  vec3 shadowTint = mix(vec3(1.0), vec3(0.80, 1.01, 1.13), uSplit);
+  vec3 highTint = mix(vec3(1.0), vec3(1.07, 1.0, 0.90), uSplit);
+  tm *= mix(shadowTint, highTint, k);
+
+  vec3 outc = toSRGB(tm);
+  outc = mix(outc, outc * outc * (3.0 - 2.0 * outc), uCurve);
+  outc = outc * mix(1.0, 0.988, uLift) + vec3(0.006, 0.0085, 0.011) * uLift;
+  float ls = slLuma(outc);
+  outc = mix(vec3(ls), outc, uSat);
 
   float vig = smoothstep(0.28, 0.78, length(c));
   outc *= 1.0 - uVignette * vig * vig * (3.0 - 2.0 * vig);
@@ -409,5 +429,29 @@ void main() {
   col += (slHash(px + 0.5) + slHash(px.yx + 3.1) - 1.0) / 255.0;
 
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+`;
+
+/** Horizontal 15-tap Gaussian for the anamorphic streak; the first pass thresholds. */
+export const STREAK_FRAG = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tInput;
+uniform vec2 uStep;
+uniform float uThreshold;
+void main() {
+  vec3 acc = vec3(0.0);
+  float wsum = 0.0;
+  for (int i = -7; i <= 7; i++) {
+    float w = exp(-float(i * i) / 18.0);
+    vec3 s = texture2D(tInput, vUv + uStep * float(i)).rgb;
+    if (uThreshold > 0.0) {
+      float l = max(s.r, max(s.g, s.b));
+      s *= max(l - uThreshold, 0.0) / max(l, 1e-4);
+    }
+    acc += s * w;
+    wsum += w;
+  }
+  gl_FragColor = vec4(acc / wsum, 1.0);
 }
 `;

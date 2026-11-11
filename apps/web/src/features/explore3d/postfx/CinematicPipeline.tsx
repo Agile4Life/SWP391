@@ -4,6 +4,7 @@ import { useDocumentTheme } from '../renderers/materials';
 import { useExploreStore } from '../state/exploreStore';
 import { CinematicRenderer, hasHalfFloatTargets } from './cinematicRenderer';
 import { getPostFxConfig } from './postfxConfig';
+import { getAtmosphere, getSunDirection } from '../canvas/atmosphere';
 import * as THREE from 'three';
 
 /**
@@ -35,7 +36,19 @@ export function CinematicPipeline() {
   }, [gl, tier, invalidate]);
 
   useEffect(() => {
-    rendererRef.current?.applyConfig(getPostFxConfig(tier, theme));
+    const renderer = rendererRef.current;
+    if (renderer) {
+      const { haze } = getAtmosphere(theme);
+      renderer.applyConfig(getPostFxConfig(tier, theme));
+      renderer.setAtmosphere({
+        sunDir: getSunDirection(theme),
+        fogColor: haze.color,
+        fogSun: haze.sunColor,
+        density: haze.density,
+        falloff: haze.falloff,
+        max: haze.max,
+      });
+    }
     invalidate();
   }, [gl, tier, theme, invalidate]);
 

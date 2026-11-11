@@ -30,6 +30,7 @@ describe('Cinematic post-processing presets', () => {
       expect(cfg.bloom.strength).toBeGreaterThan(0);
       expect(cfg.bloom.strength).toBeLessThanOrEqual(0.1);
       expect(cfg.grade.vignette).toBeLessThanOrEqual(0.3);
+      expect(cfg.grade.saturation).toBeLessThanOrEqual(1);
       expect(cfg.grade.agxMix).toBeCloseTo(0.25, 3);
     }
   });
@@ -42,8 +43,8 @@ describe('Cinematic post-processing presets', () => {
     expect(getInternalScale(10000, 10000, 1_000_000)).toBe(0.5);
   });
 
-  it('ships shaders that keep the backdrop out of the tone curve and AO', () => {
-    expect(GRADE_FRAG).toContain('d >= 0.99999');
+  it('ships shaders that keep the sky out of the haze and AO', () => {
+    expect(GRADE_FRAG).toContain('d < 0.99999');
     expect(SSAO_FRAG).toContain('d0 >= 0.99999');
   });
 });

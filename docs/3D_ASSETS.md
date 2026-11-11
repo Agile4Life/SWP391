@@ -32,6 +32,7 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 - Màu lấy từ thuộc tính `COLOR_0` hoặc màu cơ bản của material. **Texture không được mang theo**, nên dùng model màu phẳng hoặc vertex color (phong cách low-poly).
 - Vì vẫn đi qua instancing, màu trạng thái (hoạt động, bảo trì, hỏng), hover, chọn và picking hoạt động như cũ.
 - `materialColors` trong manifest đổi màu theo tên material (ví dụ `carpet`, `wood`, `metal` của Kenney) để model khớp bảng màu charcoal–salmon.
+- **Model có texture (`textured: true` trong manifest)**: giữ UV và vật liệu PBR gốc của model scan (màu, normal, độ nhám), mỗi mesh thành một group của geometry; dùng cho prop chân thực (Poly Haven). Giới hạn `GLB_TEXTURED_TRIANGLE_BUDGET` = 16000 tam giác. Tối ưu bằng gltf-transform: `simplify`, texture WebP 512–1024.
 - Giới hạn `GLB_ITEM_TRIANGLE_BUDGET` = 8000 tam giác mỗi model; vượt ngưỡng sẽ bị bỏ qua kèm cảnh báo trong console.
 - Tier chất lượng `low` không tải GLB.
 
@@ -39,11 +40,10 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 
 | Thiết bị (`ItemKind`) | File | Tác giả | Nguồn | License |
 | --- | --- | --- | --- | --- |
-| `lounge-sofa` | `lounge-sofa.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`loungeSofaLong`) | CC0 |
-| `juice-bar` | `juice-bar.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`kitchenBar`) | CC0 |
-| `planter-tree` | `planter-tree.glb` | Kenney | [Furniture Kit](https://kenney.nl/assets/furniture-kit) (`pottedPlant`) | CC0 |
+| `lounge-sofa` | `polyhaven/sofa_03.glb` (có texture) | Poly Haven | [Sofa 03](https://polyhaven.com/a/sofa_03) | CC0 |
+| `planter-tree` | `polyhaven/potted_plant_02.glb` (có texture) | Poly Haven | [Potted Plant 02](https://polyhaven.com/a/potted_plant_02) | CC0 |
 
-Bản license gốc của gói Kenney nằm ở `apps/web/public/models/explore3d/LICENSE-kenney-furniture-kit.txt`.
+Các model nội thất Kenney đã được thay bằng model scan Poly Haven và bản dựng bằng code, nên file license của gói Kenney Furniture Kit không còn trong repo.
 
 ## Nhân vật có skeleton
 
@@ -76,3 +76,29 @@ Dụng cụ cầm tay: khai báo `handProp` trong `RIGGED_ACTIVITY_CLIPS` (vợt
 | Nhân vật | File | Tác giả | Nguồn | License |
 | --- | --- | --- | --- | --- |
 | `character-male-a`, `character-female-a`, `character-male-c`, `character-female-c` | `characters/*.glb` | Kenney | [Mini Characters](https://kenney.nl/assets/mini-characters) | CC0 |
+
+## Texture bề mặt PBR (Poly Haven, CC0)
+
+Sàn, tường, mặt đường và mặt đất dùng bộ texture scan thật, chiếu triplanar theo toạ độ thế giới nên không cần UV (`renderers/surfaceTextures.ts`, `renderers/surfaceDetail.ts`). File ở `apps/web/public/textures/explore3d/<tên>_{diff,nor,arm}.webp` (1024 px, WebP). Màu vật liệu vẫn lấy từ bảng màu của dự án; texture chỉ thêm chi tiết, normal, AO và độ nhám. Khi chưa tải xong, hoặc ở tier `low`, vật liệu dùng chi tiết procedural.
+
+| Bộ texture | Dùng cho | Nguồn | License |
+|---|---|---|---|
+| `asphalt_02` | đường, bãi xe, sân | [polyhaven.com/a/asphalt_02](https://polyhaven.com/a/asphalt_02) | CC0 |
+| `smooth_concrete_floor` | sàn bê tông mài, lối đi | [polyhaven.com/a/smooth_concrete_floor](https://polyhaven.com/a/smooth_concrete_floor) | CC0 |
+| `concrete_wall_008` | tường bê tông | [polyhaven.com/a/concrete_wall_008](https://polyhaven.com/a/concrete_wall_008) | CC0 |
+| `grey_plaster` | sàn tầng, trần | [polyhaven.com/a/grey_plaster](https://polyhaven.com/a/grey_plaster) | CC0 |
+| `laminate_floor_02` | sàn gỗ trong nhà | [polyhaven.com/a/laminate_floor_02](https://polyhaven.com/a/laminate_floor_02) | CC0 |
+| `wood_floor_deck` | lam gỗ, sàn gỗ ngoài trời | [polyhaven.com/a/wood_floor_deck](https://polyhaven.com/a/wood_floor_deck) | CC0 |
+| `rubber_tiles` | sàn cao su khu gym | [polyhaven.com/a/rubber_tiles](https://polyhaven.com/a/rubber_tiles) | CC0 |
+| `rubberized_track` | mặt sân | [polyhaven.com/a/rubberized_track](https://polyhaven.com/a/rubberized_track) | CC0 |
+| `leafy_grass` | cỏ, mặt đất xa | [polyhaven.com/a/leafy_grass](https://polyhaven.com/a/leafy_grass) | CC0 |
+| `tatami_mat` | sàn tatami | [polyhaven.com/a/tatami_mat](https://polyhaven.com/a/tatami_mat) | CC0 |
+| `floor_tiles_06` | gạch lát | [polyhaven.com/a/floor_tiles_06](https://polyhaven.com/a/floor_tiles_06) | CC0 |
+
+## Nhân vật Mixamo (chân thực)
+
+`apps/web/public/models/explore3d/characters/mixamo-beta.glb` là nhân vật Beta của Adobe Mixamo, gộp 4 động tác tải từ Mixamo (`hook`, `overhead-squat`, `push-up`, `bicycle-crunch`) vào một khung xương. Dùng theo điều khoản Mixamo (miễn phí bản quyền khi đưa vào dự án; không phân phối lại model như asset rời).
+
+Cách tạo lại: tải mỗi động tác ở dạng FBX (With Skin, 30 fps), nạp bằng `FBXLoader`, xuất một GLB bằng `GLTFExporter` với tất cả clip (đặt tên clip theo động tác), rồi `gltf-transform`: `weld`, `resample`, bỏ UV, `simplify` meshopt tỉ lệ 0,45 (khoảng 22.000 tam giác). Gán động tác cho hoạt động ở `MIXAMO_ACTIVITY_CLIPS` (`renderers/actors/riggedActors.ts`). Hoạt động chưa có clip Mixamo vẫn dùng nhân vật Kenney.
+
+Để thay nốt nhân vật Kenney, cần thêm các động tác Mixamo: Walking, Running (In Place), Treadmill/Jogging, Stationary Bike/Sitting, Idle, Talking, Tennis/Badminton swing, Yoga, Bench Press, Bicep Curl, Swimming. Chỉ cần tải "Without Skin" từ động tác thứ hai trở đi, vì cùng khung xương.

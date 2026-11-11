@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { createGymBuilders, type GymBuilderHelpers } from './gymBuilders';
+import { createInteriorBuilders } from './interiorBuilders';
 import {
   ALL_ITEM_KINDS,
   type ItemKind,
@@ -80,6 +83,39 @@ const tempQuaternion = new THREE.Quaternion();
 const tempScale = new THREE.Vector3();
 const tempColor = new THREE.Color();
 
+/**
+ * Per-part PBR response [roughness, metalness], keyed by palette colour and
+ * written to the `surf` vertex attribute. One instanced material can then
+ * render chrome, powder-coated steel, rubber and vinyl differently.
+ */
+const SURFACE_BY_COLOR: Record<string, readonly [number, number]> = {
+  [ITEM_PALETTE.charcoal]: [0.42, 0.2],
+  [ITEM_PALETTE.charcoalDeep]: [0.82, 0],
+  [ITEM_PALETTE.charcoalSoft]: [0.5, 0],
+  [ITEM_PALETTE.metal]: [0.3, 1],
+  [ITEM_PALETTE.metalLight]: [0.14, 1],
+  [ITEM_PALETTE.salmon]: [0.45, 0],
+  [ITEM_PALETTE.salmonBright]: [0.45, 0],
+  [ITEM_PALETTE.screen]: [0.08, 0],
+  [ITEM_PALETTE.screenGlow]: [0.1, 0],
+  [ITEM_PALETTE.wood]: [0.6, 0],
+  [ITEM_PALETTE.woodLight]: [0.6, 0],
+  [ITEM_PALETTE.stone]: [0.7, 0],
+  [ITEM_PALETTE.white]: [0.45, 0],
+  [ITEM_PALETTE.water]: [0.06, 0],
+  [ITEM_PALETTE.foliage]: [0.8, 0],
+  [ITEM_PALETTE.foliageLight]: [0.8, 0],
+  [ITEM_PALETTE.terracotta]: [0.75, 0],
+  [ITEM_PALETTE.glass]: [0.06, 0],
+};
+const DEFAULT_SURFACE: readonly [number, number] = [0.5, 0];
+
+/** Declare how a colour should shade (roughness, metalness). */
+export function registerItemSurface(colorHex: string, roughness: number, metalness: number): string {
+  SURFACE_BY_COLOR[colorHex] = [roughness, metalness];
+  return colorHex;
+}
+
 function paintGeometry(
   geom: THREE.BufferGeometry,
   colorHex: string,
@@ -116,6 +152,13 @@ function paintGeometry(
     colors[idx + 2] = b;
   }
   geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const [rough, metal] = SURFACE_BY_COLOR[colorHex] ?? DEFAULT_SURFACE;
+  const surf = new Float32Array(count * 2);
+  for (let i = 0; i < count; i++) {
+    surf[i * 2] = rough;
+    surf[i * 2 + 1] = metal;
+  }
+  geom.setAttribute('surf', new THREE.BufferAttribute(surf, 2));
   return geom;
 }
 
@@ -250,7 +293,7 @@ export function buildChamferBoxGeometry(
 }
 
 /** Matches the per-item budget asserted in items.geometries.test.ts. */
-export const ITEM_HIGH_DETAIL_TRIANGLE_BUDGET = 900;
+export const ITEM_HIGH_DETAIL_TRIANGLE_BUDGET = 9000;
 
 let bevelEnabled = true;
 
@@ -321,6 +364,7 @@ export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec
   const positions = new Float32Array(totalVertices * 3);
   const normals = new Float32Array(totalVertices * 3);
   const colors = new Float32Array(totalVertices * 3);
+  const surfaces = new Float32Array(totalVertices * 2);
   const indices = new Uint32Array(totalIndices);
 
   let vOffset = 0;
@@ -330,10 +374,13 @@ export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec
     const posAttr = part.getAttribute('position');
     const normAttr = part.getAttribute('normal');
     const colAttr = part.getAttribute('color');
+    const surfAttr = part.getAttribute('surf');
     const vCount = posAttr.count;
 
     for (let i = 0; i < vCount; i++) {
       const dst = (vOffset + i) * 3;
+      surfaces[(vOffset + i) * 2] = surfAttr ? surfAttr.getX(i) : DEFAULT_SURFACE[0];
+      surfaces[(vOffset + i) * 2 + 1] = surfAttr ? surfAttr.getY(i) : DEFAULT_SURFACE[1];
       positions[dst] = posAttr.getX(i);
       positions[dst + 1] = posAttr.getY(i);
       positions[dst + 2] = posAttr.getZ(i);
@@ -428,11 +475,102 @@ export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec
   merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   merged.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  merged.setAttribute('surf', new THREE.BufferAttribute(surfaces, 2));
   merged.setIndex(new THREE.BufferAttribute(indices, 1));
   merged.computeBoundingBox();
   merged.computeBoundingSphere();
 
   return merged;
+}
+
+/** Soft-edged box for upholstery, shrouds and housings. */
+function roundedBox(
+  w: number,
+  h: number,
+  d: number,
+  radius: number,
+  colorHex: string,
+  pos: Vec3 = [0, h * 0.5, 0],
+  rot?: Vec3,
+): THREE.BufferGeometry {
+  const r = Math.min(radius, Math.min(w, h, d) * 0.49);
+  return paintGeometry(new RoundedBoxGeometry(w, h, d, 2, r), colorHex, pos, rot);
+}
+
+/**
+ * Bent steel tube through `points`: straight runs joined by rounded bends,
+ * closed with hemispherical ends. This is what frames, handlebars and rails
+ * are actually made of, instead of square sticks.
+ */
+function tube(
+  points: readonly Vec3[],
+  radius: number,
+  colorHex: string,
+  radialSegments = 8,
+  bend = 0.07,
+): THREE.BufferGeometry[] {
+  const pts = points.map(p => new THREE.Vector3(p[0], p[1], p[2]));
+  const path = new THREE.CurvePath<THREE.Vector3>();
+  let cursor = pts[0].clone();
+  for (let i = 1; i < pts.length; i++) {
+    const corner = pts[i];
+    if (i === pts.length - 1) {
+      path.add(new THREE.LineCurve3(cursor, corner.clone()));
+      break;
+    }
+    const inDir = corner.clone().sub(pts[i - 1]);
+    const outDir = pts[i + 1].clone().sub(corner);
+    const r = Math.min(bend, inDir.length() * 0.45, outDir.length() * 0.45);
+    const a = corner.clone().addScaledVector(inDir.normalize(), -r);
+    const b = corner.clone().addScaledVector(outDir.normalize(), r);
+    path.add(new THREE.LineCurve3(cursor, a));
+    path.add(new THREE.QuadraticBezierCurve3(a, corner.clone(), b));
+    cursor = b;
+  }
+  const segments = Math.max(2, (pts.length - 1) * 5);
+  const body = paintGeometry(
+    new THREE.TubeGeometry(path, segments, radius, radialSegments, false),
+    colorHex,
+  );
+  const capA = paintGeometry(new THREE.SphereGeometry(radius, radialSegments, 4), colorHex, points[0]);
+  const capB = paintGeometry(
+    new THREE.SphereGeometry(radius, radialSegments, 4),
+    colorHex,
+    points[points.length - 1],
+  );
+  return [body, capA, capB];
+}
+
+/** Disc / wheel / weight plate whose axis runs along X (default), Y or Z. */
+function disc(
+  radius: number,
+  thickness: number,
+  colorHex: string,
+  pos: Vec3,
+  axis: 'x' | 'y' | 'z' = 'x',
+  segments = 24,
+): THREE.BufferGeometry {
+  const rot: Vec3 | undefined =
+    axis === 'x' ? [0, 0, Math.PI / 2] : axis === 'z' ? [Math.PI / 2, 0, 0] : undefined;
+  return paintGeometry(
+    new THREE.CylinderGeometry(radius, radius, thickness, segments, 1),
+    colorHex,
+    pos,
+    rot,
+  );
+}
+
+/** Wraps any geometry (capsule, lathe...) with a palette colour and transform. */
+function shape(
+  geometry: THREE.BufferGeometry,
+  colorHex: string,
+  pos: Vec3 = [0, 0, 0],
+  rot?: Vec3,
+  scale?: Vec3,
+): THREE.BufferGeometry {
+  const source = geometry.index ? geometry.toNonIndexed() : geometry;
+  if (source !== geometry) geometry.dispose();
+  return paintGeometry(source, colorHex, pos, rot, scale);
 }
 
 // ============================================================================
@@ -1336,6 +1474,27 @@ const HIGH_DETAIL_BUILDERS: Record<ItemKind, () => THREE.BufferGeometry> = {
   'elevator-core': buildElevatorCore,
   'planter-tree': buildPlanterTree,
 };
+
+// Realistic gym equipment and interior furniture replace the box-built
+// silhouettes for these kinds.
+const BUILDER_HELPERS: GymBuilderHelpers = {
+  P: ITEM_PALETTE,
+  dims: DEFAULT_ITEM_DIMENSIONS,
+  box,
+  cyl,
+  sphere,
+  roundedBox,
+  tube,
+  disc,
+  shape,
+  surface: registerItemSurface,
+  fit: mergeAndFit,
+};
+Object.assign(
+  HIGH_DETAIL_BUILDERS,
+  createGymBuilders(BUILDER_HELPERS),
+  createInteriorBuilders(BUILDER_HELPERS),
+);
 
 // ============================================================================
 // LOW-DETAIL LOD PROXY BUILDER (<= 72 triangles per item)

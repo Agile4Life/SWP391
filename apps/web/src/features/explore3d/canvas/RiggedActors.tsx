@@ -17,10 +17,12 @@ import {
   type LiveActorDefinition,
 } from '../renderers/actors/liveActorsConfig';
 import {
-  RIGGED_ACTIVITY_CLIPS,
+  MIXAMO_CHARACTER_MODEL,
+  MIXAMO_HAND_BONES,
   RIGGED_CHARACTER_HEIGHT,
   RIGGED_CHARACTER_MODELS,
   computeRiggedPlacement,
+  getRiggedClipSpec,
   getActorPhase,
   isRiggedActivity,
   pickRiggedModelIndex,
@@ -50,12 +52,50 @@ interface TweakedBone {
   clipPose: THREE.Quaternion;
 }
 
+interface HeldBarbell {
+  bar: THREE.Object3D;
+  left: THREE.Object3D;
+  right: THREE.Object3D;
+}
+
 interface RiggedInstance {
   def: LiveActorDefinition;
   spec: RiggedClipSpec;
   holder: THREE.Group;
   mixer: THREE.AnimationMixer;
   bones: TweakedBone[];
+  barbell?: HeldBarbell;
+  /** Materials cloned per actor (outfit tint), disposed with the instance. */
+  ownedMaterials: THREE.Material[];
+}
+
+const barStart = new THREE.Vector3();
+const barEnd = new THREE.Vector3();
+const barDir = new THREE.Vector3();
+const X_AXIS = new THREE.Vector3(1, 0, 0);
+const outfitHsl = { h: 0, s: 0, l: 0 };
+
+/** Olympic bar with bumper plates, built along +X and centred on the origin. */
+function buildHeldBarbell(): THREE.Group {
+  const group = new THREE.Group();
+  group.name = 'held-barbell';
+  const steel = new THREE.MeshStandardMaterial({ color: '#c9ccd0', roughness: 0.2, metalness: 1 });
+  const rubber = new THREE.MeshStandardMaterial({ color: '#111113', roughness: 0.88, metalness: 0 });
+  const add = (geometry: THREE.BufferGeometry, material: THREE.Material, x: number) => {
+    geometry.rotateZ(Math.PI / 2);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.x = x;
+    mesh.castShadow = true;
+    mesh.raycast = NOOP_RAYCAST;
+    group.add(mesh);
+  };
+  add(new THREE.CylinderGeometry(0.014, 0.014, 2.0, 10), steel, 0);
+  for (const s of [-1, 1]) {
+    add(new THREE.CylinderGeometry(0.026, 0.026, 0.38, 12), steel, s * 0.82);
+    add(new THREE.CylinderGeometry(0.225, 0.225, 0.055, 24), rubber, s * 0.72);
+    add(new THREE.CylinderGeometry(0.2, 0.2, 0.045, 24), rubber, s * 0.78);
+  }
+  return group;
 }
 
 const tweakEuler = new THREE.Euler();
@@ -90,11 +130,24 @@ function placeInstance(
   holder.visible = isActorLevelVisible(def.level, levelMode, focusLevel);
 }
 
+/** Keeps a held bar centred between the two hands, along the line joining them. */
+function updateHeldBarbell(holder: THREE.Object3D, held: HeldBarbell): void {
+  holder.updateMatrixWorld(true);
+  held.left.getWorldPosition(barStart);
+  held.right.getWorldPosition(barEnd);
+  holder.worldToLocal(barStart);
+  holder.worldToLocal(barEnd);
+  held.bar.position.copy(barStart).add(barEnd).multiplyScalar(0.5);
+  barDir.subVectors(barEnd, barStart);
+  if (barDir.lengthSq() > 1e-8) held.bar.quaternion.setFromUnitVectors(X_AXIS, barDir.normalize());
+}
+
 /** Steps the clip, then layers the activity's procedural bone tweaks on top. */
 function stepInstance(instance: RiggedInstance, deltaSec: number, timeSec: number): void {
   const { def, spec, mixer, bones } = instance;
   for (const { bone, clipPose } of bones) bone.quaternion.copy(clipPose);
   mixer.update(deltaSec);
+  if (instance.barbell) updateHeldBarbell(instance.holder, instance.barbell);
   if (!spec.tweakBones || bones.length === 0) return;
   const tweaks = spec.tweakBones(getActorPhase(def, timeSec));
   for (const { name, bone, clipPose } of bones) {
@@ -107,10 +160,12 @@ function stepInstance(instance: RiggedInstance, deltaSec: number, timeSec: numbe
 }
 
 function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: RiggedActorsProps) {
-  const gltfs = useGLTF(
-    RIGGED_CHARACTER_MODELS.map(model => model.url),
+  const loaded = useGLTF(
+    [...RIGGED_CHARACTER_MODELS.map(model => model.url), MIXAMO_CHARACTER_MODEL.url],
     false,
   );
+  const gltfs = useMemo(() => loaded.slice(0, RIGGED_CHARACTER_MODELS.length), [loaded]);
+  const mixamoGltf = loaded[RIGGED_CHARACTER_MODELS.length];
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const invalidate = useThree(s => s.invalidate);
@@ -124,27 +179,52 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
       }),
     [gltfs],
   );
+  const mixamoScale = useMemo(() => {
+    if (!mixamoGltf) return 1;
+    const size = new THREE.Box3().setFromObject(mixamoGltf.scene).getSize(new THREE.Vector3());
+    return size.y > 1e-4 ? MIXAMO_CHARACTER_MODEL.height / size.y : 1;
+  }, [mixamoGltf]);
 
   const instances = useMemo<RiggedInstance[]>(() => {
     const defs = buildLiveActorDefinitions(scene).filter(def => isRiggedActivity(def.activity));
     const result: RiggedInstance[] = [];
 
     for (const def of defs) {
-      const spec = RIGGED_ACTIVITY_CLIPS[def.activity];
+      const picked = getRiggedClipSpec(def.activity);
+      if (!picked) continue;
+      const { spec, mixamo } = picked;
       const modelIndex = pickRiggedModelIndex(def.id, gltfs.length);
-      const gltf = gltfs[modelIndex];
-      const clipName = spec && (typeof spec.clip === 'function' ? spec.clip(def.id) : spec.clip);
+      const gltf = mixamo ? mixamoGltf : gltfs[modelIndex];
+      const clipName = typeof spec.clip === 'function' ? spec.clip(def.id) : spec.clip;
       const clip = gltf?.animations.find(a => a.name === clipName);
-      if (!spec || !gltf || !clip) continue;
+      if (!gltf || !clip) continue;
 
       const model = cloneSkinned(gltf.scene) as THREE.Object3D;
-      const scale = modelScales[modelIndex] ?? 1;
+      const scale = mixamo ? mixamoScale : (modelScales[modelIndex] ?? 1);
       model.scale.setScalar(scale);
+      const ownedMaterials: THREE.Material[] = [];
       model.traverse(object => {
         object.frustumCulled = false;
         object.raycast = NOOP_RAYCAST;
-        object.castShadow = false;
-        object.receiveShadow = false;
+        // The realistic character grounds itself with a cast shadow; the toy ones never did.
+        object.castShadow = mixamo;
+        object.receiveShadow = mixamo;
+        const mesh = object as THREE.Mesh;
+        if (mixamo && mesh.isMesh && !Array.isArray(mesh.material)) {
+          // Outfit tint per actor: sportswear colour on the body shell, dark joints.
+          const material = (mesh.material as THREE.MeshStandardMaterial).clone();
+          const isJoint = material.name === 'joints';
+          material.color.set(isJoint ? '#1c1c1f' : def.palette.top);
+          if (!isJoint) {
+            // Real sportswear is muted: pull the toy-bright outfit colours toward grey.
+            material.color.getHSL(outfitHsl);
+            material.color.setHSL(outfitHsl.h, outfitHsl.s * 0.45, Math.min(0.42, outfitHsl.l * 0.8));
+          }
+          material.roughness = isJoint ? 0.42 : 0.62;
+          material.metalness = 0;
+          mesh.material = material;
+          ownedMaterials.push(material);
+        }
       });
 
       const holder = new THREE.Group();
@@ -169,14 +249,25 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
         handBone?.add(buildHandProp(spec.handProp, scale));
       }
 
-      const instance: RiggedInstance = { def, spec, holder, mixer, bones };
+      let barbell: HeldBarbell | undefined;
+      if (spec.barbellInHands) {
+        const left = model.getObjectByName(MIXAMO_HAND_BONES[0]);
+        const right = model.getObjectByName(MIXAMO_HAND_BONES[1]);
+        if (left && right) {
+          const bar = buildHeldBarbell();
+          holder.add(bar);
+          barbell = { bar, left, right };
+        }
+      }
+
+      const instance: RiggedInstance = { def, spec, holder, mixer, bones, barbell, ownedMaterials };
       // Poses the character once so reduced-motion / low-power states show a sensible frame.
       stepInstance(instance, 0, STATIC_POSE_TIME_SEC);
 
       result.push(instance);
     }
     return result;
-  }, [scene, gltfs, modelScales]);
+  }, [scene, gltfs, modelScales, mixamoGltf, mixamoScale]);
 
   // Keep each character on its level, even as the stack explodes or collapses.
   useLayoutEffect(() => {
@@ -196,10 +287,17 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
 
   useEffect(() => {
     return () => {
-      for (const { mixer, holder } of instances) {
+      for (const { mixer, holder, ownedMaterials, barbell } of instances) {
         mixer.stopAllAction();
         const root = holder.children[0];
         if (root) mixer.uncacheRoot(root);
+        for (const material of ownedMaterials) material.dispose();
+        barbell?.bar.traverse(object => {
+          const mesh = object as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.geometry.dispose();
+          (mesh.material as THREE.Material).dispose();
+        });
       }
     };
   }, [instances]);
@@ -227,7 +325,7 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
   );
 }
 
-/** Skinned characters for activities listed in RIGGED_ACTIVITY_CLIPS; skipped on the low tier. */
+/** Skinned characters for activities in MIXAMO_ACTIVITY_CLIPS / RIGGED_ACTIVITY_CLIPS; skipped on the low tier. */
 export function RiggedActors(props: RiggedActorsProps) {
   const tier = useExploreStore(s => s.tier);
   if (tier === 'low') return null;

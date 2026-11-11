@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Environment as DreiEnvironment, Lightformer } from '@react-three/drei';
 import { useDocumentTheme, type ExploreTheme } from '../renderers/materials';
+import { getAtmosphere } from './atmosphere';
 import { SkyProbe } from './SkyProbe';
 import { useExploreStore, type QualityTier } from '../state/exploreStore';
 
@@ -37,7 +38,7 @@ export function getImageBasedLightingConfig(
     resolution: tier === 'high' ? 256 : 128,
     // The sky dome (SkyProbe) now provides most of the ambient light, Saltline-style:
     // image-based sky light instead of a flat ambient term.
-    intensity: isDark ? 1.0 : 1.05,
+    intensity: getAtmosphere(theme).skyLight,
     panels: [
       {
         id: 'key-softbox',
@@ -45,7 +46,7 @@ export function getImageBasedLightingConfig(
         rotation: [-Math.PI / 3, Math.PI / 5, 0],
         scale: [16, 10, 1],
         color: '#fff4ea',
-        intensity: isDark ? 1.6 : 1.4,
+        intensity: isDark ? 0.5 : 0.8,
       },
       {
         id: 'cool-fill',
@@ -53,7 +54,7 @@ export function getImageBasedLightingConfig(
         rotation: [0, Math.PI / 2.4, 0],
         scale: [12, 8, 1],
         color: '#dfe9f5',
-        intensity: isDark ? 1.4 : 1.2,
+        intensity: isDark ? 0.35 : 0.6,
       },
       {
         id: 'salmon-accent',
@@ -61,7 +62,7 @@ export function getImageBasedLightingConfig(
         rotation: [0, 0, 0],
         scale: [22, 3, 1],
         color: '#e1aa98',
-        intensity: 1.6,
+        intensity: 0.5,
       },
       {
         id: 'ceiling-strip',
@@ -69,7 +70,7 @@ export function getImageBasedLightingConfig(
         rotation: [Math.PI / 2, 0, 0],
         scale: [26, 4, 1],
         color: '#ffffff',
-        intensity: isDark ? 1.8 : 1.5,
+        intensity: isDark ? 0.4 : 0.7,
       },
     ],
   };

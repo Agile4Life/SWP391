@@ -1,5 +1,4 @@
 import type { ItemKind } from '../../scene/schema';
-import { ITEM_PALETTE } from './itemGeometries';
 
 export interface ItemGlbEntry {
   /** Served from apps/web/public, for example `/models/explore3d/treadmill.glb`. */
@@ -12,6 +11,8 @@ export interface ItemGlbEntry {
   rotationY?: number;
   /** Recolor by material name (hex) so the model matches the SOL charcoal-salmon palette. */
   materialColors?: Readonly<Record<string, string>>;
+  /** Keep the model's own PBR textures (photo-scanned props) instead of flat vertex colours. */
+  textured?: boolean;
 }
 
 /**
@@ -21,32 +22,17 @@ export interface ItemGlbEntry {
  */
 export const ITEM_GLB_MANIFEST: Partial<Record<ItemKind, ItemGlbEntry>> = {
   'lounge-sofa': {
-    url: '/models/explore3d/lounge-sofa.glb',
-    author: 'Kenney',
-    source: 'https://kenney.nl/assets/furniture-kit (loungeSofaLong)',
+    url: '/models/explore3d/polyhaven/sofa_03.glb',
+    author: 'Poly Haven',
+    source: 'https://polyhaven.com/a/sofa_03',
     license: 'CC0',
-    materialColors: { carpet: ITEM_PALETTE.terracotta, wood: ITEM_PALETTE.wood },
-  },
-  'juice-bar': {
-    url: '/models/explore3d/juice-bar.glb',
-    author: 'Kenney',
-    source: 'https://kenney.nl/assets/furniture-kit (kitchenBar)',
-    license: 'CC0',
-    materialColors: {
-      wood: ITEM_PALETTE.woodLight,
-      woodDark: ITEM_PALETTE.charcoalSoft,
-      metal: ITEM_PALETTE.metalLight,
-    },
+    textured: true,
   },
   'planter-tree': {
-    url: '/models/explore3d/planter-tree.glb',
-    author: 'Kenney',
-    source: 'https://kenney.nl/assets/furniture-kit (pottedPlant)',
+    url: '/models/explore3d/polyhaven/potted_plant_02.glb',
+    author: 'Poly Haven',
+    source: 'https://polyhaven.com/a/potted_plant_02',
     license: 'CC0',
-    materialColors: {
-      plant: ITEM_PALETTE.foliageLight,
-      wood: ITEM_PALETTE.terracotta,
-      woodDark: ITEM_PALETTE.charcoalSoft,
-    },
+    textured: true,
   },
 };

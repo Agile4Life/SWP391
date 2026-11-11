@@ -151,9 +151,25 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   return merged;
 }
 
+/** Realistic paint finishes instead of toy-bright primaries. */
+const CAR_PAINT: Readonly<Record<string, string>> = {
+  '#f8fafc': '#e6e6e3',
+  '#e2e8f0': '#c4c7ca',
+  '#f07654': '#74261f',
+  '#ef4444': '#6a1a1a',
+  '#38bdf8': '#1f3a5c',
+  '#3b82f6': '#22344f',
+  '#10b981': '#2c3a33',
+  '#f59e0b': '#8b8e92',
+  '#94a3b8': '#6b7178',
+  '#64748b': '#383c42',
+};
+
 /**
- * Helper to add a detailed 3D car (sedan / SUV / sports coupe / EV) at (cx, y=0, cz)
- * rotated by `ry` radians (ry=0 means car faces +Z, ry=Math.PI faces -Z, ry=Math.PI/2 faces +X).
+ * Adds a car at (cx, y=0, cz), rotated by `ry` (ry=0 faces +Z, ry=PI/2 faces +X).
+ * The body is a bevelled extrusion of a real side profile (bumpers, bonnet,
+ * raked screens, roof) rather than stacked boxes, with separate glazing, wheels
+ * with rims, lamps and mirrors.
  */
 function addCar3D(
   parts: ColoredPart[],
@@ -163,155 +179,123 @@ function addCar3D(
   bodyColor: string,
   variant: 'sedan' | 'suv' | 'coupe' = 'sedan',
 ): void {
-  const cos = Math.cos(ry);
-  const sin = Math.sin(ry);
-  const tx = (lx: number, lz: number) => cx + lx * cos + lz * sin;
-  const tz = (lx: number, lz: number) => cz - lx * sin + lz * cos;
+  const paint = CAR_PAINT[bodyColor] ?? bodyColor;
+  const W = variant === 'suv' ? 1.9 : variant === 'coupe' ? 1.86 : 1.82;
+  const L = variant === 'suv' ? 4.55 : variant === 'coupe' ? 4.35 : 4.6;
+  const y0 = variant === 'suv' ? 0.3 : 0.2;
+  const belt = y0 + (variant === 'suv' ? 0.72 : variant === 'coupe' ? 0.6 : 0.66);
+  const roof = belt + (variant === 'suv' ? 0.56 : variant === 'coupe' ? 0.4 : 0.48);
+  const h = L / 2;
+  // greenhouse: front screen base, roof start, roof end, rear screen base (car z)
+  const fBase = variant === 'coupe' ? 0.55 : 0.75;
+  const fTop = fBase - (variant === 'suv' ? 0.5 : 0.75);
+  const rTop = variant === 'suv' ? -h + 0.55 : variant === 'coupe' ? -0.75 : -0.95;
+  const rBase = variant === 'suv' ? -h + 0.22 : variant === 'coupe' ? -h + 0.55 : -h + 0.75;
 
-  const width = variant === 'suv' ? 1.92 : variant === 'coupe' ? 1.88 : 1.82;
-  const length = variant === 'suv' ? 4.45 : variant === 'coupe' ? 4.25 : 4.35;
-  const chassisH = variant === 'suv' ? 0.56 : variant === 'coupe' ? 0.44 : 0.48;
-  const cabinH = variant === 'suv' ? 0.52 : variant === 'coupe' ? 0.38 : 0.44;
-  const cabinL = variant === 'suv' ? 2.55 : variant === 'coupe' ? 1.85 : 2.15;
-  const cabinOffsetZ = variant === 'suv' ? -0.22 : variant === 'coupe' ? -0.15 : -0.12;
+  const place = (geometry: THREE.BufferGeometry, color: string) => {
+    geometry.rotateY(ry);
+    geometry.translate(cx, 0, cz);
+    parts.push({ geometry, color });
+  };
+  /** Extrude a side profile (points in car z / y) across the car width. */
+  const extrude = (pts: ReadonlyArray<readonly [number, number]>, width: number, bevel: number) => {
+    const shape = new THREE.Shape();
+    pts.forEach(([z, y], i) => (i === 0 ? shape.moveTo(z, y) : shape.lineTo(z, y)));
+    shape.closePath();
+    const geom = new THREE.ExtrudeGeometry(shape, {
+      depth: width - bevel * 2,
+      bevelEnabled: bevel > 0,
+      bevelThickness: bevel,
+      bevelSize: bevel * 0.8,
+      bevelSegments: 3,
+      curveSegments: 4,
+    });
+    geom.translate(0, 0, -(width - bevel * 2) / 2);
+    geom.rotateY(-Math.PI / 2);
+    return geom;
+  };
 
-  pushBox(parts, width * 0.94, 0.06, length * 0.92, cx, 0.08, cz, '#0d1016', 0, ry, 0);
-  pushBox(parts, width, chassisH, length, cx, 0.24 + chassisH * 0.5, cz, bodyColor, 0, ry, 0);
-  pushBox(
-    parts,
-    width * 0.96,
-    0.14,
-    0.16,
-    tx(0, length * 0.5),
-    0.26,
-    tz(0, length * 0.5),
-    '#1c222d',
-    0,
-    ry,
-    0,
-  );
-  pushBox(
-    parts,
-    width * 0.96,
-    0.16,
-    0.16,
-    tx(0, -length * 0.5),
-    0.27,
-    tz(0, -length * 0.5),
-    '#181d26',
-    0,
-    ry,
-    0,
-  );
-
-  const cabinY = 0.24 + chassisH + cabinH * 0.48;
-  pushBox(
-    parts,
-    width * 0.84,
-    cabinH,
-    cabinL,
-    tx(0, cabinOffsetZ),
-    cabinY,
-    tz(0, cabinOffsetZ),
-    '#1b2536',
-    0,
-    ry,
-    0,
-  );
-  pushBox(
-    parts,
-    width * 0.78,
-    0.07,
-    cabinL * 0.82,
-    tx(0, cabinOffsetZ),
-    cabinY + cabinH * 0.5,
-    tz(0, cabinOffsetZ),
-    bodyColor,
-    0,
-    ry,
-    0,
-  );
-
-  for (const side of [-1, 1]) {
-    pushBox(
-      parts,
-      0.34,
-      0.1,
-      0.08,
-      tx(side * (width * 0.34), length * 0.5 + 0.02),
-      0.34 + chassisH * 0.35,
-      tz(side * (width * 0.34), length * 0.5 + 0.02),
-      '#fef3c7',
-      0,
-      ry,
-      0,
-    );
-    pushBox(
-      parts,
-      0.38,
+  // body shell
+  place(
+    extrude(
+      [
+        [-h + 0.1, y0],
+        [h - 0.14, y0],
+        [h, y0 + 0.16],
+        [h - 0.02, belt - 0.2],
+        [h - 0.3, belt - 0.07],
+        [fBase, belt],
+        [fTop, roof],
+        [rTop, roof],
+        [rBase, belt],
+        [-h + 0.08, belt - 0.04],
+        [-h, belt - 0.24],
+        [-h + 0.02, y0 + 0.14],
+      ],
+      W,
       0.09,
-      0.08,
-      tx(side * (width * 0.33), -length * 0.5 - 0.02),
-      0.36 + chassisH * 0.38,
-      tz(side * (width * 0.33), -length * 0.5 - 0.02),
-      '#ef4444',
+    ),
+    paint,
+  );
+  // side glazing (slightly proud of the doors) and screens (between the pillars)
+  const glass = '#0c1116';
+  place(
+    extrude(
+      [
+        [fBase - 0.16, belt + 0.03],
+        [fTop - 0.02, roof - 0.09],
+        [rTop + 0.06, roof - 0.09],
+        [rBase + 0.2, belt + 0.03],
+      ],
+      W - 0.045,
       0,
-      ry,
+    ),
+    glass,
+  );
+  place(
+    extrude(
+      [
+        [fBase + 0.035, belt + 0.02],
+        [fTop + 0.03, roof - 0.035],
+        [rTop - 0.03, roof - 0.035],
+        [rBase - 0.035, belt + 0.02],
+      ],
+      W - 0.34,
       0,
-    );
-  }
-
-  pushBox(
-    parts,
-    width * 0.42,
-    0.18,
-    0.07,
-    tx(0, length * 0.5 + 0.02),
-    0.32 + chassisH * 0.2,
-    tz(0, length * 0.5 + 0.02),
-    '#11151d',
-    0,
-    ry,
-    0,
+    ),
+    glass,
   );
 
-  const wheelX = width * 0.48;
-  const wheelZ = length * 0.31;
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      pushBox(
-        parts,
-        0.24,
-        0.52,
-        0.52,
-        tx(sx * wheelX, sz * wheelZ),
-        0.26,
-        tz(sx * wheelX, sz * wheelZ),
-        '#12151c',
-        0,
-        ry,
-        0,
-      );
-      pushBox(
-        parts,
-        0.26,
-        0.3,
-        0.3,
-        tx(sx * wheelX, sz * wheelZ),
-        0.26,
-        tz(sx * wheelX, sz * wheelZ),
-        '#9ca3af',
-        0,
-        ry,
-        0,
-      );
+  const boxAt = (w: number, hh: number, d: number, x: number, y: number, z: number, color: string) => {
+    const g = new THREE.BoxGeometry(w, hh, d);
+    g.translate(x, y, z);
+    place(g, color);
+  };
+  // contact shadow plate, bumpers' dark lower trim, grille
+  boxAt(W * 0.9, 0.05, L * 0.9, 0, y0 - 0.06, 0, '#07090c');
+  boxAt(W * 0.7, 0.12, 0.05, 0, y0 + 0.22, h - 0.015, '#111418');
+  // lamps
+  for (const side of [-1, 1]) {
+    boxAt(0.36, 0.1, 0.06, side * (W / 2 - 0.3), belt - 0.2, h - 0.03, '#f1efe4');
+    boxAt(0.4, 0.09, 0.05, side * (W / 2 - 0.3), belt - 0.16, -h + 0.02, '#6d1212');
+    boxAt(0.1, 0.07, 0.16, side * (W / 2 + 0.05), belt + 0.06, fBase - 0.12, paint);
+  }
+  // wheels: tyre + rim
+  const r = variant === 'suv' ? 0.37 : 0.33;
+  for (const side of [-1, 1]) {
+    for (const wz of [L * 0.31, -L * 0.3]) {
+      const tyre = new THREE.CylinderGeometry(r, r, 0.24, 20);
+      tyre.rotateZ(Math.PI / 2);
+      tyre.translate(side * (W / 2 - 0.13), r, wz);
+      place(tyre, '#0b0c0e');
+      const rim = new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.05, 16);
+      rim.rotateZ(Math.PI / 2);
+      rim.translate(side * (W / 2 - 0.005), r, wz);
+      place(rim, '#aeb2b6');
     }
   }
 }
 
-/**
- * Helper to add a detailed 3D scooter / motorbike at (mx, y=0, mz) rotated by `ry`.
- */
 function addMotorbike3D(
   parts: ColoredPart[],
   mx: number,
@@ -334,6 +318,44 @@ function addMotorbike3D(
   pushBox(parts, 0.18, 0.1, 0.08, tx(0, -0.7), 0.58, tz(0, -0.7), '#ef4444', 0, ry, 0);
 }
 
+function seededRandom(seed: number): () => number {
+  let t = (seed | 0) + 0x6d2b79f5;
+  return () => {
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const FOLIAGE_TONES = ['#2f4a2b', '#3a5a33', '#476a3a', '#547843', '#33502f'] as const;
+
+/** Lumpy, irregular foliage mass: a sphere displaced by a few low-frequency lobes. */
+function foliageBlob(rand: () => number, radius: number): THREE.BufferGeometry {
+  const geom = new THREE.SphereGeometry(radius, 12, 9);
+  const pos = geom.getAttribute('position');
+  const p1 = rand() * 6.28;
+  const p2 = rand() * 6.28;
+  const p3 = rand() * 6.28;
+  for (let i = 0; i < pos.count; i += 1) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const n =
+      Math.sin((x / radius) * 3.1 + p1) * Math.cos((z / radius) * 2.7 + p2) * 0.16 +
+      Math.sin((y / radius) * 4.3 + p3) * 0.1 +
+      Math.sin((x + z) / radius * 6.5 + p2) * 0.05;
+    const k = 1 + n;
+    pos.setXYZ(i, x * k, y * k * 0.86, z * k);
+  }
+  geom.computeVertexNormals();
+  return geom;
+}
+
+/**
+ * Organic broadleaf tree: tapered leaning trunk, a few limbs, and a crown of
+ * overlapping irregular foliage masses in natural, slightly varied greens.
+ * Deterministic per position so the campus never changes between renders.
+ */
 function addCampusTree(
   parts: ColoredPart[],
   x: number,
@@ -341,46 +363,68 @@ function addCampusTree(
   scale = 1,
   withPlanter = true,
 ): void {
+  const rand = seededRandom(Math.round(x * 131 + z * 977));
   if (withPlanter) {
-    pushBox(parts, 1.9 * scale, 0.34, 1.9 * scale, x, 0.17, z, '#363d4a');
-    pushBox(parts, 1.55 * scale, 0.38, 1.55 * scale, x, 0.19, z, '#2b4230');
+    pushBox(parts, 1.9 * scale, 0.34, 1.9 * scale, x, 0.17, z, '#4a4d52');
+    pushBox(parts, 1.6 * scale, 0.36, 1.6 * scale, x, 0.19, z, '#2a2118');
   }
-  const trunkH = 2.1 * scale;
-  pushCylinder(parts, 0.14 * scale, 0.21 * scale, trunkH, x, trunkH * 0.5, z, '#5c4028', 8);
-  pushCylinder(
-    parts,
-    1.15 * scale,
-    1.35 * scale,
-    1.4 * scale,
-    x,
-    trunkH + 0.55 * scale,
-    z,
-    '#2d5a3c',
-    9,
-  );
-  pushCylinder(
-    parts,
-    0.85 * scale,
-    1.1 * scale,
-    1.25 * scale,
-    x + 0.12 * scale,
-    trunkH + 1.45 * scale,
-    z - 0.1 * scale,
-    '#3b724c',
-    9,
-  );
-  pushCylinder(
-    parts,
-    0.42 * scale,
-    0.78 * scale,
-    0.95 * scale,
-    x - 0.08 * scale,
-    trunkH + 2.2 * scale,
-    z + 0.08 * scale,
-    '#4d8a5e',
-    8,
-  );
+  const trunkH = (2.3 + rand() * 0.5) * scale;
+  const leanX = (rand() - 0.5) * 0.12;
+  const leanZ = (rand() - 0.5) * 0.12;
+  pushCylinder(parts, 0.11 * scale, 0.2 * scale, trunkH, x, trunkH * 0.5, z, '#4a392b', 9, leanZ, 0, -leanX);
+  const topX = x + leanX * trunkH * 0.5;
+  const topZ = z + leanZ * trunkH * 0.5;
+  for (let i = 0; i < 3; i += 1) {
+    const ang = rand() * Math.PI * 2;
+    const len = (0.9 + rand() * 0.5) * scale;
+    const tilt = 0.7 + rand() * 0.35;
+    pushCylinder(
+      parts,
+      0.04 * scale,
+      0.08 * scale,
+      len,
+      topX + Math.cos(ang) * Math.sin(tilt) * len * 0.5,
+      trunkH + Math.cos(tilt) * len * 0.5 - 0.15 * scale,
+      topZ + Math.sin(ang) * Math.sin(tilt) * len * 0.5,
+      '#44352a',
+      6,
+      Math.sin(ang) * tilt,
+      0,
+      -Math.cos(ang) * tilt,
+    );
+  }
+  const crownY = trunkH + 0.95 * scale;
+  const blobs = 9;
+  for (let i = 0; i < blobs; i += 1) {
+    const ring = i === 0 ? 0 : 0.55 + rand() * 0.55;
+    const ang = (i / (blobs - 1)) * Math.PI * 2 + rand() * 0.6;
+    const radius = (i === 0 ? 1.05 : 0.6 + rand() * 0.35) * scale;
+    const geom = foliageBlob(rand, radius);
+    geom.translate(
+      topX + Math.cos(ang) * ring * scale,
+      crownY + (i === 0 ? 0.35 : (rand() - 0.45) * 0.9) * scale,
+      topZ + Math.sin(ang) * ring * scale,
+    );
+    parts.push({ geometry: geom, color: FOLIAGE_TONES[Math.floor(rand() * FOLIAGE_TONES.length)] });
+  }
 }
+
+/** [x, z, armDirX, armDirZ] of every street lamp; lamp height is STREET_LAMP_HEIGHT. */
+export const STREET_LAMPS: ReadonlyArray<readonly [number, number, number, number]> = [
+  [-32, 23.9, 0, 1],
+  [-22, 23.9, 0, 1],
+  [-12, 23.9, 0, 1],
+  [1.2, 23.9, 0, 1],
+  [14.4, 23.9, 0, 1],
+  [24, 23.9, 0, 1],
+  [34, 23.9, 0, 1],
+  [44, 23.9, 0, 1],
+  [-25, 14.0, 1, 0],
+  [-25, 2.0, 1, 0],
+  [-25, -10.0, 1, 0],
+];
+export const STREET_LAMP_HEIGHT = 5.2;
+export const STREET_LAMP_ARM = 1.15 * 0.88;
 
 function addStreetLamp(
   parts: ColoredPart[],
@@ -416,8 +460,9 @@ function addBollardLight(parts: ColoredPart[], x: number, z: number): void {
  * Solar Car & EV Parking Court, Covered Motorbike & Bicycle Pavilion, and Reflection Fountain
  * are all 100% visible in the central foreground without being covered by the left LevelSwitcher HUD.
  */
-export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
+function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles: ColoredPart[] } {
   const parts: ColoredPart[] = [];
+  const vehicles: ColoredPart[] = [];
   const isLight = theme === 'light';
 
   const roadColor = isLight ? '#384150' : '#161b24';
@@ -515,7 +560,7 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   pushBox(parts, 0.24, 0.22, 0.08, gateX + 1.05, 1.06, 23.15, '#34d399');
 
   // Arriving white sports coupe entering through the East Gate lane (x = 10.45, z = 21.1)
-  addCar3D(parts, gateX + 2.65, 21.1, Math.PI, '#f8fafc', 'coupe');
+  addCar3D(vehicles, gateX + 2.65, 21.1, Math.PI, '#f8fafc', 'coupe');
 
   // =========================================================================
   // 3. ROADSIDE MONUMENT TOTEM PYLON SIGN (x = 14.8, z = 23.8)
@@ -580,10 +625,10 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   }
 
   // 4 Detailed 3D Cars in Front-East Car & EV Parking Court (1 stall left open to show EV badge & lines!)
-  addCar3D(parts, 18.0, 20.1, Math.PI, '#f8fafc', 'suv');
-  addCar3D(parts, 20.8, 20.1, Math.PI, '#f07654', 'coupe');
-  addCar3D(parts, 26.4, 20.1, Math.PI, '#38bdf8', 'sedan');
-  addCar3D(parts, 29.2, 20.1, Math.PI, '#10b981', 'suv');
+  addCar3D(vehicles, 18.0, 20.1, Math.PI, '#f8fafc', 'suv');
+  addCar3D(vehicles, 20.8, 20.1, Math.PI, '#f07654', 'coupe');
+  addCar3D(vehicles, 26.4, 20.1, Math.PI, '#38bdf8', 'sedan');
+  addCar3D(vehicles, 29.2, 20.1, Math.PI, '#10b981', 'suv');
 
   // =========================================================================
   //    5B. Front-West & West Wing Car Parking Court (x = -23.5 .. -5.2, z = 16.8 .. 23.2 & x = -36..-25)
@@ -599,10 +644,10 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
     pushBox(parts, 2.65, 0.06, 2.1, westStallXs[i]!, 3.26, 17.85, '#1d3557', 0.08, 0, 0);
   }
   pushBox(parts, 17.3, 0.12, 0.16, -14.2, 3.04, 19.05, salmon);
-  addCar3D(parts, -21.2, 20.1, Math.PI, '#e2e8f0', 'suv');
-  addCar3D(parts, -18.4, 20.1, Math.PI, '#3b82f6', 'sedan');
-  addCar3D(parts, -15.6, 20.1, Math.PI, '#f59e0b', 'coupe');
-  addCar3D(parts, -10.0, 20.1, Math.PI, '#94a3b8', 'suv');
+  addCar3D(vehicles, -21.2, 20.1, Math.PI, '#e2e8f0', 'suv');
+  addCar3D(vehicles, -18.4, 20.1, Math.PI, '#3b82f6', 'sedan');
+  addCar3D(vehicles, -15.6, 20.1, Math.PI, '#f59e0b', 'coupe');
+  addCar3D(vehicles, -10.0, 20.1, Math.PI, '#94a3b8', 'suv');
 
   // West Wing Perpendicular Car Parking (x = -36.5 .. -24.8, z = -12.0 .. +15.0)
   pushBox(parts, 11.8, 0.05, 28.0, -30.6, 0.018, 2.0, parkingAsphalt);
@@ -611,10 +656,10 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
     pushBox(parts, 4.8, 0.06, 2.75, -33.6, 3.26, -7.5 + i * 3.0, '#1d3557', 0, 0, -0.08);
     pushBox(parts, 4.6, 0.06, 0.12, -33.5, 0.038, -9.0 + i * 3.0, lineWhite);
   }
-  addCar3D(parts, -33.4, -7.5, Math.PI / 2, '#f8fafc', 'suv');
-  addCar3D(parts, -33.4, -4.5, Math.PI / 2, '#ef4444', 'coupe');
-  addCar3D(parts, -33.4, 1.5, Math.PI / 2, '#64748b', 'sedan');
-  addCar3D(parts, -33.4, 7.5, Math.PI / 2, '#f59e0b', 'suv');
+  addCar3D(vehicles, -33.4, -7.5, Math.PI / 2, '#f8fafc', 'suv');
+  addCar3D(vehicles, -33.4, -4.5, Math.PI / 2, '#ef4444', 'coupe');
+  addCar3D(vehicles, -33.4, 1.5, Math.PI / 2, '#64748b', 'sedan');
+  addCar3D(vehicles, -33.4, 7.5, Math.PI / 2, '#f59e0b', 'suv');
 
   // =========================================================================
   // 6. COVERED MOTORBIKE & BICYCLE PARKING PAVILION ("NHÀ ĐỂ XE MÁY & XE ĐẠP")
@@ -746,20 +791,7 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
     }
   }
 
-  const streetLamps: ReadonlyArray<readonly [number, number, number, number]> = [
-    [-32, 23.9, 0, 1],
-    [-22, 23.9, 0, 1],
-    [-12, 23.9, 0, 1],
-    [1.2, 23.9, 0, 1],
-    [14.4, 23.9, 0, 1],
-    [24, 23.9, 0, 1],
-    [34, 23.9, 0, 1],
-    [44, 23.9, 0, 1],
-    [-25, 14.0, 1, 0],
-    [-25, 2.0, 1, 0],
-    [-25, -10.0, 1, 0],
-  ];
-  for (const [lx, lz, dx, dz] of streetLamps) {
+  for (const [lx, lz, dx, dz] of STREET_LAMPS) {
     addStreetLamp(parts, lx, lz, dx, dz, 5.2);
   }
 
@@ -805,7 +837,24 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
     addCampusTree(parts, tx, tz, scale, planter);
   }
 
+  return { parts, vehicles };
+}
+
+function disposeParts(parts: readonly ColoredPart[]): void {
+  for (const part of parts) part.geometry.dispose();
+}
+
+export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
+  const { parts, vehicles } = buildCampusParts(theme);
+  disposeParts(vehicles);
   return mergeColoredParts(parts);
+}
+
+/** Parked cars as their own geometry so they can use a clear-coated car-paint material. */
+export function buildCampusVehiclesGeometry(theme: ExploreTheme): THREE.BufferGeometry {
+  const { parts, vehicles } = buildCampusParts(theme);
+  disposeParts(parts);
+  return mergeColoredParts(vehicles);
 }
 
 interface SignQuadSpec {

@@ -6,6 +6,7 @@ import { BenchmarkRunner } from '../perf/BenchmarkRunner';
 import { PerformanceGovernor } from '../perf/PerformanceGovernor';
 import { CinematicPipeline } from '../postfx/CinematicPipeline';
 import { patchSoftShadowChunk } from '../postfx/softShadows';
+import { loadSurfaceTextures } from '../renderers/surfaceTextures';
 import { useExploreStore } from '../state/exploreStore';
 import { WalkController } from '../walk/WalkController';
 import { CameraRig } from './CameraRig';
@@ -78,6 +79,11 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
     if ('toneMapping' in state.gl) {
       state.gl.toneMapping = THREE.ACESFilmicToneMapping;
       state.gl.toneMappingExposure = 1.06;
+    }
+
+    // Scanned PBR surface sets stream in; materials use procedural detail until then.
+    if (useExploreStore.getState().tier !== 'low') {
+      loadSurfaceTextures(() => state.invalidate(), state.gl.capabilities?.getMaxAnisotropy?.() ?? 8);
     }
 
     const domElement = state.gl.domElement;

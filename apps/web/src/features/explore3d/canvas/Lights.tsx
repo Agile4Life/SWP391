@@ -7,6 +7,7 @@ import {
   type ExploreTheme,
 } from '../renderers/materials';
 import type { LevelCode } from '../scene/schema';
+import { getAtmosphere } from './atmosphere';
 import { useExploreStore, type QualityTier } from '../state/exploreStore';
 
 const LEVEL_ELEVATION_BY_CODE: Record<LevelCode, number> = {
@@ -16,6 +17,8 @@ const LEVEL_ELEVATION_BY_CODE: Record<LevelCode, number> = {
   RF: 9.0,
   OUT: 0.0,
 };
+
+const SUN_DISTANCE = 115;
 
 export interface LightingBudgetConfig {
   ambient: {
@@ -72,24 +75,24 @@ export function getLightingBudgetConfig(
   // only a small flat ambient. The low tier has no sky probe, so it keeps a
   // stronger hemisphere/ambient fill instead.
   const hasSkyProbe = tier !== 'low';
+  const atmosphere = getAtmosphere(theme);
   return {
     ambient: {
       color: isDark ? '#fff5ec' : '#ffffff',
-      intensity: hasSkyProbe ? (isDark ? 0.14 : 0.2) : isDark ? 0.5 : 0.62,
+      intensity: hasSkyProbe ? (isDark ? 0.06 : 0.05) : isDark ? 0.5 : 0.62,
     },
     hemisphere: {
-      skyColor: hasSkyProbe ? '#bcd0e8' : palette.skyColor,
-      groundColor: palette.groundColor,
-      intensity: hasSkyProbe ? (isDark ? 0.42 : 0.5) : isDark ? 0.98 : 1.05,
+      skyColor: hasSkyProbe ? (isDark ? '#6f8fc4' : '#bcd0e8') : palette.skyColor,
+      groundColor: hasSkyProbe ? (isDark ? '#241c18' : '#6b5a4c') : palette.groundColor,
+      intensity: hasSkyProbe ? (isDark ? 0.3 : 0.28) : isDark ? 0.98 : 1.05,
     },
-    // Low warm sun (~32° elevation) raking in from the left of the default camera
-    // (camera sits at +X/+Z): long shadows fall into view and every volume gets a
-    // lit side and a shade side. Warm key vs cool fill = "teal & orange".
+    // Time-of-day sun (see atmosphere.ts): golden hour in the light theme, a very
+    // low dusk sun in the dark theme. It rakes in from the left of the default
+    // camera so long shadows fall into view. HDR intensity; the grade rolls it off.
     keyLight: {
-      position: [-26, 30, 40],
-      color: '#ffd9b3',
-      // HDR sun: the grade's filmic curve rolls highlights off, so it can be bright.
-      intensity: isDark ? 3.6 : 3.2,
+      position: atmosphere.sunPosition,
+      color: atmosphere.sunColor,
+      intensity: atmosphere.sunIntensity,
       castShadow: tier !== 'low',
       shadowMapSize: [mapResolution, mapResolution],
       shadowBounds: {
@@ -98,7 +101,7 @@ export function getLightingBudgetConfig(
         top: 44,
         bottom: -44,
         near: 1,
-        far: 140,
+        far: 230,
       },
       shadowBias: -0.00012,
       shadowNormalBias: 0.02,
@@ -106,15 +109,15 @@ export function getLightingBudgetConfig(
     },
     fillLight: {
       position: [34, 18, -10],
-      color: isDark ? '#c9dcf2' : '#dde8f6',
+      color: isDark ? '#7f9fd6' : '#cfe0f6',
       // Cool sky-bounce fill from the side opposite the sun (teal & orange).
-      intensity: hasSkyProbe ? (isDark ? 0.42 : 0.38) : isDark ? 0.8 : 0.7,
+      intensity: hasSkyProbe ? (isDark ? 0.3 : 0.34) : isDark ? 0.8 : 0.7,
       castShadow: false,
     },
     rimLight: {
       position: [-30, 22, -34],
-      color: '#f5c2ae',
-      intensity: isDark ? 0.55 : 0.42,
+      color: isDark ? '#ff9a6a' : '#f5c2ae',
+      intensity: isDark ? 0.4 : 0.36,
       castShadow: false,
     },
   };
@@ -130,7 +133,14 @@ export function Lights() {
   const cfg = getLightingBudgetConfig(theme, tier);
   const activeLevelCode: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
   const ceilingY = LEVEL_ELEVATION_BY_CODE[activeLevelCode] + 3.45;
-  const interiorBoost = walkMode ? 1.35 : 1.0;
+  // Physically-decaying warm interior lights; at dusk they are the main light indoors.
+  const interiorBoost = (walkMode ? 1.35 : 1.0) * (theme === 'dark' ? 26 : 12);
+
+  // The shadow camera sits at the light: push it far enough out along the sun
+  // direction that the whole campus is in front of it, even with a very low sun.
+  const [sx, sy, sz] = cfg.keyLight.position;
+  const sunScale = SUN_DISTANCE / Math.hypot(sx, sy, sz);
+  const sunPosition: [number, number, number] = [sx * sunScale, sy * sunScale, sz * sunScale];
 
   useEffect(() => {
     invalidate();
@@ -147,7 +157,7 @@ export function Lights() {
         ]}
       />
       <directionalLight
-        position={cfg.keyLight.position}
+        position={sunPosition}
         color={cfg.keyLight.color}
         intensity={cfg.keyLight.intensity}
         castShadow={cfg.keyLight.castShadow}
@@ -179,24 +189,24 @@ export function Lights() {
         position={[-9, ceilingY, -2]}
         color="#ffe4d0"
         intensity={1.55 * interiorBoost}
-        distance={30}
-        decay={1.25}
+        distance={34}
+        decay={2}
         castShadow={false}
       />
       <pointLight
         position={[2, ceilingY, 4]}
         color="#fff0e4"
         intensity={1.4 * interiorBoost}
-        distance={28}
-        decay={1.25}
+        distance={32}
+        decay={2}
         castShadow={false}
       />
       <pointLight
         position={[13, ceilingY, -1]}
         color="#ffe4d0"
         intensity={1.5 * interiorBoost}
-        distance={30}
-        decay={1.25}
+        distance={34}
+        decay={2}
         castShadow={false}
       />
     </group>

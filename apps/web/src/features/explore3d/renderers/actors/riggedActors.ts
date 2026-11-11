@@ -31,6 +31,8 @@ export interface RiggedClipSpec {
   handProp?: RiggedHandPropSpec;
   /** Optional procedural tweak layered over the clip each frame. */
   tweakBones?: (phase: number) => RiggedBoneTweaks;
+  /** Draw a barbell held between the two hand bones (Mixamo characters). */
+  barbellInHands?: boolean;
 }
 
 /** Same phase the procedural solver uses, so both figures stay in step. */
@@ -113,6 +115,57 @@ export const RIGGED_ACTIVITY_CLIPS: Partial<Record<ActorActivityKind, RiggedClip
   'lounge-chat': { clip: 'emote-yes', timeScale: 0.7 },
 };
 
+const pick = (a: string, b: string) => (actorId: string) => (hashString(actorId) % 2 === 0 ? a : b);
+
+/**
+ * Activities drawn with the realistic Mixamo character (one skeleton, clips merged
+ * into `mixamo-beta.glb`). These win over RIGGED_ACTIVITY_CLIPS; activities without
+ * a Mixamo clip keep the Kenney character until matching clips are added.
+ */
+export const MIXAMO_ACTIVITY_CLIPS: Partial<Record<ActorActivityKind, RiggedClipSpec>> = {
+  'boxing-spar': { clip: 'hook', timeScale: 0.55 },
+  'heavy-bag-boxer': { clip: 'hook', timeScale: 0.55 },
+  'barbell-squat': { clip: 'overhead-squat', timeScale: 0.45, barbellInHands: true },
+  'yoga-flow': { clip: pick('push-up', 'bicycle-crunch'), timeScale: 0.4 },
+};
+
+export interface MixamoCharacterModel {
+  url: string;
+  author: string;
+  source: string;
+  license: string;
+  /** Standing height in world units (the Mixamo rig is real-world proportioned). */
+  height: number;
+}
+
+export const MIXAMO_CHARACTER_MODEL: MixamoCharacterModel = {
+  url: '/models/explore3d/characters/mixamo-beta.glb',
+  author: 'Adobe Mixamo',
+  source: 'https://www.mixamo.com (Beta; Hook, Overhead Squat, Push Up, Bicycle Crunch)',
+  license: 'Mixamo terms (royalty-free in projects)',
+  height: 1.76,
+};
+
+/** Hand bones of the Mixamo rig after three.js strips the ':' from `mixamorig:`. */
+export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand'] as const;
+
+/** Procedural parts that the Mixamo squat replaces with a bar held in the hands. */
+export const PROCEDURAL_BARBELL_PART_NAMES: ReadonlySet<string> = new Set([
+  'barbellShaft',
+  'barbellPlateLeft',
+  'barbellPlateRight',
+]);
+
+export function getRiggedClipSpec(activity: ActorActivityKind): {
+  spec: RiggedClipSpec;
+  mixamo: boolean;
+} | null {
+  const mixamo = MIXAMO_ACTIVITY_CLIPS[activity];
+  if (mixamo) return { spec: mixamo, mixamo: true };
+  const kenney = RIGGED_ACTIVITY_CLIPS[activity];
+  return kenney ? { spec: kenney, mixamo: false } : null;
+}
+
 /** Procedural hand-held props that the rigged characters replace with bone-attached ones. */
 export const PROCEDURAL_HAND_PROP_NAMES: ReadonlySet<string> = new Set([
   'racketShaft',
@@ -170,7 +223,7 @@ export function computeRiggedPlacement(
   const total = yaw + pose.yawOffset;
   const cos = Math.cos(total);
   const sin = Math.sin(total);
-  const [ox, oy, oz] = RIGGED_ACTIVITY_CLIPS[def.activity]?.offset ?? [0, 0, 0];
+  const [ox, oy, oz] = getRiggedClipSpec(def.activity)?.spec.offset ?? [0, 0, 0];
   const lx = pose.rootOffset[0] + ox;
   const lz = pose.rootOffset[2] + oz;
   return {
@@ -181,7 +234,7 @@ export function computeRiggedPlacement(
 }
 
 export function isRiggedActivity(activity: ActorActivityKind): boolean {
-  return activity in RIGGED_ACTIVITY_CLIPS;
+  return activity in RIGGED_ACTIVITY_CLIPS || activity in MIXAMO_ACTIVITY_CLIPS;
 }
 
 /** Stable pick so an actor keeps the same look between renders and level changes. */

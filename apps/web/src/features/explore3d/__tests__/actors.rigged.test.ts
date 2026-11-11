@@ -10,6 +10,10 @@ import {
 } from '../renderers/actors/liveActorsConfig';
 import { buildHandProp } from '../renderers/actors/riggedHandProps';
 import {
+  MIXAMO_ACTIVITY_CLIPS,
+  MIXAMO_CHARACTER_MODEL,
+  MIXAMO_HAND_BONES,
+  PROCEDURAL_BARBELL_PART_NAMES,
   PROCEDURAL_BODY_PART_NAMES,
   PROCEDURAL_HAND_PROP_NAMES,
   RIGGED_ACTIVITY_CLIPS,
@@ -61,12 +65,13 @@ describe('rigged actors', () => {
       'badminton-player',
       'tennis-player',
       'pt-coach-tablet',
+      // Drawn by the realistic Mixamo character (overhead squat clip, bar held in the hands).
+      'barbell-squat',
     ] as const) {
       expect(isRiggedActivity(activity)).toBe(true);
     }
-    // These need knees, elbows or a prone pose the Kenney skeleton cannot show.
+    // No clip for these yet (bench, curl, swim) or not a person at all.
     for (const activity of [
-      'barbell-squat',
       'bench-press',
       'dumbbell-curl',
       'swim-freestyle',
@@ -75,7 +80,7 @@ describe('rigged actors', () => {
     ] as const) {
       expect(isRiggedActivity(activity)).toBe(false);
     }
-    expect(rigged.length).toBe(40);
+    expect(rigged.length).toBe(45);
   });
 
   it('only references clips that exist in every character GLB', () => {
@@ -174,10 +179,23 @@ describe('rigged actors', () => {
     const sample = evaluateActorPartsAtTime(rigged, 1.25, { scene: SOL_CENTER_SCENE });
     for (const part of sample) {
       expect(
-        PROCEDURAL_BODY_PART_NAMES.has(part.partName) || PROCEDURAL_HAND_PROP_NAMES.has(part.partName),
+        PROCEDURAL_BODY_PART_NAMES.has(part.partName) ||
+          PROCEDURAL_HAND_PROP_NAMES.has(part.partName) ||
+          PROCEDURAL_BARBELL_PART_NAMES.has(part.partName),
         `${part.actorId} would leave "${part.partName}" floating`,
       ).toBe(true);
     }
+  });
+
+  it('maps every Mixamo activity to a clip that exists in mixamo-beta.glb', () => {
+    const glb = readGlbJson(MIXAMO_CHARACTER_MODEL.url);
+    const clips = new Set((glb.animations ?? []).map(animation => animation.name));
+    const nodes = new Set((glb.nodes ?? []).map(node => node.name?.replace(':', '')));
+    for (const [activity, spec] of Object.entries(MIXAMO_ACTIVITY_CLIPS)) {
+      const names = typeof spec!.clip === 'function' ? [spec!.clip('a'), spec!.clip('b'), spec!.clip('ab')] : [spec!.clip];
+      for (const name of names) expect(clips.has(name), `${activity} -> ${name}`).toBe(true);
+    }
+    for (const bone of MIXAMO_HAND_BONES) expect(nodes.has(bone), bone).toBe(true);
   });
 
   it('only parents hand props and tweaks to bones that exist in every character GLB', () => {

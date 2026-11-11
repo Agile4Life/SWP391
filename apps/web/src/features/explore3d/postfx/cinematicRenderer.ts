@@ -9,6 +9,7 @@ import {
   FULLSCREEN_VERT,
   GRADE_FRAG,
   SSAO_FRAG,
+  STREAK_FRAG,
 } from './shaders';
 
 type Uniforms = Record<string, THREE.IUniform>;
@@ -45,12 +46,15 @@ interface Pipeline {
   down: THREE.WebGLRenderTarget[];
   up: THREE.WebGLRenderTarget[];
   ldr: THREE.WebGLRenderTarget;
+  streakA: THREE.WebGLRenderTarget;
+  streakB: THREE.WebGLRenderTarget;
   mats: {
     ssao: THREE.ShaderMaterial;
     blur: THREE.ShaderMaterial;
     composite: THREE.ShaderMaterial;
     down: THREE.ShaderMaterial;
     up: THREE.ShaderMaterial;
+    streak: THREE.ShaderMaterial;
     grade: THREE.ShaderMaterial;
     final: THREE.ShaderMaterial;
   };
@@ -131,6 +135,19 @@ export function createPipeline(cfg: PostFxConfig, hdrType: THREE.TextureDataType
       uSat: { value: cfg.grade.saturation },
       uVignette: { value: cfg.grade.vignette },
       uCA: { value: cfg.grade.chromaticAberration },
+      tStreak: { value: null },
+      uStreak: { value: cfg.bloom.streak },
+      uInvViewProj: { value: new THREE.Matrix4() },
+      uCamPos: { value: new THREE.Vector3() },
+      uSunDir: { value: new THREE.Vector3(0, 1, 0) },
+      uFogColor: { value: new THREE.Vector3() },
+      uFogSun: { value: new THREE.Vector3() },
+      uFogParams: { value: new THREE.Vector3(0, 0.06, 0.5) },
+    }),
+    streak: makeMaterial(STREAK_FRAG, {
+      tInput: { value: null },
+      uStep: { value: new THREE.Vector2() },
+      uThreshold: { value: 0 },
     }),
     final: makeMaterial(FINAL_FRAG, {
       tInput: { value: null },
@@ -156,6 +173,8 @@ export function createPipeline(cfg: PostFxConfig, hdrType: THREE.TextureDataType
     down,
     up,
     ldr: makeTarget(THREE.UnsignedByteType),
+    streakA: makeTarget(hdrType),
+    streakB: makeTarget(hdrType),
     mats,
     quadScene,
     quad,
@@ -167,7 +186,7 @@ export function createPipeline(cfg: PostFxConfig, hdrType: THREE.TextureDataType
 
 export function disposePipeline(p: Pipeline) {
   p.scene.depthTexture?.dispose();
-  [p.scene, p.composite, p.ao, p.aoBlur, p.ldr, ...p.down, ...p.up].forEach(t => t.dispose());
+  [p.scene, p.composite, p.ao, p.aoBlur, p.ldr, p.streakA, p.streakB, ...p.down, ...p.up].forEach(t => t.dispose());
   Object.values(p.mats).forEach(m => m.dispose());
   p.quad.geometry.dispose();
 }
@@ -187,6 +206,10 @@ function resizePipeline(p: Pipeline, w: number, h: number) {
   let bh = hh;
   p.down.forEach((t, i) => {
     t.setSize(bw, bh);
+    if (i === 2) {
+      p.streakA.setSize(bw, bh);
+      p.streakB.setSize(bw, bh);
+    }
     if (i < p.up.length) p.up[i].setSize(bw, bh);
     bw = Math.max(1, Math.floor(bw / 2));
     bh = Math.max(1, Math.floor(bh / 2));
@@ -230,9 +253,26 @@ export class CinematicRenderer {
     };
   }
 
+  /** Time-of-day inputs for the haze (linear colours, world-space sun direction). */
+  setAtmosphere(a: {
+    sunDir: THREE.Vector3;
+    fogColor: readonly [number, number, number];
+    fogSun: readonly [number, number, number];
+    density: number;
+    falloff: number;
+    max: number;
+  }) {
+    const u = this.p.mats.grade.uniforms;
+    u.uSunDir.value.copy(a.sunDir);
+    u.uFogColor.value.set(...a.fogColor);
+    u.uFogSun.value.set(...a.fogSun);
+    u.uFogParams.value.set(a.density, a.falloff, a.max);
+  }
+
   applyConfig(cfg: PostFxConfig) {
     this.cfg = cfg;
     const m = this.p.mats;
+    m.grade.uniforms.uStreak.value = cfg.bloom.streak;
     m.ssao.uniforms.uIntensity.value = cfg.ao.intensity;
     m.composite.uniforms.uStrength.value = cfg.ao.strength;
     m.composite.uniforms.uExposure.value = cfg.grade.exposure;
@@ -350,6 +390,20 @@ export class CinematicRenderer {
         low = p.up[i];
       }
       bloomTex = p.up[0].texture;
+
+      // Anamorphic streak from the third bloom level: thresholded, then widened.
+      if (cfg.bloom.streak > 0) {
+        const st = m.streak.uniforms;
+        const src2 = p.down[2];
+        st.tInput.value = src2.texture;
+        st.uStep.value.set(1.5 / src2.width, 0);
+        st.uThreshold.value = cfg.bloom.streakThreshold / cfg.grade.exposure;
+        pass(m.streak, p.streakA);
+        st.tInput.value = p.streakA.texture;
+        st.uStep.value.set(5 / src2.width, 0);
+        st.uThreshold.value = 0;
+        pass(m.streak, p.streakB);
+      }
     }
 
     // 4. Grade → LDR.
@@ -357,6 +411,10 @@ export class CinematicRenderer {
     gu.tScene.value = hdr;
     gu.tDepth.value = depth;
     gu.tBloom.value = bloomTex ?? hdr;
+    gu.tStreak.value = p.streakB.texture;
+    gu.uStreak.value = bloomTex ? cfg.bloom.streak : 0;
+    gu.uInvViewProj.value.multiplyMatrices(camera.matrixWorld, camera.projectionMatrixInverse);
+    gu.uCamPos.value.setFromMatrixPosition(camera.matrixWorld);
     pass(m.grade, p.ldr);
 
     // 5. FXAA + sharpen + grain + dither, upscaled to the drawing buffer.
