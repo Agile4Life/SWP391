@@ -54,6 +54,12 @@ public class CourtBookingService {
     private com.swp391.scms.wallet.WalletService wallets;
     @org.springframework.beans.factory.annotation.Value("${app.vnpay.timeout-minutes:15}")
     private int vnpayTimeoutMinutes = 15;
+    /** An unpaid counter booking is released this long before its slot starts, so the slot is bookable again. */
+    @org.springframework.beans.factory.annotation.Value("${app.courts.cash-release-lead-minutes:120}")
+    private int cashReleaseLeadMinutes = 120;
+    /** ...but never sooner than this after it was made, so a last-minute booking still has time to be paid. */
+    @org.springframework.beans.factory.annotation.Value("${app.courts.cash-min-hold-minutes:30}")
+    private int cashMinHoldMinutes = 30;
     private static final Set<String> PAYMENT_METHODS = Set.of("cash", "vnpay");
 
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
@@ -81,8 +87,9 @@ public class CourtBookingService {
     private static BadRequestException invalid(String suffix) {
         return new BadRequestException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix, null, null);
     }
-    private static ConflictException conflict(String suffix) {
-        return new ConflictException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix, null, null);
+    private static ConflictException conflict(String suffix, Object... args) {
+        return new ConflictException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix,
+                args == null || args.length == 0 ? null : args, null);
     }
     private static ForbiddenException forbidden(String suffix) {
         return new ForbiddenException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix, null, null);
@@ -197,6 +204,10 @@ public class CourtBookingService {
         // The plan covers the first bookings of the month; every extra court or hour is paid when booking.
         boolean covered = quotaUsed(principal.id(), date) < monthlyQuota(principal.id(), date);
         if (!covered && method == null) throw invalid("payment_required");
+        if (!covered) {
+            int maxUnpaid = maxUnpaidHolds(principal.id(), date);
+            if (bookings.countUnpaidHolds(principal.id(), now().toLocalDate()) >= maxUnpaid) throw conflict("unpaid_limit", maxUnpaid);
+        }
         CourtBooking booking = new CourtBooking(); booking.setRoom(room); booking.setMember(member.getUser());
         booking.setBookingDate(date); booking.setStartTime(start); booking.setEndTime(end); booking.setCreatedAt(now());
         booking.setPrice(covered ? BigDecimal.ZERO : price);
@@ -220,6 +231,10 @@ public class CourtBookingService {
                 .max(Comparator.comparingInt(s -> s.getMembershipPackage() == null ? -1
                         : CourtPricing.cycleQuota(s.getMembershipPackage())))
                 .orElse(null);
+    }
+    private int maxUnpaidHolds(Long memberId, LocalDate date) {
+        MembershipSubscription subscription = activeSubscription(memberId, date);
+        return com.swp391.scms.facilities.PackageBenefits.courtMaxUnpaidHolds(subscription == null ? null : subscription.getMembershipPackage());
     }
     private int monthlyQuota(Long memberId, LocalDate date) {
         MembershipSubscription subscription = activeSubscription(memberId, date);
@@ -324,13 +339,15 @@ public class CourtBookingService {
 
     /**
      * Frees slots held by unpaid bookings: a VNPay booking not paid within the gateway timeout, and a counter booking
-     * still unpaid when its slot starts. Bookings VNPay may still confirm are left for reconciliation.
+     * still unpaid {@code cashReleaseLeadMinutes} before its slot starts (held at least {@code cashMinHoldMinutes}).
+     * Bookings VNPay may still confirm are left for reconciliation.
      */
     @Transactional
     public int expireUnpaid() {
         LocalDateTime current = now();
         List<CourtBooking> stale = new ArrayList<>(bookings.findUnpaidOnlineBefore(current.minusMinutes(vnpayTimeoutMinutes + 1L)));
-        stale.addAll(bookings.findUnpaidCashStarted(current.toLocalDate(), current.toLocalTime()));
+        LocalDateTime releaseAt = current.plusMinutes(cashReleaseLeadMinutes);
+        stale.addAll(bookings.findUnpaidCashDue(releaseAt.toLocalDate(), releaseAt.toLocalTime(), current.minusMinutes(cashMinHoldMinutes)));
         int cancelled = 0;
         for (CourtBooking booking : stale) {
             try {

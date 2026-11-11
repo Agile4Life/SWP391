@@ -41,9 +41,20 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
             + "and b.paymentMethod = 'vnpay' and b.createdAt < :cutoff")
     List<CourtBooking> findUnpaidOnlineBefore(@Param("cutoff") LocalDateTime cutoff);
 
+    /**
+     * Counter (cash) bookings still unpaid whose slot starts at or before the given moment, and that have been held
+     * long enough to give the member a fair chance to reach the desk.
+     */
     @Query("select b from CourtBooking b where b.status = 'booked' and b.paymentStatus = 'pending' "
-            + "and b.paymentMethod = 'cash' and (b.bookingDate < :date or (b.bookingDate = :date and b.startTime <= :time))")
-    List<CourtBooking> findUnpaidCashStarted(@Param("date") LocalDate date, @Param("time") LocalTime time);
+            + "and b.paymentMethod = 'cash' and b.createdAt < :createdBefore "
+            + "and (b.bookingDate < :date or (b.bookingDate = :date and b.startTime <= :time))")
+    List<CourtBooking> findUnpaidCashDue(@Param("date") LocalDate date, @Param("time") LocalTime time,
+                                         @Param("createdBefore") LocalDateTime createdBefore);
+
+    /** Slots a member is holding without having paid yet (counter or VNPay), from {@code today} on. */
+    @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "
+            + "and b.paymentStatus = 'pending' and b.bookingDate >= :today")
+    long countUnpaidHolds(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 
     long countByMemberIdAndBookingDateAndStatus(Long memberId, LocalDate bookingDate, String status);
 

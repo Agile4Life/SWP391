@@ -246,9 +246,32 @@ class CourtBookingServiceTest {
         var payment = new Payment(); payment.setStatus("pending");
         when(payments.findAllByCourtBookingId(8L)).thenReturn(List.of(payment));
         when(bookings.findUnpaidOnlineBefore(any())).thenReturn(List.of());
-        when(bookings.findUnpaidCashStarted(any(), any())).thenReturn(List.of(booking));
+        when(bookings.findUnpaidCashDue(any(), any(), any())).thenReturn(List.of(booking));
         assertEquals(1, service.expireUnpaid());
         assertEquals("cancelled", booking.getStatus()); assertEquals("failed", payment.getStatus());
+    }
+    @Test void unpaidCounterBookingsAreReleasedBeforeTheSlotStartsButNotInstantly() {
+        when(bookings.findUnpaidOnlineBefore(any())).thenReturn(List.of());
+        when(bookings.findUnpaidCashDue(any(), any(), any())).thenReturn(List.of());
+        service.expireUnpaid();
+        // The fixed clock reads 10:00 in the centre zone: release anything starting by 12:00, held at least 30 minutes.
+        verify(bookings).findUnpaidCashDue(eq(date), eq(LocalTime.of(12, 0)), eq(LocalDateTime.of(date, LocalTime.of(9, 30))));
+    }
+    @Test void unpaidHoldsAreCappedPerTier() {
+        used(1); // Silver's single included booking is gone, so the next one is paid
+        when(bookings.countUnpaidHolds(eq(1L), any())).thenReturn(1L);
+        error("COURT_BOOKING_UNPAID_LIMIT", () -> service.book(member, paid(LocalTime.NOON, "cash")));
+        var capped = assertThrows(AppException.class, () -> service.book(member, paid(LocalTime.NOON, "vnpay")));
+        assertArrayEquals(new Object[]{1}, capped.getMessageArgs());
+
+        plan("GOLD"); used(2); // Gold may hold two unpaid slots
+        assertEquals("pending", service.book(member, paid(LocalTime.NOON, "cash")).paymentStatus());
+        when(bookings.countUnpaidHolds(eq(1L), any())).thenReturn(2L);
+        error("COURT_BOOKING_UNPAID_LIMIT", () -> service.book(member, paid(LocalTime.NOON, "cash")));
+    }
+    @Test void bookingCoveredByThePlanIgnoresTheUnpaidCap() {
+        when(bookings.countUnpaidHolds(eq(1L), any())).thenReturn(5L);
+        assertEquals("covered", service.book(member, request(date, LocalTime.NOON)).paymentStatus());
     }
     @Test void repeatedCancellationIsIdempotent() {
         CourtBooking booking = existing(LocalTime.NOON); booking.setStatus("cancelled");

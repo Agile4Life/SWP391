@@ -70,6 +70,19 @@ public final class PackageBenefits {
         };
     }
 
+    /**
+     * Court slots a member may hold at once without having paid for them (counter or VNPay): trial 1, Silver 1,
+     * Gold 2, Platinum 3. Stops one account from reserving many slots it never pays for.
+     */
+    public static int courtMaxUnpaidHolds(MembershipPackage pkg) {
+        if (pkg == null || isTrial(pkg)) return 1;
+        return switch (tierOf(pkg)) {
+            case "PLATINUM" -> 3;
+            case "GOLD" -> 2;
+            default -> 1;
+        };
+    }
+
     /** Longest hold in days; 0 means the package cannot be held (1-month Silver/Gold, trial). */
     public static int holdMaxDays(MembershipPackage pkg) {
         String tier = paidTier(pkg);

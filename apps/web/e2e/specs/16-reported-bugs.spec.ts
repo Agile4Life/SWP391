@@ -32,3 +32,44 @@ test.describe('Lỗi 1 — nút "Quản lý lịch PT" mở đúng trang lịch 
     await context.close();
   });
 });
+
+const TENNIS = 6;
+/** Đặt sân tennis ở một giờ ngẫu nhiên của ngày `offset`; thử giờ khác khi bị trùng (DB e2e dùng chung giữa các spec). */
+async function bookCourt(token: string, offset: number, method: 'cash' | 'vnpay' | undefined) {
+  let last: Awaited<ReturnType<typeof apiWith>> | undefined;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const hour = 7 + Math.floor(Math.random() * 13);
+    last = await apiWith(token, 'POST', '/court-bookings', { roomId: TENNIS, date: isoDay(offset), startTime: `${String(hour).padStart(2, '0')}:00`, paymentMethod: method });
+    if (last.status !== 409 || last.body?.code !== 'COURT_BOOKING_SLOT_TAKEN') return last;
+  }
+  return last!;
+}
+
+test.describe('Lỗi 2 — không giữ chỗ sân vô hạn bằng lượt chưa thanh toán', () => {
+  test('hạng Silver chỉ giữ được 1 lượt chưa thanh toán; hủy lượt cũ thì đặt tiếp được', async () => {
+    const m = await memberWithPlan(PACKAGES.SILVER_3M, 549000);
+    // Lượt đầu nằm trong quyền lợi của gói (miễn phí, không phải "giữ chỗ chưa trả tiền").
+    const included = await bookCourt(m.token, 3, undefined);
+    expect(included.status, JSON.stringify(included.body)).toBe(201);
+    expect(included.data.paymentStatus).toBe('covered');
+
+    // Lượt thứ hai phải trả tiền: thanh toán tại quầy tạo một lượt đang chờ thanh toán.
+    const held = await bookCourt(m.token, 4, 'cash');
+    expect(held.status, JSON.stringify(held.body)).toBe(201);
+    expect(held.data.paymentStatus).toBe('pending');
+
+    // Lượt trả tiền thứ ba bị chặn: Silver chỉ giữ tối đa 1 lượt chưa thanh toán.
+    const blocked = await bookCourt(m.token, 5, 'cash');
+    expect(blocked.status, JSON.stringify(blocked.body)).toBe(409);
+    expect(blocked.body.code).toBe('COURT_BOOKING_UNPAID_LIMIT');
+    expect(blocked.body.message).toContain('chưa thanh toán');
+    const blockedVnpay = await bookCourt(m.token, 5, 'vnpay');
+    expect(blockedVnpay.body.code).toBe('COURT_BOOKING_UNPAID_LIMIT');
+
+    // Hủy lượt đang giữ thì giải phóng chỗ và được đặt lượt khác.
+    const cancel = await apiWith(m.token, 'PATCH', `/court-bookings/${held.data.id}/cancel`, {});
+    expect(cancel.status, JSON.stringify(cancel.body)).toBe(200);
+    const again = await bookCourt(m.token, 5, 'cash');
+    expect(again.status, JSON.stringify(again.body)).toBe(201);
+  });
+});
