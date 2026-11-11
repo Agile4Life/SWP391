@@ -580,6 +580,16 @@ body:has(.portal-backdrop) .click-ripple {
   z-index: 30;
 }
 
+/* Hộp topbar rộng hơn cụm nút thật (padding + khoảng cách) nên phủ lên nút ở góc phải tiêu đề trang;
+   chỉ phần tử con mới nhận chuột, vùng trống phía trên không chặn nút bên dưới. */
+.portal-v2 .app-topbar {
+  pointer-events: none;
+}
+
+.portal-v2 .app-topbar > * {
+  pointer-events: auto;
+}
+
 .portal-v2 #portal-main .portal-header:first-child {
   min-height: 54px;
   padding-right: max(0px, calc(var(--portal-topbar-width, 0px) - 8px));
