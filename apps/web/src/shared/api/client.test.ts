@@ -152,6 +152,12 @@ describe('client.ts (API client & Auth session)', () => {
     expect(homePath('MEMBER')).toBe('/member/dashboard');
   });
 
+  it('setAuthSession shows the real full name, falling back to the login only when there is none', () => {
+    expect(setAuthSession('jwt-n', 'an.nguyen@example.com', 'MEMBER', '  Nguyễn Văn An ').name).toBe('Nguyễn Văn An');
+    expect(setAuthSession('jwt-n', 'an.nguyen@example.com', 'MEMBER', '   ').name).toBe('an.nguyen@example.com');
+    expect(setAuthSession('jwt-n', 'an.nguyen@example.com', 'MEMBER').name).toBe('an.nguyen@example.com');
+  });
+
   it('setAuthSession stores session and rejects unsupported roles', () => {
     const user = setAuthSession('jwt-1', 'member1', 'MEMBER');
     expect(user.role).toBe('MEMBER');

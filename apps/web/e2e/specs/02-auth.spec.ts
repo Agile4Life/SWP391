@@ -113,6 +113,7 @@ test.describe('Đăng ký hội viên và OTP', () => {
   test('luồng đầy đủ: đăng ký -> OTP -> đăng nhập được ngay', async ({ page }) => {
     const id = unique('reg').toLowerCase();
     await page.goto('/register');
+    await page.locator('#reg-fullName').fill('E2E Hội Viên');
     await page.locator('#reg-username').fill(id);
     await page.locator('#reg-email').fill(`${id}@example.com`);
     await page.locator('#reg-phone').fill('0912345678');
@@ -129,6 +130,7 @@ test.describe('Đăng ký hội viên và OTP', () => {
 
   test('kiểm tra hợp lệ từng trường (tên ngắn, email sai, SĐT sai, mật khẩu ngắn)', async ({ page }) => {
     await page.goto('/register');
+    await page.locator('#reg-fullName').fill('E2E Hội Viên');
     await page.locator('#reg-username').fill('ab');
     await page.locator('#reg-email').fill('khong-phai-email');
     await page.locator('#reg-phone').fill('12345');
@@ -151,6 +153,7 @@ test.describe('Đăng ký hội viên và OTP', () => {
   test('trùng tên đăng nhập hoặc email báo lỗi, không tạo tài khoản thứ hai', async ({ page }) => {
     const member = await createActiveMember();
     await page.goto('/register');
+    await page.locator('#reg-fullName').fill('E2E Hội Viên');
     await page.locator('#reg-username').fill(member.username);
     await page.locator('#reg-email').fill(`khac-${member.email}`);
     await page.locator('#reg-password').fill('Member@123');
@@ -159,6 +162,7 @@ test.describe('Đăng ký hội viên và OTP', () => {
     await expect(page.locator('#otp-code')).toHaveCount(0);
 
     await page.goto('/register');
+    await page.locator('#reg-fullName').fill('E2E Hội Viên');
     await page.locator('#reg-username').fill(unique('dup').toLowerCase());
     await page.locator('#reg-email').fill(member.email);
     await page.locator('#reg-password').fill('Member@123');
@@ -169,6 +173,7 @@ test.describe('Đăng ký hội viên và OTP', () => {
   test('OTP sai hoặc không đủ 6 số bị từ chối, tài khoản chưa kích hoạt không đăng nhập được', async ({ page }) => {
     const id = unique('otp').toLowerCase();
     await page.goto('/register');
+    await page.locator('#reg-fullName').fill('E2E Hội Viên');
     await page.locator('#reg-username').fill(id);
     await page.locator('#reg-email').fill(`${id}@example.com`);
     await page.locator('#reg-password').fill('Member@123');
@@ -189,6 +194,7 @@ test.describe('Đăng ký hội viên và OTP', () => {
   test('gửi lại OTP bị khóa trong thời gian chờ', async ({ page }) => {
     const id = unique('rs').toLowerCase();
     await page.goto('/register');
+    await page.locator('#reg-fullName').fill('E2E Hội Viên');
     await page.locator('#reg-username').fill(id);
     await page.locator('#reg-email').fill(`${id}@example.com`);
     await page.locator('#reg-password').fill('Member@123');

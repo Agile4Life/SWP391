@@ -70,6 +70,28 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerStoresTheRealFullNameInsteadOfTheLoginIdentifier() {
+        when(userRepository.findByUsernameIgnoreCase("an.nguyen@example.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(new Role()));
+        when(passwordEncoder.encode(any())).thenReturn("hash");
+        service.register(new RegisterRequest("an.nguyen@example.com", "secret1", "an@example.com", null, "MEMBER", "  Nguyễn   Văn An "));
+        var saved = org.mockito.ArgumentCaptor.forClass(User.class);
+        verify(userRepository).saveAndFlush(saved.capture());
+        assertEquals("Nguyễn Văn An", saved.getValue().getFullName());
+    }
+
+    @Test
+    void registerWithoutFullNameStillFallsBackToTheUsername() {
+        when(userRepository.findByUsernameIgnoreCase("legacy")).thenReturn(Optional.empty());
+        when(roleRepository.findByCodeIgnoreCase("MEMBER")).thenReturn(Optional.of(new Role()));
+        when(passwordEncoder.encode(any())).thenReturn("hash");
+        service.register(new RegisterRequest("legacy", "secret1", "legacy@example.com", null));
+        var saved = org.mockito.ArgumentCaptor.forClass(User.class);
+        verify(userRepository).saveAndFlush(saved.capture());
+        assertEquals("legacy", saved.getValue().getFullName());
+    }
+
+    @Test
     void registerRejectsDuplicatePhone() {
         when(userRepository.findByUsernameIgnoreCase("newuser")).thenReturn(Optional.empty());
         when(userRepository.findByEmailIgnoreCase("a@b.com")).thenReturn(Optional.empty());

@@ -21,6 +21,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     const input = {
+      fullName: 'New Member',
       username: 'newmember',
       email: 'member@test.com',
       password: 'Password@123',
@@ -51,6 +52,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     const input = {
+      fullName: 'Phone Member',
       username: 'phonemember',
       email: 'phone@test.com',
       password: 'Password@123',

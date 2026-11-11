@@ -69,7 +69,7 @@ public class AuthController {
             description = "Trả về tên đăng nhập và vai trò hiện hành trong cơ sở dữ liệu để frontend đồng bộ phiên sau khi Admin đổi vai trò")
     @GetMapping("/me")
     public ApiResponse<AuthSessionResponse> me(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return ApiResponse.ok(msg("auth.me.success"), new AuthSessionResponse(principal.username(), principal.role()));
+        return ApiResponse.ok(msg("auth.me.success"), new AuthSessionResponse(principal.username(), principal.role(), authService.fullNameOf(principal.username())));
     }
 
     @Operation(summary = "Đăng ký tài khoản", description = "Tạo tài khoản hội viên mới và gửi mã kích hoạt")

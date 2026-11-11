@@ -190,18 +190,19 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
 }
 
 export async function loginApi(identifier: string, password: string): Promise<LoginResponse> {
-  const data = await apiFetch<{ token: string; username: string; role: string }>('/auth/login', {
+  const data = await apiFetch<{ token: string; username: string; role: string; fullName?: string | null }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username: identifier.trim(), password }),
   });
-  const user = setAuthSession(data.token, data.username, data.role);
+  const user = setAuthSession(data.token, data.username, data.role, data.fullName);
   return { token: data.token, user };
 }
 
-export function setAuthSession(token: string, username: string, roleCode: string): UserSession {
+/** `name` là tên hiển thị của người dùng (họ tên thật); chỉ rơi về tên đăng nhập khi tài khoản chưa có họ tên. */
+export function setAuthSession(token: string, username: string, roleCode: string, fullName?: string | null): UserSession {
   const role = SESSION_ROLE[roleCode];
   if (!role) throw new ApiError('Vai trò tài khoản chưa được hỗ trợ trên portal.', 403, undefined, sourceMessage('Vai trò tài khoản chưa được hỗ trợ trên portal.', 'This account role is not supported in the portal.'));
-  const user: UserSession = { id: username, name: username, identifier: username, role };
+  const user: UserSession = { id: username, name: fullName?.trim() || username, identifier: username, role };
   localStorage.setItem(TOKEN_STORAGE_KEY, token);
   setCurrentUser(user);
   return user;
@@ -215,9 +216,9 @@ export function setAuthSession(token: string, username: string, roleCode: string
 export async function syncSessionWithServer(): Promise<void> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   if (!token) return;
-  let me: { username?: string; role?: string } | null;
+  let me: { username?: string; role?: string; fullName?: string | null } | null;
   try {
-    me = await apiFetch<{ username?: string; role?: string }>('/auth/me');
+    me = await apiFetch<{ username?: string; role?: string; fullName?: string | null }>('/auth/me');
   } catch {
     return;
   }
@@ -231,10 +232,11 @@ export async function syncSessionWithServer(): Promise<void> {
   }
   const current = getCurrentUser();
   if (!current) return;
-  if (current.role === role && current.identifier === me.username) return;
+  const displayName = me.fullName?.trim() || me.username;
+  if (current.role === role && current.identifier === me.username && current.name === displayName) return;
   setCurrentUser(current.identifier === me.username
-    ? { ...current, role }
-    : { id: me.username, name: me.username, identifier: me.username, role });
+    ? { ...current, role, name: displayName }
+    : { id: me.username, name: displayName, identifier: me.username, role });
 }
 
 // Màn hình mặc định sau đăng nhập theo từng vai trò

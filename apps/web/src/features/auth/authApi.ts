@@ -3,6 +3,8 @@ import { apiFetch } from '../../shared/api/client';
 
 export interface RegisterInput {
   username: string;
+  /** Họ và tên thật: hiển thị ở quầy check-in, lớp học, tin nhắn (không dùng tên đăng nhập/email). */
+  fullName: string;
   email: string;
   password: string;
   phone?: string;
@@ -19,6 +21,7 @@ export interface GoogleVerifyResponse {
   token: string;
   username: string;
   role: string;
+  fullName?: string | null;
 }
 
 export type GoogleOAuthResponse =

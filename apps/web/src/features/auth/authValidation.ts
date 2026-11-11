@@ -30,6 +30,7 @@ export function isValidPhoneNumber(raw: string): boolean {
 }
 
 export const registrationSchema = z.object({
+  fullName: z.string().trim().min(2, 'Vui lòng nhập họ và tên (tối thiểu 2 ký tự).').max(150, 'Họ và tên tối đa 150 ký tự.'),
   username: z.string().trim().min(3, 'Tên đăng nhập cần tối thiểu 3 ký tự.'),
   email: z.string().trim().refine(isValidEmailAddress, 'Email không đúng định dạng (vd: user@example.com).'),
   phone: z.string().transform(value => value.replace(/\s/g, ''))

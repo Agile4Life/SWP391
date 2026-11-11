@@ -35,7 +35,7 @@ async function fill(id: string, value: string) {
   });
 }
 async function validForm(phone = '') {
-  await fill('reg-username', ' buyer '); await fill('reg-email', 'buyer@example.test');
+  await fill('reg-fullName', ' Nguyễn Văn Mua '); await fill('reg-username', ' buyer '); await fill('reg-email', 'buyer@example.test');
   await fill('reg-phone', phone); await fill('reg-password', 'Buyer123!');
 }
 async function submit() { await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
@@ -51,7 +51,7 @@ it('returns to login immediately after OTP confirmation and keeps the selected p
 
 it('normalizes the phone example before sending the validated registration', async () => {
   await render(); await validForm('0912 345 678'); await submit();
-  expect(api.register).toHaveBeenCalledWith({ username: 'buyer', email: 'buyer@example.test', phone: '0912345678', password: 'Buyer123!' });
+  expect(api.register).toHaveBeenCalledWith({ fullName: 'Nguyễn Văn Mua', username: 'buyer', email: 'buyer@example.test', phone: '0912345678', password: 'Buyer123!' });
   expect(host.querySelector('#otp-code')).not.toBeNull();
 });
 
@@ -126,4 +126,12 @@ it('validates incomplete phone numbers and non-standard gmail addresses immediat
 
   await fill('reg-email', 'valid.member@gmail.com');
   expect(host.querySelector('#reg-email-error')).toBeNull();
+});
+
+it('asks for the real full name and refuses to register without it', async () => {
+  await render(); await validForm('');
+  await fill('reg-fullName', '   '); await submit();
+  expect(api.register).not.toHaveBeenCalled();
+  expect(host.querySelector('#reg-fullName-error')?.textContent).toContain('họ và tên');
+  expect(document.activeElement?.id).toBe('reg-fullName');
 });

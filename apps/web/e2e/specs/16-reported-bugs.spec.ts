@@ -139,3 +139,58 @@ test.describe('Lỗi 3 — quy định đặt sân theo hạng gói', () => {
     await context.close();
   });
 });
+
+test.describe('Lỗi 4 — hiển thị họ tên thật thay vì email/tên đăng nhập', () => {
+  test('đăng ký có họ tên: đăng nhập và /auth/me trả họ tên, giao diện hiện tên chứ không hiện email', async ({ page }) => {
+    const id = `e2ename${Date.now().toString(36)}`;
+    const email = `${id}@example.com`;
+    const fullName = 'Trần Văn Kiểm Thử';
+    const reg = await fetch('http://localhost:8080/api/v1/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: email, email, password: 'Member@123', fullName }) });
+    expect(reg.status).toBe(201);
+    const otp = (await (await fetch('http://localhost:8080/api/v1/auth/send-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })).json()).data.debugOtp;
+    expect((await fetch('http://localhost:8080/api/v1/auth/verify-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: email, otpCode: otp }) })).status).toBe(200);
+
+    const login = await (await fetch('http://localhost:8080/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: email, password: 'Member@123' }) })).json();
+    expect(login.data.fullName).toBe(fullName);
+    const me = await apiWith(login.data.token, 'GET', '/auth/me');
+    expect((me.data as any).fullName).toBe(fullName);
+
+    await page.goto('/login');
+    await page.locator('#login-identifier').fill(email);
+    await page.locator('#login-password').fill('Member@123');
+    await page.getByRole('button', { name: /ĐĂNG NHẬP/ }).click();
+    await expect(page).toHaveURL(/\/member\//);
+    const account = page.locator('.portal-account-name');
+    await expect(account).toHaveText(fullName);
+    await expect(account).not.toContainText('@');
+  });
+
+  test('đăng ký bắt buộc nhập họ tên', async ({ page }) => {
+    await page.goto('/register');
+    await page.locator('#reg-username').fill('khongcoten');
+    await page.locator('#reg-email').fill('khongcoten@example.com');
+    await page.locator('#reg-password').fill('Member@123');
+    let called = false;
+    page.on('request', (r) => { if (r.url().includes('/auth/register')) called = true; });
+    await page.getByRole('button', { name: /TIẾP TỤC XÁC THỰC/ }).click();
+    await expect(page.locator('#reg-fullName-error')).toBeVisible();
+    expect(called).toBe(false);
+  });
+
+  test('quầy check-in hiện họ tên hội viên, không hiện email/tên đăng nhập', async ({ browser }) => {
+    const m = await memberWithPlan(PACKAGES.GOLD, 299000);
+    const qr = await apiWith(m.token, 'GET', '/memberships/subscriptions/my/dynamic-qr');
+    expect(qr.status).toBe(200);
+    const context = await browser.newContext({ storageState: 'e2e/.auth/staff.json' });
+    const page = await context.newPage();
+    await page.goto('/staff/check-in');
+    await settled(page);
+    await page.getByPlaceholder(/Nhập mã QR thẻ hội viên/).or(page.getByLabel(/Nhập mã QR thẻ hội viên/)).first().fill(qr.data.qrCode);
+    await page.getByRole('button', { name: 'Check-in', exact: true }).click();
+    await expect(page.locator('main')).toContainText(/XÁC THỰC HỢP LỆ/i);
+    // Họ tên theo hồ sơ KYC của hội viên ("Nguyen <username>"), không phải email.
+    await expect(page.locator('main')).toContainText(`Nguyen ${m.username}`);
+    await expect(page.locator('main')).not.toContainText(m.email);
+    await context.close();
+  });
+});

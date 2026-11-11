@@ -17,7 +17,7 @@ export function RegisterPage() {
   useEffect(() => rememberPurchaseIntent(search), [search]);
   const [pendingAccount, setPendingAccount] = useState(readPendingRegistration);
   const step = pendingAccount ? 'otp' : 'register';
-  const [form, setForm] = useState({ username: '', email: '', phone: '', password: '' });
+  const [form, setForm] = useState({ fullName: '', username: '', email: '', phone: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState('');
   const [debugOtp, setDebugOtp] = useState('');
@@ -155,6 +155,11 @@ export function RegisterPage() {
       {error && <div role="alert" className="portal-alert">{sourceText(error)}</div>}
       {step === 'register' ? <form onSubmit={handleRegister} aria-busy={busy} noValidate>
         <div className="portal-form-group">
+          <label className="portal-label" htmlFor="reg-fullName">{sourceText("Họ và tên")}</label>
+          <input id="reg-fullName" aria-invalid={!!fieldErrors.fullName} aria-describedby={fieldErrors.fullName ? 'reg-fullName-error' : undefined} className="portal-input" type="text" autoComplete="name" placeholder={sourceText("Nguyễn Văn A")} required maxLength={150} value={form.fullName} onChange={(e) => updateField('fullName', e.target.value)} onBlur={() => handleFieldBlur('fullName')} />
+          {fieldErrors.fullName && <p id="reg-fullName-error" className="portal-field-error">{sourceText(fieldErrors.fullName)}</p>}
+        </div>
+        <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-username">{sourceText("Tên đăng nhập")}</label>
           <input id="reg-username" aria-invalid={!!fieldErrors.username} aria-describedby={fieldErrors.username ? 'reg-username-error' : undefined} className="portal-input" type="text" autoComplete="username" placeholder={sourceText("Tên đăng nhập của bạn")} required value={form.username} onChange={(e) => updateField('username', e.target.value)} onBlur={() => handleFieldBlur('username')} />
           {fieldErrors.username && <p id="reg-username-error" className="portal-field-error">{sourceText(fieldErrors.username)}</p>}
@@ -195,7 +200,7 @@ export function RegisterPage() {
             <p className="row-card__meta">{sourceText("Sai email? Tạo tài khoản mới với tên đăng nhập và email khác.")}</p>
             <button type="button" className="fit-auth-link" disabled={busy || success} onClick={() => {
               savePendingRegistration(null); setPendingAccount(null); setError(''); setOtp(''); setDebugOtp(''); setCountdown(0);
-              setForm({ username: '', email: '', phone: '', password: '' }); setFieldErrors({});
+              setForm({ fullName: '', username: '', email: '', phone: '', password: '' }); setFieldErrors({});
             }}>{sourceText("Đăng ký tài khoản khác")}</button>
           </details>
           <button className="fit-auth-link" type="button" disabled={countdown > 0 || busy || success} onClick={handleResendOtp}>{countdown > 0 ? sourceFormat("Gửi lại mã sau {0}s", countdown) : sourceText('Gửi lại mã OTP')}</button>

@@ -102,7 +102,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   }, []);
 
   const completeGoogleLogin = useCallback((authentication: GoogleVerifyResponse) => {
-    const user = setAuthSession(authentication.token, authentication.username, authentication.role);
+    const user = setAuthSession(authentication.token, authentication.username, authentication.role, authentication.fullName);
     setIsExpired(false);
     setSuccess(true);
     if (onSuccess) onSuccess();

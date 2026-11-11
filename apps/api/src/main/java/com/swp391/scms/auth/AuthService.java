@@ -172,7 +172,7 @@ public class AuthService {
             }
         }
 
-        User user = createPendingMemberUser(username, email, phone, request.password());
+        User user = createPendingMemberUser(username, request.fullName(), email, phone, request.password());
         return new RegistrationResponse(
                 msg("auth.register.success"),
                 user.getId(), username);
@@ -369,7 +369,20 @@ public class AuthService {
     }
 
     private User createPendingMemberUser(String username, String email, String phone, String rawPassword) {
-        return createMemberAccount(username, username, email, phone, rawPassword, null, null, "inactive");
+        return createPendingMemberUser(username, null, email, phone, rawPassword);
+    }
+
+    /** {@code fullName} is what the desk, coaches and check-in screens show; it falls back to the username only when absent. */
+    private User createPendingMemberUser(String username, String fullName, String email, String phone, String rawPassword) {
+        String name = fullName == null ? null : fullName.trim().replaceAll("\\s+", " ");
+        return createMemberAccount(username, name == null || name.isBlank() ? username : name, email, phone, rawPassword, null, null, "inactive");
+    }
+
+    /** Display name for the current session (never the login identifier when the account has a real name). */
+    @Transactional(readOnly = true)
+    public String fullNameOf(String username) {
+        if (username == null) return null;
+        return userRepository.findByUsernameIgnoreCase(username).map(User::getFullName).orElse(null);
     }
 
     private User createMemberAccount(
@@ -575,7 +588,7 @@ public class AuthService {
     private AuthTokenResponse issueTokenForUser(User user) {
         String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
         String role = user.getRole().getCode();
-        return new AuthTokenResponse(jwtService.generateToken(user.getId(), username, role), username, role);
+        return new AuthTokenResponse(jwtService.generateToken(user.getId(), username, role), username, role, user.getFullName());
     }
 
     private boolean isValidEmail(String rawEmail) {

@@ -87,16 +87,16 @@ security:
 paths:
   /auth/login:
     post:
-      summary: Login (public). data = { token, username, role }
+      summary: Login (public). data = { token, username, role, fullName } — fullName is the person's real name (clients show it instead of the login/email)
       security: []
       responses: { '200': { description: OK }, '401': { description: INVALID_CREDENTIALS }, '403': { description: ACCOUNT_INACTIVE } }
   /auth/me:
     get:
-      summary: Verify the current session. data = { username, role } where role is the role currently stored in the database
+      summary: Verify the current session. data = { username, role, fullName } where role is the role currently stored in the database
       responses: { '200': { description: OK }, '401': { description: Missing, expired or deactivated session } }
   /auth/register:
     post:
-      summary: Register a MEMBER account (public). data = { message, userId, username }
+      summary: Register a MEMBER account (public). Body { username, password, email, phone?, fullName? } — fullName (max 150) is the display name used at check-in, classes and chat; when omitted it falls back to the username. data = { message, userId, username }
       security: []
       responses: { '201': { description: Created }, '409': { description: USERNAME_EXISTS / EMAIL_EXISTS } }
   /auth/send-otp:
