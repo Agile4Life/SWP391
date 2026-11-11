@@ -74,6 +74,9 @@ public class EnrollmentService {
     private PaymentRepository paymentRepository;
 
     @Autowired(required = false)
+    private MemberScheduleGuard scheduleGuard;
+
+    @Autowired(required = false)
     private MemberDiscountService memberDiscounts;
 
     @Autowired(required = false)
@@ -165,6 +168,9 @@ public class EnrollmentService {
 
         // SCRUM-132: Chặn Hội viên đặt các lịch học đè/chồng chéo giờ lên nhau
         ensureNoMemberScheduleOverlap(member.getUserId(), session, gymClass.getId());
+        if (scheduleGuard != null) {
+            scheduleGuard.ensureFree(member.getUserId(), session.getSessionDate(), session.getStartTime(), session.getEndTime(), gymClass.getId());
+        }
 
         long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED) + busiestSession(gymClass.getId());
         if (booked >= gymClass.getCapacity()) {
@@ -526,6 +532,11 @@ public class EnrollmentService {
                     "Member already has an active booking for this class");
         }
 
+        // A course holds the member in every session: no other class, court or 1:1 booking may overlap any of them.
+        if (scheduleGuard != null) {
+            scheduleGuard.ensureCourseFree(member.getUserId(), gymClass);
+        }
+
         // Quota check
         QuotaDto quota = getMemberCourseQuota(principal);
         if (!quota.unlimited() && quota.remainingCredits() <= 0) {
@@ -590,6 +601,10 @@ public class EnrollmentService {
         long booked = enrollments.countByGymClassIdAndStatus(gymClass.getId(), BOOKED);
         if (booked >= gymClass.getCapacity()) {
             throw new ConflictException("SCHEDULING_CLASS_FULL", "error.scheduling.class_full", null, "Class is full");
+        }
+
+        if (scheduleGuard != null) {
+            scheduleGuard.ensureCourseFree(member.getUserId(), gymClass);
         }
 
         QuotaDto quota = getMemberCourseQuota(principal);

@@ -96,7 +96,7 @@ describe('mobile portal navigation', () => {
     expect(nav!.querySelector('button[aria-label="Thêm màn hình"]')?.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('opens the complete member menu, navigates to QR and closes the menu', async () => {
+  it('opens the complete member menu, reaches the merged card entry and closes the menu', async () => {
     const router = await renderPortal('MEMBER', '/member/dashboard');
     const more = host.querySelector<HTMLButtonElement>('button[aria-label="Thêm màn hình"]');
     expect(more).not.toBeNull();
@@ -105,11 +105,28 @@ describe('mobile portal navigation', () => {
     const dialog = host.querySelector('dialog')!;
     expect(dialog.querySelector('a[href="/member/profile"]')).not.toBeNull();
     expect(dialog.querySelector('a[href^="/manager/"]')).toBeNull();
-    const qr = dialog.querySelector<HTMLAnchorElement>('a[href="/member/check-in"]');
-    expect(qr).not.toBeNull();
-    await act(async () => qr!.click());
-    expect(router.state.location.pathname).toBe('/member/check-in');
+    // Mục gộp: Quét QR và Bảo lưu không còn là mục riêng trong menu.
+    expect(dialog.querySelector('a[href="/member/check-in"]')).toBeNull();
+    expect(dialog.querySelector('a[href="/member/hold"]')).toBeNull();
+    const card = dialog.querySelector<HTMLAnchorElement>('a[href="/member/card"]');
+    expect(card).not.toBeNull();
+    await act(async () => card!.click());
+    expect(router.state.location.pathname).toBe('/member/card');
     expect(host.querySelector('dialog')).toBeNull();
+    const tabs = host.querySelector('.portal-section-tabs');
+    expect(tabs?.textContent).toContain('Thẻ hội viên');
+    await act(async () => tabs!.querySelector<HTMLAnchorElement>('a[href="/member/check-in"]')!.click());
+    expect(router.state.location.pathname).toBe('/member/check-in');
+    expect(host.querySelector('.portal-rail-link.active')?.getAttribute('aria-label')).toBe('Thẻ & Check-in');
+  });
+
+  it('finds a merged screen by the name of one of its tabs', async () => {
+    await renderPortal('MEMBER', '/member/dashboard');
+    await act(async () => host.querySelector<HTMLButtonElement>('button.portal-search-trigger')!.click());
+    const input = host.querySelector<HTMLInputElement>('#portal-screen-search')!;
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => { setValue.call(input, 'quét qr'); input.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect(host.querySelector('.portal-screen-results a[href="/member/card"]')).not.toBeNull();
   });
 
   it('marks More on secondary screens and keeps logout in the topbar avatar menu', async () => {

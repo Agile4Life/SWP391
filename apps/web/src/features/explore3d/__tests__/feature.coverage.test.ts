@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { PORTAL_NAV } from '../../portal/portalNavigation';
+import { PORTAL_NAV, portalNavRoutes } from '../../portal/portalNavigation';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { allHotspots } from '../scene/selectors';
 
 describe('Explore 3D Member Feature Coverage', () => {
   it('ensures every MEMBER route in PORTAL_NAV (except /member/explore) is reachable from at least one 3D hotspot', () => {
+    // Mục gộp (vd. Thẻ & Check-in) tính cả từng tab con: mỗi màn vẫn phải có lối vào từ cảnh 3D.
     const memberRoutes = PORTAL_NAV.filter(
       item => item.roles.includes('MEMBER') && item.to !== '/member/explore',
-    ).map(item => item.to);
+    ).flatMap(item => portalNavRoutes(item));
 
-    expect(memberRoutes.length).toBeGreaterThanOrEqual(12);
+    expect(memberRoutes.length).toBeGreaterThanOrEqual(10);
 
     const hotspots = allHotspots(SOL_CENTER_SCENE);
     const reachableRoutes = new Set<string>();

@@ -1,6 +1,7 @@
 import { test, expect, settled, field } from '../fixtures';
 import { authFile } from '../helpers/accounts';
-import { api } from '../helpers/api';
+import { api, apiWith } from '../helpers/api';
+import { memberWithPlan, PACKAGES } from '../helpers/session';
 
 async function dynamicQr(role: 'binh' | 'an' | 'chi' | 'hieu'): Promise<string> {
   const res = await api<{ qrCode: string }>(role, 'GET', '/memberships/subscriptions/my/dynamic-qr');
@@ -21,12 +22,16 @@ test.describe('Check-in / check-out tại quầy lễ tân', () => {
   });
 
   test('hội viên còn gói: quét mã động thành công và xuất hiện trong danh sách đang tập', async ({ page }) => {
+    // hội viên mới tạo để không phụ thuộc việc dữ liệu demo đã có người "đang trong trung tâm" hay chưa
+    const m = await memberWithPlan(PACKAGES.GOLD, 299000);
+    const qr = await apiWith(m.token, 'GET', '/memberships/subscriptions/my/dynamic-qr');
+    expect(qr.status).toBe(200);
     await page.goto('/staff/check-in');
     await settled(page);
-    await field(page, /Nhập mã QR thẻ hội viên/).fill(await dynamicQr('binh'));
+    await field(page, /Nhập mã QR thẻ hội viên/).fill(qr.data.qrCode);
     await page.getByRole('button', { name: 'Check-in', exact: true }).click();
-    await expect(page.locator('main')).toContainText('Trần Thu Bình');
-    await expect(page.locator('main')).toContainText(/XÁC THỰC HỢP LỆ|check-in thành công|Cho phép/i);
+    await expect(page.locator('main')).toContainText(/XÁC THỰC HỢP LỆ/i);
+    await expect(page.locator('main')).toContainText(m.username);
   });
 
   test('quét lại cùng một mã động bị từ chối (không dùng lại được)', async ({ page }) => {

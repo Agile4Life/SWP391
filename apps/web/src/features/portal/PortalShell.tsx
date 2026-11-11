@@ -12,7 +12,8 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from './PortalIcon';
 import { usePortalMotion } from './usePortalMotion';
 import './portal-motion.css';
-import { getMobileNavLabel, getNavLabel, getRoleLabel, MOBILE_PRIMARY_NAV, PORTAL_NAV } from './portalNavigation';
+import { PortalSectionTabs } from './PortalSectionTabs';
+import { getMobileNavLabel, getNavLabel, getRoleLabel, getTabLabel, isPortalNavActive, MOBILE_PRIMARY_NAV, PORTAL_NAV } from './portalNavigation';
 import { getUnreadCount } from '../member/notificationsApi';
 import { subscribeMembershipChanges } from '../member/membershipRealtime';
 import { getProfile } from '../member/profileApi';
@@ -157,11 +158,18 @@ function PortalShellContent({ user }: { user: UserSession }) {
     }
     return { ...item, label: getNavLabel(item.to, item.label, lang) };
   });
-  const pageTitle = navItems.find((item) => item.to === location.pathname)?.label ?? t('SÖL Fitness', 'SÖL Fitness');
-  const results = navItems.filter((item) => searchable(item.label).includes(searchable(query.trim())));
+  const activeNavItem = navItems.find((item) => isPortalNavActive(item, location.pathname));
+  const activeTab = activeNavItem?.tabs?.find((tab) => tab.to === location.pathname);
+  const pageTitle = activeTab ? `${activeNavItem!.label} · ${getTabLabel(activeTab, lang)}` : activeNavItem?.label ?? t('SÖL Fitness', 'SÖL Fitness');
+  // Tìm theo tên mục gộp lẫn tên từng tab con (vd. gõ "Quét QR" vẫn ra "Thẻ & Check-in").
+  const results = navItems.filter((item) => {
+    const needle = searchable(query.trim());
+    return searchable(item.label).includes(needle) || (item.tabs ?? []).some(tab => searchable(getTabLabel(tab, lang)).includes(needle));
+  });
+  // Mục mobile có thể là một tab con của mục gộp: vẫn phải đúng quyền và giữ đích đến riêng.
   const mobileItems = MOBILE_PRIMARY_NAV[user.role].flatMap(item => {
-    const authorizedItem = navItems.find(candidate => candidate.to === item.to);
-    return authorizedItem ? [{ ...authorizedItem, label: getMobileNavLabel(item.to, item.label, lang) }] : [];
+    const authorizedItem = navItems.find(candidate => candidate.to === item.to || candidate.tabs?.some(tab => tab.to === item.to));
+    return authorizedItem ? [{ ...authorizedItem, to: item.to, label: getMobileNavLabel(item.to, item.label, lang) }] : [];
   });
   const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
@@ -350,10 +358,13 @@ function PortalShellContent({ user }: { user: UserSession }) {
       <aside className="app-sidebar" aria-label={t('Thanh công cụ SÖL', 'SÖL Sidebar')}>
         <Link to="/" className="portal-logo" aria-label={t('SÖL · Về trang chủ', 'SÖL · Back to home')}><span>S</span><i /></Link>
         <nav className="portal-rail-nav" aria-label={t('Điều hướng portal', 'Portal navigation')}>
-          {navItems.filter((item) => item.to !== '/member/profile' && item.to !== '/member/notifications').map((item) => <NavLink
-            key={item.to} to={item.to} className="portal-rail-link" aria-label={item.label} title={item.label}>
-            <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
-          </NavLink>)}
+          {navItems.filter((item) => item.to !== '/member/profile' && item.to !== '/member/notifications').map((item) => {
+            // Mục gộp sáng khi đang ở bất kỳ tab con nào, không chỉ tab đầu.
+            const active = isPortalNavActive(item, location.pathname);
+            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={item.label} title={item.label} aria-current={active ? 'page' : undefined}>
+              <PortalIcon name={item.icon} /><span className="portal-rail-tooltip">{item.label}</span>
+            </Link>;
+          })}
         </nav>
         <div className="portal-rail-footer">
           <Link to="/" className="portal-rail-link" aria-label={t('Về trang chủ', 'Back to home')}><PortalIcon name="home" /><span className="portal-rail-tooltip">{t('Về trang chủ', 'Back to home')}</span></Link>
@@ -532,6 +543,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         <PwaStatus mode="status" />
         <main ref={mainRef} id="portal-main" tabIndex={-1} aria-busy={navigating || undefined}>
           {navigating && <LoadingSkeleton label={t('Đang tải trang…', 'Loading page…')} variant="cards" count={3} className="portal-route-loading" />}
+          {activeNavItem?.tabs && <PortalSectionTabs label={activeNavItem.label} tabs={activeNavItem.tabs} pathname={location.pathname} lang={lang} />}
           <div key={location.pathname} className="route-fade" hidden={navigating}><Outlet /></div>
         </main>
         <footer className="portal-workspace-footer">

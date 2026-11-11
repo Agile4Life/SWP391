@@ -46,6 +46,9 @@ public class CoachBookingService {
     private static final java.util.Set<String> DESK_ROLES = java.util.Set.of("RECEPTIONIST", "CENTER_MANAGER");
 
     @Autowired(required = false)
+    private com.swp391.scms.scheduling.service.MemberScheduleGuard scheduleGuard;
+
+    @Autowired(required = false)
     private com.swp391.scms.finance.repository.PaymentRepository paymentRepository;
 
     @Autowired(required = false)
@@ -364,6 +367,9 @@ public class CoachBookingService {
                 .anyMatch(cs -> request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime()))) {
             throw new ConflictException("MEMBER_SCHEDULE_CONFLICT", "error.coach_booking.member_busy", null,
                     "Bạn đã có lịch học lớp trong khung giờ này.");
+        }
+        if (scheduleGuard != null) {
+            scheduleGuard.ensureFree(member.getUserId(), request.bookingDate(), request.startTime(), request.endTime(), null);
         }
 
         List<MembershipSubscription> validSubscriptions = subscriptionRepository

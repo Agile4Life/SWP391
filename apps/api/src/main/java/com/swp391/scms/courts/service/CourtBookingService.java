@@ -33,6 +33,9 @@ public class CourtBookingService {
     private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final Set<String> COURT_DISCIPLINES = Set.of("Tennis", "Cầu lông", "Bơi lội");
     private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST", "STAFF");
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.service.MemberScheduleGuard scheduleGuard;
+
     private final CourtBookingRepository bookings;
     private final RoomRepository rooms;
     private final MembershipSubscriptionRepository subscriptions;
@@ -185,6 +188,7 @@ public class CourtBookingService {
         if (bookings.existsRoomOverlap(room.getId(), date, start, end)
                 || bookings.existsClassOverlap(room.getId(), date, start, end)
                 || bookings.existsMemberOverlap(principal.id(), date, start, end)) throw conflict("slot_taken");
+        if (scheduleGuard != null) scheduleGuard.ensureFree(principal.id(), date, start, end, null);
         String method = paymentMethod == null || paymentMethod.isBlank()
                 || CourtPricing.PACKAGE_QUOTA.equalsIgnoreCase(paymentMethod.trim())
                 ? null : paymentMethod.trim().toLowerCase(Locale.ROOT);

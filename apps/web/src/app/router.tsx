@@ -196,7 +196,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/coach-classes',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachClassesPage')).CoachClassesPage }),
+            element: <Navigate to="/coach/classes" replace />,
           },
         ],
       },

@@ -96,6 +96,9 @@ public class SessionBookingService {
         this.coachBookingRepository = coachBookingRepository;
     }
 
+    @Autowired(required = false)
+    private MemberScheduleGuard scheduleGuard;
+
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
@@ -185,6 +188,9 @@ public class SessionBookingService {
                     "Member already has an active booking for this class");
         }
         ensureNoOverlap(memberId, session);
+        if (scheduleGuard != null) {
+            scheduleGuard.ensureFree(memberId, session.getSessionDate(), session.getStartTime(), session.getEndTime(), classId);
+        }
 
         long taken = enrollments.countByGymClassIdAndStatus(classId, BOOKED)
                 + bookings.countBySessionIdAndStatus(session.getId(), BOOKED);
