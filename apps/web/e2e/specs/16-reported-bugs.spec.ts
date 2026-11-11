@@ -1,5 +1,5 @@
 import { test, expect, settled } from '../fixtures';
-import { api, apiWith } from '../helpers/api';
+import { api, apiLogin, apiWith, createActiveMember, TINY_PNG } from '../helpers/api';
 import { contextFor, memberWithPlan, PACKAGES } from '../helpers/session';
 
 /** Hồi quy cho các lỗi do người dùng báo; mỗi describe ứng với một lỗi. */
@@ -221,5 +221,53 @@ test.describe('Lỗi 5 — Lịch lớp học không còn khối "lịch buổi 
 
     await view.getByRole('button', { name: 'Buổi học theo tuần' }).click();
     await expect(page.getByRole('group', { name: 'Lọc theo tuần' })).toBeVisible();
+  });
+});
+
+/** Hội viên mới đang dùng gói Trải nghiệm 3 ngày (lễ tân đã duyệt). */
+async function trialMember() {
+  const m = await createActiveMember('e2etrial');
+  const session = await apiLogin(m.username, m.password);
+  const claim = await apiWith(session.token, 'POST', '/memberships/trial/request', {
+    documentType: 'CCCD', documentNumber: String(Math.floor(1e11 + Math.random() * 9e11)), fullName: `Trial ${m.username}`, nationality: 'VN', frontImageUrl: TINY_PNG, backImageUrl: TINY_PNG,
+  });
+  expect(claim.status, JSON.stringify(claim.body)).toBe(201);
+  const list = await api('staff', 'GET', '/reception/trials');
+  const mine = ((list.data as any)?.content ?? list.data as any[]).find((item: any) => item.memberEmail === m.email);
+  expect((await api('staff', 'POST', `/reception/trials/${mine.id}/approve`)).status).toBe(200);
+  const sub = await apiWith(session.token, 'GET', '/memberships/subscriptions/my');
+  const profile = await apiWith(session.token, 'GET', '/profile');
+  return { ...m, token: session.token, subscriptionId: (sub.data as any).id as number, memberId: Number((profile.data as any).userId) };
+}
+
+test.describe('Lỗi 6 — gói Trải nghiệm nâng được lên mọi gói trả phí (Silver, Gold, Platinum)', () => {
+  const PLANS = [{ id: 2, tier: 'SILVER', price: 199000 }, { id: 3, tier: 'GOLD', price: 299000 }, { id: 4, tier: 'PLATINUM', price: 599000 }];
+  for (const plan of PLANS) {
+    test(`Trải nghiệm → ${plan.tier}: tạo yêu cầu, lễ tân thu tiền, gói chuyển sang ${plan.tier}`, async () => {
+      const t = await trialMember();
+      const up = await apiWith(t.token, 'POST', `/memberships/subscriptions/${t.subscriptionId}/upgrade`, { packageId: plan.id });
+      expect(up.status, JSON.stringify(up.body)).toBe(201);
+      expect((up.data as any).upgradeCharge).toBe(plan.price); // gói Trải nghiệm miễn phí nên không có phần quy đổi
+      const pay = await api('staff', 'POST', '/payments/process', { memberId: t.memberId, subscriptionId: (up.data as any).id, amount: plan.price, method: 'cash', note: 'e2e' });
+      expect(pay.status, JSON.stringify(pay.body)).toBe(201);
+      const now = await apiWith(t.token, 'GET', '/memberships/subscriptions/my');
+      expect((now.data as any).status).toBe('active');
+      expect(String((now.data as any).packageName).toUpperCase()).toContain(plan.tier);
+    });
+  }
+
+  test('giao diện: cả ba gói đều có nút "Nâng cấp gói" bấm được với hội viên đang dùng gói Trải nghiệm', async ({ browser }) => {
+    const t = await trialMember();
+    const context = await contextFor(browser, t);
+    const page = await context.newPage();
+    await page.goto('/member/packages');
+    await settled(page);
+    for (const tier of ['SILVER', 'GOLD', 'PLATINUM']) {
+      const card = page.locator('article', { hasText: tier }).first();
+      await expect(card.getByRole('button', { name: 'Nâng cấp gói' })).toBeEnabled();
+    }
+    await page.locator('article', { hasText: 'GOLD' }).first().getByRole('button', { name: 'Nâng cấp gói' }).click();
+    await expect(page.getByText(/Yêu cầu #\d+/)).toBeVisible();
+    await context.close();
   });
 });
