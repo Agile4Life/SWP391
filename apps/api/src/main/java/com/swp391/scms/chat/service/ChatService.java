@@ -20,6 +20,10 @@ public class ChatService {
     private final ChatMessageRepository messages;
     private final ChatContactRepository contacts;
 
+    /** Optional so the service stays constructible in unit tests; without it a coach cannot start chats. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.coaching.service.CurrentCoachMembers coachMembers;
+
     public ChatService(ChatConversationRepository conversations, ChatMessageRepository messages, ChatContactRepository contacts) {
         this.conversations = conversations; this.messages = messages; this.contacts = contacts;
     }
@@ -31,10 +35,37 @@ public class ChatService {
         return actor;
     }
 
+    /**
+     * Who the caller may start a chat with: a member finds receptionists and coaches, a receptionist finds any
+     * active member, a coach finds the members they currently train.
+     */
     public Page<ChatContactDto> contacts(AuthenticatedPrincipal principal, String query, int page) {
-        requireMember(principal);
+        User actor = requireActor(principal);
         if (query == null || query.length() > 80) throw invalid("validation.chat.query");
-        return contacts.search(query.trim(), page(page)).map(u -> contact(u, true));
+        String term = query.trim();
+        return switch (role(actor)) {
+            case "MEMBER" -> contacts.search(term, page(page)).map(u -> contact(u, true));
+            case "RECEPTIONIST" -> contacts.searchMembers(term, page(page)).map(u -> contact(u, true));
+            default -> coachContacts(actor.getId(), term, page(page));
+        };
+    }
+
+    private Page<ChatContactDto> coachContacts(Long coachId, String term, Pageable pageable) {
+        if (coachMembers == null) return Page.empty(pageable);
+        String needle = term.toLowerCase(java.util.Locale.ROOT);
+        List<com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption> mine = coachMembers.list(coachId, "COACH").stream()
+                .filter(m -> needle.isEmpty() || (m.fullName() != null && m.fullName().toLowerCase(java.util.Locale.ROOT).contains(needle))
+                        || (m.memberCode() != null && m.memberCode().toLowerCase(java.util.Locale.ROOT).contains(needle)))
+                .sorted(Comparator.comparing((com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption m) -> m.fullName() == null ? "" : m.fullName())
+                        .thenComparing(com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption::id))
+                .toList();
+        int from = (int) Math.min(pageable.getOffset(), mine.size());
+        int to = Math.min(from + pageable.getPageSize(), mine.size());
+        List<ChatContactDto> rows = new ArrayList<>();
+        for (var m : mine.subList(from, to)) {
+            contacts.findUser(m.id()).filter(u -> active(u) && "MEMBER".equals(role(u))).ifPresent(u -> rows.add(contact(u, true)));
+        }
+        return new PageImpl<>(rows, pageable, mine.size());
     }
 
     public Page<ChatConversationDto> list(AuthenticatedPrincipal principal, int page) {
@@ -66,17 +97,33 @@ public class ChatService {
         return new ChatUnreadCount(messages.unreadTotal(actor.getId()));
     }
 
+    /** Opens (or reuses) the unique conversation between a member and a receptionist/coach, started by either side. */
     @Transactional
     public ChatConversationDto open(AuthenticatedPrincipal principal, Long contactId) {
-        requireMember(principal);
+        User actor = requireActor(principal);
         if (contactId == null || contactId <= 0 || contactId.equals(principal.id())) throw invalid("validation.chat.contact");
+        boolean memberStarts = "MEMBER".equals(role(actor));
         // Serialize pair creation on the same Member row across all API instances.
-        User member = contacts.lockUser(principal.id()).orElseThrow(ChatService::forbidden);
-        checkActor(member, principal);
-        User staff = contacts.findUser(contactId).filter(ChatService::active)
+        Long memberLockId = memberStarts ? principal.id() : contactId;
+        User lockedMember = contacts.lockUser(memberLockId).orElseGet(() -> {
+            if (memberStarts) throw forbidden();
+            throw new ResourceNotFoundException("resource.chat.contact", contactId);
+        });
+        if (memberStarts) checkActor(lockedMember, principal);
+        User other = contacts.findUser(contactId).filter(ChatService::active)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.chat.contact", contactId));
-        if (!STAFF.contains(role(staff))) throw invalid("validation.chat.contact");
-        ChatConversation c = conversations.findByMemberIdAndStaffId(member.getId(), contactId)
+        User member, staff;
+        if (memberStarts) {
+            if (!STAFF.contains(role(other))) throw invalid("validation.chat.contact");
+            member = lockedMember; staff = other;
+        } else {
+            if (!"MEMBER".equals(role(other))) throw invalid("validation.chat.contact");
+            // A coach may only reach the members they currently train; the desk may reach any active member.
+            if ("COACH".equals(role(actor)) && (coachMembers == null)) throw forbidden();
+            if ("COACH".equals(role(actor))) coachMembers.requireCoachOf(actor.getId(), contactId);
+            member = other; staff = actor;
+        }
+        ChatConversation c = conversations.findByMemberIdAndStaffId(member.getId(), staff.getId())
                 .orElseGet(() -> conversations.save(new ChatConversation(member, staff, Instant.now())));
         return conversation(c, principal.id());
     }
@@ -118,11 +165,6 @@ public class ChatService {
         return message(saved, actor.getId());
     }
 
-    private User requireMember(AuthenticatedPrincipal p) {
-        User user = requireActor(p);
-        if (!"MEMBER".equals(role(user))) throw forbidden();
-        return user;
-    }
     private static void checkActor(User u, AuthenticatedPrincipal p) {
         String role = role(u);
         if (!active(u) || !role.equals(p.role()) || !("MEMBER".equals(role) || STAFF.contains(role))) throw forbidden();

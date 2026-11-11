@@ -67,10 +67,86 @@ class ChatServiceTest {
         verify(conversations, never()).save(any());
     }
 
-    @Test void staffCannotOpenConversationsOrSearchMemberDirectory() {
-        var principal = new AuthenticatedPrincipal(20L, "coach", "COACH");
-        assertThatThrownBy(() -> service.open(principal, 10L)).isInstanceOf(ForbiddenException.class);
-        assertThatThrownBy(() -> service.contacts(principal, "", 0)).isInstanceOf(ForbiddenException.class);
+    @Test void receptionistStartsAChatWithAnyActiveMember() {
+        var desk = user(40, "RECEPTIONIST");
+        when(contacts.findUser(40L)).thenReturn(Optional.of(desk));
+        when(contacts.lockUser(10L)).thenReturn(Optional.of(memberUser));
+        when(conversations.findByMemberIdAndStaffId(10L, 40L)).thenReturn(Optional.empty());
+        when(conversations.save(any())).thenAnswer(inv -> { ChatConversation c = inv.getArgument(0); c.setId(9L); return c; });
+        var result = service.open(new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST"), 10L);
+        assertThat(result.peer().id()).isEqualTo(10L);
+        assertThat(result.peer().role()).isEqualTo("MEMBER");
+        verify(contacts).lockUser(10L); // pair creation is serialized on the member row
+    }
+
+    @Test void receptionistReusesAnExistingConversationWithTheMember() {
+        var desk = user(40, "RECEPTIONIST");
+        when(contacts.findUser(40L)).thenReturn(Optional.of(desk));
+        when(contacts.lockUser(10L)).thenReturn(Optional.of(memberUser));
+        when(conversations.findByMemberIdAndStaffId(10L, 40L)).thenReturn(Optional.of(conversation));
+        assertThat(service.open(new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST"), 10L).id()).isEqualTo(7L);
+        verify(conversations, never()).save(any());
+    }
+
+    @Test void staffCanOnlyChatWithMembersNotWithOtherStaff() {
+        var desk = new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST");
+        when(contacts.findUser(40L)).thenReturn(Optional.of(user(40, "RECEPTIONIST")));
+        when(contacts.lockUser(20L)).thenReturn(Optional.of(coach));
+        assertThatThrownBy(() -> service.open(desk, 20L)).isInstanceOf(BadRequestException.class);
+        verify(conversations, never()).save(any());
+    }
+
+    @Test void staffCannotChatWithInactiveOrMissingMembers() {
+        var desk = new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST");
+        when(contacts.findUser(40L)).thenReturn(Optional.of(user(40, "RECEPTIONIST")));
+        when(contacts.lockUser(10L)).thenReturn(Optional.of(memberUser));
+        memberUser.setStatus("locked");
+        assertThatThrownBy(() -> service.open(desk, 10L)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.open(desk, 999L)).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test void coachMayOnlyStartWithMembersTheyTrain() {
+        var coachPrincipal = new AuthenticatedPrincipal(20L, "coach", "COACH");
+        var trainees = mock(com.swp391.scms.coaching.service.CurrentCoachMembers.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachMembers", trainees);
+        when(contacts.lockUser(10L)).thenReturn(Optional.of(memberUser));
+        doThrow(new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, null)).when(trainees).requireCoachOf(20L, 10L);
+        assertThatThrownBy(() -> service.open(coachPrincipal, 10L)).isInstanceOf(ForbiddenException.class);
+        verify(conversations, never()).save(any());
+
+        doNothing().when(trainees).requireCoachOf(20L, 10L);
+        when(conversations.findByMemberIdAndStaffId(10L, 20L)).thenReturn(Optional.of(conversation));
+        assertThat(service.open(coachPrincipal, 10L).peer().id()).isEqualTo(10L);
+    }
+
+    @Test void directorySearchDependsOnWhoAsks() {
+        var desk = new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST");
+        when(contacts.findUser(40L)).thenReturn(Optional.of(user(40, "RECEPTIONIST")));
+        when(contacts.searchMembers(eq("an"), any())).thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(memberUser)));
+        assertThat(service.contacts(desk, " an ", 0).getContent()).extracting(c -> c.role()).containsExactly("MEMBER");
+
+        when(contacts.search(eq(""), any())).thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(coach)));
+        assertThat(service.contacts(member, "", 0).getContent()).extracting(c -> c.role()).containsExactly("COACH");
+        verify(contacts, never()).searchMembers(eq(""), any());
+    }
+
+    @Test void coachDirectoryListsOnlyTheirCurrentMembers() {
+        var coachPrincipal = new AuthenticatedPrincipal(20L, "coach", "COACH");
+        var trainees = mock(com.swp391.scms.coaching.service.CurrentCoachMembers.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachMembers", trainees);
+        when(trainees.list(20L, "COACH")).thenReturn(List.of(
+                new com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption(10L, "MEM-10", "User 10", null, null, null),
+                new com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption(11L, "MEM-11", "Khác", null, null, null)));
+        var page = service.contacts(coachPrincipal, "user", 0);
+        assertThat(page.getContent()).extracting(c -> c.id()).containsExactly(10L);
+        verify(contacts, never()).searchMembers(any(), any());
+    }
+
+    @Test void managerCannotOpenOrSearch() {
+        when(contacts.findUser(30L)).thenReturn(Optional.of(user(30, "CENTER_MANAGER")));
+        var manager = new AuthenticatedPrincipal(30L, "manager", "CENTER_MANAGER");
+        assertThatThrownBy(() -> service.open(manager, 10L)).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service.contacts(manager, "", 0)).isInstanceOf(ForbiddenException.class);
     }
 
     @Test void rejectsSelfConversation() {

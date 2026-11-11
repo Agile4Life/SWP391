@@ -67,10 +67,30 @@ it('member starts a conversation from the contact directory', async () => {
   expect(host.querySelector('[data-thread-title]')?.textContent).toContain('Coach Linh');
 });
 
-it('coach can reply but has no member directory button', async () => {
+it('coach and receptionist can start a chat with a member from the directory', async () => {
+  const memberContact: api.ChatContact = { id: 10, name: 'Hội viên An', role: 'MEMBER', available: true };
+  for (const role of ['COACH', 'RECEPTIONIST'] as const) {
+    vi.mocked(getCurrentUser).mockReturnValue({ id: role, identifier: role, name: role, role: role === 'COACH' ? 'COACH' : 'STAFF' });
+    vi.mocked(api.getContacts).mockResolvedValue({ content: [memberContact], totalPages: 1, number: 0 });
+    vi.mocked(api.openConversation).mockResolvedValue({ ...conversation, id: 9, peer: memberContact });
+    await render();
+    expect(button('Cuộc trò chuyện mới')).toBeDefined();
+    await act(async () => button('Cuộc trò chuyện mới').click());
+    // Staff look for a member, not for another receptionist/coach.
+    expect(host.textContent).toContain('Tìm hội viên');
+    expect(host.textContent).not.toContain('Tìm lễ tân hoặc huấn luyện viên');
+    await act(async () => host.querySelector<HTMLButtonElement>('button[data-contact-id="10"]')!.click());
+    expect(api.openConversation).toHaveBeenCalledWith(10);
+    expect(host.querySelector('textarea')).not.toBeNull();
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    vi.mocked(api.openConversation).mockClear();
+  }
+});
+
+it('a coach can still reply to an existing conversation', async () => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'Coach', role: 'COACH' });
   await render();
-  expect(button('Cuộc trò chuyện mới')).toBeUndefined();
   await act(async () => button('Coach Linh').click());
   expect(host.querySelector('textarea')).not.toBeNull();
 });

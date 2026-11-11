@@ -22,4 +22,13 @@ public interface ChatContactRepository extends Repository<User, Long> {
             countQuery = "select count(u) from User u join u.role r where u.deletedAt is null and u.status = 'active' "
             + "and r.code in ('RECEPTIONIST', 'COACH') and lower(u.fullName) like lower(concat('%', :query, '%'))")
     Page<User> search(@Param("query") String query, Pageable page);
+
+    /** Active members a receptionist may start a chat with, matched by name or email. */
+    @Query(value = "select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' "
+            + "and r.code = 'MEMBER' and (lower(u.fullName) like lower(concat('%', :query, '%')) "
+            + "or lower(u.email) like lower(concat('%', :query, '%'))) order by u.fullName, u.id",
+            countQuery = "select count(u) from User u join u.role r where u.deletedAt is null and u.status = 'active' "
+            + "and r.code = 'MEMBER' and (lower(u.fullName) like lower(concat('%', :query, '%')) "
+            + "or lower(u.email) like lower(concat('%', :query, '%')))")
+    Page<User> searchMembers(@Param("query") String query, Pageable page);
 }

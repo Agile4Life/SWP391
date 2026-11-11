@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: SCMS Private Direct Chat — SCRUM-106 / SCRUM-128 extension
   version: 1.0.0
-  description: Member initiates private conversations with active Receptionist/Coach. All reads and writes require application JWT. Center Managers have no access.
+  description: Either side may start a private conversation - a Member with an active Receptionist/Coach, a Receptionist with any active Member, a Coach with a Member they currently train. All reads and writes require application JWT. Center Managers have no access.
 servers:
   - url: /api/v1
 security:
@@ -10,7 +10,7 @@ security:
 paths:
   /chat/contacts:
     get:
-      summary: Member searches active receptionists/coaches; excludes deleted accounts
+      summary: Directory for starting a chat; excludes deleted accounts. MEMBER searches active receptionists/coaches by name; RECEPTIONIST searches any active member by name or email; COACH lists only the members they currently train
       parameters:
         - {name: query, in: query, schema: {type: string, maxLength: 80, default: ''}}
         - {$ref: '#/components/parameters/Page'}
@@ -50,7 +50,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
     post:
-      summary: Member opens or reuses the unique conversation with an active Receptionist/Coach
+      summary: Opens or reuses the unique member<->staff conversation. A Member names a Receptionist/Coach; a Receptionist names any active Member; a Coach names a Member they currently train (403 COACH_MEMBER_NOT_ASSIGNED otherwise)
       requestBody:
         required: true
         content:

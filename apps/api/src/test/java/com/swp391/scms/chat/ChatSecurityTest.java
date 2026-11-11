@@ -38,9 +38,17 @@ class ChatSecurityTest {
     void supportedRoleCanReadOwnInbox(String role) {
         var p = login(role); controller.list(p, 0); verify(service).list(p, 0);
     }
-    @Test void onlyMemberCanStartAChat() {
-        var p = login("COACH");
+    @ParameterizedTest @ValueSource(strings = {"MEMBER", "RECEPTIONIST", "COACH"})
+    void memberReceptionistAndCoachCanStartAChat(String role) {
+        var p = login(role);
+        controller.contacts(p, "", 0); verify(service).contacts(p, "", 0);
+        controller.open(p, new OpenChatConversation(10L)); verify(service).open(p, 10L);
+    }
+    @ParameterizedTest @ValueSource(strings = {"CENTER_MANAGER", "GUEST"})
+    void managerAndOtherRolesCannotStartAChat(String role) {
+        var p = login(role);
         assertThrows(AccessDeniedException.class, () -> controller.open(p, new OpenChatConversation(10L)));
+        assertThrows(AccessDeniedException.class, () -> controller.contacts(p, "", 0));
         verifyNoInteractions(service);
     }
     private AuthenticatedPrincipal login(String role) {

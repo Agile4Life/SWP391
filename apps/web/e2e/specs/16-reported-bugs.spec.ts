@@ -1,5 +1,5 @@
 import { test, expect, settled } from '../fixtures';
-import { api, apiLogin, apiWith, createActiveMember, TINY_PNG } from '../helpers/api';
+import { api, apiLogin, apiWith, createActiveMember, createMemberWithKycPending, TINY_PNG } from '../helpers/api';
 import { contextFor, memberWithPlan, PACKAGES } from '../helpers/session';
 
 /** Hồi quy cho các lỗi do người dùng báo; mỗi describe ứng với một lỗi. */
@@ -269,5 +269,77 @@ test.describe('Lỗi 6 — gói Trải nghiệm nâng được lên mọi gói t
     await page.locator('article', { hasText: 'GOLD' }).first().getByRole('button', { name: 'Nâng cấp gói' }).click();
     await expect(page.getByText(/Yêu cầu #\d+/)).toBeVisible();
     await context.close();
+  });
+});
+
+test.describe('Lỗi 7 — lễ tân và HLV chủ động nhắn tin cho hội viên', () => {
+  const send = (token: string, conversationId: number, message: string) =>
+    apiWith(token, 'POST', `/chat/conversations/${conversationId}/messages`, { clientMessageId: crypto.randomUUID(), message });
+
+  test('lễ tân tìm hội viên, mở hội thoại, nhắn trước; hội viên thấy tin chưa đọc và trả lời được', async () => {
+    const m = await createMemberWithKycPending('e2echat');
+    const found = await api('staff', 'GET', `/chat/contacts?query=${encodeURIComponent(m.username)}`);
+    expect(found.status, JSON.stringify(found.body)).toBe(200);
+    const hit = ((found.data as any).content as any[]).find((c) => c.id === m.id);
+    expect(hit?.role).toBe('MEMBER');
+
+    const opened = await api('staff', 'POST', '/chat/conversations', { contactId: m.id });
+    expect(opened.status, JSON.stringify(opened.body)).toBe(200);
+    const conversationId = (opened.data as any).id as number;
+    expect((opened.data as any).peer.role).toBe('MEMBER');
+    // Mở lại là dùng lại đúng hội thoại, không tạo trùng.
+    expect(((await api('staff', 'POST', '/chat/conversations', { contactId: m.id })).data as any).id).toBe(conversationId);
+
+    const greeting = `Chào bạn, lễ tân SÖL đây ${Date.now()}`;
+    const sent = await send((await apiLogin('letan@demo.sol.vn', 'Demo@12345')).token, conversationId, greeting);
+    expect(sent.status, JSON.stringify(sent.body)).toBe(200);
+
+    const inbox = await apiWith(m.token, 'GET', '/chat/conversations');
+    const mine = ((inbox.data as any).content as any[]).find((c) => c.id === conversationId);
+    expect(mine.lastMessage).toBe(greeting);
+    expect(mine.unreadCount).toBe(1);
+    expect(mine.peer.role).toBe('RECEPTIONIST');
+    expect((await send(m.token, conversationId, 'Em cảm ơn ạ')).status).toBe(200);
+  });
+
+  test('HLV chỉ nhắn được hội viên mình đang dạy; quản lý không có quyền', async () => {
+    const coach = await apiLogin('hung@demo.sol.vn', 'Demo@12345');
+    const list = await apiWith(coach.token, 'GET', '/chat/contacts?query=');
+    expect(list.status, JSON.stringify(list.body)).toBe(200);
+    const mine = (list.data as any).content as any[];
+    expect(mine.every((c) => c.role === 'MEMBER')).toBe(true);
+    test.skip(mine.length === 0, 'HLV demo chưa có hội viên đang dạy');
+    const ok = await apiWith(coach.token, 'POST', '/chat/conversations', { contactId: mine[0].id });
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+
+    const stranger = await createMemberWithKycPending('e2estranger');
+    const denied = await apiWith(coach.token, 'POST', '/chat/conversations', { contactId: stranger.id });
+    expect(denied.status, JSON.stringify(denied.body)).toBe(403);
+    expect(denied.body.code).toBe('COACH_MEMBER_NOT_ASSIGNED');
+
+    expect((await api('manager', 'GET', '/chat/contacts?query=')).status).toBe(403);
+    expect((await api('manager', 'POST', '/chat/conversations', { contactId: stranger.id })).status).toBe(403);
+  });
+
+  test.describe('giao diện lễ tân', () => {
+    test.use({ storageState: 'e2e/.auth/staff.json' });
+    test('"Cuộc trò chuyện mới" tìm hội viên và gửi tin nhắn đầu tiên', async ({ page }) => {
+      const m = await createMemberWithKycPending('e2eui');
+      await page.goto('/staff/reception');
+      await settled(page);
+      await page.getByRole('button', { name: /^Mở tin nhắn/ }).click();
+      const panel = page.getByRole('dialog', { name: 'Tin nhắn SÖL' });
+      await panel.getByRole('button', { name: 'Cuộc trò chuyện mới' }).click();
+      await expect(panel.getByText('Tìm hội viên')).toBeVisible();
+      await panel.getByPlaceholder('Tên hội viên...').fill(m.username);
+      await panel.getByRole('button', { name: 'Tìm', exact: true }).click();
+      await panel.locator(`button[data-contact-id="${m.id}"]`).click();
+      const text = `Lễ tân nhắn trước ${Date.now()}`;
+      await panel.locator('#chat-message').fill(text);
+      await panel.getByRole('button', { name: 'Gửi', exact: true }).click();
+      await expect(panel.locator('.direct-chat__messages')).toContainText(text);
+      const unread = await apiWith(m.token, 'GET', '/chat/unread-count');
+      expect((unread.data as any).count).toBeGreaterThanOrEqual(1);
+    });
   });
 });

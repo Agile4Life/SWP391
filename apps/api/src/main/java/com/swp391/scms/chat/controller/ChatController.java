@@ -22,7 +22,7 @@ public class ChatController {
     @Autowired public ChatController(ChatService service, MessageService messages) { this.service = service; this.messages = messages; }
     private String msg(String key) { return messages == null ? key : messages.getMessage(key); }
 
-    @GetMapping("/contacts") @PreAuthorize("hasRole('MEMBER')")
+    @GetMapping("/contacts")
     public ApiResponse<Page<ChatContactDto>> contacts(@AuthenticationPrincipal AuthenticatedPrincipal p,
             @RequestParam(defaultValue = "") String query, @RequestParam(defaultValue = "0") int page) {
         return ApiResponse.ok(msg("chat.contacts.success"), service.contacts(p, query, page));
@@ -32,7 +32,7 @@ public class ChatController {
             @RequestParam(defaultValue = "0") int page) {
         return ApiResponse.ok(msg("chat.list.success"), service.list(p, page));
     }
-    @PostMapping("/conversations") @PreAuthorize("hasRole('MEMBER')")
+    @PostMapping("/conversations")
     public ApiResponse<ChatConversationDto> open(@AuthenticationPrincipal AuthenticatedPrincipal p, @Valid @RequestBody OpenChatConversation input) {
         return ApiResponse.ok(msg("chat.open.success"), service.open(p, input.contactId()));
     }

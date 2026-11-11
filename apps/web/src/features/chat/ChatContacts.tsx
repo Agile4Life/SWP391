@@ -5,7 +5,8 @@ import { ChatAvatar } from './ChatAvatar';
 import { chatError, type ChatError } from './chatMessages';
 import { useI18n } from '../../shared/i18n';
 
-export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatContact) => void; pending: number | null }) {
+/** `forMember`: a member looks for a receptionist/coach; otherwise staff look for a member to write to. */
+export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose: (contact: ChatContact) => void; pending: number | null; forMember?: boolean }) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
@@ -27,14 +28,14 @@ export function ChatContacts({ onChoose, pending }: { onChoose: (contact: ChatCo
   }, []);
   useEffect(() => { const requests = sequence.current; void search('', 0); return () => { requests.value++; }; }, [search]);
   function submit(event: FormEvent) { event.preventDefault(); void search(query.trim(), 0); }
-  return <section data-i18n-managed className="direct-chat__contacts" aria-label={t("Chọn người để trò chuyện", "Choose a chat recipient")}>
+  return <section data-i18n-managed className="direct-chat__contacts" aria-label={forMember ? t("Chọn người để trò chuyện", "Choose a chat recipient") : t("Chọn hội viên để nhắn tin", "Choose a member to message")}>
     <form onSubmit={submit} className="direct-chat__search">
-      <label className="portal-label" htmlFor="chat-contact-query">{t("Tìm lễ tân hoặc huấn luyện viên", "Find a receptionist or coach")}</label>
-      <div><input id="chat-contact-query" className="portal-input" type="search" value={query} maxLength={80} onChange={e => setQuery(e.target.value)} placeholder={t("Tìm kiếm người nhận...", "Search recipients...")} />
+      <label className="portal-label" htmlFor="chat-contact-query">{forMember ? t("Tìm lễ tân hoặc huấn luyện viên", "Find a receptionist or coach") : t("Tìm hội viên", "Find a member")}</label>
+      <div><input id="chat-contact-query" className="portal-input" type="search" value={query} maxLength={80} onChange={e => setQuery(e.target.value)} placeholder={forMember ? t("Tìm kiếm người nhận...", "Search recipients...") : t("Tên hội viên...", "Member name...")} />
         <button type="submit" className="btn-secondary" disabled={loading}>{t("Tìm", "Search")}</button></div>
     </form>
     {loading ? <LoadingSkeleton label={t("Đang tải danh bạ…", "Loading contacts…")} count={3} /> : error ? <div role="alert"><p>{t(error)}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>{t("Thử lại", "Retry")}</button></div>
-      : contacts.length === 0 ? <p className="direct-chat__muted">{t("Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.", "No matching receptionists or coaches found.")}</p>
+      : contacts.length === 0 ? <p className="direct-chat__muted">{forMember ? t("Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.", "No matching receptionists or coaches found.") : t("Không tìm thấy hội viên phù hợp.", "No matching members found.")}</p>
         : <ul className="direct-chat__list">{contacts.map(contact => <li key={contact.id}><button type="button" data-contact-id={contact.id} className="direct-chat__person" disabled={pending !== null} onClick={() => onChoose(contact)}>
           <ChatAvatar contact={contact} />
           <span className="direct-chat__person-info"><strong>{contact.name}</strong><small className="direct-chat__role">{pending === contact.id ? t('Đang mở hội thoại…', 'Opening conversation…') : chatRoleLabel(contact.role, t)}</small></span>
