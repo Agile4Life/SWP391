@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { WallNode, ZoneNode } from '../scene/schema';
+import { SURFACE_DETAIL_PRESETS as SD, applySurfaceDetail } from './surfaceDetail';
 
 export type ExploreTheme = 'dark' | 'light';
 export type FloorMaterialKind = ZoneNode['floorMaterial'];
@@ -465,6 +466,29 @@ export class MaterialRegistry {
         opacity: 0.5,
       }),
     };
+    this.applySurfaceDetails();
+  }
+
+  /** Saltline-style world-space macro variation so flat colours catch the light unevenly. */
+  private applySurfaceDetails(): void {
+    const f = this.floors;
+    for (const key of ['rubber-dark', 'turf', 'tile-stone', 'acrylic-court', 'concrete-polished', 'tatami'] as const) {
+      applySurfaceDetail(f[key], SD.floor);
+    }
+    applySurfaceDetail(f.hardwood, SD.wood);
+    applySurfaceDetail(this.walls.concrete, SD.wall);
+    applySurfaceDetail(this.walls.exteriorConcrete, SD.wall);
+    applySurfaceDetail(this.walls['wood-slat'], SD.wood);
+    applySurfaceDetail(this.walls['accent-salmon'], SD.item);
+    applySurfaceDetail(this.slabBase, SD.wall);
+    applySurfaceDetail(this.plazaGround, SD.ground);
+    applySurfaceDetail(this.plazaWalkway, SD.floor);
+    applySurfaceDetail(this.vertexColored, SD.wall);
+    applySurfaceDetail(this.items.base, SD.item);
+    applySurfaceDetail(this.items.upholstery, SD.item);
+    applySurfaceDetail(this.items.equipmentFrame, SD.metal);
+    applySurfaceDetail(this.items.equipmentVipFrame, SD.metal);
+    applySurfaceDetail(this.items.chrome, SD.metal);
   }
 
   public get theme(): ExploreTheme {

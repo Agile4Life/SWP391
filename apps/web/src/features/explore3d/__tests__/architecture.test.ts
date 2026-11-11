@@ -297,18 +297,18 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
 
     it('matches Section 5.2 lighting budget and plaza environment geometry', () => {
       const highLight = getLightingBudgetConfig('dark', 'high');
-      expect(highLight.ambient.intensity).toBeCloseTo(0.58, 3);
-      expect(highLight.hemisphere.intensity).toBeCloseTo(0.98, 3);
-      expect(highLight.keyLight.position).toEqual([30, 44, 26]);
-      expect(highLight.keyLight.intensity).toBeCloseTo(1.85, 3);
+      expect(highLight.ambient.intensity).toBeCloseTo(0.14, 3);
+      expect(highLight.hemisphere.intensity).toBeCloseTo(0.42, 3);
+      expect(highLight.keyLight.position).toEqual([-26, 30, 40]);
+      expect(highLight.keyLight.intensity).toBeCloseTo(3.6, 3);
       expect(highLight.keyLight.castShadow).toBe(true);
-      expect(highLight.keyLight.shadowMapSize).toEqual([2048, 2048]);
-      expect(highLight.keyLight.shadowBias).toBeCloseTo(-0.00025, 6);
+      expect(highLight.keyLight.shadowMapSize).toEqual([4096, 4096]);
+      expect(highLight.keyLight.shadowBias).toBeCloseTo(-0.00012, 6);
       expect(highLight.keyLight.shadowNormalBias).toBeCloseTo(0.02, 4);
-      expect(highLight.fillLight.position).toEqual([-26, 26, -22]);
-      expect(highLight.fillLight.intensity).toBeCloseTo(0.88, 3);
+      expect(highLight.fillLight.position).toEqual([34, 18, -10]);
+      expect(highLight.fillLight.intensity).toBeCloseTo(0.42, 3);
       expect(highLight.fillLight.castShadow).toBe(false);
-      expect(highLight.rimLight.intensity).toBeCloseTo(0.65, 3);
+      expect(highLight.rimLight.intensity).toBeCloseTo(0.55, 3);
 
       const lowLight = getLightingBudgetConfig('light', 'low');
       expect(lowLight.keyLight.castShadow).toBe(false);

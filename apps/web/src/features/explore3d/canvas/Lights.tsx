@@ -43,6 +43,8 @@ export interface LightingBudgetConfig {
     };
     shadowBias: number;
     shadowNormalBias: number;
+    /** Vogel-disk filter radius in shadow texels (penumbra width). */
+    shadowRadius: number;
   };
   fillLight: {
     position: [number, number, number];
@@ -63,45 +65,56 @@ export function getLightingBudgetConfig(
   tier: QualityTier,
 ): LightingBudgetConfig {
   const palette = getExploreThemePalette(theme);
-  const mapResolution = tier === 'high' ? 2048 : 1024;
+  // Saltline-style: 4096 map on high, 2048 on medium.
+  const mapResolution = tier === 'high' ? 4096 : 2048;
   const isDark = theme === 'dark';
+  // Saltline lighting model: one strong HDR sun + sky image-based light, with
+  // only a small flat ambient. The low tier has no sky probe, so it keeps a
+  // stronger hemisphere/ambient fill instead.
+  const hasSkyProbe = tier !== 'low';
   return {
     ambient: {
       color: isDark ? '#fff5ec' : '#ffffff',
-      intensity: isDark ? 0.58 : 0.72,
+      intensity: hasSkyProbe ? (isDark ? 0.14 : 0.2) : isDark ? 0.5 : 0.62,
     },
     hemisphere: {
-      skyColor: palette.skyColor,
+      skyColor: hasSkyProbe ? '#bcd0e8' : palette.skyColor,
       groundColor: palette.groundColor,
-      intensity: isDark ? 0.98 : 1.05,
+      intensity: hasSkyProbe ? (isDark ? 0.42 : 0.5) : isDark ? 0.98 : 1.05,
     },
+    // Low warm sun (~32° elevation) raking in from the left of the default camera
+    // (camera sits at +X/+Z): long shadows fall into view and every volume gets a
+    // lit side and a shade side. Warm key vs cool fill = "teal & orange".
     keyLight: {
-      position: [30, 44, 26],
-      color: '#fff6ed',
-      intensity: isDark ? 1.85 : 1.65,
+      position: [-26, 30, 40],
+      color: '#ffd9b3',
+      // HDR sun: the grade's filmic curve rolls highlights off, so it can be bright.
+      intensity: isDark ? 3.6 : 3.2,
       castShadow: tier !== 'low',
       shadowMapSize: [mapResolution, mapResolution],
       shadowBounds: {
-        left: -44,
-        right: 44,
-        top: 36,
-        bottom: -36,
-        near: 2,
-        far: 95,
+        left: -58,
+        right: 58,
+        top: 44,
+        bottom: -44,
+        near: 1,
+        far: 140,
       },
-      shadowBias: -0.00025,
+      shadowBias: -0.00012,
       shadowNormalBias: 0.02,
+      shadowRadius: tier === 'high' ? 3.2 : 2.4,
     },
     fillLight: {
-      position: [-26, 26, -22],
-      color: isDark ? '#e6eef8' : '#f4f7fb',
-      intensity: isDark ? 0.88 : 0.75,
+      position: [34, 18, -10],
+      color: isDark ? '#c9dcf2' : '#dde8f6',
+      // Cool sky-bounce fill from the side opposite the sun (teal & orange).
+      intensity: hasSkyProbe ? (isDark ? 0.42 : 0.38) : isDark ? 0.8 : 0.7,
       castShadow: false,
     },
     rimLight: {
-      position: [-18, 32, 30],
-      color: '#f5cbbd',
-      intensity: isDark ? 0.65 : 0.48,
+      position: [-30, 22, -34],
+      color: '#f5c2ae',
+      intensity: isDark ? 0.55 : 0.42,
       castShadow: false,
     },
   };
@@ -147,6 +160,7 @@ export function Lights() {
         shadow-camera-far={cfg.keyLight.shadowBounds.far}
         shadow-bias={cfg.keyLight.shadowBias}
         shadow-normalBias={cfg.keyLight.shadowNormalBias}
+        shadow-radius={cfg.keyLight.shadowRadius}
       />
       <directionalLight
         position={cfg.fillLight.position}

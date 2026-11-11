@@ -14,9 +14,9 @@ describe('Image based lighting probe', () => {
     expect(high.enabled).toBe(true);
     expect(medium.enabled).toBe(true);
     expect(high.resolution).toBeGreaterThan(medium.resolution);
-    // Existing ambient/hemisphere/key lights are already tuned; the probe only adds reflections.
-    expect(high.intensity).toBeGreaterThan(0);
-    expect(high.intensity).toBeLessThanOrEqual(0.7);
+    // The baked sky is the main ambient source now, but must stay below the sun.
+    expect(high.intensity).toBeGreaterThan(0.5);
+    expect(high.intensity).toBeLessThanOrEqual(1.5);
   });
 
   it('uses unique panel ids and positive intensities in both themes', () => {

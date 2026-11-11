@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import type { ResolvedSceneBindings } from '../data/bindings';
 import { BenchmarkRunner } from '../perf/BenchmarkRunner';
 import { PerformanceGovernor } from '../perf/PerformanceGovernor';
+import { CinematicPipeline } from '../postfx/CinematicPipeline';
+import { patchSoftShadowChunk } from '../postfx/softShadows';
 import { useExploreStore } from '../state/exploreStore';
 import { WalkController } from '../walk/WalkController';
 import { CameraRig } from './CameraRig';
@@ -21,13 +23,17 @@ import { Pool } from './Pool';
 import { RiggedActors } from './RiggedActors';
 import { SelectionHighlight } from './SelectionHighlight';
 
+// Wider, edge-faded Vogel PCF; must run before the first material compiles.
+patchSoftShadowChunk();
+
 export interface ExploreCanvasProps {
   bindings?: ResolvedSceneBindings;
   benchEnabled?: boolean;
 }
 
+// AA comes from MSAA on the HDR render target + FXAA in the final pass.
 const GL_CONFIG = {
-  antialias: true,
+  antialias: false,
   alpha: false,
   stencil: false,
   depth: true,
@@ -63,9 +69,12 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
 
     if (state.gl.shadowMap) {
       state.gl.shadowMap.enabled = true;
-      state.gl.shadowMap.type = THREE.PCFSoftShadowMap;
+      // PCFSoftShadowMap was removed in r186; softness comes from the patched Vogel filter.
+      state.gl.shadowMap.type = THREE.PCFShadowMap;
     }
 
+    // Only used by the forward fallback: the cinematic pipeline tone maps itself
+    // (three skips renderer tone mapping when drawing into render targets).
     if ('toneMapping' in state.gl) {
       state.gl.toneMapping = THREE.ACESFilmicToneMapping;
       state.gl.toneMappingExposure = 1.06;
@@ -134,6 +143,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       <Hotspots />
       <WalkController />
       <PerformanceGovernor />
+      <CinematicPipeline />
       {benchEnabled && <BenchmarkRunner />}
     </Canvas>
   );

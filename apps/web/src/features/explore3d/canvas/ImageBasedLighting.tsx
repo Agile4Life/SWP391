@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Environment as DreiEnvironment, Lightformer } from '@react-three/drei';
 import { useDocumentTheme, type ExploreTheme } from '../renderers/materials';
+import { SkyProbe } from './SkyProbe';
 import { useExploreStore, type QualityTier } from '../state/exploreStore';
 
 export interface ImageBasedLightingConfig {
@@ -15,6 +16,7 @@ export interface ImageBasedLightingConfig {
     scale: [number, number, number];
     color: string;
     intensity: number;
+    form?: 'rect' | 'circle';
   }[];
 }
 
@@ -33,7 +35,9 @@ export function getImageBasedLightingConfig(
   return {
     enabled: tier !== 'low',
     resolution: tier === 'high' ? 256 : 128,
-    intensity: isDark ? 0.42 : 0.55,
+    // The sky dome (SkyProbe) now provides most of the ambient light, Saltline-style:
+    // image-based sky light instead of a flat ambient term.
+    intensity: isDark ? 1.0 : 1.05,
     panels: [
       {
         id: 'key-softbox',
@@ -41,7 +45,7 @@ export function getImageBasedLightingConfig(
         rotation: [-Math.PI / 3, Math.PI / 5, 0],
         scale: [16, 10, 1],
         color: '#fff4ea',
-        intensity: isDark ? 2.6 : 2.2,
+        intensity: isDark ? 1.6 : 1.4,
       },
       {
         id: 'cool-fill',
@@ -85,10 +89,11 @@ export function ImageBasedLighting() {
       resolution={cfg.resolution}
       environmentIntensity={cfg.intensity}
     >
+      <SkyProbe theme={theme} />
       {cfg.panels.map(panel => (
         <Lightformer
           key={panel.id}
-          form="rect"
+          form={panel.form ?? 'rect'}
           position={panel.position}
           rotation={panel.rotation}
           scale={panel.scale}
