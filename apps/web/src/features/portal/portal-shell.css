@@ -342,17 +342,84 @@ body:has(.portal-backdrop) .click-ripple {
   align-items: center;
   justify-content: flex-start;
   gap: 26px;
+  width: var(--portal-rail-width);
   height: calc(100dvh - 36px);
   max-height: none;
   min-height: 0;
   padding: 20px 10px;
-  overflow: visible;
+  overflow: hidden;
   border: 0;
   border-radius: 28px;
   background: var(--portal-surface);
   color: var(--portal-muted);
   box-shadow: 0 8px 24px -20px #00000030;
   z-index: 30;
+  --portal-rail-width: 76px;
+  --portal-rail-open-width: 288px;
+  --portal-rail-ease: cubic-bezier(.22, 1, .36, 1);
+  transition: width 320ms var(--portal-rail-ease), box-shadow 320ms var(--portal-rail-ease);
+}
+
+/* Rail mở rộng đè lên nội dung khi rê chuột hoặc dùng bàn phím; cột lưới vẫn 76px nên trang không bị đẩy. */
+@media (hover: hover) {
+  .portal-v2 .app-sidebar:hover {
+    width: var(--portal-rail-open-width);
+    box-shadow: 0 28px 64px -28px #000000a6, 0 0 0 1px var(--portal-border);
+    transition-delay: 110ms;
+  }
+}
+
+.portal-v2 .app-sidebar:has(:focus-visible) {
+  width: var(--portal-rail-open-width);
+  box-shadow: 0 28px 64px -28px #000000a6, 0 0 0 1px var(--portal-border);
+}
+
+.portal-rail-head {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+  width: 100%;
+  padding-inline: 6px;
+}
+
+.portal-rail-brand {
+  display: flex;
+  flex-direction: column;
+  color: var(--portal-paper);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+
+.portal-rail-brand small {
+  color: var(--portal-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.portal-rail-brand,
+.portal-rail-label {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 200ms ease, transform 320ms var(--portal-rail-ease);
+}
+
+@media (hover: hover) {
+  .app-sidebar:hover :is(.portal-rail-brand, .portal-rail-label) {
+    opacity: 1;
+    transform: none;
+    transition-delay: 150ms;
+  }
+}
+
+.app-sidebar:has(:focus-visible) :is(.portal-rail-brand, .portal-rail-label) {
+  opacity: 1;
+  transform: none;
 }
 
 .portal-logo {
@@ -388,8 +455,10 @@ body:has(.portal-backdrop) .click-ripple {
 .portal-rail-footer {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+  width: 100%;
+  padding-inline: 6px;
 }
 
 .portal-rail-nav {
@@ -419,18 +488,41 @@ body:has(.portal-backdrop) .click-ripple {
   position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 12px;
   flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  padding: 0;
+  padding: 0 12px;
+  overflow: hidden;
   border: 0;
   border-radius: 16px;
   background: transparent;
   color: var(--portal-muted);
   line-height: 1;
   cursor: pointer;
-  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease, width 320ms var(--portal-rail-ease);
+}
+
+@media (hover: hover) {
+  .portal-v2 .app-sidebar:hover .portal-rail-link {
+    width: 100%;
+    transition-delay: 0ms, 0ms, 0ms, 110ms;
+  }
+}
+
+.portal-v2 .app-sidebar:has(:focus-visible) .portal-rail-link {
+  width: 100%;
+}
+
+.portal-rail-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .portal-v2 .portal-rail-link:hover {
@@ -439,40 +531,13 @@ body:has(.portal-backdrop) .click-ripple {
 }
 
 .portal-v2 .portal-rail-link.active {
-  border-radius: 50%;
+  border-radius: 22px;
   background: var(--portal-salmon);
   color: var(--portal-ink);
 }
 
 .portal-v2 .portal-rail-profile.active {
   background: var(--portal-tint);
-}
-
-.portal-rail-tooltip {
-  position: absolute;
-  top: 50%;
-  left: calc(100% + 12px);
-  z-index: 50;
-  width: max-content;
-  max-width: 270px;
-  padding: 9px 14px;
-  border-radius: 10px;
-  background: #202020;
-  color: var(--portal-paper);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translate(4px, -50%);
-  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
-}
-
-.portal-rail-link:is(:hover, :focus-visible) .portal-rail-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(0, -50%);
 }
 
 .portal-v2 .portal-avatar {
@@ -2153,6 +2218,14 @@ body:has(.portal-backdrop) .sol-toast__icon {
 
 :root:not([data-theme='light']) .portal-v2 :is(.portal-rail-link, .btn-primary) {
   transition: color 180ms var(--portal-accent-ease), background-color 180ms var(--portal-accent-ease), border-color 180ms var(--portal-accent-ease), box-shadow 180ms var(--portal-accent-ease), transform 180ms var(--portal-accent-ease);
+}
+
+:root:not([data-theme='light']) .portal-v2 .portal-rail-link {
+  transition: color 180ms var(--portal-accent-ease), background-color 180ms var(--portal-accent-ease), box-shadow 180ms var(--portal-accent-ease), width 320ms var(--portal-rail-ease);
+}
+
+:root:not([data-theme='light']) .portal-v2 .app-sidebar:hover .portal-rail-link {
+  transition-delay: 0ms, 0ms, 0ms, 110ms;
 }
 
 :root:not([data-theme='light']) .portal-v2 .portal-rail-link.active {

@@ -41,7 +41,6 @@
 :root[data-theme='light'] .portal-v2 .ldp-day-cell.is-selected { color: #202020 !important; }
 :root[data-theme='light'] .portal-logo > span { color: #202020; }
 :root[data-theme='light'] .portal-v2 .btn-primary:hover:not(:disabled) { background: #e1aa98; color: #202020; border-color: #e1aa98; }
-:root[data-theme='light'] .portal-v2 .portal-rail-tooltip { background: #fff; border: 1px solid #e4e2de; }
 :root[data-theme='light'] .portal-v2 input:is([type='date'], [type='time'], [type='datetime-local']) { color-scheme: light; }
 :root[data-theme='light'] .portal-v2 :is(.portal-field-error, .btn-danger) { color: #a33030; }
 :root[data-theme='light'] .portal-v2 .portal-alert { background: #fdf0ef; border-color: #f3c4bf; color: #a33030; }

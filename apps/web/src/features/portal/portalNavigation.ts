@@ -49,7 +49,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/member/support', label: 'Hỗ trợ & Khiếu nại', icon: 'support', roles: ['MEMBER'] },
   { to: '/member/explore', label: 'Tham quan 3D', icon: 'compass', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF'] },
-  { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'clock', roles: ['COACH'] },
+  { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH'] },
   { to: '/staff/attendance', label: 'Điểm danh', icon: 'check', roles: ['COACH'], tabs: [
     { to: '/staff/attendance', label: 'Lớp học', en: 'Classes' },
     { to: '/coach/pt-attendance', label: 'Buổi PT 1:1', en: '1:1 sessions' },
@@ -82,7 +82,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
-  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'profile', roles: ['STAFF', 'MANAGER'], tabs: [
+  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['STAFF', 'MANAGER'], tabs: [
     { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
     { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
   ] },
@@ -90,7 +90,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/manager/support', label: 'Khiếu nại chuyển lên', en: 'Escalated tickets' },
     { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', en: 'Internal requests' },
   ] },
-  { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'card', roles: ['MANAGER'] },
+  { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'badge', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
 

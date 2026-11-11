@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support' | 'inbox' | 'file' | 'feedback' | 'dumbbell' | 'star' | 'history' | 'clock' | 'refresh' | 'court' | 'bag' | 'box' | 'cube' | 'compass';
+export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support' | 'inbox' | 'file' | 'feedback' | 'dumbbell' | 'star' | 'history' | 'clock' | 'refresh' | 'court' | 'bag' | 'box' | 'cube' | 'compass' | 'badge' | 'shield';
 
 const paths: Record<PortalIconName, string> = {
   court: 'M3 4h18v16H3z M3 8h18 M3 16h18 M8 4v16 M16 4v16 M3 12h18',
@@ -34,6 +34,8 @@ const paths: Record<PortalIconName, string> = {
   bag: 'M6 7h12l1 13H5L6 7Z M9 7V5a3 3 0 0 1 6 0v2',
   box: 'M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8Z M3.3 7l8.7 5 8.7-5 M12 22V12',
   cube: 'M12 3v9m0 0-7.8 4.5M12 12l7.8 4.5 M12 2l9 5.2v9.6L12 22l-9-5.2V7.2L12 2Z',
+  badge: 'M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z M9 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M6 16.5c.6-1.7 1.7-2.5 3-2.5s2.4.8 3 2.5 M15 9h3 M15 13h3',
+  shield: 'M12 3l8 3v6c0 4.5-3.2 7.9-8 9-4.8-1.1-8-4.5-8-9V6l8-3Z M9 12l2 2 4-4',
   compass: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12Z M12 12h.01',
 };
 
