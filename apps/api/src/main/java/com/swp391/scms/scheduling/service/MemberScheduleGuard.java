@@ -9,6 +9,8 @@ import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.context.MessageSourceResolvable;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -24,6 +26,7 @@ import java.util.Objects;
 public class MemberScheduleGuard {
     private static final String CODE = "MEMBER_SCHEDULE_CONFLICT";
     private static final String KEY = "error.member_schedule.conflict";
+    private static final String KIND_KEY_PREFIX = "error.member_schedule.kind.";
 
     private final ClassSessionRepository sessions;
     private final CourtBookingRepository courts;
@@ -52,17 +55,17 @@ public class MemberScheduleGuard {
                 continue;
             }
             if (overlaps(start, end, s.getStartTime(), s.getEndTime())) {
-                throw conflict("lớp học", "class", date, s.getStartTime(), s.getEndTime(),
+                throw conflict("class", "lớp học", date, s.getStartTime(), s.getEndTime(),
                         s.getGymClass() != null ? s.getGymClass().getName() : "");
             }
         }
         if (courts.existsMemberOverlap(memberUserId, date, start, end)) {
-            throw conflict("đặt sân", "court booking", date, start, end, "");
+            throw conflict("court", "đặt sân", date, start, end, "");
         }
         List<CoachBooking> coach = coachBookings.findActiveByMemberAndDate(memberUserId, date);
         for (CoachBooking b : coach) {
             if (overlaps(start, end, b.getStartTime(), b.getEndTime())) {
-                throw conflict("lịch hẹn HLV 1:1", "1:1 coach booking", date, b.getStartTime(), b.getEndTime(), "");
+                throw conflict("coach", "lịch hẹn HLV 1:1", date, b.getStartTime(), b.getEndTime(), "");
             }
         }
     }
@@ -84,9 +87,11 @@ public class MemberScheduleGuard {
         return otherStart != null && otherEnd != null && start.isBefore(otherEnd) && end.isAfter(otherStart);
     }
 
-    private static ConflictException conflict(String kindVi, String kindEn, LocalDate date, LocalTime start, LocalTime end, String name) {
+    /** {@code kind} is a message-key suffix so the booking type is translated with the caller's language. */
+    private static ConflictException conflict(String kind, String kindVi, LocalDate date, LocalTime start, LocalTime end, String name) {
         String range = start + "–" + end;
-        return new ConflictException(CODE, KEY, new Object[]{kindVi, date.toString(), range, name},
+        MessageSourceResolvable kindLabel = new DefaultMessageSourceResolvable(new String[]{KIND_KEY_PREFIX + kind}, kindVi);
+        return new ConflictException(CODE, KEY, new Object[]{kindLabel, date.toString(), range, name},
                 "Bạn đã có " + kindVi + (name.isBlank() ? "" : " \"" + name + "\"") + " ngày " + date + " (" + range + ") trùng khung giờ này.");
     }
 }
