@@ -874,7 +874,19 @@ export function MemberClassesPage() {
               gap: 14,
             }}
           >
-            <div className="tt__toolbar" style={{ margin: 0 }}>
+            <div className="tt__toolbar" style={{ margin: 0, justifyContent: 'space-between' }}>
+              <div className="filter-chips" role="group" aria-label={memberText("Chế độ xem lịch lớp học", "Class schedule view")}>
+                <button type="button" className={`filter-chip ${scheduleView === 'sessions' ? 'is-active' : ''}`} aria-pressed={scheduleView === 'sessions'} onClick={() => setScheduleView('sessions')}>
+                  {memberText("Buổi học theo tuần", "Weekly sessions")}
+                </button>
+                <button type="button" className={`filter-chip ${scheduleView === 'courses' ? 'is-active' : ''}`} aria-pressed={scheduleView === 'courses'} onClick={() => setScheduleView('courses')}>
+                  {memberText("Khóa học định kỳ (Trọn gói)", "Recurring Courses")}
+                </button>
+              </div>
+              {scheduleView === 'courses' && <strong className="tt__range" aria-live="polite">{memberText(`Tổng cộng ${visibleCourses.length} khóa học trọn gói`, `Total ${visibleCourses.length} full courses`)}</strong>}
+            </div>
+
+            {scheduleView === 'sessions' && <div className="tt__toolbar" style={{ margin: 0 }}>
               <div className="tt__nav" role="group" aria-label={memberText("Lọc theo tuần")}>
                 {([-1, 0, 1] as const).map((offset) => (
                   <button key={offset} type="button" className={`filter-chip ${weekOffset === offset ? 'is-active' : ''}`}
@@ -884,7 +896,7 @@ export function MemberClassesPage() {
                 ))}
               </div>
               <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekRange.fromDate)}</strong>
-            </div>
+            </div>}
 
             <div className="filter-chips" role="group" aria-label={memberText("Lọc theo bộ môn")}>
               {['ALL', ...disciplines].map((value) => (
@@ -895,8 +907,8 @@ export function MemberClassesPage() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--portal-border, #e4e2de)' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {(scheduleView === 'sessions' || hasActivePackage === false) && <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--portal-border, #e4e2de)' }}>
+              {scheduleView === 'sessions' ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <label htmlFor="member-classes-day" className="meta-label">{memberText("Thứ trong tuần")}</label>
                 <Select
                   id="member-classes-day"
@@ -910,58 +922,13 @@ export function MemberClassesPage() {
                 >
                   {days.map(([value, label]) => <option key={value} value={value}>{memberText(label)}</option>)}
                 </Select>
-              </div>
+              </div> : <span />}
               {hasActivePackage === false && (
                 <p className="row-card__meta" style={{ margin: 0 }}>
                   {memberText("Cần gói tập đang hoạt động để đặt chỗ. ")}<Link className="member-classes-package-link" to="/member/packages">{memberText("Xem gói tập")}</Link>
                 </p>
               )}
-            </div>
-          </div>
-
-          {/* Thanh chuyển đổi chế độ xem: Lịch buổi học theo tuần vs Khóa học định kỳ (Trọn gói) */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 16,
-              flexWrap: 'wrap',
-              gap: 10,
-            }}
-          >
-            <div
-              style={{
-                display: 'inline-flex',
-                gap: 6,
-                background: 'var(--color-bg-warm, #1e1e1e)',
-                padding: '4px 6px',
-                borderRadius: 8,
-                border: '1px solid var(--portal-border, #333)',
-              }}
-            >
-              <button
-                type="button"
-                className={`btn-sm ${scheduleView === 'sessions' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ borderRadius: 6, fontSize: '0.84rem' }}
-                onClick={() => setScheduleView('sessions')}
-              >
-                {memberText("Lịch buổi học theo tuần", "Weekly Sessions")}
-              </button>
-              <button
-                type="button"
-                className={`btn-sm ${scheduleView === 'courses' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ borderRadius: 6, fontSize: '0.84rem' }}
-                onClick={() => setScheduleView('courses')}
-              >
-                {memberText("Khóa học định kỳ (Trọn gói)", "Recurring Courses")}
-              </button>
-            </div>
-            <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
-              {scheduleView === 'sessions'
-                ? memberText("Xem chi tiết lịch học từng buổi trong tuần", "Viewing session timetable for the week")
-                : memberText(`Tổng cộng ${visibleCourses.length} khóa học trọn gói`, `Total ${visibleCourses.length} full courses`)}
-            </span>
+            </div>}
           </div>
 
           {loading ? (
