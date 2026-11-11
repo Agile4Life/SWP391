@@ -444,18 +444,20 @@ function MemberCourseDetailModal({
   );
 }
 
+type ClassesTab = 'timetable' | 'schedule' | 'coach_booking';
+function tabFromQuery(value: string | null): ClassesTab {
+  return value === 'coach' || value === 'pt' || value === 'coach_booking' ? 'coach_booking' : value === 'list' ? 'schedule' : 'timetable';
+}
+
 export function MemberClassesPage() {
   const { lang } = useLanguage();
   const text = (vi: string, en: string) => lang === 'en' ? en : vi;
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab');
-  const [tab, setTab] = useState<'timetable' | 'schedule' | 'coach_booking'>(
-    initialTab === 'coach' || initialTab === 'pt' || initialTab === 'coach_booking'
-      ? 'coach_booking'
-      : initialTab === 'list'
-      ? 'schedule'
-      : 'timetable',
-  );
+  const rawTab = searchParams.get('tab');
+  const [tab, setTab] = useState<ClassesTab>(() => tabFromQuery(rawTab));
+  // Liên kết như "Quản lý lịch PT" (?tab=pt) nằm ngay trong trang này nên không remount: đồng bộ lại tab mỗi khi URL đổi.
+  // Bấm tab vẫn đổi state ngay (không chờ router), sau đó URL được cập nhật cùng giá trị.
+  useEffect(() => { setTab(tabFromQuery(rawTab)); }, [rawTab]);
   const weekOffset = weekFromQuery(searchParams.get('week'));
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
@@ -510,9 +512,8 @@ export function MemberClassesPage() {
   useEffect(() => {
     const week = searchParams.get('week');
     const next = weekFromQuery(week);
-    const rawTab = searchParams.get('tab');
     const needsWeekNormalize = week !== null && week !== String(next);
-    const needsTabNormalize = rawTab === 'my';
+    const needsTabNormalize = searchParams.get('tab') === 'my';
     if (needsWeekNormalize || needsTabNormalize) {
       const params = new URLSearchParams(searchParams);
       if (needsWeekNormalize) {
