@@ -41,8 +41,6 @@ public class CourtBookingService {
     private final MembershipSubscriptionRepository subscriptions;
     private final MemberRepository members;
     private final Clock clock;
-    private static final int RECURRING_MAX_DAYS = 31;
-    private static final int MAX_ADVANCE_DAYS = 365;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MessageService messages;
@@ -84,8 +82,9 @@ public class CourtBookingService {
         return wholeHour(open) && wholeHour(close) && open.isBefore(close);
     }
     private LocalDateTime now() { return LocalDateTime.ofInstant(clock.instant(), CENTER_ZONE); }
-    private static BadRequestException invalid(String suffix) {
-        return new BadRequestException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix, null, null);
+    private static BadRequestException invalid(String suffix, Object... args) {
+        return new BadRequestException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix,
+                args == null || args.length == 0 ? null : args, null);
     }
     private static ConflictException conflict(String suffix, Object... args) {
         return new ConflictException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix,
@@ -98,11 +97,10 @@ public class CourtBookingService {
         return new AppException(HttpStatus.NOT_FOUND, "COURT_BOOKING_NOT_FOUND", "error.courts.not_found", null, null);
     }
     private void dateWindow(LocalDate date) { dateWindow(date, false); }
-    /** One-off bookings open up to 365 days ahead; a standing booking may reach one month ahead. */
+    /** Only rejects missing/past dates; how far ahead a member may book depends on their plan tier (see bookOne). */
     private void dateWindow(LocalDate date, boolean recurring) {
         if (date == null) throw invalid("invalid_slot");
         if (date.isBefore(now().toLocalDate())) throw invalid("past_slot");
-        if (date.isAfter(now().toLocalDate().plusDays(recurring ? RECURRING_MAX_DAYS : MAX_ADVANCE_DAYS))) throw invalid("too_far");
     }
     private Room court(Long id) {
         if (id == null) throw invalid("invalid_court");
@@ -192,6 +190,15 @@ public class CourtBookingService {
                 || !subscriptions.hasActiveMembershipCoveringSession(principal.id(), now().toLocalDate(), date)) {
             throw forbidden("membership_invalid");
         }
+        // Plan-tier rules (PackageBenefits): how far ahead, and how many bookings may be open at once.
+        MembershipSubscription plan = activeSubscription(principal.id(), now().toLocalDate());
+        com.swp391.scms.facilities.entity.MembershipPackage pkg = plan == null ? null : plan.getMembershipPackage();
+        int advanceDays = com.swp391.scms.facilities.PackageBenefits.courtAdvanceDays(pkg);
+        if (date.isAfter(now().toLocalDate().plusDays(advanceDays))) throw invalid("too_far", advanceDays);
+        int maxUpcoming = com.swp391.scms.facilities.PackageBenefits.courtMaxUpcoming(pkg);
+        if (bookings.countUpcomingBooked(principal.id(), now().toLocalDate(), now().toLocalTime()) >= maxUpcoming) {
+            throw conflict("upcoming_limit", maxUpcoming);
+        }
         if (bookings.existsRoomOverlap(room.getId(), date, start, end)
                 || bookings.existsClassOverlap(room.getId(), date, start, end)
                 || bookings.existsMemberOverlap(principal.id(), date, start, end)) throw conflict("slot_taken");
@@ -259,7 +266,15 @@ public class CourtBookingService {
                 : subscription.getMembershipPackage().getName();
         int total = subscription == null ? 0 : CourtPricing.cycleQuota(subscription.getMembershipPackage());
         int used = (int) quotaUsed(principal.id(), day);
-        return new QuotaDto(name, total, used, Math.max(0, total - used));
+        MembershipSubscription current = activeSubscription(principal.id(), now().toLocalDate());
+        var currentPkg = current == null ? null : current.getMembershipPackage();
+        LocalDate today = now().toLocalDate();
+        return new QuotaDto(name, total, used, Math.max(0, total - used),
+                com.swp391.scms.facilities.PackageBenefits.courtAdvanceDays(currentPkg),
+                com.swp391.scms.facilities.PackageBenefits.courtMaxUpcoming(currentPkg),
+                (int) bookings.countUpcomingBooked(principal.id(), today, now().toLocalTime()),
+                com.swp391.scms.facilities.PackageBenefits.courtMaxUnpaidHolds(currentPkg),
+                (int) bookings.countUnpaidHolds(principal.id(), today), cashReleaseLeadMinutes);
     }
 
     public Page<BookingDto> my(AuthenticatedPrincipal principal, int page, int size) {

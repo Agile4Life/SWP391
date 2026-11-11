@@ -9,9 +9,10 @@ import { Modal } from '../../shared/ui/Modal';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { ApiError } from '../../shared/api/client';
 import { RecurrenceFields, RecurrenceSummary } from '../../shared/ui/RecurrenceFields';
-import { expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../shared/lib/recurrence';
+import { addDays, expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../shared/lib/recurrence';
 import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { CourtBookingList, CourtLoadError } from './CourtBookingList';
+import { CourtPolicyCard } from './CourtPolicyCard';
 import { courtsApi, type RecurringCourtResult, type CourtQuota, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
 import './courts.css';
 
@@ -99,7 +100,8 @@ export function CourtBookingFeature() {
     <div className="portal-tabs" aria-label={memberText("Bộ môn có sân")}>
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
-    <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">{memberText("Ngày đặt")}</span><DatePicker id="court-date" min={today} value={date} onChange={event => setDate(event.target.value)} /></label></div>
+    <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">{memberText("Ngày đặt")}</span><DatePicker id="court-date" min={today} max={quota ? addDays(today, quota.advanceDays) : undefined} value={date} onChange={event => setDate(event.target.value)} /></label></div>
+    <CourtPolicyCard quota={quota} />
     <section data-i18n-managed aria-labelledby="court-grid-title">
       <div className="court-section-header">
         <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>{memberText("Khung giờ theo sân")}</h2>
@@ -190,7 +192,7 @@ export function CourtBookingFeature() {
         )}
       </div>
       {!covered && <>
-        <p className="muted">{memberText("Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Mỗi buổi định kỳ thanh toán riêng; lượt chưa thanh toán sau 15 phút sẽ tự hủy.")}</p>
+        <p className="muted">{memberText("Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Mỗi buổi định kỳ thanh toán riêng; lượt VNPay chưa thanh toán sau 15 phút sẽ tự hủy, lượt tiền mặt được giữ chỗ đến 2 giờ trước giờ bắt đầu.")}</p>
       </>}
       <p className="muted">{memberText("Hủy trước giờ bắt đầu ít nhất 2 giờ.")}</p></>}
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{memberRenderMessage(actionError)}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">{memberText("Xem / Đăng ký gói tập")}</Link></div>}</div>}

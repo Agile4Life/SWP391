@@ -1,5 +1,5 @@
 import { test, expect, settled } from '../fixtures';
-import { apiWith } from '../helpers/api';
+import { api, apiWith } from '../helpers/api';
 import { contextFor, memberWithPlan, PACKAGES } from '../helpers/session';
 
 /** Hồi quy cho các lỗi do người dùng báo; mỗi describe ứng với một lỗi. */
@@ -71,5 +71,71 @@ test.describe('Lỗi 2 — không giữ chỗ sân vô hạn bằng lượt chư
     expect(cancel.status, JSON.stringify(cancel.body)).toBe(200);
     const again = await bookCourt(m.token, 5, 'cash');
     expect(again.status, JSON.stringify(again.body)).toBe(201);
+  });
+});
+
+test.describe('Lỗi 3 — quy định đặt sân theo hạng gói', () => {
+  test('API trả đúng quy định của từng hạng và chặn đặt quá xa', async () => {
+    const silver = await memberWithPlan(PACKAGES.SILVER_3M, 549000);
+    const gold = await memberWithPlan(PACKAGES.GOLD_3M, 799000);
+    const plat = await memberWithPlan(PACKAGES.PLATINUM_3M, 1599000);
+    const rules = async (token: string) => (await apiWith(token, 'GET', '/court-bookings/quota')).data as any;
+    const s = await rules(silver.token), g = await rules(gold.token), p = await rules(plat.token);
+    expect([s.advanceDays, s.maxUpcoming, s.maxUnpaid, s.monthlyQuota]).toEqual([7, 3, 1, 1]);
+    expect([g.advanceDays, g.maxUpcoming, g.maxUnpaid, g.monthlyQuota]).toEqual([14, 5, 2, 2]);
+    expect([p.advanceDays, p.maxUpcoming, p.maxUnpaid, p.monthlyQuota]).toEqual([30, 8, 3, 3]);
+    expect(s.releaseLeadMinutes).toBe(120);
+
+    // Quá giới hạn đặt trước của hạng → 400 TOO_FAR, kèm số ngày trong thông báo.
+    const tooFar = await bookCourt(silver.token, 8, undefined);
+    expect(tooFar.status, JSON.stringify(tooFar.body)).toBe(400);
+    expect(tooFar.body.code).toBe('COURT_BOOKING_TOO_FAR');
+    expect(tooFar.body.message).toContain('7 ngày');
+    // Cùng ngày xa (+10) thì Gold đặt được, Silver thì không.
+    expect((await bookCourt(silver.token, 10, undefined)).body.code).toBe('COURT_BOOKING_TOO_FAR');
+    const goldFar = await bookCourt(gold.token, 10, undefined);
+    expect(goldFar.status, JSON.stringify(goldFar.body)).toBe(201);
+    // Gold không đặt được quá 14 ngày, Platinum thì được đến 30.
+    expect((await bookCourt(gold.token, 15, undefined)).body.code).toBe('COURT_BOOKING_TOO_FAR');
+    const platFar = await bookCourt(plat.token, 29, undefined);
+    expect(platFar.status, JSON.stringify(platFar.body)).toBe(201);
+    expect((await bookCourt(plat.token, 31, undefined)).body.code).toBe('COURT_BOOKING_TOO_FAR');
+  });
+
+  test('Silver chỉ giữ tối đa 3 lượt chưa diễn ra (kể cả đã trả); giải phóng một lượt thì đặt tiếp được', async () => {
+    const m = await memberWithPlan(PACKAGES.SILVER_3M, 549000);
+    const deskConfirm = async (id: number) => (await api('staff', 'PATCH', `/court-bookings/${id}/confirm-payment`, {})).status;
+    const first = await bookCourt(m.token, 2, undefined); // trong quyền lợi gói
+    const second = await bookCourt(m.token, 3, 'cash');
+    expect([first.status, second.status], JSON.stringify([first.body, second.body])).toEqual([201, 201]);
+    expect(await deskConfirm(second.data.id)).toBe(200); // lễ tân đã thu tiền → không còn là lượt "giữ chỗ"
+    const third = await bookCourt(m.token, 4, 'cash');
+    expect(third.status, JSON.stringify(third.body)).toBe(201);
+    expect(await deskConfirm(third.data.id)).toBe(200);
+    expect((await apiWith(m.token, 'GET', '/court-bookings/quota')).data.upcoming).toBe(3);
+
+    // Đã có 3 lượt chưa diễn ra (dù đã trả) → lượt thứ tư bị chặn bởi giới hạn lượt chưa diễn ra.
+    const fourth = await bookCourt(m.token, 5, 'cash');
+    expect(fourth.status, JSON.stringify(fourth.body)).toBe(409);
+    expect(fourth.body.code).toBe('COURT_BOOKING_UPCOMING_LIMIT');
+    const cancel = await apiWith(m.token, 'PATCH', `/court-bookings/${first.data.id}/cancel`, {});
+    expect(cancel.status, JSON.stringify(cancel.body)).toBe(200);
+    expect((await bookCourt(m.token, 5, 'cash')).status).toBe(201);
+  });
+
+  test('màn Đặt sân hiển thị quy định của gói và chỉ cho chọn ngày trong hạn đặt trước', async ({ browser }) => {
+    const m = await memberWithPlan(PACKAGES.GOLD_3M, 799000);
+    const context = await contextFor(browser, m);
+    const page = await context.newPage();
+    await page.goto('/member/courts');
+    await settled(page);
+    const card = page.locator('.court-policy');
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('Quy định đặt sân của gói');
+    await expect(card).toContainText('Đặt trước tối đa 14 ngày');
+    await expect(card).toContainText('Tối đa 5 lượt chưa diễn ra cùng lúc (hiện có 0)');
+    await expect(card).toContainText('Tối đa 2 lượt chưa thanh toán cùng lúc (hiện giữ 0)');
+    await expect(card).toContainText('2 giờ trước giờ bắt đầu');
+    await context.close();
   });
 });

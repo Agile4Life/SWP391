@@ -73,6 +73,7 @@ class CourtBookingServiceTest {
         }).when(bookings).saveAndFlush(any());
     }
     BookRequest paid(LocalTime time, String method) { return new BookRequest(10L, date, time, method); }
+    BookRequest paid(LocalDate day, LocalTime time, String method) { return new BookRequest(10L, day, time, method); }
 
     BookRequest request(LocalDate day, LocalTime time) { return new BookRequest(10L, day, time); }
     void error(String code, Runnable action) { assertEquals(code, assertThrows(AppException.class, action::run).getErrorCode()); }
@@ -84,10 +85,42 @@ class CourtBookingServiceTest {
         assertTrue(result.canCancel());
     }
     @Test void rejectsPastStart() { error("COURT_BOOKING_PAST_SLOT", () -> service.book(member, request(date, LocalTime.of(10, 0)))); }
-    @Test void rejectsMoreThanSevenDays() {
-        when(subscriptions.hasActiveMembershipCoveringSession(1L, date, date.plusDays(14))).thenReturn(true);
-        assertEquals(date.plusDays(14), service.book(member, request(date.plusDays(14), LocalTime.NOON)).date());
-        error("COURT_BOOKING_TOO_FAR", () -> service.book(member, request(date.plusDays(366), LocalTime.NOON)));
+    @Test void advanceWindowDependsOnThePlanTier() {
+        // Silver (the default plan here) may book 7 days ahead, Gold 14, Platinum 30.
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), any(), any())).thenReturn(true);
+        assertEquals(date.plusDays(7), service.book(member, request(date.plusDays(7), LocalTime.NOON)).date());
+        var silver = assertThrows(AppException.class, () -> service.book(member, request(date.plusDays(8), LocalTime.NOON)));
+        assertEquals("COURT_BOOKING_TOO_FAR", silver.getErrorCode());
+        assertArrayEquals(new Object[]{7}, silver.getMessageArgs());
+
+        plan("GOLD");
+        assertEquals(date.plusDays(14), service.book(member, paid(date.plusDays(14), LocalTime.NOON, "cash")).date());
+        error("COURT_BOOKING_TOO_FAR", () -> service.book(member, request(date.plusDays(15), LocalTime.NOON)));
+
+        plan("PLATINUM");
+        assertEquals(date.plusDays(30), service.book(member, request(date.plusDays(30), LocalTime.NOON)).date());
+        error("COURT_BOOKING_TOO_FAR", () -> service.book(member, request(date.plusDays(31), LocalTime.NOON)));
+    }
+    @Test void upcomingBookingsAreCappedPerTier() {
+        when(bookings.countUpcomingBooked(eq(1L), any(), any())).thenReturn(3L);
+        var silver = assertThrows(AppException.class, () -> service.book(member, request(date, LocalTime.NOON)));
+        assertEquals("COURT_BOOKING_UPCOMING_LIMIT", silver.getErrorCode());
+        assertArrayEquals(new Object[]{3}, silver.getMessageArgs());
+        plan("GOLD"); // Gold may keep 5 open bookings
+        assertEquals("booked", service.book(member, request(date, LocalTime.NOON)).status());
+        when(bookings.countUpcomingBooked(eq(1L), any(), any())).thenReturn(5L);
+        error("COURT_BOOKING_UPCOMING_LIMIT", () -> service.book(member, request(date, LocalTime.NOON)));
+    }
+    @Test void quotaReportsThePlanRulesAndCurrentUsage() {
+        plan("GOLD");
+        when(bookings.countUpcomingBooked(eq(1L), any(), any())).thenReturn(3L);
+        when(bookings.countUnpaidHolds(eq(1L), any())).thenReturn(1L);
+        var quota = service.quota(member, date);
+        assertEquals(2, quota.monthlyQuota());
+        assertEquals(14, quota.advanceDays());
+        assertEquals(5, quota.maxUpcoming()); assertEquals(3, quota.upcoming());
+        assertEquals(2, quota.maxUnpaid()); assertEquals(1, quota.unpaid());
+        assertEquals(120, quota.releaseLeadMinutes());
     }
     @Test void rejectsNonWholeHourAndSeconds() { error("COURT_BOOKING_INVALID_SLOT", () -> service.book(member, request(date, LocalTime.of(12, 0, 1)))); }
     @Test void rejectsEndOutsideHours() { error("COURT_BOOKING_INVALID_SLOT", () -> service.book(member, request(date, LocalTime.of(22, 0)))); }
@@ -327,18 +360,28 @@ class CourtBookingServiceTest {
         assertEquals("COURT_BOOKING_SLOT_TAKEN", result.skipped().get(0).code());
     }
 
-    @Test void monthlyStandingBookingReachesPastTheSevenDayWindow() {
+    @Test void monthlyStandingBookingReachesPastTheSevenDayWindowOnAHigherTier() {
+        plan("PLATINUM"); // Platinum may book 30 days ahead; Silver's window is only 7 days
         when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
         var result = service.bookRecurring(member, recurring(date, "month", null));
         assertEquals(5, result.booked().size());
         assertEquals(date.plusDays(28), result.booked().get(4).date());
     }
 
-    @Test void standingBookingStopsAtOneMonthAhead() {
+    @Test void standingBookingStopsAtTheTierWindow() {
+        plan("PLATINUM");
         when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
         var result = service.bookRecurring(member, recurring(date.plusDays(30), "month", null));
         assertEquals(1, result.booked().size());
         assertEquals(4, result.skipped().size());
+        assertTrue(result.skipped().stream().allMatch(s -> "COURT_BOOKING_TOO_FAR".equals(s.code())));
+    }
+
+    @Test void silverStandingBookingSkipsDaysBeyondItsSevenDayWindow() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), eq(date), any())).thenReturn(true);
+        var result = service.bookRecurring(member, recurring(date, "month", null));
+        assertEquals(2, result.booked().size());
+        assertEquals(3, result.skipped().size());
         assertTrue(result.skipped().stream().allMatch(s -> "COURT_BOOKING_TOO_FAR".equals(s.code())));
     }
 

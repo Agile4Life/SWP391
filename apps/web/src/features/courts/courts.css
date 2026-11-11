@@ -12,6 +12,9 @@
 .court-slot--free:hover { background: color-mix(in srgb, var(--portal-salmon) 15%, var(--portal-surface)); }
 .court-slot:disabled { cursor: default; color: var(--portal-muted); background: var(--portal-raised); }
 .court-slot:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
+.court-policy { margin: 0 0 20px; }
+.court-policy .portal-card-title { margin-bottom: 10px; }
+.court-policy__list { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; line-height: 1.6; color: var(--portal-muted); }
 .court-pricing { margin: 12px 0; padding: 12px; border: 1px solid var(--portal-border); border-radius: 12px; }
 .court-pricing p { margin: 0 0 8px; }
 .court-pricing .portal-form-group { margin: 0; }

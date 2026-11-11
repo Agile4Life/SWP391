@@ -32,11 +32,20 @@ Mọi quyền lợi suy ra từ **hạng gói + thời hạn**, không kiểm tr
 | Khóa nhóm miễn phí (mỗi chu kỳ) | 1 | 2 | 4 | 0 |
 | Buổi PT 1:1 miễn phí / chu kỳ | 0 | 3 | 6 | 1 |
 | Lượt đặt sân gồm trong gói / chu kỳ | 1 | 2 | 3 | 0 |
+| Đặt sân trước tối đa (ngày) | 7 | 14 | 30 | 3 |
+| Lượt đặt sân chưa diễn ra cùng lúc (đã trả hoặc chưa) | 3 | 5 | 8 | 1 |
+| Lượt đặt sân chưa thanh toán cùng lúc | 1 | 2 | 3 | 1 |
 | Giảm giá PT thêm, phí khóa, sản phẩm shop | 0% | 10% | 20% | 0% |
 | Phòng VIP | không | không | có | không |
 | Đánh giá chuyên sâu (Body Fat, Muscle Mass) | không | không | có | không |
 | Đánh giá định kỳ hằng tháng | chỉ lần đầu | có | có | như Gold |
 | Xem giáo án HLV soạn | không | có | có | như Gold |
+
+**Quy định đặt sân** (nguồn duy nhất `PackageBenefits.courtAdvanceDays/courtMaxUpcoming/courtMaxUnpaidHolds`, backend kiểm tra, màn Đặt sân hiển thị qua `GET /court-bookings/quota`):
+- Lượt nằm trong quyền lợi gói (`package_quota`) miễn phí; lượt thêm tính phí theo giờ, thanh toán VNPay hoặc tiền mặt tại quầy.
+- Vượt giới hạn đặt trước → `COURT_BOOKING_TOO_FAR` (400); vượt số lượt chưa diễn ra → `COURT_BOOKING_UPCOMING_LIMIT` (409); vượt số lượt chưa thanh toán → `COURT_BOOKING_UNPAID_LIMIT` (409). Đặt định kỳ bỏ qua từng ngày vượt giới hạn và ghi lý do vào `skipped`.
+- Chống giữ chỗ không thanh toán: lượt VNPay chưa trả tự hủy sau thời gian chờ của cổng (15 phút + 1); lượt tiền mặt chưa thu tự hủy **2 giờ trước giờ bắt đầu** (`app.courts.cash-release-lead-minutes`), nhưng được giữ tối thiểu **30 phút** kể từ lúc đặt (`app.courts.cash-min-hold-minutes`). Job chạy mỗi phút (`CourtBookingExpiryScheduler`).
+- Hủy: hội viên hủy trước giờ bắt đầu ít nhất 2 giờ; lễ tân/quản lý hủy mọi lượt chưa bắt đầu.
 
 - Gói 3 tháng nhận số khóa miễn phí **gấp ba** gói 1 tháng (`credits = base × số chu kỳ`).
 - Gói trải nghiệm được coi là hạng Gold khi hiển thị dịch vụ.

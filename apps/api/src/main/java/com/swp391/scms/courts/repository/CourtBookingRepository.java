@@ -51,6 +51,11 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     List<CourtBooking> findUnpaidCashDue(@Param("date") LocalDate date, @Param("time") LocalTime time,
                                          @Param("createdBefore") LocalDateTime createdBefore);
 
+    /** Bookings that have not finished yet (paid or not): later days, or today with the slot still ahead. */
+    @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "
+            + "and (b.bookingDate > :today or (b.bookingDate = :today and b.endTime > :time))")
+    long countUpcomingBooked(@Param("memberId") Long memberId, @Param("today") LocalDate today, @Param("time") LocalTime time);
+
     /** Slots a member is holding without having paid yet (counter or VNPay), from {@code today} on. */
     @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "
             + "and b.paymentStatus = 'pending' and b.bookingDate >= :today")

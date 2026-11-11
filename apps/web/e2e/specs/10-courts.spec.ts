@@ -57,9 +57,14 @@ test.describe('Đặt sân (hội viên)', () => {
       await settled(page);
       const cancel = page.getByRole('button', { name: /^Hủy/ }).first();
       await expect(cancel).toBeVisible();
+      // Danh sách nằm dưới màn hình: cuộn tới và chờ hiệu ứng xuất hiện của thẻ xong, nếu không nút dịch chuyển giữa lúc nhấn và nhả chuột.
+      await cancel.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(700);
       await cancel.click();
       const confirm = page.getByRole('dialog');
-      if (await confirm.isVisible().catch(() => false)) await confirm.getByRole('button', { name: /Xác nhận|Hủy lượt|Đồng ý/ }).last().click();
+      // Hộp thoại mở sau khi bấm; chờ nó hiện thay vì kiểm tra tức thời (trước đây có thể bỏ qua bước xác nhận).
+      await expect(confirm).toBeVisible();
+      await confirm.getByRole('button', { name: /Xác nhận|Hủy lượt|Đồng ý/ }).last().click();
       await expect(page.getByText(/đã hủy|Đã hủy/).first()).toBeVisible();
     });
 

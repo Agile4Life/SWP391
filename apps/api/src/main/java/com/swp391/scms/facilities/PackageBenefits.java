@@ -70,6 +70,29 @@ public final class PackageBenefits {
         };
     }
 
+    /** How many days ahead a member may book a court: trial 3, Silver 7, Gold 14, Platinum 30. */
+    public static int courtAdvanceDays(MembershipPackage pkg) {
+        if (pkg == null || isTrial(pkg)) return 3;
+        return switch (tierOf(pkg)) {
+            case "PLATINUM" -> 30;
+            case "GOLD" -> 14;
+            default -> 7;
+        };
+    }
+
+    /**
+     * Upcoming court bookings a member may have at once, paid or not: trial 1, Silver 3, Gold 5, Platinum 8
+     * (the plan's included bookings, the unpaid holds, and one paid booking of headroom).
+     */
+    public static int courtMaxUpcoming(MembershipPackage pkg) {
+        if (pkg == null || isTrial(pkg)) return 1;
+        return switch (tierOf(pkg)) {
+            case "PLATINUM" -> 8;
+            case "GOLD" -> 5;
+            default -> 3;
+        };
+    }
+
     /**
      * Court slots a member may hold at once without having paid for them (counter or VNPay): trial 1, Silver 1,
      * Gold 2, Platinum 3. Stops one account from reserving many slots it never pays for.

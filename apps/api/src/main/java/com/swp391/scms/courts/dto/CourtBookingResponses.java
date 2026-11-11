@@ -11,7 +11,9 @@ public final class CourtBookingResponses {
         public SlotDto(LocalTime startTime, LocalTime endTime, String status) { this(startTime, endTime, status, null); }
     }
     /** Court bookings the member's plan still covers in the month of the requested date. */
-    public record QuotaDto(String packageName, int monthlyQuota, int used, int remaining) {}
+    /** Included bookings plus the per-tier court rules and how much of them the member is using. */
+    public record QuotaDto(String packageName, int monthlyQuota, int used, int remaining,
+                           int advanceDays, int maxUpcoming, int upcoming, int maxUnpaid, int unpaid, int releaseLeadMinutes) {}
     public record RecurringResult(java.util.List<BookingDto> booked,
                                   java.util.List<com.swp391.scms.common.RecurrenceDates.Skipped> skipped) {}
     public record BookingDto(Long id, Long roomId, String roomName, String disciplineName,

@@ -13,7 +13,11 @@ export interface Court {
   openTime: string; closeTime: string;
 }
 export interface CourtSlot { startTime: string; endTime: string; status: 'free' | 'booked' | 'class' | 'past'; price: number | null }
-export interface CourtQuota { packageName: string | null; monthlyQuota: number; used: number; remaining: number }
+export interface CourtQuota {
+  packageName: string | null; monthlyQuota: number; used: number; remaining: number;
+  /** Quy định theo hạng gói: đặt trước tối đa bao nhiêu ngày, số lượt chưa diễn ra / chưa thanh toán được giữ cùng lúc. */
+  advanceDays: number; maxUpcoming: number; upcoming: number; maxUnpaid: number; unpaid: number; releaseLeadMinutes: number;
+}
 export type CourtPaymentMethod = 'cash' | 'vnpay';
 export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'vnpay', label: 'VNPay' }, { value: 'cash', label: 'Tiền mặt tại quầy' }];
 export const formatVnd = (amount: number) => `${new Intl.NumberFormat(getIntlLocale()).format(amount)}đ`;

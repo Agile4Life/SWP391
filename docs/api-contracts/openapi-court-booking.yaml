@@ -154,6 +154,12 @@ paths:
                           monthlyQuota: {type: integer}
                           used: {type: integer}
                           remaining: {type: integer}
+                          advanceDays: {type: integer, description: 'How many days ahead the plan tier may book'}
+                          maxUpcoming: {type: integer, description: 'Upcoming bookings allowed at once for the tier'}
+                          upcoming: {type: integer}
+                          maxUnpaid: {type: integer, description: 'Unpaid (counter or VNPay) bookings allowed at once'}
+                          unpaid: {type: integer}
+                          releaseLeadMinutes: {type: integer, description: 'Unpaid counter bookings are released this long before the slot starts'}
         '403': {$ref: '#/components/responses/Forbidden'}
   /court-bookings/my:
     get:

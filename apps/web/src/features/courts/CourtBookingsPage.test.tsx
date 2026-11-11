@@ -21,7 +21,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(courtsApi.courts).mockResolvedValue([court]);
   vi.mocked(courtsApi.availability).mockResolvedValue([{ startTime: '09:00', endTime: '10:00', status: 'free', price: 100000 }, { startTime: '10:00', endTime: '11:00', status: 'class', price: 100000 }]);
-  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 1, used: 0, remaining: 1 });
+  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 1, used: 0, remaining: 1, advanceDays: 7, maxUpcoming: 2, upcoming: 0, maxUnpaid: 1, unpaid: 0, releaseLeadMinutes: 120 });
   vi.mocked(courtsApi.my).mockResolvedValue(empty);
   vi.mocked(courtsApi.list).mockResolvedValue(empty);
   HTMLDialogElement.prototype.showModal = function () { this.open = true; };
@@ -122,7 +122,7 @@ it('books free while the plan has included bookings left', async () => {
 });
 
 it('charges the slot price and sends the payment method once the plan quota is used up', async () => {
-  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 1, used: 1, remaining: 0 });
+  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 1, used: 1, remaining: 0, advanceDays: 7, maxUpcoming: 2, upcoming: 0, maxUnpaid: 1, unpaid: 0, releaseLeadMinutes: 120 });
   vi.mocked(courtsApi.book).mockResolvedValue({} as never);
   await render();
   await click('Trống');
@@ -162,4 +162,15 @@ it('renders distinct payment status labels for pending, paid, refunded, and canc
   expect(rows[2]).toContain('Đã hoàn tiền');
   expect(rows[2]).not.toContain('Đã thanh toán');
   expect(rows[3]).toContain('Đã thanh toán');
+});
+
+it('shows the plan tier rules from the API and limits the date picker to the advance window', async () => {
+  vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'GOLD', monthlyQuota: 2, used: 1, remaining: 1, advanceDays: 14, maxUpcoming: 4, upcoming: 3, maxUnpaid: 2, unpaid: 1, releaseLeadMinutes: 120 });
+  await render();
+  const card = host.querySelector('.court-policy');
+  expect(card?.textContent).toContain('Quy định đặt sân của gói GOLD');
+  expect(card?.textContent).toContain('Đặt trước tối đa 14 ngày');
+  expect(card?.textContent).toContain('Tối đa 4 lượt chưa diễn ra cùng lúc (hiện có 3)');
+  expect(card?.textContent).toContain('Tối đa 2 lượt chưa thanh toán cùng lúc (hiện giữ 1)');
+  expect(card?.textContent).toContain('2 giờ trước giờ bắt đầu');
 });
