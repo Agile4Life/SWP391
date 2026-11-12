@@ -63,7 +63,7 @@ interface WeeklyTimetableProps {
 const MINUTE_MS = 60_000;
 /** Dưới mốc này bảng chuyển sang xem từng ngày thay vì 7 cột hẹp cuộn ngang. */
 const NARROW_QUERY = '(max-width: 767px)';
-const HOUR_PX = 72;
+const HOUR_PX = 64;
 const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
 function useNow(): Date {
