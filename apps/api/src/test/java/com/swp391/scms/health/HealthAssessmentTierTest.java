@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.swp391.scms.coaching.service.CurrentCoachMembers;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.facilities.entity.MembershipPackage;
+import com.swp391.scms.health.dto.HealthMetricBatchDto;
 import com.swp391.scms.health.dto.HealthMetricDto;
 import com.swp391.scms.health.entity.MemberProgressLog;
 import com.swp391.scms.membership.entity.MembershipSubscription;
@@ -179,20 +180,41 @@ class HealthAssessmentTierTest {
         assertThrows(ForbiddenException.class, () -> service.addMetric(10L, metric("body_fat", "18", "%"), 30L, "CENTER_MANAGER"));
     }
 
-    @Test
-    void candidateSearchNeedsTwoCharactersAndReturnsUnmeasuredMembers() {
-        member.setMembershipCode("MB-010");
-        member.getUser().setFullName("Nguyen Van A");
-        member.getUser().setPhone("0900000001");
-        when(members.searchWithoutMeasurements(any(), any())).thenReturn(List.of(member));
+    private HealthMetricBatchDto.Item item(String name, String value, String unit) {
+        return new HealthMetricBatchDto.Item(name, new BigDecimal(value), unit);
+    }
 
-        assertThat(service.firstAssessmentCandidates("a")).isEmpty();
-        assertThat(service.firstAssessmentCandidates(null)).isEmpty();
-        var found = service.firstAssessmentCandidates("  Nguyen ");
-        assertThat(found).hasSize(1);
-        assertThat(found.get(0).memberId()).isEqualTo(10L);
-        assertThat(found.get(0).membershipCode()).isEqualTo("MB-010");
-        verify(members).searchWithoutMeasurements(org.mockito.ArgumentMatchers.eq("%nguyen%"), any());
+    @Test
+    void aBatchSavesEveryMeasurementAndDerivesBmiOnlyOnce() {
+        MemberProgressLog height = row(20L, today.atTime(20, 0));
+        height.setMetricName("height");
+        height.setMetricValue(new BigDecimal("172"));
+        when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(20, 0)), height));
+        var saved = service.addMetrics(10L, new HealthMetricBatchDto(List.of(
+                item("height", "172", "cm"), item("weight", "68", "kg"), item("body_fat", "18", "%"))), 30L, "CENTER_MANAGER");
+
+        assertThat(saved).extracting(HealthMetricDto::metricName).containsExactly("height", "weight", "body_fat");
+        org.mockito.ArgumentCaptor<MemberProgressLog> captor = org.mockito.ArgumentCaptor.forClass(MemberProgressLog.class);
+        verify(logs, org.mockito.Mockito.times(4)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(MemberProgressLog::getMetricName)
+                .containsExactly("height", "weight", "body_fat", "bmi");
+    }
+
+    @Test
+    void aBatchRejectsManualBmiDuplicatesAndTierViolationsWithoutSavingAnything() {
+        when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
+        assertThatThrownBy(() -> service.addMetrics(10L, new HealthMetricBatchDto(List.of(
+                item("weight", "68", "kg"), item("bmi", "23", ""))), 30L, "CENTER_MANAGER"))
+                .hasMessageContaining("BMI");
+        assertThatThrownBy(() -> service.addMetrics(10L, new HealthMetricBatchDto(List.of(
+                item("weight", "68", "kg"), item("weight", "69", "kg"))), 30L, "CENTER_MANAGER"))
+                .hasMessageContaining("once");
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("GOLD", 30)));
+        assertThatThrownBy(() -> service.addMetrics(10L, new HealthMetricBatchDto(List.of(
+                item("weight", "68", "kg"), item("body_fat", "18", "%"))), 30L, "CENTER_MANAGER"))
+                .isInstanceOf(ForbiddenException.class);
+
+        verify(logs, never()).save(any());
     }
 
     @Test

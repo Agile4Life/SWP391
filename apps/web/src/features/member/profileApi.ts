@@ -92,6 +92,9 @@ export const listHealthMetrics = (memberId: number) =>
 export const addHealthMetric = (memberId: number, metric: NewHealthMetric) =>
   apiFetch(`/members/${memberId}/health-metrics`, { method: 'POST', body: JSON.stringify(metric) });
 
+export const addHealthMetrics = (memberId: number, batch: { metrics: NewHealthMetric[] }) =>
+  apiFetch<HealthMetric[]>(`/members/${memberId}/health-metrics/batch`, { method: 'POST', body: JSON.stringify(batch) });
+
 export const updateHealthMetric = (memberId: number, metricId: number, metric: NewHealthMetric) =>
   apiFetch<HealthMetric>(`/members/${memberId}/health-metrics/${metricId}`, {
     method: 'PUT',

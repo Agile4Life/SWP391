@@ -57,7 +57,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/coach/training-plans', label: 'Soạn giáo án', en: 'Plan builder' },
     { to: '/coach/health-metrics', label: 'Chỉ số sức khỏe', en: 'Health metrics' },
     { to: '/coach/saved-plans', label: 'Giáo án đã lưu', en: 'Saved plans' },
-    { to: '/coach/first-assessment', label: 'Đánh giá lần đầu', en: 'First assessment' },
   ] },
   { to: '/staff/reception', label: 'Quầy lễ tân & Check-in', icon: 'card', roles: ['STAFF'], tabs: [
     { to: '/staff/reception', label: 'Quầy & POS', en: 'Front desk & POS' },

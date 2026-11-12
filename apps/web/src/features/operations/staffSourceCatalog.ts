@@ -213,6 +213,8 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Khối lượng cơ": "Muscle mass",
   "Không thể tải lịch sử số đo.": "Unable to load measurement history.",
   "Nhập giá trị hợp lệ lớn hơn 0; tỷ lệ mỡ không vượt 100%.": "Enter a valid value greater than 0; body fat must not exceed 100%.",
+  "Nhập giá trị hợp lệ lớn hơn 0 (tối đa 2 chữ số thập phân); tỷ lệ mỡ không vượt 100%.": "Enter valid values greater than 0 (at most 2 decimals); body fat must not exceed 100%.",
+  "Nhập ít nhất một số đo để lưu.": "Enter at least one measurement to save.",
   "Đã ghi nhận số đo sức khỏe.": "Health measurement recorded.",
   "Không thể lưu số đo.": "Unable to save measurement.",
   "Chỉ số sức khỏe học viên": "Member health metrics",

@@ -53,6 +53,16 @@ public class HealthMetricController {
                 healthMetricService.addMetric(memberId, request, principal.id(), principal.role()));
     }
 
+    @Operation(summary = "Ghi nhận nhiều chỉ số sức khỏe cùng lúc", description = "Một lần đánh giá có thể gồm cân nặng, chiều cao, tỷ lệ mỡ, khối lượng cơ...; BMI tự tính từ chiều cao và cân nặng")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PostMapping("/api/v1/members/{memberId}/health-metrics/batch")
+    public ApiResponse<List<HealthMetricDto>> addMetrics(@PathVariable Long memberId,
+                                                         @Valid @RequestBody com.swp391.scms.health.dto.HealthMetricBatchDto request,
+                                                         @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("health.metrics.add.success"),
+                healthMetricService.addMetrics(memberId, request, principal.id(), principal.role()));
+    }
+
     @Operation(summary = "Cập nhật chỉ số sức khỏe", description = "Chỉnh sửa giá trị chỉ số thể chất đã đo")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/api/v1/members/{memberId}/health-metrics/{metricId}")
@@ -81,14 +91,6 @@ public class HealthMetricController {
                                                      @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("health.metrics.add.success"),
                 healthMetricService.recordMetric(request, principal.id(), principal.role()));
-    }
-
-    @Operation(summary = "Search registered members who have not been measured yet (first assessment)")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
-    @GetMapping("/api/v1/health/first-assessment/candidates")
-    public ApiResponse<List<com.swp391.scms.health.dto.FirstAssessmentCandidateDto>> firstAssessmentCandidates(
-            @RequestParam(value = "q", required = false) String query) {
-        return ApiResponse.ok(msg("health.metrics.candidates"), healthMetricService.firstAssessmentCandidates(query));
     }
 
     @Operation(summary = "Chuỗi dữ liệu lịch sử chỉ số sức khỏe cá nhân (SCRUM-119)", description = "Trả về lịch sử chỉ số sức khỏe sắp xếp tăng dần theo recorded_at để vẽ biểu đồ tiến độ (Line Chart)")
