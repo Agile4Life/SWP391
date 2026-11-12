@@ -23,6 +23,13 @@
 :root[data-theme='light'] .theme-toggle { background: #fff; border-color: #e4e2de; color: #202020; }
 :root[data-theme='light'] .theme-toggle:hover { background: #f8eae4; border-color: #a35b49; }
 
+/* LED tokens are Dark-only: Light keeps flat surfaces and receives no glow. */
+:root:not([data-theme='light']) {
+  --sol-led-edge: rgb(var(--sol-accent-rgb) / .6);
+  --sol-led-glow: rgb(var(--sol-accent-rgb) / .22);
+  --sol-led-bloom: 0 0 0 1px rgb(var(--sol-accent-rgb) / .35), 0 0 18px rgb(var(--sol-accent-rgb) / .28), 0 0 48px -8px rgb(var(--sol-accent-rgb) / .22);
+}
+
 /* Light is an optional palette. Existing dark styles remain the default. */
 :root[data-theme='light'] { color-scheme: light; background: #f5f5f3; }
 :root[data-theme='light']:has(.fit-site, .portal-backdrop),

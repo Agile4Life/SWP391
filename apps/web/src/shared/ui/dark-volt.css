@@ -37,3 +37,43 @@
 :root:not([data-theme='light']) :is(.mcal__event--class, .mcal__event--mine) { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--sol-accent); }
 :root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class):not(.is-past):not(.is-cancelled) { color: var(--portal-paper); border-left-color: var(--sol-accent); }
 :root:not([data-theme='light']) .mcal--member .mcal__chip--class { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); }
+
+/* ---- LED / glow (Dark only). Limits: at most three box-shadow layers per element, no new looping animation,
+   no blur filters on large areas. The running edge light on primary buttons lives in button-glow.css. ---- */
+
+/* Landing: scroll progress, hero halo, sport rail dot. */
+:root:not([data-theme='light']) .fit-scroll-progress { box-shadow: 0 0 10px var(--sol-led-edge), 0 0 22px -2px var(--sol-led-glow); }
+:root:not([data-theme='light']) .fit-hero::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 40px;
+  width: 640px;
+  height: 560px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgb(var(--sol-accent-rgb) / .17), rgb(var(--sol-accent-rgb) / .06) 55%, transparent 100%);
+  pointer-events: none;
+}
+:root:not([data-theme='light']) .fit-sport-story-rail i { box-shadow: 0 0 0 4px var(--color-bg-base), 0 0 12px var(--sol-led-edge), 0 0 28px -2px var(--sol-led-glow); }
+
+/* Portal: the expanded sidebar gets a 1px LED line on its right edge that fades out at both ends. */
+:root:not([data-theme='light']) .portal-v2 .app-sidebar::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  right: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--sol-led-edge) 25%, var(--sol-led-edge) 75%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms cubic-bezier(.22, 1, .36, 1);
+}
+@media (hover: hover) {
+  :root:not([data-theme='light']) .portal-v2 .app-sidebar:hover::after { opacity: 1; }
+}
+:root:not([data-theme='light']) .portal-v2 .app-sidebar:has(:focus-visible)::after { opacity: 1; }
+
+/* Inputs and pickers: accent border plus a low-alpha 3px ring while focused or open. */
+:root:not([data-theme='light']) :is(.ui-select__trigger.is-open, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) { border-color: var(--sol-accent); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .2); }

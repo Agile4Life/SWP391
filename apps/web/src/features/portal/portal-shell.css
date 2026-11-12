@@ -2336,8 +2336,8 @@ body:has(.portal-backdrop) .sol-toast__icon {
 
 /* Dark accents mark the current location and primary actions; ordinary cards stay quiet. */
 :root:not([data-theme='light']) .portal-backdrop {
-  --portal-led-edge: color-mix(in srgb, var(--portal-salmon) 55%, transparent);
-  --portal-led-glow: color-mix(in srgb, var(--portal-salmon) 18%, transparent);
+  --portal-led-edge: var(--sol-led-edge);
+  --portal-led-glow: var(--sol-led-glow);
   --portal-accent-text: var(--sol-accent-text);
   --portal-accent-ease: cubic-bezier(.22, 1, .36, 1);
 }
@@ -2355,25 +2355,25 @@ body:has(.portal-backdrop) .sol-toast__icon {
 }
 
 :root:not([data-theme='light']) .portal-v2 .portal-rail-link.active {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--portal-paper) 35%, transparent), 0 0 12px var(--portal-led-glow);
+  box-shadow: var(--sol-led-bloom);
 }
 
 :root:not([data-theme='light']) .portal-v2 .btn-primary:not(:disabled) {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--portal-paper) 25%, transparent), 0 4px 14px -6px var(--portal-led-edge);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .4), 0 0 14px rgb(var(--sol-accent-rgb) / .3), 0 0 36px -8px rgb(var(--sol-accent-rgb) / .24);
 }
 
 :root:not([data-theme='light']) .portal-v2 .btn-primary:not(:disabled):is(:hover, :focus-visible) {
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--portal-paper) 35%, transparent), 0 0 20px var(--portal-led-glow);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .5), 0 0 22px rgb(var(--sol-accent-rgb) / .45), 0 0 56px -6px rgb(var(--sol-accent-rgb) / .34);
 }
 
 :root:not([data-theme='light']) .portal-v2 :is(.portal-tab.active, .portal-mobile-nav__item.active) {
   color: var(--portal-accent-text);
-  box-shadow: inset 0 -2px 0 var(--portal-salmon);
+  box-shadow: inset 0 -2px 0 var(--portal-salmon), 0 8px 14px -10px var(--sol-led-edge);
 }
 
-:root:not([data-theme='light']) .portal-v2 .portal-card--feature {
+:root:not([data-theme='light']) .portal-v2 :is(.portal-card--feature, .pass-card) {
   border-color: var(--portal-led-edge);
-  box-shadow: inset 2px 0 0 var(--portal-salmon);
+  box-shadow: inset 2px 0 0 var(--portal-salmon), 0 0 22px -10px var(--portal-led-edge);
 }
 
 :root:not([data-theme='light']) .portal-v2 :is(.member-text-link, .member-board-note > svg, .member-column-heading > a) {

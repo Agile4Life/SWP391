@@ -952,23 +952,23 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 
 /* A few salmon light sources, rather than a glow around every surface. */
 :root:not([data-theme='light']) .fit-site {
-  --fit-led-edge: color-mix(in srgb, var(--fit-salmon) 55%, transparent);
-  --fit-led-glow: color-mix(in srgb, var(--fit-salmon) 18%, transparent);
+  --fit-led-edge: var(--sol-led-edge);
+  --fit-led-glow: var(--sol-led-glow);
 }
-:root:not([data-theme='light']) .fit-nav a::after { box-shadow: 0 0 8px var(--fit-led-edge); }
-:root:not([data-theme='light']) .fit-hero-action .fit-round-arrow {
-  box-shadow: inset 0 1px 0 #ffffff40, 0 0 16px var(--fit-led-glow);
+:root:not([data-theme='light']) .fit-nav a::after { box-shadow: 0 0 6px var(--fit-led-edge), 0 0 14px -2px var(--fit-led-glow); }
+:root:not([data-theme='light']) .fit-site .fit-round-arrow:not(:where(.fit-plan-featured *)) {
+  box-shadow: inset 0 1px 0 #ffffff40, 0 0 14px rgb(var(--sol-accent-rgb) / .3), 0 0 36px -8px rgb(var(--sol-accent-rgb) / .22);
 }
 :root:not([data-theme='light']) .fit-site .fit-plan-featured {
   border-color: var(--fit-led-edge);
-  box-shadow: inset 0 1px 0 var(--fit-salmon), 0 0 24px -12px var(--fit-led-edge);
+  box-shadow: inset 0 1px 0 var(--fit-salmon), 0 0 22px -8px var(--fit-led-edge), 0 0 56px -18px var(--fit-led-glow);
 }
 :root:not([data-theme='light']) .fit-auth :is(.luxury-login-submit-btn, .btn-primary):not(:disabled) {
-  box-shadow: inset 0 1px 0 #ffffff40, 0 4px 16px -6px var(--fit-led-edge);
+  box-shadow: inset 0 1px 0 #ffffff40, 0 0 14px rgb(var(--sol-accent-rgb) / .3), 0 0 36px -8px rgb(var(--sol-accent-rgb) / .24);
   transition: background-color 180ms var(--fit-ease-out), box-shadow 180ms var(--fit-ease-out), transform 180ms var(--fit-ease-out);
 }
 :root:not([data-theme='light']) .fit-auth :is(.luxury-login-submit-btn, .btn-primary):not(:disabled):is(:hover, :focus-visible) {
-  box-shadow: inset 0 1px 0 #ffffff50, 0 0 20px var(--fit-led-glow);
+  box-shadow: inset 0 1px 0 #ffffff50, 0 0 22px rgb(var(--sol-accent-rgb) / .45), 0 0 56px -6px rgb(var(--sol-accent-rgb) / .34);
 }
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-theme='light']) .fit-auth :is(.luxury-login-submit-btn, .btn-primary):hover:not(:disabled) { transform: none; }
