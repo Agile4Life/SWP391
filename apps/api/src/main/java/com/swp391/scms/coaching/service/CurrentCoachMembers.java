@@ -17,6 +17,8 @@ public class CurrentCoachMembers {
  private final CurrentCoachMemberRepository members; private final Clock clock; private final MemberProgressLogRepository progressLogs;
  public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock){this(members,clock,null);}
  @Autowired public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock,@Autowired(required=false) MemberProgressLogRepository progressLogs){this.members=members;this.clock=clock;this.progressLogs=progressLogs;}
+ /** Today in the center time zone, for callers that must apply the same "current" window. */
+ public LocalDate centerToday(){return today();}
  private LocalDate today(){return LocalDate.now(clock.withZone(ZoneId.of("Asia/Ho_Chi_Minh")));}
  public record MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi) {
   public MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel){

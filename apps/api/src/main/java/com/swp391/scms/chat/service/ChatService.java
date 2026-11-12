@@ -44,10 +44,14 @@ public class ChatService {
         if (query == null || query.length() > 80) throw invalid("validation.chat.query");
         String term = query.trim();
         return switch (role(actor)) {
-            case "MEMBER" -> contacts.search(term, page(page)).map(u -> contact(u, true));
+            case "MEMBER" -> contacts.searchForMember(actor.getId(), today(), term, page(page)).map(u -> contact(u, true));
             case "RECEPTIONIST" -> contacts.searchMembers(term, page(page)).map(u -> contact(u, true));
             default -> coachContacts(actor.getId(), term, page(page));
         };
+    }
+
+    private java.time.LocalDate today() {
+        return coachMembers != null ? coachMembers.centerToday() : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
     }
 
     private Page<ChatContactDto> coachContacts(Long coachId, String term, Pageable pageable) {
@@ -115,6 +119,8 @@ public class ChatService {
         User member, staff;
         if (memberStarts) {
             if (!STAFF.contains(role(other))) throw invalid("validation.chat.contact");
+            // A member may only write to coaches they currently have a class, 1:1 booking or plan with; the desk is always open.
+            if ("COACH".equals(role(other))) requireCoachOfMember(other.getId(), lockedMember.getId());
             member = lockedMember; staff = other;
         } else {
             if (!"MEMBER".equals(role(other))) throw invalid("validation.chat.contact");
@@ -126,6 +132,16 @@ public class ChatService {
         ChatConversation c = conversations.findByMemberIdAndStaffId(member.getId(), staff.getId())
                 .orElseGet(() -> conversations.save(new ChatConversation(member, staff, Instant.now())));
         return conversation(c, principal.id());
+    }
+
+    private void requireCoachOfMember(Long coachId, Long memberId) {
+        try {
+            if (coachMembers == null) throw forbidden();
+            coachMembers.requireCoachOf(coachId, memberId);
+        } catch (ForbiddenException e) {
+            throw new ForbiddenException("CHAT_COACH_NOT_ENROLLED", "chat.coach.not_enrolled", null,
+                    "You can only chat with coaches of classes you are enrolled in.");
+        }
     }
 
     public ChatHistory history(AuthenticatedPrincipal principal, Long id, Long before, Long after) {

@@ -26,11 +26,15 @@ class ChatServiceTest {
     final AuthenticatedPrincipal member = new AuthenticatedPrincipal(10L, "member", "MEMBER");
     User memberUser, coach;
     ChatConversation conversation;
+    com.swp391.scms.coaching.service.CurrentCoachMembers trainees;
 
     @BeforeEach void setup() {
         memberUser = user(10L, "MEMBER"); coach = user(20L, "COACH");
         conversation = new ChatConversation(memberUser, coach, Instant.parse("2026-10-29T00:00:00Z"));
         conversation.setId(7L);
+        trainees = mock(com.swp391.scms.coaching.service.CurrentCoachMembers.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachMembers", trainees);
+        when(trainees.centerToday()).thenReturn(java.time.LocalDate.of(2026, 11, 12));
         when(contacts.findUser(10L)).thenReturn(Optional.of(memberUser));
         when(contacts.findUser(20L)).thenReturn(Optional.of(coach));
         when(contacts.lockUser(10L)).thenReturn(Optional.of(memberUser));
@@ -65,6 +69,20 @@ class ChatServiceTest {
         coach.setRole(user(20, role).getRole());
         assertThatThrownBy(() -> service.open(member, 20L)).isInstanceOf(BadRequestException.class);
         verify(conversations, never()).save(any());
+    }
+
+    @Test void memberCannotStartWithACoachTheyHaveNoClassWith() {
+        doThrow(new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, null)).when(trainees).requireCoachOf(20L, 10L);
+        var ex = org.junit.jupiter.api.Assertions.assertThrows(ForbiddenException.class, () -> service.open(member, 20L));
+        assertThat(ex.getErrorCode()).isEqualTo("CHAT_COACH_NOT_ENROLLED");
+        verify(conversations, never()).save(any());
+    }
+
+    @Test void memberCanAlwaysReachTheFrontDeskWithoutAClass() {
+        coach.setRole(user(20, "RECEPTIONIST").getRole());
+        when(conversations.save(any())).thenAnswer(inv -> { ChatConversation c = inv.getArgument(0); c.setId(8L); return c; });
+        assertThat(service.open(member, 20L).peer().role()).isEqualTo("RECEPTIONIST");
+        verify(trainees, never()).requireCoachOf(any(), any());
     }
 
     @Test void receptionistStartsAChatWithAnyActiveMember() {
@@ -125,7 +143,7 @@ class ChatServiceTest {
         when(contacts.searchMembers(eq("an"), any())).thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(memberUser)));
         assertThat(service.contacts(desk, " an ", 0).getContent()).extracting(c -> c.role()).containsExactly("MEMBER");
 
-        when(contacts.search(eq(""), any())).thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(coach)));
+        when(contacts.searchForMember(eq(10L), any(), eq(""), any())).thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(coach)));
         assertThat(service.contacts(member, "", 0).getContent()).extracting(c -> c.role()).containsExactly("COACH");
         verify(contacts, never()).searchMembers(eq(""), any());
     }
