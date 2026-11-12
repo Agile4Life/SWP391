@@ -1,3 +1,5 @@
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { Link } from 'react-router-dom';
 import { memberMessage, memberText, memberRenderMessage } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
@@ -114,7 +116,11 @@ export function MemberInvoicesPage() {
       <section data-i18n-managed className="portal-card portal-card--flush member-invoices__card" aria-label={memberText("Lịch sử giao dịch")}>
         {loading ? <LoadingSkeleton label={memberText("Đang tải giao dịch…")} variant="table" count={4} /> : error ? (
           <div role="alert"><p>{memberText("Không tải được giao dịch. Vui lòng thử lại.")}</p><button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>{memberText("Thử lại")}</button></div>
-        ) : payments.length === 0 ? <p>{memberText("Chưa có giao dịch thanh toán thành công.")}</p> : (
+        ) : payments.length === 0 ? (
+          <EmptyState variant="plain" icon="receipt" title={memberText("Chưa có giao dịch")}
+            description={memberText("Hóa đơn sẽ hiện ở đây sau khi bạn thanh toán gói tập hoặc dịch vụ.")}
+            actions={<Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>} />
+        ) : (
           <div className="portal-table-wrapper member-invoices__scroll">
             <table className="portal-table member-invoices__table">
               <thead><tr><th scope="col">{memberText("Mã giao dịch")}</th><th scope="col">{memberText("Dịch vụ")}</th><th scope="col">{memberText("Ngày giờ thanh toán")}</th><th scope="col">{memberText("Số tiền")}</th><th scope="col">{memberText("Trạng thái")}</th><th scope="col"><span className="sr-only">{memberText("Chi tiết")}</span></th></tr></thead>

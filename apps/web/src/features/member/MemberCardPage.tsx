@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { memberText, memberMessage, memberRenderMessage } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
@@ -284,17 +285,14 @@ export function MemberCardPage() {
         </>
       )}
       {!loading && !error && !subscription && history.length > 0 && !expired && !pending && (
-        <div className="portal-card" style={{ maxWidth: 620 }}>
-          <p>{memberText("Bạn không còn gói tập hiệu lực.")}</p>
-          <Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>
-        </div>
+        <EmptyState icon="card" title={memberText("Bạn không còn gói tập hiệu lực")}
+          description={memberText("Đăng ký gói mới để dùng lại thẻ hội viên và mã QR check-in.")}
+          actions={<Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>} />
       )}
       {!loading && !error && !subscription && history.length === 0 && (
-        <div className="portal-card" style={{ maxWidth: 620 }}>
-          <p>{memberText("Chưa có gói tập để hiển thị thẻ hội viên.")}</p>
-          <p>{memberText("Vui lòng đăng ký hoặc gia hạn gói tập.")}</p>
-          <Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>
-        </div>
+        <EmptyState icon="card" title={memberText("Chưa có thẻ hội viên")}
+          description={memberText("Đăng ký gói tập để nhận thẻ và mã QR check-in.")}
+          actions={<Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>} />
       )}
       {!loading && !error && profile && subscription && <MemberCard profile={profile} subscription={subscription} />}
     </div>

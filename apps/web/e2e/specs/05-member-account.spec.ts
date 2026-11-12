@@ -59,7 +59,7 @@ test.describe('Bảng điều khiển hội viên theo từng trạng thái gói
       test('thẻ hội viên không cấp mã QR check-in', async ({ page }) => {
         await page.goto('/member/card');
         await settled(page);
-        await expect(page.locator('main')).toContainText(/đã hết hạn|Chưa có gói tập|không còn gói tập|chưa hoạt động|đã hủy|bảo lưu|Chưa có mã QR|Đang chờ thanh toán/i);
+        await expect(page.locator('main')).toContainText(/đã hết hạn|Chưa có gói tập|không còn gói tập|chưa hoạt động|đã hủy|bảo lưu|Chưa có mã QR|Chưa có thẻ hội viên|Đang chờ thanh toán/i);
         await expect(page.getByRole('button', { name: /Sao chép/ })).toHaveCount(0);
       });
     });

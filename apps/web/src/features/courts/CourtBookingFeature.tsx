@@ -3,6 +3,7 @@ import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useActivePlan } from '../member/useActivePlan';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
@@ -19,6 +20,7 @@ import './courts.css';
 import { DatePicker } from '../../shared/ui/DatePicker';
 const SLOT_LABELS = { free: 'Trống', booked: 'Đã đặt', class: 'Đang có lớp', past: 'Đã qua' };
 export function CourtBookingFeature() {
+  const plan = useActivePlan();
   useLanguage();
   const [params, setParams] = useSearchParams();
   const discipline = COURT_DISCIPLINES.find(item => matchesDiscipline(params.get('discipline') ?? params.get('sport') ?? 'Tennis', item.name))?.name ?? 'Tennis';
@@ -97,6 +99,10 @@ export function CourtBookingFeature() {
 
   return <div data-i18n-managed className="portal-container court-page">
     <PageHeader title={memberText("Đặt sân")} />
+    {plan === 'no' && <div className="portal-alert portal-alert--info" role="status" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <span>{memberText("Cần có gói tập đang hoạt động để đặt sân.")}</span>
+      <Link className="btn-primary btn-sm" to="/member/packages">{memberText("Xem gói tập")}</Link>
+    </div>}
     <div className="portal-tabs" aria-label={memberText("Bộ môn có sân")}>
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>

@@ -1854,3 +1854,26 @@ textarea.portal-textarea:focus-visible,
   display: flex;
   gap: 8px;
 }
+
+/* Trạng thái rỗng dùng chung (EmptyState) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 24px;
+  text-align: center;
+}
+.empty-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--portal-salmon, #ce9180) 16%, transparent);
+  color: var(--portal-salmon, #ce9180);
+}
+.empty-state__title { margin: 4px 0 0; font-size: 18px; font-weight: 700; color: var(--color-text-main); }
+.empty-state__text { margin: 0; max-width: 420px; font-size: 14px; line-height: 1.6; color: var(--color-text-muted); text-wrap: balance; }
+.empty-state__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }

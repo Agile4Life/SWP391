@@ -614,4 +614,13 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Mỗi buổi định kỳ thanh toán riêng; lượt VNPay chưa thanh toán sau 15 phút sẽ tự hủy, lượt tiền mặt được giữ chỗ đến 2 giờ trước giờ bắt đầu.": "Pay with VNPay, SÖL Wallet or cash at the front desk. Each recurring session is paid separately; unpaid VNPay bookings are cancelled after 15 minutes and counter bookings are held until 2 hours before the start.",
   "/ giờ.": "/ hour.",
   "Số điện thoại không hợp lệ (vd: 0912345678).": "Invalid phone number (e.g. 0912345678).",
+  "Chưa có giao dịch": "No transactions yet",
+  "Hóa đơn sẽ hiện ở đây sau khi bạn thanh toán gói tập hoặc dịch vụ.": "Invoices will appear here after you pay for a membership or service.",
+  "Bạn không còn gói tập hiệu lực": "Your membership is no longer active",
+  "Đăng ký gói mới để dùng lại thẻ hội viên và mã QR check-in.": "Choose a new plan to use your member card and check-in QR again.",
+  "Chưa có thẻ hội viên": "No member card yet",
+  "Đăng ký gói tập để nhận thẻ và mã QR check-in.": "Choose a membership to get your card and check-in QR.",
+  "Cần có gói tập để check-in": "A membership is required to check in",
+  "Đăng ký hoặc kích hoạt gói tập để quét QR vào trung tâm.": "Register or activate a membership to scan in at the center.",
+  "Cần có gói tập đang hoạt động để đặt sân.": "An active membership is required to book a court.",
 };

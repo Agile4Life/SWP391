@@ -178,7 +178,7 @@ describe('MemberCardPage', () => {
   it('shows an empty state only for a successful null response', async () => {
     vi.mocked(getMySubscription).mockResolvedValue(null);
     await renderPage();
-    expect(host.textContent).toContain('Chưa có gói tập');
+    expect(host.textContent).toContain('Chưa có thẻ hội viên');
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
     expect(host.querySelector('a')?.textContent).toBe('Xem gói tập');
     expect(getMembershipHistory).toHaveBeenCalledTimes(1);
@@ -211,7 +211,7 @@ describe('MemberCardPage', () => {
     vi.mocked(getMembershipHistory).mockResolvedValue([{ ...subscription, status: 'pending_payment' }] as never);
     await renderPage();
     expect(host.textContent).toContain('Đang chờ thanh toán');
-    expect(host.textContent).not.toContain('Chưa có gói tập');
+    expect(host.textContent).not.toContain('Chưa có thẻ hội viên');
     expect(host.querySelector('img')).toBeNull();
   });
 
@@ -243,10 +243,10 @@ describe('MemberCardPage', () => {
     vi.mocked(getMembershipHistory).mockRejectedValueOnce(new Error('history offline')).mockResolvedValueOnce([]);
     await renderPage();
     expect(host.textContent).toContain('Không thể tải');
-    expect(host.textContent).not.toContain('Chưa có gói tập');
+    expect(host.textContent).not.toContain('Chưa có thẻ hội viên');
     await act(async () => { host.querySelector('button')?.click(); });
     expect(getMembershipHistory).toHaveBeenCalledTimes(2);
-    expect(host.textContent).toContain('Chưa có gói tập');
+    expect(host.textContent).toContain('Chưa có thẻ hội viên');
   });
 
   it('shows API errors and retries the request', async () => {

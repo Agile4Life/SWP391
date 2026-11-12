@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../shared/i18n';
@@ -183,10 +184,9 @@ export function MemberHoldPage() {
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>{t('Thử lại', 'Retry')}</button>
         </div>
       ) : !subscription || !policy ? (
-        <div className="portal-card">
-          <p>{t('Bạn chưa có gói tập đang hoạt động để bảo lưu.', 'You have no active membership to put on hold.')}</p>
-          <Link to="/member/packages" className="btn-primary btn-sm">{t('Xem gói tập', 'See memberships')}</Link>
-        </div>
+        <EmptyState icon="clock" title={t('Chưa có gói để bảo lưu', 'No membership to put on hold')}
+          description={t('Bảo lưu chỉ áp dụng cho gói tập đang hoạt động.', 'Holds only apply to an active membership.')}
+          actions={<Link to="/member/packages" className="btn-primary">{t('Xem gói tập', 'See memberships')}</Link>} />
       ) : (
         <>
           <section className="portal-card stack" aria-label={t('Quy định bảo lưu', 'Hold rules')}>

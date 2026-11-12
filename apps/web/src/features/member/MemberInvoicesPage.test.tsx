@@ -1,4 +1,5 @@
 import { act } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberInvoicesPage } from './MemberInvoicesPage';
@@ -22,7 +23,7 @@ describe('MemberInvoicesPage', () => {
     mocks.payments.mockReset(); mocks.invoice.mockReset(); mocks.pdf.mockReset();
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
-  async function render() { await act(async () => root.render(<MemberInvoicesPage />)); }
+  async function render() { await act(async () => root.render(<MemoryRouter><MemberInvoicesPage /></MemoryRouter>)); }
 
   it('separates pending VNPay checkout from successful invoice history', async () => {
     let resolve!: (value: unknown[]) => void;

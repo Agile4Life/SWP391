@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { useActivePlan } from './useActivePlan';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
@@ -20,6 +22,7 @@ function subtractCenterDays(dateKey: string, offsetDays: number): string {
 
 export function MemberCheckInPage() {
   useLanguage();
+  const plan = useActivePlan();
   const [mode, setMode] = useState<Mode>('in');
   const [days, setDays] = useState(1);
   const [result, setResult] = useState<CheckinDto | null>(null);
@@ -63,6 +66,15 @@ export function MemberCheckInPage() {
   }
   const granted = result?.status.toUpperCase() === 'GRANTED';
   const checkedOut = mode === 'out' && granted && !!result?.checkOutTime;
+
+  if (plan === 'no') {
+    return <div data-i18n-managed className="portal-container">
+      <PageHeader title={memberText("Quét QR check-in")} />
+      <EmptyState icon="scan" title={memberText("Cần có gói tập để check-in")}
+        description={memberText("Đăng ký hoặc kích hoạt gói tập để quét QR vào trung tâm.")}
+        actions={<Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>} />
+    </div>;
+  }
 
   return <div data-i18n-managed className="portal-container">
     <PageHeader title={mode === 'out' ? memberText("Quét QR check-out") : memberText("Quét QR check-in")} />
