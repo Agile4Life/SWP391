@@ -504,12 +504,10 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                         width: `calc(${100 / lanes}% - 12px)`,
                       }}
                       aria-label={eventLabel(event)}
-                      title={`${hhmm(event.startTime)} - ${hhmm(event.endTime)} · ${title(event)}`}
+                      title={[labels[event.kind], `${hhmm(event.startTime)} - ${hhmm(event.endTime)}`, title(event), event.place].filter(Boolean).join(' · ')}
                       onClick={() => openEvent(event)}
                     >
-                      <span className="mcal__event-top">
-                        <span className={`mcal__type mcal__type--${event.kind}`}>{labels[event.kind]}</span>
-                      </span>
+                      {/* Khối chỉ hiện tên và phòng; loại lịch (màu + chú thích), giờ… xem ở tooltip và chi tiết khi bấm. */}
                       <strong className="mcal__event-title">{title(event)}</strong>
                       {event.place && <span className="mcal__event-place">{event.place}</span>}
                     </button>
@@ -545,10 +543,10 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                       type="button"
                       className={`mcal__chip mcal__chip--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}`}
                       aria-label={eventLabel(event)}
+                      title={[labels[event.kind], hhmm(event.startTime), title(event), event.place].filter(Boolean).join(' · ')}
                       onClick={() => openEvent(event)}
                     >
-                      <span className={`mcal__type mcal__type--${event.kind}`}>{labels[event.kind]}</span>
-                      <span>{hhmm(event.startTime)}</span> {title(event)}
+                      {title(event)}
                     </button>
                   ))}
                   {list.length > 3 && (

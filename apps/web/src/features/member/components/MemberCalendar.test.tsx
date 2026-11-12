@@ -114,12 +114,14 @@ describe('MemberCalendar', () => {
     expect(mocks.bookings).toHaveBeenLastCalledWith(from, to);
     expect(mocks.sessions).toHaveBeenLastCalledWith(from, to);
   });
-  it('labels both event types in week, month, and event details', async () => {
+  it('labels both event types in the legend, tooltip and event details; blocks only show name and room', async () => {
     await render();
-    expect(host.querySelector('.mcal__event--class .mcal__type')!.textContent).toBe('Buổi học');
-    expect(host.querySelector('.mcal__event--court .mcal__type')!.textContent).toBe('Đặt sân / phòng');
+    expect(host.querySelector('.mcal__event .mcal__type')).toBeNull();
+    expect(host.querySelector('.mcal__event--class')!.getAttribute('title')!.startsWith('Buổi học')).toBe(true);
+    expect(host.querySelector('.mcal__event--court')!.getAttribute('title')!.startsWith('Đặt sân / phòng')).toBe(true);
     await act(async () => button('Tháng').click());
-    expect(host.querySelector('.mcal__chip--court .mcal__type')!.textContent).toBe('Đặt sân / phòng');
+    expect(host.querySelector('.mcal__chip .mcal__type')).toBeNull();
+    expect(host.querySelector('.mcal__chip--court')!.getAttribute('title')).toContain('Đặt sân / phòng');
     await act(async () => host.querySelector<HTMLButtonElement>('.mcal__chip--court')!.click());
     expect(document.querySelector('dialog')!.textContent).toContain('Đặt sân / phòng');
     expect(document.querySelector('dialog a')!.getAttribute('href')).toBe('/member/courts');
@@ -143,8 +145,8 @@ describe('MemberCalendar', () => {
     expect(document.querySelector('dialog')!.textContent).toContain('Cancel this session');
     expect(document.querySelector('dialog')!.textContent).toContain('Coach');
     await act(async () => button('Close').click());
-    expect(host.querySelector('.mcal__event--class .mcal__type')!.textContent).toBe('Class session');
-    expect(host.querySelector('.mcal__event--court .mcal__type')!.textContent).toBe('Court / room');
+    expect(host.querySelector('.mcal__event--class')!.getAttribute('title')!.startsWith('Class session')).toBe(true);
+    expect(host.querySelector('.mcal__event--court')!.getAttribute('title')!.startsWith('Court / room')).toBe(true);
   });
   it('keeps court load failures separate from a successfully empty week', async () => {
     mocks.bookings.mockResolvedValue([]);
@@ -178,7 +180,7 @@ describe('MemberCalendar', () => {
     await render();
     expect(host.querySelectorAll('.mcal__daychip')).toHaveLength(7);
     await act(async () => host.querySelector<HTMLButtonElement>('[aria-label^="Thứ 3 06/01"]')!.click());
-    expect(host.querySelector('.mcal__event--court .mcal__type')!.textContent).toBe('Đặt sân / phòng');
+    expect(host.querySelector('.mcal__event--court')!.getAttribute('title')).toContain('Đặt sân / phòng');
   });
   it('shows the next upcoming item with a countdown', async () => {
     await render();
