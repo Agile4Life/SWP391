@@ -61,4 +61,20 @@ class CounterTopupServiceTest {
         assertThat(payment.getPaidAt()).isNotNull();
         verify(invoices).autoIssueInvoiceForPayment(99L);
     }
+
+    @Test
+    void aFailingInvoiceDoesNotUndoTheTopup() {
+        when(members.findById(7L)).thenReturn(Optional.of(new Member()));
+        when(payments.save(any(Payment.class))).thenAnswer(call -> {
+            Payment saved = call.getArgument(0);
+            saved.setId(100L);
+            return saved;
+        });
+        when(invoices.autoIssueInvoiceForPayment(100L)).thenThrow(new IllegalStateException("invoice store down"));
+
+        service.record(7L, new BigDecimal("500000"), "cash", null);
+
+        verify(payments).save(any(Payment.class));
+        verify(invoices).autoIssueInvoiceForPayment(100L);
+    }
 }
