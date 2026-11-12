@@ -15,6 +15,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByRole_CodeAndDeletedAtIsNullAndStatus(String code, String status);
     List<User> findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(List<String> roleCodes);
     List<User> findAllByDeletedAtIsNullOrderByIdAsc();
+    List<User> findAllByDeletedAtIsNotNullOrderByIdDesc();
     Optional<User> findByIdAndDeletedAtIsNull(Long id);
     // Tài khoản cấp phát nội bộ (admin bootstrap, nhân sự, demo) chỉ có email: dùng email làm tên đăng nhập hiển thị,
     // khớp với phản hồi đăng nhập, để /auth/me không trả null khiến frontend tự đăng xuất.

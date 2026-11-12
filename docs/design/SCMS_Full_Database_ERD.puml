@@ -1,0 +1,889 @@
+@startuml SCMS_Full_Database_ERD
+!theme plain
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam roundcorner 6
+skinparam shadowing false
+skinparam handwritten false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName "Segoe UI"
+
+package "1. Users & Access Control (Người dùng & phân quyền)" as D1 {
+  entity "users" as users {
+    * **id** : int8 <<PK>>
+    --
+      address : varchar(255)
+      avatar_url : text
+    * created_at : timestamp
+      deleted_at : timestamp
+      dob : date
+    * email : varchar(150) <<UK>>
+    * full_name : varchar(150)
+      gender : varchar(10)
+      google_sub : varchar(100) <<UK>>
+      last_login_at : timestamp
+    * password_hash : varchar(255)
+      phone : varchar(20)
+    * status : varchar(20)
+    * updated_at : timestamp
+      username : varchar(50)
+    * role_id : int8 <<FK>>
+  }
+  entity "roles" as roles {
+    * **id** : int8 <<PK>>
+    --
+    * code : varchar(50) <<UK>>
+    * created_at : timestamp
+      description : varchar(255)
+    * name : varchar(100)
+  }
+  entity "permissions" as permissions {
+    * **id** : int8 <<PK>>
+    --
+    * code : varchar(100) <<UK>>
+    * created_at : timestamp
+    * module : varchar(50)
+    * name : varchar(150)
+  }
+  entity "role_permissions" as role_permissions {
+    * **role_id** : int8 <<PK, FK>>
+    * **permission_id** : int8 <<PK, FK>>
+  }
+  entity "members" as members {
+    * **user_id** : int8 <<PK, FK>>
+    --
+      back_image_url : text
+      citizen_id : varchar(30)
+      document_type : varchar(20)
+      emergency_contact_name : varchar(150)
+      emergency_contact_phone : varchar(20)
+      fitness_goal : varchar(255)
+    * fitness_level : varchar(20)
+      front_image_url : text
+      health_notes : varchar(255)
+      identity_verified : bool
+      identity_verified_at : timestamp
+    * join_date : date
+    * membership_code : varchar(30) <<UK>>
+      nationality : varchar(100)
+      payment_realtime_topic : uuid
+  }
+  entity "coaches" as coaches {
+    * **user_id** : int8 <<PK, FK>>
+    --
+      bio : text
+      certification : varchar(255)
+    * employment_status : varchar(20)
+      hire_date : date
+      specialization : varchar(150)
+  }
+  entity "receptionists" as receptionists {
+    * **user_id** : int8 <<PK, FK>>
+    --
+    * employment_status : varchar(20)
+      hire_date : date
+      shift : varchar(50)
+  }
+  entity "center_managers" as center_managers {
+    * **user_id** : int8 <<PK, FK>>
+    --
+      hire_date : date
+  }
+  entity "member_addresses" as member_addresses {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+    * is_default : bool
+      note : varchar(200)
+    * phone : varchar(15)
+    * province_code : varchar(10)
+    * province_name : varchar(80)
+    * recipient_name : varchar(80)
+    * street_line : varchar(200)
+    * updated_at : timestamp
+    * ward_code : varchar(10)
+    * ward_name : varchar(80)
+    * member_id : int8 <<FK>>
+  }
+  entity "otp_challenges" as otp_challenges {
+    * **id** : int8 <<PK>>
+    --
+    * code_hash : varchar(100)
+    * created_at : timestamp
+    * expires_at : timestamp
+    * failed_attempts : int4
+    * target : varchar(255) <<UK>>
+  }
+}
+
+package "2. Classes & Scheduling (Lớp học & lịch tập)" as D2 {
+  entity "classes" as classes {
+    * **id** : int8 <<PK>>
+    --
+    * capacity : int4
+    * created_at : timestamp
+      description : text
+    * level : varchar(20)
+    * name : varchar(150)
+    * status : varchar(20)
+    * updated_at : timestamp
+    * coach_id : int8 <<FK>>
+      created_by : int8 <<FK>>
+    * discipline_id : int8 <<FK>>
+    * room_id : int8 <<FK>>
+  }
+  entity "class_sessions" as class_sessions {
+    * **id** : int8 <<PK>>
+    --
+      cancel_reason : varchar(255)
+    * created_at : timestamp
+    * end_time : time
+    * session_date : date
+    * start_time : time
+    * status : varchar(20)
+    * updated_at : timestamp
+    * class_id : int8 <<FK>>
+  }
+  entity "class_enrollments" as class_enrollments {
+    * **id** : int8 <<PK>>
+    --
+      cancel_reason : varchar(255)
+      cancelled_at : timestamp
+    * enrolled_at : timestamp
+    * status : varchar(20)
+      cancelled_by : int8 <<FK>>
+    * class_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+  }
+  entity "class_waitlists" as class_waitlists {
+    * **id** : int8 <<PK>>
+    --
+    * requested_at : timestamp
+    * status : varchar(20)
+    * class_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+      notified_at : timestamp
+      reservation_expires_at : timestamp
+  }
+  entity "session_bookings" as session_bookings {
+    * **id** : int8 <<PK>>
+    --
+      batch_id : varchar(36)
+    * booked_at : timestamp
+      cancel_reason : varchar(255)
+      cancelled_at : timestamp
+    * status : varchar(20)
+      cancelled_by : int8 <<FK>>
+    * member_id : int8 <<FK>>
+    * session_id : int8 <<FK>>
+  }
+  entity "session_attendance" as session_attendance {
+    * **id** : int8 <<PK>>
+    --
+      checked_in_at : timestamp
+      notes : varchar(255)
+    * status : varchar(20)
+    * member_id : int8 <<FK>>
+    * recorded_by : int8 <<FK>>
+    * session_id : int8 <<FK>>
+  }
+  entity "session_evaluations" as session_evaluations {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+    * evaluated_at : timestamp
+      feedback : text
+      performance_notes : text
+      progress_score : numeric
+    * coach_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+      session_id : int8 <<FK>>
+  }
+  entity "disciplines" as disciplines {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+      description : text
+    * name : varchar(100) <<UK>>
+  }
+  entity "member_favorite_disciplines" as member_favorite_disciplines {
+    * **member_id** : int8 <<PK, FK>>
+    * **discipline_id** : int8 <<PK, FK>>
+  }
+  entity "rooms" as rooms {
+    * **id** : int8 <<PK>>
+    --
+    * capacity : int4
+      close_time : time
+      location : varchar(150)
+    * name : varchar(100)
+      open_time : time
+    * status : varchar(20)
+      tier : varchar(30)
+      discipline_id : int8 <<FK>>
+  }
+  entity "equipment" as equipment {
+    * **id** : int8 <<PK>>
+    --
+      category : varchar(80)
+      code : varchar(60) <<UK>>
+    * created_at : timestamp
+      maintenance_date : date
+    * name : varchar(150)
+      note : varchar(500)
+      purchase_date : date
+    * quantity : int4
+    * status : varchar(30)
+    * updated_at : timestamp
+      room_id : int8 <<FK>>
+  }
+}
+
+package "3. Bookings & Check-ins (Đặt lịch)" as D3 {
+  entity "coach_bookings" as coach_bookings {
+    * **id** : int8 <<PK>>
+    --
+    * booking_date : date
+      cancel_reason : varchar(255)
+      cancelled_at : timestamp
+    * created_at : timestamp
+    * end_time : time
+    * hourly_rate : numeric
+      notes : varchar(500)
+    * payment_method : varchar(30)
+    * payment_status : varchar(20)
+    * start_time : time
+    * status : varchar(20)
+    * coach_id : int8 <<FK>>
+      discipline_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+  }
+  entity "court_bookings" as court_bookings {
+    * **id** : int8 <<PK>>
+    --
+    * booking_date : date
+      cancel_reason : varchar(255)
+      cancelled_at : timestamp
+    * created_at : timestamp
+    * end_time : time
+      payment_method : varchar(20)
+      payment_status : varchar(20)
+      price : numeric
+    * start_time : time
+    * status : varchar(20)
+    * member_id : int8 <<FK>>
+    * room_id : int8 <<FK>>
+  }
+  entity "center_checkins" as center_checkins {
+    * **id** : int8 <<PK>>
+    --
+    * check_in_time : timestamp
+      check_out_time : timestamp
+      denial_reason : varchar(255)
+      gate : varchar(50)
+    * method : varchar(10)
+      notes : varchar(255)
+    * status : varchar(20)
+      member_id : int8 <<FK>>
+      recorded_by : int8 <<FK>>
+  }
+}
+
+package "4. Coaches & Training Progress (Huấn luyện viên & tiến độ)" as D4 {
+  entity "coach_reviews" as coach_reviews {
+    * **id** : int8 <<PK>>
+    --
+      booking_id : int8
+      class_session_id : int8
+      comment : text
+    * created_at : timestamp
+      is_anonymous : bool
+      manager_notes : text
+    * rating : int4
+    * status : varchar(20)
+    * coach_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+  }
+  entity "coach_monthly_reviews" as coach_monthly_reviews {
+    * **id** : int8 <<PK>>
+    --
+      average_rating : numeric
+      badge : varchar(100)
+      bonus_amount : numeric
+    * created_at : timestamp
+      manager_feedback : text
+    * review_month : int4
+      rank_position : int4
+    * status : varchar(20)
+    * total_reviews : int4
+    * total_sessions : int4
+      updated_at : timestamp
+    * review_year : int4
+    * coach_id : int8 <<FK>>
+      manager_id : int8 <<FK>>
+  }
+  entity "training_plans" as training_plans {
+    * **id** : int8 <<PK>>
+    --
+    * is_ai_generated : bool
+    * created_at : timestamp
+    * end_date : date
+      goal : varchar(255)
+    * start_date : date
+    * status : varchar(20)
+    * updated_at : timestamp
+      ai_recommendation_id : int8 <<FK>>
+    * coach_id : int8 <<FK>>
+      class_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+  }
+  entity "training_plan_items" as training_plan_items {
+    * **id** : int8 <<PK>>
+    --
+      day_of_week : int4
+      description : text
+      duration_minutes : int4
+    * exercise_name : varchar(150)
+    * order_index : int4
+      reps : int4
+      rest_seconds : int4
+      sets : int4
+    * training_plan_id : int8 <<FK>>
+  }
+  entity "training_item_completions" as training_item_completions {
+    * **id** : int8 <<PK>>
+    --
+    * completed_at : timestamp
+    * exercise_date : date
+    * member_id : int8 <<FK>>
+    * training_plan_item_id : int8 <<FK>>
+  }
+  entity "member_progress_logs" as member_progress_logs {
+    * **id** : int8 <<PK>>
+    --
+    * metric_name : varchar(100)
+    * metric_value : numeric
+    * recorded_at : timestamp
+      unit : varchar(20)
+    * member_id : int8 <<FK>>
+    * recorded_by : int8 <<FK>>
+  }
+}
+
+package "5. Memberships & Subscriptions (Gói thành viên)" as D5 {
+  entity "membership_packages" as membership_packages {
+    * **id** : int8 <<PK>>
+    --
+      class_credit_limit : int4
+    * created_at : timestamp
+      description : text
+    * duration_days : int4
+    * name : varchar(150)
+    * price : numeric
+    * status : varchar(20)
+      tier : varchar(30)
+    * updated_at : timestamp
+      created_by : int8 <<FK>>
+  }
+  entity "membership_subscriptions" as membership_subscriptions {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+      credit_applied : numeric
+    * end_date : date
+      hold_reason : varchar(500)
+      hold_requested_at : timestamp
+      hold_resolved_at : timestamp
+      hold_status : varchar(20)
+      qr_code : varchar(255) <<UK>>
+      quoted_price : numeric
+      replaced_end_date : date
+    * start_date : date
+    * status : varchar(20)
+    * updated_at : timestamp
+      upgrade_charge : numeric
+      created_by : int8 <<FK>>
+      hold_resolved_by : int8 <<FK>>
+    * member_id : int8 <<FK>>
+    * package_id : int8 <<FK>>
+      previous_subscription_id : int8 <<FK>>
+  }
+  entity "membership_cancellation_requests" as membership_cancellation_requests {
+    * **id** : int8 <<PK>>
+    --
+    * reason : varchar(500)
+      refund_amount : numeric
+    * requested_at : timestamp
+      resolution_note : varchar(500)
+      resolved_at : timestamp
+    * status : varchar(20)
+    * member_id : int8 <<FK>>
+      requested_by : int8 <<FK>>
+      resolved_by : int8 <<FK>>
+    * subscription_id : int8 <<FK>>
+  }
+  entity "member_trial_redemptions" as member_trial_redemptions {
+    * **id** : int8 <<PK>>
+    --
+      back_image_url : text
+    * cccd_hash : varchar(64) <<UK>>
+    * cccd_last4 : varchar(4)
+      document_type : varchar(20)
+      front_image_url : text
+    * full_name : varchar(150)
+      nationality : varchar(100)
+    * redeemed_at : timestamp
+      rejection_reason : varchar(500)
+      reviewed_at : timestamp
+      reviewed_by : int8
+      status : varchar(30)
+    * member_id : int8 <<FK>> <<UK>>
+      subscription_id : int8 <<FK>> <<UK>>
+  }
+}
+
+package "6. Payments & Digital Wallets (Thanh toán & ví)" as D6 {
+  entity "invoices" as invoices {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+    * invoice_number : varchar(50) <<UK>>
+    * issued_at : timestamp
+      pdf_url : varchar(255)
+    * subtotal_amount : numeric
+    * tax_amount : numeric
+      total_amount : numeric
+    * payment_id : int8 <<FK>> <<UK>>
+  }
+  entity "invoice_items" as invoice_items {
+    * **id** : int8 <<PK>>
+    --
+      amount : numeric
+    * description : varchar(255)
+    * quantity : int4
+    * unit_price : numeric
+    * invoice_id : int8 <<FK>>
+  }
+  entity "payments" as payments {
+    * **id** : int8 <<PK>>
+    --
+    * amount : numeric
+      class_enrollment_id : int8 <<FK>>
+      coach_booking_id : int8 <<FK>>
+      court_booking_id : int8 <<FK>>
+    * created_at : timestamp
+    * method : varchar(20)
+      note : varchar(255)
+      paid_at : timestamp
+      product_order_id : int8 <<FK>>
+      receipt_image : text
+      refunded_amount : numeric
+    * status : varchar(20)
+      subscription_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+      received_by : int8 <<FK>>
+  }
+  entity "vnpay_transactions" as vnpay_transactions {
+    * **reference** : varchar(32) <<PK>>
+    --
+    * amount : numeric
+    * created_at : timestamp
+    * expires_at : timestamp
+      gateway_transaction_no : varchar(20) <<UK>>
+    * ip_address : varchar(45)
+    * status : varchar(20)
+    * payment_id : int8 <<FK>>
+  }
+  entity "wallets" as wallets {
+    * **id** : int8 <<PK>>
+    --
+    * balance : numeric
+    * updated_at : timestamp
+    * user_id : int8 <<FK>> <<UK>>
+  }
+  entity "wallet_transactions" as wallet_transactions {
+    * **id** : int8 <<PK>>
+    --
+    * amount : numeric
+    * balance_after : numeric
+    * created_at : timestamp
+      description : varchar(500)
+      reference_id : varchar(100)
+      reference_type : varchar(50)
+    * type : varchar(30)
+    * wallet_id : int8 <<FK>>
+  }
+}
+
+package "7. E-Commerce & Supplements (Sản phẩm & đơn hàng)" as D7 {
+  entity "products" as products {
+    * **id** : int8 <<PK>>
+    --
+    * active : bool
+      brand : varchar(80)
+    * created_at : timestamp
+      description : text
+    * featured : bool
+    * form : varchar(20)
+    * name : varchar(160)
+      registration_number : varchar(60)
+    * serving_size : varchar(60)
+    * short_description : varchar(300)
+    * slug : varchar(180) <<UK>>
+    * updated_at : timestamp
+      usage_instructions : text
+      warnings : text
+    * category_id : int8 <<FK>>
+  }
+  entity "product_categories" as product_categories {
+    * **id** : int8 <<PK>>
+    --
+    * active : bool
+    * created_at : timestamp
+    * name : varchar(80) <<UK>>
+    * slug : varchar(80) <<UK>>
+    * sort_order : int4
+  }
+  entity "product_variants" as product_variants {
+    * **id** : int8 <<PK>>
+    --
+    * active : bool
+    * label : varchar(80)
+    * price : numeric
+      servings_per_container : int4
+    * sku : varchar(40) <<UK>>
+    * sort_order : int4
+    * stock : int4
+    * product_id : int8 <<FK>>
+  }
+  entity "product_images" as product_images {
+    * **id** : int8 <<PK>>
+    --
+    * alt_text : varchar(160)
+    * content_type : varchar(20)
+    * created_at : timestamp
+    * data_url : text
+    * sort_order : int4
+    * product_id : int8 <<FK>>
+  }
+  entity "product_nutrients" as product_nutrients {
+    * **id** : int8 <<PK>>
+    --
+    * amount : numeric
+      daily_value_percent : int4
+    * highlight : bool
+    * name : varchar(80)
+    * sort_order : int4
+    * sub_row : bool
+    * unit : varchar(12)
+    * product_id : int8 <<FK>>
+  }
+  entity "product_goals" as product_goals {
+    * **product_id** : int8 <<PK, FK>>
+    * **goal** : varchar(30) <<PK>>
+  }
+  entity "product_orders" as product_orders {
+    * **id** : int8 <<PK>>
+    --
+      cancel_reason : varchar(255)
+      cancelled_at : timestamp
+      cancelled_by_id : int8 <<FK>>
+    * client_request_id : varchar(36)
+    * code : varchar(20) <<UK>>
+      completed_at : timestamp
+    * created_at : timestamp
+    * fulfillment : varchar(10)
+      paid_at : timestamp
+      payment_due_at : timestamp
+    * payment_method : varchar(10)
+      processing_at : timestamp
+      ready_at : timestamp
+      ship_note : varchar(200)
+      ship_phone : varchar(15)
+      ship_province_name : varchar(80)
+      ship_recipient_name : varchar(80)
+      ship_street_line : varchar(200)
+      ship_ward_name : varchar(80)
+      shipped_at : timestamp
+    * shipping_fee : numeric
+    * status : varchar(20)
+    * subtotal : numeric
+    * total : numeric
+      tracking_carrier : varchar(60)
+      tracking_number : varchar(60)
+    * updated_at : timestamp
+    * member_id : int8 <<FK>>
+  }
+  entity "product_order_items" as product_order_items {
+    * **id** : int8 <<PK>>
+    --
+    * line_total : numeric
+    * product_name : varchar(160)
+    * quantity : int4
+    * sku : varchar(40)
+    * unit_price : numeric
+    * variant_label : varchar(80)
+    * order_id : int8 <<FK>>
+    * variant_id : int8 <<FK>>
+  }
+  entity "product_stock_movements" as product_stock_movements {
+    * **id** : int8 <<PK>>
+    --
+      actor_id : int8 <<FK>>
+    * created_at : timestamp
+    * delta : int4
+      note : varchar(200)
+      order_id : int8
+    * reason : varchar(20)
+    * variant_id : int8 <<FK>>
+  }
+}
+
+package "8. Chat, AI & Support Requests (Chat, AI, hỗ trợ)" as D8 {
+  entity "ai_chat_sessions" as ai_chat_sessions {
+    * **id** : int8 <<PK>>
+    --
+      ended_at : timestamp
+    * started_at : timestamp
+      topic : varchar(150)
+    * member_id : int8 <<FK>>
+  }
+  entity "ai_chat_messages" as ai_chat_messages {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+    * message : text
+    * sender : varchar(10)
+    * session_id : int8 <<FK>>
+  }
+  entity "ai_recommendation_logs" as ai_recommendation_logs {
+    * **id** : int8 <<PK>>
+    --
+    * is_applied : bool
+    * created_at : timestamp
+    * input_context : jsonb
+      model_name : varchar(100)
+    * recommended_content : jsonb
+      coach_id : int8 <<FK>>
+    * member_id : int8 <<FK>>
+  }
+  entity "chat_conversations" as chat_conversations {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamptz
+    * last_activity_at : timestamptz
+      member_last_read_message_id : int8
+      staff_last_read_message_id : int8
+    * member_user_id : int8 <<FK>>
+    * staff_user_id : int8 <<FK>>
+  }
+  entity "chat_messages" as chat_messages {
+    * **id** : int8 <<PK>>
+    --
+    * client_message_id : uuid
+    * created_at : timestamptz
+    * message : varchar(2000)
+    * conversation_id : int8 <<FK>>
+    * sender_user_id : int8 <<FK>>
+  }
+  entity "support_requests" as support_requests {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+      description : text
+      escalated_at : timestamp
+      escalation_reason : varchar(500)
+      resolved_at : timestamp
+    * status : varchar(20)
+    * subject : varchar(150)
+      assigned_to : int8 <<FK>>
+      escalated_by : int8 <<FK>>
+    * member_id : int8 <<FK>>
+  }
+  entity "support_request_messages" as support_request_messages {
+    * **id** : int8 <<PK>>
+    --
+      client_message_id : uuid
+    * created_at : timestamp
+    * message : text
+    * sender_user_id : int8 <<FK>>
+    * support_request_id : int8 <<FK>>
+  }
+  entity "staff_internal_requests" as staff_internal_requests {
+    * **id** : int8 <<PK>>
+    --
+    * created_at : timestamp
+      end_date : date
+      manager_notes : text
+    * reason : text
+    * request_type : varchar(50)
+      reviewed_at : timestamp
+      start_date : date
+    * status : varchar(30)
+      target_shift : varchar(100)
+    * title : varchar(200)
+      updated_at : timestamp
+      replacement_user_id : int8 <<FK>>
+      reviewed_by_user_id : int8 <<FK>>
+    * user_id : int8 <<FK>>
+  }
+}
+
+package "9. Notifications & Audit System (Thông báo & hệ thống)" as D9 {
+  entity "notifications" as notifications {
+    * **id** : int8 <<PK>>
+    --
+      action_path : varchar(500)
+    * created_at : timestamp
+    * is_read : bool
+    * content : text
+      related_entity_id : int8
+      related_entity_type : varchar(50)
+    * title : varchar(150)
+    * type : varchar(30)
+    * user_id : int8 <<FK>>
+  }
+  entity "notification_outbox" as notification_outbox {
+    * **id** : uuid <<PK>>
+    --
+    * attempts : int4
+    * channel : varchar(20)
+      completed_at : timestamptz
+    * created_at : timestamptz
+    * next_attempt_at : timestamptz
+    * payload : text
+      published_at : timestamptz
+      version : int8
+  }
+  entity "audit_logs" as audit_logs {
+    * **id** : int8 <<PK>>
+    --
+    * action : varchar(100)
+    * created_at : timestamp
+      entity_id : int8
+    * entity_type : varchar(100)
+      ip_address : varchar(45)
+      new_value : jsonb
+      old_value : jsonb
+      user_id : int8 <<FK>>
+  }
+  entity "report_snapshots" as report_snapshots {
+    * **id** : int8 <<PK>>
+    --
+    * data : jsonb
+    * generated_at : timestamp
+    * period_end : date
+    * period_start : date
+    * report_type : varchar(30)
+      generated_by : int8 <<FK>>
+  }
+}
+
+' ================= RELATIONSHIPS (105 FKs) =================
+ai_chat_sessions ||..o{ ai_chat_messages : "session_id"
+members ||..o{ ai_chat_sessions : "member_id"
+members ||..o{ ai_recommendation_logs : "member_id"
+coaches ||..o{ ai_recommendation_logs : "coach_id"
+users ||..o{ audit_logs : "user_id"
+members ||..o{ center_checkins : "member_id"
+users ||..o{ center_checkins : "recorded_by"
+users ||..o{ center_managers : "user_id"
+users ||..o{ chat_conversations : "staff_user_id"
+users ||..o{ chat_conversations : "member_user_id"
+users ||..o{ chat_messages : "sender_user_id"
+chat_conversations ||..o{ chat_messages : "conversation_id"
+users ||..o{ class_enrollments : "cancelled_by"
+classes ||..o{ class_enrollments : "class_id"
+members ||..o{ class_enrollments : "member_id"
+classes ||..o{ class_sessions : "class_id"
+coaches ||..o{ classes : "coach_id"
+disciplines ||..o{ classes : "discipline_id"
+users ||..o{ classes : "created_by"
+rooms ||..o{ classes : "room_id"
+disciplines ||..o{ coach_bookings : "discipline_id"
+coaches ||..o{ coach_bookings : "coach_id"
+members ||..o{ coach_bookings : "member_id"
+coaches ||..o{ coach_monthly_reviews : "coach_id"
+users ||..o{ coach_monthly_reviews : "manager_id"
+coaches ||..o{ coach_reviews : "coach_id"
+members ||..o{ coach_reviews : "member_id"
+users ||..o{ coaches : "user_id"
+rooms ||..o{ court_bookings : "room_id"
+users ||..o{ court_bookings : "member_id"
+rooms ||..o{ equipment : "room_id"
+invoices ||..o{ invoice_items : "invoice_id"
+payments ||..o{ invoices : "payment_id"
+members ||..o{ member_addresses : "member_id"
+members ||..o{ member_favorite_disciplines : "member_id"
+disciplines ||..o{ member_favorite_disciplines : "discipline_id"
+users ||..o{ member_progress_logs : "recorded_by"
+members ||..o{ member_progress_logs : "member_id"
+members ||..o{ member_trial_redemptions : "member_id"
+membership_subscriptions ||..o{ member_trial_redemptions : "subscription_id"
+users ||..o{ members : "user_id"
+users ||..o{ membership_cancellation_requests : "resolved_by"
+users ||..o{ membership_cancellation_requests : "requested_by"
+membership_subscriptions ||..o{ membership_cancellation_requests : "subscription_id"
+members ||..o{ membership_cancellation_requests : "member_id"
+users ||..o{ membership_packages : "created_by"
+users ||..o{ membership_subscriptions : "hold_resolved_by"
+members ||..o{ membership_subscriptions : "member_id"
+membership_subscriptions ||..o{ membership_subscriptions : "previous_subscription_id"
+membership_packages ||..o{ membership_subscriptions : "package_id"
+users ||..o{ membership_subscriptions : "created_by"
+users ||..o{ notifications : "user_id"
+court_bookings ||..o{ payments : "court_booking_id"
+users ||..o{ payments : "received_by"
+membership_subscriptions ||..o{ payments : "subscription_id"
+coach_bookings ||..o{ payments : "coach_booking_id"
+class_enrollments ||..o{ payments : "class_enrollment_id"
+product_orders ||..o{ payments : "product_order_id"
+members ||..o{ payments : "member_id"
+products ||..o{ product_goals : "product_id"
+products ||..o{ product_images : "product_id"
+products ||..o{ product_nutrients : "product_id"
+product_orders ||..o{ product_order_items : "order_id"
+product_variants ||..o{ product_order_items : "variant_id"
+members ||..o{ product_orders : "member_id"
+users ||..o{ product_orders : "cancelled_by_id"
+users ||..o{ product_stock_movements : "actor_id"
+product_variants ||..o{ product_stock_movements : "variant_id"
+products ||..o{ product_variants : "product_id"
+product_categories ||..o{ products : "category_id"
+users ||..o{ receptionists : "user_id"
+users ||..o{ report_snapshots : "generated_by"
+permissions ||..o{ role_permissions : "permission_id"
+roles ||..o{ role_permissions : "role_id"
+disciplines ||..o{ rooms : "discipline_id"
+members ||..o{ session_attendance : "member_id"
+class_sessions ||..o{ session_attendance : "session_id"
+coaches ||..o{ session_attendance : "recorded_by"
+members ||..o{ session_bookings : "member_id"
+users ||..o{ session_bookings : "cancelled_by"
+class_sessions ||..o{ session_bookings : "session_id"
+class_sessions ||..o{ session_evaluations : "session_id"
+members ||..o{ session_evaluations : "member_id"
+coaches ||..o{ session_evaluations : "coach_id"
+users ||..o{ staff_internal_requests : "replacement_user_id"
+users ||..o{ staff_internal_requests : "user_id"
+users ||..o{ staff_internal_requests : "reviewed_by_user_id"
+users ||..o{ support_request_messages : "sender_user_id"
+support_requests ||..o{ support_request_messages : "support_request_id"
+users ||..o{ support_requests : "escalated_by"
+members ||..o{ support_requests : "member_id"
+users ||..o{ support_requests : "assigned_to"
+members ||..o{ training_item_completions : "member_id"
+training_plan_items ||..o{ training_item_completions : "training_plan_item_id"
+training_plans ||..o{ training_plan_items : "training_plan_id"
+members ||..o{ training_plans : "member_id"
+coaches ||..o{ training_plans : "coach_id"
+classes ||..o{ training_plans : "class_id"
+ai_recommendation_logs ||..o{ training_plans : "ai_recommendation_id"
+roles ||..o{ users : "role_id"
+payments ||..o{ vnpay_transactions : "payment_id"
+wallets ||..o{ wallet_transactions : "wallet_id"
+users ||..o{ wallets : "user_id"
+members ||..o{ class_waitlists : "member_id"
+classes ||..o{ class_waitlists : "class_id"
+
+@enduml

@@ -70,6 +70,18 @@ public class UserController {
         return ApiResponse.ok(msg("users.deleted.success"), null);
     }
 
+    @Operation(summary = "Lấy danh sách người dùng đã bị xóa mềm", description = "Trả về danh sách tài khoản có deleted_at khác null")
+    @GetMapping("/deleted")
+    public ApiResponse<List<UserDto>> getDeletedUsers() {
+        return ApiResponse.ok(msg("users.list.success"), userService.getDeletedUsers());
+    }
+
+    @Operation(summary = "Khôi phục tài khoản", description = "Khôi phục tài khoản đã bị xóa mềm (đặt lại deleted_at = null)")
+    @PatchMapping("/{id}/restore")
+    public ApiResponse<UserDto> restoreUser(@PathVariable Long id) {
+        return ApiResponse.ok(msg("users.restored.success"), userService.restoreUser(id));
+    }
+
     @Operation(summary = "Khóa tài khoản", description = "Chuyển trạng thái người dùng sang 'locked'")
     @PatchMapping("/{id}/lock")
     public ApiResponse<UserDto> lockUser(@PathVariable Long id) {

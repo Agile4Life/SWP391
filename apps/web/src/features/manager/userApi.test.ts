@@ -285,5 +285,64 @@ describe('userApi.ts (User Management & RBAC)', () => {
     );
     expect(result.deletedCount).toBe(5);
   });
+
+  it('getDeletedUsers calls GET /api/v1/users/deleted', async () => {
+    const deletedList = [
+      {
+        id: 99,
+        roleCode: 'MEMBER',
+        fullName: 'Deleted Member',
+        email: 'deleted@test.com',
+        phone: null,
+        status: 'active',
+        createdAt: '2026-01-01T10:00:00',
+        deletedAt: '2026-11-10T10:00:00',
+      },
+    ];
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: deletedList }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await userApi.getDeletedUsers();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/users/deleted',
+      expect.anything(),
+    );
+    expect(result.length).toBe(1);
+    expect(result[0].name).toBe('Deleted Member');
+    expect(result[0].deleted_at).toBe('2026-11-10T10:00:00');
+  });
+
+  it('restoreUser calls PATCH /api/v1/users/:id/restore', async () => {
+    const restoredUser = {
+      id: 99,
+      roleCode: 'MEMBER',
+      fullName: 'Restored Member',
+      email: 'deleted@test.com',
+      phone: null,
+      status: 'active',
+      createdAt: '2026-01-01T10:00:00',
+      deletedAt: null,
+    };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: restoredUser }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await userApi.restoreUser('99');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/users/99/restore',
+      expect.objectContaining({ method: 'PATCH' }),
+    );
+    expect(result.id).toBe('99');
+    expect(result.deleted_at).toBeNull();
+  });
 });
 

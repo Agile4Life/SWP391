@@ -214,13 +214,13 @@ class MembershipCancellationServiceTest {
         assertThatThrownBy(() -> service.staffRequest(receptionist, new CancellationDtos.StaffRequest(10L, 100L, "   ", null)))
                 .isInstanceOf(BadRequestException.class);
 
-        MembershipSubscription future = new MembershipSubscription();
-        future.setId(101L); future.setMember(member); future.setMembershipPackage(active.getMembershipPackage());
-        future.setStatus("active");
-        future.setStartDate(LocalDate.of(2026, 11, 2));
-        future.setEndDate(LocalDate.of(2026, 12, 2));
-        when(subscriptions.findById(101L)).thenReturn(Optional.of(future));
-        when(subscriptions.findByIdForUpdate(101L)).thenReturn(Optional.of(future));
+        MembershipSubscription expired = new MembershipSubscription();
+        expired.setId(101L); expired.setMember(member); expired.setMembershipPackage(active.getMembershipPackage());
+        expired.setStatus("active");
+        expired.setStartDate(LocalDate.of(2026, 9, 1));
+        expired.setEndDate(LocalDate.of(2026, 10, 1));
+        when(subscriptions.findById(101L)).thenReturn(Optional.of(expired));
+        when(subscriptions.findByIdForUpdate(101L)).thenReturn(Optional.of(expired));
         assertThatThrownBy(() -> service.staffRequest(receptionist, new CancellationDtos.StaffRequest(10L, 101L, "Moving", null)))
                 .isInstanceOf(ConflictException.class);
     }

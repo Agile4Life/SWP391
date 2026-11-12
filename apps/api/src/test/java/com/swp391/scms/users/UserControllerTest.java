@@ -136,6 +136,27 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/v1/users/deleted calls getDeletedUsers")
+    void getDeletedUsersSuccess() throws Exception {
+        when(userService.getDeletedUsers()).thenReturn(List.of());
+        mockMvc.perform(get("/api/v1/users/deleted"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+        verify(userService).getDeletedUsers();
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/restore calls restoreUser")
+    void restoreUserSuccess() throws Exception {
+        when(userService.restoreUser(4L)).thenReturn(sampleUser(4L, "MEMBER", "active"));
+        mockMvc.perform(patch("/api/v1/users/4/restore"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(4));
+        verify(userService).restoreUser(4L);
+    }
+
+    @Test
     @DisplayName("PUT /api/v1/users/{id}/receptionist updates receptionist shift")
     void updateReceptionistProfileSuccess() throws Exception {
         com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request = new com.swp391.scms.users.dto.ReceptionistProfileUpdateDto("Morning");
