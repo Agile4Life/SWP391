@@ -423,4 +423,64 @@ class TrainingPlanServiceTest {
   assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,()->service.createPlan(dto,20L,"COACH"));
   verify(trainingPlanRepository,never()).save(any());
  }
+
+    @Test
+    @DisplayName("Activating a plan moves the member's other active plan into history")
+    void activatingAPlanSupersedesTheMembersOtherActivePlan() {
+        var draft = ownedPlan("draft");
+        var previous = ownedPlan("active");
+        ReflectionTestUtils.setField(previous, "id", 99L);
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
+        when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(trainingPlanRepository.findOtherActiveForMember(10L, 100L)).thenReturn(List.of(previous));
+
+        assertEquals("active", service.activatePlan(100L, 20L, "COACH").getStatus());
+
+        assertEquals("superseded", previous.getStatus());
+        verify(trainingPlanRepository).save(previous);
+    }
+
+    @Test
+    @DisplayName("Re-applying a history plan makes it active and moves the current plan to history")
+    void reapplyingAHistoryPlanSwapsItWithTheActiveOne() {
+        var history = ownedPlan("superseded");
+        var current = ownedPlan("active");
+        ReflectionTestUtils.setField(current, "id", 101L);
+        history.setStartDate(LocalDate.now().minusDays(10));
+        history.setEndDate(LocalDate.now().plusDays(18));
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
+        when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(trainingPlanRepository.findOtherActiveForMember(10L, 100L)).thenReturn(List.of(current));
+
+        var result = service.reapplyPlan(100L, 20L, "COACH");
+
+        assertEquals("active", result.getStatus());
+        assertEquals("superseded", current.getStatus());
+        assertEquals(LocalDate.now().plusDays(18), result.getEndDate(), "A plan still in its period keeps its dates");
+    }
+
+    @Test
+    @DisplayName("Re-applying a plan whose period ended gives it a new window of the same length")
+    void reapplyingAnExpiredPlanShiftsItsDatesToToday() {
+        var history = ownedPlan("superseded");
+        history.setStartDate(LocalDate.of(2026, 1, 1));
+        history.setEndDate(LocalDate.of(2026, 1, 29));
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
+        when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.reapplyPlan(100L, 20L, "COACH");
+
+        var today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        assertEquals(today, result.getStartDate());
+        assertEquals(today.plusDays(28), result.getEndDate());
+    }
+
+    @Test
+    @DisplayName("Only plans in history can be re-applied")
+    void reapplyRejectsPlansOutsideHistory() {
+        var active = ownedPlan("active");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(active));
+        assertThrows(ConflictException.class, () -> service.reapplyPlan(100L, 20L, "COACH"));
+        verify(trainingPlanRepository, never()).save(any());
+    }
 }

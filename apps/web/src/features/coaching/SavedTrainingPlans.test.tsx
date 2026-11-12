@@ -107,3 +107,22 @@ it('edits saved exercise sets, reps and rest time with its existing server ID', 
   await act(async()=>document.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
   expect(update).toHaveBeenCalledWith(1,expect.objectContaining({items:[expect.objectContaining({id:501,sets:5,reps:8,restSeconds:90})]}));
 });
+
+it('tags the current plan and offers re-applying a history plan after confirmation', async () => {
+  const history: SavedTrainingPlan = { ...active, id: 9, goal: 'Giáo án cũ', status: 'superseded' };
+  const list = vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([active, history]);
+  const reapply = vi.spyOn(aiApi, 'reapplyTrainingPlan').mockResolvedValue({ ...history, status: 'active' });
+  await render();
+  const [current, old] = rows();
+  expect(current.textContent).toContain('Đang áp dụng');
+  expect(buttonIn(current, 'Áp dụng lại')).toBeFalsy();
+  expect(old.textContent).toContain('Lịch sử');
+  expect(buttonIn(old, 'Sửa')).toBeFalsy();
+
+  await click(buttonIn(old, 'Áp dụng lại'));
+  expect(reapply).not.toHaveBeenCalled();
+  const confirmButton = [...host.ownerDocument.querySelectorAll('button')].find((b) => b.textContent === 'Áp dụng lại' && b.closest('dialog,[role="dialog"],[role="alertdialog"]'));
+  await click(confirmButton);
+  expect(reapply).toHaveBeenCalledWith(9);
+  expect(list).toHaveBeenCalledTimes(2);
+});

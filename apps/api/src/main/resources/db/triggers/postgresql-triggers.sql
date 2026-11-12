@@ -346,6 +346,17 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.membership_subscriptions ADD CONSTRAINT ck_subscriptions_status CHECK (status IN (''pending_payment'',''active'',''frozen'',''expired'',''cancelled''))', current_schema());
     END IF;
 
+    -- A member has one active plan; the plan it replaces is kept as history ('superseded') and can be re-applied.
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = current_schema()
+          AND table_name = 'training_plans'
+    ) THEN
+        EXECUTE format('ALTER TABLE %I.training_plans DROP CONSTRAINT IF EXISTS ck_plans_status', current_schema());
+        EXECUTE format('ALTER TABLE %I.training_plans ADD CONSTRAINT ck_plans_status CHECK (status IN (''draft'',''active'',''superseded'',''completed'',''cancelled''))', current_schema());
+    END IF;
+
     IF EXISTS (
         SELECT 1
         FROM information_schema.columns

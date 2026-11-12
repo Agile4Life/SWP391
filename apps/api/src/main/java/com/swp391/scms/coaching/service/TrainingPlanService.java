@@ -113,6 +113,7 @@ public class TrainingPlanService {
         }
 
         TrainingPlan savedPlan = trainingPlanRepository.save(plan);
+        if (activateImmediately) supersedeOtherActivePlans(savedPlan);
 
         List<TrainingPlanItem> savedItems = new ArrayList<>();
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
@@ -163,8 +164,45 @@ public class TrainingPlanService {
 
         plan.setStatus("active");
         TrainingPlan saved = trainingPlanRepository.save(plan);
+        supersedeOtherActivePlans(saved);
         List<TrainingPlanItem> items = trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId);
         return toDto(saved, items);
+    }
+
+    /**
+     * Brings a plan from the member's history back as the active one. The plan that is active right now moves to
+     * history, so the member always has exactly one current plan. A plan whose period already ended gets a fresh
+     * window of the same length starting today, otherwise it would be "active" yet outside its dates.
+     */
+    public TrainingPlanDto reapplyPlan(Long planId, Long currentUserId, String currentUserRole) {
+        TrainingPlan plan = trainingPlanRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
+        verifyCoachOwnership(plan, currentUserId, currentUserRole);
+        if (!"superseded".equalsIgnoreCase(plan.getStatus())) {
+            throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.invalid_reapply_status",
+                    new Object[]{plan.getStatus()}, "Only plans in history can be re-applied");
+        }
+        java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        if (plan.getEndDate().isBefore(today)) {
+            long days = java.time.temporal.ChronoUnit.DAYS.between(plan.getStartDate(), plan.getEndDate());
+            plan.setStartDate(today);
+            plan.setEndDate(today.plusDays(days));
+        }
+        plan.setStatus("active");
+        TrainingPlan saved = trainingPlanRepository.save(plan);
+        supersedeOtherActivePlans(saved);
+        return toDto(saved, trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId));
+    }
+
+    /** A member has one active plan; whatever it replaces stays as history instead of being deleted. */
+    private void supersedeOtherActivePlans(TrainingPlan current) {
+        if (current.getMember() == null || current.getMember().getUserId() == null) return;
+        var others = trainingPlanRepository.findOtherActiveForMember(current.getMember().getUserId(), current.getId());
+        if (others == null) return;
+        for (TrainingPlan other : others) {
+            other.setStatus("superseded");
+            trainingPlanRepository.save(other);
+        }
     }
 
     public TrainingPlanDto updatePlan(Long planId, com.swp391.scms.coaching.dto.TrainingPlanUpdateDto dto,
@@ -214,7 +252,7 @@ public class TrainingPlanService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
         verifyCoachOwnership(plan, currentUserId, currentUserRole);
         if ("cancelled".equalsIgnoreCase(plan.getStatus())) return;
-        if ("active".equalsIgnoreCase(plan.getStatus())) {
+        if ("active".equalsIgnoreCase(plan.getStatus()) || "superseded".equalsIgnoreCase(plan.getStatus())) {
             plan.setStatus("cancelled");trainingPlanRepository.save(plan);return;
         }
         if (!"draft".equalsIgnoreCase(plan.getStatus())) {

@@ -80,6 +80,18 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.activated"), activated));
     }
 
+    @Operation(summary = "Áp dụng lại giáo án trong lịch sử", description = "Đưa giáo án lịch sử (superseded) về trạng thái đang áp dụng; giáo án đang áp dụng hiện tại chuyển thành lịch sử")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
+    @PutMapping("/{id}/reapply")
+    public ResponseEntity<ApiResponse<TrainingPlanDto>> reapplyPlan(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        Long userId = principal != null ? principal.id() : null;
+        String role = principal != null ? principal.role() : "COACH";
+        return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.reapplied"),
+                trainingPlanService.reapplyPlan(id, userId, role)));
+    }
+
     @Operation(summary = "Xem giáo án đang hoạt động của hội viên", description = "Hội viên xem giáo án bài tập đang hoạt động của mình")
     @PreAuthorize("hasRole('MEMBER')")
     @GetMapping("/my")
