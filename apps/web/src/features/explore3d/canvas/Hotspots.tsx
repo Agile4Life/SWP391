@@ -243,10 +243,10 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
               padding: '0.28rem 0.65rem',
               borderRadius: '999px',
               border: isSelected
-                ? '1.5px solid var(--explore-accent-hover, #e1aa98)'
-                : '1px solid var(--explore-border-accent, rgba(206, 145, 128, 0.55))',
+                ? '1.5px solid var(--explore-accent-hover)'
+                : '1px solid var(--explore-border-accent, rgb(var(--sol-accent-rgb) / .55))',
               background: isSelected
-                ? 'var(--explore-accent, #ce9180)'
+                ? 'var(--explore-accent)'
                 : 'var(--explore-surface, rgba(32, 32, 32, 0.88))',
               color: isSelected
                 ? 'var(--explore-on-accent, #202020)'
@@ -268,7 +268,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
                 width: '8px',
                 height: '8px',
                 borderRadius: '999px',
-                background: isSelected ? '#202020' : '#ce9180',
+                background: isSelected ? 'var(--explore-on-accent, #202020)' : 'var(--explore-accent)',
                 flexShrink: 0,
               }}
             />
@@ -279,7 +279,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
                   fontSize: '0.75rem',
                   fontWeight: 700,
                   letterSpacing: '0.04em',
-                  color: isSelected ? '#202020' : '#ce9180',
+                  color: isSelected ? 'var(--explore-on-accent, #202020)' : 'var(--explore-accent)',
                 }}
               >
                 {hotspot.badge}

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { SceneDoc, Vec3 } from '../scene/schema';
 import { worldBox, type WorldBox } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
+import { getExploreUiAccent, useDocumentTheme } from '../renderers/materials';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
 
 export interface SelectionHighlightProps {
@@ -82,23 +83,25 @@ export function SelectionHighlight({ scene = SOL_CENTER_SCENE }: SelectionHighli
   const selectedId = useExploreStore(s => s.selectedId);
   const hoveredId = useExploreStore(s => s.hoveredId);
   const levelMode = useExploreStore(s => s.levelMode);
+  const theme = useDocumentTheme();
 
   const resources = useMemo(() => {
+    const uiAccent = getExploreUiAccent(theme);
     const geometry = buildUnitHighlightFrameGeometry();
     const selectedMaterial = new THREE.LineBasicMaterial({
       name: 'sol-selection-highlight-mat',
-      color: '#ce9180',
+      color: uiAccent.accent,
       transparent: true,
       opacity: 0.95,
     });
     const hoveredMaterial = new THREE.LineBasicMaterial({
       name: 'sol-hover-highlight-mat',
-      color: '#e1aa98',
+      color: uiAccent.hover,
       transparent: true,
       opacity: 0.55,
     });
     return { geometry, selectedMaterial, hoveredMaterial };
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     return () => {

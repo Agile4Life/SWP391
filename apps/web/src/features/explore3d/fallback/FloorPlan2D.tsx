@@ -37,7 +37,7 @@ function polygonCentroid(polygon: Vec2[]): Vec2 {
 }
 
 function getItemFillColor(status: NormalizedItemStatus, isSelected: boolean): string {
-  if (isSelected) return '#ce9180';
+  if (isSelected) return 'var(--explore-accent)';
   switch (status) {
     case 'active':
     case 'available':
@@ -229,7 +229,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             points={polygonToSvgPoints(levelNode.slabPolygon)}
             className="explore3d-svg-slab"
             fill="#242424"
-            stroke="rgba(206, 145, 128, 0.32)"
+            stroke="rgb(var(--sol-accent-rgb) / 0.32)"
             strokeWidth={0.22}
           />
 
@@ -276,8 +276,8 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                 width={12.4}
                 height={7.4}
                 rx={0.4}
-                fill="rgba(206, 145, 128, 0.16)"
-                stroke="#ce9180"
+                fill="rgb(var(--sol-accent-rgb) / 0.16)"
+                stroke="var(--explore-accent)"
                 strokeWidth={0.18}
               />
               <text
@@ -294,7 +294,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                 x={6.7}
                 y={22.8}
                 textAnchor="middle"
-                fill="#ce9180"
+                fill="var(--explore-accent)"
                 fontSize={0.68}
                 fontWeight={800}
               >
@@ -307,7 +307,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                 cy={19.6}
                 r={1.15}
                 fill="rgba(56, 189, 248, 0.35)"
-                stroke="#ce9180"
+                stroke="var(--explore-accent)"
                 strokeWidth={0.12}
               />
               <rect
@@ -365,17 +365,17 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                   points={polygonToSvgPoints(zone.polygon)}
                   fill={
                     isZoneSelected
-                      ? 'rgba(206, 145, 128, 0.28)'
+                      ? 'rgb(var(--sol-accent-rgb) / 0.28)'
                       : 'rgba(46, 46, 46, 0.88)'
                   }
-                  stroke={isZoneSelected ? '#ce9180' : 'rgba(250, 249, 246, 0.22)'}
+                  stroke={isZoneSelected ? 'var(--explore-accent)' : 'rgba(250, 249, 246, 0.22)'}
                   strokeWidth={isZoneSelected ? 0.24 : 0.12}
                 />
                 <text
                   x={cx}
                   y={cz - 0.55}
                   textAnchor="middle"
-                  fill={isZoneSelected ? '#ce9180' : '#faf9f6'}
+                  fill={isZoneSelected ? 'var(--explore-accent)' : '#faf9f6'}
                   fontSize={0.72}
                   fontWeight={700}
                 >
@@ -399,7 +399,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                     fill={
                       zBinding?.roomStatus === 'maintenance'
                         ? '#e0a050'
-                        : '#ce9180'
+                        : 'var(--explore-accent)'
                     }
                     fontSize={0.52}
                     fontWeight={600}
@@ -424,7 +424,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                   wall.material === 'glass'
                     ? 'rgba(130, 195, 225, 0.65)'
                     : wall.material === 'accent-salmon'
-                      ? '#ce9180'
+                      ? 'var(--explore-accent)'
                       : 'rgba(250, 249, 246, 0.55)'
                 }
                 strokeWidth={wall.thickness}
@@ -530,7 +530,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                     cx={0}
                     cy={0}
                     r={isHsSelected ? 0.72 : 0.56}
-                    fill="#ce9180"
+                    fill="var(--explore-accent)"
                     stroke="#202020"
                     strokeWidth={0.12}
                   />

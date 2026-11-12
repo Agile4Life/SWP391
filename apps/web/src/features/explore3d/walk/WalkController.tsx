@@ -711,7 +711,7 @@ export function WalkController() {
           width: '8px',
           height: '8px',
           borderRadius: '999px',
-          background: 'var(--explore-accent, #ce9180)',
+          background: 'var(--explore-accent)',
           flexShrink: 0,
         }}
       />

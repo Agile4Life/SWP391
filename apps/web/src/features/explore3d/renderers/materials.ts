@@ -55,8 +55,8 @@ export const DARK_PALETTE: ExploreThemePalette = {
   surfacePrimary: '#202020',
   surfaceSecondary: '#2b2b2b',
   surfaceElevated: '#303030',
-  accentSalmon: '#ce9180',
-  accentSalmonHover: '#e1aa98',
+  accentSalmon: '#c8cdd6',
+  accentSalmonHover: '#e6e9ef',
   textPrimary: '#faf9f6',
   skyColor: '#ffe8de',
   groundColor: '#3d3735',
@@ -150,6 +150,13 @@ export const LIGHT_PALETTE: ExploreThemePalette = {
 
 export function getExploreThemePalette(theme: ExploreTheme): ExploreThemePalette {
   return theme === 'light' ? LIGHT_PALETTE : DARK_PALETTE;
+}
+
+/** Interface accent (selection highlight, pins): silver in Dark, salmon in Light. Scene materials keep their own colours. */
+export function getExploreUiAccent(theme: ExploreTheme): { accent: string; hover: string } {
+  return theme === 'light'
+    ? { accent: '#ce9180', hover: '#e1aa98' }
+    : { accent: DARK_PALETTE.accentSalmon, hover: DARK_PALETTE.accentSalmonHover };
 }
 
 export function detectDocumentTheme(): ExploreTheme {

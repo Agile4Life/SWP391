@@ -267,7 +267,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       const light = getExploreThemePalette('light');
 
       expect(dark.canvasBg).toBe('#161618');
-      expect(dark.accentSalmon).toBe('#ce9180');
+      expect(dark.accentSalmon).toBe('#c8cdd6');
       expect(light.canvasBg).toBe('#eae5dd');
       expect(light.accentSalmon).toBe('#c47c6a');
 
