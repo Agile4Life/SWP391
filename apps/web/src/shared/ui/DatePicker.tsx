@@ -1,7 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../i18n/language';
 import { centerNowParts } from '../lib/centerTime';
-import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './datepicker.css';
 
 export interface DatePickerProps {
@@ -46,8 +45,9 @@ export function DatePicker({
 }: DatePickerProps) {
   const { lang, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
-  const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'left' });
+  const [position, setPosition] = useState<{ top: number; left: number; v: 'up' | 'down' } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const triggerPlaceholder = placeholder ?? t('Chọn ngày...', 'Select date...');
 
   // Parse initial year & month from value or today
@@ -96,15 +96,40 @@ export function DatePicker({
     };
   }, [isOpen]);
 
-  // Lật lên / căn phải khi thiếu chỗ
+  // Popover dùng position: fixed theo viewport để không bị cắt bởi vùng cuộn của <dialog>.
+  // Mở xuống khi đủ chỗ, lật lên khi phía trên rộng hơn, và luôn kẹp trong viewport.
   useLayoutEffect(() => {
     if (!isOpen) {
       setYearMode(false);
+      setPosition(null);
       return;
     }
-    const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-datepicker-trigger');
-    if (trigger) setPlacement(popoverPlacement(trigger, POPOVER_WIDTH, POPOVER_HEIGHT));
-  }, [isOpen]);
+    const reposition = () => {
+      const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-datepicker-trigger');
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const width = Math.min(POPOVER_WIDTH, window.innerWidth - 32);
+      const height = popoverRef.current?.offsetHeight || POPOVER_HEIGHT;
+      const gap = 6;
+      const margin = 8;
+      const below = window.innerHeight - rect.bottom - gap - margin;
+      const above = rect.top - gap - margin;
+      const openUp = below < height && above > below;
+      const rawTop = openUp ? rect.top - gap - height : rect.bottom + gap;
+      const top = Math.max(margin, Math.min(rawTop, window.innerHeight - height - margin));
+      const alignRight = rect.left + width > window.innerWidth - margin && rect.right - width >= margin;
+      const rawLeft = alignRight ? rect.right - width : rect.left;
+      const left = Math.max(margin, Math.min(rawLeft, window.innerWidth - width - margin));
+      setPosition({ top, left, v: openUp ? 'up' : 'down' });
+    };
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isOpen, yearMode, viewMonth, viewYear]);
 
   // Format display text (DD/MM/YYYY)
   const displayLabel = useMemo(() => {
@@ -292,7 +317,16 @@ export function DatePicker({
 
       {isOpen && (
         <div
-          className={`luxury-datepicker-popover luxury-datepicker-popover--${placement.v} luxury-datepicker-popover--${placement.h}`}
+          ref={popoverRef}
+          className={`luxury-datepicker-popover luxury-datepicker-popover--${position?.v ?? 'down'}`}
+          style={{
+            position: 'fixed',
+            top: position?.top ?? 0,
+            left: position?.left ?? 0,
+            bottom: 'auto',
+            right: 'auto',
+            visibility: position ? 'visible' : 'hidden',
+          }}
           role="dialog"
           aria-label={t('Chọn ngày', 'Select date')}
         >
