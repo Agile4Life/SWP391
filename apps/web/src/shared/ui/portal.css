@@ -1893,3 +1893,23 @@ textarea.portal-textarea:focus-visible,
 .kyc-card__image > span { position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: rgba(0,0,0,.6); color: #fff; }
 .kyc-card__image--empty { display: flex; align-items: center; justify-content: center; border-style: dashed; color: var(--color-text-muted); font-size: 13px; }
 .kyc-card__image--empty > span { position: static; background: none; color: inherit; }
+
+/* Chip thời hạn gói tập */
+.days-left { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.days-left--ok { background: color-mix(in srgb, #2f8f5b 16%, transparent); color: #2f8f5b; }
+.days-left--warn { background: color-mix(in srgb, #d6a638 22%, transparent); color: #9a6f00; }
+.days-left--danger { background: color-mix(in srgb, #c0392b 18%, transparent); color: #c0392b; }
+.pass-card .days-left--ok { color: #7ddba5; }
+.pass-card .days-left--warn { color: #f0c860; }
+.pass-card .days-left--danger { color: #ff8f84; }
+
+/* Thẻ hội viên: thông tin bên trái, mã QR bên phải */
+.pass-card__body { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; justify-content: space-between; margin-top: 8px; }
+.pass-card__rows { margin: 0; display: grid; gap: 10px; min-width: 240px; flex: 1 1 260px; }
+.pass-card__rows dt { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .65; }
+.pass-card__rows dd { margin: 2px 0 0; font-size: 16px; font-weight: 600; }
+.pass-card__expiry { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; }
+.pass-card__qr { display: grid; gap: 8px; justify-items: center; }
+.pass-card__qr-note { font-size: 12px; opacity: .75; text-align: center; max-width: 196px; line-height: 1.4; }
+.pass-card__qr-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.pass-card__qr-live i { width: 8px; height: 8px; border-radius: 50%; background: #48bb78; }

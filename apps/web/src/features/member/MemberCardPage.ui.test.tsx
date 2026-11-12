@@ -65,7 +65,7 @@ describe('MemberCardPage', () => {
   it('shows paid renewal expiry instead of the current period expiry', async () => {
     vi.mocked(getMySubscription).mockResolvedValue({ ...subscription, paidThroughDate: '2100-03-01' } as never);
     await renderPage();
-    expect(host.textContent).toContain('Ngày hết hạn: 01/03/2100');
+    expect(host.textContent).toContain('01/03/2100');
     expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('DYN:9:1:123:signed');
   });
 
@@ -90,7 +90,7 @@ describe('MemberCardPage', () => {
     await renderPage();
     expect(host.textContent).toContain('Nguyễn Minh');
     expect(host.textContent).toContain('SÖL Gold');
-    expect(host.textContent).toContain('Ngày bắt đầu: 01/01/2026');
+    expect(host.textContent).toContain('01/01/2026');
     expect(vi.mocked(QRCode.toDataURL).mock.calls[0][0]).toBe('DYN:9:1:123:signed');
     expect(getMembershipHistory).not.toHaveBeenCalled();
     expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).not.toBeNull();

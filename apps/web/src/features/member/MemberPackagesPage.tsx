@@ -1,3 +1,4 @@
+import { DaysLeft } from './DaysLeft';
 import { memberMessage, memberText } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
@@ -804,8 +805,9 @@ export function MemberPackagesPage() {
               >
                 {displayedPackageName}
               </h2>
-              <p className="row-card__meta" style={{ marginTop: 4 }}>
-                {t(" Hiệu lực từ ", "Valid from")}{formatDate(current.startDate)} {t("đến ", "to")}{formatDate(current.paidThroughDate ?? current.endDate)}
+              <p className="row-card__meta" style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                <span>{t(" Hiệu lực từ ", "Valid from")}{formatDate(current.startDate)} {t("đến ", "to")}<strong>{formatDate(current.paidThroughDate ?? current.endDate)}</strong></span>
+                <DaysLeft endDate={current.paidThroughDate ?? current.endDate} />
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

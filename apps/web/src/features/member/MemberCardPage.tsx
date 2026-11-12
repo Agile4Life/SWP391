@@ -1,3 +1,4 @@
+import { DaysLeft } from './DaysLeft';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { memberText, memberMessage, memberRenderMessage } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
@@ -110,15 +111,11 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
 
   return (
     <>
-      <div ref={cardRef} className="pass-card" style={{ background: '#202020', color: '#faf9f6', border: `2px solid ${border}`, borderRadius: 16, padding: 32, maxWidth: 620 }}>
+      <div ref={cardRef} className="pass-card" style={{ background: '#202020', color: '#faf9f6', border: `2px solid ${border}`, borderRadius: 16, padding: 32, maxWidth: 760 }}>
         <div style={{ color: '#ce9180', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 24 }}>SÖL FITNESS</div>
         <p style={{ fontSize: '0.75rem', letterSpacing: '0.16em', color: '#bcb8b5', marginTop: 4 }}>{memberText("THẺ HỘI VIÊN ĐIỆN TỬ")}</p>
         <h2 style={{ margin: '14px 0 8px' }}>{profile.fullName}</h2>
-        <p style={{ margin: '4px 0' }}>{memberText("Mã hội viên: ")}{profile.membershipCode || memberText("Chưa có mã hội viên")}</p>
-        <p style={{ margin: '4px 0' }}>{memberText("Gói tập: ")}{subscription.packageName}</p>
-        <p style={{ margin: '4px 0' }}>{memberText("Ngày bắt đầu: ")}{displayDate(subscription.startDate)}</p>
-        <p style={{ margin: '4px 0 12px' }}>{memberText("Ngày hết hạn: ")}{displayDate(paidThroughDate)}</p>
-        <p style={{ color: border, fontWeight: 600 }}>
+        <p style={{ color: border, fontWeight: 700, margin: '0 0 4px' }}>
           {status === 'warning'
             ? memberText("Gói tập sắp hết hạn")
             : status === 'expired'
@@ -127,37 +124,43 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
                 ? memberText("Gói tập đang hoạt động")
                 : memberText("Gói tập chưa hoạt động")}
         </p>
-        {canShowQr && qrImage && !qrError && (
-          <div style={{ marginTop: 14 }}>
-            <img
-              src={qrImage}
-              alt={memberText("Mã QR check-in của hội viên")}
-              width={180}
-              height={180}
-              style={{ background: 'white', padding: 8, borderRadius: 8 }}
-              onLoad={() => setQrLoaded(true)}
-              onError={() => {
-                setQrLoaded(false);
-                setQrError(true);
-              }}
-            />
-            <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#bcb8b5', fontFamily: 'monospace' }}>
+        <div className="pass-card__body">
+          <dl className="pass-card__rows">
+            <div><dt>{memberText("Mã hội viên")}</dt><dd>{profile.membershipCode || memberText("Chưa có mã hội viên")}</dd></div>
+            <div><dt>{memberText("Gói tập")}</dt><dd>{subscription.packageName}</dd></div>
+            <div><dt>{memberText("Bắt đầu")}</dt><dd>{displayDate(subscription.startDate)}</dd></div>
+            <div><dt>{memberText("Hết hạn")}</dt><dd className="pass-card__expiry">{displayDate(paidThroughDate)} <DaysLeft endDate={paidThroughDate} /></dd></div>
+          </dl>
+          {canShowQr && qrImage && !qrError && (
+            <div className="pass-card__qr">
+              <img
+                src={qrImage}
+                alt={memberText("Mã QR check-in của hội viên")}
+                width={180}
+                height={180}
+                style={{ background: 'white', padding: 8, borderRadius: 8 }}
+                onLoad={() => setQrLoaded(true)}
+                onError={() => {
+                  setQrLoaded(false);
+                  setQrError(true);
+                }}
+              />
               {dynamicQr ? (
-                <span>
-                  <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#48BB78', marginRight: 6 }} />
-                  {memberText("Dynamic QR (Bảo mật)", "Dynamic QR (Secure)")}
-                </span>
+                <>
+                  <span className="pass-card__qr-live"><i />{memberText("Mã QR bảo mật", "Secure QR code")}</span>
+                  <span className="pass-card__qr-note">{memberText("Mã tự đổi mỗi 60 giây. Mở thẻ này khi đến quầy.", "The code refreshes every 60 seconds. Open this card at the desk.")}</span>
+                </>
               ) : (
-                <span>{memberText("Mã QR định danh: ")}<strong>{subscription.qrCode}</strong></span>
+                <span className="pass-card__qr-note">{memberText("Mã QR định danh: ")}<strong>{subscription.qrCode}</strong></span>
               )}
             </div>
-          </div>
-        )}
-        {canShowQr && !qrImage && !qrError && (
-          <div className="portal-skeleton" style={{ width: 180, height: 180, marginTop: 14 }}>
-            <span className="sr-only">{memberText("Đang tạo ảnh QR…")}</span>
-          </div>
-        )}
+          )}
+          {canShowQr && !qrImage && !qrError && (
+            <div className="portal-skeleton" style={{ width: 180, height: 180 }}>
+              <span className="sr-only">{memberText("Đang tạo ảnh QR…")}</span>
+            </div>
+          )}
+        </div>
         {qrError && <p role="alert">{memberText("Không thể hiển thị mã QR. Vui lòng tải lại trang.")}</p>}
         {!canShowQr && <p>{memberText("Chưa có mã QR hợp lệ để check-in. Vui lòng kiểm tra gói tập.")}</p>}
       </div>

@@ -1,3 +1,4 @@
+import { DaysLeft } from './DaysLeft';
 import { memberText } from './memberI18n';
 import { useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
@@ -38,10 +39,6 @@ function dayNumber(date: Date): number {
   return Math.floor(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS,
   );
-}
-
-function remainingDays(endDate: string, today: Date): number {
-  return Math.max(0, dayNumber(localDate(endDate)) - dayNumber(today) + 1);
 }
 
 function membershipProgress(
@@ -193,13 +190,9 @@ export function MemberDashboardPage() {
                       {membership.packageName}
                     </h2>
 
-                    <p className="row-card__meta">
-                      {formatDate(membership.startDate)}
-                      {' – '}
-                      {formatDate(membership.paidThroughDate ?? membership.endDate)}
-{memberText(" · Còn ")}
-                      {remainingDays(membership.paidThroughDate ?? membership.endDate, today)}
-{memberText(" ngày")}
+                    <p className="row-card__meta" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                      <span>{formatDate(membership.startDate)}{' – '}<strong>{formatDate(membership.paidThroughDate ?? membership.endDate)}</strong></span>
+                      <DaysLeft endDate={membership.paidThroughDate ?? membership.endDate} />
                     </p>
 
                     <div
