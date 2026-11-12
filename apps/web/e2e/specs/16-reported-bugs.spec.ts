@@ -343,3 +343,23 @@ test.describe('Lỗi 7 — lễ tân và HLV chủ động nhắn tin cho hội 
     });
   });
 });
+
+test.describe('Lỗi 8 — hồ sơ giấy tờ hội viên gửi lên phải hiện cho lễ tân đang mở sẵn trang duyệt', () => {
+  test.use({ storageState: 'e2e/.auth/staff.json' });
+
+  test('hồ sơ gửi sau khi trang đã mở: hiện bằng nút Làm mới và tự hiện sau 30 giây', async ({ page }) => {
+    await page.clock.install();
+    await page.goto('/staff/kyc');
+    await settled(page);
+    await expect(page.getByRole('heading', { name: 'Duyệt hồ sơ định danh' })).toBeVisible();
+
+    // Hội viên gửi hồ sơ trong lúc lễ tân giữ nguyên trang: trước đây phải tải lại cả trang mới thấy.
+    const first = await createMemberWithKycPending('e2ekycdesk');
+    await page.getByRole('button', { name: 'Làm mới danh sách hồ sơ' }).click();
+    await expect(page.getByTestId(`kyc-${first.id}`)).toContainText(`Nguyen ${first.username}`);
+
+    const second = await createMemberWithKycPending('e2ekycauto');
+    await page.clock.fastForward(31_000);
+    await expect(page.getByTestId(`kyc-${second.id}`)).toBeVisible();
+  });
+});

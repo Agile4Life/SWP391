@@ -2,10 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { notify } from '../../shared/lib/portalNotices';
 import { approveKyc, listPendingKyc, rejectKyc, type KycSubmission } from './kycReviewApi';
+
+/** How often the open page looks for new submissions, so the desk sees a member's upload without reloading. */
+const AUTO_REFRESH_MS = 30_000;
 
 /** Receptionists and managers compare the declared number with the document photos, then approve or reject. */
 export function KycReviewPage() {
@@ -17,20 +21,37 @@ export function KycReviewPage() {
   const [rejecting, setRejecting] = useState<number | null>(null);
   const [reason, setReason] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // `silent` refreshes keep what is on screen: no skeleton, and a failed background refresh does not wipe the list.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) { setLoading(true); setError(null); }
     try {
-      setItems(await listPendingKyc());
+      const fresh = await listPendingKyc();
+      setItems(fresh);
+      if (silent) setError(null);
     } catch (cause) {
-      setItems([]);
-      setError(localizableError(cause, 'Không tải được hồ sơ chờ duyệt. Vui lòng thử lại.'));
+      if (!silent) {
+        setItems([]);
+        setError(localizableError(cause, 'Không tải được hồ sơ chờ duyệt. Vui lòng thử lại.'));
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  // The page used to load once on open, so a document sent while the receptionist already had it open never showed up.
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState !== 'hidden') void load(true); };
+    const timer = window.setInterval(refresh, AUTO_REFRESH_MS);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [load]);
 
   async function decide(item: KycSubmission, approve: boolean) {
     if (busyId !== null) return;
@@ -56,7 +77,8 @@ export function KycReviewPage() {
 
   return (
     <div data-i18n-managed className="portal-container kyc-review">
-      <PageHeader title={t('Duyệt hồ sơ định danh', 'Identity review')} />
+      <PageHeader title={t('Duyệt hồ sơ định danh', 'Identity review')}
+        actions={<RefreshButton label={t('Làm mới danh sách hồ sơ', 'Refresh submissions')} disabled={loading} onClick={() => void load()} />} />
       {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong></div>}
       {loading ? <LoadingSkeleton label={t('Đang tải hồ sơ chờ duyệt', 'Loading submissions')} /> : items.length === 0 ? (
         <div className="portal-card" role="status">{t('Không có hồ sơ nào chờ duyệt.', 'No submissions are waiting for review.')}</div>

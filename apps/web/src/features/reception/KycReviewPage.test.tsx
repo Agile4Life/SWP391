@@ -55,4 +55,29 @@ describe('KycReviewPage', () => {
     await render();
     expect(host.textContent).toContain('Không có hồ sơ nào chờ duyệt');
   });
+
+  it('picks up a submission sent after the page was opened: refresh button, timer and window focus', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.list.mockResolvedValueOnce([]);
+      await render();
+      expect(host.textContent).toContain('Không có hồ sơ nào chờ duyệt');
+
+      // A member uploads while the receptionist keeps the page open; the 30s background refresh shows it.
+      mocks.list.mockResolvedValue([submission]);
+      await act(async () => { vi.advanceTimersByTime(30_000); });
+      expect(host.querySelector('[data-testid="kyc-10"]')).not.toBeNull();
+
+      // The manual button and returning to the tab also re-query; a failing refresh keeps the list on screen.
+      mocks.list.mockRejectedValue(new Error('offline'));
+      await act(async () => { window.dispatchEvent(new Event('focus')); });
+      expect(host.querySelector('[data-testid="kyc-10"]')).not.toBeNull();
+      expect(host.querySelector('[role="alert"]')).toBeNull();
+      const calls = mocks.list.mock.calls.length;
+      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Làm mới danh sách hồ sơ"]')!.click());
+      expect(mocks.list.mock.calls.length).toBe(calls + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
