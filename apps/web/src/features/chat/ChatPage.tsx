@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useInRouterContext, useLocation } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
 import { chatError, type ChatError } from './chatMessages';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -128,7 +129,9 @@ function ChatWorkspace({ member, support, embedded, visible, realtime, onPeersCh
     finally { opening.current = false; if (mounted.current) setPending(null); }
   }
 
+  const inRouter = useInRouterContext();
   return <div data-i18n-managed className={`portal-container direct-chat${mobileThread ? ' direct-chat--thread-open' : ''}`}>
+    {inRouter && !embedded && support && <SupportTabLink onOpen={selectSupport} />}
     {/* Trong widget, tiêu đề, trạng thái kết nối và nút làm mới nằm ở header của widget. */}
     {!embedded && <header className="portal-header"><div><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1></div>
       <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}>{t(...connectionLabel[connection])}</span>
@@ -213,4 +216,18 @@ function ChatWorkspace({ member, support, embedded, visible, realtime, onPeersCh
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}
     </div>
   </div>;
+}
+
+/**
+ * Mở mục Hỗ trợ & Khiếu nại mỗi lần điều hướng tới /messages?tab=support, kể cả khi trang Tin nhắn đang mở sẵn
+ * (bấm thông báo phiếu hỗ trợ ngay trong trang). Theo location.key nên bấm lại cùng liên kết vẫn mở lại mục này.
+ */
+function SupportTabLink({ onOpen }: { onOpen: () => void }) {
+  const location = useLocation();
+  const onOpenRef = useRef(onOpen);
+  useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tab') === 'support') onOpenRef.current();
+  }, [location.key, location.search]);
+  return null;
 }
