@@ -39,6 +39,12 @@ describe('auditApi', () => {
     await expect(auditApi.getClassOccupancy()).resolves.toEqual([]);
   });
 
+  it('preserves date and discipline filters for the occupancy API', async () => {
+    vi.mocked(client.apiFetch).mockResolvedValueOnce([]);
+    await auditApi.getClassOccupancy('2026-11-01', '2026-11-12', 3);
+    expect(client.apiFetch).toHaveBeenCalledWith('/reports/class-utilization?startDate=2026-11-01&endDate=2026-11-12&disciplineId=3');
+  });
+
   it('rejects a malformed occupancy response', async () => {
     vi.mocked(client.apiFetch).mockResolvedValueOnce(null);
 

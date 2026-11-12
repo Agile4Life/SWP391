@@ -222,6 +222,7 @@ paths:
   /api/v1/reports/class-utilization:
     get:
       summary: Retrieve class occupancy and attendance utilization report (SCRUM-120, SCRUM-124)
+      description: Accessible to ADMIN, CENTER_MANAGER and MANAGER. ADMIN access is limited to this report and does not grant access to revenue or other report APIs.
       tags: [Analytics]
       parameters:
         - in: query
