@@ -88,6 +88,23 @@ test.describe('Tin nhắn — widget nổi (hội viên)', () => {
     await expect(panel(page).locator('#chat-directory')).toHaveCount(0);
   });
 
+  test('đang trong hội thoại (người và SÖL AI): nút Mở rộng và Đóng ở góc phải vẫn bấm được', async ({ page }) => {
+    const header = (name: string | RegExp) => panel(page).getByRole('button', { name });
+    for (const kind of ['ai', 'human'] as const) {
+      await openWidget(page);
+      if (kind === 'ai') await panel(page).getByRole('button', { name: /SÖL AI/ }).first().click();
+      else await openFirstContact(panel(page), page);
+      await expect(panel(page).locator('.direct-chat__thread')).toBeVisible();
+      // Playwright từ chối click nếu nút bị phần tử khác đè lên, nên đây bắt đúng lỗi "nhìn thấy nhưng không ấn được".
+      await header('Mở rộng cửa sổ tin nhắn').click();
+      await expect(header('Thu nhỏ cửa sổ tin nhắn')).toHaveAttribute('aria-pressed', 'true');
+      await header('Thu nhỏ cửa sổ tin nhắn').click();
+      await expect(header('Mở rộng cửa sổ tin nhắn')).toHaveAttribute('aria-pressed', 'false');
+      await header('Đóng cửa sổ tin nhắn').click();
+      await expect(panel(page)).toBeHidden();
+    }
+  });
+
   test('ô tìm danh bạ: nút Tìm bấm được và lọc không lỗi', async ({ page }) => {
     await openWidget(page);
     await panel(page).getByRole('button', { name: 'Cuộc trò chuyện mới' }).click();
