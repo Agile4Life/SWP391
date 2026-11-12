@@ -287,12 +287,16 @@ export function CoachTrainingPlanPage() {
   const handleApplyAiPlan = async () => {
     if (!aiResult || !aiResult.items || aiResult.items.length === 0) return;
 
-    // Đã soạn tay (bài tập chưa lưu trong trình soạn) hoặc học viên đã có giáo án đang áp dụng: hỏi trước khi ghi đè.
+    // Đã soạn tay (bài tập chưa lưu trong trình soạn) hoặc HLV phụ trách đã có giáo án đang áp dụng cho học viên: hỏi trước khi ghi đè.
+    // Mỗi cặp hội viên–HLV có một giáo án đang áp dụng; giáo án của HLV khác không bị ảnh hưởng nên không cần cảnh báo.
     const handComposed = exercises.filter((item) => !item.id?.startsWith('ex-init-') && !item.id?.startsWith('ai-item-')).length;
     let activePlan: SavedTrainingPlan | undefined;
     try {
       const plans = await aiApi.listTrainingPlans(aiResult.memberId);
-      activePlan = Array.isArray(plans) ? plans.find((plan) => plan.status === 'active') : undefined;
+      const planCoachId = isManager ? selectedCoachId : Number(currentUser?.id);
+      activePlan = Array.isArray(plans)
+        ? plans.find((plan) => plan.status === 'active' && (planCoachId == null || Number.isNaN(planCoachId) || plan.coachId == null || plan.coachId === planCoachId))
+        : undefined;
     } catch {
       // Không tải được giáo án đã lưu thì chỉ kiểm tra phần soạn tay, không chặn việc áp dụng.
     }
@@ -306,8 +310,8 @@ export function CoachTrainingPlanPage() {
       }
       if (activePlan) {
         const range = `${activePlan.startDate.split('-').reverse().join('/')} – ${activePlan.endDate.split('-').reverse().join('/')}`;
-        lines.push(`${memberLabel} đang có giáo án "${activePlan.goal || 'chưa đặt mục tiêu'}" (${range}) đang áp dụng. Khi lưu giáo án AI, giáo án cũ sẽ chuyển vào lịch sử và bạn có thể áp dụng lại bất cứ lúc nào.`);
-        linesEn.push(`${memberLabel} already has the plan "${activePlan.goal || 'no goal set'}" (${range}) in use. When you save the AI plan, the old one moves to history and you can re-apply it at any time.`);
+        lines.push(`${memberLabel} đang có giáo án "${activePlan.goal || 'chưa đặt mục tiêu'}" (${range}) đang áp dụng. Khi lưu giáo án AI, giáo án cũ của HLV này sẽ chuyển vào lịch sử và có thể áp dụng lại bất cứ lúc nào. Giáo án của HLV khác vẫn giữ nguyên.`);
+        linesEn.push(`${memberLabel} already has the plan "${activePlan.goal || 'no goal set'}" (${range}) in use. When you save the AI plan, this coach's old plan moves to history and can be re-applied at any time. Plans from other coaches stay as they are.`);
       }
       const confirmed = await confirm({
         title: staffMessage('Ghi đè giáo án đã soạn trước đó?', 'Overwrite the plan you composed earlier?'),

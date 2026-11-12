@@ -1,5 +1,10 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Nhật ký & Lấp đầy (12/11/2026, yêu cầu Leader — cập nhật SCRUM-124):
+- Màn hình Audit Trail và tỷ lệ lấp đầy thuộc Admin, route `/admin/audit-logs`, dùng chung PortalShell, bảng, tab, bộ lọc và theme portal hiện hành; duy trì VI/EN.
+- Manager chỉ giữ mục Doanh thu ở `/manager/reports`; bỏ mục Nhật ký & Lấp đầy và route `/manager/audit-logs`. URL cũ đi qua fallback route hiện hành, không render màn hình audit.
+- Audit API chỉ dành cho ADMIN. Riêng GET `/api/v1/reports/class-utilization` cho ADMIN, CENTER_MANAGER và MANAGER; không mở các API doanh thu cho Admin.
+
 Màu nhấn Dark: bạc, token `--sol-accent*` và LED (12/11/2026, quyết định mới nhất của người dùng — **ghi đè** mục “Điểm nhấn neon ở giao diện tối (05/11/2026)” ở chỗ “neon chỉ dùng màu salmon”, cùng mọi mô tả khác coi salmon là màu nhấn của Dark; Light giữ nguyên salmon):
 - **Quyết định**: Dark dùng điểm nhấn **bạc** (`#c8cdd6`) thay salmon `#ce9180`. Đã thử Volt (vàng chanh `#c8fa3c`) và bị đánh giá là quá chói ở diện tích lớn, nên không dùng và không đưa trở lại. Bạc phát sáng vừa phải trên nền than, không trùng màu trạng thái (đỏ, hổ phách, xanh lá, xanh dương). Phạm vi: landing, auth và toàn bộ portal (cửa hàng, chat, Tham quan 3D).
 - **Bộ token duy nhất** (khai báo trong `shared/ui/theme.css`; **màu mới phải đi qua các token này, không viết hex salmon/bạc trong CSS hay TSX**): `--sol-accent` (nền nút chính, mục đang chọn, viền nhấn) · `--sol-accent-hover` · `--sol-accent-text` (chữ/link nhấn) · `--sol-accent-deep` (đầu tối của gradient) · `--sol-on-accent` (chữ/icon trên nền nhấn, không dùng `#fff`) · `--sol-accent-rgb` (để tạo alpha: `rgb(var(--sol-accent-rgb) / .4)`). Giá trị Dark: `#c8cdd6` / `#e6e9ef` / `#e2e6ec` / `#9aa1ad` / `#202020` / `200 205 214`. Giá trị Light: `#ce9180` / `#e1aa98` / `#a35b49` / `#b97a69` / `#ffffff` / `206 145 128`. Tên token cũ (`--fit-salmon`, `--portal-salmon`, `--portal-hover`, `--portal-tint`, `--portal-accent-text`, `--portal-on-accent`, `--explore-accent*`) giữ nguyên nhưng chỉ là bí danh của bộ mới.

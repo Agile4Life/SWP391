@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { MemberDashboardPage } from './MemberDashboardPage';
 
 const api = vi.hoisted(() => ({
@@ -70,14 +71,17 @@ describe('SCRUM-85 dashboard', () => {
   });
 
   it('shows paid renewal expiry and remaining days across 120 days', async () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(start); end.setDate(end.getDate() + 29);
-    const paid = new Date(start); paid.setDate(paid.getDate() + 119);
-    const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    // The dashboard counts days on the center calendar (UTC+7), so build the dates from it, not the machine's timezone.
+    const [year, month, day] = centerNowParts().date.split('-').map(Number);
+    const today = new Date(Date.UTC(year, month - 1, day));
+    // Start the day before so the card counts as started whichever calendar day the machine's timezone is on.
+    const start = new Date(today); start.setUTCDate(start.getUTCDate() - 1);
+    const end = new Date(today); end.setUTCDate(end.getUTCDate() + 28);
+    const paid = new Date(today); paid.setUTCDate(paid.getUTCDate() + 119);
+    const key = (date: Date) => date.toISOString().slice(0, 10);
     api.membership.mockResolvedValue({ ...membership, startDate: key(start), endDate: key(end), paidThroughDate: key(paid) });
     await renderDashboard();
-    expect(host.querySelector('.member-card-details-link')?.textContent).toContain(paid.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+    expect(host.querySelector('.member-card-details-link')?.textContent).toContain(paid.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }));
     expect(host.querySelector('.member-card-details-link')?.textContent).toContain('Còn 120 ngày');
   });
 

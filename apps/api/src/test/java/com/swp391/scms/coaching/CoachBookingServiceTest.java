@@ -621,18 +621,6 @@ class CoachBookingServiceTest {
     }
 
     @Test
-    @DisplayName("Đặt 1:1 định kỳ: tính năng đã bị vô hiệu hóa và ném ngoại lệ COACH_RECURRING_DISABLED")
-    void createRecurringBooking_throwsDisabledException() {
-        assertThatThrownBy(() -> service.createRecurringBooking(principal,
-                new com.swp391.scms.coaching.dto.CoachRecurringBookingDto(20L, null, LocalDate.of(2026, 11, 2),
-                        LocalTime.of(14, 0), LocalTime.of(15, 0), "week", List.of(1, 3, 5), "cash", null)))
-                .isInstanceOf(com.swp391.scms.common.exception.AppException.class)
-                .satisfies(e -> assertThat(((com.swp391.scms.common.exception.AppException) e).getErrorCode())
-                        .isEqualTo("COACH_RECURRING_DISABLED"));
-        verify(coachBookingRepository, never()).save(any());
-    }
-
-    @Test
     @DisplayName("getMemberQuotaStatus: Trả về đúng 1 lượt cho Gói Trải Nghiệm 3 Ngày (dù tên cũ là GOLD)")
     void getMemberQuotaStatus_returnsTrialQuotaCorrectly() {
         MembershipPackage pkg = new MembershipPackage();

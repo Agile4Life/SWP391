@@ -17,7 +17,6 @@ const mocks = vi.hoisted(() => ({
   getAvailableSlots: vi.fn(),
   getMyCoachBookings: vi.fn(),
   createCoachBooking: vi.fn(),
-  createRecurringCoachBooking: vi.fn(),
   cancelCoachBooking: vi.fn(),
   getMemberQuotaStatus: vi.fn(),
   createCoachReview: vi.fn(),
@@ -30,7 +29,6 @@ vi.mock('../coachBookingApi', () => ({
   getAvailableSlots: mocks.getAvailableSlots,
   getMyCoachBookings: mocks.getMyCoachBookings,
   createCoachBooking: mocks.createCoachBooking,
-  createRecurringCoachBooking: mocks.createRecurringCoachBooking,
   cancelCoachBooking: mocks.cancelCoachBooking,
   getMemberQuotaStatus: mocks.getMemberQuotaStatus,
 }));
@@ -408,7 +406,6 @@ describe('weekly PT booking after Monday has passed', () => {
       expect(mocks.createCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
         coachId: 1, bookingDate: '2026-11-06', startTime: '14:00:00', endTime: '15:00:00',
       }));
-      expect(mocks.createRecurringCoachBooking).not.toHaveBeenCalled();
     } finally {
       await act(async () => root.unmount());
       host.remove();

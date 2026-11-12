@@ -41,7 +41,7 @@ function reachable(entry: string, seen = new Set<string>()): Set<string> {
 const translationCalls = new Set(['t', 'memberText', 'memberMessage', 'sourceText', 'sourcePair', 'sourceFormat', 'sourceMessage', 'staffMessage']);
 function catalog(file: string) {
   const domain = /\/(member|courts|checkin|schedule|wallet|payments)\//.test(file) ? memberLabels
-    : /\/(coaching|classes|reception|manager|operations|support)\//.test(file) ? staffSourceCatalog
+    : /\/(coaching|classes|reception|manager|admin|operations|support)\//.test(file) ? staffSourceCatalog
     : /\/(landing|auth|shop|pwa)\//.test(file) ? englishShopPublicLabels : {};
   return { ...englishLabels, ...domain };
 }

@@ -23,9 +23,10 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   const el = document.createElement('dialog');
   if (translation) el.setAttribute('data-i18n-managed', '');
   el.className = `sol-toast sol-toast--${type}`;
-  el.setAttribute('role', type === 'error' ? 'alertdialog' : 'status');
-  el.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  // Hộp thoại modal: lỗi là alertdialog, thành công là dialog; trình đọc màn hình đọc nội dung qua aria-describedby khi mở.
+  el.setAttribute('role', type === 'error' ? 'alertdialog' : 'dialog');
   el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-describedby', 'sol-toast-message');
 
   const card = document.createElement('div');
   card.className = 'sol-toast__card';
@@ -40,6 +41,7 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
 
   const body = document.createElement('p');
   body.className = 'sol-toast__message';
+  body.id = 'sol-toast-message';
   body.textContent = message;
 
   const closeBtn = document.createElement('button');
@@ -50,6 +52,7 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
     if (translation) body.textContent = english ? translation.en : translation.vi;
     closeBtn.textContent = english ? 'Close' : 'Đóng';
     closeBtn.setAttribute('aria-label', english ? 'Close notification' : 'Đóng thông báo');
+    el.setAttribute('aria-label', type === 'error' ? (english ? 'Error' : 'Lỗi') : (english ? 'Notification' : 'Thông báo'));
   };
   renderLanguage();
   unsubscribeLanguage = subscribeLanguage(renderLanguage);

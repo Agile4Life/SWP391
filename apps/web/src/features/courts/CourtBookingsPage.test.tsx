@@ -8,7 +8,7 @@ import { courtsApi } from './courtsApi';
 import { MemberCourtsPage, StaffCourtsPage } from './CourtBookingsPage';
 
 vi.mock('./courtsApi', async original => ({ ...(await original<typeof import('./courtsApi')>()), courtsApi: {
-  courts: vi.fn(), availability: vi.fn(), quota: vi.fn(), my: vi.fn(), list: vi.fn(), book: vi.fn(), bookRecurring: vi.fn(), cancel: vi.fn(),
+  courts: vi.fn(), availability: vi.fn(), quota: vi.fn(), my: vi.fn(), list: vi.fn(), book: vi.fn(), cancel: vi.fn(),
 } }));
 vi.mock('../manager/catalogApi', () => ({ catalogApi: { rooms: vi.fn().mockResolvedValue([]) } }));
 vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
@@ -89,7 +89,6 @@ it('only allows single session court booking and does not offer weekly or monthl
   expect(host.querySelector('[aria-label="Thứ trong tuần"]')).toBeNull();
   await click('Xác nhận đặt');
   expect(courtsApi.book).toHaveBeenCalledWith(expect.objectContaining({ roomId: 5, startTime: '09:00' }));
-  expect(courtsApi.bookRecurring).not.toHaveBeenCalled();
 });
 
 it('books free while the plan has included bookings left', async () => {

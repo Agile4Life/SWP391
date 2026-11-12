@@ -425,14 +425,14 @@ class TrainingPlanServiceTest {
  }
 
     @Test
-    @DisplayName("Activating a plan moves the member's other active plan into history")
+    @DisplayName("Activating a plan moves the same coach's other active plan for the member into history")
     void activatingAPlanSupersedesTheMembersOtherActivePlan() {
         var draft = ownedPlan("draft");
         var previous = ownedPlan("active");
         ReflectionTestUtils.setField(previous, "id", 99L);
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(trainingPlanRepository.findOtherActiveForMember(10L, 100L)).thenReturn(List.of(previous));
+        when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of(previous));
 
         assertEquals("active", service.activatePlan(100L, 20L, "COACH").getStatus());
 
@@ -450,7 +450,7 @@ class TrainingPlanServiceTest {
         history.setEndDate(LocalDate.now().plusDays(18));
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(trainingPlanRepository.findOtherActiveForMember(10L, 100L)).thenReturn(List.of(current));
+        when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of(current));
 
         var result = service.reapplyPlan(100L, 20L, "COACH");
 
@@ -482,5 +482,19 @@ class TrainingPlanServiceTest {
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(active));
         assertThrows(ConflictException.class, () -> service.reapplyPlan(100L, 20L, "COACH"));
         verify(trainingPlanRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Activating a plan leaves the active plans of the member's other coaches alone")
+    void activatingAPlanOnlyLooksAtTheSameCoachsPlans() {
+        var draft = ownedPlan("draft");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
+        when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of());
+
+        assertEquals("active", service.activatePlan(100L, 20L, "COACH").getStatus());
+
+        verify(trainingPlanRepository).findOtherActiveForMemberAndCoach(10L, 20L, 100L);
+        verify(trainingPlanRepository, times(1)).save(any(TrainingPlan.class));
     }
 }

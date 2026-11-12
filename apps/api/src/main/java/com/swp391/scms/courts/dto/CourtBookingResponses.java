@@ -14,8 +14,6 @@ public final class CourtBookingResponses {
     /** Included bookings plus the per-tier court rules and how much of them the member is using. */
     public record QuotaDto(String packageName, int monthlyQuota, int used, int remaining,
                            int advanceDays, int maxUpcoming, int upcoming, int maxUnpaid, int unpaid, int releaseLeadMinutes) {}
-    public record RecurringResult(java.util.List<BookingDto> booked,
-                                  java.util.List<com.swp391.scms.common.RecurrenceDates.Skipped> skipped) {}
     public record BookingDto(Long id, Long roomId, String roomName, String disciplineName,
                              Long memberId, String memberName, LocalDate date, LocalTime startTime,
                              LocalTime endTime, String status, LocalDateTime createdAt, LocalDateTime cancelledAt,

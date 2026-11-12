@@ -261,6 +261,7 @@ export const router = createBrowserRouter([
         element: <RoleGuard allowedRoles={['ADMIN']} />,
         children: [
           { path: '/admin/users', lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }) },
+          { path: '/admin/audit-logs', lazy: async () => ({ Component: (await import('../features/admin/AdminAuditLogsPage')).AdminAuditLogsPage }) },
         ],
       },
       // Center Manager Dedicated Routes
@@ -308,10 +309,6 @@ export const router = createBrowserRouter([
           {
             path: '/manager/cancellations',
             element: <Navigate to="/manager/reports" replace />,
-          },
-          {
-            path: '/manager/audit-logs',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerAuditLogsPage')).ManagerAuditLogsPage }),
           },
           {
             path: '/manager/coach-reviews',

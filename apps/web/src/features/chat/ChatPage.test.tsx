@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ChatPage } from './ChatPage';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import * as api from './chatApi';
 import { subscribeChat } from './chatRealtime';
 import { getCurrentUser } from '../../shared/api/client';
@@ -226,4 +227,14 @@ it('gives receptionists the ticket inbox and coaches no support entry', async ()
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
   await render();
   expect(host.querySelector('.direct-chat__person--support')).toBeNull();
+});
+
+it('opens Support & Tickets when a notification links to ?tab=support while Messages is already open', async () => {
+  let go!: (to: string) => void;
+  function Nav() { go = useNavigate(); return null; }
+  await act(async () => root.render(<MemoryRouter initialEntries={['/messages']}><Nav /><ChatPage /></MemoryRouter>));
+  await vi.waitFor(() => expect(host.querySelector('.direct-chat__person--support')).not.toBeNull());
+  expect(host.querySelector('.direct-chat__support')).toBeNull();
+  await act(async () => go('/messages?tab=support'));
+  await vi.waitFor(() => expect(host.querySelector('.direct-chat__support')).not.toBeNull());
 });

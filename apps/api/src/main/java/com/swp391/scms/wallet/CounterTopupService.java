@@ -6,8 +6,14 @@ import com.swp391.scms.finance.service.InvoiceService;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.MemberRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -42,6 +48,7 @@ public class CounterTopupService {
     private final UserRepository users;
     private final InvoiceService invoices;
     private final Clock clock;
+    private TransactionTemplate invoiceTransaction;
 
     public CounterTopupService(PaymentRepository payments, MemberRepository members, UserRepository users,
                                InvoiceService invoices, Clock clock) {
@@ -50,6 +57,14 @@ public class CounterTopupService {
         this.users = users;
         this.invoices = invoices;
         this.clock = clock;
+    }
+
+    /** The invoice gets its own transaction so a failure there can never roll back the wallet top-up. */
+    @Autowired(required = false)
+    void setTransactionManager(PlatformTransactionManager transactionManager) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.invoiceTransaction = template;
     }
 
     /** Maps the desk's method code onto the payment methods the table allows; anything unknown is cash. */
@@ -72,11 +87,30 @@ public class CounterTopupService {
         if (staffUserId != null) {
             users.findByIdAndDeletedAtIsNull(staffUserId).ifPresent(payment::setReceivedBy);
         }
-        payment = payments.save(payment);
+        Long paymentId = payments.save(payment).getId();
+        // Issue the invoice only after the top-up has committed: an invoice error then cannot mark the top-up's
+        // transaction rollback-only and undo the money the member already handed over.
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    issueInvoice(paymentId);
+                }
+            });
+        } else {
+            issueInvoice(paymentId);
+        }
+    }
+
+    private void issueInvoice(Long paymentId) {
         try {
-            invoices.autoIssueInvoiceForPayment(payment.getId());
+            if (invoiceTransaction != null) {
+                invoiceTransaction.executeWithoutResult(status -> invoices.autoIssueInvoiceForPayment(paymentId));
+            } else {
+                invoices.autoIssueInvoiceForPayment(paymentId);
+            }
         } catch (RuntimeException ignored) {
-            // The invoice is best effort; the top-up itself is already recorded.
+            // The invoice is best effort; the top-up itself is already committed.
         }
     }
 

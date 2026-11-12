@@ -84,6 +84,7 @@ public class ReportController {
 
     @Operation(summary = "Báo cáo công suất sử dụng và tỷ lệ lấp đầy lớp học (SCRUM-120)")
     @GetMapping("/class-utilization")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CENTER_MANAGER', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<ClassUtilizationDto>>> getClassUtilization(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
