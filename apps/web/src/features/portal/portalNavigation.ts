@@ -64,6 +64,10 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/staff/check-out', label: 'Check-out', en: 'Check-out' },
     { to: '/staff/reception-history', label: 'Lịch sử', en: 'History' },
   ] },
+  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['STAFF'], tabs: [
+    { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
+    { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
+  ] },
   { to: '/staff/courts', label: 'Đặt sân & Đơn hàng', icon: 'court', roles: ['STAFF'], tabs: [
     { to: '/staff/courts', label: 'Lượt đặt sân', en: 'Court bookings' },
     { to: '/staff/orders', label: 'Đơn hàng sản phẩm', en: 'Product orders' },
@@ -84,7 +88,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
-  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['STAFF', 'MANAGER'], tabs: [
+  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['MANAGER'], tabs: [
     { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
     { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
   ] },
