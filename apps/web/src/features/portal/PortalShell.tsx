@@ -357,7 +357,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
       <a href="#portal-main" className="skip-link">{t('Bỏ qua tới nội dung chính', 'Skip to main content')}</a>
       <aside className="app-sidebar" aria-label={t('Thanh công cụ SÖL', 'SÖL Sidebar')}>
         <div className="portal-rail-head">
-          <Link to="/" className="portal-logo" aria-label={t('SÖL · Về trang chủ', 'SÖL · Back to home')}><span>S</span><i /></Link>
+          <Link to="/" className="portal-logo portal-logo--mark" aria-label={t('SÖL · Về trang chủ', 'SÖL · Back to home')}><img src="/favicon.svg" alt="" width={44} height={44} draggable={false} /></Link>
           <span className="portal-rail-brand" aria-hidden="true">SÖL<small>Fitness</small></span>
         </div>
         <nav className="portal-rail-nav" aria-label={t('Điều hướng portal', 'Portal navigation')}>
