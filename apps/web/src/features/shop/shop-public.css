@@ -207,6 +207,12 @@
   gap: 20px;
 }
 
+.fit-site .shop-shelf__footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
 .fit-site .shop-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

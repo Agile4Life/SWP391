@@ -451,6 +451,21 @@ body:has(.portal-backdrop) .click-ripple {
   transform: translateY(-0.5px);
 }
 
+/* Logo portal = đúng favicon (chữ S nét cọ trên nền than), không còn chữ "S" dựng bằng font. */
+html:root .portal-logo.portal-logo--mark {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 22%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--portal-paper) 12%, transparent);
+}
+
+.portal-logo--mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .portal-rail-nav,
 .portal-rail-footer {
   display: flex;
