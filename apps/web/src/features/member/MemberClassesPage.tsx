@@ -382,7 +382,7 @@ function MemberCourseDetailModal({
             padding: '14px 16px',
             border: '1px solid var(--color-salmon, #eb7e6b)',
             borderRadius: 8,
-            backgroundColor: 'rgba(235, 126, 107, 0.06)',
+            backgroundColor: 'color-mix(in srgb, var(--color-salmon, #eb7e6b) 6%, transparent)',
           }}
         >
           <div className="meta-label" style={{ color: 'var(--color-salmon, #eb7e6b)', marginBottom: 6 }}>

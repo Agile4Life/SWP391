@@ -655,7 +655,7 @@ export function ManagerCatalogsPage() {
                         <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
                         <td>
                           {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? (
-                            <span data-i18n-managed className="badge badge-primary" style={{ backgroundColor: 'rgba(235, 114, 91, 0.2)', color: 'var(--color-brand-salmon, #eb725b)', border: '1px solid rgba(235, 114, 91, 0.4)' }}>VIP · Platinum</span>
+                            <span data-i18n-managed className="badge badge-primary" style={{ backgroundColor: 'color-mix(in srgb, var(--color-brand-salmon, #eb725b) 20%, transparent)', color: 'var(--color-brand-salmon, #eb725b)', border: '1px solid color-mix(in srgb, var(--color-brand-salmon, #eb725b) 40%, transparent)' }}>VIP · Platinum</span>
                           ) : (
                             <span data-i18n-managed className="badge badge-secondary">{t("Tiêu chuẩn")}</span>
                           )}

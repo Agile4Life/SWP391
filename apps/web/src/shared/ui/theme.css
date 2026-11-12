@@ -1,12 +1,12 @@
-/* Accent tokens: the single source for the brand accent. Dark is the base; Light overrides below.
+/* Accent tokens: the single source for the brand accent. Dark (silver) is the base; Light (salmon) overrides below.
    New colours must go through these tokens, never a hex value (see DESIGN.md). */
 :root {
-  --sol-accent: #ce9180;
-  --sol-accent-hover: #e1aa98;
-  --sol-accent-text: #e8b5a4;
-  --sol-accent-deep: #b97a69;
+  --sol-accent: #c8cdd6;
+  --sol-accent-hover: #e6e9ef;
+  --sol-accent-text: #e2e6ec;
+  --sol-accent-deep: #9aa1ad;
   --sol-on-accent: #202020;
-  --sol-accent-rgb: 206 145 128;
+  --sol-accent-rgb: 200 205 214;
 }
 :root[data-theme='light'] {
   --sol-accent: #ce9180;

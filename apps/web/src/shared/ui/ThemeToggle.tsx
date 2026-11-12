@@ -1,6 +1,7 @@
 import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
 import { useI18n } from '../i18n';
 import './theme.css';
+import './dark-volt.css';
 
 type Theme = 'light' | 'dark';
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void } | null>(null);

@@ -1,0 +1,39 @@
+/* Dark-only accent corrections (silver accent; the file keeps its Volt name from the first palette). Everything here is scoped to Dark so Light keeps its salmon palette.
+   Colours must come from the --sol-accent* tokens in theme.css, never from hex values. */
+
+/* Legacy names that were never defined (inline styles fell back to a coral hex). */
+:root:not([data-theme='light']) {
+  --color-salmon: var(--sol-accent);
+  --color-brand-salmon: var(--sol-accent);
+  accent-color: var(--sol-accent);
+}
+:root:not([data-theme='light']) :is(.portal-input[type='time'], .portal-input[type='datetime-local'], input[type='date'], input[type='time'], input[type='datetime-local']) { accent-color: var(--sol-accent); }
+
+/* Member calendar: the "class" type colour follows the accent (court stays blue, PT stays green). */
+:root:not([data-theme='light']) .mcal--member { --mcal-class: var(--sol-accent); }
+:root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class) { border-left-color: var(--sol-accent-deep); }
+
+/* Landing: pale salmon text and warm tints become Volt text / neutral. */
+:root:not([data-theme='light']) .fit-scroll-progress { background: linear-gradient(90deg, var(--sol-accent), var(--sol-accent-hover)); }
+:root:not([data-theme='light']) :is(.fit-trainer-story-cta, .fit-schedule-spots, .fit-preview-live) { color: var(--sol-accent-text); }
+:root:not([data-theme='light']) .fit-benefit-end p { color: var(--sol-on-accent); }
+:root:not([data-theme='light']) .fit-sport-trigger { background: rgb(32 32 32 / .85); }
+:root:not([data-theme='light']) .fit-pointer-origin-ring { stroke: var(--sol-accent-text); }
+:root:not([data-theme='light']) .fit-pointer-line, :root:not([data-theme='light']) .fit-pointer-head { stroke: var(--sol-accent-text); }
+:root:not([data-theme='light']) .fit-muscle-lit-image { filter: grayscale(1) brightness(1.55) contrast(1.2) drop-shadow(0 0 18px rgb(var(--sol-accent-rgb) / .5)); }
+
+/* Chat: own bubbles and the primary button use Volt with charcoal text. */
+:root:not([data-theme='light']) .chat-widget .btn-primary { background: linear-gradient(135deg, var(--sol-accent), var(--sol-accent-deep)); border-color: rgb(var(--sol-accent-rgb) / .4); color: var(--sol-on-accent); }
+:root:not([data-theme='light']) .chat-widget .direct-chat__messages .is-mine .direct-chat__bubble { background: linear-gradient(135deg, rgb(var(--sol-accent-rgb) / .9) 0%, color-mix(in srgb, var(--sol-accent-deep) 92%, transparent) 100%); border-color: rgb(var(--sol-accent-rgb) / .5); color: var(--sol-on-accent); }
+
+/* Landing hero service cards: charcoal surface with a Volt edge instead of a large solid Volt block. */
+:root:not([data-theme='light']) .fit-service-surface { fill: var(--color-bg-card); stroke: rgb(var(--sol-accent-rgb) / .55); stroke-width: 1.5; }
+:root:not([data-theme='light']) .fit-service-surface path { vector-effect: non-scaling-stroke; }
+:root:not([data-theme='light']) .fit-service:hover .fit-service-surface { fill: color-mix(in srgb, var(--color-bg-card) 92%, var(--sol-accent)); stroke: var(--sol-accent); }
+:root:not([data-theme='light']) .fit-service-rule { background: rgb(var(--sol-accent-rgb) / .4); }
+:root:not([data-theme='light']) .fit-service p { color: var(--fit-muted); }
+
+/* Calendars: class/mine events are a tinted surface with a Volt edge (a solid Volt block is too bright at this size). */
+:root:not([data-theme='light']) :is(.mcal__event--class, .mcal__event--mine) { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--sol-accent); }
+:root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class):not(.is-past):not(.is-cancelled) { color: var(--portal-paper); border-left-color: var(--sol-accent); }
+:root:not([data-theme='light']) .mcal--member .mcal__chip--class { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); }
