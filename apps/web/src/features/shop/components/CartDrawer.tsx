@@ -130,7 +130,12 @@ export function CartDrawer({
             {loading && !quote && (
               <LoadingSkeleton label={sourceText("Đang tính giỏ hàng…")} variant="rows" count={Math.min(lines.length, 3)} />
             )}
-            {loading && quote && <p className="shop-drawer__updating" role="status">{sourceText("Đang cập nhật giỏ hàng…")}</p>}
+            {loading && quote && (
+              <div className="shop-drawer__updating" role="status">
+                <span className="shop-spinner" aria-hidden="true" />
+                <span className="shop-sr-only">{sourceText("Đang cập nhật giỏ hàng…")}</span>
+              </div>
+            )}
             {error && (
               <div className="shop-drawer__error" role="alert">
                 <p>{sourceText(error)}</p>
@@ -208,7 +213,7 @@ export function CartDrawer({
             <div className="shop-drawer__footer">
               <div className="shop-drawer__subtotal">
                 <span>{sourceText("Tạm tính")}</span>
-                <strong aria-live="polite">{loading ? (quote ? sourceText('Đang cập nhật…') : sourceText('Đang tính…')) : error || !quote ? '—' : formatVnd(quote.subtotal)}</strong>
+                <strong aria-live="polite">{loading ? (<><span className="shop-spinner shop-spinner--sm" aria-hidden="true" /><span className="shop-sr-only">{quote ? sourceText('Đang cập nhật…') : sourceText('Đang tính…')}</span></>) : error || !quote ? '—' : formatVnd(quote.subtotal)}</strong>
               </div>
               <p className="shop-drawer__shipping-note">{sourceText("Phí giao hàng được tính ở bước thanh toán.")}</p>
               <div className="shop-drawer__actions">

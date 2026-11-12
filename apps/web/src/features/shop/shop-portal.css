@@ -549,7 +549,9 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-transform: uppercase;
   color: var(--portal-salmon);
 }
@@ -626,6 +628,8 @@
 .portal-v2 .portal-header__actions:has(> .shop-cart-btn) {
   align-self: flex-start;
   align-items: center;
+  /* Tâm của nút giỏ hàng trùng tâm 51px của cụm theme/chuông/tìm kiếm. */
+  margin-top: 1px;
 }
 
 .portal-v2 .shop-cart-btn {
