@@ -91,7 +91,7 @@ paths:
       responses:
         '200': { description: Hold withdrawn }
     get:
-      summary: Hold details with document metadata (owner, receptionist, manager)
+      summary: Hold details with document metadata (owner, receptionist)
       responses:
         '200': { description: HoldRequestDto with holdStartDate, holdEndDate, documents }
   /subscriptions/{id}/hold/documents/{documentId}:
@@ -102,7 +102,7 @@ paths:
         '404': { description: Not found or not attached to this subscription }
   /subscriptions/holds:
     get:
-      summary: Hold requests and history for the desk (receptionist, manager)
+      summary: Hold requests and history for the desk (receptionist only)
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [ALL, PENDING, APPROVED, REJECTED, COMPLETED] } }
       responses:
@@ -138,17 +138,17 @@ paths:
       description: The fee is reduced by the tier discount of the active package (Gold 10%, Platinum 20%); the payment note records the percentage and the list price. `GET /classes/my-quota` returns `discountPercent`.
       responses:
         '201': { description: Checkout with the discounted amount }
-  /health/first-assessment/candidates:
-    get:
-      summary: Registered, active members with no measurements matching `q` (at least 2 characters, max 20 results)
+  /members/{memberId}/health-metrics/batch:
+    post:
+      summary: Record several measurements of one assessment at once
       description: |
-        Coach and manager only. Lets any coach take the first assessment of a member. While a member has no measurements,
-        or only ones this coach took today, POST /health/metrics and /members/{id}/health-metrics succeed without a coach
-        assignment; afterwards only the assigned coach may add measurements. Guests without an account cannot be assessed.
-      parameters:
-        - { name: q, in: query, schema: { type: string, minLength: 2 } }
+        Coach, manager and receptionist (intake). Body `{ metrics: [{ metricName, metricValue, unit }] }` with 1-10 distinct
+        items among weight (kg), height (cm), body_fat (%), muscle_mass (kg), waist (cm). BMI is never submitted: it is derived
+        once from the resulting height and weight (400 HEALTH_BMI_AUTOMATIC when sent, 400 HEALTH_DUPLICATE_METRIC for a
+        repeated measurement). Tier rules of POST /health/metrics apply to every item and the batch is atomic.
+        Any coach may measure a member who has no measurements yet; later ones belong to the assigned coach.
       responses:
-        '200': { description: "[{memberId, membershipCode, fullName, phone}]" }
+        '200': { description: The recorded measurements (the derived BMI row is not included) }
   /health/metrics:
     post:
       summary: Record a measurement (tier rules)
@@ -176,13 +176,11 @@ paths:
         '200': { description: Enrollments with totalSessions, attendedSessions, remainingSessions }
   /classes/recurring:
     post:
-      summary: Create a recurring course that repeats weekly or monthly
+      summary: Create a recurring course that repeats weekly
       description: |
-        `repeatType` is `weekly` (default) or `monthly`. A weekly course needs `recurringDays` (MONDAY...) and meets on
-        those weekdays between `startDate` and `endDate`. A monthly course takes `monthDays` (1-31; the day of the
-        start date when empty) and meets on each chosen day of every month in the range; a month without the chosen
-        day uses its last day. Responses carry `repeatType` and `monthDays` (for example "5,20"); `recurringDays` is
-        null for monthly courses. Invalid days answer 400 SCHEDULING_INVALID_MONTH_DAYS.
+        A course needs `recurringDays` (MONDAY...) and meets on those weekdays every week between `startDate` and
+        `endDate` (400 SCHEDULING_NO_RECURRING_DAYS when none is chosen). Monthly repetition (`repeatType`,
+        `monthDays`) was removed: the fields are no longer accepted nor returned.
       responses:
         '201': { description: Course with all its sessions }
   /coaching/bookings:
@@ -299,7 +297,7 @@ paths:
         '200': { description: ok }
   /subscriptions/{id}/hold/withdraw:
     post:
-      summary: Desk withdraws a hold on behalf of the member (receptionist, manager)
+      summary: Desk withdraws a hold on behalf of the member (receptionist only)
       description: Allowed for a pending request or an approved hold that has not started (400 MEMBERSHIP_HOLD_NOT_PENDING otherwise). The package gets its one hold back, course excuses of the window are released and the member is notified.
       responses:
         '200': { description: Subscription without a hold }

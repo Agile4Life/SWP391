@@ -3,32 +3,34 @@ import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { CoachHealthMetrics } from './CoachHealthMetrics';
 import * as api from '../member/profileApi';
-vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn(), addHealthMetric: vi.fn() }));
+vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn(), addHealthMetrics: vi.fn() }));
 vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
 let host: HTMLDivElement; let root: Root;
-beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);host=document.createElement('div');document.body.append(host);root=createRoot(host);vi.mocked(api.listHealthMetrics).mockResolvedValue([]);vi.mocked(api.addHealthMetric).mockResolvedValue({}); });
+beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);host=document.createElement('div');document.body.append(host);root=createRoot(host);vi.mocked(api.listHealthMetrics).mockResolvedValue([]);vi.mocked(api.addHealthMetrics).mockResolvedValue([]); });
 afterEach(async () => {await act(async()=>root.unmount());host.remove();vi.resetAllMocks();vi.unstubAllGlobals();});
 async function render(id=10){await act(async()=>root.render(<CoachHealthMetrics memberId={id} memberName={'Member '+id} />));}
-async function fill(){const input=host.querySelector('input')!;await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'70');input.dispatchEvent(new Event('input',{bubbles:true}));});}
-it('loads real history and appends a measurement then refetches', async()=>{await render();expect(host.textContent).toContain('Chưa có số đo');await fill();await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));expect(api.addHealthMetric).toHaveBeenCalledWith(10,{metricName:'weight',metricValue:70,unit:'kg'});expect(api.listHealthMetrics).toHaveBeenCalledTimes(2);});
+async function typeInto(id:string,value:string){const input=host.querySelector('#'+id) as HTMLInputElement;await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});}
+async function submitForm(){await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));}
+async function fill(){const input=host.querySelector('#coach-metric-weight')!;await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,'70');input.dispatchEvent(new Event('input',{bubbles:true}));});}
+it('loads real history and appends a measurement then refetches', async()=>{await render();expect(host.textContent).toContain('Chưa có số đo');await fill();await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));expect(api.addHealthMetrics).toHaveBeenCalledWith(10,{metrics:[{metricName:'weight',metricValue:70,unit:'kg'}]});expect(api.listHealthMetrics).toHaveBeenCalledTimes(2);});
 it('does not present failed reads as empty data and supports retry',async()=>{vi.mocked(api.listHealthMetrics).mockRejectedValueOnce(new Error('offline'));await render();expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('form')).toBeNull();await act(async()=>host.querySelector('button')!.click());expect(host.querySelector('form')).not.toBeNull();});
-it('preserves input when saving fails',async()=>{vi.mocked(api.addHealthMetric).mockRejectedValueOnce(new Error('forbidden'));await render();await fill();await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('input')!.value).toBe('70');});
-it('does not let an old member response replace the selected member history',async()=>{let finish!:(v:api.HealthMetric[])=>void;vi.mocked(api.listHealthMetrics).mockImplementationOnce(()=>new Promise<api.HealthMetric[]>(r=>{finish=r;}));await render(10);await render(11);await act(async()=>finish([{id:1,metricName:'weight',metricValue:999,unit:'kg',recordedAt:'2026-11-03T08:00:00'}]));expect(host.textContent).not.toContain('999');expect(host.textContent).toContain('Member 11');});
+it('preserves input when saving fails',async()=>{vi.mocked(api.addHealthMetrics).mockRejectedValueOnce(new Error('forbidden'));await render();await fill();await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));expect(host.querySelector('[role="alert"]')).not.toBeNull();expect((host.querySelector('#coach-metric-weight') as HTMLInputElement).value).toBe('70');});
+it('does not let an old member response replace the selected member history',async()=>{let finish!:(v:api.HealthMetric[])=>void;vi.mocked(api.listHealthMetrics).mockImplementationOnce(()=>new Promise(r=>{finish=r;}));await render(10);await render(11);await act(async()=>finish([{id:1,metricName:'weight',metricValue:999,unit:'kg',recordedAt:'2026-11-03T08:00:00'}]));expect(host.textContent).not.toContain('999');expect(host.textContent).toContain('Member 11');});
 
-it('blocks double submit while save is pending',async()=>{let finish!:(v:unknown)=>void;vi.mocked(api.addHealthMetric).mockImplementationOnce(()=>new Promise(r=>{finish=r;}));await render();await fill();await act(async()=>{const form=host.querySelector('form')!;form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});expect(api.addHealthMetric).toHaveBeenCalledTimes(1);await act(async()=>finish({}));});
-it('old member save cannot clear the new member draft',async()=>{let finish!:(v:unknown)=>void;vi.mocked(api.addHealthMetric).mockImplementationOnce(()=>new Promise(r=>{finish=r;}));await render(10);await fill();await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await render(11);await fill();await act(async()=>finish({}));expect(host.querySelector('input')!.value).toBe('70');expect(api.listHealthMetrics).toHaveBeenLastCalledWith(11);});
+it('blocks double submit while save is pending',async()=>{let finish!:(v:api.HealthMetric[])=>void;vi.mocked(api.addHealthMetrics).mockImplementationOnce(()=>new Promise(r=>{finish=r;}));await render();await fill();await act(async()=>{const form=host.querySelector('form')!;form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});expect(api.addHealthMetrics).toHaveBeenCalledTimes(1);await act(async()=>finish([]));});
+it('old member save cannot clear the new member draft',async()=>{let finish!:(v:api.HealthMetric[])=>void;vi.mocked(api.addHealthMetrics).mockImplementationOnce(()=>new Promise(r=>{finish=r;}));await render(10);await fill();await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));await render(11);await fill();await act(async()=>finish([]));expect((host.querySelector('#coach-metric-weight') as HTMLInputElement).value).toBe('70');expect(api.listHealthMetrics).toHaveBeenLastCalledWith(11);});
 
 it('reception mode appends without reading or displaying private history', async()=>{
  await act(async()=>root.render(<CoachHealthMetrics memberId={10} memberName="Intake Member" intakeOnly />));
  expect(api.listHealthMetrics).not.toHaveBeenCalled();expect(host.querySelector('table')).toBeNull();await fill();
  await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
- expect(api.addHealthMetric).toHaveBeenCalledWith(10,{metricName:'weight',metricValue:70,unit:'kg'});expect(api.listHealthMetrics).not.toHaveBeenCalled();
+ expect(api.addHealthMetrics).toHaveBeenCalledWith(10,{metrics:[{metricName:'weight',metricValue:70,unit:'kg'}]});expect(api.listHealthMetrics).not.toHaveBeenCalled();
 });
 it('reception intake denial keeps the draft and never shows success history',async()=>{
- vi.mocked(api.addHealthMetric).mockRejectedValueOnce(new Error('HEALTH_INTAKE_REQUIRED'));
+ vi.mocked(api.addHealthMetrics).mockRejectedValueOnce(new Error('HEALTH_INTAKE_REQUIRED'));
  await act(async()=>root.render(<CoachHealthMetrics memberId={10} memberName="Intake Member" intakeOnly />));await fill();
  await act(async()=>host.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
- expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('input')!.value).toBe('70');expect(api.listHealthMetrics).not.toHaveBeenCalled();
+ expect(host.querySelector('[role="alert"]')).not.toBeNull();expect((host.querySelector('#coach-metric-weight') as HTMLInputElement).value).toBe('70');expect(api.listHealthMetrics).not.toHaveBeenCalled();
 });
 it('auto-calculates BMI from height and weight and notifies parent without manual BMI input option',async()=>{
  const onMetricsChange=vi.fn();
@@ -39,5 +41,42 @@ it('auto-calculates BMI from height and weight and notifies parent without manua
  await act(async()=>root.render(<CoachHealthMetrics memberId={10} memberName="Member 10" onMetricsChange={onMetricsChange} />));
  expect(onMetricsChange).toHaveBeenCalledWith({memberId:10,heightCm:172,weightKg:68,bmi:23});
  expect(host.textContent).toContain('BMI được tính tự động từ chiều cao và cân nặng.');
- expect(host.textContent).toContain('(Chỉ số BMI: 23)');
+ const bmi=host.querySelector('#coach-metric-bmi') as HTMLInputElement;
+ expect(bmi.readOnly).toBe(true);
+ expect(bmi.value).toBe('23');
+ await typeInto('coach-metric-weight','80');
+ expect(bmi.value).toBe('27');
+});
+it('saves height, weight and optional body fat in one request, never sending BMI',async()=>{
+ await render();
+ await typeInto('coach-metric-height','172');await typeInto('coach-metric-weight','68');await typeInto('coach-metric-body-fat','18.5');
+ await submitForm();
+ expect(api.addHealthMetrics).toHaveBeenCalledTimes(1);
+ expect(api.addHealthMetrics).toHaveBeenCalledWith(10,{metrics:[
+  {metricName:'height',metricValue:172,unit:'cm'},
+  {metricName:'weight',metricValue:68,unit:'kg'},
+  {metricName:'body_fat',metricValue:18.5,unit:'%'},
+ ]});
+ expect(host.querySelector('#coach-metric-body-fat')).not.toBeNull();
+ expect(host.querySelector('#coach-metric-muscle-mass')).not.toBeNull();
+});
+it('requires at least one measurement and rejects body fat above 100%',async()=>{
+ await render();
+ await submitForm();
+ expect(api.addHealthMetrics).not.toHaveBeenCalled();
+ expect(host.querySelector('[role="alert"]')).not.toBeNull();
+ await typeInto('coach-metric-body-fat','101');
+ await submitForm();
+ expect(api.addHealthMetrics).not.toHaveBeenCalled();
+});
+it('lists each assessment as one row with all its measurements',async()=>{
+ vi.mocked(api.listHealthMetrics).mockResolvedValueOnce([
+  {id:3,metricName:'bmi',metricValue:23,unit:null,recordedAt:'2026-11-03T08:05:10'},
+  {id:2,metricName:'weight',metricValue:68,unit:'kg',recordedAt:'2026-11-03T08:05:10'},
+  {id:1,metricName:'height',metricValue:172,unit:'cm',recordedAt:'2026-11-03T08:05:10'},
+ ]);
+ await render();
+ expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+ expect(host.querySelector('tbody')!.textContent).toContain('172');
+ expect(host.querySelector('tbody')!.textContent).toContain('68');
 });

@@ -34,15 +34,12 @@ public class SchedulingMapper {
                 gymClass.getEndDate(),
                 gymClass.getRecurringDays(),
                 gymClass.getStartTime(),
-                gymClass.getEndTime(),
-                gymClass.getRepeatType() != null ? gymClass.getRepeatType() : "weekly",
-                gymClass.getMonthDays()
+                gymClass.getEndTime()
         );
     }
 
-    /** True when a weekly class is missing the schedule fields the course screens rely on (classes made before them). */
+    /** True when a class is missing the schedule fields the course screens rely on (classes made before them). */
     public static boolean lacksSchedule(GymClass gymClass) {
-        if ("monthly".equalsIgnoreCase(gymClass.getRepeatType())) return false;
         return gymClass.getRecurringDays() == null || gymClass.getRecurringDays().isBlank()
                 || gymClass.getStartDate() == null || gymClass.getEndDate() == null;
     }
@@ -70,8 +67,7 @@ public class SchedulingMapper {
                 dto.endDate() != null ? dto.endDate() : last,
                 days,
                 dto.startTime() != null ? dto.startTime() : sample.getStartTime(),
-                dto.endTime() != null ? dto.endTime() : sample.getEndTime(),
-                dto.repeatType(), dto.monthDays());
+                dto.endTime() != null ? dto.endTime() : sample.getEndTime());
     }
 
     public ClassSessionDto toDto(ClassSession session, long bookedCount) {

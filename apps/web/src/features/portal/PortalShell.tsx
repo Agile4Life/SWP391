@@ -551,7 +551,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </main>
         <footer className="portal-workspace-footer">
           <span>SÖL Fitness</span>
-          <LanguageSetting variant="footer" />
         </footer>
       </div>
 
@@ -564,7 +563,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </button>
       </nav>
 
-      {location.pathname !== '/member/check-in' && location.pathname !== '/staff/check-in' && location.pathname !== '/messages' && <ChatWidget />}
+      {location.pathname !== '/member/check-in' && location.pathname !== '/staff/check-in' && location.pathname !== '/staff/check-out' && location.pathname !== '/messages' && <ChatWidget />}
       {canReceiveNotifications && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'wallet' && (
         <Modal title={t('Ví điện tử SÖL', 'SÖL Digital Wallet')} onClose={() => setDialog(null)}>

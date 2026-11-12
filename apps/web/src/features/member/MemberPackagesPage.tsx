@@ -721,6 +721,11 @@ export function MemberPackagesPage() {
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
               {t(" Đã nộp: ", "Submitted:")}{(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : t("Gần đây", "Recently")}
             </span>
+            <RefreshButton
+              label={t("Kiểm tra lại trạng thái", "Check status") as string}
+              onClick={() => { void loadTrialStatus(); void loadCurrent(); void loadHistory(); }}
+              variant="bare"
+            />
           </div>
           <h3 style={{ margin: '10px 0 6px', fontSize: 18, fontWeight: 700 }}>
             {t(" Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý ", "Your 3-day trial application is being processed")}</h3>

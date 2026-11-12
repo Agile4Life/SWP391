@@ -44,35 +44,38 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/member/check-in', label: 'Quét QR cổng', en: 'Gate QR' },
   ] },
   { to: '/member/invoices', label: 'Giao dịch & Hóa đơn', icon: 'receipt', roles: ['MEMBER'] },
-  { to: '/member/orders', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MEMBER'] },
+  { to: '/member/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MEMBER'] },
   { to: '/member/progress', label: 'Tiến độ & Giáo án', icon: 'chart', roles: ['MEMBER'] },
-  { to: '/member/support', label: 'Hỗ trợ & Khiếu nại', icon: 'support', roles: ['MEMBER'] },
   { to: '/member/explore', label: 'Tham quan 3D', icon: 'compass', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF'] },
   { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH'] },
-  { to: '/staff/attendance', label: 'Điểm danh', icon: 'check', roles: ['COACH'], tabs: [
+  { to: '/staff/attendance', label: 'Quản lý buổi học', icon: 'check', roles: ['COACH'], tabs: [
     { to: '/staff/attendance', label: 'Lớp học', en: 'Classes' },
     { to: '/coach/pt-attendance', label: 'Buổi PT 1:1', en: '1:1 sessions' },
   ] },
   { to: '/coach/training-plans', label: 'Giáo án & Đánh giá', icon: 'dumbbell', roles: ['COACH'], tabs: [
-    { to: '/coach/training-plans', label: 'Soạn giáo án & AI', en: 'Plans & AI' },
-    { to: '/coach/first-assessment', label: 'Đánh giá lần đầu', en: 'First assessment' },
+    { to: '/coach/training-plans', label: 'Soạn giáo án', en: 'Plan builder' },
+    { to: '/coach/health-metrics', label: 'Chỉ số sức khỏe', en: 'Health metrics' },
+    { to: '/coach/saved-plans', label: 'Giáo án đã lưu', en: 'Saved plans' },
   ] },
   { to: '/staff/reception', label: 'Quầy lễ tân & Check-in', icon: 'card', roles: ['STAFF'], tabs: [
     { to: '/staff/reception', label: 'Quầy & POS', en: 'Front desk & POS' },
-    { to: '/staff/check-in', label: 'Check-in cổng', en: 'Gate check-in' },
+    { to: '/staff/check-in', label: 'Check-in', en: 'Check-in' },
+    { to: '/staff/check-out', label: 'Check-out', en: 'Check-out' },
+    { to: '/staff/reception-history', label: 'Lịch sử giao dịch', en: 'Transaction history' },
+  ] },
+  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['STAFF'], tabs: [
+    { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
+    { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
   ] },
   { to: '/staff/courts', label: 'Đặt sân & Đơn hàng', icon: 'court', roles: ['STAFF'], tabs: [
     { to: '/staff/courts', label: 'Lượt đặt sân', en: 'Court bookings' },
     { to: '/staff/orders', label: 'Đơn hàng sản phẩm', en: 'Product orders' },
   ] },
-  { to: '/staff/support', label: 'Hộp thư hỗ trợ', icon: 'inbox', roles: ['STAFF'] },
   { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'file', roles: ['STAFF', 'COACH'] },
   { to: '/admin/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['ADMIN'] },
-  { to: '/manager/reports', label: 'Báo cáo & Nhật ký', icon: 'chart', roles: ['MANAGER'], tabs: [
-    { to: '/manager/reports', label: 'Doanh thu', en: 'Revenue' },
-    { to: '/manager/audit-logs', label: 'Kiểm toán & Giám sát', en: 'Audit & monitoring' },
-  ] },
+  { to: '/admin/audit-logs', label: 'Nhật ký & Lấp đầy', icon: 'chart', roles: ['ADMIN'] },
+  { to: '/manager/reports', label: 'Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MANAGER'] },
   { to: '/manager/equipment', label: 'Quản lý máy móc thiết bị', icon: 'dumbbell', roles: ['MANAGER'] },
@@ -82,10 +85,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
-  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['STAFF', 'MANAGER'], tabs: [
-    { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
-    { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
-  ] },
   { to: '/manager/support', label: 'Khiếu nại & Đơn từ', icon: 'inbox', roles: ['MANAGER'], tabs: [
     { to: '/manager/support', label: 'Khiếu nại chuyển lên', en: 'Escalated tickets' },
     { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', en: 'Internal requests' },
@@ -101,6 +100,9 @@ export function portalNavRoutes(item: Pick<PortalNavItem, 'to' | 'tabs'>): strin
 
 /** Mục sidebar đang chọn khi đường dẫn nằm ở một tab con hoặc route con (vd. /member/orders/:id). */
 export function isPortalNavActive(item: Pick<PortalNavItem, 'to' | 'tabs'>, pathname: string): boolean {
+  if (item.to === '/member/products' && (pathname === '/member/orders' || pathname.startsWith('/member/orders/'))) {
+    return true;
+  }
   return portalNavRoutes(item).some(route => pathname === route || pathname.startsWith(`${route}/`));
 }
 
@@ -117,18 +119,18 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/card': 'Card & Check-in',
   '/member/invoices': 'Transactions & Invoices',
   '/member/orders': 'Shop & Orders',
+  '/member/products': 'Shop & Orders',
   '/member/progress': 'Progress & Plans',
   '/member/notifications': 'Notifications',
-  '/member/support': 'Support & Tickets',
   '/coach/classes': 'Coach Schedule & Members',
-  '/staff/attendance': 'Attendance',
+  '/staff/attendance': 'Session management',
   '/coach/training-plans': 'Plans & Assessment',
   '/staff/reception': 'Front Desk & Check-in',
   '/staff/courts': 'Courts & Orders',
-  '/staff/support': 'Support Inbox',
   '/staff/requests': 'Internal Requests',
   '/admin/users': 'Accounts & Permissions',
-  '/manager/reports': 'Reports & Logs',
+  '/admin/audit-logs': 'Audit & occupancy',
+  '/manager/reports': 'Revenue',
   '/manager/catalogs': 'Operations Catalogs',
   '/manager/products': 'Products & Orders',
   '/manager/equipment': 'Equipment Management',

@@ -19,7 +19,8 @@ const connections: Record<ChatConnection, string> = { connecting: 'Đang kết n
 const transitions: Record<SupportTicket['status'], SupportTicket['status'][]> = { open: ['open', 'in_progress', 'resolved'], in_progress: ['in_progress', 'open', 'resolved', 'closed'], resolved: ['resolved', 'in_progress', 'closed'], closed: ['closed'] };
 const failure = (error: unknown) => error instanceof ApiError ? error : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
 
-export function StaffSupportPage() {
+/** `embedded`: hiển thị bên trong khung Tin nhắn (không tiêu đề trang). */
+export function StaffSupportPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useStaffI18n();
   // Receptionists take every complaint first; managers only receive what a receptionist escalates.
   const role: string | undefined = getCurrentUser()?.role;
@@ -137,8 +138,8 @@ export function StaffSupportPage() {
     if (!ticket || !canEscalate(ticket) || !reason || reason.length > 500 || isBusy) return;
     void actOnTicket(async () => { const updated = await escalateSupportTicket(ticket.id, reason); if (alive.current) { setEscalating(false); setEscalationReason(''); } return updated; }, undefined, 'Đã chuyển khiếu nại lên quản lý.');
   }
-  return <div data-i18n-managed className="portal-container member-support staff-support">
-    <PageHeader title={isManager ? t('Khiếu nại chuyển lên quản lý') : t('Hộp thư hỗ trợ')} />
+  return <div data-i18n-managed className={`${embedded ? '' : 'portal-container '}member-support staff-support${embedded ? ' member-support--embedded' : ''}`}>
+    {!embedded && <PageHeader title={isManager ? t('Khiếu nại chuyển lên quản lý') : t('Hộp thư hỗ trợ')} />}
     <p role="status" className="member-support-context">{t(connections[connection])}</p>
     <section className="portal-card" ref={listFocus} tabIndex={-1}>
       <div className="staff-support-toolbar"><label htmlFor="staff-support-filter">{t("Trạng thái")}</label><Select id="staff-support-filter" className="portal-select" value={filter} onChange={event => { changeQuery(0, event.target.value); }}>{<option value="">{t("Tất cả")}</option>}{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</Select><RefreshButton disabled={loading} onClick={() => void loadList()} /></div>

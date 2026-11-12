@@ -12,9 +12,9 @@ const ROUTES: Record<string, string[]> = {
   em: ['/member/dashboard', '/member/packages', '/member/hold'],
   lan: ['/member/dashboard', '/member/packages'],
   staff: ['/staff/reception', '/staff/check-in', '/staff/support', '/staff/courts', '/staff/attendance', '/staff/coach-classes', '/staff/requests', '/staff/pt-attendance', '/staff/kyc', '/staff/holds', '/staff/classes', '/staff/orders', '/messages', '/profile'],
-  coach: ['/coach/classes', '/coach/first-assessment', '/coach/pt-attendance', '/coach/training-plans', '/staff/requests', '/messages', '/profile'],
-  manager: ['/manager/reports', '/manager/catalogs', '/manager/products', '/manager/products/new', '/manager/equipment', '/manager/coach-assignments', '/manager/staff-accounts', '/manager/users', '/manager/cancellations', '/manager/audit-logs', '/manager/coach-reviews', '/manager/support', '/manager/requests', '/staff/classes', '/profile'],
-  admin: ['/admin/users', '/profile'],
+  coach: ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans', '/coach/health-metrics', '/coach/saved-plans', '/staff/requests', '/messages', '/profile'],
+  manager: ['/manager/reports', '/manager/catalogs', '/manager/products', '/manager/products/new', '/manager/equipment', '/manager/coach-assignments', '/manager/staff-accounts', '/manager/users', '/manager/cancellations', '/manager/coach-reviews', '/manager/support', '/manager/requests', '/staff/classes', '/profile'],
+  admin: ['/admin/users', '/admin/audit-logs', '/profile'],
 };
 const VI = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹàáèéìíòóùúýÀ-Ỹ]/;
 

@@ -9,12 +9,12 @@ import {
   type AuditLogItem,
   type ClassOccupancyItem,
 } from './auditApi';
-import './manager-audit-logs.css';
+import './admin-audit-logs.css';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 type ActiveTab = 'audit' | 'occupancy';
 
-export function ManagerAuditLogsPage() {
+export function AdminAuditLogsPage() {
   const { t } = useStaffI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('audit');
 
@@ -195,7 +195,7 @@ export function ManagerAuditLogsPage() {
   return (
     <div data-i18n-managed className="audit-page portal-container">
       <PageHeader
-        title={t("Kiểm toán & Giám sát vận hành")}
+        title={t("Nhật ký & lấp đầy lớp")}
       />
 
       {/* Navigation Tabs */}
@@ -207,7 +207,7 @@ export function ManagerAuditLogsPage() {
           className={`portal-tab audit-tab-btn ${activeTab === 'audit' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          {t("Nhật ký kiểm toán")}</button>
+          {t("Nhật ký kiểm toán (Audit Trail)")}</button>
         <button
           type="button"
           role="tab"
@@ -369,7 +369,7 @@ export function ManagerAuditLogsPage() {
                   className="btn-secondary btn-sm btn-page-nav"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() => setCurrentPage((p) => p + 1)}
-                  aria-label="Trang sau"
+                  aria-label={t("Trang sau →")}
                 >
                   {t("Trang sau →")}</button>
               </div>

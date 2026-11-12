@@ -102,6 +102,51 @@ public class HealthMetricService {
         return toDto(saved);
     }
 
+    /**
+     * Records several measurements of one assessment atomically. BMI cannot be submitted: it is derived once from the
+     * resulting height and weight, so a batch with both never leaves an intermediate BMI behind.
+     */
+    @Transactional
+    public List<HealthMetricDto> addMetrics(Long memberId, com.swp391.scms.health.dto.HealthMetricBatchDto request,
+                                            Long currentUserId, String currentUserRole) {
+        ensureCanModify(memberId, currentUserId, currentUserRole, true);
+        Set<String> seen = new java.util.HashSet<>();
+        for (var item : request.metrics()) {
+            String name = validateAndNormalizeMetricName(item.metricName());
+            if ("bmi".equals(name)) {
+                throw new BadRequestException("HEALTH_BMI_AUTOMATIC", "health.metrics.bmi_automatic", null,
+                        "BMI is calculated from height and weight.");
+            }
+            if (!seen.add(name)) {
+                throw new BadRequestException("HEALTH_DUPLICATE_METRIC", "health.metrics.duplicate_metric", null,
+                        "Each measurement can appear once per assessment.");
+            }
+            validatedUnit(name, item.metricValue(), item.unit());
+            enforceAssessmentTier(memberId, name);
+        }
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        User recordedBy = userRepository.findByIdAndDeletedAtIsNull(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.health_recorder", currentUserId));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        List<MemberProgressLog> saved = new java.util.ArrayList<>();
+        for (var item : request.metrics()) {
+            String name = validateAndNormalizeMetricName(item.metricName());
+            MemberProgressLog log = new MemberProgressLog();
+            log.setMember(member);
+            log.setMetricName(name);
+            log.setMetricValue(item.metricValue());
+            log.setUnit(validatedUnit(name, item.metricValue(), item.unit()));
+            log.setRecordedBy(recordedBy);
+            log.setRecordedAt(now);
+            saved.add(progressLogRepository.save(log));
+        }
+        if (seen.contains("weight") || seen.contains("height")) {
+            recordAutoCalculatedBmi(member, recordedBy, now, "", null);
+        }
+        return saved.stream().map(this::toDto).toList();
+    }
+
     private void recordAutoCalculatedBmi(Member member, User recordedBy, java.time.LocalDateTime recordedAt,
                                          String updatedMetricName, java.math.BigDecimal updatedValue) {
         if (member == null || member.getUserId() == null) return;
@@ -156,20 +201,6 @@ public class HealthMetricService {
         ensureCanModify(memberId, currentUserId, currentUserRole, false);
         MemberProgressLog log = findOwnedMetric(memberId, metricId);
         progressLogRepository.delete(log);
-    }
-
-    /** Registered members with no measurements matching {@code query} (at least two characters), at most 20. */
-    @Transactional(readOnly = true)
-    public List<com.swp391.scms.health.dto.FirstAssessmentCandidateDto> firstAssessmentCandidates(String query) {
-        String trimmed = query == null ? "" : query.trim().toLowerCase(java.util.Locale.ROOT);
-        if (trimmed.length() < 2) return List.of();
-        String pattern = "%" + trimmed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-        return memberRepository.searchWithoutMeasurements(pattern, org.springframework.data.domain.PageRequest.of(0, 20))
-                .stream()
-                .map(m -> new com.swp391.scms.health.dto.FirstAssessmentCandidateDto(m.getUserId(), m.getMembershipCode(),
-                        m.getUser() != null ? m.getUser().getFullName() : null,
-                        m.getUser() != null ? m.getUser().getPhone() : null))
-                .toList();
     }
 
     @Transactional

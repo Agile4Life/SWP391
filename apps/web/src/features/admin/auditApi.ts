@@ -48,7 +48,7 @@ export interface ClassOccupancyItem {
 
 export const auditApi = {
   /**
-   * Lấy danh sách Audit Log có lọc và phân trang (GET /api/v1/audit-logs)
+   * Lấy danh sách Audit Log có lọc và phân trang (GET /api/v1/admin/audit-logs, ADMIN only)
    */
   getAuditLogs: async (filter?: AuditLogFilter): Promise<PageResult<AuditLogItem>> => {
     const params = new URLSearchParams();

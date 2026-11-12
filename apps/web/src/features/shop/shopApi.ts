@@ -74,11 +74,10 @@ export const shopApi = {
   getShopConfig: (signal?: AbortSignal) =>
     apiFetch<ShopConfigDto>('/public/shop/config', publicInit({ signal })),
 
+  // Not publicInit: the Bearer token must go along so the quote carries the member's tier discount,
+  // otherwise expectedTotal differs from the order total and checkout fails with ORDER_PRICE_CHANGED.
   quote: (request: QuoteRequest, signal?: AbortSignal) =>
-    apiFetch<QuoteDto>(
-      '/public/shop/quote',
-      publicInit({ method: 'POST', body: JSON.stringify(request), signal }),
-    ),
+    apiFetch<QuoteDto>('/public/shop/quote', { method: 'POST', body: JSON.stringify(request), signal }),
 
   listProvinces: (signal?: AbortSignal) =>
     apiFetch<GeoRegion[]>('/public/geo/provinces', publicInit({ signal })),

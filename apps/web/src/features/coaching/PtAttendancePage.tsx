@@ -88,16 +88,18 @@ export function PtAttendancePage() {
   return (
     <div data-i18n-managed className="portal-container pt-attendance">
       <PageHeader title={t('Điểm danh buổi PT 1:1', '1:1 session attendance')} />
-      <div className="portal-card" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'end' }}>
-        <div className="portal-form-group">
-          <label className="portal-label" htmlFor="pt-from">{t('Từ ngày', 'From')}</label>
-          <DatePicker id="pt-from" max={to} value={from} onChange={(event) => setFrom(event.target.value)} />
+      <div className="portal-card pt-range">
+        <div className="pt-range__fields">
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="pt-from">{t('Từ ngày', 'From')}</label>
+            <DatePicker id="pt-from" max={to} value={from} onChange={(event) => setFrom(event.target.value)} />
+          </div>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="pt-to">{t('Đến ngày', 'To')}</label>
+            <DatePicker id="pt-to" min={from} value={to} onChange={(event) => setTo(event.target.value)} />
+          </div>
         </div>
-        <div className="portal-form-group">
-          <label className="portal-label" htmlFor="pt-to">{t('Đến ngày', 'To')}</label>
-          <DatePicker id="pt-to" min={from} value={to} onChange={(event) => setTo(event.target.value)} />
-        </div>
-        <small>{t('Tối đa 62 ngày mỗi lần xem.', 'Up to 62 days at a time.')}</small>
+        <p className="form-hint">{t('Tối đa 62 ngày mỗi lần xem.', 'Up to 62 days at a time.')}</p>
       </div>
       {invalidRange && <div className="portal-card" role="alert">{t('Ngày bắt đầu phải trước ngày kết thúc.', 'The start date must be before the end date.')}</div>}
       <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ marginTop: 16 }}>

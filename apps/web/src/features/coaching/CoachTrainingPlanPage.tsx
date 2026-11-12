@@ -1,5 +1,4 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
-import { CoachHealthMetrics } from './CoachHealthMetrics';
 import { calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './coachHealthUtils';
 import { listHealthMetrics } from '../member/profileApi';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
@@ -9,18 +8,20 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { centerNowParts, formatCenterTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterTime } from '../../shared/lib/centerTime';
 import {
   aiApi,
   type CoachOption,
   type MemberOption,
   type WorkoutExerciseItem,
   type AiWorkoutPlanResult,
+  type SavedTrainingPlan,
 } from './aiApi';
-import { SavedTrainingPlans } from './SavedTrainingPlans';
+import { Link } from 'react-router-dom';
 import './coach-training-plan.css';
 
 // Tạm ẩn các điểm vào AI cho đến khi có provider thực tế.
@@ -36,8 +37,17 @@ const DAYS_OF_WEEK = [
   { id: 7, name: 'Chủ Nhật' },
 ];
 
+/** Soạn giáo án đi theo từng bước để mỗi màn hình chỉ giữ một nhóm thông tin. */
+const PLAN_STEPS = [
+  { id: 1, vi: 'Học viên & kế hoạch', en: 'Member & plan' },
+  { id: 2, vi: 'Bài tập theo ngày', en: 'Daily exercises' },
+  { id: 3, vi: 'Xem lại & kích hoạt', en: 'Review & activate' },
+] as const;
+type PlanStep = (typeof PLAN_STEPS)[number]['id'];
+
 export function CoachTrainingPlanPage() {
   const { t } = useStaffI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
   // Role authorization
@@ -123,6 +133,8 @@ export function CoachTrainingPlanPage() {
   const [exerciseError, setExerciseError] = useState<StaffMessage | null>(null);
   const [dateError, setDateError] = useState<StaffMessage | null>(null);
   const [planError, setPlanError] = useState<StaffMessage | null>(null);
+  const [step, setStep] = useState<PlanStep>(1);
+  const [savedPlanLink, setSavedPlanLink] = useState(false);
   const [aiError, setAiError] = useState<StaffMessage | null>(null);
 
   // AI Modal States
@@ -272,8 +284,43 @@ export function CoachTrainingPlanPage() {
   };
 
   // AC: Nút "Áp dụng vào giáo án"
-  const handleApplyAiPlan = () => {
+  const handleApplyAiPlan = async () => {
     if (!aiResult || !aiResult.items || aiResult.items.length === 0) return;
+
+    // Đã soạn tay (bài tập chưa lưu trong trình soạn) hoặc HLV phụ trách đã có giáo án đang áp dụng cho học viên: hỏi trước khi ghi đè.
+    // Mỗi cặp hội viên–HLV có một giáo án đang áp dụng; giáo án của HLV khác không bị ảnh hưởng nên không cần cảnh báo.
+    const handComposed = exercises.filter((item) => !item.id?.startsWith('ex-init-') && !item.id?.startsWith('ai-item-')).length;
+    let activePlan: SavedTrainingPlan | undefined;
+    try {
+      const plans = await aiApi.listTrainingPlans(aiResult.memberId);
+      const planCoachId = isManager ? selectedCoachId : Number(currentUser?.id);
+      activePlan = Array.isArray(plans)
+        ? plans.find((plan) => plan.status === 'active' && (planCoachId == null || Number.isNaN(planCoachId) || plan.coachId == null || plan.coachId === planCoachId))
+        : undefined;
+    } catch {
+      // Không tải được giáo án đã lưu thì chỉ kiểm tra phần soạn tay, không chặn việc áp dụng.
+    }
+    if (handComposed > 0 || activePlan) {
+      const memberLabel = aiResult.memberName || 'học viên';
+      const lines: string[] = [];
+      const linesEn: string[] = [];
+      if (handComposed > 0) {
+        lines.push(`Bạn đã soạn tay ${handComposed} bài tập trong trình soạn. Áp dụng gợi ý AI sẽ thay thế các bài tập đó.`);
+        linesEn.push(`You have hand-composed ${handComposed} exercise(s) in the editor. Applying the AI suggestion will replace them.`);
+      }
+      if (activePlan) {
+        const range = `${activePlan.startDate.split('-').reverse().join('/')} – ${activePlan.endDate.split('-').reverse().join('/')}`;
+        lines.push(`${memberLabel} đang có giáo án "${activePlan.goal || 'chưa đặt mục tiêu'}" (${range}) đang áp dụng. Khi lưu giáo án AI, giáo án cũ của HLV này sẽ chuyển vào lịch sử và có thể áp dụng lại bất cứ lúc nào. Giáo án của HLV khác vẫn giữ nguyên.`);
+        linesEn.push(`${memberLabel} already has the plan "${activePlan.goal || 'no goal set'}" (${range}) in use. When you save the AI plan, this coach's old plan moves to history and can be re-applied at any time. Plans from other coaches stay as they are.`);
+      }
+      const confirmed = await confirm({
+        title: staffMessage('Ghi đè giáo án đã soạn trước đó?', 'Overwrite the plan you composed earlier?'),
+        message: staffMessage(lines.join(' '), linesEn.join(' ')),
+        confirmLabel: staffMessage('Ghi đè bằng giáo án AI', 'Overwrite with AI plan'),
+        cancelLabel: staffMessage('Giữ giáo án hiện tại', 'Keep current plan'),
+      });
+      if (!confirmed) return;
+    }
 
     // Cập nhật thông tin hội viên & mục tiêu theo kết quả AI
     setSelectedMemberId(aiResult.memberId);
@@ -300,9 +347,23 @@ export function CoachTrainingPlanPage() {
 
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
+  // Bước 1 phải hợp lệ trước khi đi tiếp: có ngày hợp lệ và (Quản lý) đã chọn HLV phụ trách.
+  const planInfoError = (): StaffMessage | null =>
+    startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+      : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
+        : null;
+  const goToStep = (next: PlanStep) => {
+    if (next > 1) {
+      const invalid = planInfoError();
+      setPlanError(invalid);
+      if (invalid) { setStep(1); return; }
+    }
+    setPlanError(null);
+    setStep(next);
+  };
+
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
-  const [plansRefresh, setPlansRefresh] = useState(0);
   const handleSavePlan = async () => {
     const invalid =
       exercises.length === 0 ? 'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.'
@@ -357,7 +418,7 @@ export function CoachTrainingPlanPage() {
         // ignore storage error
       }
 
-      setPlansRefresh((value) => value + 1);
+      setSavedPlanLink(true);
       notify(staffMessage(`Đã lưu và kích hoạt giáo án "${planTitle}" cho học viên ${selectedMember.fullName}.`, `Saved and activated training plan "${planTitle}" for member ${selectedMember.fullName}.`), 'success');
     } catch {
       notify('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error');
@@ -400,7 +461,6 @@ export function CoachTrainingPlanPage() {
         <p>{t("Học viên lấy từ các lớp đã có hội viên ghi danh.")}</p>
         <button type="button" className="btn-secondary" onClick={() => setMembersAttempt(value => value + 1)}>{t("Tải lại danh sách")}</button>
       </div>
-      <SavedTrainingPlans refreshKey={plansRefresh} />
     </div>;
   }
 
@@ -421,23 +481,30 @@ export function CoachTrainingPlanPage() {
               <span>{t("Gợi ý giáo án bằng AI")}</span>
             </button>}
 
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => void handleSavePlan()}
-              disabled={isSaving || (isManager && selectedCoachId == null)}
-              title={isManager && selectedCoachId == null ? t('Chọn huấn luyện viên phụ trách để lưu') : undefined}
-            >
-              {isSaving ? t('Đang lưu...') : t('Lưu & Kích hoạt giáo án')}
-            </button>
           </div>
         }
       />
 
+      <ol className="plan-steps" aria-label={t("Các bước soạn giáo án", "Plan building steps")}>
+        {PLAN_STEPS.map((item) => (
+          <li key={item.id} className="plan-step">
+            <button
+              type="button"
+              className={`plan-step__button ${step === item.id ? 'is-active' : ''} ${step > item.id ? 'is-done' : ''}`}
+              aria-current={step === item.id ? 'step' : undefined}
+              onClick={() => goToStep(item.id)}
+            >
+              <span className="plan-step__index" aria-hidden="true">{step > item.id ? '✓' : item.id}</span>
+              <span className="plan-step__label">{t(item.vi, item.en)}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+
       {planError && <p className="form-error" role="alert">{t(planError)}</p>}
 
-      {/* Plan Meta Information Card */}
-      <div className="plan-meta-card">
+      {/* Bước 1: thông tin kế hoạch */}
+      {step === 1 && <div className="plan-meta-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 className="portal-card-title" style={{ margin: 0, fontSize: '1.2rem' }}>
@@ -554,12 +621,10 @@ export function CoachTrainingPlanPage() {
             {t("Lưu ý sức khỏe: ")}<strong>{selectedMember.healthNotes || t('Bình thường')}</strong>
           </div>
         </div>
-      </div>
+      </div>}
 
-      <CoachHealthMetrics memberId={selectedMember.id} memberName={selectedMember.fullName} onMetricsChange={handleHealthMetricsChange} />
-
-      {/* Main Workspace: Day Selector & Exercise Form */}
-      <div className="portal-card">
+      {/* Bước 2: bài tập theo ngày */}
+      {step === 2 && <div className="portal-card">
         {/* AC: Tab chọn ngày trong tuần */}
         <div className="portal-tabs plan-day-tabs" role="tablist" aria-label={t("Các ngày trong tuần")}>
           {DAYS_OF_WEEK.map((d) => {
@@ -765,6 +830,55 @@ export function CoachTrainingPlanPage() {
             </div>
           )}
         </div>
+      </div>}
+
+      {/* Bước 3: xem lại & kích hoạt */}
+      {step === 3 && <div className="plan-meta-card plan-review">
+        <h2 className="portal-card-title" style={{ margin: '0 0 16px', fontSize: '1.2rem' }}>{t("Xem lại giáo án")}</h2>
+        <div className="kv-list">
+          <div className="kv-row"><span>{t("Tên giáo án")}</span><strong>{planTitle}</strong></div>
+          <div className="kv-row"><span>{t("Học viên thụ hưởng")}</span><strong>{selectedMember.fullName} ({selectedMember.memberCode})</strong></div>
+          {isManager && <div className="kv-row"><span>{t("Huấn luyện viên phụ trách")}</span><strong>{coaches.find((c) => c.id === selectedCoachId)?.fullName ?? '—'}</strong></div>}
+          <div className="kv-row"><span>{t("Thời gian áp dụng")}</span><strong>{formatCenterDate(startDate)} → {formatCenterDate(endDate)}</strong></div>
+          <div className="kv-row"><span>{t("Mục tiêu thể lực")}</span><strong>{planGoal}</strong></div>
+          <div className="kv-row"><span>{t("Lưu ý sức khỏe")}</span><strong>{selectedMember.healthNotes || t('Bình thường')}</strong></div>
+        </div>
+        <div className="plan-review__days">
+          {DAYS_OF_WEEK.filter((d) => countByDay[d.id] > 0).map((d) => (
+            <div key={d.id} className="plan-review__day">
+              <strong>{t(d.name)}</strong>
+              <span>{exercises.filter((item) => item.dayOfWeek === d.id).map((item) => item.exerciseName).join(' · ')}</span>
+            </div>
+          ))}
+          {exercises.length === 0 && <p className="muted">{t("Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.")}</p>}
+        </div>
+        <p className="plan-review__total">{t("Tổng số: ")}<strong>{exercises.length} {t(" động tác")}</strong>{t(" được thiết lập trong tuần")}</p>
+        {lastSavedTime && (
+          <p className="plan-saved-badge" role="status">
+            {t("Đã kích hoạt (")}{lastSavedTime}){' '}
+            {savedPlanLink && <Link to="/coach/saved-plans">{t("Xem giáo án đã lưu")}</Link>}
+          </p>
+        )}
+        <div className="form-actions" style={{ marginTop: 16 }}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void handleSavePlan()}
+            disabled={isSaving || (isManager && selectedCoachId == null)}
+            title={isManager && selectedCoachId == null ? t('Chọn huấn luyện viên phụ trách để lưu') : undefined}
+          >
+            {isSaving ? t('Đang lưu...') : t('Lưu & Kích hoạt giáo án')}
+          </button>
+        </div>
+      </div>}
+
+      <div className="plan-step-nav">
+        <button type="button" className="btn-secondary" onClick={() => goToStep((step - 1) as PlanStep)} disabled={step === 1}>
+          {t("Quay lại")}</button>
+        {step < PLAN_STEPS.length && (
+          <button type="button" className="btn-primary" onClick={() => goToStep((step + 1) as PlanStep)}>
+            {t("Tiếp tục")}</button>
+        )}
       </div>
 
       {/* AC: Modal Tương Tác AI Gợi Ý Giáo Án */}
@@ -883,7 +997,7 @@ export function CoachTrainingPlanPage() {
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button type="button" className="btn-secondary" onClick={() => setIsAiModalOpen(false)}>
                     {t("Hủy bỏ")}</button>
-                  <button type="button" className="btn-primary btn-ai-sparkle" onClick={handleApplyAiPlan}>
+                  <button type="button" className="btn-primary btn-ai-sparkle" onClick={() => void handleApplyAiPlan()}>
                     <span>{t("Áp dụng vào giáo án")}</span>
                   </button>
                 </div>
@@ -893,7 +1007,6 @@ export function CoachTrainingPlanPage() {
         </Modal>
       )}
 
-      <SavedTrainingPlans refreshKey={plansRefresh} />
       {editingExercise && <Modal title={t("Sửa bài tập")} onClose={() => setEditingExercise(null)}>
         <form className="stack" onSubmit={event => {
           event.preventDefault();
@@ -908,7 +1021,7 @@ export function CoachTrainingPlanPage() {
           <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEditingExercise(null)}>{t("Hủy")}</button><button type="submit" className="btn-primary">{t("Lưu bài tập")}</button></div>
         </form>
       </Modal>}
-
+      {confirmDialog}
     </div>
   );
 }

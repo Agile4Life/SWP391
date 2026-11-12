@@ -108,11 +108,6 @@ class ClassServiceRecurringTest {
         });
     }
 
-    private CreateRecurringClassRequest monthly(LocalDate start, LocalDate end, List<Integer> days) {
-        return new CreateRecurringClassRequest("Yoga Monthly", 1L, 2L, 3L, 20, "all", null, new BigDecimal("500000"),
-                start, end, null, LocalTime.of(7, 0), LocalTime.of(8, 30), "monthly", days);
-    }
-
     private List<LocalDate> savedDates() {
         var captor = org.mockito.ArgumentCaptor.forClass(ClassSession.class);
         verify(sessions, atLeastOnce()).saveAndFlush(captor.capture());
@@ -120,40 +115,25 @@ class ClassServiceRecurringTest {
     }
 
     @Test
-    void aMonthlyCourseMeetsOnTheChosenDaysOfEachMonth() {
+    void aWeeklyCourseMeetsOnTheChosenWeekdaysEveryWeek() {
         stubCatalog();
 
-        GymClassDto result = classService.createRecurringClass(
-                monthly(LocalDate.of(2026, 11, 10), LocalDate.of(2027, 1, 31), List.of(20, 5)));
+        GymClassDto result = classService.createRecurringClass(new CreateRecurringClassRequest("Yoga", 1L, 2L, 3L, 20, "all", null,
+                BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 13), List.of("MONDAY", "WEDNESDAY"),
+                LocalTime.of(7, 0), LocalTime.of(8, 30)));
 
-        assertEquals("monthly", result.repeatType());
-        assertEquals("5,20", result.monthDays());
-        assertNull(result.recurringDays());
-        // Nov 5 is before the start; Nov 20, Dec 5, Dec 20, Jan 5, Jan 20.
-        assertEquals(List.of(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 5), LocalDate.of(2026, 12, 20),
-                LocalDate.of(2027, 1, 5), LocalDate.of(2027, 1, 20)), savedDates());
+        assertEquals("MONDAY,WEDNESDAY", result.recurringDays());
+        assertEquals(List.of(LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 2), LocalDate.of(2026, 12, 7),
+                LocalDate.of(2026, 12, 9)), savedDates());
     }
 
     @Test
-    void aMonthlyCourseDefaultsToTheDayOfTheStartDateAndClampsShortMonths() {
-        stubCatalog();
-
-        classService.createRecurringClass(monthly(LocalDate.of(2026, 11, 30), LocalDate.of(2027, 3, 31), null));
-
-        // The 30th, but February has only 28 days in 2027.
-        assertEquals(List.of(LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 30), LocalDate.of(2027, 1, 30),
-                LocalDate.of(2027, 2, 28), LocalDate.of(2027, 3, 30)), savedDates());
-    }
-
-    @Test
-    void aWeeklyCourseStillNeedsWeekdaysAndAMonthlyOneRejectsBadDays() {
+    void aWeeklyCourseStillNeedsWeekdays() {
         stubCatalog();
         CreateRecurringClassRequest weeklyWithoutDays = new CreateRecurringClassRequest("Yoga", 1L, 2L, 3L, 20, "all", null,
                 BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 11), List.of(),
                 LocalTime.of(7, 0), LocalTime.of(8, 30));
         assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
                 () -> classService.createRecurringClass(weeklyWithoutDays));
-        assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
-                () -> classService.createRecurringClass(monthly(LocalDate.of(2026, 11, 30), LocalDate.of(2027, 1, 31), List.of(40))));
     }
 }

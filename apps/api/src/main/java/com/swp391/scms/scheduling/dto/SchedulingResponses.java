@@ -30,22 +30,8 @@ public final class SchedulingResponses {
             LocalDate endDate,
             String recurringDays,
             LocalTime startTime,
-            LocalTime endTime,
-            /** {@code weekly} or {@code monthly}. */
-            String repeatType,
-            /** Days of the month of a monthly course, for example "5,20". */
-            String monthDays
+            LocalTime endTime
     ) {
-        public GymClassDto(
-                Long id, String name, Long disciplineId, String disciplineName, Long coachId, String coachName,
-                Long roomId, String roomName, int capacity, String level, String description, String status,
-                java.math.BigDecimal price, LocalDate startDate, LocalDate endDate, String recurringDays,
-                LocalTime startTime, LocalTime endTime
-        ) {
-            this(id, name, disciplineId, disciplineName, coachId, coachName, roomId, roomName, capacity, level,
-                    description, status, price, startDate, endDate, recurringDays, startTime, endTime, "weekly", null);
-        }
-
         public GymClassDto(
                 Long id,
                 String name,
@@ -60,7 +46,7 @@ public final class SchedulingResponses {
                 String description,
                 String status
         ) {
-            this(id, name, disciplineId, disciplineName, coachId, coachName, roomId, roomName, capacity, level, description, status, java.math.BigDecimal.ZERO, null, null, null, null, null, "weekly", null);
+            this(id, name, disciplineId, disciplineName, coachId, coachName, roomId, roomName, capacity, level, description, status, java.math.BigDecimal.ZERO, null, null, null, null, null);
         }
     }
 

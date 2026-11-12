@@ -63,7 +63,7 @@ interface WeeklyTimetableProps {
 const MINUTE_MS = 60_000;
 /** Dưới mốc này bảng chuyển sang xem từng ngày thay vì 7 cột hẹp cuộn ngang. */
 const NARROW_QUERY = '(max-width: 767px)';
-const HOUR_PX = 72;
+const HOUR_PX = 64;
 const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
 function useNow(): Date {
@@ -342,14 +342,10 @@ export function WeeklyTimetable({
                       aria-label={event.ariaLabel}
                       disabled={disabled}
                       aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
-                      title={[event.title, range, event.meta, event.badge].filter(Boolean).join(' · ')}
+                      title={[event.title, range, event.meta, event.detail, event.badge].filter(Boolean).join(' · ')}
                       onClick={() => onEventClick(event.id)}
                     >
-                      {event.badge && (
-                        <span className="mcal__event-top">
-                          <span className="mcal__event-badge">{event.badge}</span>
-                        </span>
-                      )}
+                      {/* Khối chỉ hiện tên và phòng; giờ, sĩ số, trạng thái, HLV xem ở chi tiết khi bấm. */}
                       <strong className="mcal__event-title">{event.title}</strong>
                       {event.meta && <span className="mcal__event-place">{event.meta}</span>}
                     </button>

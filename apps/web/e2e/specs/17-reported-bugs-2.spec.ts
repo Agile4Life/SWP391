@@ -60,7 +60,7 @@ test.describe('Mục 2–3 — lịch lớp khớp buổi học', () => {
     const classes = (await api<any[]>('manager', 'GET', '/classes')).data as any[];
     const sessions = (await api<any[]>('manager', 'GET', `/classes/sessions?fromDate=${isoDay(-40)}&toDate=${isoDay(60)}`)).data as any[];
     const names = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-    for (const c of classes.filter((x) => x.repeatType !== 'monthly')) {
+    for (const c of classes) {
       expect(c.recurringDays, `${c.name} có thứ học`).toBeTruthy();
       const days = String(c.recurringDays).split(',');
       for (const s of sessions.filter((x) => x.classId === c.id)) {
@@ -213,7 +213,7 @@ test.describe('Mục 12 — lễ tân xem lịch sử yêu cầu gói đã xử 
     expect((await apiWith(m.token, 'GET', '/memberships/subscriptions/requests/history')).status).toBe(403);
 
     const page = await browser.newPage({ storageState: 'e2e/.auth/staff.json' });
-    await page.goto('/staff/reception');
+    await page.goto('/staff/reception-history');
     await settled(page);
     const section = page.getByTestId('request-history');
     await expect(section).toContainText('Lịch sử xử lý yêu cầu gói tập');

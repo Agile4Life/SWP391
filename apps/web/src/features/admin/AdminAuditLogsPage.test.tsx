@@ -1,10 +1,11 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ManagerAuditLogsPage } from './ManagerAuditLogsPage';
+import { AdminAuditLogsPage } from './AdminAuditLogsPage';
 import { auditApi, type AuditLogItem, type ClassOccupancyItem } from './auditApi';
+import { setLanguage } from '../../shared/i18n/language';
 
-describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp đầy Lớp)', () => {
+describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp đầy Lớp)', () => {
   let host: HTMLDivElement;
   let root: Root;
 
@@ -64,6 +65,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
   ];
 
   beforeEach(() => {
+    setLanguage('vi');
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -110,16 +112,17 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
       root.unmount();
     });
     host.remove();
+    setLanguage('vi');
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
 
   it('renders audit log table with actors, actions and pagination (AC 1)', async () => {
     await act(async () => {
-      root.render(<ManagerAuditLogsPage />);
+      root.render(<AdminAuditLogsPage />);
     });
 
-    expect(host.textContent).toContain('Kiểm toán & Giám sát vận hành');
+    expect(host.textContent).toContain('Nhật ký & lấp đầy lớp');
     expect(host.textContent).toContain('Vũ Hoàng Nam');
     expect(host.textContent).toContain('Nguyễn Thu Trang');
     expect(host.textContent).toContain('UPDATE');
@@ -131,7 +134,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
 
   it('allows filtering by action and triggers API reload (AC 1)', async () => {
     await act(async () => {
-      root.render(<ManagerAuditLogsPage />);
+      root.render(<AdminAuditLogsPage />);
     });
 
     const actionSelect = (host.querySelector('select[aria-label="Lọc theo hành động"]') ||
@@ -150,7 +153,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
 
   it('opens diff modal and displays old_value vs new_value comparison (AC 2)', async () => {
     await act(async () => {
-      root.render(<ManagerAuditLogsPage />);
+      root.render(<AdminAuditLogsPage />);
     });
 
     const diffBtn = host.querySelector('button[aria-label="Xem diff bản ghi #101"]') as HTMLButtonElement;
@@ -167,11 +170,48 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
     expect(host.textContent).toContain('active');
   });
 
+  it('filters the current page by actor name or email', async () => {
+    await act(async () => { root.render(<AdminAuditLogsPage />); });
+    const input = host.querySelector('input[aria-label="Tìm kiếm người thực hiện"]') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'trang.nguyen');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.textContent).toContain('Nguyễn Thu Trang');
+    expect(host.textContent).not.toContain('Vũ Hoàng Nam');
+  });
+
+  it('loads the next page and resets pagination when entity filter changes', async () => {
+    vi.mocked(auditApi.getAuditLogs).mockResolvedValue({ content: mockLogs, totalElements: 16, totalPages: 2, number: 0, size: 8 });
+    await act(async () => { root.render(<AdminAuditLogsPage />); });
+    await act(async () => { (host.querySelector('button[aria-label="Trang sau →"]') as HTMLButtonElement).click(); });
+    expect(auditApi.getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
+    const select = host.querySelector('select[aria-label="Lọc theo đối tượng"]') as HTMLSelectElement;
+    await act(async () => {
+      select.value = 'payments';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(auditApi.getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ entityType: 'payments', page: 0 }));
+  });
+
+  it('switches audit, Diff and occupancy labels to English without reloading audit data', async () => {
+    await act(async () => { root.render(<AdminAuditLogsPage />); });
+    await act(async () => { setLanguage('en'); });
+    expect(host.textContent).toContain('Audit log & class fill');
+    expect(host.querySelector('input[aria-label="Search actor"]')).not.toBeNull();
+    await act(async () => { (host.querySelector('button[aria-label="View record diff #101"]') as HTMLButtonElement).click(); });
+    expect(host.textContent).toContain('pending_payment');
+    expect(host.textContent).toContain('View diff');
+    expect(auditApi.getAuditLogs).toHaveBeenCalledTimes(1);
+    await act(async () => { (host.querySelectorAll('button[role="tab"]')[1] as HTMLButtonElement).click(); });
+    expect(host.textContent).toContain('Average occupancy');
+  });
+
   it('shows an error with retry when logs fail to load, never sample rows', async () => {
     vi.mocked(auditApi.getAuditLogs).mockRejectedValueOnce(new Error('Máy chủ không phản hồi'));
 
     await act(async () => {
-      root.render(<ManagerAuditLogsPage />);
+      root.render(<AdminAuditLogsPage />);
     });
 
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Máy chủ không phản hồi');
@@ -188,7 +228,7 @@ describe('ManagerAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấ
 
   it('switches to occupancy tab and renders visual occupancy chart (AC 3)', async () => {
     await act(async () => {
-      root.render(<ManagerAuditLogsPage />);
+      root.render(<AdminAuditLogsPage />);
     });
 
     const occupancyTabBtn = host.querySelector('button[role="tab"]:nth-child(2)') as HTMLButtonElement;

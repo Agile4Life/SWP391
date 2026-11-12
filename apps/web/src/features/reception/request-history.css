@@ -1,0 +1,3 @@
+/* Bộ lọc của lịch sử xử lý: các ô chọn rộng cố định, nằm cùng một hàng với nút làm mới */
+.request-history__filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.request-history__filters .ui-select { width: 168px; }

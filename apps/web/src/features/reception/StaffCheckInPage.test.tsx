@@ -38,8 +38,8 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function renderPage() {
-  await act(async () => root.render(<StaffCheckInPage />));
+async function renderPage(mode: 'in' | 'out' = 'in') {
+  await act(async () => root.render(<StaffCheckInPage mode={mode} />));
 }
 
 function checkoutButtons() {
@@ -48,7 +48,7 @@ function checkoutButtons() {
 
 it('keeps every open visit available for checkout, including visits older than the newest ten scans', async () => {
   history = Array.from({ length: 11 }, (_, index) => ({ ...visit, id: index + 1, memberName: `Member ${index + 1}` }));
-  await renderPage();
+  await renderPage('out');
   expect(checkoutButtons()).toHaveLength(11);
   expect(host.textContent).toContain('Member 11');
   const recent = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('10 lượt gần nhất'))!;
@@ -57,8 +57,23 @@ it('keeps every open visit available for checkout, including visits older than t
 });
 
 it('places the checkout action before horizontally scrollable history details', async () => {
-  await renderPage();
+  await renderPage('out');
   expect(host.querySelector('tbody tr td:first-child button')?.textContent).toContain('Checkout');
+});
+
+it('check-in tab scans member cards and lists recent entries without checkout actions', async () => {
+  await renderPage();
+  expect(host.querySelector('#checkin-qr-input')).not.toBeNull();
+  expect(host.textContent).toContain('Hội viên quét QR cổng');
+  expect(host.textContent).toContain('Hội viên đang tập');
+  expect(checkoutButtons()).toHaveLength(0);
+});
+
+it('check-out tab shows the gate QR for leaving instead of the member-card scanner', async () => {
+  await renderPage('out');
+  expect(host.querySelector('#checkin-qr-input')).toBeNull();
+  expect(host.textContent).toContain('Hội viên quét QR để check-out');
+  expect(host.textContent).not.toContain('Quét QR thẻ hội viên bằng camera');
 });
 
 it('shows the granted member photo, package and days remaining from the scan', async () => {
@@ -78,7 +93,7 @@ it('shows the granted member photo, package and days remaining from the scan', a
 });
 
 it('checks out through the real API client and removes the visit from the open list', async () => {
-  await renderPage();
+  await renderPage('out');
   await act(async () => checkoutButtons()[0].click());
   expect(fetch).toHaveBeenCalledWith('/api/v1/check-in/1/checkout', expect.objectContaining({ method: 'POST' }));
   expect(checkoutButtons()).toHaveLength(0);
@@ -88,7 +103,7 @@ it('checks out through the real API client and removes the visit from the open l
 
 it('keeps checkout available after a server failure and explains the error', async () => {
   checkoutResponse = Promise.resolve(new Response(JSON.stringify({ message: 'Không thể ghi nhận ra về' }), { status: 500 }));
-  await renderPage();
+  await renderPage('out');
   await act(async () => checkoutButtons()[0].click());
   expect(checkoutButtons()).toHaveLength(1);
   expect(checkoutButtons()[0].disabled).toBe(false);
@@ -98,7 +113,7 @@ it('keeps checkout available after a server failure and explains the error', asy
 it('submits one checkout request when the same action is clicked repeatedly', async () => {
   let finish!: (response: Response) => void;
   checkoutResponse = new Promise((resolve) => { finish = resolve; });
-  await renderPage();
+  await renderPage('out');
   const button = checkoutButtons()[0];
   await act(async () => { button.click(); button.click(); });
   expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith('/checkout'))).toHaveLength(1);

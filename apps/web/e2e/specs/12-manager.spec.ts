@@ -117,7 +117,7 @@ test.describe('Quản lý: tài khoản nhân sự', () => {
   });
 });
 
-test.describe('Quản lý: báo cáo & nhật ký', () => {
+test.describe('Quản lý: báo cáo', () => {
   test('báo cáo doanh thu: KPI, lọc 7/30 ngày, khoảng ngày sai bị chặn, xuất báo cáo', async ({ page }) => {
     await page.goto('/manager/reports');
     await settled(page);
@@ -130,12 +130,15 @@ test.describe('Quản lý: báo cáo & nhật ký', () => {
     if (file) expect(file.suggestedFilename()).toMatch(/\.csv$/i);
   });
 
-  test('nhật ký kiểm toán: tìm kiếm, lọc hành động/đối tượng và xem diff', async ({ page }) => {
-    await page.goto('/manager/audit-logs');
+  test('không có menu Audit và không truy cập được URL Admin hoặc URL cũ', async ({ page }) => {
+    await page.goto('/manager/reports');
     await settled(page);
-    await field(page, 'Tìm kiếm người thực hiện').fill('manager');
-    await page.getByRole('button', { name: 'Xem Diff' }).first().click();
-    await expect(page.getByRole('dialog').or(page.locator('main')).first()).toBeVisible();
+    await expect(page.locator('a[href="/admin/audit-logs"], a[href="/manager/audit-logs"]')).toHaveCount(0);
+    for (const path of ['/admin/audit-logs', '/manager/audit-logs']) {
+      await page.goto(path);
+      await expect(page).not.toHaveURL(/\/(admin|manager)\/audit-logs/);
+      await expect(page.getByRole('heading', { name: 'Nhật ký & lấp đầy lớp' })).toHaveCount(0);
+    }
   });
 
   test('đánh giá HLV và theo dõi HLV & học viên mở được', async ({ page }) => {
@@ -150,6 +153,14 @@ test.describe('Quản lý: báo cáo & nhật ký', () => {
 
 test.describe('Admin: tài khoản & phân quyền', () => {
   test.use({ storageState: authFile('admin') });
+  test('nhật ký kiểm toán: tìm kiếm và xem diff tại route Admin', async ({ page }) => {
+    await page.goto('/admin/audit-logs');
+    await settled(page);
+    await expect(page.locator('a[href="/admin/audit-logs"]').first()).toBeVisible();
+    await field(page, 'Tìm kiếm người thực hiện').fill('manager');
+    await page.getByRole('button', { name: 'Xem Diff' }).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
   test('danh sách tài khoản, tìm kiếm, lọc vai trò', async ({ page }) => {
     await page.goto('/admin/users');
     await settled(page);

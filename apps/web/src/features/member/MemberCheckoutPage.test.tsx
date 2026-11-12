@@ -321,4 +321,71 @@ describe('MemberCheckoutPage Component', () => {
     );
   });
 
+  it('allows member to refresh KYC verification status when pending and enables payment once approved', async () => {
+    vi.mocked(profileApi.getProfile).mockResolvedValueOnce({
+      userId: 10,
+      fullName: 'Hội Viên Đang Chờ',
+      email: 'pending@sol.com',
+      phone: '0901234567',
+      dob: '1995-05-10',
+      gender: 'male',
+      avatarUrl: null,
+      address: '123 Le Loi',
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: false,
+      kycStatus: 'PENDING',
+      citizenId: '001200001234',
+      documentType: 'CCCD',
+    });
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
+
+    await renderCheckout('/member/packages/checkout?packageId=1');
+
+    const pendingSection = host.querySelector('[data-testid="kyc-pending"]');
+    expect(pendingSection).not.toBeNull();
+    expect(pendingSection?.textContent).toContain('Hồ sơ định danh đang chờ lễ tân duyệt');
+
+    // Nút refresh phải hiển thị trong section KYC pending
+    const refreshBtn = pendingSection?.querySelector('button.refresh-button') as HTMLButtonElement | null;
+    expect(refreshBtn).not.toBeNull();
+
+    // Giả lập lễ tân phê duyệt thành công, lần gọi getProfile tiếp theo trả về identityVerified: true
+    vi.mocked(profileApi.getProfile).mockResolvedValueOnce({
+      userId: 10,
+      fullName: 'Hội Viên Đang Chờ',
+      email: 'pending@sol.com',
+      phone: '0901234567',
+      dob: '1995-05-10',
+      gender: 'male',
+      avatarUrl: null,
+      address: '123 Le Loi',
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: true,
+      kycStatus: 'APPROVED',
+      citizenId: '001200001234',
+      documentType: 'CCCD',
+    });
+
+    await act(async () => refreshBtn?.click());
+
+    // Sau khi bấm refresh, không cần reload trang:
+    // 1. kyc-pending biến mất
+    expect(host.querySelector('[data-testid="kyc-pending"]')).toBeNull();
+    // 2. Trạng thái đã xác minh hiển thị
+    expect(host.querySelector('.kyc-verified')?.textContent).toContain('Đã xác minh định danh');
+    // 3. Nút thanh toán được kích hoạt (enabled)
+    const walletBtn = host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement | null;
+    expect(walletBtn).not.toBeNull();
+    expect(walletBtn?.disabled).toBe(false);
+  });
 });

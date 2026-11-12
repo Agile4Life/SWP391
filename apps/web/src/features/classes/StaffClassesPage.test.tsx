@@ -93,6 +93,31 @@ describe('StaffClassesPage (SCRUM-131 & SCRUM-132)', () => {
     expect(host.querySelector('[data-testid="view-class-101"]')).not.toBeNull();
   });
 
+  it('class detail previews the next five sessions and reveals the rest on "Xem thêm"', async () => {
+    vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '2', name: 'Lễ tân Lan', identifier: 'reception@scms.local', role: 'STAFF' });
+    const day = (n: number) => `2026-11-${String(n).padStart(2, '0')}`;
+    vi.spyOn(classesApi, 'getSessions').mockResolvedValue([
+      ...[1, 2, 3].map((n) => ({ id: n, classId: 101, sessionDate: day(n), startTime: '18:00:00', endTime: '19:15:00', status: 'completed' as const })),
+      ...[12, 13, 14, 15, 16, 17, 18, 19].map((n) => ({ id: n, classId: 101, sessionDate: day(n), startTime: '18:00:00', endTime: '19:15:00', status: 'scheduled' as const })),
+    ]);
+    await act(async () => { root.render(<StaffClassesPage />); });
+    await openListView();
+    await act(async () => { host.querySelector<HTMLButtonElement>('[data-testid="view-class-101"]')!.click(); });
+
+    const dialog = () => document.body.querySelector('[role="dialog"]')!;
+    const rows = () => dialog().querySelectorAll('.badge-neutral').length;
+    expect(rows()).toBe(5);
+    expect(dialog().textContent).toContain('12/11/2026');
+    expect(dialog().textContent).not.toContain('01/11/2026');
+    const more = [...dialog().querySelectorAll('button')].find((b) => b.textContent?.includes('Xem thêm 6 buổi'))!;
+    await act(async () => more.click());
+    expect(rows()).toBe(11);
+    expect(dialog().textContent).toContain('01/11/2026');
+    const less = [...dialog().querySelectorAll('button')].find((b) => b.textContent === 'Thu gọn')!;
+    await act(async () => less.click());
+    expect(rows()).toBe(5);
+  });
+
   it('shows edit, reschedule, and 2-step double confirm delete for Manager (MANAGER role)', async () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
       id: '1',
@@ -308,35 +333,11 @@ it('creates a recurring course with advance start date, recurring days and fee',
   );
 });
 
-it('creates a monthly course on the chosen days of the month', async () => {
-  vi.spyOn(classesApi, 'getAvailableRooms').mockResolvedValue([{ id: 2, name: 'Studio A', capacity: 20, location: 'T1', status: 'available' }]);
-  vi.spyOn(classesApi, 'getActiveCoaches').mockResolvedValue([{ id: 10, fullName: 'HLV Quân', email: 'coach@test.com', status: 'active' }]);
-  const createRecurringSpy = vi.spyOn(classesApi, 'createRecurringClass').mockResolvedValue({
-    id: 998, name: 'Monthly Yoga', disciplineId: 1, coachId: 10, roomId: 2, capacity: 20, level: 'all', status: 'ACTIVE',
-  });
+it('offers only weekly repetition: weekday chips, no monthly option', async () => {
   await openForm();
-  const setValue = async (element: HTMLInputElement | HTMLSelectElement, value: string) => act(async () => {
-    const proto = element instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
-    Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(element, value);
-    element.dispatchEvent(new Event(element instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
-  });
-  await setValue(host.querySelector<HTMLInputElement>('#class-name')!, 'Monthly Yoga');
-  await setValue(host.querySelector<HTMLSelectElement>('#class-coach')!, '10');
-  await setValue(host.querySelector<HTMLSelectElement>('#class-room')!, '2');
-
-  const monthly = [...host.querySelectorAll<HTMLButtonElement>('button[aria-pressed]')].find((button) => button.textContent === 'Theo tháng')!;
-  await act(async () => monthly.click());
-  expect(host.querySelector('[data-testid="month-days"]')).not.toBeNull();
-  for (const day of ['20', '5']) {
-    const chip = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="month-days"] button')].find((button) => button.textContent === day)!;
-    await act(async () => chip.click());
-  }
-  await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="submit-class-button"]')!.click());
-
-  const payload = createRecurringSpy.mock.calls[0][0];
-  expect(payload.repeatType).toBe('monthly');
-  expect(payload.monthDays).toEqual([5, 20]);
-  expect(payload.recurringDays).toBeUndefined();
+  expect(host.textContent).not.toContain('Theo tháng');
+  expect(host.querySelector('[data-testid="month-days"]')).toBeNull();
+  expect(host.textContent).toContain('Các buổi học trong tuần');
 });
 
 });
@@ -377,7 +378,8 @@ describe('StaffClassesPage weekly timetable', () => {
     await render();
     expect(host.querySelector('[data-testid="view-timetable"]')!.getAttribute('aria-selected')).toBe('true');
     expect(host.querySelector('.mcal__event')!.textContent).toContain('Morning Yoga Flow');
-    expect(host.querySelector('.mcal__event')!.textContent).toContain('4/15');
+    expect(host.querySelector('.mcal__event')!.textContent).not.toContain('4/15');
+    expect(host.querySelector('.mcal__event')!.getAttribute('title')).toContain('4/15');
   });
 
   it('lets a manager click an empty slot to prefill the create form', async () => {

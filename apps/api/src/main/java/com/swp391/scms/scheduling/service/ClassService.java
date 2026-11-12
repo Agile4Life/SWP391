@@ -258,23 +258,17 @@ public class ClassService {
         }
         SessionEligibility.ensureFuture(request.startDate(), request.startTime(), clock);
 
-        boolean monthly = "monthly".equalsIgnoreCase(request.repeatType());
-        List<Integer> monthDays = monthly ? resolveMonthDays(request) : List.of();
         List<LocalDate> sessionDates = new ArrayList<>();
-        if (monthly) {
-            sessionDates.addAll(monthlyDates(request.startDate(), request.endDate(), monthDays));
-        } else {
-            if (request.recurringDays() == null || request.recurringDays().isEmpty()) {
-                throw new BadRequestException("SCHEDULING_NO_RECURRING_DAYS", "error.scheduling.no_recurring_days", null, "Vui lòng chọn ít nhất một ngày trong tuần");
-            }
-            java.util.Set<java.time.DayOfWeek> selectedDays = request.recurringDays().stream()
-                    .map(String::toUpperCase)
-                    .map(java.time.DayOfWeek::valueOf)
-                    .collect(java.util.stream.Collectors.toSet());
-            for (LocalDate d = request.startDate(); !d.isAfter(request.endDate()); d = d.plusDays(1)) {
-                if (selectedDays.contains(d.getDayOfWeek())) {
-                    sessionDates.add(d);
-                }
+        if (request.recurringDays() == null || request.recurringDays().isEmpty()) {
+            throw new BadRequestException("SCHEDULING_NO_RECURRING_DAYS", "error.scheduling.no_recurring_days", null, "Vui lòng chọn ít nhất một ngày trong tuần");
+        }
+        java.util.Set<java.time.DayOfWeek> selectedDays = request.recurringDays().stream()
+                .map(String::toUpperCase)
+                .map(java.time.DayOfWeek::valueOf)
+                .collect(java.util.stream.Collectors.toSet());
+        for (LocalDate d = request.startDate(); !d.isAfter(request.endDate()); d = d.plusDays(1)) {
+            if (selectedDays.contains(d.getDayOfWeek())) {
+                sessionDates.add(d);
             }
         }
         if (sessionDates.isEmpty()) {
@@ -304,9 +298,7 @@ public class ClassService {
         gymClass.setPrice(request.price() != null ? request.price() : java.math.BigDecimal.ZERO);
         gymClass.setStartDate(request.startDate());
         gymClass.setEndDate(request.endDate());
-        gymClass.setRepeatType(monthly ? "monthly" : "weekly");
-        gymClass.setRecurringDays(monthly || request.recurringDays() == null ? null : String.join(",", request.recurringDays()));
-        gymClass.setMonthDays(monthly ? monthDays.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")) : null);
+        gymClass.setRecurringDays(String.join(",", request.recurringDays()));
         gymClass.setStartTime(request.startTime());
         gymClass.setEndTime(request.endTime());
 
@@ -326,38 +318,6 @@ public class ClassService {
         }
 
         return mapper.toDto(savedClass != null ? savedClass : gymClass);
-    }
-
-    /** Days of the month a monthly course meets on: the requested ones, or the day of the start date. */
-    private static List<Integer> resolveMonthDays(CreateRecurringClassRequest request) {
-        List<Integer> requested = request.monthDays() == null ? List.of() : request.monthDays().stream()
-                .filter(java.util.Objects::nonNull).distinct().sorted().toList();
-        if (requested.isEmpty()) {
-            return List.of(request.startDate().getDayOfMonth());
-        }
-        if (requested.stream().anyMatch(day -> day < 1 || day > 31)) {
-            throw new BadRequestException("SCHEDULING_INVALID_MONTH_DAYS", "error.scheduling.invalid_month_days", null,
-                    "Day of month must be between 1 and 31");
-        }
-        return requested;
-    }
-
-    /**
-     * Every chosen day of every month from {@code start} to {@code end}. A month shorter than the chosen day uses its
-     * last day (the 31st becomes the 30th, or the 28th/29th in February).
-     */
-    static List<LocalDate> monthlyDates(LocalDate start, LocalDate end, List<Integer> monthDays) {
-        java.util.TreeSet<LocalDate> dates = new java.util.TreeSet<>();
-        for (java.time.YearMonth month = java.time.YearMonth.from(start);
-             !month.isAfter(java.time.YearMonth.from(end)); month = month.plusMonths(1)) {
-            for (int day : monthDays) {
-                LocalDate date = month.atDay(Math.min(day, month.lengthOfMonth()));
-                if (!date.isBefore(start) && !date.isAfter(end)) {
-                    dates.add(date);
-                }
-            }
-        }
-        return new ArrayList<>(dates);
     }
 
     /**

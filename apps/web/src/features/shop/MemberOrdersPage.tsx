@@ -77,12 +77,10 @@ export function MemberOrdersPage({
   }, [activeTab, loadOrders]);
 
   const switchTab = (next: 'orders' | 'shop' | 'addresses') => {
-    if (next === 'addresses') {
-      setSearchParams({ tab: 'addresses' }, { replace: true });
-    } else if (next === 'shop') {
-      setSearchParams({ tab: 'shop' }, { replace: true });
-    } else {
+    if (next === defaultTab) {
       setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab: next }, { replace: true });
     }
   };
 
@@ -109,19 +107,19 @@ export function MemberOrdersPage({
         <button
           type="button"
           role="tab"
-          aria-selected={activeTab === 'orders'}
-          className={`portal-tab ${activeTab === 'orders' ? 'active' : ''}`}
-          onClick={() => switchTab('orders')}
-        >
-          {sourceText("Đơn hàng")}</button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={activeTab === 'shop'}
           className={`portal-tab ${activeTab === 'shop' ? 'active' : ''}`}
           onClick={() => switchTab('shop')}
         >
           {sourceText("Sản phẩm")}</button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'orders'}
+          className={`portal-tab ${activeTab === 'orders' ? 'active' : ''}`}
+          onClick={() => switchTab('orders')}
+        >
+          {sourceText("Đơn hàng")}</button>
         <button
           type="button"
           role="tab"

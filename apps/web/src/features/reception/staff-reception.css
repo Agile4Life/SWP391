@@ -1,19 +1,19 @@
-/* Quầy lễ tân: QR cổng thu gọn bên trái; tra cứu và hàng chờ thanh toán bên phải, form thu tiền ngay sau */
+/* Quầy lễ tân: tra cứu và danh sách "Cần xử lý" xếp dọc, form thu tiền ngay sau */
 .reception-top {
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   align-items: start;
   margin-bottom: 24px;
 }
 .reception-top__main { display: grid; gap: 24px; min-width: 0; }
-.reception-top .gate-qr-panel { margin-bottom: 0; }
-.reception-top .gate-qr-panel__image { width: min(100%, 200px); }
 .reception-checkout { margin-bottom: 24px; scroll-margin-top: 24px; }
 
-@media (max-width: 1100px) {
-  .reception-top { grid-template-columns: minmax(0, 1fr); }
-}
+/* "Cần xử lý": mọi việc đang chờ lễ tân (gói tập, buổi PT, đơn trải nghiệm, bảo lưu) trong một thẻ */
+.reception-todo { display: grid; gap: 10px; margin-top: 12px; min-width: 0; }
+.reception-todo__empty { padding: 24px 16px; text-align: center; color: var(--color-text-muted); font-size: 0.9rem; }
+/* Nhãn nhỏ cho biết mục thuộc loại việc nào; chỉ dùng màu trung tính + viền để không lệch bảng màu portal. */
+.reception-todo__tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--color-border-medium); background: var(--color-bg-card); color: var(--color-text-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
 
 @media (max-width: 767px) {
   .reception-top__search form { flex-wrap: wrap; }

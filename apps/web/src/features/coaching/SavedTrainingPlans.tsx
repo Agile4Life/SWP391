@@ -12,6 +12,7 @@ import { aiApi, type SavedTrainingPlan, type SavedTrainingPlanItem } from './aiA
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Bản nháp',
   active: 'Đang áp dụng',
+  superseded: 'Lịch sử',
   completed: 'Đã hoàn thành',
   cancelled: 'Đã hủy',
 };
@@ -80,8 +81,8 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   const remove = async (plan: SavedTrainingPlan) => {
     if (busyId !== null) return;
     const confirmed = await confirm({
-      title: plan.status === 'active' ? staffMessage('Ngừng áp dụng giáo án?', staffTranslation('Ngừng áp dụng giáo án?')) : staffMessage('Xóa giáo án nháp?', staffTranslation('Xóa giáo án nháp?')),
-      message: plan.status === 'active' ? staffMessage('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.', staffTranslation('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.')) : staffMessage(`Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`, `Training plan for ${plan.memberName ?? `member #${plan.memberId}`} will be deleted with all exercises. This cannot be undone.`),
+      title: plan.status === 'superseded' ? staffMessage('Xóa giáo án khỏi lịch sử?', 'Remove this plan from history?') : plan.status === 'active' ? staffMessage('Ngừng áp dụng giáo án?', staffTranslation('Ngừng áp dụng giáo án?')) : staffMessage('Xóa giáo án nháp?', staffTranslation('Xóa giáo án nháp?')),
+      message: plan.status === 'superseded' ? staffMessage('Giáo án sẽ bị gỡ khỏi lịch sử và không thể áp dụng lại. Lịch sử tập đã ghi nhận được giữ lại.', 'The plan is removed from history and can no longer be re-applied. Recorded workout history is kept.') : plan.status === 'active' ? staffMessage('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.', staffTranslation('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.')) : staffMessage(`Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`, `Training plan for ${plan.memberName ?? `member #${plan.memberId}`} will be deleted with all exercises. This cannot be undone.`),
       confirmLabel: staffMessage('Xóa', staffTranslation('Xóa')),
       danger: true,
     });
@@ -90,9 +91,39 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     try {
       await aiApi.deleteTrainingPlan(plan.id);
       setPlans((current) => current.filter((item) => item.id !== plan.id));
-      notify(plan.status === 'active' ? 'Đã ngừng áp dụng giáo án.' : 'Đã xóa giáo án nháp.', 'success');
+      notify(plan.status === 'superseded' ? 'Đã gỡ giáo án khỏi lịch sử.' : plan.status === 'active' ? 'Đã ngừng áp dụng giáo án.' : 'Đã xóa giáo án nháp.', 'success');
     } catch (err) {
       notify(errorMessage(err, 'Không thể xóa giáo án.'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const reapply = async (plan: SavedTrainingPlan) => {
+    if (busyId !== null) return;
+    // Chỉ giáo án đang áp dụng của cùng HLV cho hội viên này bị chuyển vào lịch sử; giáo án của HLV khác giữ nguyên.
+    const current = plans.find((item) => item.status === 'active' && item.memberId === plan.memberId && item.coachId === plan.coachId);
+    const confirmed = await confirm({
+      title: staffMessage('Áp dụng lại giáo án này?', 'Re-apply this training plan?'),
+      message: staffMessage(
+        current
+          ? `Giáo án này sẽ trở thành giáo án đang áp dụng của ${plan.memberName ?? `hội viên #${plan.memberId}`}. Giáo án "${current.goal || 'đang áp dụng'}" hiện tại sẽ chuyển vào lịch sử.`
+          : `Giáo án này sẽ trở thành giáo án đang áp dụng của ${plan.memberName ?? `hội viên #${plan.memberId}`}.`,
+        current
+          ? `This plan becomes the active plan for ${plan.memberName ?? `member #${plan.memberId}`}. The current plan "${current.goal || 'in use'}" moves to history.`
+          : `This plan becomes the active plan for ${plan.memberName ?? `member #${plan.memberId}`}.`),
+      confirmLabel: staffMessage('Áp dụng lại', 'Re-apply'),
+    });
+    if (!confirmed) return;
+    setBusyId(plan.id);
+    try {
+      await aiApi.reapplyTrainingPlan(plan.id);
+      load();
+      notify(current
+        ? staffMessage('Đã áp dụng lại giáo án. Giáo án trước đó của HLV này được chuyển vào lịch sử.', "Training plan re-applied. This coach's previous plan moved to history.")
+        : staffMessage('Đã áp dụng lại giáo án.', 'Training plan re-applied.'), 'success');
+    } catch (err) {
+      notify(errorMessage(err, 'Không thể áp dụng lại giáo án.'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -135,17 +166,21 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                     <td>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</td>
                     <td>{plan.items?.length ?? 0}</td>
                     <td>
-                      <span className={`badge ${plan.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
+                      <span className={`badge ${plan.status === 'active' ? 'badge-success' : plan.status === 'superseded' ? 'badge-neutral' : 'badge-warning'}`}>
                         {t(STATUS_LABEL[plan.status]) || plan.status}
                       </span>
                     </td>
                     <td className="actions">
                       <button type="button" className="btn-secondary btn-sm" onClick={() => setResultPlan(plan)}>{t("Kết quả")}</button>
+                      {plan.status === 'superseded' && (
+                        <button data-i18n-managed type="button" className="btn-primary btn-sm" disabled={busyId !== null} onClick={() => void reapply(plan)}>
+                          {t("Áp dụng lại")}</button>
+                      )}
                       {editable && (
                         <button data-i18n-managed type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => openEditor(plan)}>
                           {t("Sửa")}</button>
                       )}
-                      {editable && (
+                      {(editable || plan.status === 'superseded') && (
                         <button data-i18n-managed type="button" className="btn-danger btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
                           {t("Xóa")}</button>
                       )}

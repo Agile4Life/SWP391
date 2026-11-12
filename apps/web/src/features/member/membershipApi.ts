@@ -52,7 +52,7 @@ export interface Payment {
   createdAt: string;
   invoiceNumber: string | null;
   /** What the payment is for (server-derived); absent on endpoints that do not describe payments. */
-  serviceType?: 'MEMBERSHIP' | 'CLASS' | 'PT' | 'COURT' | 'SHOP' | 'OTHER' | null;
+  serviceType?: 'MEMBERSHIP' | 'CLASS' | 'PT' | 'COURT' | 'SHOP' | 'WALLET_TOPUP' | 'OTHER' | null;
   /** The paid item as stored data: package, class, coach + slot, court + slot or order code. */
   serviceName?: string | null;
   coachBookingId?: number | null;

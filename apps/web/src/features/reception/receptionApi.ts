@@ -56,6 +56,18 @@ export interface RequestHistoryItem {
   processedByName: string | null;
 }
 
+/** A wallet top-up the desk took (GET /wallet/counter-topups). */
+export interface CounterTopupHistoryItem {
+  paymentId: number;
+  memberId: number;
+  membershipCode: string | null;
+  memberName: string;
+  amount: number;
+  paymentMethod: string | null;
+  paidAt: string | null;
+  receivedByName: string | null;
+}
+
 export interface PendingSubscriptionItem {
   id: number;
   memberId: number;
@@ -248,6 +260,10 @@ export const receptionApi = {
   /** Lịch sử yêu cầu gói tập lễ tân đã xử lý (đã thu tiền hoặc đã hủy) trong `days` ngày gần nhất. */
   getRequestHistory: (days = 30): Promise<RequestHistoryItem[]> =>
     apiFetch<RequestHistoryItem[]>(`/memberships/subscriptions/requests/history?days=${days}`),
+
+  /** Lịch sử nạp tiền vào Ví SÖL tại quầy trong `days` ngày gần nhất. */
+  getCounterTopupHistory: (days = 30): Promise<CounterTopupHistoryItem[]> =>
+    apiFetch<CounterTopupHistoryItem[]>(`/wallet/counter-topups?days=${days}`),
 
   /**
    * Hủy yêu cầu đăng ký/gia hạn/nâng cấp gói tập đang chờ thanh toán (pending_payment)

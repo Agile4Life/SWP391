@@ -1,7 +1,7 @@
-.tt { --tt-hour: 64px; font-variant-numeric: tabular-nums; display: grid; gap: 12px; min-width: 0; }
-.tt__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.tt { --tt-hour: 64px; font-variant-numeric: tabular-nums; display: grid; gap: 8px; min-width: 0; }
+.tt__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .tt__nav { display: inline-flex; gap: 8px; }
-.tt__range { font-size: 15px; color: var(--portal-paper); }
+.tt__range { font-size: 14px; color: var(--portal-paper); }
 .tt__span[aria-pressed='true'] { border-color: var(--portal-salmon); color: var(--portal-salmon); }
 .tt__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--portal-muted); }
 .tt__legend li { display: inline-flex; align-items: center; gap: 6px; }
@@ -22,8 +22,8 @@
 .tt__grid.is-loading { opacity: .55; }
 
 /* Tiêu đề ngày dính khi cuộn trong khung */
-.tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); display: grid; gap: 2px; justify-items: center; padding: 8px 4px; border-left: 1px solid var(--portal-border); font-size: 12px; color: var(--portal-muted); }
-.tt__dayhead strong { font-size: 15px; color: var(--portal-paper); }
+.tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); display: grid; gap: 1px; justify-items: center; padding: 5px 4px; border-left: 1px solid var(--portal-border); font-size: 11px; color: var(--portal-muted); }
+.tt__dayhead strong { font-size: 14px; color: var(--portal-paper); }
 .tt__dayhead.is-today { background: color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-raised)); color: var(--portal-paper); }
 .tt__dayhead.is-today strong { color: var(--portal-salmon); }
 

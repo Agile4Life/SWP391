@@ -3,7 +3,6 @@ import { memberMessage, memberError } from '../member/memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { apiFetch, ApiError } from '../../shared/api/client';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
-import type { SkippedOccurrence } from '../../shared/lib/recurrence';
 
 export const COURT_DISCIPLINES = DISCIPLINES.filter(item => ['tennis', 'badminton', 'swimming'].includes(item.id));
 // Backend accepts only the canonical names, so aliases ("Tennis nâng cao") must not be offered as bookable.
@@ -29,14 +28,11 @@ export interface CourtBooking {
 }
 export interface BookingPage { content: CourtBooking[]; number: number; totalPages: number; totalElements: number }
 export interface BookCourtRequest { roomId: number; date: string; startTime: string; paymentMethod?: CourtPaymentMethod }
-export interface RecurringCourtRequest { roomId: number; startDate: string; startTime: string; period: 'week' | 'month'; daysOfWeek: number[]; paymentMethod?: CourtPaymentMethod }
-export interface RecurringCourtResult { booked: CourtBooking[]; skipped: SkippedOccurrence[] }
 const json = (method: string, body: unknown) => ({ method, body: JSON.stringify(body) });
 export const courtsApi = {
   courts: (discipline = '') => apiFetch<Court[]>(`/courts${discipline ? `?discipline=${encodeURIComponent(discipline)}` : ''}`),
   availability: (id: number, date: string) => apiFetch<CourtSlot[]>(`/courts/${id}/availability?date=${date}`),
   book: (body: BookCourtRequest) => apiFetch<CourtBooking>('/court-bookings', json('POST', body)),
-  bookRecurring: (body: RecurringCourtRequest) => apiFetch<RecurringCourtResult>('/court-bookings/recurring', json('POST', body)),
   quota: (date: string) => apiFetch<CourtQuota>(`/court-bookings/quota?date=${date}`),
   my: (page = 0) => apiFetch<BookingPage>(`/court-bookings/my?page=${page}&size=20`),
   list: (date: string, roomId = '', page = 0) => apiFetch<BookingPage>(`/court-bookings?date=${date}&page=${page}&size=20${roomId ? `&roomId=${encodeURIComponent(roomId)}` : ''}`),

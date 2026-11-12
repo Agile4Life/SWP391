@@ -9,12 +9,11 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { ApiError } from '../../shared/api/client';
-import { RecurrenceFields, RecurrenceSummary } from '../../shared/ui/RecurrenceFields';
-import { addDays, expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../shared/lib/recurrence';
+import { addDays } from '../../shared/lib/recurrence';
 import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { CourtBookingList, CourtLoadError } from './CourtBookingList';
 import { CourtPolicyCard } from './CourtPolicyCard';
-import { courtsApi, type RecurringCourtResult, type CourtQuota, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
+import { courtsApi, type CourtQuota, formatVnd, COURT_DISCIPLINES, centerDate, shortTime, displayDate, courtError, type Court, type CourtSlot } from './courtsApi';
 import './courts.css';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -34,8 +33,6 @@ export function CourtBookingFeature() {
   const [actionError, setActionError] = useState<string | SourceMessage>('');
   const [conflict, setConflict] = useState(false);
   const [needsMembership, setNeedsMembership] = useState(false);
-  const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
-  const [outcome, setOutcome] = useState<RecurringCourtResult | null>(null);
   const [quota, setQuota] = useState<CourtQuota | null>(null);
   const gridHeading = useRef<HTMLHeadingElement>(null);
   const today = centerDate();
@@ -59,37 +56,15 @@ export function CourtBookingFeature() {
     return () => { current = false; };
   }, [date, refresh, validDate]);
 
-  // Free only while the plan still has included bookings; a standing booking may run past them and is charged per extra day.
-  const plannedDates = selection ? expandRecurrence(selection.date, recurrence) : [];
-  const sessionCount = plannedDates.length;
   const remainingQuota = Math.max(0, quota?.remaining ?? 0);
-  const freeSessions = Math.min(sessionCount, remainingQuota);
-  const paidSessions = Math.max(0, sessionCount - freeSessions);
+  const covered = remainingQuota > 0;
   const price = selection?.slot.price ?? 0;
-  const totalPrice = paidSessions * price;
-  const covered = sessionCount > 0 && paidSessions === 0;
   const book = async () => {
     if (!selection || busy) return;
     setBusy(true); setActionError('');
     try {
-      const standing = recurrenceRequest(recurrence, selection.date);
-      if (standing) {
-        const result = await courtsApi.bookRecurring({ roomId: selection.court.id, startDate: selection.date, startTime: selection.slot.startTime, ...standing, paymentMethod: 'vnpay' });
-        setOutcome(result); reload();
-        const bookedTotal = result.booked.reduce((sum, item) => sum + (item.paymentMethod === 'package_quota' ? 0 : (item.price ?? 0)), 0);
-        memberNotify(
-          result.booked.length
-            ? bookedTotal > 0
-              ? memberMessage(`Đã đặt ${result.booked.length} buổi sân định kỳ (tổng phụ phí ${formatVnd(bookedTotal)}).`, `${result.booked.length} recurring court sessions booked (total surcharge ${formatVnd(bookedTotal)}).`)
-              : memberMessage(`Đã đặt ${result.booked.length} buổi sân định kỳ.`, `${result.booked.length} recurring court sessions booked.`)
-            : 'Không đặt được buổi nào.',
-          result.booked.length ? 'success' : 'error',
-          { record: Boolean(result.booked.length) },
-        );
-      } else {
-        await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime, ...(covered ? {} : { paymentMethod: 'vnpay' }) });
-        setSelection(null); reload(); memberNotify(covered ? 'Đã đặt sân thành công.' : memberMessage(`Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán qua VNPay hoặc Ví SÖL.`, `Court booked (surcharge ${formatVnd(price)}). Please complete payment via VNPay or SÖL Wallet.`), 'success', { record: true });
-      }
+      await courtsApi.book({ roomId: selection.court.id, date: selection.date, startTime: selection.slot.startTime, ...(covered ? {} : { paymentMethod: 'vnpay' }) });
+      setSelection(null); reload(); memberNotify(covered ? 'Đã đặt sân thành công.' : memberMessage(`Đã đặt sân (phụ phí ${formatVnd(price)}). Vui lòng hoàn tất thanh toán qua VNPay hoặc Ví SÖL.`, `Court booked (surcharge ${formatVnd(price)}). Please complete payment via VNPay or SÖL Wallet.`), 'success', { record: true });
     } catch (reason) {
       setActionError(courtError(reason));
       setNeedsMembership(reason instanceof ApiError && reason.code === 'COURT_BOOKING_MEMBERSHIP_INVALID');
@@ -120,7 +95,7 @@ export function CourtBookingFeature() {
             <Link to={`/member/explore?item=${encodeURIComponent(court.name)}`} className="btn-secondary btn-sm">{memberText("Xem trong 3D", "View in 3D")}</Link>
           </div>
           <p className="muted">{court.location ? `${court.location} · ` : ''}{shortTime(court.openTime)}–{shortTime(court.closeTime)}</p>
-          <div className="court-slots">{slots.map(slot => <button type="button" key={slot.startTime} className={`court-slot court-slot--${slot.status}`} disabled={slot.status !== 'free' || busy} onClick={() => { setActionError(''); setNeedsMembership(false); setConflict(false); setOutcome(null); setRecurrence({ period: 'once', days: [] }); setSelection({ court, slot, date }); }} aria-label={`${court.name}, ${shortTime(slot.startTime)}–${shortTime(slot.endTime)}, ${memberText(SLOT_LABELS[slot.status])}`}><strong>{shortTime(slot.startTime)}–{shortTime(slot.endTime)}</strong><span>{memberText(SLOT_LABELS[slot.status])}</span></button>)}</div>
+          <div className="court-slots">{slots.map(slot => <button type="button" key={slot.startTime} className={`court-slot court-slot--${slot.status}`} disabled={slot.status !== 'free' || busy} onClick={() => { setActionError(''); setNeedsMembership(false); setConflict(false); setSelection({ court, slot, date }); }} aria-label={`${court.name}, ${shortTime(slot.startTime)}–${shortTime(slot.endTime)}, ${memberText(SLOT_LABELS[slot.status])}`}><strong>{shortTime(slot.startTime)}–{shortTime(slot.endTime)}</strong><span>{memberText(SLOT_LABELS[slot.status])}</span></button>)}</div>
           {!slots.length && <p className="muted">{memberText("Chưa có khung giờ cho ngày này.")}</p>}
         </article>)}
       </div>}
@@ -129,80 +104,22 @@ export function CourtBookingFeature() {
     {selection && <Modal title={memberText("Xác nhận đặt sân")} busy={busy} onClose={() => setSelection(null)} returnFocusRef={gridHeading}>
       <p><strong>{selection.court.name}</strong> · {selection.court.disciplineName}</p>
       <p>{displayDate(selection.date)} · {shortTime(selection.slot.startTime)}–{shortTime(selection.slot.endTime)}</p>
-      {outcome ? (() => {
-        const bookedFreeCount = outcome.booked.filter(item => item.paymentMethod === 'package_quota' || item.price <= 0).length;
-        const bookedPaidItems = outcome.booked.filter(item => item.paymentMethod !== 'package_quota' && item.price > 0);
-        const bookedTotal = bookedPaidItems.reduce((sum, item) => sum + (item.price ?? 0), 0);
-        return <>
-          <RecurrenceSummary
-            booked={outcome.booked}
-            skipped={outcome.skipped}
-            describe={item => `${displayDate(item.date)} · ${shortTime(item.startTime)}–${shortTime(item.endTime)} · ${item.paymentMethod === 'package_quota' || item.price <= 0 ? memberText("Miễn phí (theo gói)", "Free (membership)") : `${memberText("Chờ thanh toán", "Pending payment")} ${formatVnd(item.price)}`}`}
-          />
-          {outcome.booked.length > 0 && (
-            <div className="court-pricing">
-              <p>
-                {memberRenderMessage(
-                  bookedPaidItems.length > 0
-                    ? memberMessage(
-                        `Tổng thanh toán các buổi đã đặt (${outcome.booked.length} buổi${bookedFreeCount > 0 ? `: ${bookedFreeCount} buổi miễn phí, ${bookedPaidItems.length} buổi tính phí` : ''}): `,
-                        `Total payment for booked sessions (${outcome.booked.length} sessions${bookedFreeCount > 0 ? `: ${bookedFreeCount} free, ${bookedPaidItems.length} paid` : ''}): `,
-                      )
-                    : memberMessage(
-                        `Tổng thanh toán các buổi đã đặt (${outcome.booked.length} buổi miễn phí theo gói): `,
-                        `Total payment for booked sessions (${outcome.booked.length} free sessions): `,
-                      ),
-                )}
-                <strong>{formatVnd(bookedTotal)}</strong>.
-              </p>
-              {bookedPaidItems.length > 0 && (
-                <p className="muted">
-                  {memberText("Thanh toán tại lượt đặt của bạn. Lượt chưa thanh toán sau 15 phút sẽ tự hủy.")}
-                </p>
-              )}
-            </div>
-          )}
-        </>;
-      })() : <>
-      <RecurrenceFields startDate={selection.date} value={recurrence} onChange={setRecurrence} disabled={busy} hint={memberText("Đặt định kỳ tối đa 1 tháng; buổi trùng lịch hoặc ngoài hạn gói sẽ bị bỏ qua.")} />
       <div className="court-pricing">
-        {covered && recurrence.period === 'once' ? (
+        {covered ? (
           <p>{memberText("Còn ")}<strong>{remainingQuota}</strong>{memberText(" lượt đặt sân miễn phí trong tháng này; buổi này sẽ dùng 1 lượt.")}</p>
-        ) : covered ? (
-          <p>
-            {memberRenderMessage(memberMessage(
-              `Còn ${remainingQuota} lượt đặt sân miễn phí trong tháng này; ${sessionCount} buổi này sẽ dùng ${freeSessions} lượt miễn phí. Phụ phí đặt sân: `,
-              `Remaining ${remainingQuota} free court bookings this month; these ${sessionCount} sessions will use ${freeSessions} free bookings. Court surcharge: `,
-            ))}
-            <strong>{formatVnd(0)}</strong>.
-          </p>
         ) : (
-          <>
-            <p>{memberText("Còn ")}<strong>{remainingQuota}</strong>{memberText(" lượt đặt sân miễn phí trong tháng này. Phụ phí đặt sân: ")}<strong>{formatVnd(totalPrice)}</strong>.</p>
-            {recurrence.period !== 'once' && (
-              <p className="muted">
-                {memberRenderMessage(
-                  freeSessions > 0
-                    ? memberMessage(
-                        `Chi tiết ${sessionCount} buổi: ${freeSessions} buổi miễn phí (theo gói), ${paidSessions} buổi tính phí × ${formatVnd(price)}/buổi = ${formatVnd(totalPrice)}.`,
-                        `Breakdown for ${sessionCount} sessions: ${freeSessions} free (membership), ${paidSessions} paid × ${formatVnd(price)}/session = ${formatVnd(totalPrice)}.`,
-                      )
-                    : memberMessage(
-                        `Chi tiết ${sessionCount} buổi: ${paidSessions} buổi tính phí × ${formatVnd(price)}/buổi = ${formatVnd(totalPrice)}.`,
-                        `Breakdown for ${sessionCount} sessions: ${paidSessions} paid × ${formatVnd(price)}/session = ${formatVnd(totalPrice)}.`,
-                      ),
-                )}
-              </p>
-            )}
-          </>
+          <p>{memberText("Còn ")}<strong>{remainingQuota}</strong>{memberText(" lượt đặt sân miễn phí trong tháng này. Phụ phí đặt sân: ")}<strong>{formatVnd(price)}</strong>.</p>
         )}
       </div>
-      {!covered && <>
-        <p className="muted">{memberText("Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Mỗi buổi định kỳ thanh toán riêng; lượt VNPay chưa thanh toán sau 15 phút sẽ tự hủy, lượt tiền mặt được giữ chỗ đến 2 giờ trước giờ bắt đầu.")}</p>
-      </>}
-      <p className="muted">{memberText("Hủy trước giờ bắt đầu ít nhất 2 giờ.")}</p></>}
+      {!covered && (
+        <p className="muted">{memberText("Thanh toán bằng VNPay, Ví SÖL hoặc tiền mặt tại quầy Lễ tân. Lượt VNPay chưa thanh toán sau 15 phút sẽ tự hủy, lượt tiền mặt được giữ chỗ đến 2 giờ trước giờ bắt đầu.", "Pay with VNPay, SÖL Wallet or cash at the front desk. Unpaid VNPay bookings are cancelled after 15 minutes and counter bookings are held until 2 hours before start.")}</p>
+      )}
+      <p className="muted">{memberText("Hủy trước giờ bắt đầu ít nhất 2 giờ.")}</p>
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{memberRenderMessage(actionError)}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">{memberText("Xem / Đăng ký gói tập")}</Link></div>}</div>}
-      <div className="court-modal-actions">{outcome ? <button type="button" className="btn-primary" onClick={() => setSelection(null)}>{memberText("Đóng")}</button> : <><button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>{memberText("Quay lại")}</button><button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? memberText("Đang đặt…") : recurrence.period !== 'once' ? memberText("Xác nhận đặt định kỳ") : covered ? memberText("Xác nhận đặt") : memberText("Đặt sân & Thanh toán sau qua VNPay / Ví SÖL")}</button></>}</div>
+      <div className="court-modal-actions">
+        <button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>{memberText("Quay lại")}</button>
+        <button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? memberText("Đang đặt…") : covered ? memberText("Xác nhận đặt") : memberText("Đặt sân & Thanh toán sau qua VNPay / Ví SÖL")}</button>
+      </div>
     </Modal>}
   </div>;
 }

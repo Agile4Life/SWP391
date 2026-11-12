@@ -1,27 +1,27 @@
 /* Lịch tuần/tháng dùng chung cho mọi role: một thẻ, điều hướng tròn, cột giờ bên trái, ngày hôm nay là vòng salmon. */
 .mcal {
-  --mcal-hour: 76px;
+  --mcal-hour: 64px;
   --mcal-gutter: 64px;
   --mcal-court: var(--portal-warning);
   --mcal-class: var(--portal-salmon);
-  display: grid; gap: 14px; min-width: 0; padding: 20px;
-  border: 1px solid var(--portal-border); border-radius: 22px; background: var(--portal-surface);
+  display: grid; gap: 10px; min-width: 0; padding: 14px;
+  border: 1px solid var(--portal-border); border-radius: 18px; background: var(--portal-surface);
   font-variant-numeric: tabular-nums;
 }
 
 /* Thanh công cụ */
-.mcal__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
+.mcal__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
 .mcal__nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-.mcal__icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--portal-border-strong); border-radius: 50%; background: var(--portal-raised); color: var(--portal-paper); cursor: pointer; }
-.mcal__icon-btn svg, .mcal__next svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.mcal__today-btn { height: 40px; padding: 0 18px; border: 1px solid var(--portal-border-strong); border-radius: 999px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.mcal__icon-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--portal-border-strong); border-radius: 50%; background: var(--portal-raised); color: var(--portal-paper); cursor: pointer; }
+.mcal__icon-btn svg, .mcal__next svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mcal__today-btn { height: 32px; padding: 0 14px; border: 1px solid var(--portal-border-strong); border-radius: 999px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .mcal__today-btn:disabled { opacity: .55; cursor: default; }
 .mcal__icon-btn:hover, .mcal__today-btn:hover:not(:disabled) { border-color: var(--portal-salmon); color: var(--portal-salmon); }
-.mcal__range { margin: 0 0 0 8px; font-size: clamp(20px, 2.2vw, 28px); font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); white-space: nowrap; }
-.mcal__side { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.mcal__range { margin: 0 0 0 6px; font-size: clamp(16px, 1.8vw, 22px); font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); white-space: nowrap; }
+.mcal__side { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .mcal__extra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
-.mcal__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--portal-muted); }
+.mcal__legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--portal-muted); }
 .mcal__legend li { display: inline-flex; align-items: center; gap: 7px; }
 .mcal__dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--portal-muted); }
 .mcal__dot--court { background: var(--mcal-court); }
@@ -35,7 +35,7 @@
 .mcal__legend-note { color: var(--portal-muted); opacity: .85; }
 
 .mcal__switch { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--portal-raised); }
-.mcal__switch button { min-width: 72px; height: 34px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.mcal__switch button { min-width: 60px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
 .mcal__switch button[aria-pressed='true'] { background: var(--portal-salmon); color: var(--portal-on-accent); }
 
 /* Thanh "Tiếp theo" */
@@ -60,11 +60,11 @@
 .mcal__week.is-single :is(.mcal__corner, .mcal__dayhead) { display: none; }
 .mcal__corner, .mcal__dayhead { position: sticky; top: 0; z-index: 6; background: var(--portal-surface); border-bottom: 1px solid var(--portal-border-strong); }
 .mcal__corner { left: 0; z-index: 7; }
-.mcal__dayhead { display: grid; justify-items: center; align-content: start; gap: 4px; padding: 6px 4px 10px; }
-.mcal__dayname { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--portal-muted); }
-.mcal__daynum { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; font-size: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); }
+.mcal__dayhead { display: grid; justify-items: center; align-content: start; gap: 2px; padding: 4px 4px 6px; }
+.mcal__dayname { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--portal-muted); }
+.mcal__daynum { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); }
 .mcal__dayhead.is-today .mcal__dayname { color: var(--portal-paper); }
-.mcal__dayhead.is-today .mcal__daynum { background: var(--portal-salmon); color: var(--portal-on-accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--portal-salmon) 25%, transparent); }
+.mcal__dayhead.is-today .mcal__daynum { background: var(--portal-salmon); color: var(--portal-on-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--portal-salmon) 25%, transparent); }
 .mcal__dayhead small { font-size: 12px; color: var(--portal-muted); }
 .mcal__dots { display: flex; gap: 4px; min-height: 7px; }
 .mcal__dots .mcal__dot { width: 7px; height: 7px; }

@@ -75,7 +75,7 @@ class WalletServiceNotificationTest {
                 eq("payment"),
                 eq("wallet"),
                 eq(7L),
-                eq("/member/packages")
+                eq("/member/invoices")
         );
 
         assertThat(bodyCaptor.getValue())
@@ -106,7 +106,7 @@ class WalletServiceNotificationTest {
                 eq("payment"),
                 eq("wallet"),
                 eq(7L),
-                eq("/member/packages")
+                eq("/member/invoices")
         );
 
         assertThat(bodyCaptor.getValue())

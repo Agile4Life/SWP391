@@ -119,7 +119,25 @@ paths:
             format: int64
       responses:
         '200':
-          description: Training plan activated successfully
+          description: Training plan activated successfully. Each member–coach pair has one active plan, so the other active plan the same coach gave this member becomes `superseded` (history); plans from the member's other coaches stay active.
+  /api/v1/coaching/training-plans/{id}/reapply:
+    put:
+      summary: Re-apply a plan from history as the member's active plan
+      description: |
+        Only plans with status `superseded` can be re-applied. The plan becomes `active` and the plan the same coach
+        had active for the same member becomes `superseded`; plans from the member's other coaches are not touched. When the plan's end date is already in the past it gets a new window
+        of the same length starting today. Visible changes: `status` values now include `superseded`.
+      tags: [Coaching]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: Plan is active again; previous active plan moved to history }
+        '403': { description: Plan belongs to another Coach }
+        '404': { description: Plan not found }
+        '409': { description: INVALID_PLAN_STATUS - plan is not in history }
   /api/v1/ai/generate-workout-plan:
     post:
       summary: Generate AI workout recommendation from member health metrics (SCRUM-117)
@@ -204,6 +222,7 @@ paths:
   /api/v1/reports/class-utilization:
     get:
       summary: Retrieve class occupancy and attendance utilization report (SCRUM-120, SCRUM-124)
+      description: Accessible to ADMIN, CENTER_MANAGER and MANAGER. ADMIN access is limited to this report and does not grant access to revenue or other report APIs.
       tags: [Analytics]
       parameters:
         - in: query

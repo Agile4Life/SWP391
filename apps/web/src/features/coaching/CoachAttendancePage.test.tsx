@@ -2,12 +2,28 @@ import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachAttendancePage } from './CoachAttendancePage';
 import { attendanceApi, type AttendanceStudent, type CoachClassSession } from './attendanceApi';
+import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 
+vi.mock('../member/coachBookingApi', () => ({ getCoachSchedule: vi.fn().mockResolvedValue([]) }));
 vi.mock('../../shared/lib/portalNotices', async (importOriginal) => ({ ...await importOriginal<typeof import('../../shared/lib/portalNotices')>(), notify: vi.fn() }));
+
+function pageAt(path: string) {
+  return (
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/staff/attendance" element={<CoachAttendancePage />} />
+        <Route path="/staff/attendance/:sessionId" element={<CoachAttendancePage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+const LIST = '/staff/attendance';
+const SESSION = '/staff/attendance/101';
 
 describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch sử sửa trực tiếp bằng Modal)', () => {
   let host: HTMLDivElement;
@@ -93,22 +109,39 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     localStorage.clear();
   });
 
-  it('renders 4 tabs: Điểm danh buổi học, Đánh giá học viên, Lịch sử điểm danh, Lịch sử đánh giá', async () => {
-    await act(async () => {
-      root.render(<CoachAttendancePage />);
-    });
+  it('management page has Thời khóa biểu plus the two histories; a session page has only Điểm danh and Đánh giá', async () => {
+    await act(async () => { root.render(pageAt(LIST)); });
+    expect(host.querySelector('h1')!.textContent).toBe('Quản lý buổi học');
+    let tabBtns = host.querySelectorAll('.attendance-tab-btn');
+    expect(tabBtns.length).toBe(3);
+    expect(tabBtns[0].textContent).toContain('Thời khóa biểu');
+    expect(tabBtns[1].textContent).toContain('Lịch sử điểm danh');
+    expect(tabBtns[2].textContent).toContain('Lịch sử đánh giá');
+    // Không điểm danh ngay trên trang quản lý
+    expect(host.querySelector('.btn-batch-save')).toBeNull();
+    expect(host.querySelector('.mcal')).not.toBeNull();
 
-    const tabBtns = host.querySelectorAll('.attendance-tab-btn');
-    expect(tabBtns.length).toBe(4);
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await act(async () => { root.render(pageAt(SESSION)); });
+    tabBtns = host.querySelectorAll('.attendance-tab-btn');
+    expect(tabBtns.length).toBe(2);
     expect(tabBtns[0].textContent).toContain('Điểm danh buổi học');
     expect(tabBtns[1].textContent).toContain('Đánh giá học viên');
-    expect(tabBtns[2].textContent).toContain('Lịch sử điểm danh');
-    expect(tabBtns[3].textContent).toContain('Lịch sử đánh giá');
+    expect(host.querySelector('.mcal')).toBeNull();
+    expect(host.querySelector('a[href="/staff/attendance"]')).not.toBeNull();
+  });
+
+  it('shows a not-found state with a way back for a session that is not in the coach schedule', async () => {
+    await act(async () => { root.render(pageAt('/staff/attendance/999')); });
+    expect(host.querySelector('[role="alert"]')!.textContent).toContain('Không tìm thấy buổi học này');
+    expect(host.querySelector('a[href="/staff/attendance"]')).not.toBeNull();
+    expect(attendanceApi.saveBatchAttendance).not.toHaveBeenCalled();
   });
 
   it('tab Điểm danh buổi học is pure attendance (no evaluation sliders or buttons on rows)', async () => {
     await act(async () => {
-      root.render(<CoachAttendancePage />);
+      root.render(pageAt(SESSION));
     });
 
     expect(host.textContent).toContain('Có mặt');
@@ -126,7 +159,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
   it('tab Đánh giá học viên allows rating and saves into evaluation history', async () => {
     await act(async () => {
-      root.render(<CoachAttendancePage />);
+      root.render(pageAt(SESSION));
     });
 
     const tabBtns = host.querySelectorAll('.attendance-tab-btn');
@@ -155,14 +188,14 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
   it('clicking Sửa điểm danh in History opens Modal directly in center without switching tabs', async () => {
     await act(async () => {
-      root.render(<CoachAttendancePage />);
+      root.render(pageAt(LIST));
     });
 
     const tabBtns = host.querySelectorAll('.attendance-tab-btn');
 
     // Switch to tab "Lịch sử điểm danh"
     await act(async () => {
-      (tabBtns[2] as HTMLButtonElement).click();
+      (tabBtns[1] as HTMLButtonElement).click();
     });
 
     expect(host.textContent).toContain('Lịch sử các buổi đã điểm danh');
@@ -205,14 +238,14 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
   it('tab Lịch sử đánh giá allows opening modal to edit progress evaluation directly', async () => {
     await act(async () => {
-      root.render(<CoachAttendancePage />);
+      root.render(pageAt(LIST));
     });
 
     const tabBtns = host.querySelectorAll('.attendance-tab-btn');
 
     // Switch to tab "Lịch sử đánh giá"
     await act(async () => {
-      (tabBtns[3] as HTMLButtonElement).click();
+      (tabBtns[2] as HTMLButtonElement).click();
     });
 
     expect(host.textContent).toContain('Lịch sử đánh giá tiến bộ học viên');
@@ -246,8 +279,8 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
   it('keeps a failed history edit open and does not overwrite its stored record', async () => {
     vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
     const original = localStorage.getItem(coachHistoryStorageKey('attendance'));
-    await act(async () => { root.render(<CoachAttendancePage />); });
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
+    await act(async () => { root.render(pageAt(LIST)); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
@@ -257,18 +290,18 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
   it('does not fabricate history for a fresh browser', async () => {
     localStorage.clear();
-    await act(async () => { root.render(<CoachAttendancePage />); });
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
+    await act(async () => { root.render(pageAt(LIST)); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
   });
 
   it('keeps a failed evaluation edit open without changing stored history', async () => {
     vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
     const original = localStorage.getItem(coachHistoryStorageKey('evaluation'));
-    await act(async () => { root.render(<CoachAttendancePage />); });
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    await act(async () => { root.render(pageAt(LIST)); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
@@ -277,9 +310,9 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
   });
 
   it('preserves the latest attendance when updating an older evaluation snapshot', async () => {
-    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { root.render(pageAt(LIST)); });
     vi.mocked(attendanceApi.getSessionStudents).mockResolvedValueOnce(mockStudents.map(student => ({ ...student, status: 'absent' })));
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101, status: 'absent', progressScore: 85 })]), true);
@@ -289,18 +322,16 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     const coachAHistory = localStorage.getItem(coachHistoryStorageKey('attendance'));
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach-b', name: 'Coach B', role: 'COACH' }));
     localStorage.setItem('sol_coach_attendance_history', coachAHistory!);
-    await act(async () => { root.render(<CoachAttendancePage />); });
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
+    await act(async () => { root.render(pageAt(LIST)); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
-    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[3] as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
   });
 
-  it('clears the previous roster and blocks both saves when another session fails to load', async () => {
-    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValueOnce([mockSessions[0], { ...mockSessions[0], id: 202, className: 'Session B' }]);
-    await act(async () => { root.render(<CoachAttendancePage />); });
-    vi.mocked(attendanceApi.getSessionStudents).mockRejectedValueOnce(new Error('Session B unavailable'));
-    await act(async () => { host.querySelector<HTMLButtonElement>('.mcal__event[aria-label^="Session B"]')!.click(); });
+  it('clears the previous roster and blocks both saves when the session fails to load', async () => {
+    vi.mocked(attendanceApi.getSessionStudents).mockRejectedValueOnce(new Error('Session unavailable'));
+    await act(async () => { root.render(pageAt(SESSION)); });
     expect(host.textContent).not.toContain(mockStudents[0].fullName);
     expect(host.querySelector('[role="alert"]')).not.toBeNull();
     expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(true);
@@ -309,34 +340,32 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(attendanceApi.saveBatchAttendance).not.toHaveBeenCalled();
   });
 
-  it('prevents switching sessions while an attendance write is pending', async () => {
+  it('keeps the save button locked while an attendance write is pending, then stores the record', async () => {
     let complete!: (value: { success: boolean; updatedCount: number; message: string }) => void;
     vi.mocked(attendanceApi.saveBatchAttendance).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
-    await act(async () => { root.render(<CoachAttendancePage />); });
+    await act(async () => { root.render(pageAt(SESSION)); });
     await act(async () => { (host.querySelector('.btn-batch-save') as HTMLButtonElement).click(); });
-    expect([...host.querySelectorAll<HTMLButtonElement>('.mcal__event')].every((b) => b.disabled)).toBe(true);
+    expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(true);
     await act(async () => { complete({ success: true, updatedCount: 2, message: 'Saved' }); });
-    expect([...host.querySelectorAll<HTMLButtonElement>('.mcal__event')].some((b) => b.disabled)).toBe(false);
+    expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(false);
     expect(JSON.parse(localStorage.getItem(coachHistoryStorageKey('attendance'))!)[0].sessionId).toBe(101);
   });
 
-  it('picks sessions from the weekly timetable, marks saved ones and filters by class', async () => {
+  it('picks a session from the weekly timetable, marks saved ones, filters by class and opens a dedicated attendance page', async () => {
     const other = { ...mockSessions[0], id: 202, className: 'Session B', sessionDate: '2026-10-25', startTime: '09:00', endTime: '10:00' };
-    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValueOnce([mockSessions[0], other]);
-    await act(async () => { root.render(<CoachAttendancePage />); });
+    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValue([mockSessions[0], other]);
+    await act(async () => { root.render(pageAt(LIST)); });
 
     // Mở đúng tuần chứa buổi gần hôm nay nhất; buổi 101 đã có bản ghi điểm danh, buổi 202 đã diễn ra nhưng chưa lưu.
     const saved = host.querySelector<HTMLButtonElement>('.mcal__event--mine')!;
-    expect(saved.textContent).toContain('Đã điểm danh');
-    expect(host.querySelector('.mcal__event--full')!.textContent).toContain('Chưa điểm danh');
+    expect(saved.textContent).not.toContain('Đã điểm danh');
+    expect(saved.getAttribute('title')).toContain('Đã điểm danh');
+    expect(host.querySelector('.mcal__event--full')!.getAttribute('title')).toContain('Chưa điểm danh');
     // Chỉ hiện khung giờ có buổi (tối thiểu 8 giờ) thay vì đủ 16 giờ.
     expect(host.querySelectorAll('.mcal__gutter span').length).toBeGreaterThanOrEqual(8);
     expect(host.querySelector('[aria-label="Khung giờ"]')).not.toBeNull();
-
-    await act(async () => { host.querySelector<HTMLButtonElement>('.mcal__event--full')!.click(); });
-    expect(vi.mocked(attendanceApi.getSessionStudents)).toHaveBeenLastCalledWith(202);
-    expect(host.querySelector('.session-name-title')!.textContent).toBe('Session B');
-    expect(host.querySelector('.mcal__event.is-selected')!.textContent).toContain('Session B');
+    // Chọn buổi chỉ điều hướng, chưa tải học viên trên trang quản lý
+    expect(attendanceApi.getSessionStudents).not.toHaveBeenCalled();
 
     await act(async () => {
       const select = host.querySelector('.attendance-class-filter select') as HTMLSelectElement;
@@ -344,6 +373,64 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       select.dispatchEvent(new Event('change', { bubbles: true }));
     });
     expect(host.querySelectorAll('.mcal__event')).toHaveLength(1);
+
+    await act(async () => { host.querySelector<HTMLButtonElement>('.mcal__event--full')!.click(); });
+    expect(vi.mocked(attendanceApi.getSessionStudents)).toHaveBeenLastCalledWith(202);
+    expect(host.querySelector('.session-name-title')!.textContent).toBe('Session B');
+    expect(host.querySelector('.mcal')).toBeNull();
+    expect(host.querySelector('.btn-batch-save')).not.toBeNull();
+  });
+
+  it('renders 1:1 PT bookings on the coach timetable alongside group classes and allows filtering', async () => {
+    const mockPtBooking: CoachBookingDto = {
+      id: 999,
+      memberId: 5,
+      memberName: 'Lê Văn Học Viên',
+      coachId: 10,
+      coachName: 'HLV Minh Quân',
+      coachSpecialization: 'Gym & Fitness',
+      coachAvatarUrl: null,
+      disciplineId: null,
+      disciplineName: null,
+      bookingDate: '2026-10-26',
+      startTime: '14:00',
+      endTime: '15:00',
+      hourlyRate: 300000,
+      paymentMethod: 'wallet',
+      paymentStatus: 'paid',
+      status: 'confirmed',
+      notes: 'Tập tăng cơ',
+      createdAt: '2026-10-20T10:00:00Z',
+      cancelledAt: null,
+      cancelReason: null,
+    };
+
+    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValue([mockSessions[0]]);
+    vi.mocked(getCoachSchedule).mockResolvedValue([mockPtBooking]);
+
+    await act(async () => { root.render(pageAt(LIST)); });
+
+    // Cả lớp nhóm và buổi PT 1:1 đều hiện trên bảng
+    const ptEvent = host.querySelector<HTMLButtonElement>('button[title*="PT 1:1 · Lê Văn Học Viên"]');
+    expect(ptEvent).not.toBeNull();
+    expect(ptEvent?.textContent).toContain('PT 1:1 · Lê Văn Học Viên');
+
+    // Dropdown có option lọc Buổi PT 1:1
+    const filterSelect = host.querySelector('.attendance-class-filter select') as HTMLSelectElement;
+    expect(filterSelect.innerHTML).toContain('Buổi PT 1:1');
+
+    // Lọc theo Buổi PT 1:1
+    await act(async () => {
+      filterSelect.value = 'PT_1ON1';
+      filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const visibleEvents = host.querySelectorAll('.mcal__event');
+    expect(visibleEvents).toHaveLength(1);
+    expect(visibleEvents[0].textContent).toContain('PT 1:1 · Lê Văn Học Viên');
+
+    // Nút refresh thời khóa biểu có mặt và hoạt động
+    const refreshBtn = host.querySelector('button.refresh-button') as HTMLButtonElement;
+    expect(refreshBtn).not.toBeNull();
   });
 
 });

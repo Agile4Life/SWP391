@@ -19,8 +19,11 @@ export interface TimetableEvent {
   startTime: string;
   endTime: string;
   title: string;
+  /** Phòng: cùng với `title` là phần duy nhất hiện trên khối. */
   meta?: string;
+  /** Thông tin phụ (sĩ số, trạng thái, HLV…): không hiện trên khối, chỉ có trong chú giải khi rê chuột và khi bấm xem chi tiết. */
   badge?: string;
+  detail?: string;
   tone: TimetableTone;
   ariaLabel: string;
 }

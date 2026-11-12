@@ -13,12 +13,12 @@ test.describe('Check-in / check-out tại quầy lễ tân', () => {
   test.use({ storageState: authFile('staff') });
   test.describe.configure({ mode: 'serial' });
 
-  test('trang có ô nhập mã QR, danh sách đang trong trung tâm và nhật ký', async ({ page }) => {
+  test('trang Check-in có ô nhập mã QR và nhật ký các lượt vào gần đây', async ({ page }) => {
     await page.goto('/staff/check-in');
     await settled(page);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Check-in');
     await expect(field(page, /Nhập mã QR thẻ hội viên/)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Đang trong trung tâm/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Lượt check-in gần đây' })).toBeVisible();
   });
 
   test('hội viên còn gói: quét mã động thành công và xuất hiện trong danh sách đang tập', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('Check-in / check-out tại quầy lễ tân', () => {
   });
 
   test('check-out đưa hội viên ra khỏi danh sách đang trong trung tâm', async ({ page }) => {
-    await page.goto('/staff/check-in');
+    await page.goto('/staff/check-out');
     await settled(page);
     await page.getByRole('button', { name: /Đang trong trung tâm/ }).click();
     const buttons = page.getByRole('button', { name: /Checkout/ });
@@ -74,7 +74,6 @@ test.describe('Check-in / check-out tại quầy lễ tân', () => {
   test('nhật ký 10 lượt gần nhất ghi cả lượt bị từ chối', async ({ page }) => {
     await page.goto('/staff/check-in');
     await settled(page);
-    await page.getByRole('button', { name: '10 lượt gần nhất' }).click();
     await expect(page.locator('main')).toContainText(/từ chối/i);
   });
 });
@@ -110,9 +109,18 @@ test.describe('Hội viên tự check-in', () => {
 
 test.describe('Mã QR cổng ở quầy', () => {
   test.use({ storageState: authFile('staff') });
-  test('mã cổng hiển thị thời hạn hiệu lực và tự làm mới', async ({ page }) => {
+  test('mã cổng hiển thị thời hạn hiệu lực và tự làm mới ở tab Check-in và Check-out', async ({ page }) => {
+    for (const path of ['/staff/check-in', '/staff/check-out']) {
+      await page.goto(path);
+      await settled(page);
+      await expect(page.getByText(/Mã còn hiệu lực/)).toBeVisible();
+    }
+  });
+
+  test('quầy lễ tân không còn hiện mã QR cổng', async ({ page }) => {
     await page.goto('/staff/reception');
     await settled(page);
-    await expect(page.getByText(/Mã còn hiệu lực/)).toBeVisible();
+    await expect(page.getByText(/Mã còn hiệu lực/)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /Cần xử lý/ })).toBeVisible();
   });
 });

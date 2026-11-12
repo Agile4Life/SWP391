@@ -299,9 +299,7 @@ public class VnpayPaymentService {
                                         ? "/member/classes"
                                         : p.getSubscriptionId()!=null
                                                 ? "/member/packages"
-                                                : isWalletTopup(p)
-                                                        ? "/member/packages"
-                                                        : "/member/invoices";
+                                                : "/member/invoices";
         return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
     }
     public String ipn(Map<String,String> fields) {

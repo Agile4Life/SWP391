@@ -108,7 +108,7 @@ export async function createCourse(opts: { startInDays: number; capacity?: numbe
     const res = await api('manager', 'POST', '/classes/recurring', {
       name: opts.name ?? `E2E ${unique('c')}`, disciplineId: base.disciplineId, coachId: base.coachId, roomId: base.roomId,
       capacity: opts.capacity ?? 10, level: 'all', description: 'Khóa học tạo bởi e2e', price: opts.price ?? 500000,
-      startDate: iso, endDate: iso, recurringDays: [day], startTime: `${String(hour).padStart(2, '0')}:00:00`, endTime: `${String(hour + 1).padStart(2, '0')}:00:00`, repeatType: 'weekly',
+      startDate: iso, endDate: iso, recurringDays: [day], startTime: `${String(hour).padStart(2, '0')}:00:00`, endTime: `${String(hour + 1).padStart(2, '0')}:00:00`,
     });
     if (res.status < 300) return { id: Number((res.data as any).id ?? (res.data as any).classId), startDate: iso, raw: res.data as any };
     if (res.status !== 409) throw new Error(`create course ${res.status} ${JSON.stringify(res.body)}`);

@@ -101,8 +101,9 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberProgressPage')).MemberProgressPage }),
           },
           {
+            // Hỗ trợ & khiếu nại đã gộp vào Tin nhắn; giữ đường dẫn cũ cho email, thông báo và liên kết 3D.
             path: '/member/support',
-            lazy: async () => ({ Component: (await import('../features/member/MemberSupportPage')).MemberSupportPage }),
+            element: <Navigate to="/messages?tab=support" replace />,
           },
         ],
       },
@@ -165,7 +166,23 @@ export const router = createBrowserRouter([
             path: '/staff/check-in',
             lazy: async () => ({ Component: (await import('../features/reception/StaffCheckInPage')).StaffCheckInPage }),
           },
-          { path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) },
+          {
+            path: '/staff/check-out',
+            lazy: async () => ({ Component: (await import('../features/reception/StaffCheckOutPage')).StaffCheckOutPage }),
+          },
+          {
+            path: '/staff/reception-history',
+            lazy: async () => ({ Component: (await import('../features/reception/StaffRequestHistoryPage')).StaffRequestHistoryPage }),
+          },
+          {
+            path: '/staff/kyc',
+            lazy: async () => ({ Component: (await import('../features/reception/KycReviewPage')).KycReviewPage }),
+          },
+          {
+            path: '/staff/holds',
+            lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
+          },
+          { path: '/staff/support', element: <Navigate to="/messages?tab=support" replace /> },
           { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
         ],
       },
@@ -175,15 +192,15 @@ export const router = createBrowserRouter([
         element: <RoleGuard allowedRoles={['COACH']} />,
         children: [
           {
-            path: '/coach/first-assessment',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachFirstAssessmentPage')).CoachFirstAssessmentPage }),
-          },
-          {
             path: '/coach/pt-attendance',
             lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
           },
           {
             path: '/staff/attendance',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+          },
+          {
+            path: '/staff/attendance/:sessionId',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
           },
           {
@@ -193,6 +210,14 @@ export const router = createBrowserRouter([
           {
             path: '/coach/training-plans',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachTrainingPlanPage')).CoachTrainingPlanPage }),
+          },
+          {
+            path: '/coach/health-metrics',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachHealthMetricsPage')).CoachHealthMetricsPage }),
+          },
+          {
+            path: '/coach/saved-plans',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachSavedPlansPage')).CoachSavedPlansPage }),
           },
           {
             path: '/staff/coach-classes',
@@ -221,14 +246,6 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
           },
           {
-            path: '/staff/kyc',
-            lazy: async () => ({ Component: (await import('../features/reception/KycReviewPage')).KycReviewPage }),
-          },
-          {
-            path: '/staff/holds',
-            lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
-          },
-          {
             path: '/staff/classes',
             lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),
           },
@@ -244,6 +261,7 @@ export const router = createBrowserRouter([
         element: <RoleGuard allowedRoles={['ADMIN']} />,
         children: [
           { path: '/admin/users', lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }) },
+          { path: '/admin/audit-logs', lazy: async () => ({ Component: (await import('../features/admin/AdminAuditLogsPage')).AdminAuditLogsPage }) },
         ],
       },
       // Center Manager Dedicated Routes
@@ -291,10 +309,6 @@ export const router = createBrowserRouter([
           {
             path: '/manager/cancellations',
             element: <Navigate to="/manager/reports" replace />,
-          },
-          {
-            path: '/manager/audit-logs',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerAuditLogsPage')).ManagerAuditLogsPage }),
           },
           {
             path: '/manager/coach-reviews',

@@ -5,13 +5,16 @@ import { getCurrentUser } from '../../shared/api/client';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { Select } from '../../shared/ui/Select';
 import { formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { checkinApi, type CheckinDto } from './checkinApi';
 import './staff-check-in.css';
 import { GateQrPanel } from './GateQrPanel';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { Link } from 'react-router-dom';
+
+/** The center runs a single gate, so the desk never picks one. */
+const GATE = 'Turnstile A1 - Sảnh Chính';
+const GATE_ID = 'A1';
 
 const formatTime = (iso?: string | null): string => formatCenterTimeSeconds(iso, iso ?? '—');
 
@@ -21,8 +24,10 @@ const isCheckinGranted = (status?: string | null): boolean => {
   return normalized === 'GRANTED' || normalized === 'SUCCESS';
 };
 
-export function StaffCheckInPage() {
+/** `in`: the desk scans a member's card and shows the gate QR members scan to enter. `out`: gate QR for leaving plus the visits still inside. */
+export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) {
   const { t } = useStaffI18n();
+  const checkingOut = mode === 'out';
   const currentUser = getCurrentUser();
 
   // BR-01: Chỉ RECEPTIONIST / STAFF và CENTER_MANAGER / MANAGER được truy cập
@@ -33,7 +38,6 @@ export function StaffCheckInPage() {
 
   const [scanCode, setScanCode] = useState('');
   const [scanError, setScanError] = useState<StaffMessage | null>(null);
-  const [selectedGate, setSelectedGate] = useState('Turnstile A1 - Sảnh Chính');
   const [isScanning, setIsScanning] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
@@ -103,7 +107,7 @@ export function StaffCheckInPage() {
     try {
       const res = await checkinApi.scan({
         qrCode: trimmed,
-        gate: selectedGate,
+        gate: GATE,
       });
       setCurrentResult(res);
       setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)]);
@@ -117,7 +121,7 @@ export function StaffCheckInPage() {
         checkInTime: new Date().toISOString(),
         checkOutTime: null,
         method: 'qr_code',
-        gate: selectedGate,
+        gate: GATE,
         status: 'DENIED',
         denialReason: msg instanceof Error ? msg.message : typeof msg === 'string' ? msg : msg.vi,
       };
@@ -154,41 +158,25 @@ export function StaffCheckInPage() {
 
   const isGranted = isCheckinGranted(currentResult?.status);
   const openVisits = recentCheckins.filter((record) => isCheckinGranted(record.status) && !record.checkOutTime);
-  const visibleVisits = historyView === 'inside' ? openVisits : recentCheckins.slice(0, 10);
+  const visibleVisits = checkingOut && historyView === 'inside' ? openVisits : recentCheckins.slice(0, 10);
 
   return (
     <div data-i18n-managed className="portal-container checkin-page">
       <PageHeader
-        title="Check-in & checkout"
+        title={checkingOut ? t('Check-out') : t('Check-in')}
         actions={
           <RefreshButton label={t("Làm mới nhật ký")} onClick={() => void loadHistory()} disabled={loadingHistory} />
         }
       />
 
       <div className="checkin-layout">
-        {/* Scanner Panel */}
+        {/* Left card: member-card scanner + gate QR to check in, or just the gate QR to check out */}
         <div className="portal-card">
-          <div className="portal-card-header">
+          {!checkingOut && <div className="portal-card-header">
             <h2 className="portal-card-title">{t("Quét mã hội viên")}</h2>
-          </div>
+          </div>}
 
-          <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
-            <div>
-              <label className="portal-label" htmlFor="checkin-gate-select">
-                {t("Cổng kiểm soát")}</label>
-              <Select
-                id="checkin-gate-select"
-                className="portal-select"
-                value={selectedGate}
-                onChange={(e) => setSelectedGate(e.target.value)}
-                disabled={isScanning}
-              >
-                <option value="Turnstile A1 - Sảnh Chính">{t("Turnstile A1 - Sảnh Chính")}</option>
-                <option value="Turnstile A2 - Sảnh Chính">{t("Turnstile A2 - Sảnh Chính")}</option>
-                <option value="Turnstile B1 - Tầng Mezzanine">{t("Turnstile B1 - Tầng Mezzanine")}</option>
-              </Select>
-            </div>
-
+          {!checkingOut && <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
             <div>
               <label className="portal-label" htmlFor="checkin-qr-input">
                 {t("Mã QR hội viên")}</label>
@@ -216,22 +204,25 @@ export function StaffCheckInPage() {
               </div>
               {scanError && <p id="checkin-qr-error" className="form-error" role="alert">{t(scanError)}</p>}
             </div>
-          </form>
+          </form>}
 
-          <div style={{ marginBottom: '24px' }}>
-            <button type="button" className="btn-secondary" aria-expanded={cameraOpen} onClick={() => setCameraOpen((open) => !open)}>
-              {cameraOpen ? t('Đóng camera') : t('Quét QR thẻ hội viên bằng camera')}
-            </button>
-            {cameraOpen && (
-              <QrCameraScanner
-                onScan={(code) => void executeScan(code)}
-                disabled={isScanning}
-                hint={t("Đưa mã QR trên thẻ hội viên vào khung. Bấm “Quét lại” cho người kế tiếp.")}
-              />
-            )}
-          </div>
+          {!checkingOut && (
 
-          <GateQrPanel gateId={selectedGate.includes('A2') ? 'A2' : selectedGate.includes('B1') ? 'B1' : 'A1'} />
+            <div style={{ marginBottom: '24px' }}>
+              <button type="button" className="btn-secondary" aria-expanded={cameraOpen} onClick={() => setCameraOpen((open) => !open)}>
+                {cameraOpen ? t('Đóng camera') : t('Quét QR thẻ hội viên bằng camera')}
+              </button>
+              {cameraOpen && (
+                <QrCameraScanner
+                  onScan={(code) => void executeScan(code)}
+                  disabled={isScanning}
+                  hint={t("Đưa mã QR trên thẻ hội viên vào khung. Bấm “Quét lại” cho người kế tiếp.")}
+                />
+              )}
+            </div>
+          )}
+
+          <GateQrPanel purpose={checkingOut ? 'out' : 'in'} gateId={GATE_ID} />
 
           {/* Visual Door Gate Feedback */}
           {currentResult && (
@@ -274,7 +265,7 @@ export function StaffCheckInPage() {
               {isGranted && currentResult.remainingDays != null && <div>{t("Còn ")}{currentResult.remainingDays}{t(" ngày")}</div>}
 
               <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
-                {currentResult.gate || selectedGate} — {formatTime(currentResult.checkInTime)}
+                {currentResult.gate || GATE} — {formatTime(currentResult.checkInTime)}
               </div>
 
               {currentResult.denialReason && (
@@ -289,10 +280,10 @@ export function StaffCheckInPage() {
         {/* Keep open visits separate from the latest ten audit entries. */}
         <div className="portal-card">
           <div className="portal-card-header">
-            <h2 className="portal-card-title">{t("Theo dõi ra vào hôm nay")}</h2>
+            <h2 className="portal-card-title">{checkingOut ? t("Theo dõi ra về hôm nay") : t("Lượt check-in gần đây")}</h2>
           </div>
 
-          <div className="portal-tabs" aria-label={t("Danh sách ra vào")}>
+          {checkingOut && <div className="portal-tabs" aria-label={t("Danh sách ra vào")}>
             <button type="button" className={`portal-tab ${historyView === 'inside' ? 'active' : ''}`}
               aria-pressed={historyView === 'inside'} onClick={() => setHistoryView('inside')}>
               {t("Đang trong trung tâm (")}{openVisits.length})
@@ -300,7 +291,7 @@ export function StaffCheckInPage() {
             <button type="button" className={`portal-tab ${historyView === 'recent' ? 'active' : ''}`}
               aria-pressed={historyView === 'recent'} onClick={() => setHistoryView('recent')}>
               {t("10 lượt gần nhất")}</button>
-          </div>
+          </div>}
 
           {historyError && (
             <div data-i18n-managed
@@ -339,7 +330,7 @@ export function StaffCheckInPage() {
             </div>
           ) : visibleVisits.length === 0 ? (
             <div data-i18n-managed style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-muted)' }} data-testid="checkin-history-empty">
-              {historyView === 'inside'
+              {checkingOut && historyView === 'inside'
                 ? t('Hiện không có hội viên trong trung tâm.')
                 : t('Chưa có lượt check-in nào được ghi nhận.')}
             </div>
@@ -348,7 +339,7 @@ export function StaffCheckInPage() {
               <table className="portal-table">
                 <thead>
                   <tr>
-                    <th className="checkin-actions">{t("Ra về")}</th>
+                    {checkingOut && <th className="checkin-actions">{t("Ra về")}</th>}
                     <th>{t("Hội viên")}</th>
                     <th>{t("Giờ vào / ra")}</th>
                     <th>{t("Cổng")}</th>
@@ -360,7 +351,7 @@ export function StaffCheckInPage() {
                     const ok = isCheckinGranted(rec.status);
                     return (
                       <tr data-i18n-managed key={rec.id} className="row-in" style={{ '--i': i } as React.CSSProperties}>
-                        <td className="checkin-actions">
+                        {checkingOut && <td className="checkin-actions">
                           {ok && !rec.checkOutTime ? (
                             <button data-i18n-managed
                               type="button"
@@ -374,7 +365,7 @@ export function StaffCheckInPage() {
                           ) : rec.checkOutTime ? (
                             <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{t("Đã ra về")}</span>
                           ) : '—'}
-                        </td>
+                        </td>}
                         <td>
                           <div>{rec.memberName || t('Thẻ QR không xác định')}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>

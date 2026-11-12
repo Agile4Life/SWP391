@@ -695,10 +695,6 @@ html:root .portal-logo.portal-logo--mark {
   display: none;
 }
 
-body:has(.portal-backdrop) .sol-toast__icon {
-  display: none;
-}
-
 .portal-search-trigger:hover {
   border-color: var(--portal-border-strong);
 }

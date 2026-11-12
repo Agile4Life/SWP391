@@ -1,6 +1,6 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { formatCenterDate } from '../../shared/lib/centerTime';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
@@ -41,9 +41,6 @@ interface FormState {
   endDate: string;
   durationWeeks: number;
   recurringDays: string[];
-  /** `weekly` repeats on weekdays, `monthly` on days of the month. */
-  repeatType: 'weekly' | 'monthly';
-  monthDays: number[];
   price: number;
   startTime: string;
   endTime: string;
@@ -95,23 +92,6 @@ function addWeeksToDate(dateStr: string, weeks: number): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Sessions of a monthly course: each chosen day of each month in the range, a short month using its last day. */
-function countMonthlySessions(startDate: string, endDate: string, monthDays: number[]): number {
-  if (!startDate || !endDate || monthDays.length === 0) return 0;
-  const from = new Date(`${startDate}T00:00:00`);
-  const to = new Date(`${endDate}T00:00:00`);
-  const dates = new Set<string>();
-  for (let y = from.getFullYear(), m = from.getMonth(); y < to.getFullYear() || (y === to.getFullYear() && m <= to.getMonth()); m += 1) {
-    if (m > 11) { m = 0; y += 1; }
-    const last = new Date(y, m + 1, 0).getDate();
-    for (const day of monthDays) {
-      const date = new Date(y, m, Math.min(day, last));
-      if (date >= from && date <= to) dates.add(date.toDateString());
-    }
-  }
-  return dates.size;
-}
-
 const RECURRING_DAYS_OPTIONS = [
   { value: 'MONDAY', label: 'T2', fullLabel: 'Thứ 2' },
   { value: 'TUESDAY', label: 'T3', fullLabel: 'Thứ 3' },
@@ -137,13 +117,13 @@ const defaultFormData = (): FormState => {
     endDate: addWeeksToDate(advance2, 4),
     durationWeeks: 4,
     recurringDays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
-    repeatType: 'weekly',
-    monthDays: [],
     price: 500000,
     startTime: '08:00',
     endTime: '09:00',
   };
 };
+
+const DETAIL_SESSION_PREVIEW = 5;
 
 export function StaffClassesPage() {
   const { t } = useStaffI18n();
@@ -168,6 +148,18 @@ export function StaffClassesPage() {
   // State Modal Tạo lớp & Form
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const selectedClassId = selectedClassDetail?.id;
+  useEffect(() => { setShowAllSessions(false); }, [selectedClassId]);
+  // Class detail shows the next few sessions first; the rest (and past ones) sit behind "Xem thêm".
+  const detailSessions = useMemo(() => {
+    const all = sessions
+      .filter((s) => s.classId === selectedClassId)
+      .sort((a, b) => `${a.sessionDate}${a.startTime}`.localeCompare(`${b.sessionDate}${b.startTime}`));
+    const upcoming = all.filter((s) => s.status === 'scheduled');
+    const preview = upcoming.length > 0 ? upcoming.slice(0, DETAIL_SESSION_PREVIEW) : all.slice(-DETAIL_SESSION_PREVIEW);
+    return { all, preview };
+  }, [sessions, selectedClassId]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [modalError, setModalError] = useState<StaffMessage | null>(null);
   const [formData, setFormData] = useState<FormState>(defaultFormData);
@@ -482,14 +474,9 @@ export function StaffClassesPage() {
       const startDateVal = formData.startDate || formData.sessionDate;
       const durationWeeksVal = formData.durationWeeks || 4;
       const endDateVal = formData.endDate || addWeeksToDate(startDateVal, durationWeeksVal);
-      const monthly = formData.repeatType === 'monthly';
       const recurringDaysVal = formData.recurringDays && formData.recurringDays.length > 0
         ? formData.recurringDays
         : ['MONDAY', 'WEDNESDAY', 'FRIDAY'];
-      // A monthly course with no day picked meets on the day of its start date.
-      const monthDaysVal = formData.monthDays.length > 0
-        ? [...formData.monthDays].sort((a, b) => a - b)
-        : [Number(startDateVal.slice(8, 10))];
 
       await classesApi.createRecurringClass({
         name: formData.name.trim(),
@@ -502,8 +489,7 @@ export function StaffClassesPage() {
         price: Number(formData.price) || 0,
         startDate: startDateVal,
         endDate: endDateVal,
-        repeatType: monthly ? 'monthly' : 'weekly',
-        ...(monthly ? { monthDays: monthDaysVal } : { recurringDays: recurringDaysVal }),
+        recurringDays: recurringDaysVal,
         startTime: formData.startTime.length === 5 ? formData.startTime + ':00' : formData.startTime,
         endTime: formData.endTime.length === 5 ? formData.endTime + ':00' : formData.endTime,
       });
@@ -904,7 +890,8 @@ export function StaffClassesPage() {
       startTime: session.startTime,
       endTime: session.endTime,
       title: name,
-      meta: [room, coach].filter(Boolean).join(' · ') || undefined,
+      meta: room || undefined,
+      detail: coach || undefined,
       badge: tone === 'cancelled' ? t('Đã hủy', 'Cancelled') : tone === 'full' ? t('Đầy', 'Full') : capacity !== undefined ? `${booked}/${capacity}` : undefined,
       tone,
       ariaLabel: `${name}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${room ? `, ${room}` : ''}${seats ? `, ${seats}` : ''}, ${statusText}. ${t('Bấm để xem chi tiết lớp', 'Click to view class details')}`,
@@ -998,7 +985,7 @@ export function StaffClassesPage() {
           onEventClick={openSessionDetail}
           onSlotClick={isManager ? (slot) => { if (!catalogsLoading) handleOpenModal(slot); } : undefined}
           slotActionLabel={t("bấm để tạo lịch")}
-          legendNote={t("Số trên khối: đã đặt / sức chứa")}
+          legendNote={t("Bấm vào khối để xem giờ, sĩ số và huấn luyện viên")}
           legend={[
             ...(isManager ? [{ tone: 'free' as const, label: t('Ô trống: bấm để tạo lịch') }] : []),
             { tone: 'open', label: t('Có lịch, còn chỗ') },
@@ -1154,11 +1141,11 @@ export function StaffClassesPage() {
             </div>
             <div>
               <h4 style={{ margin: '4px 0 8px', fontSize: '0.88rem' }}>{t("Lịch các buổi học đã xếp")}</h4>
-              {sessions.filter((s) => s.classId === selectedClassDetail.id).length === 0 ? (
+              {detailSessions.all.length === 0 ? (
                 <p data-i18n-managed className="muted" style={{ margin: 0 }}>{t("Chưa có buổi học nào được xếp lịch cho lớp này.")}</p>
               ) : (
                 <div data-i18n-managed style={{ display: 'grid', gap: 8 }}>
-                  {sessions.filter((s) => s.classId === selectedClassDetail.id).map((s) => (
+                  {(showAllSessions ? detailSessions.all : detailSessions.preview).map((s) => (
                     <div data-i18n-managed key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
                       <div>
                         <strong>{formatCenterDate(s.sessionDate)}</strong>
@@ -1194,6 +1181,14 @@ export function StaffClassesPage() {
                     </div>
                   ))}
                 </div>
+              )}
+              {detailSessions.all.length > detailSessions.preview.length && (
+                <button type="button" className="btn-secondary btn-sm" style={{ marginTop: 8 }}
+                  aria-expanded={showAllSessions} onClick={() => setShowAllSessions((open) => !open)}>
+                  {showAllSessions
+                    ? t('Thu gọn', 'Show less')
+                    : t(`Xem thêm ${detailSessions.all.length - detailSessions.preview.length} buổi`, `Show ${detailSessions.all.length - detailSessions.preview.length} more`)}
+                </button>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
@@ -1942,63 +1937,6 @@ export function StaffClassesPage() {
                 </div>
               </div>
 
-              {/* Kiểu lặp lại: theo tuần hoặc theo tháng */}
-              <div className="portal-form-group">
-                <label className="portal-label">{t("Lặp lại *", "Repeats *")}</label>
-                <div role="group" aria-label={t("Kiểu lặp lại", "Repeat type")} style={{ display: 'flex', gap: 6 }}>
-                  {(['weekly', 'monthly'] as const).map((kind) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      aria-pressed={formData.repeatType === kind}
-                      className={`filter-chip ${formData.repeatType === kind ? 'is-active' : ''}`}
-                      style={{ padding: '5px 14px', borderRadius: 16, fontWeight: 600, fontSize: '0.82rem' }}
-                      onClick={() => setFormData({ ...formData, repeatType: kind })}
-                      disabled={isSubmitting}
-                    >
-                      {kind === 'weekly' ? t('Theo tuần', 'Weekly') : t('Theo tháng', 'Monthly')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {formData.repeatType === 'monthly' ? (
-                <div className="portal-form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <label className="portal-label" style={{ margin: 0 }}>
-                      {t("Các ngày học trong tháng *", "Days of the month *")}</label>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-salmon, #eb7e6b)', fontWeight: 600 }}>
-                      {t("Tổng cộng:", "Total:")} {countMonthlySessions(
-                        formData.startDate || formData.sessionDate,
-                        formData.endDate,
-                        formData.monthDays.length > 0 ? formData.monthDays : [Number((formData.startDate || formData.sessionDate).slice(8, 10))],
-                      )} {t("buổi học", "sessions")}
-                    </span>
-                  </div>
-                  <div data-testid="month-days" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => {
-                      const isSelected = formData.monthDays.includes(day);
-                      return (
-                        <button
-                          key={day}
-                          type="button"
-                          aria-pressed={isSelected}
-                          className={`filter-chip ${isSelected ? 'is-active' : ''}`}
-                          style={{ padding: '4px 0', width: 38, borderRadius: 16, fontWeight: 600, fontSize: '0.8rem' }}
-                          onClick={() => setFormData({
-                            ...formData,
-                            monthDays: isSelected ? formData.monthDays.filter((d) => d !== day) : [...formData.monthDays, day],
-                          })}
-                          disabled={isSubmitting}
-                        >
-                          {day}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <small>{t("Tháng thiếu ngày đã chọn thì học vào ngày cuối tháng; không chọn thì theo ngày khai giảng.", "A month without the chosen day (for example 31) uses its last day. With no day chosen the course meets on the start date's day each month.")}</small>
-                </div>
-              ) : (
               <div className="portal-form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label className="portal-label" style={{ margin: 0 }}>
@@ -2034,8 +1972,6 @@ export function StaffClassesPage() {
                   })}
                 </div>
               </div>
-
-              )}
 
               {/* Khung giờ học */}
               <div className="grid-2">

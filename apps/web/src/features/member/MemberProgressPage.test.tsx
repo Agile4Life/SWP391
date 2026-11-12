@@ -8,7 +8,7 @@ import * as api from './memberProgressApi';
 import { memberCheckinApi } from './memberCheckinApi';
 vi.mock('./memberCheckinApi', () => ({ memberCheckinApi: { history: vi.fn().mockResolvedValue([]) } }));
 
-vi.mock('./memberProgressApi', () => ({ getMyEvaluations: vi.fn().mockResolvedValue([]), getMyProgressMetrics: vi.fn(), getMyTrainingPlans: vi.fn(), getMyCompletedItemIds: vi.fn(), setTrainingItemCompleted: vi.fn() }));
+vi.mock('./memberProgressApi', () => ({ getMyProgressMetrics: vi.fn(), getMyTrainingPlans: vi.fn() }));
 let host: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
@@ -19,8 +19,6 @@ beforeEach(() => {
     { id: 2, metricName: 'bmi', metricValue: 23, unit: null, recordedAt: '2026-10-19T08:00:00' },
   ]);
   vi.mocked(api.getMyTrainingPlans).mockResolvedValue([]);
-  vi.mocked(api.getMyCompletedItemIds).mockResolvedValue([]);
-  vi.mocked(api.setTrainingItemCompleted).mockResolvedValue({ itemId: 5, exerciseDate: '2026-10-25', completed: true });
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 async function render() { await act(async () => root.render(<MemoryRouter><MemberProgressPage /></MemoryRouter>)); }
@@ -34,10 +32,16 @@ it('renders persisted weekly measurements without derived BMI', async () => {
   expect(host.textContent).toContain('BMI 23');
 });
 
-it('shows an honest homework blocker without a fake completion checkbox', async () => {
+it('removes the today-exercises block and the old coach review block', async () => {
   await render();
-  expect(host.textContent).toContain('Chưa có giáo án đang hoạt động được giao.');
+  expect(host.textContent).not.toContain('Bài tập hôm nay');
+  expect(host.textContent).not.toContain('Đánh giá từ huấn luyện viên');
   expect(host.querySelector('input[type="checkbox"]')).toBeNull();
+});
+
+it('shows an empty state when no coach plan is applied', async () => {
+  await render();
+  expect(host.querySelector('#coach-training-plan')?.textContent).toContain('Chưa có giáo án đang áp dụng.');
 });
 
 it('shows independent API errors and retry controls', async () => {
@@ -48,124 +52,68 @@ it('shows independent API errors and retry controls', async () => {
   expect(host.textContent).toContain('Thử lại');
 });
 
-function todayPlan() {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  const date = `${value('year')}-${value('month')}-${value('day')}`;
-  return { date, plan: { id: 1, status: 'active', startDate: date, endDate: date, goal: null, coachName: 'HLV', items: [
-    { id: 5, dayOfWeek: new Date(`${date}T12:00:00Z`).getUTCDay() || 7, exerciseName: 'Squat', description: null, sets: 3, reps: 10, durationMinutes: null, orderIndex: 1 },
-  ] } as api.TrainingPlan };
+function activePlan(overrides: Partial<api.TrainingPlan> = {}): api.TrainingPlan {
+  return { id: 1, status: 'active', startDate: '2026-01-01', endDate: '2099-12-31', goal: 'Tăng cơ', coachName: 'HLV Lan', items: [
+    { id: 6, dayOfWeek: 3, exerciseName: 'Deadlift', description: 'Giữ lưng thẳng', sets: 4, reps: 6, durationMinutes: null, restSeconds: 90, orderIndex: 1 },
+    { id: 5, dayOfWeek: 1, exerciseName: 'Squat', description: null, sets: 3, reps: 10, durationMinutes: null, orderIndex: 1 },
+    { id: 7, dayOfWeek: 1, exerciseName: 'Plank', description: null, sets: null, reps: null, durationMinutes: 5, orderIndex: 2 },
+  ], ...overrides };
 }
 
-it('loads persisted completion and only changes checkbox after server confirms', async () => {
-  const { date, plan } = todayPlan();
-  vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
-  vi.mocked(api.getMyCompletedItemIds).mockResolvedValue([5]);
+it('shows the coach plan in the first section, grouped by weekday', async () => {
+  vi.mocked(api.getMyTrainingPlans).mockResolvedValue([activePlan()]);
   await render();
-  const checkbox = host.querySelector('input[type="checkbox"]') as HTMLInputElement;
-  expect(checkbox.checked).toBe(true);
-  await act(async () => checkbox.click());
-  expect(api.setTrainingItemCompleted).toHaveBeenCalledWith(5, date, false);
-  expect(checkbox.checked).toBe(false);
+  const section = host.querySelector('#coach-training-plan') as HTMLElement;
+  expect(section.textContent).toContain('Tăng cơ');
+  expect(section.textContent).toContain('HLV Lan');
+  const days = [...section.querySelectorAll('.member-progress-plan__day h4')].map((node) => node.textContent);
+  expect(days).toEqual(['Thứ 2', 'Thứ 4']);
+  expect(section.querySelectorAll('li')).toHaveLength(3);
+  expect(section.textContent).toContain('4 hiệp × 6 lần');
+  expect(section.textContent).toContain('Nghỉ 90 giây');
+  expect(host.querySelector('.member-progress > section')).toBe(section);
 });
 
-it('keeps prior completion state and reports API failure', async () => {
-  const { plan } = todayPlan();
-  vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
-  vi.mocked(api.setTrainingItemCompleted).mockRejectedValue(new Error('offline'));
+it('ignores plans that are not active and shows the empty state', async () => {
+  vi.mocked(api.getMyTrainingPlans).mockResolvedValue([activePlan({ status: 'superseded' })]);
   await render();
-  const checkbox = host.querySelector('input[type="checkbox"]') as HTMLInputElement;
-  await act(async () => checkbox.click());
-  expect(checkbox.checked).toBe(false);
-  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể lưu');
+  expect(host.querySelector('#coach-training-plan')?.textContent).toContain('Chưa có giáo án đang áp dụng.');
+  expect(host.querySelector('.member-progress-plan')).toBeNull();
 });
 
-it('does not confirm completion while the API is pending', async () => {
-  const { plan } = todayPlan();
-  vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
-  let resolveSave!: (value: api.TrainingCompletion) => void;
-  vi.mocked(api.setTrainingItemCompleted).mockImplementation(() => new Promise((resolve) => { resolveSave = resolve; }));
+it('retries a failed plan load without touching measurements', async () => {
+  vi.mocked(api.getMyTrainingPlans).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([activePlan()]);
   await render();
-  const checkbox = host.querySelector('input[type="checkbox"]') as HTMLInputElement;
-  await act(async () => checkbox.click());
-  expect(checkbox.disabled).toBe(true);
-  expect(checkbox.checked).toBe(false);
-  expect(host.textContent).toContain('Đang lưu');
-  await act(async () => resolveSave({ itemId: 5, exerciseDate: todayPlan().date, completed: true }));
-  expect(checkbox.checked).toBe(true);
+  const section = host.querySelector('#coach-training-plan') as HTMLElement;
+  expect(section.querySelector('[role="alert"]')?.textContent).toContain('Không thể tải giáo án');
+  await act(async () => (section.querySelector('button') as HTMLButtonElement).click());
+  expect(section.textContent).toContain('Squat');
+  expect(api.getMyProgressMetrics).toHaveBeenCalledTimes(1);
 });
 
-it('hides checkboxes if completion loading fails and retries from the backend', async () => {
-  const { plan } = todayPlan();
-  vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
-  vi.mocked(api.getMyCompletedItemIds).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([5]);
-  await render();
-  expect(host.querySelector('input[type="checkbox"]')).toBeNull();
-  const retry = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Thử lại');
-  expect(retry).toBeDefined();
-  await act(async () => retry?.click());
-  expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
-});
-
-it('shows the measurements empty state when only other health metrics exist', async () => {
+it('shows every coach assessment measurement in its week', async () => {
   vi.mocked(api.getMyProgressMetrics).mockResolvedValue([
     { id: 1, metricName: 'height', metricValue: 170, unit: 'cm', recordedAt: '2026-10-19T08:00:00' },
+    { id: 2, metricName: 'weight', metricValue: 70, unit: 'kg', recordedAt: '2026-10-19T08:00:00' },
+    { id: 3, metricName: 'bmi', metricValue: 24.22, unit: null, recordedAt: '2026-10-19T08:00:00' },
+    { id: 4, metricName: 'body_fat', metricValue: 18.5, unit: '%', recordedAt: '2026-10-26T08:00:00' },
+    { id: 5, metricName: 'muscle_mass', metricValue: 32, unit: 'kg', recordedAt: '2026-10-26T08:00:00' },
   ]);
   await render();
-  expect(host.textContent).toContain('Chưa có số đo cân nặng hoặc BMI.');
+  const weeks = [...host.querySelectorAll('.member-progress-values p')].map((node) => node.textContent ?? '');
+  expect(weeks).toHaveLength(2);
+  expect(weeks[0]).toContain('70 kg');
+  expect(weeks[0]).toContain('Cao 170 cm');
+  expect(weeks[1]).toContain('Mỡ 18.5%');
+  expect(weeks[1]).toContain('Cơ 32 kg');
+});
+
+it('shows the assessment empty state when no coach measurement exists', async () => {
+  vi.mocked(api.getMyProgressMetrics).mockResolvedValue([]);
+  await render();
+  expect(host.textContent).toContain('Chưa có đánh giá sức khỏe từ huấn luyện viên.');
   expect(host.querySelector('.member-progress-values')).toBeNull();
   expect(host.querySelector('svg.member-progress-chart')).toBeNull();
-});
-
-it('shows persisted coach score and feedback, and retries evaluation failures', async () => {
-  vi.mocked(api.getMyEvaluations).mockRejectedValueOnce(new Error('offline'));
-  await render();
-  expect(host.querySelector('#coach-evaluations')?.textContent).toContain('Không thể tải đánh giá');
-  vi.mocked(api.getMyEvaluations).mockResolvedValueOnce([{ id: 8, sessionId: 4, coachId: 2, progressScore: 92, performanceNotes: 'Giữ đúng tư thế', feedback: 'Tiếp tục phát huy', evaluatedAt: '2026-11-03T10:00:00' }]);
-  await act(async () => (host.querySelector('#coach-evaluations button') as HTMLButtonElement).click());
-  expect(host.querySelector('#coach-evaluations')?.textContent).toContain('92/100');
-  expect(host.querySelector('#coach-evaluations')?.textContent).toContain('Giữ đúng tư thế');
-  expect(host.querySelector('#coach-evaluations')?.textContent).toContain('Tiếp tục phát huy');
-});
-
-it('distinguishes a rest day from a missing assigned plan', async () => {
- const {plan}=todayPlan();plan.items=[];
- vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
- await render();
- expect(host.textContent).toContain('Hôm nay là ngày nghỉ hoặc chưa có bài tập được lên lịch.');
- expect(host.textContent).not.toContain('Chưa có giáo án đang hoạt động được giao.');
-});
-
-it('rejects double submit while completion save is pending', async () => {
- const {plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
- let finish!:(value:api.TrainingCompletion)=>void;
- vi.mocked(api.setTrainingItemCompleted).mockImplementation(()=>new Promise(r=>{finish=r;}));
- await render();const input=host.querySelector('input[type="checkbox"]') as HTMLInputElement;
- await act(async()=>{input.click();input.click();});
- expect(api.setTrainingItemCompleted).toHaveBeenCalledTimes(1);
- await act(async()=>finish({itemId:5,exerciseDate:todayPlan().date,completed:true}));
-});
-it('refetches persisted completion after remount instead of keeping local state', async () => {
- const {plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);
- vi.mocked(api.getMyCompletedItemIds).mockResolvedValue([5]);await render();
- expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
- await act(async()=>root.render(null));await render();
- expect(api.getMyCompletedItemIds).toHaveBeenCalledTimes(2);
- expect((host.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(true);
-});
-it('switches Vietnamese exercise day on focus across midnight without applying old completion', async () => {
- vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-10-25T16:59:59Z'));
- const {plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([plan]);await render();
- expect(api.getMyCompletedItemIds).toHaveBeenLastCalledWith('2026-10-25');
- vi.setSystemTime(new Date('2026-10-25T17:00:00Z'));
- await act(async()=>window.dispatchEvent(new Event('focus')));
- expect(api.getMyCompletedItemIds).toHaveBeenLastCalledWith('2026-10-26');
- expect(host.textContent).not.toContain('Squat');
-});
-it('distinguishes a future or expired active plan from a rest day', async () => {
- const {date,plan}=todayPlan();vi.mocked(api.getMyTrainingPlans).mockResolvedValue([{...plan,startDate:'2099-01-01',endDate:'2099-01-31'}]);
- await render();expect(host.textContent).toContain('Chưa có giáo án có hiệu lực trong hôm nay.');
- expect(api.getMyCompletedItemIds).toHaveBeenCalledWith(date);
 });
 
 it('provides a separate workout history tab while preserving progress', async () => {
@@ -190,7 +138,7 @@ it('switches mounted progress labels and independent errors without refetching',
   await act(async () => setLanguage('en'));
   expect(host.textContent).toContain('Fitness progress');
   expect(host.textContent).toContain('Unable to load measurements.');
-  expect(host.textContent).toContain('No active training plan assigned.');
+  expect(host.textContent).toContain('No training plan in use yet.');
   expect(vi.mocked(api.getMyProgressMetrics).mock.calls.length).toBe(calls);
   await act(async () => setLanguage('vi'));
   expect(host.textContent).toContain('Tiến độ thể lực');

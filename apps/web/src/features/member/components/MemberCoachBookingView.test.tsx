@@ -17,7 +17,6 @@ const mocks = vi.hoisted(() => ({
   getAvailableSlots: vi.fn(),
   getMyCoachBookings: vi.fn(),
   createCoachBooking: vi.fn(),
-  createRecurringCoachBooking: vi.fn(),
   cancelCoachBooking: vi.fn(),
   getMemberQuotaStatus: vi.fn(),
   createCoachReview: vi.fn(),
@@ -30,7 +29,6 @@ vi.mock('../coachBookingApi', () => ({
   getAvailableSlots: mocks.getAvailableSlots,
   getMyCoachBookings: mocks.getMyCoachBookings,
   createCoachBooking: mocks.createCoachBooking,
-  createRecurringCoachBooking: mocks.createRecurringCoachBooking,
   cancelCoachBooking: mocks.cancelCoachBooking,
   getMemberQuotaStatus: mocks.getMemberQuotaStatus,
 }));
@@ -377,7 +375,7 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
 
 
 describe('weekly PT booking after Monday has passed', () => {
-  it('chooses next Monday before selecting a slot on a fully booked anchor date', async () => {
+  it('only allows single session 1:1 booking and does not offer weekly or monthly recurring booking', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-11-06T01:00:00Z'));
@@ -388,24 +386,25 @@ describe('weekly PT booking after Monday has passed', () => {
     mocks.getMyCoachBookings.mockResolvedValue([]);
     mocks.getMyCoachReviews.mockResolvedValue([]);
     mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
-    mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-09'
+    mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-06'
       ? [{ startTime: '14:00:00', endTime: '15:00:00', available: true, reason: null }] : []);
-    mocks.createRecurringCoachBooking.mockResolvedValue({ booked: [], skipped: [] });
+    mocks.createCoachBooking.mockResolvedValue({ id: 10, coachId: 1, bookingDate: '2026-11-06', startTime: '14:00:00', endTime: '15:00:00', status: 'CONFIRMED' });
     try {
       await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
       const weekly = host.querySelector<HTMLButtonElement>('button[aria-label="Cả tuần (Hàng tuần)"]');
-      expect(weekly).not.toBeNull();
-      await act(async () => weekly!.click());
-      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="T2"]')!.click());
-      await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="T6, đã chọn"]')!.click());
+      expect(weekly).toBeNull();
+      expect(host.textContent).not.toContain('Cả tuần');
+      expect(host.textContent).not.toContain('Hàng tuần');
+      expect(host.textContent).not.toContain('Cả tháng');
+      expect(host.textContent).not.toContain('Hàng tháng');
       const slot = [...host.querySelectorAll('button')].find(b => b.title.includes('14:00') && b.title.includes('Còn trống'));
       expect(slot).toBeDefined();
       await act(async () => slot!.click());
-      const confirm = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xác nhận đặt'));
+      const confirm = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xác nhận & Đặt lịch'));
       expect(confirm).toBeDefined();
       await act(async () => confirm!.click());
-      expect(mocks.createRecurringCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
-        startDate: '2026-11-06', period: 'week', daysOfWeek: [1], startTime: '14:00:00',
+      expect(mocks.createCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
+        coachId: 1, bookingDate: '2026-11-06', startTime: '14:00:00', endTime: '15:00:00',
       }));
     } finally {
       await act(async () => root.unmount());
