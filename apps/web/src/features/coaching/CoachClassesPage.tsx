@@ -437,7 +437,7 @@ export function CoachClassesPage() {
           onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
           onEventClick={handleEventClick}
           emptyLabel={t("Tuần này bạn chưa có buổi dạy nào.")}
-          legendNote={t("Số trên khối: đã đặt / sức chứa")}
+          legendNote={t("Bấm vào khối để xem giờ, sĩ số và học viên")}
           legend={[
             { tone: 'open', label: t('Lớp còn chỗ') },
             { tone: 'full', label: t('Lớp đã đầy') },

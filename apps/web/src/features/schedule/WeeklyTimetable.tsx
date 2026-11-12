@@ -342,14 +342,10 @@ export function WeeklyTimetable({
                       aria-label={event.ariaLabel}
                       disabled={disabled}
                       aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
-                      title={[event.title, range, event.meta, event.badge].filter(Boolean).join(' · ')}
+                      title={[event.title, range, event.meta, event.detail, event.badge].filter(Boolean).join(' · ')}
                       onClick={() => onEventClick(event.id)}
                     >
-                      {event.badge && (
-                        <span className="mcal__event-top">
-                          <span className="mcal__event-badge">{event.badge}</span>
-                        </span>
-                      )}
+                      {/* Khối chỉ hiện tên và phòng; giờ, sĩ số, trạng thái, HLV xem ở chi tiết khi bấm. */}
                       <strong className="mcal__event-title">{event.title}</strong>
                       {event.meta && <span className="mcal__event-place">{event.meta}</span>}
                     </button>

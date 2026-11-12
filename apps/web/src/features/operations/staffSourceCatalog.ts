@@ -104,6 +104,8 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Đánh giá & bảng xếp hạng tháng": "Monthly evaluations & rankings",
   "Thời khóa biểu giảng dạy của tôi": "My teaching timetable",
   "Số trên khối: đã đặt / sức chứa": "Numbers on each block: booked / capacity",
+  "Bấm vào khối để xem giờ, sĩ số và huấn luyện viên": "Click a block to see the time, attendance and coach",
+  "Bấm vào khối để xem giờ, sĩ số và học viên": "Click a block to see the time, attendance and members",
   "Lớp còn chỗ": "Spaces available",
   "Lớp đã đầy": "Class full",
   "Kèm riêng 1:1": "One-to-one coaching",

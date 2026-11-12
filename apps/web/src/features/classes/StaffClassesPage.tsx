@@ -904,7 +904,8 @@ export function StaffClassesPage() {
       startTime: session.startTime,
       endTime: session.endTime,
       title: name,
-      meta: [room, coach].filter(Boolean).join(' · ') || undefined,
+      meta: room || undefined,
+      detail: coach || undefined,
       badge: tone === 'cancelled' ? t('Đã hủy', 'Cancelled') : tone === 'full' ? t('Đầy', 'Full') : capacity !== undefined ? `${booked}/${capacity}` : undefined,
       tone,
       ariaLabel: `${name}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${room ? `, ${room}` : ''}${seats ? `, ${seats}` : ''}, ${statusText}. ${t('Bấm để xem chi tiết lớp', 'Click to view class details')}`,
@@ -998,7 +999,7 @@ export function StaffClassesPage() {
           onEventClick={openSessionDetail}
           onSlotClick={isManager ? (slot) => { if (!catalogsLoading) handleOpenModal(slot); } : undefined}
           slotActionLabel={t("bấm để tạo lịch")}
-          legendNote={t("Số trên khối: đã đặt / sức chứa")}
+          legendNote={t("Bấm vào khối để xem giờ, sĩ số và huấn luyện viên")}
           legend={[
             ...(isManager ? [{ tone: 'free' as const, label: t('Ô trống: bấm để tạo lịch') }] : []),
             { tone: 'open', label: t('Có lịch, còn chỗ') },

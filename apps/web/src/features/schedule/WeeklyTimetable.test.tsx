@@ -6,7 +6,7 @@ import type { TimetableEvent } from './timetable';
 
 const event: TimetableEvent = {
   id: '7', date: '2099-01-05', startTime: '08:00:00', endTime: '09:30:00',
-  title: 'Yoga Flow', meta: 'Studio · HLV An', badge: '3/12 chỗ', tone: 'open', ariaLabel: 'Yoga Flow 08:00',
+  title: 'Yoga Flow', meta: 'Studio', detail: 'HLV An', badge: '3/12 chỗ', tone: 'open', ariaLabel: 'Yoga Flow 08:00',
 };
 const legend = [{ tone: 'open' as const, label: 'Còn chỗ' }];
 
@@ -49,13 +49,16 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelector<HTMLElement>('.mcal__event')!.style.top).toBe('calc(50% + 3px)');
   });
 
-  it('draws one block per session with title, place and status; the time lives in the hour column and tooltip', async () => {
+  it('draws one block per session with only title and place; time, status and coach live in the tooltip and detail', async () => {
     const onEventClick = vi.fn();
     await render({ onEventClick });
     const blocks = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
     expect(blocks).toHaveLength(1);
-    expect([...blocks[0].children].map((node) => node.textContent)).toEqual(['3/12 chỗ', 'Yoga Flow', 'Studio · HLV An']);
-    expect(blocks[0].getAttribute('title')).toContain('08:00 - 09:30');
+    expect([...blocks[0].children].map((node) => node.textContent)).toEqual(['Yoga Flow', 'Studio']);
+    const tooltip = blocks[0].getAttribute('title')!;
+    expect(tooltip).toContain('08:00 - 09:30');
+    expect(tooltip).toContain('HLV An');
+    expect(tooltip).toContain('3/12 chỗ');
     expect(blocks[0].classList).toContain('mcal__event--open');
     await act(async () => blocks[0].click());
     expect(onEventClick).toHaveBeenCalledWith('7');

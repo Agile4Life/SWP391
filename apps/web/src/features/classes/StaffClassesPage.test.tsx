@@ -377,7 +377,8 @@ describe('StaffClassesPage weekly timetable', () => {
     await render();
     expect(host.querySelector('[data-testid="view-timetable"]')!.getAttribute('aria-selected')).toBe('true');
     expect(host.querySelector('.mcal__event')!.textContent).toContain('Morning Yoga Flow');
-    expect(host.querySelector('.mcal__event')!.textContent).toContain('4/15');
+    expect(host.querySelector('.mcal__event')!.textContent).not.toContain('4/15');
+    expect(host.querySelector('.mcal__event')!.getAttribute('title')).toContain('4/15');
   });
 
   it('lets a manager click an empty slot to prefill the create form', async () => {

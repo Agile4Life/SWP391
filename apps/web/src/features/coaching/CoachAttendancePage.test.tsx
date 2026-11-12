@@ -327,8 +327,9 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
     // Mở đúng tuần chứa buổi gần hôm nay nhất; buổi 101 đã có bản ghi điểm danh, buổi 202 đã diễn ra nhưng chưa lưu.
     const saved = host.querySelector<HTMLButtonElement>('.mcal__event--mine')!;
-    expect(saved.textContent).toContain('Đã điểm danh');
-    expect(host.querySelector('.mcal__event--full')!.textContent).toContain('Chưa điểm danh');
+    expect(saved.textContent).not.toContain('Đã điểm danh');
+    expect(saved.getAttribute('title')).toContain('Đã điểm danh');
+    expect(host.querySelector('.mcal__event--full')!.getAttribute('title')).toContain('Chưa điểm danh');
     // Chỉ hiện khung giờ có buổi (tối thiểu 8 giờ) thay vì đủ 16 giờ.
     expect(host.querySelectorAll('.mcal__gutter span').length).toBeGreaterThanOrEqual(8);
     expect(host.querySelector('[aria-label="Khung giờ"]')).not.toBeNull();
