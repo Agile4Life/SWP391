@@ -213,7 +213,7 @@ test.describe('Mục 12 — lễ tân xem lịch sử yêu cầu gói đã xử 
     expect((await apiWith(m.token, 'GET', '/memberships/subscriptions/requests/history')).status).toBe(403);
 
     const page = await browser.newPage({ storageState: 'e2e/.auth/staff.json' });
-    await page.goto('/staff/reception');
+    await page.goto('/staff/reception-history');
     await settled(page);
     const section = page.getByTestId('request-history');
     await expect(section).toContainText('Lịch sử xử lý yêu cầu gói tập');

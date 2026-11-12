@@ -5,7 +5,8 @@ import QRCode from 'qrcode';
 import { checkinApi } from './checkinApi';
 import '../checkin/qr-checkin.css';
 
-export function GateQrPanel({ gateId }: { gateId: string }) {
+/** `purpose` only changes the copy: members scan the same gate QR to enter and to leave. */
+export function GateQrPanel({ gateId, purpose = 'in' }: { gateId: string; purpose?: 'in' | 'out' }) {
   const { t } = useStaffI18n();
   const [qr, setQr] = useState<{ image: string; gateId: string; wallEnd: number; monotonicEnd: number } | null>(null);
   const [error, setError] = useState<StaffMessage>('');
@@ -49,8 +50,10 @@ export function GateQrPanel({ gateId }: { gateId: string }) {
   }, [gateId, retry]);
   const remaining = qr?.gateId === gateId ? Math.max(0, Math.ceil(Math.min(qr.wallEnd - now.wall, qr.monotonicEnd - now.monotonic) / 1000)) : 0;
   return <section data-i18n-managed className="gate-qr-panel" aria-label={t("Mã QR cổng cho hội viên")}>
-    <h2 className="portal-card-title">{t("Hội viên quét QR cổng")}</h2>
-    <p className="qr-checkin-hint">{t("Mở mục Quét QR trên điện thoại và hướng camera vào mã bên dưới.")}</p>
+    <h2 className="portal-card-title">{purpose === 'out' ? t("Hội viên quét QR để check-out") : t("Hội viên quét QR cổng")}</h2>
+    <p className="qr-checkin-hint">{purpose === 'out'
+      ? t("Mở mục Quét QR trên điện thoại, chọn Check-out rồi hướng camera vào mã bên dưới.")
+      : t("Mở mục Quét QR trên điện thoại và hướng camera vào mã bên dưới.")}</p>
     {qr && remaining > 0 ? <><LoadingImage className="gate-qr-panel__image" src={qr.image} alt={t("Mã QR cổng check-in")} onError={() => { setQr(null); setError('Không thể hiển thị mã QR. Vui lòng thử lại.'); }} /><p data-i18n-managed className="gate-qr-panel__status">{t("Mã còn hiệu lực ")}{remaining}{t("s · Tự làm mới")}</p></>
       : loading ? <div role="status" aria-busy="true" style={{ display: 'grid' }}><span className="sr-only">{t("Đang tạo mã QR cổng…")}</span><div className="gate-qr-panel__image portal-skeleton" aria-hidden="true" style={{ background: 'var(--portal-raised, #eeefec)' }} /></div> : !error && <p role="status">{t("Mã đã hết hạn. Vui lòng tạo mã mới.")}</p>}
     {error && <p className="qr-checkin-error" role="alert">{t(error)}</p>}

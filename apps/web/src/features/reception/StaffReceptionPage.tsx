@@ -7,8 +7,6 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { PaymentInvoice } from './PaymentInvoice';
-import { GateQrPanel } from './GateQrPanel';
-import { MembershipRequestHistory } from './MembershipRequestHistory';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
 import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
@@ -49,8 +47,6 @@ export function StaffReceptionPage() {
 
   // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
   const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
-  // Bumped whenever the pending queue is reloaded (after a payment or cancellation) so the history refreshes too.
-  const [historyRefresh, setHistoryRefresh] = useState(0);
   const [loadingPending, setLoadingPending] = useState(true);
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
   const [cancellingPendingId, setCancellingPendingId] = useState<number | null>(null);
@@ -183,7 +179,6 @@ export function StaffReceptionPage() {
       const items = await receptionApi.getPendingSubscriptions();
       setPendingList(items);
       setSelectedPending((prev) => items.find((item) => item.id === prev?.id) ?? null);
-      if (!silent) setHistoryRefresh((n) => n + 1);
     } catch {
       if (!silent) setPendingList([]);
     } finally {
@@ -234,6 +229,12 @@ export function StaffReceptionPage() {
       if (!silent) setLoadingTrials(false);
     }
   }, [hasAccess]);
+
+  const todoCount = pendingList.length + unpaidPt.length + trialList.length + holdList.length;
+  const loadingTodo = loadingPending || loadingHolds || loadingPt || loadingTrials;
+  const reloadTodo = useCallback(() => Promise.all([
+    loadPendingSubscriptions(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
+  ]), [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     void loadPendingSubscriptions();
@@ -561,10 +562,6 @@ export function StaffReceptionPage() {
       />
 
       <div className="reception-top">
-        <div className="portal-card reception-top__qr">
-          <GateQrPanel gateId="A1" />
-        </div>
-
         <div className="reception-top__main">
           {/* Thanh tra cứu hội viên (BR-01, BR-05) */}
           <div className="portal-card reception-top__search">
@@ -624,135 +621,435 @@ export function StaffReceptionPage() {
           <div className="portal-card reception-top__queue">
             <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 className="portal-card-title">{t("Gói tập chờ thanh toán (")}{pendingList.length})</h2>
+                <h2 className="portal-card-title">{t("Cần xử lý (")}{todoCount})</h2>
               </div>
-              <RefreshButton label={t("Làm mới danh sách")} onClick={() => void loadPendingSubscriptions()} disabled={loadingPending} />
+              <RefreshButton label={t("Làm mới danh sách")} onClick={() => void reloadTodo()} disabled={loadingTodo} />
             </div>
 
-            {loadingPending ? (
-              <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
-                <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
-                {[1, 2].map((idx) => (
-                  <div data-i18n-managed
-                    key={idx}
-                    aria-hidden="true"
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '14px 18px',
-                      borderRadius: '10px',
-                      border: '1px solid var(--color-border-medium)',
-                      backgroundColor: 'var(--color-bg-card)',
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div className="portal-skeleton-line" style={{ width: '42%', height: 18, marginBottom: 8 }} />
-                      <div className="portal-skeleton-line" style={{ width: '64%', height: 14 }} />
-                    </div>
-                    <div style={{ width: 160 }}>
-                      <div className="portal-skeleton-line" style={{ width: '100%', height: 34 }} />
-                    </div>
+            <div className="reception-todo">
+              <section className="reception-todo__group">
+                <div className="portal-card-header">
+                  <h3 className="reception-todo__title">{t("Gói tập chờ thanh toán (")}{pendingList.length})</h3>
+                </div>
+
+                {loadingPending ? (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+                    <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
+                    {[1, 2].map((idx) => (
+                      <div data-i18n-managed
+                        key={idx}
+                        aria-hidden="true"
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '14px 18px',
+                          borderRadius: '10px',
+                          border: '1px solid var(--color-border-medium)',
+                          backgroundColor: 'var(--color-bg-card)',
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div className="portal-skeleton-line" style={{ width: '42%', height: 18, marginBottom: 8 }} />
+                          <div className="portal-skeleton-line" style={{ width: '64%', height: 14 }} />
+                        </div>
+                        <div style={{ width: 160 }}>
+                          <div className="portal-skeleton-line" style={{ width: '100%', height: 34 }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : pendingList.length === 0 ? (
-              <div data-i18n-managed style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                {t("Không có yêu cầu chờ thanh toán.")}</div>
-            ) : (
-              <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
-                {pendingList.map((item) => {
-                  const isSelected = selectedPending?.id === item.id;
-                  return (
-                    <div data-i18n-managed
-                      key={item.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleSelectPendingItem(item)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSelectPendingItem(item);
-                        }
-                      }}
+                ) : pendingList.length === 0 ? (
+                  <div data-i18n-managed style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    {t("Không có yêu cầu chờ thanh toán.")}</div>
+                ) : (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+                    {pendingList.map((item) => {
+                      const isSelected = selectedPending?.id === item.id;
+                      return (
+                        <div data-i18n-managed
+                          key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSelectPendingItem(item)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleSelectPendingItem(item);
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '12px',
+                            padding: '14px 18px',
+                            borderRadius: '10px',
+                            border: isSelected ? '2px solid var(--color-accent-gold)' : '1px solid var(--color-border-medium)',
+                            backgroundColor: isSelected ? 'var(--color-bg-warm)' : 'var(--color-bg-card)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span
+                                style={{
+                                  fontVariantNumeric: 'tabular-nums',
+                                  fontWeight: 700,
+                                  color: 'var(--color-accent-gold)',
+                                  fontSize: '0.92rem',
+                                }}
+                              >
+                                {t("Yêu cầu #")}{item.id}
+                              </span>
+                              <strong>{item.memberName}</strong>
+                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                                ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '4px' }}>
+                              {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
+                                {vnd(item.packagePrice)}
+                              </div>
+                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+                                {t("CHỜ THANH TOÁN")}</span>
+                            </div>
+                            <button
+                              type="button"
+                              className={isSelected ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectPendingItem(item);
+                              }}
+                            >
+                              {isSelected ? t('Đang chọn xử lý') : t('Chọn xác nhận')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                              disabled={cancellingPendingId !== null || isSubmittingPayment}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleCancelPendingItem(item);
+                              }}
+                            >
+                              {cancellingPendingId === item.id ? t('Đang hủy...') : t('Hủy yêu cầu')}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <section className="reception-todo__group">
+                <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 className="reception-todo__title">{t("Buổi PT chưa thanh toán (")}{unpaidPt.length})</h3>
+                  </div>
+                </div>
+
+                {loadingPt ? (
+                  <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
+                ) : ptError ? (
+                  <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{t(ptError)}</span>
+                    <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>{t("Thử lại")}</button>
+                  </div>
+                ) : unpaidPt.length === 0 ? (
+                  <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    {t("Không có buổi PT nào chờ thu tiền.")}</div>
+                ) : (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                    {unpaidPt.map((item) => {
+                      const isBusy = processingPtId === item.id;
+                      return (
+                        <div data-i18n-managed
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '14px',
+                            padding: '16px 18px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--color-border-medium)',
+                            backgroundColor: 'var(--color-bg-warm)',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 240 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                                PT #{item.id}
+                              </span>
+                              <strong>{item.memberName}</strong>
+                              {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
+                            </div>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                              {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
+                              <strong>{vnd(item.hourlyRate)}</strong>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="btn-primary btn-sm"
+                              disabled={processingPtId !== null}
+                              onClick={() => void handleConfirmPt(item, 'cash')}
+                            >
+                              {isBusy ? t('Đang xử lý...') : t('Đã thu tiền mặt')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              disabled={processingPtId !== null}
+                              onClick={() => void handleConfirmPt(item, 'bank_transfer')}
+                            >
+                              {isBusy ? t('Đang xử lý...') : t('Đã nhận chuyển khoản')}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <section className="reception-todo__group">
+                <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 className="reception-todo__title">{t("Đơn trải nghiệm 3 ngày chờ duyệt (")}{trialList.length})</h3>
+                  </div>
+                </div>
+
+                {loadingTrials ? (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+                    <span className="sr-only">{t("Đang tải danh sách đơn đăng ký trải nghiệm...")}</span>
+                    <div
+                      aria-hidden="true"
                       style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '12px',
                         padding: '14px 18px',
                         borderRadius: '10px',
-                        border: isSelected ? '2px solid var(--color-accent-gold)' : '1px solid var(--color-border-medium)',
-                        backgroundColor: isSelected ? 'var(--color-bg-warm)' : 'var(--color-bg-card)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        border: '1px solid var(--color-border-medium)',
+                        backgroundColor: 'var(--color-bg-card)',
                       }}
                     >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span
-                            style={{
-                              fontVariantNumeric: 'tabular-nums',
-                              fontWeight: 700,
-                              color: 'var(--color-accent-gold)',
-                              fontSize: '0.92rem',
-                            }}
-                          >
-                            {t("Yêu cầu #")}{item.id}
-                          </span>
-                          <strong>{item.memberName}</strong>
-                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                            ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '4px' }}>
-                          {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
-                            {vnd(item.packagePrice)}
-                          </div>
-                          <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
-                            {t("CHỜ THANH TOÁN")}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className={isSelected ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectPendingItem(item);
-                          }}
-                        >
-                          {isSelected ? t('Đang chọn xử lý') : t('Chọn xác nhận')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm"
-                          style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
-                          disabled={cancellingPendingId !== null || isSubmittingPayment}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleCancelPendingItem(item);
-                          }}
-                        >
-                          {cancellingPendingId === item.id ? t('Đang hủy...') : t('Hủy yêu cầu')}
-                        </button>
-                      </div>
+                      <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
+                      <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                ) : trialList.length === 0 ? (
+                  <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    {t("Không có đơn trải nghiệm chờ duyệt.")}</div>
+                ) : (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                    {trialList.map((item) => {
+                      const isBusy = processingTrialId === item.id;
+                      return (
+                        <div data-i18n-managed
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap',
+                            gap: '14px',
+                            padding: '16px 18px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--color-border-medium)',
+                            backgroundColor: 'var(--color-bg-warm)',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 260 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  fontVariantNumeric: 'tabular-nums',
+                                  fontWeight: 700,
+                                  color: 'var(--portal-salmon)',
+                                  fontSize: '0.92rem',
+                                }}
+                              >
+                                {t("Đơn thử #")}{item.id}
+                              </span>
+                              <strong>{item.memberName}</strong>
+                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                                ({item.membershipCode || t('Hội viên mới')})
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  padding: '2px 8px',
+                                  borderRadius: '99px',
+                                  background: item.documentType === 'PASSPORT' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 88, 12, 0.15)',
+                                  color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
+                                }}
+                              >
+                                {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Nước ngoài'})`) : 'CCCD'}
+                              </span>
+                            </div>
+
+                            <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--color-text-muted)', display: 'grid', gap: '4px' }}>
+                              <div>
+                                <strong>{t("Tên trên giấy tờ:")}</strong>{' '}
+                                <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{item.documentFullName}</span>
+                                {item.memberName !== item.documentFullName && (
+                                  <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
+                                    {t("(Đồng bộ họ tên: \"")}{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
+                                  </span>
+                                )}
+                              </div>
+                              <div>
+                                <strong>{t("Số giấy tờ:")}</strong> {item.documentNumberMasked}
+                                {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
+                              </div>
+                              <div>
+                                <strong>{t("Email/SĐT:")}</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
+                              </div>
+                              <div>
+                                <strong>{t("Thời gian nộp:")}</strong> {formatCenterDate(item.requestedAt)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              onClick={() => setInspectingTrial(item)}
+                            >
+                              {t("Xem giấy tờ & ảnh")}</button>
+                            <button
+                              type="button"
+                              className="btn-primary btn-sm"
+                              disabled={isBusy}
+                              onClick={() => void handleApproveTrial(item)}
+                            >
+                              {isBusy ? t('Đang duyệt…') : t('✓ Duyệt & Kích hoạt')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                              disabled={isBusy}
+                              onClick={() => handleOpenRejectTrial(item)}
+                            >
+                              {t("✕ Từ chối")}</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <section className="reception-todo__group">
+                <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 className="reception-todo__title">{t("Yêu cầu bảo lưu (")}{holdList.length})</h3>
+                  </div>
+                </div>
+
+                {loadingHolds ? (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
+                    <span className="sr-only">{t("Đang tải danh sách yêu cầu bảo lưu...")}</span>
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        padding: '14px 18px',
+                        borderRadius: '10px',
+                        border: '1px solid var(--color-border-medium)',
+                        backgroundColor: 'var(--color-bg-card)',
+                      }}
+                    >
+                      <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
+                      <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
+                    </div>
+                  </div>
+                ) : holdList.length === 0 ? (
+                  <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                    {t("Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.")}</div>
+                ) : (
+                  <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                    {holdList.map((item) => {
+                      return (
+                        <div data-i18n-managed
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            flexWrap: 'wrap',
+                            gap: '14px',
+                            padding: '16px 18px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--color-border-medium)',
+                            backgroundColor: 'var(--color-bg-warm)',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 260 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  fontVariantNumeric: 'tabular-nums',
+                                  fontWeight: 700,
+                                  color: 'var(--color-accent-gold)',
+                                  fontSize: '0.92rem',
+                                }}
+                              >
+                                {t("Bảo lưu #")}{item.id}
+                              </span>
+                              <strong>{item.memberName}</strong>
+                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                                ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
+                              </span>
+                              <span className="badge badge-warning">{t("CHỜ DUYỆT BẢO LƯU")}</span>
+                            </div>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                              {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
+                            </div>
+                            <div
+                              style={{
+                                marginTop: '8px',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                backgroundColor: 'var(--color-bg-card)',
+                                border: '1px solid var(--color-border-subtle)',
+                                fontSize: '0.88rem',
+                                color: 'var(--color-text-main)',
+                              }}
+                            >
+                              <strong>{t("Lý do hội viên nhập:")}</strong> {item.holdReason}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <Link to="/staff/holds" className="btn-primary btn-sm">
+                              {t('Xem giấy tờ y tế & xử lý', 'Review documents & decide')}
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Lịch sử yêu cầu đăng ký/gia hạn/nâng cấp đã xử lý: danh sách chờ chỉ giữ yêu cầu còn mở. */}
-      <MembershipRequestHistory refreshKey={historyRefresh} />
 
       <div className="grid-2 reception-checkout" ref={checkoutRef}>
         {/* Thông tin hội viên tìm thấy (BR-01 Empty state & BR-05 Masked CCCD) */}
@@ -997,307 +1294,6 @@ export function StaffReceptionPage() {
             </button>
           </form>
         </div>
-      </div>
-
-      {/* Mục Đơn đăng ký Gói Trải Nghiệm 3 Ngày (CCCD / Hộ chiếu) */}
-      <div className="portal-card" style={{ marginBottom: '24px' }}>
-        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 className="portal-card-title">{t("Đơn trải nghiệm 3 ngày chờ duyệt (")}{trialList.length})</h2>
-          </div>
-          <RefreshButton label={t("Làm mới đơn thử")} onClick={() => void loadPendingTrials()} disabled={loadingTrials} />
-        </div>
-
-        {loadingTrials ? (
-          <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
-            <span className="sr-only">{t("Đang tải danh sách đơn đăng ký trải nghiệm...")}</span>
-            <div
-              aria-hidden="true"
-              style={{
-                padding: '14px 18px',
-                borderRadius: '10px',
-                border: '1px solid var(--color-border-medium)',
-                backgroundColor: 'var(--color-bg-card)',
-              }}
-            >
-              <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
-              <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
-            </div>
-          </div>
-        ) : trialList.length === 0 ? (
-          <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            {t("Không có đơn trải nghiệm chờ duyệt.")}</div>
-        ) : (
-          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
-            {trialList.map((item) => {
-              const isBusy = processingTrialId === item.id;
-              return (
-                <div data-i18n-managed
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    padding: '16px 18px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--color-border-medium)',
-                    backgroundColor: 'var(--color-bg-warm)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span
-                        style={{
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: 700,
-                          color: 'var(--portal-salmon)',
-                          fontSize: '0.92rem',
-                        }}
-                      >
-                        {t("Đơn thử #")}{item.id}
-                      </span>
-                      <strong>{item.memberName}</strong>
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                        ({item.membershipCode || t('Hội viên mới')})
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: '99px',
-                          background: item.documentType === 'PASSPORT' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 88, 12, 0.15)',
-                          color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
-                        }}
-                      >
-                        {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Nước ngoài'})`) : 'CCCD'}
-                      </span>
-                    </div>
-
-                    <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--color-text-muted)', display: 'grid', gap: '4px' }}>
-                      <div>
-                        <strong>{t("Tên trên giấy tờ:")}</strong>{' '}
-                        <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{item.documentFullName}</span>
-                        {item.memberName !== item.documentFullName && (
-                          <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
-                            {t("(Đồng bộ họ tên: \"")}{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <strong>{t("Số giấy tờ:")}</strong> {item.documentNumberMasked}
-                        {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
-                      </div>
-                      <div>
-                        <strong>{t("Email/SĐT:")}</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
-                      </div>
-                      <div>
-                        <strong>{t("Thời gian nộp:")}</strong> {formatCenterDate(item.requestedAt)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={() => setInspectingTrial(item)}
-                    >
-                      {t("Xem giấy tờ & ảnh")}</button>
-                    <button
-                      type="button"
-                      className="btn-primary btn-sm"
-                      disabled={isBusy}
-                      onClick={() => void handleApproveTrial(item)}
-                    >
-                      {isBusy ? t('Đang duyệt…') : t('✓ Duyệt & Kích hoạt')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
-                      disabled={isBusy}
-                      onClick={() => handleOpenRejectTrial(item)}
-                    >
-                      {t("✕ Từ chối")}</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Mục Yêu cầu bảo lưu */}
-      <div className="portal-card" style={{ marginBottom: '24px' }}>
-        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 className="portal-card-title">{t("Yêu cầu bảo lưu (")}{holdList.length})</h2>
-          </div>
-          <RefreshButton label={t("Làm mới bảo lưu")} onClick={() => void loadPendingHolds()} disabled={loadingHolds} />
-        </div>
-
-        {loadingHolds ? (
-          <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
-            <span className="sr-only">{t("Đang tải danh sách yêu cầu bảo lưu...")}</span>
-            <div
-              aria-hidden="true"
-              style={{
-                padding: '14px 18px',
-                borderRadius: '10px',
-                border: '1px solid var(--color-border-medium)',
-                backgroundColor: 'var(--color-bg-card)',
-              }}
-            >
-              <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
-              <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
-            </div>
-          </div>
-        ) : holdList.length === 0 ? (
-          <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            {t("Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.")}</div>
-        ) : (
-          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
-            {holdList.map((item) => {
-              return (
-                <div data-i18n-managed
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    padding: '16px 18px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--color-border-medium)',
-                    backgroundColor: 'var(--color-bg-warm)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span
-                        style={{
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: 700,
-                          color: 'var(--color-accent-gold)',
-                          fontSize: '0.92rem',
-                        }}
-                      >
-                        {t("Bảo lưu #")}{item.id}
-                      </span>
-                      <strong>{item.memberName}</strong>
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                        ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
-                      </span>
-                      <span className="badge badge-warning">{t("CHỜ DUYỆT BẢO LƯU")}</span>
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
-                      {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
-                    </div>
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg-card)',
-                        border: '1px solid var(--color-border-subtle)',
-                        fontSize: '0.88rem',
-                        color: 'var(--color-text-main)',
-                      }}
-                    >
-                      <strong>{t("Lý do hội viên nhập:")}</strong> {item.holdReason}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <Link to="/staff/holds" className="btn-primary btn-sm">
-                      {t('Xem giấy tờ y tế & xử lý', 'Review documents & decide')}
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Buổi PT 1:1 trả phí chờ thu tiền */}
-      <div className="portal-card" style={{ marginBottom: '24px' }}>
-        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 className="portal-card-title">{t("Buổi PT chưa thanh toán (")}{unpaidPt.length})</h2>
-          </div>
-          <RefreshButton label={t("Làm mới buổi PT")} onClick={() => void loadUnpaidPt()} disabled={loadingPt} />
-        </div>
-
-        {loadingPt ? (
-          <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
-        ) : ptError ? (
-          <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-            <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{t(ptError)}</span>
-            <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>{t("Thử lại")}</button>
-          </div>
-        ) : unpaidPt.length === 0 ? (
-          <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-            {t("Không có buổi PT nào chờ thu tiền.")}</div>
-        ) : (
-          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
-            {unpaidPt.map((item) => {
-              const isBusy = processingPtId === item.id;
-              return (
-                <div data-i18n-managed
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    padding: '16px 18px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--color-border-medium)',
-                    backgroundColor: 'var(--color-bg-warm)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 240 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
-                        PT #{item.id}
-                      </span>
-                      <strong>{item.memberName}</strong>
-                      {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
-                      {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
-                      <strong>{vnd(item.hourlyRate)}</strong>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="btn-primary btn-sm"
-                      disabled={processingPtId !== null}
-                      onClick={() => void handleConfirmPt(item, 'cash')}
-                    >
-                      {isBusy ? t('Đang xử lý...') : t('Đã thu tiền mặt')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      disabled={processingPtId !== null}
-                      onClick={() => void handleConfirmPt(item, 'bank_transfer')}
-                    >
-                      {isBusy ? t('Đang xử lý...') : t('Đã nhận chuyển khoản')}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {selectedMember && currentUser?.role === 'STAFF' && <CoachHealthMetrics memberId={selectedMember.userId} memberName={selectedMember.fullName} intakeOnly />}

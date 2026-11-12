@@ -46,12 +46,23 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 
-it.each(['STAFF', 'MANAGER'] as const)('shows a scannable gate QR on reception before member lookup for %s', async (role) => {
+it.each(['STAFF', 'MANAGER'] as const)('leaves the gate QR to the check-in and check-out tabs for %s', async (role) => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role });
   await act(async () => root.render(<StaffReceptionPage />));
-  const image = host.querySelector<HTMLImageElement>('img[alt="Mã QR cổng check-in"]');
-  expect(image?.src).toBe('data:image/png;base64,gate-qr');
-  expect(image!.compareDocumentPosition(host.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(host.querySelector('img[alt="Mã QR cổng check-in"]')).toBeNull();
+  expect(checkinApi.gateQr).not.toHaveBeenCalled();
+});
+
+it('gathers memberships, 1:1 sessions, trials and holds in one "Cần xử lý" card', async () => {
+  await act(async () => root.render(<StaffReceptionPage />));
+  const headings = Array.from(host.querySelectorAll('h2, h3')).map((node) => node.textContent ?? '');
+  expect(headings.some((text) => text.startsWith('Cần xử lý ('))).toBe(true);
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain('Gói tập chờ thanh toán');
+  expect(card.textContent).toContain('Buổi PT chưa thanh toán');
+  expect(card.textContent).toContain('Đơn trải nghiệm 3 ngày chờ duyệt');
+  expect(card.textContent).toContain('Yêu cầu bảo lưu');
+  expect(host.querySelector('[data-testid="request-history"]')).toBeNull();
 });
 
 it('keeps the gate QR hidden from members on reception', async () => {

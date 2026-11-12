@@ -165,6 +165,14 @@ export const router = createBrowserRouter([
             path: '/staff/check-in',
             lazy: async () => ({ Component: (await import('../features/reception/StaffCheckInPage')).StaffCheckInPage }),
           },
+          {
+            path: '/staff/check-out',
+            lazy: async () => ({ Component: (await import('../features/reception/StaffCheckOutPage')).StaffCheckOutPage }),
+          },
+          {
+            path: '/staff/reception-history',
+            lazy: async () => ({ Component: (await import('../features/reception/StaffRequestHistoryPage')).StaffRequestHistoryPage }),
+          },
           { path: '/staff/support', lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }) },
           { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
         ],

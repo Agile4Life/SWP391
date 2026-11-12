@@ -60,7 +60,9 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/reception', label: 'Quầy lễ tân & Check-in', icon: 'card', roles: ['STAFF'], tabs: [
     { to: '/staff/reception', label: 'Quầy & POS', en: 'Front desk & POS' },
-    { to: '/staff/check-in', label: 'Check-in cổng', en: 'Gate check-in' },
+    { to: '/staff/check-in', label: 'Check-in', en: 'Check-in' },
+    { to: '/staff/check-out', label: 'Check-out', en: 'Check-out' },
+    { to: '/staff/reception-history', label: 'Lịch sử', en: 'History' },
   ] },
   { to: '/staff/courts', label: 'Đặt sân & Đơn hàng', icon: 'court', roles: ['STAFF'], tabs: [
     { to: '/staff/courts', label: 'Lượt đặt sân', en: 'Court bookings' },
