@@ -258,21 +258,21 @@ export function MemberCheckoutPage() {
                 <h2 className="portal-card-title" style={{ margin: 0 }}>
                   {t("Xác minh danh tính trước khi đăng ký gói tập đầu tiên", "Verify your identity before your first membership")}</h2>
               </div>
-              <p className="row-card__meta" style={{ margin: 0, color: '#f59e0b' }}>
+              <p className="hold-notice hold-notice--warn">
                 {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify a citizen ID (or passport for foreign nationals). Your account name will match the document.")}</p>
 
               {profile?.kycStatus === 'REJECTED' && (
-                <div role="alert" data-testid="kyc-rejected" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem' }}>
+                <div role="alert" data-testid="kyc-rejected" className="hold-notice hold-notice--danger">
                   {t("Hồ sơ trước bị từ chối", "Your previous submission was rejected")}{profile.kycRejectReason ? `: ${profile.kycRejectReason}` : ''}. {t("Vui lòng gửi lại.", "Please submit it again.")}
                 </div>
               )}
               {kycError && (
-                <div role="alert" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem' }}>
+                <div role="alert" className="hold-notice hold-notice--danger">
                   {t(kycError)}
                 </div>
               )}
               {kycSuccess && (
-                <div role="status" style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(34, 197, 94, 0.1)', color: '#4ade80', border: '1px solid rgba(34, 197, 94, 0.2)', fontSize: '0.9rem' }}>
+                <div role="status" className="hold-notice hold-notice--success">
                   {t(kycSuccess)}
                 </div>
               )}
@@ -307,7 +307,7 @@ export function MemberCheckoutPage() {
                 {kycDocType === 'PASSPORT' && (
                   <div>
                     <label htmlFor="checkout-nationality" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                      {t(" Quốc tịch (Nationality) ", "Nationality")}<span style={{ color: '#ef4444' }}>*</span>
+                      {t(" Quốc tịch (Nationality) ", "Nationality")}<span className="required-mark" aria-hidden="true">*</span>
                     </label>
                     <input
                       id="checkout-nationality"
@@ -323,7 +323,7 @@ export function MemberCheckoutPage() {
 
                 <div>
                   <label htmlFor="checkout-doc-number" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                    {kycDocType === 'CCCD' ? t("Số Căn cước công dân (12 chữ số)", "Citizen ID number (12 digits)") : t("Số Hộ chiếu (Passport Number)", "Passport number")} <span style={{ color: '#ef4444' }}>*</span>
+                    {kycDocType === 'CCCD' ? t("Số Căn cước công dân (12 chữ số)", "Citizen ID number (12 digits)") : t("Số Hộ chiếu (Passport Number)", "Passport number")} <span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
                     id="checkout-doc-number"
@@ -339,7 +339,7 @@ export function MemberCheckoutPage() {
 
                 <div>
                   <label htmlFor="checkout-fullname" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                    {t(" Họ và tên đầy đủ (trên CCCD / Hộ chiếu) ", "Full name (on citizen ID / passport)")}<span style={{ color: '#ef4444' }}>*</span>
+                    {t(" Họ và tên đầy đủ (trên CCCD / Hộ chiếu) ", "Full name (on citizen ID / passport)")}<span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
                     id="checkout-fullname"
@@ -350,14 +350,14 @@ export function MemberCheckoutPage() {
                     onChange={(e) => setKycFullName(e.target.value)}
                     required
                   />
-                  <span style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginTop: 4 }}>
+                  <span className="form-hint">
                     {t(" Họ tên tài khoản sẽ được đồng bộ theo tên này. ", "Your account name will match this name.")}</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: kycDocType === 'CCCD' ? '1fr 1fr' : '1fr', gap: 12 }}>
                   <div>
                     <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                      {t(" Ảnh mặt trước ", "Front image")}{kycDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} <span style={{ color: '#ef4444' }}>*</span>
+                      {t(" Ảnh mặt trước ", "Front image")}{kycDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} <span className="required-mark" aria-hidden="true">*</span>
                     </label>
                     {kycFrontImage ? (
                       <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -372,7 +372,7 @@ export function MemberCheckoutPage() {
                   {kycDocType === 'CCCD' && (
                     <div>
                       <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                        {t(" Ảnh mặt sau CCCD ", "Back of citizen ID")}<span style={{ color: '#ef4444' }}>*</span>
+                        {t(" Ảnh mặt sau CCCD ", "Back of citizen ID")}<span className="required-mark" aria-hidden="true">*</span>
                       </label>
                       {kycBackImage ? (
                         <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -397,8 +397,8 @@ export function MemberCheckoutPage() {
               </form>
             </section>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#4ade80', fontSize: '0.9rem' }}>
-              <span>✓</span>
+            <div className="hold-notice hold-notice--success kyc-verified">
+              <span aria-hidden="true">✓</span>
               <span>{t("Đã xác minh định danh theo ", "Identity verified using")}{profile?.documentType || 'CCCD'}: <strong>{profile?.fullName}</strong> {profile?.citizenId ? t(`(Số: ${profile.citizenId})`, `(Number: ${profile.citizenId})`) : ''}</span>
             </div>
           )}
@@ -406,7 +406,7 @@ export function MemberCheckoutPage() {
           <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !isKycVerified ? 0.6 : 1, pointerEvents: !isKycVerified ? 'none' : 'auto' }}>
             <h2 className="portal-card-title">{t("Thanh toán qua VNPay hoặc Ví điện tử SÖL", "Pay via VNPay or SÖL Wallet")}</h2>
             {!isKycVerified && (
-              <p style={{ color: '#f59e0b', fontSize: '0.9rem', margin: 0 }}>
+              <p className="hold-notice hold-notice--warn">
                 {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
             )}
             <VnpayPayButton
