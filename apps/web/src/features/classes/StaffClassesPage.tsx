@@ -1,6 +1,6 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { formatCenterDate } from '../../shared/lib/centerTime';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
@@ -145,6 +145,8 @@ const defaultFormData = (): FormState => {
   };
 };
 
+const DETAIL_SESSION_PREVIEW = 5;
+
 export function StaffClassesPage() {
   const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
@@ -168,6 +170,18 @@ export function StaffClassesPage() {
   // State Modal Tạo lớp & Form
   const [showModal, setShowModal] = useState<boolean>(false);
   const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const selectedClassId = selectedClassDetail?.id;
+  useEffect(() => { setShowAllSessions(false); }, [selectedClassId]);
+  // Class detail shows the next few sessions first; the rest (and past ones) sit behind "Xem thêm".
+  const detailSessions = useMemo(() => {
+    const all = sessions
+      .filter((s) => s.classId === selectedClassId)
+      .sort((a, b) => `${a.sessionDate}${a.startTime}`.localeCompare(`${b.sessionDate}${b.startTime}`));
+    const upcoming = all.filter((s) => s.status === 'scheduled');
+    const preview = upcoming.length > 0 ? upcoming.slice(0, DETAIL_SESSION_PREVIEW) : all.slice(-DETAIL_SESSION_PREVIEW);
+    return { all, preview };
+  }, [sessions, selectedClassId]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [modalError, setModalError] = useState<StaffMessage | null>(null);
   const [formData, setFormData] = useState<FormState>(defaultFormData);
@@ -1155,11 +1169,11 @@ export function StaffClassesPage() {
             </div>
             <div>
               <h4 style={{ margin: '4px 0 8px', fontSize: '0.88rem' }}>{t("Lịch các buổi học đã xếp")}</h4>
-              {sessions.filter((s) => s.classId === selectedClassDetail.id).length === 0 ? (
+              {detailSessions.all.length === 0 ? (
                 <p data-i18n-managed className="muted" style={{ margin: 0 }}>{t("Chưa có buổi học nào được xếp lịch cho lớp này.")}</p>
               ) : (
                 <div data-i18n-managed style={{ display: 'grid', gap: 8 }}>
-                  {sessions.filter((s) => s.classId === selectedClassDetail.id).map((s) => (
+                  {(showAllSessions ? detailSessions.all : detailSessions.preview).map((s) => (
                     <div data-i18n-managed key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
                       <div>
                         <strong>{formatCenterDate(s.sessionDate)}</strong>
@@ -1195,6 +1209,14 @@ export function StaffClassesPage() {
                     </div>
                   ))}
                 </div>
+              )}
+              {detailSessions.all.length > detailSessions.preview.length && (
+                <button type="button" className="btn-secondary btn-sm" style={{ marginTop: 8 }}
+                  aria-expanded={showAllSessions} onClick={() => setShowAllSessions((open) => !open)}>
+                  {showAllSessions
+                    ? t('Thu gọn', 'Show less')
+                    : t(`Xem thêm ${detailSessions.all.length - detailSessions.preview.length} buổi`, `Show ${detailSessions.all.length - detailSessions.preview.length} more`)}
+                </button>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>

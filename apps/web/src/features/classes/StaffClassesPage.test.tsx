@@ -93,6 +93,31 @@ describe('StaffClassesPage (SCRUM-131 & SCRUM-132)', () => {
     expect(host.querySelector('[data-testid="view-class-101"]')).not.toBeNull();
   });
 
+  it('class detail previews the next five sessions and reveals the rest on "Xem thêm"', async () => {
+    vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '2', name: 'Lễ tân Lan', identifier: 'reception@scms.local', role: 'STAFF' });
+    const day = (n: number) => `2026-11-${String(n).padStart(2, '0')}`;
+    vi.spyOn(classesApi, 'getSessions').mockResolvedValue([
+      ...[1, 2, 3].map((n) => ({ id: n, classId: 101, sessionDate: day(n), startTime: '18:00:00', endTime: '19:15:00', status: 'completed' as const })),
+      ...[12, 13, 14, 15, 16, 17, 18, 19].map((n) => ({ id: n, classId: 101, sessionDate: day(n), startTime: '18:00:00', endTime: '19:15:00', status: 'scheduled' as const })),
+    ]);
+    await act(async () => { root.render(<StaffClassesPage />); });
+    await openListView();
+    await act(async () => { host.querySelector<HTMLButtonElement>('[data-testid="view-class-101"]')!.click(); });
+
+    const dialog = () => document.body.querySelector('[role="dialog"]')!;
+    const rows = () => dialog().querySelectorAll('.badge-neutral').length;
+    expect(rows()).toBe(5);
+    expect(dialog().textContent).toContain('12/11/2026');
+    expect(dialog().textContent).not.toContain('01/11/2026');
+    const more = [...dialog().querySelectorAll('button')].find((b) => b.textContent?.includes('Xem thêm 6 buổi'))!;
+    await act(async () => more.click());
+    expect(rows()).toBe(11);
+    expect(dialog().textContent).toContain('01/11/2026');
+    const less = [...dialog().querySelectorAll('button')].find((b) => b.textContent === 'Thu gọn')!;
+    await act(async () => less.click());
+    expect(rows()).toBe(5);
+  });
+
   it('shows edit, reschedule, and 2-step double confirm delete for Manager (MANAGER role)', async () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({
       id: '1',
