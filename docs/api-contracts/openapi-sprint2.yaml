@@ -2056,7 +2056,7 @@ paths:
   /admin/audit-logs:
     get:
       summary: Tra cứu nhật ký kiểm toán hệ thống (Audit Logs)
-      description: Chỉ Quản lý Trung tâm (CENTER_MANAGER) có quyền truy cập. Hỗ trợ lọc theo user_id, entity_type, action, khoảng thời gian from - to, kèm phân trang.
+      description: Chỉ Quản trị hệ thống (ADMIN) có quyền truy cập. Hỗ trợ lọc theo user_id, entity_type, action, khoảng thời gian from - to, kèm phân trang. MANAGER và CENTER_MANAGER nhận 403.
       tags: [Audit]
       parameters:
         - name: user_id
@@ -2121,7 +2121,7 @@ paths:
         '401':
           description: Chưa xác thực (UNAUTHORIZED)
         '403':
-          description: Không có quyền truy cập (FORBIDDEN - Yêu cầu CENTER_MANAGER)
+          description: Không có quyền truy cập (FORBIDDEN - Yêu cầu ADMIN)
 
 
   /memberships/subscriptions/realtime-session:

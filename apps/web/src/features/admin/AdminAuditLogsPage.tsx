@@ -9,12 +9,12 @@ import {
   type AuditLogItem,
   type ClassOccupancyItem,
 } from './auditApi';
-import './manager-audit-logs.css';
+import './admin-audit-logs.css';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
 type ActiveTab = 'audit' | 'occupancy';
 
-export function ManagerAuditLogsPage() {
+export function AdminAuditLogsPage() {
   const { t } = useStaffI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('audit');
 
@@ -369,7 +369,7 @@ export function ManagerAuditLogsPage() {
                   className="btn-secondary btn-sm btn-page-nav"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() => setCurrentPage((p) => p + 1)}
-                  aria-label="Trang sau"
+                  aria-label={t("Trang sau →")}
                 >
                   {t("Trang sau →")}</button>
               </div>

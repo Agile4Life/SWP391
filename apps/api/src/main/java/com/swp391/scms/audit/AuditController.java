@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controller for viewing system Audit Logs (SCRUM-109).
- * Strictly restricted to CENTER_MANAGER.
+ * Strictly restricted to ADMIN.
  */
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")
@@ -41,8 +41,8 @@ public class AuditController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
-    @Operation(summary = "Get audit logs with filters", description = "Restricted to CENTER_MANAGER and MANAGER. Supports filtering by userId, entityType, action, from, to.")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get audit logs with filters", description = "Restricted to ADMIN. Supports filtering by userId, entityType, action, from, to.")
     public ApiResponse<Page<AuditLogDto>> getAuditLogs(
             @RequestParam(name = "user_id", required = false) Long userId,
             @RequestParam(name = "entity_type", required = false) String entityType,
