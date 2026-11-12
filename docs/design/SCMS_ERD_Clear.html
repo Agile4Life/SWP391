@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>SCMS ERD Diagram - High Resolution</title>
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      background: #F3F4F6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    #control-panel {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 999;
+      background: #FFFFFF;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn {
+      background: #E67E22;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #D35400; }
+    .btn-svg { background: #2C3E50; }
+    .btn-svg:hover { background: #1A252F; }
+    #wrapper {
+      padding: 80px 40px 40px 40px;
+      display: flex;
+      justify-content: center;
+    }
+    #svg-card {
+      background: #FFFFFF;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    /* SVG Styling */
+    .tbl-header { fill: #E67E22; }
+    .tbl-header-txt { fill: #FFFFFF; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; }
+    .tbl-body { fill: #FFFDF9; stroke: #E67E22; stroke-width: 1.5; }
+    .tbl-row-alt { fill: #FFF7ED; }
+    .txt-field { fill: #2C3E50; font-size: 12px; font-family: "JetBrains Mono", Consolas, monospace; }
+    .txt-pk { fill: #B45309; font-weight: 700; font-size: 11px; }
+    .txt-fk { fill: #C026D3; font-weight: 600; font-size: 11px; }
+    .conn-line { stroke: #4B5563; stroke-width: 1.5; fill: none; }
+    .conn-label { fill: #6B7280; font-size: 11px; font-style: italic; background: #FFFFFF; }
+  </style>
+</head>
+<body>
+
+  <div id="control-panel">
+    <strong style="color: #2C3E50; font-size: 15px;">SCMS ERD Diagram</strong>
+    <button class="btn" onclick="downloadHighResPNG()">Tải ảnh PNG Nét Căng (4K)</button>
+    <button class="btn btn-svg" onclick="downloadVectorSVG()">Tải ảnh Vector (.SVG)</button>
+    <small style="color: #6B7280;">Dán vào Word đảm bảo to rõ 100%</small>
+  </div>
+
+  <div id="wrapper">
+    <div id="svg-card">
+      <svg id="erd-svg" width="1350" height="960" viewBox="0 0 1350 960" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="crow" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+            <line x1="0" y1="2" x2="10" y2="7" stroke="#4B5563" stroke-width="1.8"/>
+            <line x1="0" y1="12" x2="10" y2="7" stroke="#4B5563" stroke-width="1.8"/>
+            <line x1="0" y1="7" x2="10" y2="7" stroke="#4B5563" stroke-width="1.8"/>
+          </marker>
+          <marker id="bar" markerWidth="10" markerHeight="14" refX="5" refY="7" orient="auto">
+            <line x1="5" y1="1" x2="5" y2="13" stroke="#4B5563" stroke-width="2"/>
+          </marker>
+        </defs>
+
+        <!-- BACKGROUND RECT FOR CLEAN EXPORT -->
+        <rect width="1350" height="960" fill="#FFFFFF"/>
+
+        <!-- ================= RELATIONSHIP CONNECTOR LINES ================= -->
+        <!-- Role -> User -->
+        <path d="M 685 110 L 685 160" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="695" y="140" class="conn-label">assigned_to</text>
+
+        <!-- User -> Members -->
+        <path d="M 590 200 L 190 200 L 190 520" class="conn-line" marker-start="url(#bar)" marker-end="url(#bar)"/>
+        <text x="350" y="195" class="conn-label">extends (1:0..1)</text>
+
+        <!-- User -> Coaches -->
+        <path d="M 780 220 L 850 220 L 850 330" class="conn-line" marker-start="url(#bar)" marker-end="url(#bar)"/>
+        <text x="800" y="215" class="conn-label">extends (1:0..1)</text>
+
+        <!-- Rooms -> Class_Sessions -->
+        <path d="M 370 370 L 440 370 L 440 480" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="390" y="365" class="conn-label">hosts</text>
+
+        <!-- Coaches -> Class_Sessions -->
+        <path d="M 760 370 L 600 370 L 600 460" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="670" y="365" class="conn-label">instructs</text>
+
+        <!-- Classes -> Class_Sessions -->
+        <path d="M 760 520 L 600 520" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="670" y="515" class="conn-label">schedules</text>
+
+        <!-- Disciplines -> Classes -->
+        <path d="M 1120 460 L 1000 460 L 1000 500" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="1030" y="455" class="conn-label">categorizes</text>
+
+        <!-- Disciplines -> Membership_Packages -->
+        <path d="M 1200 480 L 1200 580" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="1210" y="535" class="conn-label">categorizes</text>
+
+        <!-- Membership_Packages -> Member_Subscriptions -->
+        <path d="M 1200 700 L 1200 760" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="1210" y="735" class="conn-label">defines</text>
+
+        <!-- Class_Sessions -> Session_Booking -->
+        <path d="M 520 660 L 520 780" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="530" y="725" class="conn-label">contains</text>
+
+        <!-- Members -> Session_Booking -->
+        <path d="M 190 640 L 190 820 L 430 820" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="300" y="815" class="conn-label">books</text>
+
+        <!-- Members -> Center_Checkins -->
+        <path d="M 280 580 L 320 580 L 320 670" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="290" y="625" class="conn-label">checks_in</text>
+
+        <!-- Member_Subscriptions -> Invoice -->
+        <path d="M 1110 820 L 950 820 L 950 670" class="conn-line" marker-start="url(#bar)" marker-end="url(#bar)"/>
+        <text x="1010" y="815" class="conn-label">originates</text>
+
+        <!-- Invoice -> Payments -->
+        <path d="M 850 710 L 850 840" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="860" y="775" class="conn-label">settled_by</text>
+
+        <!-- Members -> Member_Subscriptions (Bottom Routing Bus) -->
+        <path d="M 140 640 L 140 920 L 1200 920 L 1200 890" class="conn-line" marker-start="url(#bar)" marker-end="url(#crow)"/>
+        <text x="640" y="915" class="conn-label">purchases (1:N)</text>
+
+        <!-- ================= ENTITY TABLES ================= -->
+
+        <!-- 1. ROLE -->
+        <g transform="translate(590, 20)">
+          <rect width="190" height="90" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 184 0 A 6 6 0 0 1 190 6 L 190 26 L 0 26 Z" class="tbl-header"/>
+          <text x="95" y="18" text-anchor="middle" class="tbl-header-txt">Role</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="60" class="txt-field">code</text>
+          <text x="12" y="76" class="txt-field">name</text>
+          <text x="12" y="92" class="txt-field">description</text>
+        </g>
+
+        <!-- 2. USER -->
+        <g transform="translate(590, 160)">
+          <rect width="190" height="150" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 184 0 A 6 6 0 0 1 190 6 L 190 26 L 0 26 Z" class="tbl-header"/>
+          <text x="95" y="18" text-anchor="middle" class="tbl-header-txt">User</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">role_id</tspan></text>
+          <text x="12" y="80" class="txt-field">full_name</text>
+          <text x="12" y="98" class="txt-field">email</text>
+          <text x="12" y="116" class="txt-field">phone</text>
+          <text x="12" y="134" class="txt-field">password_hash</text>
+          <text x="12" y="152" class="txt-field">status</text>
+        </g>
+
+        <!-- 3. ROOMS -->
+        <g transform="translate(200, 310)">
+          <rect width="170" height="110" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 164 0 A 6 6 0 0 1 170 6 L 170 26 L 0 26 Z" class="tbl-header"/>
+          <text x="85" y="18" text-anchor="middle" class="tbl-header-txt">Rooms</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field">code</text>
+          <text x="12" y="80" class="txt-field">name</text>
+          <text x="12" y="98" class="txt-field">capacity</text>
+          <text x="12" y="116" class="txt-field">status</text>
+        </g>
+
+        <!-- 4. COACHES -->
+        <g transform="translate(760, 330)">
+          <rect width="180" height="110" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Coaches</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">user_id</tspan></text>
+          <text x="12" y="62" class="txt-field">coach_code</text>
+          <text x="12" y="80" class="txt-field">specialty</text>
+          <text x="12" y="98" class="txt-field">rating</text>
+          <text x="12" y="116" class="txt-field">hourly_rate</text>
+        </g>
+
+        <!-- 5. MEMBERS -->
+        <g transform="translate(100, 520)">
+          <rect width="180" height="100" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Members</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">user_id</tspan></text>
+          <text x="12" y="62" class="txt-field">membership_code</text>
+          <text x="12" y="80" class="txt-field">join_date</text>
+          <text x="12" y="98" class="txt-field">health_notes</text>
+        </g>
+
+        <!-- 6. CLASS_SESSIONS -->
+        <g transform="translate(440, 460)">
+          <rect width="180" height="180" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Class_Sessions</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">class_id</tspan></text>
+          <text x="12" y="80" class="txt-field"><tspan class="txt-fk">coach_id</tspan></text>
+          <text x="12" y="98" class="txt-field"><tspan class="txt-fk">room_id</tspan></text>
+          <text x="12" y="116" class="txt-field">session_date</text>
+          <text x="12" y="134" class="txt-field">start_time</text>
+          <text x="12" y="152" class="txt-field">end_time</text>
+          <text x="12" y="170" class="txt-field">capacity</text>
+          <text x="12" y="188" class="txt-field">status</text>
+        </g>
+
+        <!-- 7. CLASSES -->
+        <g transform="translate(760, 480)">
+          <rect width="190" height="130" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 184 0 A 6 6 0 0 1 190 6 L 190 26 L 0 26 Z" class="tbl-header"/>
+          <text x="95" y="18" text-anchor="middle" class="tbl-header-txt">Classes</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">discipline_id</tspan></text>
+          <text x="12" y="80" class="txt-field"><tspan class="txt-fk">default_room_id</tspan></text>
+          <text x="12" y="98" class="txt-field">code</text>
+          <text x="12" y="116" class="txt-field">name</text>
+          <text x="12" y="134" class="txt-field">capacity</text>
+        </g>
+
+        <!-- 8. DISCIPLINES -->
+        <g transform="translate(1120, 390)">
+          <rect width="170" height="90" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 164 0 A 6 6 0 0 1 170 6 L 170 26 L 0 26 Z" class="tbl-header"/>
+          <text x="85" y="18" text-anchor="middle" class="tbl-header-txt">Disciplines</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="60" class="txt-field">code</text>
+          <text x="12" y="76" class="txt-field">name</text>
+          <text x="12" y="92" class="txt-field">description</text>
+        </g>
+
+        <!-- 9. MEMBERSHIP_PACKAGES -->
+        <g transform="translate(1110, 580)">
+          <rect width="190" height="120" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 184 0 A 6 6 0 0 1 190 6 L 190 26 L 0 26 Z" class="tbl-header"/>
+          <text x="95" y="18" text-anchor="middle" class="tbl-header-txt">Membership_Packages</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">discipline_id</tspan></text>
+          <text x="12" y="80" class="txt-field">code</text>
+          <text x="12" y="98" class="txt-field">name</text>
+          <text x="12" y="116" class="txt-field">price</text>
+          <text x="12" y="134" class="txt-field">duration_days</text>
+        </g>
+
+        <!-- 10. CENTER_CHECKINS -->
+        <g transform="translate(260, 670)">
+          <rect width="180" height="110" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Center_Checkins</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">member_id</tspan></text>
+          <text x="12" y="80" class="txt-field">checkin_time</text>
+          <text x="12" y="98" class="txt-field">checkout_time</text>
+          <text x="12" y="116" class="txt-field"><tspan class="txt-fk">verified_by</tspan></text>
+        </g>
+
+        <!-- 11. SESSION_BOOKING -->
+        <g transform="translate(430, 780)">
+          <rect width="180" height="100" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Session_Booking</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">member_id</tspan></text>
+          <text x="12" y="80" class="txt-field"><tspan class="txt-fk">session_id</tspan></text>
+          <text x="12" y="98" class="txt-field">booking_time</text>
+          <text x="12" y="116" class="txt-field">status</text>
+        </g>
+
+        <!-- 12. INVOICE -->
+        <g transform="translate(760, 650)">
+          <rect width="180" height="120" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Invoice</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">member_id</tspan></text>
+          <text x="12" y="80" class="txt-field"><tspan class="txt-fk">subscription_id</tspan></text>
+          <text x="12" y="98" class="txt-field">total_amount</text>
+          <text x="12" y="116" class="txt-field">status</text>
+          <text x="12" y="134" class="txt-field">issue_date</text>
+        </g>
+
+        <!-- 13. PAYMENTS -->
+        <g transform="translate(760, 820)">
+          <rect width="180" height="120" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 174 0 A 6 6 0 0 1 180 6 L 180 26 L 0 26 Z" class="tbl-header"/>
+          <text x="90" y="18" text-anchor="middle" class="tbl-header-txt">Payments</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">invoice_id</tspan></text>
+          <text x="12" y="80" class="txt-field">amount</text>
+          <text x="12" y="98" class="txt-field">payment_method</text>
+          <text x="12" y="116" class="txt-field">payment_time</text>
+          <text x="12" y="134" class="txt-field">status</text>
+        </g>
+
+        <!-- 14. MEMBER_SUBSCRIPTIONS -->
+        <g transform="translate(1110, 760)">
+          <rect width="190" height="130" rx="6" class="tbl-body"/>
+          <path d="M 0 6 A 6 6 0 0 1 6 0 L 184 0 A 6 6 0 0 1 190 6 L 190 26 L 0 26 Z" class="tbl-header"/>
+          <text x="95" y="18" text-anchor="middle" class="tbl-header-txt">Member_Subscriptions</text>
+          <text x="12" y="44" class="txt-field"><tspan class="txt-pk">id</tspan></text>
+          <text x="12" y="62" class="txt-field"><tspan class="txt-fk">member_id</tspan></text>
+          <text x="12" y="80" class="txt-field"><tspan class="txt-fk">package_id</tspan></text>
+          <text x="12" y="98" class="txt-field">start_date</text>
+          <text x="12" y="116" class="txt-field">end_date</text>
+          <text x="12" y="134" class="txt-field">status</text>
+          <text x="12" y="152" class="txt-field">price_paid</text>
+        </g>
+
+      </svg>
+    </div>
+  </div>
+
+  <script>
+    function downloadHighResPNG() {
+      const svg = document.getElementById("erd-svg");
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement("canvas");
+      // Scale 3x để đạt chuẩn 4K siêu nét
+      canvas.width = 1350 * 3;
+      canvas.height = 960 * 3;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const img = new Image();
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        const pngUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = pngUrl;
+        a.download = "SCMS_ERD_UltraHD.png";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+      img.src = url;
+    }
+
+    function downloadVectorSVG() {
+      const svg = document.getElementById("erd-svg");
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "SCMS_ERD_Vector.svg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  </script>
+</body>
+</html>

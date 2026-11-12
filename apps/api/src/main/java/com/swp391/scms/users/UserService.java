@@ -4,6 +4,7 @@ import com.swp391.scms.audit.Audited;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.users.dto.UserCreateDto;
 import com.swp391.scms.users.dto.UserDto;
 import com.swp391.scms.users.dto.UserUpdateDto;
@@ -98,6 +99,9 @@ public class UserService {
 
     @Autowired(required = false)
     com.swp391.scms.courts.repository.CourtBookingRepository courtBookingRepository;
+
+    @Autowired(required = false)
+    com.swp391.scms.membership.repository.MembershipCancellationRequestRepository cancellationRequestRepository;
 
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
@@ -314,6 +318,27 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
+    public List<UserDto> getDeletedUsers() {
+        return userRepository.findAllByDeletedAtIsNotNullOrderByIdDesc().stream()
+                .map(userMapper::toDto)
+                .toList();
+    }
+
+    @Transactional
+    @Audited(action = "USER_RESTORE", entity = "users")
+    public UserDto restoreUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.user", id));
+        if (user.getDeletedAt() == null) {
+            throw new BadRequestException("USER_NOT_DELETED", "users.not_deleted", null, null);
+        }
+        user.setDeletedAt(null);
+        user.setStatus("active");
+        user.setUpdatedAt(LocalDateTime.now(clock));
+        return userMapper.toDto(userRepository.save(user));
+    }
+
     @Transactional
     @Audited(action = "USER_STATUS_CHANGE", entity = "users")
     public UserDto setStatus(Long id, String status) {
@@ -337,6 +362,17 @@ public class UserService {
         Long id = user.getId();
         LocalDate today = LocalDate.now(clock);
         if ("MEMBER".equals(role)) {
+            if (subscriptionRepository != null && cancellationRequestRepository != null
+                    && cancellationRequestRepository.existsByMemberUserIdAndStatus(id, "APPROVED")) {
+                List<MembershipSubscription> remaining = subscriptionRepository.findByMemberUserId(id).stream()
+                        .filter(s -> List.of("active", "frozen", "pending_payment").contains(s.getStatus()))
+                        .toList();
+                for (MembershipSubscription rem : remaining) {
+                    rem.setStatus("cancelled");
+                    rem.setUpdatedAt(LocalDateTime.now(clock));
+                    subscriptionRepository.save(rem);
+                }
+            }
             if (subscriptionRepository != null && subscriptionRepository.existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
                     id, List.of("active", "frozen", "pending_payment"), today)) {
                 throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.membership", null, null);

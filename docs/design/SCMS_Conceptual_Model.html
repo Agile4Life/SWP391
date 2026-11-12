@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>SCMS Conceptual Data Model</title>
+  <style>
+    * { box-sizing: border-box; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      background: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    #wrapper {
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+    }
+    #card {
+      background: #FFFFFF;
+      padding: 20px;
+    }
+    .tbl-header { fill: #E67E22; }
+    .tbl-header-txt { fill: #FFFFFF; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; }
+    .tbl-body { fill: #FFFDF9; stroke: #E67E22; stroke-width: 1.5; }
+    .txt-field { fill: #2C3E50; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .conn-line { stroke: #B56557; stroke-width: 1.8; fill: none; }
+    .conn-label { fill: #B56557; font-size: 12px; font-weight: 600; font-style: italic; }
+    .cardinality { fill: #2C3E50; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <div id="wrapper">
+    <div id="card">
+      <svg id="concept-svg" width="1280" height="820" viewBox="0 0 1280 820" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#B56557"/>
+          </marker>
+        </defs>
+
+        <rect width="1280" height="820" fill="#FFFFFF"/>
+
+        <!-- ================= RELATIONSHIP CONNECTOR LINES ================= -->
+
+        <!-- Discipline -> MembershipPackage -->
+        <path d="M 1030 130 L 770 130" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="860" y="120" class="conn-label">categorizes</text>
+        <text x="1005" y="145" class="cardinality">1</text>
+        <text x="785" y="145" class="cardinality">1..*</text>
+
+        <!-- Discipline -> GymClass -->
+        <path d="M 1120 200 L 1120 380 L 1020 380" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="1130" y="300" class="conn-label">includes</text>
+        <text x="1105" y="225" class="cardinality">1</text>
+        <text x="1035" y="375" class="cardinality">1..*</text>
+
+        <!-- Member -> MembershipPackage -->
+        <path d="M 280 130 L 550 130" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="380" y="120" class="conn-label">purchases</text>
+        <text x="295" y="145" class="cardinality">1</text>
+        <text x="525" y="145" class="cardinality">0..*</text>
+
+        <!-- Member -> CheckIn -->
+        <path d="M 190 220 L 190 400" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="200" y="320" class="conn-label">performs</text>
+        <text x="175" y="245" class="cardinality">1</text>
+        <text x="175" y="390" class="cardinality">0..*</text>
+
+        <!-- Member -> Invoice -->
+        <path d="M 240 220 L 240 680 L 550 680" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="360" y="670" class="conn-label">receives & pays</text>
+        <text x="225" y="250" class="cardinality">1</text>
+        <text x="520" y="695" class="cardinality">0..*</text>
+
+        <!-- Member -> ClassSession -->
+        <path d="M 280 180 L 550 410" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="370" y="300" class="conn-label">reserves & attends</text>
+        <text x="295" y="195" class="cardinality">1</text>
+        <text x="525" y="420" class="cardinality">0..*</text>
+
+        <!-- GymClass -> ClassSession -->
+        <path d="M 810 410 L 760 410" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="765" y="400" class="conn-label">schedules</text>
+        <text x="790" y="425" class="cardinality">1</text>
+        <text x="770" y="425" class="cardinality">1..*</text>
+
+        <!-- Coach -> ClassSession -->
+        <path d="M 655 240 L 655 350" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="665" y="300" class="conn-label">teaches</text>
+        <text x="640" y="260" class="cardinality">1</text>
+        <text x="640" y="340" class="cardinality">0..*</text>
+
+        <!-- Room -> ClassSession -->
+        <path d="M 915 570 L 915 500 L 760 450" class="conn-line" marker-end="url(#arrow)"/>
+        <text x="860" y="520" class="conn-label">hosts</text>
+        <text x="925" y="555" class="cardinality">1</text>
+        <text x="775" y="470" class="cardinality">0..*</text>
+
+        <!-- ================= ENTITY BOXES ================= -->
+
+        <!-- 1. MEMBER -->
+        <g transform="translate(80, 80)">
+          <rect width="200" height="140" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 192 0 A 8 8 0 0 1 200 8 L 200 32 L 0 32 Z" class="tbl-header"/>
+          <text x="100" y="22" text-anchor="middle" class="tbl-header-txt">Member</text>
+          <text x="16" y="56" class="txt-field">• member_code</text>
+          <text x="16" y="80" class="txt-field">• full_name</text>
+          <text x="16" y="104" class="txt-field">• phone</text>
+          <text x="16" y="128" class="txt-field">• join_date</text>
+        </g>
+
+        <!-- 2. MEMBERSHIP PACKAGE -->
+        <g transform="translate(550, 70)">
+          <rect width="220" height="140" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 212 0 A 8 8 0 0 1 220 8 L 220 32 L 0 32 Z" class="tbl-header"/>
+          <text x="110" y="22" text-anchor="middle" class="tbl-header-txt">MembershipPackage</text>
+          <text x="16" y="56" class="txt-field">• package_name</text>
+          <text x="16" y="80" class="txt-field">• price</text>
+          <text x="16" y="104" class="txt-field">• duration_days</text>
+          <text x="16" y="128" class="txt-field">• description</text>
+        </g>
+
+        <!-- 3. DISCIPLINE -->
+        <g transform="translate(1030, 80)">
+          <rect width="190" height="120" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 182 0 A 8 8 0 0 1 190 8 L 190 32 L 0 32 Z" class="tbl-header"/>
+          <text x="95" y="22" text-anchor="middle" class="tbl-header-txt">Discipline</text>
+          <text x="16" y="56" class="txt-field">• code (GYM/YOGA)</text>
+          <text x="16" y="80" class="txt-field">• name</text>
+          <text x="16" y="104" class="txt-field">• description</text>
+        </g>
+
+        <!-- 4. COACH -->
+        <g transform="translate(560, 240)">
+          <rect width="190" height="110" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 182 0 A 8 8 0 0 1 190 8 L 190 32 L 0 32 Z" class="tbl-header"/>
+          <text x="95" y="22" text-anchor="middle" class="tbl-header-txt">Coach</text>
+          <text x="16" y="56" class="txt-field">• coach_code</text>
+          <text x="16" y="80" class="txt-field">• specialty</text>
+          <text x="16" y="104" class="txt-field">• rating</text>
+        </g>
+
+        <!-- 5. GYM CLASS -->
+        <g transform="translate(810, 330)">
+          <rect width="210" height="120" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 202 0 A 8 8 0 0 1 210 8 L 210 32 L 0 32 Z" class="tbl-header"/>
+          <text x="105" y="22" text-anchor="middle" class="tbl-header-txt">GymClass</text>
+          <text x="16" y="56" class="txt-field">• class_name</text>
+          <text x="16" y="80" class="txt-field">• code</text>
+          <text x="16" y="104" class="txt-field">• max_capacity</text>
+        </g>
+
+        <!-- 6. CLASS SESSION -->
+        <g transform="translate(550, 370)">
+          <rect width="210" height="130" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 202 0 A 8 8 0 0 1 210 8 L 210 32 L 0 32 Z" class="tbl-header"/>
+          <text x="105" y="22" text-anchor="middle" class="tbl-header-txt">ClassSession</text>
+          <text x="16" y="56" class="txt-field">• session_date</text>
+          <text x="16" y="80" class="txt-field">• start_time</text>
+          <text x="16" y="104" class="txt-field">• end_time</text>
+          <text x="16" y="128" class="txt-field">• status</text>
+        </g>
+
+        <!-- 7. ROOM -->
+        <g transform="translate(820, 570)">
+          <rect width="190" height="110" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 182 0 A 8 8 0 0 1 190 8 L 190 32 L 0 32 Z" class="tbl-header"/>
+          <text x="95" y="22" text-anchor="middle" class="tbl-header-txt">Room</text>
+          <text x="16" y="56" class="txt-field">• room_name</text>
+          <text x="16" y="80" class="txt-field">• capacity</text>
+          <text x="16" y="104" class="txt-field">• status</text>
+        </g>
+
+        <!-- 8. CHECK-IN -->
+        <g transform="translate(90, 400)">
+          <rect width="190" height="110" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 182 0 A 8 8 0 0 1 190 8 L 190 32 L 0 32 Z" class="tbl-header"/>
+          <text x="95" y="22" text-anchor="middle" class="tbl-header-txt">CheckIn</text>
+          <text x="16" y="56" class="txt-field">• check_in_time</text>
+          <text x="16" y="80" class="txt-field">• check_out_time</text>
+          <text x="16" y="104" class="txt-field">• verified_status</text>
+        </g>
+
+        <!-- 9. INVOICE -->
+        <g transform="translate(550, 610)">
+          <rect width="210" height="130" rx="8" class="tbl-body"/>
+          <path d="M 0 8 A 8 8 0 0 1 8 0 L 202 0 A 8 8 0 0 1 210 8 L 210 32 L 0 32 Z" class="tbl-header"/>
+          <text x="105" y="22" text-anchor="middle" class="tbl-header-txt">Invoice</text>
+          <text x="16" y="56" class="txt-field">• total_amount</text>
+          <text x="16" y="80" class="txt-field">• issue_date</text>
+          <text x="16" y="104" class="txt-field">• payment_method</text>
+          <text x="16" y="128" class="txt-field">• payment_status</text>
+        </g>
+
+      </svg>
+    </div>
+  </div>
+
+</body>
+</html>
+

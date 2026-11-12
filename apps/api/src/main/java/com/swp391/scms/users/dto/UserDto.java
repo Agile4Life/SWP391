@@ -16,6 +16,7 @@ public class UserDto {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime lastLoginAt;
+    private LocalDateTime deletedAt;
     private Boolean subscriptionFrozen;
 
     // Getters and Setters
@@ -43,6 +44,8 @@ public class UserDto {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(LocalDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
     public Boolean getSubscriptionFrozen() { return subscriptionFrozen; }
     public void setSubscriptionFrozen(Boolean subscriptionFrozen) { this.subscriptionFrozen = subscriptionFrozen; }
 }

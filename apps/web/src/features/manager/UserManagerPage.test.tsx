@@ -16,6 +16,8 @@ vi.mock('./userApi', async (importOriginal) => {
       updateUser: vi.fn(),
       toggleLockUser: vi.fn(),
       deleteUser: vi.fn(),
+      getDeletedUsers: vi.fn(),
+      restoreUser: vi.fn(),
       cleanupInactiveUsers: vi.fn(),
       toggleRolePermission: vi.fn(),
     },
@@ -75,6 +77,7 @@ describe('UserManagerPage', () => {
     root = createRoot(host);
 
     vi.mocked(userApi.getUsers).mockResolvedValue(sampleUsers);
+    vi.mocked(userApi.getDeletedUsers).mockResolvedValue([]);
     vi.mocked(userApi.getRolePermissions).mockResolvedValue({
       ADMIN: [],
       CENTER_MANAGER: [],

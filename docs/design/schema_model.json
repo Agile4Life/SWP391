@@ -1,0 +1,5066 @@
+{
+  "domains": [
+    {
+      "id": "users",
+      "nameVi": "Người dùng & phân quyền",
+      "nameEn": "Users & Access Control",
+      "color": "#D97706",
+      "tables": [
+        {
+          "name": "users",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "address",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "avatar_url",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "deleted_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "dob",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "email",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "full_name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "gender",
+              "type": "varchar(10)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "google_sub",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "last_login_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "password_hash",
+              "type": "varchar(255)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "phone",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "username",
+              "type": "varchar(50)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "role_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → roles.id"
+            }
+          ]
+        },
+        {
+          "name": "roles",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "code",
+              "type": "varchar(50)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "permissions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "code",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "module",
+              "type": "varchar(50)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "role_permissions",
+          "columns": [
+            {
+              "name": "role_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → roles.id"
+            },
+            {
+              "name": "permission_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → permissions.id"
+            }
+          ]
+        },
+        {
+          "name": "members",
+          "columns": [
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → users.id"
+            },
+            {
+              "name": "back_image_url",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "citizen_id",
+              "type": "varchar(30)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "document_type",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "emergency_contact_name",
+              "type": "varchar(150)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "emergency_contact_phone",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "fitness_goal",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "fitness_level",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "front_image_url",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "health_notes",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "identity_verified",
+              "type": "bool",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "identity_verified_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "join_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "membership_code",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "nationality",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_realtime_topic",
+              "type": "uuid",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "coaches",
+          "columns": [
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → users.id"
+            },
+            {
+              "name": "bio",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "certification",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "employment_status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hire_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "specialization",
+              "type": "varchar(150)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "receptionists",
+          "columns": [
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → users.id"
+            },
+            {
+              "name": "employment_status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hire_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "shift",
+              "type": "varchar(50)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "center_managers",
+          "columns": [
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → users.id"
+            },
+            {
+              "name": "hire_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "member_addresses",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "is_default",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "note",
+              "type": "varchar(200)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "phone",
+              "type": "varchar(15)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "province_code",
+              "type": "varchar(10)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "province_name",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "recipient_name",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "street_line",
+              "type": "varchar(200)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ward_code",
+              "type": "varchar(10)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ward_name",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "otp_challenges",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "code_hash",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "expires_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "failed_attempts",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "target",
+              "type": "varchar(255)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "classes",
+      "nameVi": "Lớp học & lịch tập",
+      "nameEn": "Classes & Scheduling",
+      "color": "#2563EB",
+      "tables": [
+        {
+          "name": "classes",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "capacity",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "level",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "created_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "discipline_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → disciplines.id"
+            },
+            {
+              "name": "room_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → rooms.id"
+            }
+          ]
+        },
+        {
+          "name": "class_sessions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "cancel_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "end_time",
+              "type": "time",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "session_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "start_time",
+              "type": "time",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "class_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → classes.id"
+            }
+          ]
+        },
+        {
+          "name": "class_enrollments",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "cancel_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "enrolled_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "class_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → classes.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "class_waitlists",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "requested_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "class_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → classes.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "notified_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reservation_expires_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "session_bookings",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "batch_id",
+              "type": "varchar(36)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "booked_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancel_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "session_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → class_sessions.id"
+            }
+          ]
+        },
+        {
+          "name": "session_attendance",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "checked_in_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "notes",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "recorded_by",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "session_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → class_sessions.id"
+            }
+          ]
+        },
+        {
+          "name": "session_evaluations",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "evaluated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "feedback",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "performance_notes",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "progress_score",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "session_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → class_sessions.id"
+            }
+          ]
+        },
+        {
+          "name": "disciplines",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            }
+          ]
+        },
+        {
+          "name": "member_favorite_disciplines",
+          "columns": [
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → members.user_id"
+            },
+            {
+              "name": "discipline_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → disciplines.id"
+            }
+          ]
+        },
+        {
+          "name": "rooms",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "capacity",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "close_time",
+              "type": "time",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "location",
+              "type": "varchar(150)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "open_time",
+              "type": "time",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "tier",
+              "type": "varchar(30)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "discipline_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → disciplines.id"
+            }
+          ]
+        },
+        {
+          "name": "equipment",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "category",
+              "type": "varchar(80)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "code",
+              "type": "varchar(60)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "maintenance_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "note",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "purchase_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "quantity",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "room_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → rooms.id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bookings",
+      "nameVi": "Đặt lịch",
+      "nameEn": "Bookings & Check-ins",
+      "color": "#059669",
+      "tables": [
+        {
+          "name": "coach_bookings",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "booking_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancel_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "end_time",
+              "type": "time",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hourly_rate",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "notes",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_method",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "start_time",
+              "type": "time",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "discipline_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → disciplines.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "court_bookings",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "booking_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancel_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "end_time",
+              "type": "time",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_method",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_status",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "price",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "start_time",
+              "type": "time",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "room_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → rooms.id"
+            }
+          ]
+        },
+        {
+          "name": "center_checkins",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "check_in_time",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "check_out_time",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "denial_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "gate",
+              "type": "varchar(50)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "method",
+              "type": "varchar(10)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "notes",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "`'GRANTED'::character varying`",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "recorded_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "coaches",
+      "nameVi": "Huấn luyện viên & tiến độ",
+      "nameEn": "Coaches & Training Progress",
+      "color": "#7C3AED",
+      "tables": [
+        {
+          "name": "coach_reviews",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "booking_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "class_session_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "comment",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "is_anonymous",
+              "type": "bool",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "manager_notes",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "rating",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "coach_monthly_reviews",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "average_rating",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "badge",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "bonus_amount",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "manager_feedback",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "review_month",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "rank_position",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "total_reviews",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "total_sessions",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "review_year",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "manager_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "training_plans",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "is_ai_generated",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "end_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "goal",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "start_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ai_recommendation_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → ai_recommendation_logs.id"
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "class_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → classes.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "training_plan_items",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "day_of_week",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "duration_minutes",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "exercise_name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "order_index",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reps",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "rest_seconds",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sets",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "training_plan_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → training_plans.id"
+            }
+          ]
+        },
+        {
+          "name": "training_item_completions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "completed_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "exercise_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "training_plan_item_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → training_plan_items.id"
+            }
+          ]
+        },
+        {
+          "name": "member_progress_logs",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "metric_name",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "metric_value",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "recorded_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "unit",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "recorded_by",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "memberships",
+      "nameVi": "Gói thành viên",
+      "nameEn": "Memberships & Subscriptions",
+      "color": "#DB2777",
+      "tables": [
+        {
+          "name": "membership_packages",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "class_credit_limit",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "duration_days",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "price",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "tier",
+              "type": "varchar(30)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "membership_subscriptions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "credit_applied",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "end_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hold_reason",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hold_requested_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hold_resolved_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "hold_status",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "qr_code",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "quoted_price",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "replaced_end_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "start_date",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "upgrade_charge",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "hold_resolved_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "package_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → membership_packages.id"
+            },
+            {
+              "name": "previous_subscription_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → membership_subscriptions.id"
+            }
+          ]
+        },
+        {
+          "name": "membership_cancellation_requests",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "reason",
+              "type": "varchar(500)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "refund_amount",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "requested_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "resolution_note",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "resolved_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "requested_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "resolved_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "subscription_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → membership_subscriptions.id"
+            }
+          ]
+        },
+        {
+          "name": "member_trial_redemptions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "back_image_url",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cccd_hash",
+              "type": "varchar(64)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "cccd_last4",
+              "type": "varchar(4)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "document_type",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "front_image_url",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "full_name",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "nationality",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "redeemed_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "rejection_reason",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reviewed_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reviewed_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(30)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id, UNIQUE"
+            },
+            {
+              "name": "subscription_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → membership_subscriptions.id, UNIQUE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "payments",
+      "nameVi": "Thanh toán & ví",
+      "nameEn": "Payments & Digital Wallets",
+      "color": "#0891B2",
+      "tables": [
+        {
+          "name": "invoices",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "invoice_number",
+              "type": "varchar(50)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "issued_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "pdf_url",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "subtotal_amount",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "tax_amount",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "total_amount",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → payments.id, UNIQUE"
+            }
+          ]
+        },
+        {
+          "name": "invoice_items",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "amount",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "varchar(255)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "quantity",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "unit_price",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "invoice_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → invoices.id"
+            }
+          ]
+        },
+        {
+          "name": "payments",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "amount",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "class_enrollment_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → class_enrollments.id"
+            },
+            {
+              "name": "coach_booking_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → coach_bookings.id"
+            },
+            {
+              "name": "court_booking_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → court_bookings.id"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "method",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "note",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "paid_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "product_order_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → product_orders.id"
+            },
+            {
+              "name": "receipt_image",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "refunded_amount",
+              "type": "numeric",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "subscription_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → membership_subscriptions.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            },
+            {
+              "name": "received_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "vnpay_transactions",
+          "columns": [
+            {
+              "name": "reference",
+              "type": "varchar(32)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "amount",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "expires_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "gateway_transaction_no",
+              "type": "varchar(20)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "ip_address",
+              "type": "varchar(45)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → payments.id"
+            }
+          ]
+        },
+        {
+          "name": "wallets",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "balance",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id, UNIQUE"
+            }
+          ]
+        },
+        {
+          "name": "wallet_transactions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "amount",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "balance_after",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reference_id",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reference_type",
+              "type": "varchar(50)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "type",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "wallet_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → wallets.id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "products",
+      "nameVi": "Sản phẩm & đơn hàng",
+      "nameEn": "E-Commerce & Supplements",
+      "color": "#EA580C",
+      "tables": [
+        {
+          "name": "products",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "active",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "brand",
+              "type": "varchar(80)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "featured",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "form",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(160)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "registration_number",
+              "type": "varchar(60)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "serving_size",
+              "type": "varchar(60)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "short_description",
+              "type": "varchar(300)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "slug",
+              "type": "varchar(180)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "usage_instructions",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "warnings",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "category_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → product_categories.id"
+            }
+          ]
+        },
+        {
+          "name": "product_categories",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "active",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "slug",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "sort_order",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "product_variants",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "active",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "label",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "price",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "servings_per_container",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sku",
+              "type": "varchar(40)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "sort_order",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "stock",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "product_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → products.id"
+            }
+          ]
+        },
+        {
+          "name": "product_images",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "alt_text",
+              "type": "varchar(160)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "content_type",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "data_url",
+              "type": "text",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sort_order",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "product_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → products.id"
+            }
+          ]
+        },
+        {
+          "name": "product_nutrients",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "amount",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "daily_value_percent",
+              "type": "int4",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "highlight",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "name",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sort_order",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sub_row",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "unit",
+              "type": "varchar(12)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "product_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → products.id"
+            }
+          ]
+        },
+        {
+          "name": "product_goals",
+          "columns": [
+            {
+              "name": "product_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK, FK → products.id"
+            },
+            {
+              "name": "goal",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            }
+          ]
+        },
+        {
+          "name": "product_orders",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "cancel_reason",
+              "type": "varchar(255)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "cancelled_by_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "client_request_id",
+              "type": "varchar(36)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "code",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "UNIQUE"
+            },
+            {
+              "name": "completed_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "fulfillment",
+              "type": "varchar(10)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "paid_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_due_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payment_method",
+              "type": "varchar(10)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "processing_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ready_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ship_note",
+              "type": "varchar(200)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ship_phone",
+              "type": "varchar(15)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ship_province_name",
+              "type": "varchar(80)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ship_recipient_name",
+              "type": "varchar(80)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ship_street_line",
+              "type": "varchar(200)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ship_ward_name",
+              "type": "varchar(80)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "shipped_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "shipping_fee",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "subtotal",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "total",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "tracking_carrier",
+              "type": "varchar(60)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "tracking_number",
+              "type": "varchar(60)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "product_order_items",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "line_total",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "product_name",
+              "type": "varchar(160)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "quantity",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sku",
+              "type": "varchar(40)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "unit_price",
+              "type": "numeric",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "variant_label",
+              "type": "varchar(80)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "order_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → product_orders.id"
+            },
+            {
+              "name": "variant_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → product_variants.id"
+            }
+          ]
+        },
+        {
+          "name": "product_stock_movements",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "actor_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "delta",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "note",
+              "type": "varchar(200)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "order_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reason",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "variant_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → product_variants.id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chat_ai",
+      "nameVi": "Chat, AI, hỗ trợ",
+      "nameEn": "Chat, AI & Support Requests",
+      "color": "#4F46E5",
+      "tables": [
+        {
+          "name": "ai_chat_sessions",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "ended_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "started_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "topic",
+              "type": "varchar(150)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "ai_chat_messages",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "message",
+              "type": "text",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sender",
+              "type": "varchar(10)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "session_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → ai_chat_sessions.id"
+            }
+          ]
+        },
+        {
+          "name": "ai_recommendation_logs",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "is_applied",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "input_context",
+              "type": "jsonb",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "model_name",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "recommended_content",
+              "type": "jsonb",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "coach_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → coaches.user_id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "chat_conversations",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamptz",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "last_activity_at",
+              "type": "timestamptz",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_last_read_message_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "staff_last_read_message_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "member_user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "staff_user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "chat_messages",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "client_message_id",
+              "type": "uuid",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamptz",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "message",
+              "type": "varchar(2000)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "conversation_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → chat_conversations.id"
+            },
+            {
+              "name": "sender_user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "support_requests",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "escalated_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "escalation_reason",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "resolved_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "subject",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "assigned_to",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "escalated_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "member_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → members.user_id"
+            }
+          ]
+        },
+        {
+          "name": "support_request_messages",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "client_message_id",
+              "type": "uuid",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "message",
+              "type": "text",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "sender_user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "support_request_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → support_requests.id"
+            }
+          ]
+        },
+        {
+          "name": "staff_internal_requests",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "end_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "manager_notes",
+              "type": "text",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reason",
+              "type": "text",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "request_type",
+              "type": "varchar(50)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "reviewed_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "start_date",
+              "type": "date",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "status",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "target_shift",
+              "type": "varchar(100)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "title",
+              "type": "varchar(200)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "updated_at",
+              "type": "timestamp",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "replacement_user_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "reviewed_by_user_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            },
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "system",
+      "nameVi": "Thông báo & hệ thống",
+      "nameEn": "Notifications & Audit System",
+      "color": "#475569",
+      "tables": [
+        {
+          "name": "notifications",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "action_path",
+              "type": "varchar(500)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "is_read",
+              "type": "bool",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "content",
+              "type": "text",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "related_entity_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "related_entity_type",
+              "type": "varchar(50)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "title",
+              "type": "varchar(150)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "type",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "notification_outbox",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "attempts",
+              "type": "int4",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "channel",
+              "type": "varchar(20)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "completed_at",
+              "type": "timestamptz",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamptz",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "next_attempt_at",
+              "type": "timestamptz",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "payload",
+              "type": "text",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "published_at",
+              "type": "timestamptz",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "version",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            }
+          ]
+        },
+        {
+          "name": "audit_logs",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "action",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "created_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "entity_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "entity_type",
+              "type": "varchar(100)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "ip_address",
+              "type": "varchar(45)",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "new_value",
+              "type": "jsonb",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "old_value",
+              "type": "jsonb",
+              "nullable": true,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "user_id",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        },
+        {
+          "name": "report_snapshots",
+          "columns": [
+            {
+              "name": "id",
+              "type": "int8",
+              "nullable": false,
+              "defaultVal": "",
+              "key": "PK"
+            },
+            {
+              "name": "data",
+              "type": "jsonb",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "generated_at",
+              "type": "timestamp",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "period_end",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "period_start",
+              "type": "date",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "report_type",
+              "type": "varchar(30)",
+              "nullable": false,
+              "defaultVal": "",
+              "key": ""
+            },
+            {
+              "name": "generated_by",
+              "type": "int8",
+              "nullable": true,
+              "defaultVal": "",
+              "key": "FK → users.id"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "fks": [
+    {
+      "childTable": "ai_chat_messages",
+      "childCol": "session_id",
+      "parentTable": "ai_chat_sessions",
+      "parentCol": "id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "childTable": "ai_chat_sessions",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "ai_recommendation_logs",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "ai_recommendation_logs",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "audit_logs",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "center_checkins",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "center_checkins",
+      "childCol": "recorded_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "center_managers",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "chat_conversations",
+      "childCol": "staff_user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "chat_conversations",
+      "childCol": "member_user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "chat_messages",
+      "childCol": "sender_user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "chat_messages",
+      "childCol": "conversation_id",
+      "parentTable": "chat_conversations",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "class_enrollments",
+      "childCol": "cancelled_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "class_enrollments",
+      "childCol": "class_id",
+      "parentTable": "classes",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "class_enrollments",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "class_sessions",
+      "childCol": "class_id",
+      "parentTable": "classes",
+      "parentCol": "id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "childTable": "classes",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "classes",
+      "childCol": "discipline_id",
+      "parentTable": "disciplines",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "classes",
+      "childCol": "created_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "classes",
+      "childCol": "room_id",
+      "parentTable": "rooms",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_bookings",
+      "childCol": "discipline_id",
+      "parentTable": "disciplines",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_bookings",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_bookings",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_monthly_reviews",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_monthly_reviews",
+      "childCol": "manager_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_reviews",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coach_reviews",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "coaches",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "court_bookings",
+      "childCol": "room_id",
+      "parentTable": "rooms",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "court_bookings",
+      "childCol": "member_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "equipment",
+      "childCol": "room_id",
+      "parentTable": "rooms",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "invoice_items",
+      "childCol": "invoice_id",
+      "parentTable": "invoices",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "invoices",
+      "childCol": "payment_id",
+      "parentTable": "payments",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_addresses",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_favorite_disciplines",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_favorite_disciplines",
+      "childCol": "discipline_id",
+      "parentTable": "disciplines",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_progress_logs",
+      "childCol": "recorded_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_progress_logs",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_trial_redemptions",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "member_trial_redemptions",
+      "childCol": "subscription_id",
+      "parentTable": "membership_subscriptions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "members",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_cancellation_requests",
+      "childCol": "resolved_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_cancellation_requests",
+      "childCol": "requested_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_cancellation_requests",
+      "childCol": "subscription_id",
+      "parentTable": "membership_subscriptions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_cancellation_requests",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_packages",
+      "childCol": "created_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_subscriptions",
+      "childCol": "hold_resolved_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_subscriptions",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_subscriptions",
+      "childCol": "previous_subscription_id",
+      "parentTable": "membership_subscriptions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_subscriptions",
+      "childCol": "package_id",
+      "parentTable": "membership_packages",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "membership_subscriptions",
+      "childCol": "created_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "notifications",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "court_booking_id",
+      "parentTable": "court_bookings",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "received_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "subscription_id",
+      "parentTable": "membership_subscriptions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "coach_booking_id",
+      "parentTable": "coach_bookings",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "class_enrollment_id",
+      "parentTable": "class_enrollments",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "product_order_id",
+      "parentTable": "product_orders",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "payments",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_goals",
+      "childCol": "product_id",
+      "parentTable": "products",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_images",
+      "childCol": "product_id",
+      "parentTable": "products",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_nutrients",
+      "childCol": "product_id",
+      "parentTable": "products",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_order_items",
+      "childCol": "order_id",
+      "parentTable": "product_orders",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_order_items",
+      "childCol": "variant_id",
+      "parentTable": "product_variants",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_orders",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_orders",
+      "childCol": "cancelled_by_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_stock_movements",
+      "childCol": "actor_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_stock_movements",
+      "childCol": "variant_id",
+      "parentTable": "product_variants",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "product_variants",
+      "childCol": "product_id",
+      "parentTable": "products",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "products",
+      "childCol": "category_id",
+      "parentTable": "product_categories",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "receptionists",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "report_snapshots",
+      "childCol": "generated_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "role_permissions",
+      "childCol": "permission_id",
+      "parentTable": "permissions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "role_permissions",
+      "childCol": "role_id",
+      "parentTable": "roles",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "rooms",
+      "childCol": "discipline_id",
+      "parentTable": "disciplines",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_attendance",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_attendance",
+      "childCol": "session_id",
+      "parentTable": "class_sessions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_attendance",
+      "childCol": "recorded_by",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_bookings",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_bookings",
+      "childCol": "cancelled_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_bookings",
+      "childCol": "session_id",
+      "parentTable": "class_sessions",
+      "parentCol": "id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "childTable": "session_evaluations",
+      "childCol": "session_id",
+      "parentTable": "class_sessions",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_evaluations",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "session_evaluations",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "staff_internal_requests",
+      "childCol": "replacement_user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "staff_internal_requests",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "staff_internal_requests",
+      "childCol": "reviewed_by_user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "support_request_messages",
+      "childCol": "sender_user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "support_request_messages",
+      "childCol": "support_request_id",
+      "parentTable": "support_requests",
+      "parentCol": "id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "childTable": "support_requests",
+      "childCol": "escalated_by",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "support_requests",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "support_requests",
+      "childCol": "assigned_to",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "training_item_completions",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "training_item_completions",
+      "childCol": "training_plan_item_id",
+      "parentTable": "training_plan_items",
+      "parentCol": "id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "childTable": "training_plan_items",
+      "childCol": "training_plan_id",
+      "parentTable": "training_plans",
+      "parentCol": "id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "childTable": "training_plans",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "training_plans",
+      "childCol": "coach_id",
+      "parentTable": "coaches",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "training_plans",
+      "childCol": "class_id",
+      "parentTable": "classes",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "training_plans",
+      "childCol": "ai_recommendation_id",
+      "parentTable": "ai_recommendation_logs",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "users",
+      "childCol": "role_id",
+      "parentTable": "roles",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "vnpay_transactions",
+      "childCol": "payment_id",
+      "parentTable": "payments",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "wallet_transactions",
+      "childCol": "wallet_id",
+      "parentTable": "wallets",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "wallets",
+      "childCol": "user_id",
+      "parentTable": "users",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "class_waitlists",
+      "childCol": "member_id",
+      "parentTable": "members",
+      "parentCol": "user_id",
+      "onDelete": "NO ACTION"
+    },
+    {
+      "childTable": "class_waitlists",
+      "childCol": "class_id",
+      "parentTable": "classes",
+      "parentCol": "id",
+      "onDelete": "NO ACTION"
+    }
+  ]
+}

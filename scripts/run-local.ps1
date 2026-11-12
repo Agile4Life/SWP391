@@ -47,7 +47,7 @@ function Test-ScmsLocalService {
             $health = $response.Content | ConvertFrom-Json
             return $health.service -eq 'scms-api' -and $health.status -eq 'UP'
         }
-        return $response.Content -match '<title>.*SCMS</title>'
+        return $response.Content -match '<title>.*(SCMS|SÖL Fitness|Fitness).*</title>' -or $response.Content -match 'id="root"'
     } catch { return $false }
 }
 
@@ -131,6 +131,9 @@ if ($Only -in @("all", "web")) {
 if ($Only -in @("all", "api")) {
     $knownJdks = @(
         $env:JAVA_HOME,
+        [System.Environment]::GetEnvironmentVariable("JAVA_HOME", "User"),
+        [System.Environment]::GetEnvironmentVariable("JAVA_HOME", "Machine"),
+        "$env:USERPROFILE\.jdks\corretto-21.0.10",
         "C:\Program Files\Java\jdk-21"
     )
     foreach ($cand in $knownJdks) {

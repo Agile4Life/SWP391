@@ -29,6 +29,7 @@ public interface MembershipCancellationRequestRepository extends JpaRepository<M
 
     List<MembershipCancellationRequest> findByStatusOrderByRequestedAtAsc(String status);
     boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
+    boolean existsByMemberUserIdAndStatus(Long memberId, String status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from MembershipCancellationRequest r where r.id = :id")

@@ -195,7 +195,7 @@ export function ManagerAuditLogsPage() {
   return (
     <div data-i18n-managed className="audit-page portal-container">
       <PageHeader
-        title={t("Nhật ký & lấp đầy lớp")}
+        title={t("Kiểm toán & Giám sát vận hành")}
       />
 
       {/* Navigation Tabs */}
@@ -207,7 +207,7 @@ export function ManagerAuditLogsPage() {
           className={`portal-tab audit-tab-btn ${activeTab === 'audit' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          {t("Nhật ký kiểm toán (Audit Trail)")}</button>
+          {t("Nhật ký kiểm toán")}</button>
         <button
           type="button"
           role="tab"

@@ -65,6 +65,21 @@ export function ManagerReportsPage() {
   const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
+  const [txSearchTerm, setTxSearchTerm] = useState('');
+
+  const filteredTransactions = useMemo(() => {
+    if (!summary?.recentTransactions) return [];
+    const term = txSearchTerm.trim().toLowerCase();
+    if (!term) return summary.recentTransactions;
+    return summary.recentTransactions.filter((tx) => {
+      const matchName = tx.memberName?.toLowerCase().includes(term);
+      const matchInvoice = tx.invoiceNumber?.toLowerCase().includes(term);
+      const matchEmail = tx.email?.toLowerCase().includes(term);
+      const matchPhone = tx.phone?.toLowerCase().includes(term);
+      const matchPackage = tx.packageName?.toLowerCase().includes(term);
+      return Boolean(matchName || matchInvoice || matchEmail || matchPhone || matchPackage);
+    });
+  }, [summary?.recentTransactions, txSearchTerm]);
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
 
@@ -665,13 +680,66 @@ export function ManagerReportsPage() {
       {/* Bảng danh sách giao dịch gần nhất */}
       {!loading && !error && summary && (
         <div data-i18n-managed className="portal-card">
-          <div className="portal-card-header" style={{ marginBottom: '16px' }}>
-            <h2 className="portal-card-title">{t("Giao dịch gần đây")}</h2>
+          <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Giao dịch gần đây")}</h2>
+              {summary.recentTransactions.length > 0 && (
+                <span className="muted" style={{ fontSize: '0.82rem' }}>
+                  {txSearchTerm.trim()
+                    ? t(`Tìm thấy ${filteredTransactions.length} / ${summary.recentTransactions.length} giao dịch`, `Found ${filteredTransactions.length} / ${summary.recentTransactions.length} transactions`)
+                    : t(`Hiển thị ${summary.recentTransactions.length} giao dịch gần nhất`, `Showing ${summary.recentTransactions.length} recent transactions`)}
+                </span>
+              )}
+            </div>
+
+            {/* Thanh tìm kiếm theo tên, SĐT, email, mã hóa đơn */}
+            <div style={{ position: 'relative', minWidth: '280px', maxWidth: '420px', flex: '1 1 280px' }}>
+              <input
+                type="text"
+                className="portal-input"
+                style={{ width: '100%', paddingRight: txSearchTerm ? '32px' : '12px', height: '38px', fontSize: '0.88rem' }}
+                placeholder={t("Tìm theo tên, SĐT, email, mã hóa đơn...", "Search by name, phone, email, invoice code...")}
+                value={txSearchTerm}
+                onChange={(e) => setTxSearchTerm(e.target.value)}
+                aria-label={t("Tìm kiếm giao dịch")}
+              />
+              {txSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setTxSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: '4px',
+                    lineHeight: 1,
+                  }}
+                  title={t("Xóa tìm kiếm")}
+                  aria-label={t("Xóa tìm kiếm")}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {summary.recentTransactions.length === 0 ? (
             <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-              {t("Chưa có giao dịch thanh toán nào được ghi nhận.")}</div>
+              {t("Chưa có giao dịch thanh toán nào được ghi nhận.")}
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+              <p style={{ margin: '0 0 8px 0' }}>{t(`Không tìm thấy giao dịch nào khớp với "${txSearchTerm}".`, `No transactions found matching "${txSearchTerm}".`)}</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => setTxSearchTerm('')}>
+                {t("Xóa tìm kiếm", "Clear search")}
+              </button>
+            </div>
           ) : (
             <div data-i18n-managed className="portal-table-wrapper" tabIndex={0} role="region" aria-label={t("Giao dịch gần đây, cuộn ngang để xem đầy đủ")}>
               <table className="portal-table">
@@ -686,10 +754,19 @@ export function ManagerReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {summary.recentTransactions.map((tx) => (
+                  {filteredTransactions.map((tx) => (
                     <tr data-i18n-managed key={tx.id}>
                       <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{tx.invoiceNumber ?? t('Chưa xuất hóa đơn')}</td>
-                      <td>{tx.memberName}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontWeight: 600 }}>{tx.memberName}</span>
+                          {(tx.phone || tx.email) && (
+                            <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                              {[tx.phone, tx.email].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td>{tx.packageName ?? '—'}</td>
                       <td style={{ fontWeight: 600, color: 'var(--portal-success, #86efac)' }}>{vnd(tx.amount)}</td>
                       <td>

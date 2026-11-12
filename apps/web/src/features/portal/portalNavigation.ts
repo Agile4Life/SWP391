@@ -71,7 +71,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/admin/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['ADMIN'] },
   { to: '/manager/reports', label: 'Báo cáo & Nhật ký', icon: 'chart', roles: ['MANAGER'], tabs: [
     { to: '/manager/reports', label: 'Doanh thu', en: 'Revenue' },
-    { to: '/manager/audit-logs', label: 'Nhật ký & Lấp đầy', en: 'Audit & occupancy' },
+    { to: '/manager/audit-logs', label: 'Kiểm toán & Giám sát', en: 'Audit & monitoring' },
   ] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MANAGER'] },
