@@ -150,19 +150,8 @@ public class CourtBookingService {
      */
     @Transactional
     public RecurringResult bookRecurring(AuthenticatedPrincipal principal, RecurringBookRequest request) {
-        if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
-        List<LocalDate> dates = RecurrenceDates.expand(request.startDate(), request.period(), request.daysOfWeek());
-        court(request.roomId()); // fail fast when the court itself cannot be booked
-        List<BookingDto> booked = new ArrayList<>();
-        List<RecurrenceDates.Skipped> skipped = new ArrayList<>();
-        for (LocalDate date : dates) {
-            try {
-                booked.add(bookOne(principal, request.roomId(), date, request.startTime(), true, request.paymentMethod()));
-            } catch (AppException e) {
-                skipped.add(new RecurrenceDates.Skipped(date, e.getErrorCode(), reason(e)));
-            }
-        }
-        return new RecurringResult(booked, skipped);
+        throw new AppException(HttpStatus.BAD_REQUEST, "COURT_RECURRING_DISABLED", "error.courts.recurring_disabled", null,
+                "Tính năng đặt sân định kỳ theo tuần hoặc tháng đã ngừng hỗ trợ. Vui lòng đặt từng buổi một.");
     }
 
     private String reason(AppException e) {

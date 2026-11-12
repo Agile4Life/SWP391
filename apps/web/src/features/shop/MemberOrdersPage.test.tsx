@@ -55,11 +55,11 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function renderAt(entry = '/member/orders') {
+async function renderAt(entry = '/member/orders', defaultTab?: 'orders' | 'shop' | 'addresses') {
   await act(async () => {
     root.render(
       <MemoryRouter initialEntries={[entry]}>
-        <MemberOrdersPage />
+        <MemberOrdersPage defaultTab={defaultTab} />
       </MemoryRouter>,
     );
   });
@@ -267,4 +267,35 @@ it('shop tab lets members browse products with real images, open quick-buy modal
   // Add to cart from modal
   await click('Thêm vào giỏ');
   expect(host.textContent).toContain('Giỏ hàng có');
+});
+
+it('renders Sản phẩm as the first tab ahead of Đơn hàng and allows switching tabs when defaultTab is shop', async () => {
+  vi.mocked(shopApi.listProducts).mockResolvedValue({
+    content: [],
+    number: 0,
+    size: 12,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  vi.mocked(shopApi.listMyOrders).mockResolvedValue({
+    content: [],
+    number: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0,
+  });
+
+  await renderAt('/member/products', 'shop');
+  const tabs = host.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+  expect(tabs.length).toBe(3);
+  expect(tabs[0].textContent).toContain('Sản phẩm');
+  expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+  expect(tabs[1].textContent).toContain('Đơn hàng');
+  expect(tabs[1].getAttribute('aria-selected')).toBe('false');
+  expect(tabs[2].textContent).toContain('Địa chỉ giao hàng');
+
+  await click('Đơn hàng');
+  const updatedTabs = host.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+  expect(updatedTabs[1].getAttribute('aria-selected')).toBe('true');
+  expect(updatedTabs[0].getAttribute('aria-selected')).toBe('false');
 });

@@ -87,13 +87,11 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
   /court-bookings/recurring:
     post:
-      summary: Standing court booking for a week or a month (MEMBER)
+      summary: (Disabled) Standing court booking is no longer supported; returns 400 COURT_RECURRING_DISABLED
+      deprecated: true
       description: >
-        Books the same one-hour slot on the chosen ISO weekdays (1 = Monday ... 7 = Sunday; defaults to the weekday of
-        startDate). period week covers 7 days from startDate, month covers one calendar month. Standing bookings may
-        reach 31 days ahead instead of 7. Every date is checked on its own (court overlap, class overlap, member
-        overlap, 4 bookings per day, membership covering that date); dates that fail are returned in skipped and the
-        rest are kept. Status 201 when at least one booking was created, 200 when none was.
+        Standing court booking by week or month is no longer supported. This endpoint returns 400 Bad Request with
+        code COURT_RECURRING_DISABLED. Please use single-session booking via POST /court-bookings instead.
       requestBody:
         required: true
         content:

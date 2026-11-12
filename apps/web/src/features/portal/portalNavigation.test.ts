@@ -27,6 +27,10 @@ describe('portal sidebar grouping', () => {
     expect(isPortalNavActive(packages, '/member/hold')).toBe(true);
     expect(isPortalNavActive(packages, '/member/packages/checkout')).toBe(true);
     expect(isPortalNavActive(packages, '/member/card')).toBe(false);
+    const products = PORTAL_NAV.find(item => item.to === '/member/products')!;
+    expect(isPortalNavActive(products, '/member/products')).toBe(true);
+    expect(isPortalNavActive(products, '/member/orders')).toBe(true);
+    expect(isPortalNavActive(products, '/member/orders/42')).toBe(true);
   });
 
   it.each(ROLES)('%s: every mobile shortcut resolves to an allowed sidebar entry', role => {

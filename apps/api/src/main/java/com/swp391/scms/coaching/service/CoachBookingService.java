@@ -522,24 +522,12 @@ public class CoachBookingService {
     @Transactional
     public com.swp391.scms.coaching.dto.CoachRecurringResultDto createRecurringBooking(
             AuthenticatedPrincipal principal, com.swp391.scms.coaching.dto.CoachRecurringBookingDto request) {
-        List<LocalDate> dates = com.swp391.scms.common.RecurrenceDates.expand(
-                request.startDate(), request.period(), request.daysOfWeek());
-        coachRepository.findById(request.coachId())
-                .orElseThrow(() -> new ResourceNotFoundException("Coach", request.coachId()));
-        List<CoachBookingDto> booked = new java.util.ArrayList<>();
-        List<com.swp391.scms.common.RecurrenceDates.Skipped> skipped = new java.util.ArrayList<>();
-        for (LocalDate date : dates) {
-            try {
-                booked.add(createBooking(principal, new CoachBookingCreateDto(request.coachId(), request.disciplineId(),
-                        date, request.startTime(), request.endTime(), request.paymentMethod(), request.notes())));
-            } catch (com.swp391.scms.common.exception.AppException e) {
-                String reason = e.getMessageKey() != null
-                        ? msg(e.getMessageKey(), e.getMessageArgs() == null ? new Object[0] : e.getMessageArgs())
-                        : e.getErrorCode();
-                skipped.add(new com.swp391.scms.common.RecurrenceDates.Skipped(date, e.getErrorCode(), reason));
-            }
-        }
-        return new com.swp391.scms.coaching.dto.CoachRecurringResultDto(booked, skipped);
+        throw new com.swp391.scms.common.exception.AppException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,
+                "COACH_RECURRING_DISABLED",
+                "error.coach_booking.recurring_disabled",
+                null,
+                "Tính năng đặt lịch HLV 1:1 định kỳ đã ngừng hỗ trợ. Vui lòng đặt từng buổi một.");
     }
 
     @Transactional(readOnly = true)

@@ -74,15 +74,18 @@ export function coachSessionEvents(
 /** Buổi kèm 1:1 đã xác nhận, hiện cùng bảng với lớp nhóm. id có tiền tố `pt-`. */
 export function ptBookingEvents(bookings: PtBookingLike[]): TimetableEvent[] {
   return bookings
-    .filter((booking) => booking.status === 'confirmed')
-    .map((booking) => ({
-      id: `pt-${booking.id}`,
-      date: booking.bookingDate,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      title: `PT 1:1 · ${booking.memberName}`,
-      badge: '1:1',
-      tone: 'mine' as const,
-      ariaLabel: staffText(`Kèm riêng 1:1 với ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`, `One-to-one coaching with ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`),
-    }));
+    .filter((booking) => booking.status && booking.status.toLowerCase() !== 'cancelled')
+    .map((booking) => {
+      const isCompleted = booking.status.toLowerCase() === 'completed';
+      return {
+        id: `pt-${booking.id}`,
+        date: booking.bookingDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        title: `PT 1:1 · ${booking.memberName}`,
+        badge: isCompleted ? staffText('Hoàn thành', 'Completed') : '1:1',
+        tone: 'mine' as const,
+        ariaLabel: staffText(`Kèm riêng 1:1 với ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`, `One-to-one coaching with ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`),
+      };
+    });
 }

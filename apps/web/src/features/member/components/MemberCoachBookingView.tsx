@@ -6,15 +6,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
-import { RecurrenceFields, RecurrenceSummary } from '../../../shared/ui/RecurrenceFields';
-import { expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
 import { centerNowParts, formatCenterDate } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
 import {
   getCoaches,
   getAvailableSlots,
   createCoachBooking,
-  createRecurringCoachBooking,
   getMyCoachBookings,
   cancelCoachBooking,
   getMemberQuotaStatus,
@@ -22,7 +19,6 @@ import {
   type CoachAvailableSlotDto,
   type CoachBookingDto,
   type CoachQuotaStatusDto,
-  type CoachRecurringResult,
 } from '../coachBookingApi';
 import {
   createCoachReview,
@@ -138,10 +134,7 @@ export function MemberCoachBookingView({
   const [modalSlot, setModalSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
   const [notes, setNotes] = useState('');
-  const [recurrence, setRecurrence] = useState<RecurrenceChoice>({ period: 'once', days: [] });
-  const [recurringOutcome, setRecurringOutcome] = useState<CoachRecurringResult | null>(null);
-
-  const slotDate = expandRecurrence(selectedDate, recurrence)[0] ?? selectedDate;
+  const slotDate = selectedDate;
 
   // Payment Checkout Modal State
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
@@ -340,47 +333,6 @@ export function MemberCoachBookingView({
     setError('');
 
     try {
-      const standing = recurrenceRequest(recurrence, selectedDate);
-      if (standing) {
-        const result = await createRecurringCoachBooking({
-          coachId: selectedCoach.id,
-          startDate: selectedDate,
-          startTime: modalSlot.startTime,
-          endTime: modalSlot.endTime,
-          ...standing,
-          paymentMethod: paymentMethod === 'package_quota' ? 'package_quota' : 'cash',
-          notes: notes.trim() || undefined,
-        });
-        setModalSlot(null);
-        setNotes('');
-        setRecurringOutcome(result);
-        const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
-          getAvailableSlots(selectedCoach.id, slotDate),
-          getMyCoachBookings(),
-          getMemberQuotaStatus().catch(() => null),
-        ]);
-        setSlots(updatedSlots);
-        setMyBookings(updatedBookings);
-        if (updatedQuota) setQuotaStatus(updatedQuota);
-        window.dispatchEvent(new Event('member-notifications-changed'));
-        if (result.booked.length) {
-          onBookingSuccess?.();
-          if (paymentMethod === 'hourly_pay') {
-            for (const item of result.booked) {
-              watchedPendingBookingsRef.current.add(item.id);
-            }
-            memberNotify(
-              memberMessage(
-                `Đã đặt ${result.booked.length} buổi tập 1:1 định kỳ — Chờ thanh toán theo giờ.`,
-                `Booked ${result.booked.length} recurring 1:1 sessions — Awaiting hourly payment.`,
-              ),
-              'info',
-              { record: true },
-            );
-          }
-        }
-        return;
-      }
       const created = await createCoachBooking({
         coachId: selectedCoach.id,
         bookingDate: slotDate,
@@ -986,14 +938,6 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            <RecurrenceFields
-              startDate={selectedDate}
-              value={recurrence}
-              onChange={setRecurrence}
-              disabled={submitting}
-              allowedPeriods={['once', 'week']}
-              hint={memberText("Đặt các thứ đã chọn trong 7 ngày từ ngày bắt đầu; ngày không đặt được sẽ được báo lại.")}
-            />
             <p className="row-card__meta" style={{ margin: 0 }}>
               {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')} {memberText(" · HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.")}</p>
 
@@ -1825,31 +1769,13 @@ export function MemberCoachBookingView({
                 <span>
                   {submitting
                     ? memberText("Đang xử lý…")
-                    : recurrence.period !== 'once'
-                      ? memberText("Xác nhận đặt định kỳ")
-                      : memberText("Xác nhận & Đặt lịch")}
+                    : memberText("Xác nhận & Đặt lịch")}
                 </span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
               </button>
             </div>
-          </div>
-        </Modal>
-      )}
-
-      {recurringOutcome && (
-        <Modal title={memberText("Kết quả đặt lịch 1:1 định kỳ")} onClose={() => setRecurringOutcome(null)}>
-          <RecurrenceSummary
-            booked={recurringOutcome.booked}
-            skipped={recurringOutcome.skipped}
-            describe={(b) => `${formatCenterDate(b.bookingDate)} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
-          />
-          {recurringOutcome.booked.some((b) => b.paymentMethod !== 'package_quota') && (
-            <p className="muted">{memberText("Thanh toán các buổi trả phí tại danh sách lịch tập.")}</p>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-            <button type="button" className="btn-primary" onClick={() => setRecurringOutcome(null)}>{memberText("Đóng")}</button>
           </div>
         </Modal>
       )}

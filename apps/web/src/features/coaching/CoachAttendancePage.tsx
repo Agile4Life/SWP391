@@ -15,7 +15,9 @@ import {
 } from './attendanceApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
 import { mondayOf, parseISODate, todayISO } from '../schedule/timetable';
-import { coachSessionEvents } from './coachTimetable';
+import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
+import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './coach-attendance.css';
 
 // Chỉ giữ lại 2 trạng thái điểm danh: Có mặt và Vắng mặt (đã bỏ Đi muộn & Có phép)
@@ -78,6 +80,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const STORAGE_KEY_EVAL_HISTORY = coachHistoryStorageKey('evaluation');
   const [activeTab, setActiveTab] = useState<AttendanceTab>(sessionMode ? 'attendance' : 'timetable');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
+  const [ptBookings, setPtBookings] = useState<CoachBookingDto[]>([]);
   const selectedSessionId: number | null = sessionMode && Number.isInteger(Number(routeSessionId)) ? Number(routeSessionId) : null;
   const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
   const [rosterError, setRosterError] = useState<StaffMessage | null>(null);
@@ -142,27 +145,38 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     }
   };
 
-  // Load danh sách buổi học của HLV
+  // Load danh sách buổi học & buổi PT 1:1 của HLV
   useEffect(() => {
     let mounted = true;
     const fetchSessions = async () => {
       setLoading(true);
       setSessionsError(null);
       try {
-        const data = await attendanceApi.getCoachSessions();
+        const [data, ptData] = await Promise.all([
+          attendanceApi.getCoachSessions(),
+          getCoachSchedule().catch(() => []),
+        ]);
         if (mounted) {
           setSessions(data);
-          if (data.length > 0) {
-            // Mở sẵn buổi gần hôm nay nhất (ưu tiên buổi đã có học viên) và tuần chứa buổi đó.
+          setPtBookings(ptData);
+          const allActiveDates: string[] = [
+            ...data.map((s) => s.sessionDate),
+            ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate),
+          ];
+          if (allActiveDates.length > 0) {
+            // Mở sẵn buổi gần hôm nay nhất (ưu tiên buổi đã có học viên hoặc buổi PT 1:1) và tuần chứa buổi đó.
             const withStudents = data.filter((s) => (s.bookedCount ?? 0) > 0);
-            const pool = withStudents.length > 0 ? withStudents : data;
+            const poolDates = withStudents.length > 0
+              ? [...withStudents.map((s) => s.sessionDate), ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate)]
+              : allActiveDates;
             const today = parseISODate(todayISO()).getTime();
-            const distance = (s: CoachClassSession) => Math.abs(parseISODate(s.sessionDate).getTime() - today);
-            const preferred = pool.reduce((best, s) => (distance(s) < distance(best) ? s : best), pool[0]);
-            setWeekStart(mondayOf(preferred.sessionDate));
+            const distance = (d: string) => Math.abs(parseISODate(d).getTime() - today);
+            const preferred = poolDates.reduce((best, d) => (distance(d) < distance(best) ? d : best), poolDates[0]);
+            setWeekStart(mondayOf(preferred));
           }
         }
-      } catch {if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
+      } catch {
+        if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
       } finally {
         if (mounted) { setLoading(false); setSessionsLoaded(true); }
       }
@@ -173,6 +187,21 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       mounted = false;
     };
   }, [sessionsAttempt]);
+
+  // Tự động làm mới lịch khi quay lại tab trình duyệt
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        setSessionsAttempt((n) => n + 1);
+      }
+    };
+    window.addEventListener('focus', handleRefresh);
+    document.addEventListener('visibilitychange', handleRefresh);
+    return () => {
+      window.removeEventListener('focus', handleRefresh);
+      document.removeEventListener('visibilitychange', handleRefresh);
+    };
+  }, []);
 
   // Load danh sách học viên khi chọn buổi học khác
   useEffect(() => {
@@ -618,34 +647,55 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         <WeeklyTimetable
           label={t("Thời khóa biểu buổi dạy cần điểm danh")}
           weekStart={weekStart}
-          events={coachSessionEvents(
-            sessions.filter((s) => classFilter === 'ALL' || s.className === classFilter),
-            'attendance',
-            new Set(history.map((h) => Number(h.sessionId))),
-          )}
+          events={[
+            ...(classFilter === 'PT_1ON1'
+              ? []
+              : coachSessionEvents(
+                  sessions.filter((s) => classFilter === 'ALL' || s.className === classFilter),
+                  'attendance',
+                  new Set(history.map((h) => Number(h.sessionId))),
+                )),
+            ...(classFilter === 'ALL' || classFilter === 'PT_1ON1'
+              ? ptBookingEvents(ptBookings)
+              : []),
+          ]}
           loading={!sessionsLoaded}
           onWeekChange={setWeekStart}
-          onEventClick={(id) => navigate(`/staff/attendance/${id}`)}
+          onEventClick={(id) => {
+            if (id.startsWith('pt-')) {
+              navigate('/coach/pt-attendance');
+              return;
+            }
+            navigate(`/staff/attendance/${id}`);
+          }}
           emptyLabel={t("Tuần này bạn chưa có buổi dạy nào.")}
           toolbar={
-            <div className="attendance-class-filter">
-              <Select
-                className="portal-select"
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                aria-label={t("Lọc theo lớp")}
-              >
-                <option value="ALL">{t("Tất cả lớp")}</option>
-                {[...new Set(sessions.map((s) => s.className))].sort((a, b) => a.localeCompare(b)).map((name) => (
-                  <option data-i18n-managed key={name} value={name}>{name}</option>
-                ))}
-              </Select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="attendance-class-filter">
+                <Select
+                  className="portal-select"
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  aria-label={t("Lọc theo lớp")}
+                >
+                  <option value="ALL">{t("Tất cả lớp")}</option>
+                  {ptBookings.length > 0 && <option value="PT_1ON1">{t("Buổi PT 1:1", "1:1 PT session")}</option>}
+                  {[...new Set(sessions.map((s) => s.className))].sort((a, b) => a.localeCompare(b)).map((name) => (
+                    <option data-i18n-managed key={name} value={name}>{name}</option>
+                  ))}
+                </Select>
+              </div>
+              <RefreshButton
+                label={t("Làm mới thời khóa biểu", "Refresh timetable") as string}
+                onClick={() => setSessionsAttempt((n) => n + 1)}
+                disabled={loading}
+              />
             </div>
           }
           legend={[
             { tone: 'open', label: t('Sắp diễn ra') },
             { tone: 'full', label: t('Đã diễn ra, chưa điểm danh') },
-            { tone: 'mine', label: t('Đã điểm danh') },
+            { tone: 'mine', label: t('Đã điểm danh / Buổi PT 1:1', 'Attended / 1:1 PT session') },
             { tone: 'cancelled', label: t('Đã hủy') },
           ]}
         />

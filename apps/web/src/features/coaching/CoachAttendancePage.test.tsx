@@ -6,8 +6,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachAttendancePage } from './CoachAttendancePage';
 import { attendanceApi, type AttendanceStudent, type CoachClassSession } from './attendanceApi';
+import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 
+vi.mock('../member/coachBookingApi', () => ({ getCoachSchedule: vi.fn().mockResolvedValue([]) }));
 vi.mock('../../shared/lib/portalNotices', async (importOriginal) => ({ ...await importOriginal<typeof import('../../shared/lib/portalNotices')>(), notify: vi.fn() }));
 
 function pageAt(path: string) {
@@ -377,6 +379,58 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(host.querySelector('.session-name-title')!.textContent).toBe('Session B');
     expect(host.querySelector('.mcal')).toBeNull();
     expect(host.querySelector('.btn-batch-save')).not.toBeNull();
+  });
+
+  it('renders 1:1 PT bookings on the coach timetable alongside group classes and allows filtering', async () => {
+    const mockPtBooking: CoachBookingDto = {
+      id: 999,
+      memberId: 5,
+      memberName: 'Lê Văn Học Viên',
+      coachId: 10,
+      coachName: 'HLV Minh Quân',
+      coachSpecialization: 'Gym & Fitness',
+      coachAvatarUrl: null,
+      disciplineId: null,
+      disciplineName: null,
+      bookingDate: '2026-10-26',
+      startTime: '14:00',
+      endTime: '15:00',
+      hourlyRate: 300000,
+      paymentMethod: 'wallet',
+      paymentStatus: 'paid',
+      status: 'confirmed',
+      notes: 'Tập tăng cơ',
+      createdAt: '2026-10-20T10:00:00Z',
+      cancelledAt: null,
+      cancelReason: null,
+    };
+
+    vi.mocked(attendanceApi.getCoachSessions).mockResolvedValue([mockSessions[0]]);
+    vi.mocked(getCoachSchedule).mockResolvedValue([mockPtBooking]);
+
+    await act(async () => { root.render(pageAt(LIST)); });
+
+    // Cả lớp nhóm và buổi PT 1:1 đều hiện trên bảng
+    const ptEvent = host.querySelector<HTMLButtonElement>('button[title*="PT 1:1 · Lê Văn Học Viên"]');
+    expect(ptEvent).not.toBeNull();
+    expect(ptEvent?.textContent).toContain('PT 1:1 · Lê Văn Học Viên');
+
+    // Dropdown có option lọc Buổi PT 1:1
+    const filterSelect = host.querySelector('.attendance-class-filter select') as HTMLSelectElement;
+    expect(filterSelect.innerHTML).toContain('Buổi PT 1:1');
+
+    // Lọc theo Buổi PT 1:1
+    await act(async () => {
+      filterSelect.value = 'PT_1ON1';
+      filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const visibleEvents = host.querySelectorAll('.mcal__event');
+    expect(visibleEvents).toHaveLength(1);
+    expect(visibleEvents[0].textContent).toContain('PT 1:1 · Lê Văn Học Viên');
+
+    // Nút refresh thời khóa biểu có mặt và hoạt động
+    const refreshBtn = host.querySelector('button.refresh-button') as HTMLButtonElement;
+    expect(refreshBtn).not.toBeNull();
   });
 
 });

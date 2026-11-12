@@ -1891,10 +1891,10 @@ addHotspot(zoneL1Shop, {
   liveSummaryKey: 'shop',
   action: {
     type: 'navigate',
-    to: '/member/orders',
+    to: '/member/products',
     ctaLabel: { vi: 'Mở Sản phẩm & Đơn hàng', en: 'Open Shop & Orders' },
-    secondaryTo: '/member/products',
-    secondaryLabel: { vi: 'Xem Kệ sản phẩm', en: 'Browse Catalog' },
+    secondaryTo: '/member/orders',
+    secondaryLabel: { vi: 'Xem Đơn hàng', en: 'View Orders' },
   },
 });
 
@@ -2170,7 +2170,7 @@ addHotspot(zoneL2Lounge, {
   liveSummaryKey: 'shop',
   action: {
     type: 'navigate',
-    to: '/member/orders',
+    to: '/member/products',
     ctaLabel: { vi: 'Đặt Thực phẩm bổ sung', en: 'Order Supplements' },
   },
 });

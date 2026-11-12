@@ -15,6 +15,7 @@ import {
 } from './membershipApi';
 import { getProfile, submitMemberKyc, Profile } from './profileApi';
 import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './member-checkout.css';
 import { localizableError } from '../../shared/lib/errorMessage';
 
@@ -48,6 +49,20 @@ export function MemberCheckoutPage() {
   const [kycSubmitting, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState<string | Error | SourceMessage>('');
   const [kycSuccess, setKycSuccess] = useState('');
+  const [refreshingKyc, setRefreshingKyc] = useState(false);
+
+  async function refreshKycStatus() {
+    setRefreshingKyc(true);
+    try {
+      const updated = await getProfile();
+      setProfile(updated);
+      if (updated?.identityVerified) {
+        setKycSuccess(t('Đã xác minh thành công! Bạn có thể tiến hành thanh toán.', 'Verification approved! You can now proceed to payment.') as string);
+        window.dispatchEvent(new Event('profile-updated'));
+      }
+    } catch { /* ignore */ }
+    finally { setRefreshingKyc(false); }
+  }
 
   useEffect(() => {
     let active = true;
@@ -248,9 +263,18 @@ export function MemberCheckoutPage() {
         <div className="stack" data-i18n-managed>
           {!isKycVerified && profile?.kycStatus === 'PENDING' ? (
             <section data-i18n-managed className="portal-card stack" role="status" data-testid="kyc-pending" aria-label={t("Hồ sơ định danh đang chờ duyệt", "Identity document awaiting review")}>
-              <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Hồ sơ định danh đang chờ lễ tân duyệt", "Your identity document is waiting for review")}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <h2 className="portal-card-title" style={{ margin: 0 }}>{t("Hồ sơ định danh đang chờ lễ tân duyệt", "Your identity document is waiting for review")}</h2>
+                <RefreshButton
+                  label={t("Kiểm tra lại trạng thái xác minh", "Check verification status") as string}
+                  onClick={refreshKycStatus}
+                  disabled={refreshingKyc}
+                />
+              </div>
               <p className="row-card__meta" style={{ margin: 0 }}>
-                {t("Bạn có thể đăng ký gói sau khi hồ sơ được duyệt.", "You can choose a plan once your documents are approved.")}</p>
+                {t("Bạn có thể đăng ký gói sau khi hồ sơ được duyệt.", "You can choose a plan once your documents are approved.")}
+                {' '}{t("Bấm nút làm mới để kiểm tra kết quả.", "Tap refresh to check the result.")}
+              </p>
               {kycSuccess && <p role="status">{t(kycSuccess)}</p>}
             </section>
           ) : !isKycVerified ? (
