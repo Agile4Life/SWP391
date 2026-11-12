@@ -345,10 +345,11 @@ export function WeeklyTimetable({
                       title={[event.title, range, event.meta, event.badge].filter(Boolean).join(' · ')}
                       onClick={() => onEventClick(event.id)}
                     >
-                      <span className="mcal__event-top">
-                        <span className="mcal__event-time">{range}</span>
-                        {event.badge && <span className="mcal__event-badge">{event.badge}</span>}
-                      </span>
+                      {event.badge && (
+                        <span className="mcal__event-top">
+                          <span className="mcal__event-badge">{event.badge}</span>
+                        </span>
+                      )}
                       <strong className="mcal__event-title">{event.title}</strong>
                       {event.meta && <span className="mcal__event-place">{event.meta}</span>}
                     </button>

@@ -269,9 +269,6 @@
   background: #FAF8F5;
 }
 
-.portal-table tbody tr:hover td:first-child {
-  box-shadow: inset 2px 0 0 var(--color-accent-gold);
-}
 
 /* Badges */
 .badge {

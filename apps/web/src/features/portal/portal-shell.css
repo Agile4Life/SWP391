@@ -2373,7 +2373,6 @@ body:has(.portal-backdrop) .sol-toast__icon {
 
 :root:not([data-theme='light']) .portal-v2 .portal-card--feature {
   border-color: var(--portal-led-edge);
-  box-shadow: inset 2px 0 0 var(--portal-salmon);
 }
 
 :root:not([data-theme='light']) .portal-v2 :is(.member-text-link, .member-board-note > svg, .member-column-heading > a) {

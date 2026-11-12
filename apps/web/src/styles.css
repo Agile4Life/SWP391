@@ -664,22 +664,21 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   background: var(--portal-surface, #262524);
   color: var(--portal-paper, #FAF9F6);
   border: 1px solid var(--portal-border-strong, rgba(255, 255, 255, 0.16));
-  border-left: 4px solid var(--portal-success, #22C55E);
+  border-color: color-mix(in srgb, var(--portal-success, #22C55E) 60%, transparent);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
   animation: toast-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.sol-toast--error .sol-toast__card { border-left-color: var(--portal-danger, #EF4444); }
+.sol-toast--error .sol-toast__card { border-color: color-mix(in srgb, var(--portal-danger, #EF4444) 60%, transparent); }
 
 :root[data-theme='light'] .sol-toast__card {
   background: #FFFFFF;
   color: #202020;
-  border-color: rgba(28, 25, 23, 0.12);
-  border-left-color: #15803D;
+  border-color: color-mix(in srgb, #15803D 45%, transparent);
   box-shadow: 0 16px 40px rgba(28, 25, 23, 0.16);
 }
 
-:root[data-theme='light'] .sol-toast--error .sol-toast__card { border-left-color: #B91C1C; }
+:root[data-theme='light'] .sol-toast--error .sol-toast__card { border-color: color-mix(in srgb, #B91C1C 45%, transparent); }
 
 .sol-toast__icon {
   display: inline-flex;
