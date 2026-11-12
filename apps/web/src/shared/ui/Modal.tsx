@@ -51,6 +51,9 @@ export function Modal({ title, onClose, children, busy = false, className, retur
       }}
       tabIndex={-1}
       onCancel={(e) => {
+        // Dismissing a file picker fires a bubbling `cancel` on its <input type="file">: that is not the dialog's
+        // own Esc cancel, so it must not close the dialog (and lose what the user already filled in).
+        if (e.target !== e.currentTarget) return;
         e.stopPropagation();
         e.preventDefault();
         if (!busy) onClose();

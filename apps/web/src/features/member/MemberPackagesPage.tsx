@@ -1322,7 +1322,7 @@ export function MemberPackagesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-full-name">
-                {t(" Họ và tên trên ", "Full name on")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} *
+                {t(" Họ và tên trên ", "Full name on ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} *
               </label>
               <input
                 id="trial-full-name"
@@ -1341,7 +1341,7 @@ export function MemberPackagesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-cccd">
-                {t(" Số ", "Number")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : t("CCCD (12 chữ số)", "Citizen ID (12 digits)")} *
+                {t(" Số ", "Number ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : t("CCCD (12 chữ số)", "Citizen ID (12 digits)")} *
               </label>
               <input
                 id="trial-cccd"
@@ -1362,7 +1362,7 @@ export function MemberPackagesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
               <div>
                 <label className="portal-label" style={{ fontSize: '0.82rem' }}>
-                  {t(" Ảnh mặt trước ", "Front image")}{trialDocType} *
+                  {t(" Ảnh mặt trước ", "Front image ")}{trialDocType} *
                 </label>
                 {trialFrontImage ? (
                   <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
@@ -1413,7 +1413,7 @@ export function MemberPackagesPage() {
 
               <div>
                 <label className="portal-label" style={{ fontSize: '0.82rem' }}>
-                  {t(" Ảnh mặt sau ", "Back image")}{trialDocType === 'PASSPORT' ? t("(Tùy chọn)", "(Optional)") : '*'}
+                  {t(" Ảnh mặt sau ", "Back image ")}{trialDocType === 'PASSPORT' ? t("(Tùy chọn)", "(Optional)") : '*'}
                 </label>
                 {trialBackImage ? (
                   <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>

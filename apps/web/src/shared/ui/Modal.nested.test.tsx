@@ -48,3 +48,16 @@ it('keeps Tab focus inside the innermost dialog', async () => {
   await act(async () => innerClose.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })));
   expect(document.activeElement).toBe(innerClose);
 });
+
+it('stays open when a file picker inside it is dismissed', async () => {
+  const onClose = vi.fn();
+  await act(async () => root.render(<Modal title="Gói trải nghiệm" onClose={onClose}><input type="file" aria-label="Ảnh mặt trước" /></Modal>));
+  const fileInput = host.querySelector('input[type="file"]')!;
+  // Browsers fire a bubbling `cancel` on the file input when its picker is closed without choosing a file.
+  await act(async () => fileInput.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true })));
+  expect(onClose).not.toHaveBeenCalled();
+
+  // The dialog's own cancel (Esc) still closes it.
+  await act(async () => host.querySelector('dialog')!.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true })));
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
