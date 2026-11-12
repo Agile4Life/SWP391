@@ -3,9 +3,28 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as clientModule from '../../shared/api/client';
 import { PtAttendancePage } from './PtAttendancePage';
+import { centerNowParts } from '../../shared/lib/centerTime';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), mark: vi.fn(), unmark: vi.fn() }));
 vi.mock('./ptAttendanceApi', () => ({ getPtAttendance: mocks.load, markPtAttended: mocks.mark, unmarkPtAttended: mocks.unmark }));
+
+function isoOffset(days: number): string {
+  const [year, month, day] = centerNowParts().date.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
+}
+
+async function pickDate(host: HTMLElement, id: string, iso: string) {
+  await act(async () => host.querySelector<HTMLButtonElement>(`button#${id}`)!.click());
+  const dayButton = () => document.querySelector<HTMLButtonElement>(`button[aria-label="${iso}"]`);
+  for (let i = 0; i < 2 && !dayButton(); i++) {
+    await act(async () => document.querySelector<HTMLButtonElement>('button[aria-label="Tháng sau"]')?.click());
+  }
+  for (let i = 0; i < 4 && !dayButton(); i++) {
+    await act(async () => document.querySelector<HTMLButtonElement>('button[aria-label="Tháng trước"]')?.click());
+  }
+  await act(async () => dayButton()!.click());
+}
 
 const base = {
   memberId: 10, memberName: 'Khoa Hội Viên', coachId: 20, coachName: 'HLV Hùng', coachSpecialization: 'Gym',
@@ -50,10 +69,10 @@ describe('PtAttendancePage', () => {
     await render();
     expect(host.querySelector('[data-testid="pt-row-1"]')?.textContent).not.toContain('HLV Hùng');
     mocks.load.mockResolvedValueOnce([]);
-    await act(async () => { const input = host.querySelector<HTMLInputElement>('#pt-from')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '2020-01-01'); input.dispatchEvent(new Event('input', { bubbles: true })); });
+    await pickDate(host, 'pt-from', isoOffset(-5));
     expect(host.textContent).toContain('Không có buổi PT nào');
     mocks.load.mockRejectedValueOnce(new Error('Không có quyền'));
-    await act(async () => { const input = host.querySelector<HTMLInputElement>('#pt-to')!; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '2020-02-01'); input.dispatchEvent(new Event('input', { bubbles: true })); });
+    await pickDate(host, 'pt-to', isoOffset(-1));
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không có quyền');
   });
 

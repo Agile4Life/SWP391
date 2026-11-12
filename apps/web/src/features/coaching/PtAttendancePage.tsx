@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DatePicker } from '../../shared/ui/DatePicker';
 import { useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -90,11 +91,11 @@ export function PtAttendancePage() {
       <div className="portal-card" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'end' }}>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="pt-from">{t('Từ ngày', 'From')}</label>
-          <input id="pt-from" className="portal-input" type="date" max={to} value={from} onChange={(event) => setFrom(event.target.value)} />
+          <DatePicker id="pt-from" max={to} value={from} onChange={(event) => setFrom(event.target.value)} />
         </div>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="pt-to">{t('Đến ngày', 'To')}</label>
-          <input id="pt-to" className="portal-input" type="date" min={from} value={to} onChange={(event) => setTo(event.target.value)} />
+          <DatePicker id="pt-to" min={from} value={to} onChange={(event) => setTo(event.target.value)} />
         </div>
         <small>{t('Tối đa 62 ngày mỗi lần xem.', 'Up to 62 days at a time.')}</small>
       </div>
