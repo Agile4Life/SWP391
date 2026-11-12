@@ -8,7 +8,7 @@ import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
 import { RecurrenceFields, RecurrenceSummary } from '../../../shared/ui/RecurrenceFields';
 import { expandRecurrence, recurrenceRequest, type RecurrenceChoice } from '../../../shared/lib/recurrence';
-import { centerNowParts } from '../../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
 import {
   getCoaches,
@@ -217,8 +217,8 @@ export function MemberCoachBookingView({
         setPaymentModalBooking((prev) => (prev?.id === b.id ? null : prev));
         memberNotify(
           memberMessage(
-            `Thanh toán buổi tập PT 1:1 ngày ${b.bookingDate} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) với HLV ${formatCoachName(b.coachName)} thành công!`,
-            `Payment confirmed for 1:1 PT session on ${b.bookingDate} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) with coach ${formatCoachName(b.coachName)}!`,
+            `Thanh toán buổi tập PT 1:1 ngày ${formatCenterDate(b.bookingDate)} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) với HLV ${formatCoachName(b.coachName)} thành công!`,
+            `Payment confirmed for 1:1 PT session on ${formatCenterDate(b.bookingDate)} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) with coach ${formatCoachName(b.coachName)}!`,
           ),
           'success',
           { record: true },
@@ -410,15 +410,15 @@ export function MemberCoachBookingView({
         setPaymentModalBooking(created);
         memberNotify(
           memberMessage(
-            `Đã ghi nhận lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) — Chờ thanh toán ${formatPrice(created.hourlyRate)}.`,
-            `1:1 session with coach ${formatCoachName(created.coachName)} on ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) recorded — Awaiting payment of ${formatPrice(created.hourlyRate)}.`,
+            `Đã ghi nhận lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) — Chờ thanh toán ${formatPrice(created.hourlyRate)}.`,
+            `1:1 session with coach ${formatCoachName(created.coachName)} on ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) recorded — Awaiting payment of ${formatPrice(created.hourlyRate)}.`,
           ),
           'info',
           { record: true },
         );
       } else {
         memberNotify(
-          memberMessage(`Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`, `1:1 session booked with coach ${formatCoachName(created.coachName)} on ${created.bookingDate} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) using 1 membership session!`)
+          memberMessage(`Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`, `1:1 session booked with coach ${formatCoachName(created.coachName)} on ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) using 1 membership session!`)
           , 'success', { record: true });
       }
     } catch (err: unknown) {
@@ -1073,7 +1073,7 @@ export function MemberCoachBookingView({
                           {selectedSlot.startTime.slice(0, 5)} – {selectedSlot.endTime.slice(0, 5)}
                         </strong>
                         <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                          {` (${slotDate} • HLV ${selectedCoach?.fullName})`}
+                          {` (${formatCenterDate(slotDate)} • HLV ${selectedCoach?.fullName})`}
                         </span>
                       </div>
                     </div>
@@ -1203,7 +1203,7 @@ export function MemberCoachBookingView({
                         )}
                       </div>
                       <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
-                        {memberText("Ngày ")}<strong>{b.bookingDate}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? memberText("Quyền lợi gói tập") : memberText(`Trả phí: ${formatPrice(b.hourlyRate)}`, `Paid session: ${formatPrice(b.hourlyRate)}`)}
+                        {memberText("Ngày ")}<strong>{formatCenterDate(b.bookingDate)}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? memberText("Quyền lợi gói tập") : memberText(`Trả phí: ${formatPrice(b.hourlyRate)}`, `Paid session: ${formatPrice(b.hourlyRate)}`)}
                       </p>
                       {b.notes && (
                         <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
@@ -1304,7 +1304,7 @@ export function MemberCoachBookingView({
                 border: '1px solid var(--portal-border)',
               }}
             >
-              {memberText("Buổi tập 1:1 đã kết thúc ngày ")}<strong>{reviewTargetBooking.bookingDate}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
+              {memberText("Buổi tập 1:1 đã kết thúc ngày ")}<strong>{formatCenterDate(reviewTargetBooking.bookingDate)}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
             </div>
 
             <div>
@@ -1500,7 +1500,7 @@ export function MemberCoachBookingView({
                   <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
                     {memberText("Thời gian")}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)' }}>
-                    {slotDate}
+                    {formatCenterDate(slotDate)}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>
                     {modalSlot.startTime.slice(0, 5)} – {modalSlot.endTime.slice(0, 5)}
@@ -1843,7 +1843,7 @@ export function MemberCoachBookingView({
           <RecurrenceSummary
             booked={recurringOutcome.booked}
             skipped={recurringOutcome.skipped}
-            describe={(b) => `${b.bookingDate} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
+            describe={(b) => `${formatCenterDate(b.bookingDate)} · ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)} · HLV ${formatCoachName(b.coachName)}`}
           />
           {recurringOutcome.booked.some((b) => b.paymentMethod !== 'package_quota') && (
             <p className="muted">{memberText("Thanh toán các buổi trả phí tại danh sách lịch tập.")}</p>
@@ -1887,7 +1887,7 @@ export function MemberCoachBookingView({
                   : memberText("Lịch tập 1:1 đã được ghi nhận thành công!")}</h4>
               <p style={{ margin: 0, fontSize: 13 }}>
                 {memberText("HLV: ", "Coach: ")}<strong>{formatCoachName(paymentModalBooking.coachName)}</strong>{memberText(" • Thời gian:")}{' '}
-                <strong>{paymentModalBooking.bookingDate} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
+                <strong>{formatCenterDate(paymentModalBooking.bookingDate)} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
               </p>
             </div>
 
@@ -1948,7 +1948,7 @@ export function MemberCoachBookingView({
           <div style={{ display: 'grid', gap: 14 }}>
             <p>
               {memberText("Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV ")}<strong>{formatCoachName(cancelTarget.coachName)}</strong>{memberText(" vào")}{' '}
-              <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{cancelTarget.bookingDate}</strong>?
+              <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button

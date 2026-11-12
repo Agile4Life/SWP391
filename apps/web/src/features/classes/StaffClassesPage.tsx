@@ -1,4 +1,5 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 import React, { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -875,7 +876,7 @@ export function StaffClassesPage() {
     const classSessions = sessions.filter((s) => s.classId === cls.id && s.status !== 'cancelled');
     if (classSessions.length > 0) {
       const first = classSessions[0];
-      return `${first.sessionDate} (${first.startTime.slice(0, 5)} - ${first.endTime.slice(0, 5)})`;
+      return `${formatCenterDate(first.sessionDate)} (${first.startTime.slice(0, 5)} - ${first.endTime.slice(0, 5)})`;
     }
     return 'Chưa có lịch';
   };
@@ -1160,7 +1161,7 @@ export function StaffClassesPage() {
                   {sessions.filter((s) => s.classId === selectedClassDetail.id).map((s) => (
                     <div data-i18n-managed key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, background: 'var(--portal-raised)', border: '1px solid var(--portal-border)' }}>
                       <div>
-                        <strong>{s.sessionDate}</strong>
+                        <strong>{formatCenterDate(s.sessionDate)}</strong>
                         <span className="muted" style={{ marginLeft: 8 }}>{s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1232,7 +1233,7 @@ export function StaffClassesPage() {
       {/* Modal: Hủy buổi học (Manager Only) */}
       {isManager && cancellingSession && (
         <Modal
-          title={t(`Hủy buổi học: ${cancellingSession.sessionDate} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`, `Cancel session: ${cancellingSession.sessionDate} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`)}
+          title={t(`Hủy buổi học: ${formatCenterDate(cancellingSession.sessionDate)} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`, `Cancel session: ${formatCenterDate(cancellingSession.sessionDate)} (${cancellingSession.startTime.slice(0, 5)} – ${cancellingSession.endTime.slice(0, 5)})`)}
           onClose={handleCloseCancelSessionModal}
         >
           <form onSubmit={handleConfirmCancelSession} style={{ display: 'grid', gap: 12 }}>
@@ -1464,7 +1465,7 @@ export function StaffClassesPage() {
                   .filter((s) => s.classId === reschedulingClass.id && s.status !== 'cancelled')
                   .map((s) => (
                     <option data-i18n-managed key={s.id} value={String(s.id)}>
-                      {t("Buổi #")}{s.id}: {s.sessionDate} ({s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)})
+                      {t("Buổi #")}{s.id}: {formatCenterDate(s.sessionDate)} ({s.startTime.slice(0, 5)} – {s.endTime.slice(0, 5)})
                     </option>
                   ))}
                 <option value="NEW">{t("+ Xếp thêm buổi học mới cho lớp này")}</option>

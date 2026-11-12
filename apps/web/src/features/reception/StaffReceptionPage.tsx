@@ -342,7 +342,7 @@ export function StaffReceptionPage() {
       citizenId: null,
       status: 'PENDING_PAYMENT',
       currentPackage: item.packageName,
-      endDate: `${item.startDate} → ${item.endDate}`,
+      endDate: `${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`,
     });
     // Form thanh toán nằm phía trên danh sách chờ: đưa lễ tân tới bước xác nhận
     checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
@@ -683,7 +683,7 @@ export function StaffReceptionPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span
                             style={{
-                              fontFamily: 'monospace',
+                              fontVariantNumeric: 'tabular-nums',
                               fontWeight: 700,
                               color: 'var(--color-accent-gold)',
                               fontSize: '0.92rem',
@@ -697,7 +697,7 @@ export function StaffReceptionPage() {
                           </span>
                         </div>
                         <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '4px' }}>
-                          {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{item.startDate} → {item.endDate})
+                          {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
                         </div>
                       </div>
 
@@ -766,7 +766,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>{t("Mã hội viên")}</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
                     {selectedMember.membershipCode || `MB-2026-${String(selectedMember.userId).padStart(3, '0')}`}
                   </span>
                 </div>
@@ -784,7 +784,7 @@ export function StaffReceptionPage() {
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
                   <span>{t("Số CCCD (Bảo mật)")}</span>
-                  <span style={{ fontFamily: 'monospace', color: 'var(--color-text-main)' }}>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-main)' }}>
                     {selectedMember.citizenId ? maskCitizenId(selectedMember.citizenId) : t('Chưa cập nhật')}
                   </span>
                 </div>
@@ -804,10 +804,10 @@ export function StaffReceptionPage() {
                   <span>{t("Thời hạn gói")}</span>
                   <span style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
                     {selectedPending
-                      ? t(`${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} ngày)`, `${selectedPending.startDate} → ${selectedPending.endDate} (${selectedPending.durationDays} days)`)
+                      ? t(`${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} ngày)`, `${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} days)`)
                       : activeCandidate
-                        ? `${activeCandidate.startDate} → ${activeCandidate.endDate}`
-                        : selectedMember.endDate || t('Chưa kích hoạt')}
+                        ? `${formatCenterDate(activeCandidate.startDate)} → ${formatCenterDate(activeCandidate.endDate)}`
+                        : formatCenterDate(selectedMember.endDate, '') || t('Chưa kích hoạt')}
                   </span>
                 </div>
 
@@ -896,7 +896,7 @@ export function StaffReceptionPage() {
                     .filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
                     .map((candidate) => (
                       <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`}>
-                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{candidate.endDate}
+                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{formatCenterDate(candidate.endDate)}
                       </option>
                     ))}
                   {packages.map((pkg) => (
@@ -1035,7 +1035,7 @@ export function StaffReceptionPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span
                         style={{
-                          fontFamily: 'monospace',
+                          fontVariantNumeric: 'tabular-nums',
                           fontWeight: 700,
                           color: 'var(--portal-salmon)',
                           fontSize: '0.92rem',
@@ -1165,7 +1165,7 @@ export function StaffReceptionPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span
                         style={{
-                          fontFamily: 'monospace',
+                          fontVariantNumeric: 'tabular-nums',
                           fontWeight: 700,
                           color: 'var(--color-accent-gold)',
                           fontSize: '0.92rem',
@@ -1180,7 +1180,7 @@ export function StaffReceptionPage() {
                       <span className="badge badge-warning">{t("CHỜ DUYỆT BẢO LƯU")}</span>
                     </div>
                     <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
-                      {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({item.startDate} → {item.endDate})
+                      {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
                     </div>
                     <div
                       style={{
@@ -1249,7 +1249,7 @@ export function StaffReceptionPage() {
                 >
                   <div style={{ flex: 1, minWidth: 240 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
                         PT #{item.id}
                       </span>
                       <strong>{item.memberName}</strong>
@@ -1409,7 +1409,7 @@ export function StaffReceptionPage() {
               {activeCandidate && (
                 <>
                   <br data-i18n-managed />
-                  {t("Gói đang hoạt động: ")}<strong data-i18n-managed>{activeCandidate.packageName}</strong> ({activeCandidate.startDate} → {activeCandidate.endDate})
+                  {t("Gói đang hoạt động: ")}<strong data-i18n-managed>{activeCandidate.packageName}</strong> ({formatCenterDate(activeCandidate.startDate)} → {formatCenterDate(activeCandidate.endDate)})
                 </>
               )}
             </div>
@@ -1492,7 +1492,7 @@ export function StaffReceptionPage() {
               </div>
               <div>
                 <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
-                <strong style={{ fontFamily: 'monospace' }}>{inspectingTrial.documentNumberMasked}</strong>
+                <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{inspectingTrial.documentNumberMasked}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Họ và tên trên giấy tờ")}</span>
