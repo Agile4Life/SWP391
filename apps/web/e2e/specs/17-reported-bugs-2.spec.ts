@@ -60,7 +60,7 @@ test.describe('Mục 2–3 — lịch lớp khớp buổi học', () => {
     const classes = (await api<any[]>('manager', 'GET', '/classes')).data as any[];
     const sessions = (await api<any[]>('manager', 'GET', `/classes/sessions?fromDate=${isoDay(-40)}&toDate=${isoDay(60)}`)).data as any[];
     const names = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-    for (const c of classes.filter((x) => x.repeatType !== 'monthly')) {
+    for (const c of classes) {
       expect(c.recurringDays, `${c.name} có thứ học`).toBeTruthy();
       const days = String(c.recurringDays).split(',');
       for (const s of sessions.filter((x) => x.classId === c.id)) {

@@ -8,7 +8,6 @@ export interface GymClassDto {
   coachId: number; coachName: string; roomId: number; roomName: string;
   capacity: number; level: string; description: string | null; status: string;
   price?: number; startDate?: string; endDate?: string; recurringDays?: string;
-  repeatType?: string; monthDays?: string;
   startTime?: string; endTime?: string;
 }
 
