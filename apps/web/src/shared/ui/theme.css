@@ -30,6 +30,13 @@
   --sol-led-bloom: 0 0 0 1px rgb(var(--sol-accent-rgb) / .35), 0 0 18px rgb(var(--sol-accent-rgb) / .28), 0 0 48px -8px rgb(var(--sol-accent-rgb) / .22);
 }
 
+/* Theme switch (ThemeToggle.tsx): the page-transition rules in styles.css target the same root pseudo-elements,
+   so while data-theme-vt is set the default fades are disabled and the new theme is revealed by a circle. */
+:root[data-theme-vt]::view-transition-old(root),
+:root[data-theme-vt]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+:root[data-theme-vt]::view-transition-old(root) { z-index: 1; }
+:root[data-theme-vt]::view-transition-new(root) { z-index: 2; }
+
 /* Light is an optional palette. Existing dark styles remain the default. */
 :root[data-theme='light'] { color-scheme: light; background: #f5f5f3; }
 :root[data-theme='light']:has(.fit-site, .portal-backdrop),

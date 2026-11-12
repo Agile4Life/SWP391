@@ -48,3 +48,33 @@ it('still switches when browser storage is unavailable', async () => {
   await act(async () => host.querySelector('button')!.click());
   expect(document.documentElement.dataset.theme).toBe('dark');
 });
+
+it('reveals the new theme with a circle from the toggle when View Transitions are available', async () => {
+  const animate = vi.fn();
+  (document.documentElement as unknown as { animate: unknown }).animate = animate;
+  const start = vi.fn((update: () => void) => { update(); return { ready: Promise.resolve(), finished: Promise.resolve() }; });
+  (document as unknown as { startViewTransition: unknown }).startViewTransition = start;
+  await render();
+  await act(async () => host.querySelector('button')!.click());
+  await act(async () => { await Promise.resolve(); });
+  expect(start).toHaveBeenCalledTimes(1);
+  expect(document.documentElement.dataset.theme).toBe('dark');
+  const [keyframes, options] = animate.mock.calls[0] as [{ clipPath: string[] }, { duration: number; pseudoElement: string }];
+  expect(keyframes.clipPath[0]).toMatch(/^circle\(0px at /);
+  expect(options).toMatchObject({ duration: 450, pseudoElement: '::view-transition-new(root)' });
+  expect(document.documentElement.hasAttribute('data-theme-vt')).toBe(false);
+  delete (document as unknown as { startViewTransition?: unknown }).startViewTransition;
+  delete (document.documentElement as unknown as { animate?: unknown }).animate;
+});
+
+it('switches instantly when the user prefers reduced motion', async () => {
+  const start = vi.fn();
+  (document as unknown as { startViewTransition: unknown }).startViewTransition = start;
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce'), media: query, addEventListener() {}, removeEventListener() {} }));
+  await render();
+  await act(async () => host.querySelector('button')!.click());
+  expect(start).not.toHaveBeenCalled();
+  expect(document.documentElement.dataset.theme).toBe('dark');
+  vi.unstubAllGlobals();
+  delete (document as unknown as { startViewTransition?: unknown }).startViewTransition;
+});
