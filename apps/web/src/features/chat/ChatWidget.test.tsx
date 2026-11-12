@@ -82,7 +82,7 @@ it('shows the unread badge and clears it after reading the conversation', async 
   await render();
   expect(host.querySelector('.chat-widget__badge')?.textContent).toBe('2');
   await act(async () => button('Mở tin nhắn · 2 chưa đọc').click()); await settle();
-  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) .direct-chat__preview')?.textContent).toBe('Hẹn bạn lúc 18h');
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) .direct-chat__preview')?.textContent).toBe('Hẹn bạn lúc 18h');
   expect(host.querySelector('.direct-chat__unread')?.textContent).toBe('2');
   await act(async () => [...host.querySelectorAll('button')].find(node => node.textContent?.includes('Coach Linh'))!.click());
   expect(api.markConversationRead).toHaveBeenCalledWith(7, 5);

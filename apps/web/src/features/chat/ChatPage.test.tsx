@@ -7,6 +7,8 @@ import * as api from './chatApi';
 import { subscribeChat } from './chatRealtime';
 import { getCurrentUser } from '../../shared/api/client';
 vi.mock('./chatApi', async importOriginal => ({ ...await importOriginal<typeof api>(), getConversations: vi.fn(), getContacts: vi.fn(), openConversation: vi.fn(), getHistory: vi.fn(), sendMessage: vi.fn(), markConversationRead: vi.fn() }));
+vi.mock('../member/memberSupportApi', () => ({ getMySupportTickets: vi.fn(async () => ({ content: [], totalPages: 0 })), getSupportInbox: vi.fn(async () => ({ content: [], totalPages: 0 })), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(async () => []), sendSupportMessage: vi.fn(), createSupportTicket: vi.fn(), updateSupportStatus: vi.fn(), escalateSupportTicket: vi.fn() }));
+vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn(() => () => {}) }));
 vi.mock('./chatRealtime', () => ({ subscribeChat: vi.fn(() => vi.fn()) }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn(), apiFetch: vi.fn() }));
 let host: HTMLDivElement, root: Root;
@@ -162,8 +164,8 @@ it('owns inbox, unread, role, contact and empty labels in both languages without
   await act(async () => setLanguage('en'));
   expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Your conversations');
   expect(host.querySelector('[aria-label="2 unread messages"]')).not.toBeNull();
-  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) strong')!.textContent).toBe('Tin nhắn');
-  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) .direct-chat__preview')!.textContent).toBe('You: Tìm');
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) strong')!.textContent).toBe('Tin nhắn');
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) .direct-chat__preview')!.textContent).toBe('You: Tìm');
   expect(host.querySelector('[aria-label="Conversation pages"]')).not.toBeNull();
   expect(host.querySelector('[title="Refresh messages"]')).not.toBeNull();
   await act(async () => button('New conversation').click());
@@ -174,7 +176,7 @@ it('owns inbox, unread, role, contact and empty labels in both languages without
   expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Hội thoại của bạn');
   expect(host.querySelector('[aria-label="2 tin chưa đọc"]')).not.toBeNull();
   expect(host.querySelector('input[type="search"]')!.getAttribute('placeholder')).toBe('Tìm kiếm người nhận...');
-  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) .direct-chat__preview')!.textContent).toBe('Bạn: Tìm');
+  expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) .direct-chat__preview')!.textContent).toBe('Bạn: Tìm');
 });
 
 it('tells a member without any coach class that only the front desk can be messaged', async () => {
@@ -202,4 +204,26 @@ it('keeps SÖL AI first, above the contact directory and the conversations', asy
   const firstConversation = host.querySelector('.direct-chat__list:not(.direct-chat__list--pinned) .direct-chat__person')!;
   expect(ai.compareDocumentPosition(directory) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(ai.compareDocumentPosition(firstConversation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+it('pins Support & Tickets above SÖL AI so member complaints to the front desk live in Messages', async () => {
+  await render();
+  const support = host.querySelector('.direct-chat__person--support')!;
+  expect(support).not.toBeNull();
+  expect(support.compareDocumentPosition(host.querySelector('.direct-chat__person--ai')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await act(async () => (support as HTMLButtonElement).click());
+  await act(async () => { await Promise.resolve(); });
+  await vi.waitFor(() => expect(host.querySelector('#support-subject')).not.toBeNull());
+  expect(host.querySelector('.direct-chat__support')).not.toBeNull();
+});
+
+it('gives receptionists the ticket inbox and coaches no support entry', async () => {
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
+  await render();
+  await act(async () => (host.querySelector('.direct-chat__person--support') as HTMLButtonElement).click());
+  await vi.waitFor(() => expect(host.querySelector('#staff-support-filter')).not.toBeNull());
+  await act(async () => root.unmount()); root = createRoot(host);
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
+  await render();
+  expect(host.querySelector('.direct-chat__person--support')).toBeNull();
 });
