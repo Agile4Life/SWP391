@@ -155,8 +155,14 @@ it('tabs show live counts and search filters by code, name or phone', async () =
   expect(host.textContent).toContain('Chờ trả tại quầy (1)');
 
   const searchInput = host.querySelector<HTMLInputElement>('#staff-order-search')!;
+  const callsBeforeTyping = vi.mocked(shopApi.staff.listOrders).mock.calls.length;
   await act(async () => {
     setInputValue(searchInput, '0901234567');
+  });
+  // No request per keystroke: the search waits until typing pauses.
+  expect(vi.mocked(shopApi.staff.listOrders).mock.calls.length).toBe(callsBeforeTyping);
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 350));
   });
   expect(shopApi.staff.listOrders).toHaveBeenLastCalledWith(
     expect.objectContaining({ status: 'paid', q: '0901234567', page: 0 }),
@@ -258,7 +264,45 @@ it('counter payment asks for the method and refreshes the order', async () => {
     'success',
     { record: true, translation: { vi: 'Đã thu tiền tại quầy cho đơn SOL-261105-ABCD.', en: 'Counter payment collected for order SOL-261105-ABCD.' } },
   );
-  expect(host.querySelector('dialog')?.textContent).toContain('Bắt đầu chuẩn bị');
+  // Paid at the desk: the member is standing there, so the order can be handed over at once.
+  const dialog = host.querySelector('dialog')!;
+  expect(dialog.textContent).toContain('Giao ngay tại quầy');
+  expect(dialog.textContent).toContain('Cần chuẩn bị trước');
+});
+
+it('hands a counter-paid pickup order over in one step', async () => {
+  vi.mocked(shopApi.staff.listOrders).mockResolvedValue({
+    content: [sampleStaffOrder({ status: 'paid', fulfillment: 'pickup', paymentMethod: 'counter', paidAt: '2026-11-05T14:20:00' })],
+    number: 0,
+    size: 20,
+    totalElements: 1,
+    totalPages: 1,
+  });
+  vi.mocked(shopApi.staff.complete).mockResolvedValue(
+    sampleStaffOrder({ status: 'completed', fulfillment: 'pickup', paymentMethod: 'counter', paidAt: '2026-11-05T14:20:00' }),
+  );
+
+  await renderPage();
+  await click('Mở');
+  await click('Giao ngay tại quầy');
+  expect(shopApi.staff.complete).toHaveBeenCalledWith(9);
+  expect(shopApi.staff.startProcessing).not.toHaveBeenCalled();
+});
+
+it('an online-paid pickup order still starts with preparation', async () => {
+  vi.mocked(shopApi.staff.listOrders).mockResolvedValue({
+    content: [sampleStaffOrder({ status: 'paid', fulfillment: 'pickup', paymentMethod: 'online' })],
+    number: 0,
+    size: 20,
+    totalElements: 1,
+    totalPages: 1,
+  });
+
+  await renderPage();
+  await click('Mở');
+  const dialog = host.querySelector('dialog')!;
+  expect(dialog.textContent).toContain('Bắt đầu chuẩn bị');
+  expect(dialog.textContent).not.toContain('Giao ngay tại quầy');
 });
 
 it('cancel requires a reason, shows the wallet refund amount for paid orders and the restock option', async () => {

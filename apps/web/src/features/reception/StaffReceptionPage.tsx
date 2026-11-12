@@ -11,7 +11,7 @@ import { GateQrPanel } from './GateQrPanel';
 import { MembershipRequestHistory } from './MembershipRequestHistory';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
-import { formatCenterDate } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import {
   maskCitizenId,
   receptionApi,
@@ -284,6 +284,16 @@ export function StaffReceptionPage() {
     () => renewalCandidates.find((c) => c.status?.toLowerCase() === 'active') ?? null,
     [renewalCandidates]
   );
+
+  // Mirrors the counter checkout rule (MEMBERSHIP_ALREADY_ACTIVE): a member with a paid period still running can only
+  // renew, so "buy new" is not offered instead of failing after the cashier presses collect.
+  const hasRunningPaidPeriod = useMemo(() => {
+    const today = centerNowParts().date;
+    return renewalCandidates.some((c) => {
+      const status = c.status?.toLowerCase();
+      return (status === 'active' || status === 'expired') && (!c.endDate || c.endDate.slice(0, 10) >= today);
+    });
+  }, [renewalCandidates]);
 
   const handleOpenCancelModal = () => {
     if (!selectedMember) return;
@@ -899,12 +909,17 @@ export function StaffReceptionPage() {
                         {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{formatCenterDate(candidate.endDate)}
                       </option>
                     ))}
-                  {packages.map((pkg) => (
+                  {!hasRunningPaidPeriod && packages.map((pkg) => (
                     <option data-i18n-managed key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
                       {t("Mua mới: ")}{pkg.name} — {vnd(pkg.price)}
                     </option>
                   ))}
                 </Select>
+              )}
+              {!selectedPending && !loadingOffers && selectedMember && hasRunningPaidPeriod && (
+                <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+                  {t('Hội viên còn gói đang hiệu lực nên chỉ gia hạn được; không thể mua thêm gói mới song song.', 'This member still has a running membership, so it can only be renewed; a second new package cannot be bought alongside it.')}
+                </p>
               )}
               {offersError && <p role="alert">{t(offersError)} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button></p>}
               {!selectedPending && !loadingOffers && selectedMember && !offersError && packages.length === 0 && (

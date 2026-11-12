@@ -229,7 +229,41 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         )}
 
         {/* Primary status actions */}
-        {order.status === 'paid' && (
+        {order.status === 'paid' && order.paymentMethod === 'counter' && order.fulfillment === 'pickup' ? (
+          // Paid at the desk with the member standing there: hand it over now (the API allows paid → completed).
+          <div className="stack">
+            <p className="muted" style={{ margin: 0 }}>
+              {sourceText("Hội viên đã trả tại quầy — kiểm tra thẻ hội viên rồi giao sản phẩm ngay.")}</p>
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() =>
+                  void runAction(
+                    () => shopApi.staff.startProcessing(order.id),
+                    sourceFormatPair("Đã bắt đầu chuẩn bị đơn {0}.", order.code),
+                  )
+                }
+              >
+                {sourceText('Cần chuẩn bị trước')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={busy}
+                onClick={() =>
+                  void runAction(
+                    () => shopApi.staff.complete(order.id),
+                    sourceFormatPair("Đã giao đơn {0} tại quầy.", order.code),
+                  )
+                }
+              >
+                {busy ? sourceText('Đang xử lý…') : sourceText('Giao ngay tại quầy')}
+              </button>
+            </div>
+          </div>
+        ) : order.status === 'paid' && (
           <div className="form-actions">
             <button
               type="button"

@@ -1,5 +1,5 @@
 import { sourceText, useSourceLanguage, sourceError } from './shopI18n';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -8,6 +8,8 @@ import { StaffOrderDialog } from './components/StaffOrderDialog';
 import './shop-portal.css';
 import { shopApi } from './shopApi';
 import type { OrderCountsDto, OrderDto, Page } from './shopTypes';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 const STAFF_TABS: Array<{
   id: string;
@@ -103,7 +105,8 @@ export function StaffOrdersSection({
         </div>
       </div>
 
-      {loading ? (
+      {/* The skeleton is only for the first load; a refresh keeps the table so the desk does not lose its place. */}
+      {loading && !data ? (
         <LoadingSkeleton label={sourceText("Đang tải đơn hàng…")} variant="table" count={4} />
       ) : error ? (
         <div className="portal-alert" role="alert">
@@ -116,7 +119,7 @@ export function StaffOrdersSection({
           <p style={{ margin: 0 }}>{sourceText("Chưa có đơn hàng nào khớp bộ lọc.")}</p>
         </div>
       ) : (
-        <>
+        <div aria-busy={loading || undefined} style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s ease' }}>
           <OrderTable orders={data.content} onOpen={order => setSelectedOrder(order)} />
           {data.totalPages > 1 && (
             <nav className="court-pagination" aria-label={sourceText("Phân trang đơn hàng")}>
@@ -139,7 +142,7 @@ export function StaffOrdersSection({
                 {sourceText("Trang sau")}</button>
             </nav>
           )}
-        </>
+        </div>
       )}
 
       {selectedOrder && (
@@ -165,24 +168,35 @@ export function StaffOrdersPage() {
   const [counts, setCounts] = useState<OrderCountsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error>('');
+  // Search once typing pauses instead of on every keystroke.
+  const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearchQuery(q.trim()), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+  // Only the latest request may update the list: a slow earlier response must not overwrite a newer one.
+  const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setError('');
     try {
       const statusParam = status === 'pending_payment' ? 'counter_pending' : status || undefined;
       const [orderPage, orderCounts] = await Promise.all([
-        shopApi.staff.listOrders({ status: statusParam, q: q.trim() || undefined, page, size: 20 }),
+        shopApi.staff.listOrders({ status: statusParam, q: searchQuery || undefined, page, size: 20 }),
         shopApi.staff.counts(),
       ]);
+      if (requestId !== latestRequest.current) return;
       setData(orderPage);
       setCounts(orderCounts);
     } catch (err) {
+      if (requestId !== latestRequest.current) return;
       setError(sourceError(err, 'Không thể tải danh sách đơn hàng. Vui lòng thử lại.'));
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
-  }, [status, q, page]);
+  }, [status, searchQuery, page]);
 
   useEffect(() => {
     void load();

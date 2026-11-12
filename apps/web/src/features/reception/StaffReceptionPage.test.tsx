@@ -256,3 +256,14 @@ it('lets the receptionist top up a selected member wallet at the counter', async
   });
   expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toContain('650.000');
 });
+
+it('offers only renewal, not a second new package, while the member still has a running paid period', async () => {
+  const running = { id: 5, memberId: 10, packageId: 2, packageName: 'Gold', startDate: '2026-01-01', endDate: '2099-12-31', status: 'active', createdAt: '2026-01-01' };
+  api.getRenewalCandidates.mockResolvedValue([running]);
+  await selectMember();
+  const packageSelect = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  const values = Array.from(packageSelect.options).map((option) => option.value);
+  expect(values).toContain('renew:5');
+  expect(values.some((value) => value.startsWith('buy:'))).toBe(false);
+  expect(host.querySelector('[data-testid="reception-renew-only-hint"]')).not.toBeNull();
+});
