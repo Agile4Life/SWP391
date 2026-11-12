@@ -25,6 +25,14 @@ describe('MemberInvoicesPage', () => {
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
   async function render() { await act(async () => root.render(<MemoryRouter><MemberInvoicesPage /></MemoryRouter>)); }
 
+  it('names a wallet top-up payment as a SÖL wallet top-up instead of "Khác"', async () => {
+    mocks.payments.mockResolvedValue([{ ...paid, id: 19, amount: 1000000, serviceType: 'WALLET_TOPUP' }]);
+    await render();
+    const row = host.querySelector('.member-invoices__table')?.textContent ?? '';
+    expect(row).toContain('Nạp tiền vào ví SÖL');
+    expect(row).not.toContain('Khác');
+  });
+
   it('separates pending VNPay checkout from successful invoice history', async () => {
     let resolve!: (value: unknown[]) => void;
     mocks.payments.mockReturnValue(new Promise((done) => { resolve = done; }));

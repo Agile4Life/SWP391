@@ -19,9 +19,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/wallet")
@@ -48,6 +50,12 @@ public class WalletController {
     private final WalletService walletService;
     private final MessageService messageService;
     private final VnpayPaymentService vnpayPaymentService;
+    private CounterTopupService counterTopupService;
+
+    @Autowired(required = false)
+    public void setCounterTopupService(CounterTopupService counterTopupService) {
+        this.counterTopupService = counterTopupService;
+    }
 
     public WalletController(WalletService walletService) {
         this(walletService, null, null);
@@ -128,5 +136,15 @@ public class WalletController {
                 ? messageService.getMessage("wallet.topup.counter.success")
                 : "Đã nạp tiền vào Ví hội viên tại quầy thành công";
         return ApiResponse.ok(msg, dto);
+    }
+
+    @GetMapping("/counter-topups")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST','STAFF','CENTER_MANAGER','MANAGER')")
+    public ApiResponse<List<CounterTopupService.TopupHistoryDto>> counterTopupHistory(
+            @RequestParam(value = "days", required = false) Integer days) {
+        String msg = messageService != null
+                ? messageService.getMessage("wallet.topup.counter.history")
+                : "Lấy lịch sử nạp Ví tại quầy thành công";
+        return ApiResponse.ok(msg, counterTopupService == null ? List.of() : counterTopupService.history(days));
     }
 }

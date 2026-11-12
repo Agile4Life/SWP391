@@ -62,7 +62,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/staff/reception', label: 'Quầy & POS', en: 'Front desk & POS' },
     { to: '/staff/check-in', label: 'Check-in', en: 'Check-in' },
     { to: '/staff/check-out', label: 'Check-out', en: 'Check-out' },
-    { to: '/staff/reception-history', label: 'Lịch sử', en: 'History' },
+    { to: '/staff/reception-history', label: 'Lịch sử giao dịch', en: 'Transaction history' },
   ] },
   { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['STAFF'], tabs: [
     { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },

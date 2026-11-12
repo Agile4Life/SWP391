@@ -60,7 +60,7 @@ public class SecurityConfig {
                     // Profile extensions (SCRUM-66)
                     .requestMatchers(HttpMethod.POST, "/api/v1/profile/avatar").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
-                    .requestMatchers("/api/v1/wallet/members/**").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
+                    .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/wallet/**").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/receptionist").hasRole("RECEPTIONIST")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("ADMIN")
@@ -91,7 +91,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/process").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/payments/**", "/api/v1/invoices/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers("/api/v1/wallet/members/**").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
+                    .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
 
                     // Reports (SCRUM-79)
                     .requestMatchers("/api/v1/reports/**").hasAnyRole("CENTER_MANAGER", "MANAGER")

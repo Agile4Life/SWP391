@@ -1578,4 +1578,12 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Người xử lý": "Processed by",
   "Hội viên tự thanh toán": "Paid by member online",
   "Không tải được lịch sử xử lý yêu cầu gói tập.": "Unable to load processed membership requests.",
+  "Lịch sử giao dịch": "Transaction history",
+  "Lịch sử nạp tiền vào Ví SÖL": "SÖL wallet top-up history",
+  "Phương thức nạp": "Top-up method",
+  "Nạp tiền vào ví SÖL": "SÖL wallet top-up",
+  "Chưa có giao dịch nạp ví nào tại quầy trong khoảng thời gian này.": "No wallet top-ups were taken at the desk in this period.",
+  "Không tải được lịch sử nạp ví tại quầy.": "Unable to load the desk's wallet top-up history.",
+  "Làm mới lịch sử nạp ví": "Refresh top-up history",
+  "Thu bởi": "Received by",
 };

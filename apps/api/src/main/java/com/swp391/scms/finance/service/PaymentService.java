@@ -282,6 +282,8 @@ public class PaymentService {
         } else if (payment.getProductOrderId() != null) {
             dto.setServiceType("SHOP");
             dto.setServiceName(payment.getProductOrder() != null ? payment.getProductOrder().getCode() : null);
+        } else if (payment.getNote() != null && payment.getNote().startsWith("WALLET_TOPUP")) {
+            dto.setServiceType("WALLET_TOPUP");
         } else {
             dto.setServiceType("OTHER");
         }

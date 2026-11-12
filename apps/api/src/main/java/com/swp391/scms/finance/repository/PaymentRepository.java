@@ -33,6 +33,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
             java.util.Collection<String> statuses, java.time.LocalDateTime since);
 
+    /** Wallet top-ups taken at the front desk since a moment, newest first. */
+    @EntityGraph(attributePaths = {"member", "member.user", "receivedBy"})
+    List<Payment> findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
+            String note, String status, java.time.LocalDateTime since);
+
     List<Payment> findAllByCoachBookingId(Long coachBookingId);
     List<Payment> findAllByCourtBookingId(Long courtBookingId);
     List<Payment> findAllByProductOrderId(Long productOrderId);

@@ -21,6 +21,7 @@ const SERVICE_LABELS: Record<string, SourceMessage> = {
   PT: memberMessage('PT 1:1', '1:1 PT'),
   COURT: memberMessage('Đặt sân', 'Court booking'),
   SHOP: memberMessage('Đơn hàng', 'Shop order'),
+  WALLET_TOPUP: memberMessage('Nạp tiền vào ví SÖL', 'SÖL wallet top-up'),
   OTHER: memberMessage('Khác', 'Other'),
 };
 

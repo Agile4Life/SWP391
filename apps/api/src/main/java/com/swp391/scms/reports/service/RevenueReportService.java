@@ -129,6 +129,8 @@ public class RevenueReportService {
 
         Map<LocalDate, List<Payment>> byDate = payments.stream()
                 .filter(p -> p.getPaidAt() != null)
+                // A wallet top-up only moves money into the wallet; the revenue is booked when it is spent.
+                .filter(p -> p.getNote() == null || !p.getNote().startsWith("WALLET_TOPUP"))
                 .collect(Collectors.groupingBy(p -> p.getPaidAt().toLocalDate()));
 
         List<DailyRevenueDto> result = new ArrayList<>();

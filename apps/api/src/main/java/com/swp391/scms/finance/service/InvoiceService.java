@@ -166,7 +166,9 @@ public class InvoiceService {
                         }
                     } else {
                         InvoiceItem item = new InvoiceItem();
-                        item.setDescription(resolveDefaultItemDescription(payment.getId()));
+                        item.setDescription(payment.getNote() != null && payment.getNote().startsWith("WALLET_TOPUP")
+                                ? resolveWalletTopupItemDescription()
+                                : resolveDefaultItemDescription(payment.getId()));
                         item.setQuantity(1);
                         item.setUnitPrice(payment.getAmount());
                         invoice.addItem(item);
@@ -175,6 +177,17 @@ public class InvoiceService {
                     Invoice saved = invoiceRepository.save(invoice);
                     return invoiceMapper.toDto(saved);
                 });
+    }
+
+    private String resolveWalletTopupItemDescription() {
+        String fallback = "Nạp tiền vào ví SÖL";
+        if (messageService == null) {
+            return fallback;
+        }
+        String resolved = messageService.getMessage("finance.invoice.item.wallet_topup");
+        return (resolved == null || resolved.isBlank() || "finance.invoice.item.wallet_topup".equals(resolved))
+                ? fallback
+                : resolved;
     }
 
     private String resolveShippingItemDescription() {
