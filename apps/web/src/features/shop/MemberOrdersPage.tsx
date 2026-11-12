@@ -201,8 +201,13 @@ export function MemberOrdersPage({
                       }}
                     >
                       <div>
-                        <strong>{o.code}</strong>
-                        <span className="muted"> · {formatCenterDateTime(o.createdAt)}</span>
+                        <strong>
+                          {o.firstItemName}
+                          {o.itemCount > 1 ? sourceFormat(" và {0} sản phẩm khác", o.itemCount - 1) : ''}
+                        </strong>
+                        <div className="muted">
+                          {o.code} · {formatCenterDateTime(o.createdAt)}
+                        </div>
                       </div>
                       <OrderStatusPill
                         status={o.status}
@@ -213,27 +218,21 @@ export function MemberOrdersPage({
                     <div
                       style={{
                         display: 'flex',
-                        justifyContent: 'space-between',
+                        justifyContent: 'flex-end',
                         alignItems: 'center',
                         gap: 12,
                         flexWrap: 'wrap',
                       }}
                     >
-                      <span>
-                        {o.firstItemName}
-                        {o.itemCount > 1 ? sourceFormat(" và {0} sản phẩm khác", o.itemCount - 1) : ''}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {formatVnd(o.total)}
-                        </strong>
-                        {o.canPay && (
-                          <Link className="btn-primary btn-sm" to={`/member/orders/${o.id}`}>
-                            {sourceText("Thanh toán")}</Link>
-                        )}
-                        <Link className="btn-secondary btn-sm" to={`/member/orders/${o.id}`}>
-                          {sourceText("Xem chi tiết")}</Link>
-                      </div>
+                      <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {formatVnd(o.total)}
+                      </strong>
+                      {o.canPay && (
+                        <Link className="btn-primary btn-sm" to={`/member/orders/${o.id}`}>
+                          {sourceText("Thanh toán")}</Link>
+                      )}
+                      <Link className="btn-secondary btn-sm" to={`/member/orders/${o.id}`}>
+                        {sourceText("Xem chi tiết")}</Link>
                     </div>
                   </article>
                 ))}

@@ -802,6 +802,7 @@ export const englishShopPublicLabels: Readonly<Record<string, string>> = {
   "Bạn có chắc chắn muốn hủy đơn hàng {0}?": "Are you sure you want to cancel order {0}?",
   "Đã hủy đơn {0}": "Order {0} cancelled",
   " và {0} sản phẩm khác": " and {0} other items",
+  " · và {0} sản phẩm khác": " · and {0} other items",
   "Ảnh {0}": "Image {0}",
   "{0} lần": "{0} servings",
   "{0} / lần dùng": "{0} / serving",

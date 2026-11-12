@@ -9,6 +9,26 @@ export interface OrderTableProps {
   onOpen: (order: OrderDto) => void;
 }
 
+/** Total units in the order across all lines. */
+function totalQuantity(order: OrderDto): number {
+  return (order.items ?? []).reduce((sum, item) => sum + item.quantity, 0);
+}
+
+/** The first product leads; any others collapse into a count so a row stays one or two lines. */
+function ProductSummary({ order }: { order: OrderDto }) {
+  const [first, ...rest] = order.items ?? [];
+  if (!first) return <span>—</span>;
+  return (
+    <div>
+      <strong>{first.productName}</strong>
+      <div className="muted">
+        {first.variantLabel ? `${first.variantLabel} · ` : ''}×{first.quantity}
+        {rest.length > 0 ? sourceFormat(" · và {0} sản phẩm khác", rest.length) : ''}
+      </div>
+    </div>
+  );
+}
+
 export function OrderTable({ orders, onOpen }: OrderTableProps) {
   useSourceLanguage();
   return (
@@ -16,6 +36,8 @@ export function OrderTable({ orders, onOpen }: OrderTableProps) {
       <table className="portal-table">
         <thead>
           <tr>
+            <th scope="col">{sourceText("Sản phẩm")}</th>
+            <th scope="col">{sourceText("Số lượng")}</th>
             <th scope="col">{sourceText("Mã đơn")}</th>
             <th scope="col">{sourceText("Thời gian")}</th>
             <th scope="col">{sourceText("Hội viên")}</th>
@@ -29,6 +51,12 @@ export function OrderTable({ orders, onOpen }: OrderTableProps) {
         <tbody>
           {orders.map(order => (
             <tr key={order.id}>
+              <td>
+                <ProductSummary order={order} />
+              </td>
+              <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <strong>{totalQuantity(order)}</strong>
+              </td>
               <td>
                 <strong>{order.code}</strong>
               </td>

@@ -383,3 +383,23 @@ it('errors stay inside the dialog and the dialog cannot close while sending', as
     'Không thể chuyển trạng thái đơn',
   );
 });
+
+it('leads each row with the product, before the order code', async () => {
+  vi.mocked(shopApi.staff.listOrders).mockResolvedValue({
+    content: [sampleStaffOrder()],
+    number: 0,
+    size: 20,
+    totalElements: 1,
+    totalPages: 1,
+  });
+
+  await renderPage();
+  const headers = Array.from(host.querySelectorAll('thead th')).map(th => th.textContent);
+  expect(headers.indexOf('Sản phẩm')).toBe(0);
+  expect(headers.indexOf('Số lượng')).toBe(1);
+  expect(headers.indexOf('Mã đơn')).toBe(2);
+  const firstRow = host.querySelector('tbody tr')!;
+  expect(firstRow.querySelector('td')!.textContent).toContain(sampleStaffOrder().items[0].productName);
+  const expectedUnits = sampleStaffOrder().items.reduce((sum, item) => sum + item.quantity, 0);
+  expect(firstRow.querySelectorAll('td')[1].textContent).toBe(String(expectedUnits));
+});
