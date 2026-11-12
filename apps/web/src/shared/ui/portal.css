@@ -1938,3 +1938,9 @@ textarea.portal-textarea:focus-visible,
 .kyc-verified { display: flex; align-items: center; gap: 8px; }
 .required-mark { color: var(--color-danger, #c53030); margin-left: 2px; }
 .form-hint { display: block; margin-top: 4px; font-size: 13px; color: var(--portal-muted); }
+
+/* Bộ lọc khoảng ngày: hai ô ngày một hàng, ghi chú nằm dưới thay vì lơ lửng bên cạnh. */
+.pt-range { display: grid; gap: 12px; }
+.pt-range__fields { display: flex; flex-wrap: wrap; gap: 16px; }
+.pt-range__fields .portal-form-group { margin: 0; }
+.pt-range .form-hint { margin: 0; }
