@@ -5,7 +5,7 @@ import { Select } from '../../shared/ui/Select';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as profileApi from './profileApi';
 import { getProfile, updateProfile, uploadAvatar, type Profile } from './profileApi';
-import { getCurrentUser } from '../../shared/api/client';
+import { getCurrentUser, setCurrentUser } from '../../shared/api/client';
 import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
@@ -196,6 +196,9 @@ export function MemberProfilePage() {
         certification: profile.certification ?? updated.certification,
         shift: profile.shift ?? updated.shift,
       });
+      const session = getCurrentUser();
+      const savedName = updated.fullName?.trim();
+      if (session && savedName && session.name !== savedName) setCurrentUser({ ...session, name: savedName });
       window.dispatchEvent(new Event('profile-updated'));
       notify(memberText("Đã cập nhật hồ sơ cá nhân."), 'success', { translation: memberMessage("Đã cập nhật hồ sơ cá nhân.") });
     } catch (err) {

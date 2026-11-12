@@ -1,10 +1,11 @@
 import { DaysLeft } from './DaysLeft';
 import { memberText } from './memberI18n';
+import { getMyQuota, type QuotaDto } from './memberClassesApi';
 import { useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser } from '../../shared/api/client';
+import { useCurrentUser } from '../../shared/api/useCurrentUser';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PortalIcon } from '../portal/PortalIcon';
@@ -71,7 +72,7 @@ type ClassesState =
 
 export function MemberDashboardPage() {
   useLanguage();
-  const userName = getCurrentUser()?.name || memberText('Hội viên');
+  const userName = useCurrentUser()?.name || memberText('Hội viên');
 
   const [membershipState, setMembershipState] =
     useState<MembershipState>({ status: 'loading' });
@@ -90,6 +91,16 @@ export function MemberDashboardPage() {
     }
   }, []);
 
+  const [quota, setQuota] = useState<QuotaDto | null>(null);
+  const loadQuota = useCallback(async () => {
+    try {
+      const data = await getMyQuota();
+      setQuota(data && typeof data === 'object' ? data : null);
+    } catch {
+      setQuota(null);
+    }
+  }, []);
+
   const loadClasses = useCallback(async (silent = false) => {
     if (!silent) setClassesState({ status: 'loading' });
 
@@ -104,10 +115,12 @@ export function MemberDashboardPage() {
   useEffect(() => {
     void loadMembership();
     void loadClasses();
+    void loadQuota();
     const syncDashboard = () => {
       if (document.visibilityState === 'hidden') return;
       void loadMembership(true);
       void loadClasses(true);
+      void loadQuota();
     };
     window.addEventListener('focus', syncDashboard);
     window.addEventListener('online', syncDashboard);
@@ -117,7 +130,7 @@ export function MemberDashboardPage() {
       window.removeEventListener('online', syncDashboard);
       document.removeEventListener('visibilitychange', syncDashboard);
     };
-  }, [loadMembership, loadClasses]);
+  }, [loadMembership, loadClasses, loadQuota]);
 
   const today = new Date();
 
@@ -263,6 +276,19 @@ export function MemberDashboardPage() {
                 className="portal-card-title"
               >
                 {memberText("Lớp đã đăng ký")}</h2>
+              {membership && quota && (quota.unlimited || quota.totalCredits != null) && (
+                <span
+                  className={`badge ${!quota.unlimited && quota.remainingCredits <= 0 ? 'badge-warning' : 'badge-success'}`}
+                  data-testid="dashboard-course-quota"
+                >
+                  {quota.unlimited
+                    ? memberText('Khóa học không giới hạn', 'Unlimited courses')
+                    : memberText(
+                        `Còn ${quota.remainingCredits}/${quota.totalCredits} khóa miễn phí`,
+                        `${quota.remainingCredits}/${quota.totalCredits} free courses left`,
+                      )}
+                </span>
+              )}
             </div>
 
             {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch lớp học của tôi")} />}
