@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
   getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
-  getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(),
+  getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(), getRequestHistory: vi.fn(),
 }));
 vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—' }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
@@ -27,6 +27,7 @@ const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.resetAllMocks();
+  api.getRequestHistory.mockResolvedValue([]);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role: 'STAFF' });
   vi.mocked(checkinApi.gateQr).mockResolvedValue({ qrCode: 'SOL:GATE:1:A1:signed', gateId: 'A1', gate: 'Turnstile A1 - Sảnh Chính',
     generatedAt: '2026-10-29T00:00:00Z', expiresAt: '2026-10-29T00:01:00Z', expiresInSeconds: 60 });
