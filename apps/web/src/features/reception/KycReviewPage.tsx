@@ -64,15 +64,29 @@ export function KycReviewPage() {
         <ul className="stack" style={{ listStyle: 'none', padding: 0 }} aria-label={t('Hồ sơ chờ duyệt', 'Submissions awaiting review')}>
           {items.map((item) => (
             <li key={item.memberId} className="portal-card stack" data-testid={`kyc-${item.memberId}`}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <strong>{item.fullName ?? '—'} {item.membershipCode ? `(${item.membershipCode})` : ''}</strong>
-                {item.submittedAt && <small>{t('Gửi lúc', 'Submitted')} {formatCenterDateTime(item.submittedAt)}</small>}
+              <div className="kyc-card__head">
+                <div>
+                  <h2 className="kyc-card__name">{item.fullName ?? '—'}</h2>
+                  {item.membershipCode && <span className="badge badge-neutral">{item.membershipCode}</span>}
+                </div>
+                {item.submittedAt && <span className="kyc-card__time">{t('Gửi lúc', 'Submitted')} {formatCenterDateTime(item.submittedAt)}</span>}
               </div>
-              <div>{item.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Citizen ID')}: <strong>{item.citizenId}</strong>
-                {item.nationality ? ` · ${item.nationality}` : ''}</div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {item.frontImageUrl && <img src={item.frontImageUrl} alt={t('Mặt trước giấy tờ', 'Document front')} style={{ maxWidth: 260, borderRadius: 8 }} />}
-                {item.backImageUrl && <img src={item.backImageUrl} alt={t('Mặt sau giấy tờ', 'Document back')} style={{ maxWidth: 260, borderRadius: 8 }} />}
+              <dl className="kyc-card__doc">
+                <div>
+                  <dt>{item.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Citizen ID')}</dt>
+                  <dd>{item.citizenId ? <strong className="kyc-card__number">{item.citizenId}</strong> : <span className="kyc-card__missing">{t('Chưa có số giấy tờ', 'No document number')}</span>}</dd>
+                </div>
+                {item.nationality && <div><dt>{t('Quốc tịch', 'Nationality')}</dt><dd>{item.nationality}</dd></div>}
+              </dl>
+              <div className="kyc-card__images">
+                {([['front', item.frontImageUrl, t('Mặt trước', 'Front')], ['back', item.backImageUrl, t('Mặt sau', 'Back')]] as const).map(([side, url, label]) => url ? (
+                  <a key={side} className="kyc-card__image" href={url} target="_blank" rel="noreferrer" aria-label={t(`Mở ảnh ${label} ở cửa sổ mới`, `Open ${label} image in a new tab`)}>
+                    <img src={url} alt={t(`${label} giấy tờ`, `Document ${label.toLowerCase()}`)} />
+                    <span>{label}</span>
+                  </a>
+                ) : (
+                  <div key={side} className="kyc-card__image kyc-card__image--empty"><span>{label}: {t('chưa có ảnh', 'no photo')}</span></div>
+                ))}
               </div>
               {rejecting === item.memberId ? (
                 <div className="portal-form-group">
