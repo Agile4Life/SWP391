@@ -29,6 +29,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findAllBySubscriptionId(Long subscriptionId);
 
+    /** Membership payments settled since a moment, newest first: the desk's history of processed requests. */
+    List<Payment> findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
+            java.util.Collection<String> statuses, java.time.LocalDateTime since);
+
     List<Payment> findAllByCoachBookingId(Long coachBookingId);
     List<Payment> findAllByCourtBookingId(Long courtBookingId);
     List<Payment> findAllByProductOrderId(Long productOrderId);

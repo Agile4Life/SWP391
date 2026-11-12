@@ -123,8 +123,10 @@ function parseCourseSchedule(
     : [];
   const recurringDaysArr = cls?.recurringDays
     ? cls.recurringDays.split(',').map((d) => d.trim().toUpperCase()).filter(Boolean)
-    : ['MONDAY', 'WEDNESDAY', 'FRIDAY'];
-  const daysPerWeek = recurringDaysArr.length || 3;
+    : [];
+  // No weekdays on record (and none derivable from sessions server-side): say so instead of guessing a default.
+  const daysUnknown = !isMonthly && recurringDaysArr.length === 0;
+  const daysPerWeek = recurringDaysArr.length;
 
   let durationWeeks = 4;
   if (cls?.startDate && cls?.endDate) {
@@ -136,7 +138,7 @@ function parseCourseSchedule(
     }
   }
 
-  let totalSessions = durationWeeks * daysPerWeek;
+  let totalSessions = durationWeeks * Math.max(daysPerWeek, 1);
   if (isMonthly && cls?.startDate && cls?.endDate) {
     // Same rule as the server: each chosen day of each month, a short month using its last day.
     const dates = new Set<string>();
@@ -165,16 +167,22 @@ function parseCourseSchedule(
 
   const daysText = isMonthly
     ? memberText(`Ngày ${monthDayList.join(', ')} hằng tháng`, `Day ${monthDayList.join(', ')} of each month`)
-    : recurringDaysArr.map((d) => DAY_LABELS[d] || d).join(', ');
+    : daysUnknown
+      ? memberText('Theo lịch từng buổi', 'See each session')
+      : recurringDaysArr.map((d) => DAY_LABELS[d] || d).join(', ');
   const courseLabel = isMonthly
     ? memberText(`Khóa hằng tháng (${monthDayList.length} buổi/tháng)`, `Monthly course (${monthDayList.length} sessions/month)`)
-    : memberText(`Khóa ${durationWeeks} tuần (${daysPerWeek} buổi/tuần)`, `${durationWeeks}-week course (${daysPerWeek} sessions/week)`);
-  const courseLabelSpaced = isMonthly
+    : daysUnknown
+      ? memberText(`Khóa ${durationWeeks} tuần`, `${durationWeeks}-week course`)
+      : memberText(`Khóa ${durationWeeks} tuần (${daysPerWeek} buổi/tuần)`, `${durationWeeks}-week course (${daysPerWeek} sessions/week)`);
+  const courseLabelSpaced = isMonthly || daysUnknown
     ? courseLabel
     : memberText(`Khóa ${durationWeeks} tuần (${daysPerWeek} buổi / tuần)`, `${durationWeeks}-week course (${daysPerWeek} sessions / week)`);
   const cadenceLabel = isMonthly
     ? memberText(`${monthDayList.length} buổi / tháng`, `${monthDayList.length} sessions / month`)
-    : memberText(`${daysPerWeek} buổi / tuần`, `${daysPerWeek} sessions / week`);
+    : daysUnknown
+      ? memberText('Theo lịch từng buổi', 'See each session')
+      : memberText(`${daysPerWeek} buổi / tuần`, `${daysPerWeek} sessions / week`);
   const startTimeStr = cls?.startTime || defaultStart || '08:00';
   const endTimeStr = cls?.endTime || defaultEnd || '09:00';
   const timeRange = `${startTimeStr.slice(0, 5)}–${endTimeStr.slice(0, 5)}`;
@@ -1105,6 +1113,8 @@ export function MemberClassesPage() {
                   item.sessionDate < now.date ||
                   (item.sessionDate === now.date && item.startTime.slice(0, 5) <= now.time);
                 const unavailable = past || item.status !== 'scheduled';
+                // A course is joined as a whole (server rule): once its first day has passed it is closed to new members.
+                const courseStarted = Boolean(parentClass?.startDate && parentClass.startDate < now.date);
                 const overlap = findOverlappingEnrollment(item, seatsInView, sessions);
                 const myBooking = activeBookings.find((b) => b.sessionId === item.id);
                 const myEnrollment = activeEnrollments.find(
@@ -1197,7 +1207,10 @@ export function MemberClassesPage() {
                           >
                             {isBusy ? memberText("Đang xử lý...") : memberText("Hủy đặt chỗ")}
                           </button>
-                        ) : overlap ? <button type="button" className="btn-secondary btn-sm" data-testid={`overlap-btn-${item.id}`} disabled>{memberText("Trùng giờ đã đặt")}</button> : unavailable ? (
+                        ) : overlap ? <button type="button" className="btn-secondary btn-sm" data-testid={`overlap-btn-${item.id}`} disabled>{memberText("Trùng giờ đã đặt")}</button> : courseStarted && !unavailable ? (
+                          <button type="button" className="btn-secondary btn-sm" disabled title={memberText("Khóa học đã bắt đầu, không thể đăng ký thêm.")}>
+                            {memberText("Khóa đã bắt đầu")}</button>
+                        ) : unavailable ? (
                           <button type="button" className="btn-secondary btn-sm" disabled>
                             {memberText("Không thể đặt")}</button>
                         ) : item.bookedCount < item.capacity ? (

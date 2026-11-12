@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: SCMS — tester report 2026-11-12 (payment description, desk request history, course enrolment)
+  version: 1.0.0
+paths:
+  /api/v1/payments/my:
+    get:
+      summary: Member's payments, each saying what it is for (mục 11)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Payment' } }
+        '403': { description: Not a member }
+  /api/v1/memberships/subscriptions/requests/history:
+    get:
+      summary: Membership requests the desk processed (mục 12). Roles RECEPTIONIST, CENTER_MANAGER.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: days, in: query, required: false, schema: { type: integer, default: 30, minimum: 1, maximum: 180 } }
+      responses:
+        '200':
+          description: OK, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/RequestHistory' } }
+        '403': { description: Member, coach or admin }
+  /api/v1/classes/{id}/enroll:
+    post:
+      summary: Enrol in a whole course with a plan credit (mục 1)
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        '201': { description: Enrolled }
+        '400':
+          description: >-
+            SCHEDULING_COURSE_ALREADY_STARTED when the course start date has passed (checked before membership
+            coverage, same rule as POST /classes/{id}/checkout).
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    Payment:
+      type: object
+      description: Existing payment fields plus the ones below (added).
+      properties:
+        id: { type: integer }
+        amount: { type: number }
+        status: { type: string, enum: [success, pending, failed, refunded] }
+        serviceType: { type: string, enum: [MEMBERSHIP, CLASS, PT, COURT, SHOP, OTHER] }
+        serviceName: { type: string, nullable: true, example: 'Sân Tennis 01 · 20/11/2026 · 14:00' }
+        coachBookingId: { type: integer, nullable: true }
+        courtBookingId: { type: integer, nullable: true }
+        productOrderId: { type: integer, nullable: true }
+    RequestHistory:
+      type: object
+      properties:
+        subscriptionId: { type: integer }
+        type: { type: string, enum: [REGISTER, RENEW, UPGRADE] }
+        outcome: { type: string, enum: [APPROVED, CANCELLED] }
+        memberId: { type: integer }
+        membershipCode: { type: string, nullable: true }
+        memberName: { type: string }
+        packageName: { type: string, nullable: true }
+        previousPackageName: { type: string, nullable: true }
+        amount: { type: number, nullable: true }
+        paymentMethod: { type: string, nullable: true }
+        processedAt: { type: string, format: date-time, nullable: true }
+        processedByName: { type: string, nullable: true, description: 'Null when the member paid online' }

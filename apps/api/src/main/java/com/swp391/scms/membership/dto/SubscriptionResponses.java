@@ -90,6 +90,25 @@ public final class SubscriptionResponses {
             LocalDateTime createdAt
     ) {}
 
+    /**
+     * A membership request the desk has finished with: {@code type} REGISTER, RENEW or UPGRADE; {@code outcome}
+     * APPROVED (paid and activated) or CANCELLED (withdrawn before payment).
+     */
+    public record RequestHistoryDto(
+            Long subscriptionId,
+            String type,
+            String outcome,
+            Long memberId,
+            String membershipCode,
+            String memberName,
+            String packageName,
+            String previousPackageName,
+            java.math.BigDecimal amount,
+            String paymentMethod,
+            LocalDateTime processedAt,
+            String processedByName
+    ) {}
+
     public record HoldRequestDto(
             Long id,
             Long memberId,

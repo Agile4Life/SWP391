@@ -115,8 +115,14 @@ public class DemoDataSeeder implements ApplicationRunner {
             new CoachSpec("thao", "Vũ Phương Thảo", "female", "Bơi lội", "ASCA Level 2",
                     "Huấn luyện viên bơi 7 năm kinh nghiệm: kỹ thuật bơi và sức bền dưới nước.", "Bơi lội"));
 
+    /** {@code fromDay}/{@code toDay}: window of sessions relative to the seed day; the class dates follow its sessions. */
     private record ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
-                             Set<DayOfWeek> days, LocalTime start, LocalTime end, int price) {}
+                             Set<DayOfWeek> days, LocalTime start, LocalTime end, int price, int fromDay, int toDay) {
+        ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
+                  Set<DayOfWeek> days, LocalTime start, LocalTime end, int price) {
+            this(name, coachKey, room, discipline, level, capacity, days, start, end, price, -28, 14);
+        }
+    }
 
     private static final List<ClassSpec> CLASSES = List.of(
             new ClassSpec("Strength Foundation", "hung", "Phòng Gym Tiêu chuẩn", "Gym", "all", 12,
@@ -126,7 +132,10 @@ public class DemoDataSeeder implements ApplicationRunner {
             new ClassSpec("Boxing Cardio Rounds", "long", "Phòng Gym VIP", "Boxing", "intermediate", 8,
                     Set.of(DayOfWeek.SATURDAY), LocalTime.of(9, 0), LocalTime.of(10, 15), 0),
             new ClassSpec("Aqua Technique", "thao", "Oasis Lap Pool", "Bơi lội", "all", 8,
-                    Set.of(DayOfWeek.FRIDAY), LocalTime.of(17, 0), LocalTime.of(18, 0), 0));
+                    Set.of(DayOfWeek.FRIDAY), LocalTime.of(17, 0), LocalTime.of(18, 0), 0),
+            // Not started yet, so members can try enrolling in a whole course.
+            new ClassSpec("Yoga Cơ Bản (khóa mới)", "mai", "Zen Garden Studio", "Yoga", "beginner", 12,
+                    Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), LocalTime.of(7, 0), LocalTime.of(8, 0), 0, 7, 34));
 
     private final UserRepository users;
     private final RoleRepository roles;
@@ -428,8 +437,18 @@ public class DemoDataSeeder implements ApplicationRunner {
             gymClass.setDescription("Lớp " + spec.name() + " do huấn luyện viên " + spec.coachKey() + " phụ trách.");
             gymClass.setStatus("active");
             gymClass.setPrice(BigDecimal.valueOf(spec.price()));
-            gymClass.setStartDate(today.minusDays(28));
-            gymClass.setEndDate(today.plusDays(42));
+            List<LocalDate> dates = new ArrayList<>();
+            for (LocalDate d = today.plusDays(spec.fromDay()); !d.isAfter(today.plusDays(spec.toDay())); d = d.plusDays(1)) {
+                if (spec.days().contains(d.getDayOfWeek())) {
+                    dates.add(d);
+                }
+            }
+            if (dates.isEmpty()) {
+                continue;
+            }
+            // The course runs exactly from its first to its last session: enrolment checks membership against these.
+            gymClass.setStartDate(dates.get(0));
+            gymClass.setEndDate(dates.get(dates.size() - 1));
             gymClass.setRepeatType("weekly");
             gymClass.setRecurringDays(String.join(",", spec.days().stream().map(DayOfWeek::name).toList()));
             gymClass.setStartTime(spec.start());
@@ -438,10 +457,7 @@ public class DemoDataSeeder implements ApplicationRunner {
             gymClass = classes.save(gymClass);
 
             List<ClassSession> created = new ArrayList<>();
-            for (LocalDate d = today.minusDays(28); !d.isAfter(today.plusDays(14)); d = d.plusDays(1)) {
-                if (!spec.days().contains(d.getDayOfWeek())) {
-                    continue;
-                }
+            for (LocalDate d : dates) {
                 ClassSession session = new ClassSession();
                 session.setGymClass(gymClass);
                 session.setSessionDate(d);

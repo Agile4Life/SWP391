@@ -40,6 +40,22 @@ export interface ReceptionTrialItem {
   subscriptionStatus?: string | null;
 }
 
+/** A membership request the desk already processed (GET /memberships/subscriptions/requests/history). */
+export interface RequestHistoryItem {
+  subscriptionId: number;
+  type: 'REGISTER' | 'RENEW' | 'UPGRADE';
+  outcome: 'APPROVED' | 'CANCELLED';
+  memberId: number;
+  membershipCode: string | null;
+  memberName: string;
+  packageName: string | null;
+  previousPackageName: string | null;
+  amount: number | null;
+  paymentMethod: string | null;
+  processedAt: string | null;
+  processedByName: string | null;
+}
+
 export interface PendingSubscriptionItem {
   id: number;
   memberId: number;
@@ -228,6 +244,10 @@ export const receptionApi = {
   getPendingSubscriptions: async (): Promise<PendingSubscriptionItem[]> => {
     return apiFetch<PendingSubscriptionItem[]>('/memberships/subscriptions/pending');
   },
+
+  /** Lịch sử yêu cầu gói tập lễ tân đã xử lý (đã thu tiền hoặc đã hủy) trong `days` ngày gần nhất. */
+  getRequestHistory: (days = 30): Promise<RequestHistoryItem[]> =>
+    apiFetch<RequestHistoryItem[]>(`/memberships/subscriptions/requests/history?days=${days}`),
 
   /**
    * Hủy yêu cầu đăng ký/gia hạn/nâng cấp gói tập đang chờ thanh toán (pending_payment)

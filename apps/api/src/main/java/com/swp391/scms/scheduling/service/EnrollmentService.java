@@ -522,7 +522,14 @@ public class EnrollmentService {
                     "Class is currently inactive");
         }
 
-        LocalDate startDate = gymClass.getStartDate() != null ? gymClass.getStartDate() : SessionEligibility.today(clock);
+        LocalDate today = SessionEligibility.today(clock);
+        // Same rule as checkoutCourse: a course is joined as a whole, so once it has started it is closed. Checking it
+        // first keeps the member from seeing a misleading "membership does not cover <start date>" error instead.
+        if (gymClass.getStartDate() != null && gymClass.getStartDate().isBefore(today)) {
+            throw new BadRequestException("SCHEDULING_COURSE_ALREADY_STARTED", "error.scheduling.course_already_started", null,
+                    "Khóa học đã bắt đầu, không thể đăng ký thêm.");
+        }
+        LocalDate startDate = gymClass.getStartDate() != null ? gymClass.getStartDate() : today;
         SessionEligibility.ensureMembershipCoversSession(subscriptions, member.getUserId(), startDate, clock);
         SessionEligibility.ensureMembershipCoversCourse(subscriptions, member.getUserId(), startDate, gymClass.getEndDate());
         SessionEligibility.ensurePlatinumRoomAccess(subscriptions, member.getUserId(), gymClass.getRoom(), startDate);

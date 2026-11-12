@@ -13,6 +13,28 @@ import { getMyPayments, type Payment } from './membershipApi';
 import { getMyInvoiceByPayment, getMyInvoicePdf, type MemberInvoice } from './memberInvoicesApi';
 import './member-invoices.css';
 
+const SERVICE_LABELS: Record<string, SourceMessage> = {
+  MEMBERSHIP: memberMessage('Gói tập', 'Membership'),
+  CLASS: memberMessage('Khóa học', 'Class'),
+  PT: memberMessage('PT 1:1', '1:1 PT'),
+  COURT: memberMessage('Đặt sân', 'Court booking'),
+  SHOP: memberMessage('Đơn hàng', 'Shop order'),
+  OTHER: memberMessage('Khác', 'Other'),
+};
+
+const STATUS_LABELS: Record<string, SourceMessage> = {
+  pending: memberMessage('Chờ thanh toán', 'Awaiting payment'),
+  success: memberMessage('Đã thanh toán', 'Paid'),
+  failed: memberMessage('Thất bại', 'Failed'),
+  refunded: memberMessage('Đã hoàn tiền', 'Refunded'),
+};
+
+/** "Gói tập · GOLD" — the kind of service, then the paid item when the server named it. */
+function ServiceCell({ payment }: { payment: Payment }) {
+  const kind = SERVICE_LABELS[payment.serviceType ?? 'OTHER'] ?? SERVICE_LABELS.OTHER;
+  return <span className="member-invoices__service"><strong>{memberRenderMessage(kind)}</strong>{payment.serviceName ? <> · {payment.serviceName}</> : null}</span>;
+}
+
 
 export function MemberInvoicesPage() {
   useLanguage();
@@ -81,7 +103,13 @@ export function MemberInvoicesPage() {
       <PageHeader title={memberText("Giao dịch & hóa đơn")} />
       {!loading && !error && pending.length > 0 && <section data-i18n-managed className="portal-card stack" aria-label={memberText("Khoản chờ thanh toán")}>
         <h2 className="portal-card-title">{memberText("Khoản chờ thanh toán")}</h2>
-        {pending.map(payment => <div className="row-card" key={payment.id}><span>{memberText("Giao dịch #")}{payment.id} · {formatPrice(payment.amount)}</span><VnpayPayButton target={{ paymentId: payment.id }} onPaid={() => setReload((n) => n + 1)} /></div>)}
+        {pending.map(payment => <div className="row-card" key={payment.id} data-testid={`pending-payment-${payment.id}`}>
+          <span className="stack" style={{ gap: 2 }}>
+            <ServiceCell payment={payment} />
+            <span className="muted">{memberText("Giao dịch #")}{payment.id} · {formatPrice(payment.amount)} · {memberRenderMessage(STATUS_LABELS.pending)}</span>
+          </span>
+          <VnpayPayButton target={{ paymentId: payment.id }} onPaid={() => setReload((n) => n + 1)} />
+        </div>)}
       </section>}
       <section data-i18n-managed className="portal-card portal-card--flush member-invoices__card" aria-label={memberText("Lịch sử giao dịch")}>
         {loading ? <LoadingSkeleton label={memberText("Đang tải giao dịch…")} variant="table" count={4} /> : error ? (
@@ -89,9 +117,9 @@ export function MemberInvoicesPage() {
         ) : payments.length === 0 ? <p>{memberText("Chưa có giao dịch thanh toán thành công.")}</p> : (
           <div className="portal-table-wrapper member-invoices__scroll">
             <table className="portal-table member-invoices__table">
-              <thead><tr><th scope="col">{memberText("Mã giao dịch")}</th><th scope="col">{memberText("Ngày giờ thanh toán")}</th><th scope="col">{memberText("Số tiền")}</th><th scope="col"><span className="sr-only">{memberText("Chi tiết")}</span></th></tr></thead>
+              <thead><tr><th scope="col">{memberText("Mã giao dịch")}</th><th scope="col">{memberText("Dịch vụ")}</th><th scope="col">{memberText("Ngày giờ thanh toán")}</th><th scope="col">{memberText("Số tiền")}</th><th scope="col">{memberText("Trạng thái")}</th><th scope="col"><span className="sr-only">{memberText("Chi tiết")}</span></th></tr></thead>
               <tbody>{payments.map((payment) => <tr key={payment.id}>
-                <td>#{payment.id}</td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td>
+                <td>#{payment.id}</td><td><ServiceCell payment={payment} /></td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td><td>{memberRenderMessage(STATUS_LABELS[payment.status.toLowerCase()] ?? memberMessage(payment.status, payment.status))}</td>
                 <td><button type="button" className="btn-secondary btn-sm member-invoices__detail" onClick={() => setSelected(payment)} aria-label={memberText(`Xem hóa đơn giao dịch #${payment.id}`, `View invoice for transaction #${payment.id}`)}>{memberText("Xem hóa đơn ")}<span aria-hidden="true">↗</span></button></td>
               </tr>)}</tbody>
             </table>

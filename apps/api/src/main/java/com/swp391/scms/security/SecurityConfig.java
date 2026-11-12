@@ -131,7 +131,8 @@ public class SecurityConfig {
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
-                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending")
+                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending",
+                            "/api/v1/memberships/subscriptions/requests/history", "/api/v1/subscriptions/requests/history")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/holds", "/api/v1/subscriptions/holds")

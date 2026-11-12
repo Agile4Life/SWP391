@@ -166,4 +166,25 @@ public class PaymentDto {
     public void setRefundedAmount(BigDecimal refundedAmount) {
         this.refundedAmount = refundedAmount;
     }
+
+    /** What the payment is for: MEMBERSHIP, CLASS, PT, COURT, SHOP or OTHER. */
+    @Schema(description = "Loại dịch vụ: MEMBERSHIP, CLASS, PT, COURT, SHOP, OTHER")
+    private String serviceType;
+    /** The paid item as stored data (package, class, coach and slot, court and slot, order code); not translated. */
+    @Schema(description = "Tên dịch vụ cụ thể (gói tập, khóa học, HLV + giờ, sân + giờ, mã đơn)")
+    private String serviceName;
+    private Long coachBookingId;
+    private Long courtBookingId;
+    private Long productOrderId;
+
+    public String getServiceType() { return serviceType; }
+    public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+    public Long getCoachBookingId() { return coachBookingId; }
+    public void setCoachBookingId(Long coachBookingId) { this.coachBookingId = coachBookingId; }
+    public Long getCourtBookingId() { return courtBookingId; }
+    public void setCourtBookingId(Long courtBookingId) { this.courtBookingId = courtBookingId; }
+    public Long getProductOrderId() { return productOrderId; }
+    public void setProductOrderId(Long productOrderId) { this.productOrderId = productOrderId; }
 }

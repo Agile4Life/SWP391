@@ -59,6 +59,11 @@ public class Payment {
     public Long getProductOrderId() { return productOrderId; }
     public void setProductOrderId(Long id) { productOrderId = id; }
     public com.swp391.scms.shop.entity.ProductOrder getProductOrder() { return productOrder; }
+    /** Read-only views of the linked records (the *_id fields are the writable side). */
+    public MembershipSubscription getSubscription() { return subscription; }
+    public com.swp391.scms.coaching.entity.CoachBooking getCoachBooking() { return coachBooking; }
+    public com.swp391.scms.courts.entity.CourtBooking getCourtBooking() { return courtBooking; }
+    public ClassEnrollment getClassEnrollment() { return classEnrollment; }
     public void setProductOrder(com.swp391.scms.shop.entity.ProductOrder productOrder) { this.productOrder = productOrder; }
 
     @Column(name = "class_enrollment_id")

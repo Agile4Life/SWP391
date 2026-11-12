@@ -898,7 +898,10 @@ public class ClassService {
     @Transactional(readOnly = true)
     public List<GymClassDto> listClasses() {
         return gymClasses.findAllByOrderByIdDesc().stream()
-                .map(mapper::toDto)
+                // Only legacy classes without schedule fields need their sessions read.
+                .map(c -> SchedulingMapper.lacksSchedule(c)
+                        ? mapper.toDto(c, sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(c.getId()))
+                        : mapper.toDto(c))
                 .toList();
     }
 

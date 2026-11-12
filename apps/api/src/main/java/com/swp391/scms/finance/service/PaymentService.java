@@ -239,7 +239,59 @@ public class PaymentService {
             throw new ResourceNotFoundException("resource.member", memberId);
         }
         List<Payment> payments = paymentRepository.findByMemberUserId(memberId);
-        return paymentMapper.toDtoList(payments);
+        List<PaymentDto> dtos = paymentMapper.toDtoList(payments);
+        if (dtos == null) return List.of();
+        for (int i = 0; i < dtos.size() && i < payments.size(); i++) {
+            if (dtos.get(i) != null) describe(payments.get(i), dtos.get(i));
+        }
+        return dtos;
+    }
+
+    /**
+     * Says what a payment is for, so a member can tell their pending and past payments apart. Read inside the
+     * transaction because the linked records are lazy.
+     */
+    static PaymentDto describe(Payment payment, PaymentDto dto) {
+        java.time.format.DateTimeFormatter day = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        java.time.format.DateTimeFormatter hour = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+        if (payment.getSubscriptionId() != null) {
+            dto.setServiceType("MEMBERSHIP");
+            var sub = payment.getSubscription();
+            dto.setServiceName(sub != null && sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null);
+        } else if (payment.getClassEnrollmentId() != null) {
+            dto.setServiceType("CLASS");
+            var enrollment = payment.getClassEnrollment();
+            dto.setServiceName(enrollment != null && enrollment.getGymClass() != null ? enrollment.getGymClass().getName() : null);
+        } else if (payment.getCoachBookingId() != null) {
+            dto.setServiceType("PT");
+            var booking = payment.getCoachBooking();
+            if (booking != null) {
+                String coach = booking.getCoach() != null && booking.getCoach().getUser() != null
+                        ? booking.getCoach().getUser().getFullName() : "";
+                dto.setServiceName(join(coach, booking.getBookingDate() == null ? null : booking.getBookingDate().format(day),
+                        booking.getStartTime() == null ? null : booking.getStartTime().format(hour)));
+            }
+        } else if (payment.getCourtBookingId() != null) {
+            dto.setServiceType("COURT");
+            var booking = payment.getCourtBooking();
+            if (booking != null) {
+                dto.setServiceName(join(booking.getRoom() == null ? null : booking.getRoom().getName(),
+                        booking.getBookingDate() == null ? null : booking.getBookingDate().format(day),
+                        booking.getStartTime() == null ? null : booking.getStartTime().format(hour)));
+            }
+        } else if (payment.getProductOrderId() != null) {
+            dto.setServiceType("SHOP");
+            dto.setServiceName(payment.getProductOrder() != null ? payment.getProductOrder().getCode() : null);
+        } else {
+            dto.setServiceType("OTHER");
+        }
+        return dto;
+    }
+
+    private static String join(String... parts) {
+        String joined = java.util.Arrays.stream(parts).filter(p -> p != null && !p.isBlank())
+                .collect(java.util.stream.Collectors.joining(" · "));
+        return joined.isEmpty() ? null : joined;
     }
 
     public PaymentDto updatePaymentStatus(Long id, String status) {

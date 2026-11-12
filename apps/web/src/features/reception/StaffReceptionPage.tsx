@@ -8,6 +8,7 @@ import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { PaymentInvoice } from './PaymentInvoice';
 import { GateQrPanel } from './GateQrPanel';
+import { MembershipRequestHistory } from './MembershipRequestHistory';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
@@ -48,6 +49,8 @@ export function StaffReceptionPage() {
 
   // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
   const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
+  // Bumped whenever the pending queue is reloaded (after a payment or cancellation) so the history refreshes too.
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const [loadingPending, setLoadingPending] = useState(true);
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
   const [cancellingPendingId, setCancellingPendingId] = useState<number | null>(null);
@@ -180,6 +183,7 @@ export function StaffReceptionPage() {
       const items = await receptionApi.getPendingSubscriptions();
       setPendingList(items);
       setSelectedPending((prev) => items.find((item) => item.id === prev?.id) ?? null);
+      if (!silent) setHistoryRefresh((n) => n + 1);
     } catch {
       if (!silent) setPendingList([]);
     } finally {
@@ -736,6 +740,9 @@ export function StaffReceptionPage() {
           </div>
         </div>
       </div>
+
+      {/* Lịch sử yêu cầu đăng ký/gia hạn/nâng cấp đã xử lý: danh sách chờ chỉ giữ yêu cầu còn mở. */}
+      <MembershipRequestHistory refreshKey={historyRefresh} />
 
       <div className="grid-2 reception-checkout" ref={checkoutRef}>
         {/* Thông tin hội viên tìm thấy (BR-01 Empty state & BR-05 Masked CCCD) */}
