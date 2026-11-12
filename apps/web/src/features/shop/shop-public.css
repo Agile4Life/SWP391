@@ -1108,7 +1108,7 @@
 .shop-drawer__empty p { margin: 0; color: var(--fit-muted); }
 .shop-drawer .shop-drawer__disclaimer { margin: 0; flex-shrink: 0; }
 .shop-drawer__updating { position: absolute; top: 8px; right: 4px; z-index: 2; display: inline-flex; margin: 0; }
-.shop-spinner { display: inline-block; flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--sol-accent, #ce9180) 28%, transparent); border-top-color: var(--sol-accent, #ce9180); animation: shop-spin 0.8s linear infinite; vertical-align: middle; }
+.shop-spinner { display: inline-block; flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--sol-accent) 28%, transparent); border-top-color: var(--sol-accent); animation: shop-spin 0.8s linear infinite; vertical-align: middle; }
 .shop-spinner--sm { width: 16px; height: 16px; }
 .shop-drawer__subtotal strong { display: inline-flex; align-items: center; min-height: 22px; }
 .shop-drawer__content[aria-busy='true'] .shop-drawer__list { opacity: .6; transition: opacity 160ms ease; }
@@ -1440,6 +1440,6 @@
 .shop-drawer .shop-stepper__btn:focus-visible,
 .fit-site .shop-stepper__btn:focus-visible { outline: none; }
 .shop-drawer .shop-stepper:focus-within,
-.fit-site .shop-stepper:focus-within { border-color: var(--sol-accent, #ce9180); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sol-accent, #ce9180) 35%, transparent); }
+.fit-site .shop-stepper:focus-within { border-color: var(--sol-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sol-accent) 35%, transparent); }
 
 @media (prefers-reduced-motion: reduce) { .shop-spinner { animation-duration: 2.4s; } }
