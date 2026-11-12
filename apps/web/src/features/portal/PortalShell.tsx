@@ -551,7 +551,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </main>
         <footer className="portal-workspace-footer">
           <span>SÖL Fitness</span>
-          <LanguageSetting variant="footer" />
         </footer>
       </div>
 

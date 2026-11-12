@@ -47,7 +47,7 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     );
   });
 
-  it('switches language from user avatar dropdown settings and portal workspace footer', async () => {
+  it('switches language from the user avatar dropdown, with no switch in the portal workspace footer', async () => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({ id: '1', name: 'Nguyen Van A', identifier: 'member1', role: 'MEMBER' })
@@ -71,9 +71,8 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
       root.render(<RouterProvider router={router} />);
     });
 
-    // Verify footer language setting is rendered in portal workspace footer
-    const footerSetting = host.querySelector('[data-testid="footer-language-setting"]');
-    expect(footerSetting).not.toBeNull();
+    // The portal footer only carries the brand; language lives in the avatar menu
+    expect(host.querySelector('[data-testid="footer-language-setting"]')).toBeNull();
     expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
     // Open user avatar menu
@@ -103,11 +102,11 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     expect(host.querySelector('[data-testid="avatar-menu-logout"]')?.textContent).toContain('Sign out');
     expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
-    // Switch back to Vietnamese via footer language setting
-    const viFooterBtn = host.querySelector<HTMLButtonElement>('[data-testid="footer-lang-vi"]');
-    expect(viFooterBtn).not.toBeNull();
+    // Switch back to Vietnamese via the avatar menu
+    const viAvatarBtn = host.querySelector<HTMLButtonElement>('[data-testid="avatar-lang-vi"]');
+    expect(viAvatarBtn).not.toBeNull();
     await act(async () => {
-      viFooterBtn!.click();
+      viAvatarBtn!.click();
     });
 
     expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('vi');
