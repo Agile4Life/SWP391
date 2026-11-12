@@ -50,7 +50,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/member/explore', label: 'Tham quan 3D', icon: 'compass', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF'] },
   { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH'] },
-  { to: '/staff/attendance', label: 'Điểm danh', icon: 'check', roles: ['COACH'], tabs: [
+  { to: '/staff/attendance', label: 'Quản lý buổi học', icon: 'check', roles: ['COACH'], tabs: [
     { to: '/staff/attendance', label: 'Lớp học', en: 'Classes' },
     { to: '/coach/pt-attendance', label: 'Buổi PT 1:1', en: '1:1 sessions' },
   ] },
@@ -129,7 +129,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/notifications': 'Notifications',
   '/member/support': 'Support & Tickets',
   '/coach/classes': 'Coach Schedule & Members',
-  '/staff/attendance': 'Attendance',
+  '/staff/attendance': 'Session management',
   '/coach/training-plans': 'Plans & Assessment',
   '/staff/reception': 'Front Desk & Check-in',
   '/staff/courts': 'Courts & Orders',

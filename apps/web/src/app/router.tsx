@@ -195,6 +195,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
           },
           {
+            path: '/staff/attendance/:sessionId',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+          },
+          {
             path: '/coach/classes',
             lazy: async () => ({ Component: (await import('../features/coaching/CoachClassesPage')).CoachClassesPage }),
           },

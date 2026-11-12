@@ -1,6 +1,7 @@
 import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { coachHistoryStorageKey } from './coachHistoryStorage';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
@@ -58,13 +59,26 @@ export interface EvaluationHistoryRecord {
 }
 
 
+type AttendanceTab = 'timetable' | 'attendance' | 'evaluation' | 'attendance-history' | 'eval-history';
+
+/**
+ * Quản lý buổi học (`/staff/attendance`): thời khóa biểu và hai bảng lịch sử.
+ * Bấm một buổi trên thời khóa biểu mở trang riêng `/staff/attendance/:sessionId` chỉ để điểm danh / đánh giá buổi đó.
+ */
 export function CoachAttendancePage() {
+  const { sessionId } = useParams();
+  return <SessionManagement key={sessionId ?? 'list'} routeSessionId={sessionId} />;
+}
+
+function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const { t } = useStaffI18n();
+  const navigate = useNavigate();
+  const sessionMode = routeSessionId !== undefined;
   const STORAGE_KEY_HISTORY = coachHistoryStorageKey('attendance');
   const STORAGE_KEY_EVAL_HISTORY = coachHistoryStorageKey('evaluation');
-  const [activeTab, setActiveTab] = useState<'attendance' | 'evaluation' | 'attendance-history' | 'eval-history'>('attendance');
+  const [activeTab, setActiveTab] = useState<AttendanceTab>(sessionMode ? 'attendance' : 'timetable');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const selectedSessionId: number | null = sessionMode && Number.isInteger(Number(routeSessionId)) ? Number(routeSessionId) : null;
   const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
   const [rosterError, setRosterError] = useState<StaffMessage | null>(null);
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
@@ -83,7 +97,6 @@ export function CoachAttendancePage() {
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
   const [classFilter, setClassFilter] = useState('ALL');
-  const headerRef = useRef<HTMLDivElement>(null);
   const [confirm, confirmDialog] = useConfirm();
   const showCenterNotification = useCallback((msg: string = 'Cập nhật thành công') => notify(msg, 'success'), []);
 
@@ -146,7 +159,6 @@ export function CoachAttendancePage() {
             const today = parseISODate(todayISO()).getTime();
             const distance = (s: CoachClassSession) => Math.abs(parseISODate(s.sessionDate).getTime() - today);
             const preferred = pool.reduce((best, s) => (distance(s) < distance(best) ? s : best), pool[0]);
-            setSelectedSessionId((prev) => (prev === null ? preferred.id : prev));
             setWeekStart(mondayOf(preferred.sessionDate));
           }
         }
@@ -544,51 +556,57 @@ export function CoachAttendancePage() {
     return { present, absent, total, rate };
   }, [students]);
 
+  if (sessionMode && sessionsLoaded && !sessionsError && !activeSession) {
+    return (
+      <div data-i18n-managed className="coach-attendance-page portal-container">
+        <PageHeader title={t("Điểm danh buổi học")} />
+        <div className="portal-card" role="alert">
+          <p>{t("Không tìm thấy buổi học này trong lịch dạy của bạn.")}</p>
+          <Link to="/staff/attendance" className="btn-secondary">{t("Quay lại thời khóa biểu")}</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const tabs: { id: AttendanceTab; label: string }[] = sessionMode
+    ? [
+        { id: 'attendance', label: t("Điểm danh buổi học") },
+        { id: 'evaluation', label: t("Đánh giá học viên") },
+      ]
+    : [
+        { id: 'timetable', label: t("Thời khóa biểu") },
+        { id: 'attendance-history', label: `${t("Lịch sử điểm danh (")}${history.length})` },
+        { id: 'eval-history', label: `${t("Lịch sử đánh giá (")}${evalHistory.length})` },
+      ];
+
   return (
     <div data-i18n-managed className="coach-attendance-page portal-container">
       <PageHeader
         title={
-          activeTab === 'evaluation'
+          !sessionMode
+            ? t('Quản lý buổi học')
+            : activeTab === 'evaluation'
             ? t('Đánh giá tiến bộ học viên')
-            : activeTab === 'attendance-history'
-            ? t('Lịch sử điểm danh lớp học')
-            : activeTab === 'eval-history'
-            ? t('Lịch sử đánh giá học viên')
             : t('Điểm danh buổi học')
         }
+        actions={sessionMode ? <Link to="/staff/attendance" className="btn-secondary">{t("Quay lại thời khóa biểu")}</Link> : undefined}
       />
 
-      {/* Tabs chuyển đổi giữa 4 mục: Điểm danh, Đánh giá, Lịch sử điểm danh, Lịch sử đánh giá */}
+      {/* Quản lý buổi học: thời khóa biểu + 2 lịch sử. Trang một buổi: điểm danh + đánh giá. */}
       <div className="portal-tabs attendance-nav-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab" aria-selected={activeTab === 'attendance'} className={`portal-tab attendance-tab-btn ${activeTab === 'attendance' ? 'active is-active' : ''}`}
-          onClick={() => setActiveTab('attendance')}
-        >
-          {t("Điểm danh buổi học")}</button>
-        <button
-          type="button"
-          role="tab" aria-selected={activeTab === 'evaluation'} className={`portal-tab attendance-tab-btn ${activeTab === 'evaluation' ? 'active is-active' : ''}`}
-          onClick={() => setActiveTab('evaluation')}
-        >
-          {t("Đánh giá học viên")}</button>
-        <button
-          type="button"
-          role="tab" aria-selected={activeTab === 'attendance-history'} className={`portal-tab attendance-tab-btn ${activeTab === 'attendance-history' ? 'active is-active' : ''}`}
-          onClick={() => setActiveTab('attendance-history')}
-        >
-          {t("Lịch sử điểm danh (")}{history.length})
-        </button>
-        <button
-          type="button"
-          role="tab" aria-selected={activeTab === 'eval-history'} className={`portal-tab attendance-tab-btn ${activeTab === 'eval-history' ? 'active is-active' : ''}`}
-          onClick={() => setActiveTab('eval-history')}
-        >
-          {t("Lịch sử đánh giá (")}{evalHistory.length})
-        </button>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab" aria-selected={activeTab === tab.id} className={`portal-tab attendance-tab-btn ${activeTab === tab.id ? 'active is-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+      {sessionsError && (sessionMode || activeTab === 'timetable') && (
         <div data-i18n-managed className="coach-error-box" role="alert">
           {t(sessionsError)}{' '}
           <button type="button" className="btn-secondary btn-sm" onClick={() => setSessionsAttempt((n) => n + 1)}>{t("Thử lại")}</button>
@@ -596,7 +614,7 @@ export function CoachAttendancePage() {
       )}
 
       {/* Chọn buổi học trên thời khóa biểu tuần (Dùng cho tab Điểm danh & Đánh giá) */}
-      {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+      {!sessionsError && !sessionMode && activeTab === 'timetable' && (
         <WeeklyTimetable
           label={t("Thời khóa biểu buổi dạy cần điểm danh")}
           weekStart={weekStart}
@@ -606,15 +624,8 @@ export function CoachAttendancePage() {
             new Set(history.map((h) => Number(h.sessionId))),
           )}
           loading={!sessionsLoaded}
-          selectedId={selectedSessionId === null ? undefined : String(selectedSessionId)}
-          disabled={saving || savingEvaluation}
           onWeekChange={setWeekStart}
-          onEventClick={(id) => {
-            setSelectedSessionId(Number(id));
-            // Bảng cao hơn một màn hình: đưa thông tin buổi và danh sách học viên vào tầm nhìn.
-            const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-            headerRef.current?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-          }}
+          onEventClick={(id) => navigate(`/staff/attendance/${id}`)}
           emptyLabel={t("Tuần này bạn chưa có buổi dạy nào.")}
           toolbar={
             <div className="attendance-class-filter">
@@ -640,9 +651,9 @@ export function CoachAttendancePage() {
         />
       )}
 
-      {/* Header Selector & Session Info (Dùng cho tab Điểm danh & Đánh giá) */}
-      {!sessionsError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
-        <div data-i18n-managed className="attendance-header-card" ref={headerRef}>
+      {/* Thông tin buổi học (trang điểm danh một buổi) */}
+      {!sessionsError && sessionMode && (
+        <div data-i18n-managed className="attendance-header-card">
           <div className="attendance-session-meta">
             <div className="session-title-wrap">
               <h3 className="session-name-title">
@@ -680,7 +691,7 @@ export function CoachAttendancePage() {
         </div>
       )}
 
-      {rosterError && (activeTab === 'attendance' || activeTab === 'evaluation') && (
+      {rosterError && sessionMode && (
         <div data-i18n-managed className="coach-error-box" role="alert">{t(rosterError)}</div>
       )}
 
