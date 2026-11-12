@@ -76,6 +76,18 @@ it('keeps the question when the server rolled the message back', async () => {
 });
 
 
+it('shows the server wait message and keeps the question when the 15-per-10-minutes limit is hit', async () => {
+  const limited = 'Bạn đã gửi tối đa 15 tin nhắn cho SÖL AI trong 10 phút. Vui lòng thử lại sau khoảng 3 phút.';
+  vi.mocked(ai.sendAiChatMessage).mockRejectedValue(new ApiError(limited, 429, 'AI_CHAT_RATE_LIMITED'));
+  await render();
+  await type('Câu hỏi thứ 16');
+  await act(async () => sendButton().click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('thử lại sau khoảng 3 phút');
+  // Tin chưa được lưu nên nội dung nằm lại ô nhập và lịch sử không có thêm bong bóng treo.
+  expect(host.querySelector('textarea')!.value).toBe('Câu hỏi thứ 16');
+  expect(host.querySelectorAll('.direct-chat__messages li')).toHaveLength(2);
+});
+
 it('locks the composer and new-session control while a reply is pending and prevents duplicate sends', async () => {
   let finish!: (value: Awaited<ReturnType<typeof ai.sendAiChatMessage>>) => void;
   vi.mocked(ai.sendAiChatMessage).mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));

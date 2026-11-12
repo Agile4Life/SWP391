@@ -103,6 +103,42 @@ class AiChatServiceTest {
     }
 
     @Test
+    void sendMessage_RejectsTheSixteenthMessageInTenMinutesBeforeCallingTheProviderOrSavingAnything() {
+        var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
+                java.time.Clock.systemDefaultZone());
+        ReflectionTestUtils.setField(aiChatService, "rateLimiter", limiter);
+        // 15 member messages already sent in the last 10 minutes.
+        List<LocalDateTime> recent = new java.util.ArrayList<>();
+        for (int i = 0; i < 15; i++) recent.add(LocalDateTime.now().minusMinutes(9).plusSeconds(i));
+        when(messageRepository.memberMessageTimesSince(eq(100L), any())).thenReturn(recent);
+
+        var thrown = assertThrows(com.swp391.scms.common.exception.TooManyRequestsException.class,
+                () -> aiChatService.sendMessage(500L, new AiChatMessageCreateDto("Thêm một câu nữa"), 100L, "MEMBER"));
+
+        assertEquals("AI_CHAT_RATE_LIMITED", thrown.getErrorCode());
+        verify(chatProvider, never()).generate(any(), any());
+        verify(messageRepository, never()).save(any(AiChatMessage.class));
+    }
+
+    @Test
+    void sendMessage_AllowsTheFifteenthMessageAndFreesItsSlotWhenTheProviderFails() {
+        var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
+                java.time.Clock.systemDefaultZone());
+        ReflectionTestUtils.setField(aiChatService, "rateLimiter", limiter);
+        List<LocalDateTime> recent = new java.util.ArrayList<>();
+        for (int i = 0; i < 14; i++) recent.add(LocalDateTime.now().minusMinutes(5).plusSeconds(i));
+        when(messageRepository.memberMessageTimesSince(eq(100L), any())).thenReturn(recent);
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
+        when(chatProvider.generate(any(), any())).thenThrow(new IllegalStateException("provider down"));
+
+        // The 15th message is let through; the provider fails, so nothing is stored and the slot must come back.
+        assertThrows(IllegalStateException.class, () -> aiChatService.sendMessage(500L, new AiChatMessageCreateDto("câu thứ 15"), 100L, "MEMBER"));
+        assertThrows(IllegalStateException.class, () -> aiChatService.sendMessage(500L, new AiChatMessageCreateDto("thử lại"), 100L, "MEMBER"));
+        verify(chatProvider, times(2)).generate(any(), any());
+    }
+
+    @Test
     void sendMessage_ShouldPersistMemberAndAiMessagesAndMaintainContext() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());

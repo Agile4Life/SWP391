@@ -10,7 +10,8 @@ import { ChatComposer } from './ChatComposer';
 import { useI18n } from '../../shared/i18n';
 
 /** Lỗi mà máy chủ đã hoàn tác tin của người dùng: giữ lại nội dung để gửi lại. */
-const ROLLED_BACK = ['AI_CHAT_NOT_CONFIGURED', 'AI_CHAT_UNAVAILABLE'];
+/** AI_CHAT_RATE_LIMITED (15 tin / 10 phút / tài khoản): bị từ chối trước khi lưu gì, nên cũng giữ lại nội dung để gửi lại sau. */
+const ROLLED_BACK = ['AI_CHAT_NOT_CONFIGURED', 'AI_CHAT_UNAVAILABLE', 'AI_CHAT_RATE_LIMITED'];
 const errorText = (cause: unknown) => chatError(cause, 'Không thể kết nối trợ lý AI. Vui lòng thử lại.', 'Unable to connect to the AI assistant. Please try again.');
 
 /**

@@ -34,6 +34,8 @@ components:
         aiMessage: {$ref: '#/components/schemas/Message'}
         reply: {type: string}
   responses:
+    RateLimited:
+      description: 'HTTP 429 with ApiResponse code AI_CHAT_RATE_LIMITED: one account may send at most 15 messages to the assistant in any rolling 10 minutes (app.ai.chat.rate-limit.max-messages / window-minutes). Counted from stored member messages, so it holds across restarts and instances. The message states how many minutes to wait; nothing is sent to the provider and nothing is persisted, so the client keeps the draft. The same limit applies to POST /ai/chat/message(s).'
     ProviderUnavailable:
       description: 'HTTP 503 with ApiResponse code AI_CHAT_NOT_CONFIGURED or AI_CHAT_UNAVAILABLE; no synthetic reply, no message pair is persisted.'
 paths:
@@ -102,6 +104,7 @@ paths:
         '401': {description: Unauthenticated}
         '403': {description: Session belongs to another MEMBER}
         '404': {description: Session missing}
+        '429': {$ref: '#/components/responses/RateLimited'}
         '503': {$ref: '#/components/responses/ProviderUnavailable'}
   /ai/chat/sessions/{id}/history:
     get:

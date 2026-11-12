@@ -47,6 +47,10 @@ public class AiChatService {
 
     private final AiChatSessionRepository sessionRepository;
     private final AiChatMessageRepository messageRepository;
+
+    /** Optional so the service stays constructible in unit tests; without it no limit is applied. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AiChatRateLimiter rateLimiter;
     private final MemberRepository memberRepository;
     private final MessageService messageService;
     private final AiChatProvider chatProvider;
@@ -201,6 +205,16 @@ public class AiChatService {
         if (dto == null || dto.message() == null || dto.message().isBlank()) {
             throw new BadRequestException(msg("validation.ai.chat.message.required"));
         }
+        // Checked before any work or any provider call, so a rejected message costs nothing and is not stored.
+        AiChatRateLimiter.Permit permit = rateLimiter != null ? rateLimiter.acquire(currentUserId) : null;
+        try {
+            return replyTo(sessionId, dto, currentUserId, currentRole);
+        } finally {
+            if (permit != null) permit.release();
+        }
+    }
+
+    private AiChatReplyDto replyTo(Long sessionId, AiChatMessageCreateDto dto, Long currentUserId, String currentRole) {
         String trimmedUserMessage = dto.message().trim();
 
         // Phase 1: short read-only transaction (check ownership, load history, build RAG context String)

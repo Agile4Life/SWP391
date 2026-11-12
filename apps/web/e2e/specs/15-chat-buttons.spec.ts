@@ -105,6 +105,20 @@ test.describe('Tin nhắn — widget nổi (hội viên)', () => {
     }
   });
 
+  test('SÖL AI: khi vượt 15 tin / 10 phút, hiện thông báo thời gian chờ và giữ lại nội dung đã gõ', async ({ page }) => {
+    // Stack e2e không có nhà cung cấp AI thật nên giả lập đúng phản hồi 429 của máy chủ.
+    await page.route('**/api/v1/ai/chat/sessions/*/messages', route => route.request().method() === 'POST'
+      ? route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ success: false, status: 429, code: 'AI_CHAT_RATE_LIMITED', message: 'Bạn đã gửi tối đa 15 tin nhắn cho SÖL AI trong 10 phút. Vui lòng thử lại sau khoảng 4 phút.' }) })
+      : route.fallback());
+    await openWidget(page);
+    await panel(page).getByRole('button', { name: /SÖL AI/ }).first().click();
+    await expect(panel(page).locator('.direct-chat__thread--ai')).toBeVisible();
+    await panel(page).locator('#chat-ai-message').fill('câu hỏi thứ 16');
+    await panel(page).getByRole('button', { name: 'Gửi', exact: true }).click();
+    await expect(panel(page).getByRole('alert')).toContainText('thử lại sau khoảng 4 phút');
+    await expect(panel(page).locator('#chat-ai-message')).toHaveValue('câu hỏi thứ 16');
+  });
+
   test('ô tìm danh bạ: nút Tìm bấm được và lọc không lỗi', async ({ page }) => {
     await openWidget(page);
     await panel(page).getByRole('button', { name: 'Cuộc trò chuyện mới' }).click();
