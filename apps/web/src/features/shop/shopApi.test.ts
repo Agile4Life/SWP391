@@ -53,15 +53,14 @@ describe('shopApi', () => {
       }),
     );
 
+    // The quote keeps the member's Bearer token so the tier discount matches the order total.
     await shopApi.quote({ items: [{ variantId: 1, quantity: 2 }], fulfillment: 'delivery' });
-    expect(client.apiFetch).toHaveBeenCalledWith(
-      '/public/shop/quote',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ items: [{ variantId: 1, quantity: 2 }], fulfillment: 'delivery' }),
-        headers: expect.objectContaining({ Authorization: '' }),
-      }),
-    );
+    const quoteInit = vi.mocked(client.apiFetch).mock.calls.find(c => c[0] === '/public/shop/quote')?.[1];
+    expect(quoteInit).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ items: [{ variantId: 1, quantity: 2 }], fulfillment: 'delivery' }),
+    });
+    expect(quoteInit?.headers).toBeUndefined();
   });
 
   it('calls member address and order endpoints with proper HTTP methods', async () => {
