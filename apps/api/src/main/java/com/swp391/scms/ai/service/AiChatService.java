@@ -33,14 +33,15 @@ import java.util.function.Supplier;
 public class AiChatService {
 
     public static final String SYSTEM_PROMPT = """
-            Bạn là Trợ lý Tư vấn Thể thao & Dinh dưỡng 24/7 của Trung tâm SCMS (Sports Center Management System).
+            Bạn là Sol AI, Trợ lý Tư vấn Thể thao & Dinh dưỡng 24/7 của Trung tâm thể thao SÖL (hệ thống SCMS).
             Nhiệm vụ của bạn:
             1. Tư vấn các bộ môn thể thao tại trung tâm (Gym là bộ môn chính; bộ môn phụ gồm Bơi lội, Boxing, Tennis, Cầu lông, Yoga), lịch tập luyện và phương pháp phục hồi.
-            2. Cung cấp lời khuyên dinh dưỡng thể thao cơ bản, tính toán cân đối calo/macro an toàn.
+            2. Cung cấp lời khuyên dinh dưỡng thể thao cơ bản, tính toán cân đối calo/macro an toàn; với chấn thương hoặc bệnh lý, khuyên hội viên trao đổi với HLV hoặc bác sĩ thay vì tự chẩn đoán.
             3. Tuyệt đối bảo mật dữ liệu cá nhân của các hội viên khác.
-            4. Từ chối lịch sự mọi câu hỏi ngoài phạm vi thể thao, sức khỏe, dinh dưỡng hoặc dịch vụ trung tâm SCMS.
-            5. Không suy đoán bảng giá, lịch lớp, trạng thái gói tập hay dữ liệu cá nhân khi chưa có dữ liệu xác thực; hướng dẫn hội viên tra cứu các màn hình portal tương ứng.
-            6. Trả lời bằng văn bản thuần (plain text) dễ đọc: KHÔNG dùng ký hiệu Markdown như **, *, #, hay ```; chỉ xuống dòng và dùng dấu • khi liệt kê ngắn gọn (tối đa 3-5 câu).
+            4. Từ chối lịch sự mọi câu hỏi ngoài phạm vi thể thao, sức khỏe, dinh dưỡng hoặc dịch vụ trung tâm.
+            5. Với bảng giá, lịch lớp, HLV, trạng thái gói tập, giáo án và dữ liệu cá nhân: CHỈ dùng số liệu trong khối [DỮ LIỆU HỆ THỐNG] (nếu có) và trích đúng tên, giá, ngày giờ, số chỗ trống. Nếu khối không có thông tin được hỏi thì nói rõ là chưa có dữ liệu và hướng dẫn hội viên tra cứu màn hình portal tương ứng hoặc liên hệ lễ tân; không suy đoán.
+            6. Khi tư vấn tập luyện, cá nhân hóa theo mục tiêu, trình độ, lưu ý sức khỏe và giáo án hiện tại của hội viên nếu có trong dữ liệu.
+            7. Trả lời bằng văn bản thuần (plain text) dễ đọc: KHÔNG dùng ký hiệu Markdown như **, *, #, hay ```; chỉ xuống dòng và dùng dấu • khi liệt kê ngắn gọn (tối đa 3-5 câu).
             """;
 
     private static final int MAX_CONTEXT_MESSAGES = 6;
@@ -228,7 +229,14 @@ public class AiChatService {
             }
             String effectiveSystemPrompt = SYSTEM_PROMPT;
             if (ragContextService != null) {
-                String retrievedContext = ragContextService.buildRagContext(session.getMember(), trimmedUserMessage);
+                // A follow-up such as "còn ngày mai thì sao?" only makes sense with the question before it.
+                String previousQuestion = existingHistory.stream()
+                        .filter(message -> !"ai".equals(message.getSender()))
+                        .reduce((first, second) -> second)
+                        .map(AiChatMessage::getMessage)
+                        .orElse("");
+                String retrievedContext = ragContextService.buildRagContext(
+                        session.getMember(), (previousQuestion + "\n" + trimmedUserMessage).trim());
                 if (retrievedContext != null && !retrievedContext.isBlank()) {
                     effectiveSystemPrompt = SYSTEM_PROMPT + "\n\n" + retrievedContext;
                 }
@@ -308,29 +316,6 @@ public class AiChatService {
                 : (requestedMemberId != null ? requestedMemberId : currentUserId);
         return memberRepository.findById(targetId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", targetId));
-    }
-
-    private String generateContextualReply(Member member,
-                                           List<AiChatMessage> history,
-                                           String userMessage) {
-        if (chatProvider == null) {
-            throw new com.swp391.scms.common.exception.ServiceUnavailableException(
-                    "AI_CHAT_NOT_CONFIGURED", "ai.chat.provider.not_configured", null,
-                    "The AI assistant is not configured.");
-        }
-        String effectiveSystemPrompt = SYSTEM_PROMPT;
-        if (ragContextService != null) {
-            String retrievedContext = ragContextService.buildRagContext(member, userMessage);
-            if (retrievedContext != null && !retrievedContext.isBlank()) {
-                effectiveSystemPrompt = SYSTEM_PROMPT + "\n\n" + retrievedContext;
-            }
-        }
-        var turns = new java.util.ArrayList<AiChatProvider.Turn>();
-        history.subList(Math.max(0, history.size() - MAX_CONTEXT_MESSAGES), history.size())
-                .forEach(message -> turns.add(new AiChatProvider.Turn(
-                        "ai".equals(message.getSender()) ? "assistant" : "user", message.getMessage())));
-        turns.add(new AiChatProvider.Turn("user", userMessage));
-        return stripMarkdown(chatProvider.generate(effectiveSystemPrompt, turns));
     }
 
     private static String stripMarkdown(String raw) {

@@ -269,4 +269,80 @@ class AiRecommendationControllerTest {
         txService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, "extra", 4), null);
         assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate in generateWorkoutPlan");
     }
+
+    @Test
+    @DisplayName("Plan generation sends the member's current plan and the centre's equipment, and keeps a plan whose items need tidying")
+    void shouldGroundThePromptAndKeepItemsThatNeedTidying() {
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setMembershipCode("MEM-10");
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var plans = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.TrainingPlanRepository.class);
+        var planItems = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.TrainingPlanItemRepository.class);
+        var equipment = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.EquipmentRepository.class);
+        var currentPlan = new com.swp391.scms.coaching.entity.TrainingPlan();
+        ReflectionTestUtils.setField(currentPlan, "id", 5L);
+        currentPlan.setGoal("Giảm mỡ 4 tuần");
+        when(plans.findByMemberUserIdAndStatusOrderByCreatedAtDesc(10L, "active")).thenReturn(List.of(currentPlan));
+        var currentItem = new com.swp391.scms.coaching.entity.TrainingPlanItem();
+        currentItem.setDayOfWeek(1);
+        currentItem.setExerciseName("Goblet Squat");
+        currentItem.setSets(3);
+        currentItem.setReps(12);
+        when(planItems.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(5L)).thenReturn(List.of(currentItem));
+        var treadmill = new com.swp391.scms.facilities.entity.Equipment();
+        treadmill.setName("Máy chạy bộ");
+        treadmill.setCategory("Cardio");
+        var broken = new com.swp391.scms.facilities.entity.Equipment();
+        broken.setName("Máy kéo cáp");
+        broken.setCategory("Strength");
+        broken.setStatus("broken");
+        when(equipment.findAllWithRoom()).thenReturn(List.of(treadmill, broken));
+
+        var prompts = new java.util.ArrayList<String>();
+        AiClient client = new AiClient() {
+            @Override
+            public String generate(String systemPrompt, String userMessage) {
+                prompts.add(systemPrompt);
+                prompts.add(userMessage);
+                return """
+                        {"goal":"Tăng sức bền","analysis":"Ổn","items":[
+                          {"dayOfWeek":9,"exerciseName":"Chạy bộ nhẹ","sets":"3 hiệp","reps":"10-12","restSeconds":-5,"tempo":"2-0-2"},
+                          {"dayOfWeek":3,"exerciseName":"  "},
+                          {"day_of_week":3,"exercise_name":"Plank","durationMinutes":0}]}""";
+            }
+            @Override
+            public String getModelName() { return "test-model"; }
+            @Override
+            public String getProviderName() { return "test-provider"; }
+        };
+        AiRecommendationService service = new AiRecommendationService(client, recommendationLogRepository,
+                memberRepository, coachRepository, progressLogRepository, trainingPlanService, objectMapper);
+        ReflectionTestUtils.setField(service, "trainingPlanRepository", plans);
+        ReflectionTestUtils.setField(service, "trainingPlanItemRepository", planItems);
+        ReflectionTestUtils.setField(service, "equipmentRepository", equipment);
+
+        var response = service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), null);
+
+        assertTrue(prompts.get(0).contains("7 = Chủ nhật"));
+        String userPrompt = prompts.get(1);
+        assertTrue(userPrompt.contains("Thời lượng giáo án: 6 tuần"));
+        assertTrue(userPrompt.contains("Giáo án đang áp dụng: Giảm mỡ 4 tuần"));
+        assertTrue(userPrompt.contains("Goblet Squat 3x12"));
+        assertTrue(userPrompt.contains("Cardio: Máy chạy bộ"));
+        assertFalse(userPrompt.contains("Máy kéo cáp"));
+
+        assertEquals(2, response.getItems().size());
+        var run = response.getItems().get(0);
+        assertEquals(2, run.getDayOfWeek());
+        assertEquals(3, run.getSets());
+        assertEquals(10, run.getReps());
+        assertNull(run.getRestSeconds());
+        var plank = response.getItems().get(1);
+        assertEquals("Plank", plank.getExerciseName());
+        assertEquals(3, plank.getDayOfWeek());
+        assertNull(plank.getDurationMinutes());
+    }
 }
