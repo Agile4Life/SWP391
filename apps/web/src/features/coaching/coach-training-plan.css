@@ -299,3 +299,79 @@
 .plan-exercise-list { min-width: 0; padding: 0; border: 0; margin: 18px 0; }
 .plan-exercise-editor { min-width: 0; padding: 16px 0; margin: 12px 0; border: 0; border-top: 1px solid var(--portal-border); }
 .plan-exercise-editor legend { max-width: 100%; overflow-wrap: anywhere; font-weight: 600; }
+
+/* Các bước soạn giáo án: mỗi bước một nhóm thông tin */
+.plan-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+.plan-step { flex: 1 1 170px; min-width: 0; }
+.plan-step__button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-surface);
+  color: var(--portal-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.plan-step__button:hover { border-color: var(--portal-border-strong); }
+.plan-step__button.is-active {
+  border-color: var(--sol-accent);
+  color: var(--color-text-main);
+  font-weight: 650;
+}
+.plan-step__index {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--portal-border-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.plan-step__button.is-active .plan-step__index,
+.plan-step__button.is-done .plan-step__index {
+  background: var(--sol-accent);
+  border-color: var(--sol-accent);
+  color: var(--sol-on-accent);
+}
+.plan-step__label { min-width: 0; overflow-wrap: anywhere; }
+
+.plan-step-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.plan-review__days { display: grid; gap: 8px; margin: 16px 0 8px; }
+.plan-review__day {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--portal-raised);
+  border: 1px solid var(--portal-border);
+  font-size: 0.86rem;
+}
+.plan-review__day span { color: var(--portal-muted); overflow-wrap: anywhere; }
+.plan-review__total { margin: 8px 0 0; font-size: 0.86rem; color: var(--portal-muted); }
+
+@media (max-width: 767px) {
+  .plan-step { flex-basis: calc(50% - 5px); }
+  .plan-review__day { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

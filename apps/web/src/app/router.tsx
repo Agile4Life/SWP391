@@ -203,6 +203,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/CoachTrainingPlanPage')).CoachTrainingPlanPage }),
           },
           {
+            path: '/coach/saved-plans',
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachSavedPlansPage')).CoachSavedPlansPage }),
+          },
+          {
             path: '/staff/coach-classes',
             element: <Navigate to="/coach/classes" replace />,
           },
