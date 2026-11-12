@@ -97,3 +97,12 @@
   .workout-tabs > button { flex: 1; padding-inline: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .workout-calendar-day { transition: none; } }
+
+.progress-summary { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+.progress-summary__tile { display: grid; gap: 2px; padding: 14px 18px; min-width: 200px; border-radius: 14px; background: var(--color-bg-warm, rgba(0,0,0,.04)); }
+.progress-summary__label { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--color-text-muted); }
+.progress-summary__value { font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.progress-summary__value small { font-size: 14px; font-weight: 600; color: var(--color-text-muted); }
+.progress-summary__delta { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
+.progress-summary__delta.is-down { color: #2f8f5b; }
+.progress-summary__delta.is-up { color: #c0392b; }

@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { memberText } from './memberI18n';
 import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useState } from 'react';
@@ -27,7 +28,7 @@ export function CoachEvaluations() {
     <div className="portal-card-header"><h2 id="coach-evaluations-title" className="portal-card-title">{memberText("Đánh giá từ huấn luyện viên")}</h2></div>
     {error ? <div role="alert">{memberText("Không thể tải đánh giá. ")}<button type="button" className="member-progress-link" onClick={() => { setError(false); setRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div>
       : data === null ? <LoadingSkeleton label={memberText("Đang tải đánh giá…")} count={2} />
-      : data.length === 0 ? <p className="portal-empty">{memberText("Chưa có đánh giá từ huấn luyện viên.")}</p>
+      : data.length === 0 ? <EmptyState variant="plain" icon="check" title={memberText("Chưa có đánh giá từ huấn luyện viên.")} description={memberText("Đánh giá sẽ hiện ở đây sau các buổi tập có HLV.")} />
       : <ol className="member-progress-exercises">{data.map((item) => <li key={item.id}>
         <div><time dateTime={item.evaluatedAt}>{formatCenterDateTime(item.evaluatedAt)}</time><h3>{memberText("Điểm tiến độ: ")}{item.progressScore}/100</h3>
           {item.performanceNotes && <p>{item.performanceNotes}</p>}{item.feedback && <p>{item.feedback}</p>}</div>

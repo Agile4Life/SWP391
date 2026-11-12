@@ -623,4 +623,9 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "Cần có gói tập để check-in": "A membership is required to check in",
   "Đăng ký hoặc kích hoạt gói tập để quét QR vào trung tâm.": "Register or activate a membership to scan in at the center.",
   "Cần có gói tập đang hoạt động để đặt sân.": "An active membership is required to book a court.",
+  "Cân nặng hiện tại": "Current weight",
+  "BMI hiện tại": "Current BMI",
+  "Đánh giá sẽ hiện ở đây sau các buổi tập có HLV.": "Reviews will appear here after sessions with a coach.",
+  "Bắt đầu": "Starts",
+  "Hết hạn": "Expires",
 };

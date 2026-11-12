@@ -191,26 +191,26 @@ export function MemberHoldPage() {
         <>
           <section className="portal-card stack" aria-label={t('Quy định bảo lưu', 'Hold rules')}>
             <h2 className="portal-card-title">{subscription.packageName}</h2>
-            <p>{t(`Hiệu lực ${formatCenterDate(subscription.startDate)} – ${formatCenterDate(subscription.endDate)}.`, `Valid ${formatCenterDate(subscription.startDate)} – ${formatCenterDate(subscription.endDate)}.`)}</p>
+            <p className="hold-validity">{t(`Hiệu lực ${formatCenterDate(subscription.startDate)} – ${formatCenterDate(subscription.endDate)}.`, `Valid ${formatCenterDate(subscription.startDate)} – ${formatCenterDate(subscription.endDate)}.`)}</p>
             {policy.allowed ? (
-              <ul>
+              <ul className="hold-rules">
                 <li>{t(`Tối đa ${policy.maxDays} ngày, tối thiểu ${policy.minDays} ngày.`, `Between ${policy.minDays} and ${policy.maxDays} days.`)}</li>
                 <li>{t('Mỗi gói chỉ được bảo lưu một lần.', 'Each package can be put on hold only once.')}</li>
                 <li>{t(`Nộp đơn trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ, kèm giấy tờ y tế.`, `File at least ${policy.noticeHours} hours before it starts, with medical paperwork.`)}</li>
                 <li>{t('Khi được duyệt, các buổi PT và đặt sân trong giai đoạn bảo lưu sẽ tự hủy; ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions and courts booked during the hold are cancelled and the held days are added to your expiry.')}</li>
               </ul>
             ) : (
-              <p>{t('Gói này không được bảo lưu. Chỉ gói 3 tháng và gói Platinum 1 tháng được bảo lưu.', 'This package cannot be put on hold. Only 3-month packages and the 1-month Platinum package can be held.')}</p>
+              <p className="hold-notice hold-notice--info" role="status">{t('Gói này không được bảo lưu. Chỉ gói 3 tháng và gói Platinum 1 tháng được bảo lưu.', 'This package cannot be put on hold. Only 3-month packages and the 1-month Platinum package can be held.')}</p>
             )}
           </section>
 
           {detail && status && (
             <section className="portal-card stack" aria-label={t('Đơn bảo lưu hiện tại', 'Current hold request')} data-testid="hold-current">
-              <h2 className="portal-card-title">{t('Đơn bảo lưu', 'Hold request')}: {statusLabel[status] ?? status}</h2>
+              <h2 className="portal-card-title">{t('Đơn bảo lưu', 'Hold request')}: <span className={`badge ${status === 'APPROVED' ? 'badge-success' : status === 'REJECTED' ? 'badge-danger' : status === 'PENDING' ? 'badge-warning' : 'badge-neutral'}`}>{statusLabel[status] ?? status}</span></h2>
               {detail.holdStartDate && detail.holdEndDate && (
-                <p>{formatCenterDate(detail.holdStartDate)} – {formatCenterDate(detail.holdEndDate)}</p>
+                <p className="hold-period"><strong>{formatCenterDate(detail.holdStartDate)} – {formatCenterDate(detail.holdEndDate)}</strong></p>
               )}
-              {detail.holdReason && <p>{t('Lý do', 'Reason')}: {detail.holdReason}</p>}
+              {detail.holdReason && <p className="hold-reason">{t('Lý do', 'Reason')}: {detail.holdReason}</p>}
               {detail.documents.length > 0 && (
                 <ul aria-label={t('Giấy tờ đã nộp', 'Submitted documents')}>
                   {detail.documents.map((document) => (
@@ -228,12 +228,12 @@ export function MemberHoldPage() {
                   {status === 'APPROVED' && <small style={{ display: 'block' }}>{t('Các lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
                 </div>
               )}
-              {status === 'REJECTED' && <p>{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}</p>}
+              {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}</p>}
             </section>
           )}
 
           {policy.alreadyUsed && status !== 'PENDING' && status !== 'APPROVED' && (
-            <div className="portal-card" role="status">{t('Gói này đã dùng lượt bảo lưu duy nhất.', 'This package has already used its only hold.')}</div>
+            <div className="portal-card hold-notice hold-notice--info" role="status">{t('Gói này đã dùng lượt bảo lưu duy nhất.', 'This package has already used its only hold.')}</div>
           )}
 
           {canRequest && (
@@ -258,7 +258,7 @@ export function MemberHoldPage() {
                 <label className="portal-label" htmlFor="hold-files">{t('Giấy tờ y tế (JPG, PNG, PDF) *', 'Medical paperwork (JPG, PNG, PDF) *')}</label>
                 <input id="hold-files" className="portal-input" type="file" multiple accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
                   onChange={(event) => onPickFiles(event.target.files)} disabled={busy} />
-                {files.length > 0 && <small>{files.map((file) => file.name).join(', ')}</small>}
+                {files.length > 0 && <small className="hold-files">{files.map((file) => file.name).join(', ')}</small>}
               </div>
               {formError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{t(formError)}</p>}
               <div><button type="submit" className="btn-primary" disabled={busy}>{busy ? t('Đang gửi…', 'Sending…') : t('Gửi đơn bảo lưu', 'Send hold request')}</button></div>
