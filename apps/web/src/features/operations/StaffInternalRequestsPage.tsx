@@ -17,7 +17,7 @@ import { DatePicker } from '../../shared/ui/DatePicker';
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
   SHIFT_EXCHANGE: { label: 'Đổi ca trực', bg: 'color-mix(in srgb, var(--portal-violet) 12%, transparent)', color: 'var(--portal-violet)' },
-  SCHEDULE_CHANGE: { label: 'Đổi lịch dạy', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, #ce9180)' },
+  SCHEDULE_CHANGE: { label: 'Đổi lịch dạy', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, var(--sol-accent))' },
   OTHER: { label: 'Đề xuất khác', bg: 'color-mix(in srgb, var(--portal-muted) 12%, transparent)', color: 'var(--portal-muted)' },
 };
 
@@ -494,7 +494,7 @@ export function StaffInternalRequestsPage() {
                   fontWeight: 750,
                   fontSize: 14,
                   cursor: 'pointer',
-                  background: 'var(--portal-salmon, #ce9180)',
+                  background: 'var(--portal-salmon, var(--sol-accent))',
                   color: 'var(--portal-on-accent)',
                 }}
               >

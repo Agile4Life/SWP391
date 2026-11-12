@@ -548,7 +548,7 @@ export function CoachTrainingPlanPage() {
         >
           <div>
             <span>{t("Mục tiêu thể lực: ")}</span>
-            <strong style={{ color: 'var(--fit-salmon, #ce9180)' }}>{planGoal}</strong>
+            <strong style={{ color: 'var(--fit-salmon, var(--sol-accent))' }}>{planGoal}</strong>
           </div>
           <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
             {t("Lưu ý sức khỏe: ")}<strong>{selectedMember.healthNotes || t('Bình thường')}</strong>
@@ -583,7 +583,7 @@ export function CoachTrainingPlanPage() {
 
         {/* AC: Form soạn giáo án theo ngày trong tuần */}
         <form onSubmit={handleAddExercise} className="exercise-form-card">
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--fit-salmon, #ce9180)', marginBottom: '12px' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--fit-salmon, var(--sol-accent))', marginBottom: '12px' }}>
             {t("Thêm bài tập mới vào ")}{t(DAYS_OF_WEEK.find((d) => d.id === activeDay)?.name)}
           </div>
 

@@ -1,6 +1,25 @@
+/* Accent tokens: the single source for the brand accent. Dark is the base; Light overrides below.
+   New colours must go through these tokens, never a hex value (see DESIGN.md). */
+:root {
+  --sol-accent: #ce9180;
+  --sol-accent-hover: #e1aa98;
+  --sol-accent-text: #e8b5a4;
+  --sol-accent-deep: #b97a69;
+  --sol-on-accent: #202020;
+  --sol-accent-rgb: 206 145 128;
+}
+:root[data-theme='light'] {
+  --sol-accent: #ce9180;
+  --sol-accent-hover: #e1aa98;
+  --sol-accent-text: #a35b49;
+  --sol-accent-deep: #b97a69;
+  --sol-on-accent: #ffffff;
+  --sol-accent-rgb: 206 145 128;
+}
+
 .theme-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid #ffffff30; border-radius: 50%; background: #292929; color: #faf9f6; cursor: pointer; }
-.theme-toggle:hover { border-color: #ce9180; background: #ce91801f; }
-.theme-toggle:focus-visible { outline: 2px solid #ce9180; outline-offset: 4px; }
+.theme-toggle:hover { border-color: var(--sol-accent); background: rgb(var(--sol-accent-rgb) / .12); }
+.theme-toggle:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 4px; }
 :root[data-theme='light'] .theme-toggle { background: #fff; border-color: #e4e2de; color: #202020; }
 :root[data-theme='light'] .theme-toggle:hover { background: #f8eae4; border-color: #a35b49; }
 
@@ -21,26 +40,26 @@
   --portal-raised: #eeefec;
   --portal-paper: #202020;
   --portal-muted: #68645f;
-  --portal-salmon: #a35b49;
-  --portal-hover: #e1aa98;
-  --portal-tint: #ce91801f;
+  --portal-salmon: var(--sol-accent-text);
+  --portal-hover: var(--sol-accent-hover);
+  --portal-tint: rgb(var(--sol-accent-rgb) / .12);
   --portal-border: #e4e2de;
   --portal-border-strong: #ccc8c2;
   --portal-danger: #a33030;
   --portal-success: #226442;
   --portal-warning: #805400;
   --portal-info-surface: #eef3fa;
-  --portal-on-accent: #ffffff;
+  --portal-on-accent: var(--sol-on-accent);
   --portal-info: #1d4ed8;
   --portal-violet: #7e22ce;
   --portal-star: #92560a;
   color-scheme: light;
 }
 :root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .portal-section-tab.active, .portal-tab.active .portal-tab-count, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected),
-:root[data-theme='light'] .portal-logo { background: #ce9180; border-color: #ce9180; color: #202020; }
+:root[data-theme='light'] .portal-logo { background: var(--sol-accent); border-color: var(--sol-accent); color: #202020; }
 :root[data-theme='light'] .portal-v2 .ldp-day-cell.is-selected { color: #202020 !important; }
 :root[data-theme='light'] .portal-logo > span { color: #202020; }
-:root[data-theme='light'] .portal-v2 .btn-primary:hover:not(:disabled) { background: #e1aa98; color: #202020; border-color: #e1aa98; }
+:root[data-theme='light'] .portal-v2 .btn-primary:hover:not(:disabled) { background: var(--sol-accent-hover); color: #202020; border-color: var(--sol-accent-hover); }
 :root[data-theme='light'] .portal-v2 input:is([type='date'], [type='time'], [type='datetime-local']) { color-scheme: light; }
 :root[data-theme='light'] .portal-v2 :is(.portal-field-error, .btn-danger) { color: #a33030; }
 :root[data-theme='light'] .portal-v2 .portal-alert { background: #fdf0ef; border-color: #f3c4bf; color: #a33030; }
@@ -74,34 +93,34 @@
 :root[data-theme='light'] .fit-service-rule { background: #20202030; }
 :root[data-theme='light'] .fit-site :is(.fit-hero-action > span, .fit-hero-index) { color: #68645f; }
 :root[data-theme='light'] .fit-menu { color: #202020; border-color: #ccc8c2; }
-:root[data-theme='light'] .fit-pill { background: #ce9180; color: #202020; }
+:root[data-theme='light'] .fit-pill { background: var(--sol-accent); color: #202020; }
 :root[data-theme='light'] .fit-plan-featured {
   background: #202020 !important;
   color: #faf9f6 !important;
-  border: 1.5px solid rgba(206, 145, 128, 0.45) !important;
+  border: 1.5px solid rgb(var(--sol-accent-rgb) / .45) !important;
   box-shadow: 0 16px 36px rgba(32, 32, 32, 0.18) !important;
 }
 :root[data-theme='light'] .fit-plan-featured h3 { color: #ffffff !important; }
-:root[data-theme='light'] .fit-plan-featured .fit-plan-price { color: #ce9180 !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-plan-price { color: var(--sol-accent) !important; }
 :root[data-theme='light'] .fit-plan-featured .fit-plan-price > span { color: #a8a29d !important; }
 :root[data-theme='light'] .fit-plan-featured > p { color: #c5bfb9 !important; }
 :root[data-theme='light'] .fit-plan-featured li { color: #ebe5df !important; }
-:root[data-theme='light'] .fit-plan-featured li > span { color: #ce9180 !important; }
+:root[data-theme='light'] .fit-plan-featured li > span { color: var(--sol-accent) !important; }
 :root[data-theme='light'] .fit-plan-featured .fit-plan-period { background: #2e2e2e !important; color: #e4dfda !important; border: 1px solid rgba(255, 255, 255, 0.12) !important; }
-:root[data-theme='light'] .fit-plan-featured .fit-plan-period--highlight { background: rgba(206, 145, 128, 0.22) !important; color: #f6d4c8 !important; border-color: rgba(206, 145, 128, 0.45) !important; }
+:root[data-theme='light'] .fit-plan-featured .fit-plan-period--highlight { background: rgb(var(--sol-accent-rgb) / .22) !important; color: #f6d4c8 !important; border-color: rgb(var(--sol-accent-rgb) / .45) !important; }
 :root[data-theme='light'] .fit-plan-featured .fit-pill { background: #ffffff !important; color: #202020 !important; font-weight: 650; }
 :root[data-theme='light'] .fit-plan-featured .fit-pill:hover { background: #f2eee9 !important; color: #1a1a1a !important; }
 :root[data-theme='light'] .fit-plan-featured .fit-round-arrow { background: #202020 !important; color: #ffffff !important; }
-:root[data-theme='light'] .fit-pill:hover { background: #e1aa98; }
+:root[data-theme='light'] .fit-pill:hover { background: var(--sol-accent-hover); }
 :root[data-theme='light'] .fit-round-arrow { color: #202020; }
 :root[data-theme='light'] .fit-skip { background: #202020; color: #faf9f6; }
 :root[data-theme='light'] .fit-site :is(.fit-metric-card, .fit-schedule-card, .fit-intro-pillar-card, .fit-rhythm-explorer, .fit-sport-curriculum, .fit-sport-pillar, .fit-sport-specs, .fit-step-item, .fit-journey-preview, .fit-bmi-card, .fit-bmi-result, .fit-faq-item, .fit-auth-card, .fit-auth-facts > div, .fit-trainer-chip) { background: #fff; border-color: #e4e2de; }
-:root[data-theme='light'] .fit-site :is(.fit-faq-item.is-open, .fit-step-item.is-active, .fit-step-item:hover, .fit-trainer-chip:hover) { background: #f8eae4; border-color: #ce9180; }
+:root[data-theme='light'] .fit-site :is(.fit-faq-item.is-open, .fit-step-item.is-active, .fit-step-item:hover, .fit-trainer-chip:hover) { background: #f8eae4; border-color: var(--sol-accent); }
 :root[data-theme='light'] .fit-plan:not(.fit-plan-featured) { background: #fff; border: 1px solid #e4e2de; }
 :root[data-theme='light'] .fit-site :is(.fit-plan:not(.fit-plan-featured) > p, .fit-rhythm-copy li, .fit-sport-pillar p, .fit-sport-spec-item dt, .fit-footer nav, .fit-footer address, .fit-footer-bottom, .fit-disclosure) { color: #68645f; }
 :root[data-theme='light'] .fit-site :is(.fit-trainer-chip, .fit-slot-pill, .fit-chat-bot, .fit-rhythm-tabs button, .fit-bmi-goals button) { color: #202020; background: #eeefec; border-color: #e4e2de; }
 :root[data-theme='light'] .fit-site :is(.fit-schedule-spots, .fit-intro-pillar-badge, .fit-preview-live, .fit-sport-pillar-metric, .fit-kicker, .fit-trainer-chip strong) { color: #a35b49; }
-:root[data-theme='light'] .fit-site :is(.fit-rhythm-tabs button.is-active, .fit-slot-pill.is-selected, .fit-bmi-goals button[aria-pressed='true']) { background: #ce9180; color: #202020; }
+:root[data-theme='light'] .fit-site :is(.fit-rhythm-tabs button.is-active, .fit-slot-pill.is-selected, .fit-bmi-goals button[aria-pressed='true']) { background: var(--sol-accent); color: #202020; }
 :root[data-theme='light'] .fit-site :is(.fit-rhythm-body, .fit-sport-spec-item, .fit-footer-bottom) { border-color: #e4e2de; }
 :root[data-theme='light'] .fit-footer-watermark { color: #2020200c; }
 :root[data-theme='light'] .fit-faq-icon { background: #eeefec; color: #a35b49; }
@@ -126,7 +145,7 @@
 :root[data-theme='light'] .fit-site .bot-bubble .chat-bubble-text { color: #202020 !important; }
 :root[data-theme='light'] .fit-site :is(.fit-trainer-switch-pill, .fit-trainer-quote, .fit-trainer-stat-box, .fit-trainer-story-article, .fit-trainer-milestones, .fit-trainer-action-banner, .fit-milestone-item, .fit-trainer-specialty-box, .fit-trainer-step-card, .fit-trainer-schedule-card, .fit-sport-page-program-card, .fit-back-link) { background: #fff; border-color: #e4e2de; color: #202020; }
 :root[data-theme='light'] .fit-site :is(.fit-trainer-paragraphs p, .fit-trainer-specialty-box li) { color: #68645f; }
-:root[data-theme='light'] .fit-trainer-switch-pill:is(.is-active, :hover) { background: #ce9180; }
+:root[data-theme='light'] .fit-trainer-switch-pill:is(.is-active, :hover) { background: var(--sol-accent); }
 :root[data-theme='light'] .fit-benefits { background: #eeefec; border-color: #e4e2de; }
 :root[data-theme='light'] .fit-benefits-eyebrow { color: #68645f; }
 :root[data-theme='light'] .fit-benefits-bg { -webkit-text-stroke-color: #20202012; }

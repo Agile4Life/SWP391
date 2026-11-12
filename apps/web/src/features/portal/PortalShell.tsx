@@ -483,7 +483,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       <span>{t('Ví của tôi', 'My Wallet')}</span>
                     </span>
-                    <strong style={{ color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums' }}>
+                    <strong style={{ color: 'var(--portal-salmon, var(--sol-accent))', fontVariantNumeric: 'tabular-nums' }}>
                       {walletBalance.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
                     </strong>
                   </button>}
@@ -583,7 +583,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           >
             <div>
               <div className="portal-label">{t('Số dư khả dụng', 'Available balance')}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--portal-salmon, var(--sol-accent))', fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
                 {walletBalance.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
               </div>
             </div>

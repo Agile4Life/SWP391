@@ -693,8 +693,8 @@ export function FitnessLanding() {
             <svg className="fit-progress-svg" viewBox="0 0 320 92" fill="none" aria-hidden="true">
               <defs>
                 <linearGradient id="fit-curve-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ce9180" stopOpacity="0.42" />
-                  <stop offset="100%" stopColor="#ce9180" stopOpacity="0" />
+                  <stop offset="0%" style={{ stopColor: 'var(--sol-accent)' }} stopOpacity="0.42" />
+                  <stop offset="100%" style={{ stopColor: 'var(--sol-accent)' }} stopOpacity="0" />
                 </linearGradient>
               </defs>
               <path className="fit-curve-area" d="M12 74 C 70 68, 110 52, 162 44 C 214 36, 256 22, 308 14 L 308 84 L 12 84 Z" fill="url(#fit-curve-fill)" />

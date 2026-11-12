@@ -44,9 +44,9 @@ body:has(.explore3d-page),
   --explore-surface: rgba(32, 32, 32, 0.9);
   --explore-surface-elevated: rgba(40, 40, 42, 0.95);
   --explore-border: rgba(250, 249, 246, 0.14);
-  --explore-border-accent: rgba(206, 145, 128, 0.46);
-  --explore-accent: #ce9180;
-  --explore-accent-hover: #e1aa98;
+  --explore-border-accent: rgb(var(--sol-accent-rgb) / .46);
+  --explore-accent: var(--sol-accent);
+  --explore-accent-hover: var(--sol-accent-hover);
   --explore-on-accent: #202020;
   --explore-ink: #faf9f6;
   --explore-ink-muted: #cbc7c3;
@@ -200,7 +200,7 @@ html[data-theme='light'] .explore3d-page {
 
 .explore3d-breadcrumb-btn:hover {
   color: var(--explore-ink);
-  background: rgba(206, 145, 128, 0.12);
+  background: rgb(var(--sol-accent-rgb) / .12);
 }
 
 .explore3d-breadcrumb-btn.is-active {
@@ -214,7 +214,7 @@ html[data-theme='light'] .explore3d-page {
   min-height: 30px;
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
-  background: rgba(206, 145, 128, 0.16);
+  background: rgb(var(--sol-accent-rgb) / .16);
   border: 1px solid var(--explore-border-accent);
   color: var(--explore-accent);
   font-size: 12px;
@@ -226,7 +226,7 @@ html[data-theme='light'] .explore3d-page {
 
 html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
   color: #8f4e3c;
-  background: rgba(206, 145, 128, 0.2);
+  background: rgb(var(--sol-accent-rgb) / .2);
 }
 
 .explore3d-search-btn {
@@ -319,7 +319,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
 .explore3d-level-btn:hover,
 .explore3d-mode-btn:hover {
   color: var(--explore-ink);
-  background: rgba(206, 145, 128, 0.12);
+  background: rgb(var(--sol-accent-rgb) / .12);
 }
 
 .explore3d-level-btn.is-active,
@@ -385,7 +385,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
 }
 
 .explore3d-toolbar-btn:hover {
-  background: rgba(206, 145, 128, 0.14);
+  background: rgb(var(--sol-accent-rgb) / .14);
 }
 
 .explore3d-toolbar-btn.is-active {
@@ -444,7 +444,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
 .explore3d-walk-hud__btn:hover,
 .explore3d-tour-bar__icon-btn:hover {
   border-color: var(--explore-accent);
-  background: rgba(206, 145, 128, 0.16);
+  background: rgb(var(--sol-accent-rgb) / .16);
 }
 
 .explore3d-walk-hud__exit,
@@ -453,7 +453,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
   padding: 0.22rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--explore-border-accent);
-  background: rgba(206, 145, 128, 0.18);
+  background: rgb(var(--sol-accent-rgb) / .18);
   color: var(--explore-ink);
   font-size: 12px;
   font-weight: 700;
@@ -606,7 +606,7 @@ html[data-theme='light'] .explore3d-page .explore3d-status-pill.is-closed {
   align-items: center;
   padding: 0.18rem 0.6rem;
   border-radius: 999px;
-  background: rgba(206, 145, 128, 0.22);
+  background: rgb(var(--sol-accent-rgb) / .22);
   border: 1px solid var(--explore-border-accent);
   color: var(--explore-accent);
   font-size: 12px;
@@ -674,7 +674,7 @@ html[data-theme='light'] .explore3d-page .explore3d-status-pill.is-closed {
   gap: 0.6rem;
   padding: 0.8rem;
   border-radius: 12px;
-  background: rgba(206, 145, 128, 0.14);
+  background: rgb(var(--sol-accent-rgb) / .14);
   border: 1px solid var(--explore-border-accent);
 }
 
@@ -927,7 +927,7 @@ html[data-theme='light'] .explore3d-page .explore3d-status-pill.is-closed {
   padding: 0.38rem 0.6rem;
   border-radius: 9px;
   border: 1px solid transparent;
-  background: rgba(206, 145, 128, 0.12);
+  background: rgb(var(--sol-accent-rgb) / .12);
   color: var(--explore-accent);
   font-size: 0.8rem;
   cursor: pointer;
@@ -935,7 +935,7 @@ html[data-theme='light'] .explore3d-page .explore3d-status-pill.is-closed {
 
 html[data-theme='light'] .explore3d-page .explore3d-directory-level-btn {
   color: #8f4e3c;
-  background: rgba(206, 145, 128, 0.16);
+  background: rgb(var(--sol-accent-rgb) / .16);
 }
 
 .explore3d-directory-zone-list {
@@ -1157,7 +1157,7 @@ html[data-theme='light'] .explore3d-page .explore3d-floorplan-canvas-wrap {
 
 .explore3d-search-hit-btn:hover,
 .explore3d-search-hit-btn.is-active {
-  background: rgba(206, 145, 128, 0.14);
+  background: rgb(var(--sol-accent-rgb) / .14);
   border-color: var(--explore-border-accent);
 }
 

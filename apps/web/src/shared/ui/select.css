@@ -45,7 +45,7 @@
   outline: none;
   outline-offset: 0;
   border-color: var(--color-accent-gold);
-  box-shadow: 0 0 0 3px rgba(206, 145, 128, 0.18);
+  box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .18);
 }
 
 .ui-select__value {
@@ -212,14 +212,14 @@
 }
 
 .ui-select__option.is-active {
-  background: rgba(206, 145, 128, 0.14);
+  background: rgb(var(--sol-accent-rgb) / .14);
   color: var(--color-accent-gold);
 }
 
 .ui-select__option.is-selected {
   font-weight: 600;
   color: var(--color-accent-gold);
-  background: rgba(206, 145, 128, 0.12);
+  background: rgb(var(--sol-accent-rgb) / .12);
 }
 
 .ui-select__check {

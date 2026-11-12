@@ -403,7 +403,7 @@
   background: var(--portal-salmon);
   color: var(--portal-ink);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(206, 145, 128, 0.3);
+  box-shadow: 0 4px 14px rgb(var(--sol-accent-rgb) / .3);
 }
 
 .btn-view-students:active,

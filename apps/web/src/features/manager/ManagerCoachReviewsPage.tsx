@@ -298,7 +298,7 @@ export function ManagerCoachReviewsPage() {
                             padding: '3px 10px',
                             borderRadius: 99,
                             background: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)',
-                            color: 'var(--portal-salmon, #ce9180)',
+                            color: 'var(--portal-salmon, var(--sol-accent))',
                           }}
                         >
                           {r.badge || t('Huấn luyện viên')}
@@ -324,7 +324,7 @@ export function ManagerCoachReviewsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: 12, color: 'var(--portal-muted, #71717a)' }}>{t("Mức thưởng tháng")}</span>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--portal-salmon, #ce9180)', fontVariantNumeric: 'tabular-nums' }}>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--portal-salmon, var(--sol-accent))', fontVariantNumeric: 'tabular-nums' }}>
                         {formatPrice(r.bonusAmount)}
                       </div>
                     </div>

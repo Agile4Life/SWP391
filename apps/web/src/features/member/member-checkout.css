@@ -65,12 +65,12 @@
 
 .payment-method-card:hover {
   border-color: var(--portal-salmon, #a35b49);
-  background: var(--portal-tint, rgba(206, 145, 128, 0.08));
+  background: var(--portal-tint, rgb(var(--sol-accent-rgb) / .08));
 }
 
 .payment-method-card.is-selected {
   border-color: var(--portal-salmon, #a35b49);
-  background: var(--portal-tint, rgba(206, 145, 128, 0.12));
+  background: var(--portal-tint, rgb(var(--sol-accent-rgb) / .12));
   box-shadow: 0 0 0 1px var(--portal-salmon, #a35b49);
 }
 

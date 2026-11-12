@@ -693,9 +693,9 @@ export function CoachClassesPage() {
                 <div data-i18n-managed
                   style={{
                     background:
-                      'linear-gradient(135deg, rgba(206, 145, 128, 0.14) 0%, rgba(206, 145, 128, 0.04) 100%)',
+                      'linear-gradient(135deg, rgb(var(--sol-accent-rgb) / .14) 0%, rgb(var(--sol-accent-rgb) / .04) 100%)',
                     borderRadius: 20,
-                    border: '1.5px solid var(--portal-salmon, #ce9180)',
+                    border: '1.5px solid var(--portal-salmon, var(--sol-accent))',
                     padding: 28,
                     position: 'relative',
                     overflow: 'hidden',
@@ -814,7 +814,7 @@ export function CoachClassesPage() {
                         style={{
                           fontSize: 22,
                           fontWeight: 800,
-                          color: 'var(--portal-salmon, #ce9180)',
+                          color: 'var(--portal-salmon, var(--sol-accent))',
                           fontVariantNumeric: 'tabular-nums',
                         }}
                       >
@@ -839,7 +839,7 @@ export function CoachClassesPage() {
                         style={{
                           fontWeight: 750,
                           fontSize: 13,
-                          color: 'var(--portal-salmon, #ce9180)',
+                          color: 'var(--portal-salmon, var(--sol-accent))',
                           display: 'block',
                           marginBottom: 6,
                         }}
@@ -908,10 +908,10 @@ export function CoachClassesPage() {
                             padding: '14px 20px',
                             borderRadius: 14,
                             background: isMe
-                              ? 'linear-gradient(135deg, rgba(206, 145, 128, 0.16) 0%, rgba(206, 145, 128, 0.05) 100%)'
+                              ? 'linear-gradient(135deg, rgb(var(--sol-accent-rgb) / .16) 0%, rgb(var(--sol-accent-rgb) / .05) 100%)'
                               : 'var(--portal-raised)',
                             border: isMe
-                              ? '1.5px solid var(--portal-salmon, #ce9180)'
+                              ? '1.5px solid var(--portal-salmon, var(--sol-accent))'
                               : '1px solid var(--portal-border)',
                           }}
                         >
@@ -953,7 +953,7 @@ export function CoachClassesPage() {
                                       fontWeight: 750,
                                       padding: '2px 8px',
                                       borderRadius: 99,
-                                      background: 'var(--portal-salmon, #ce9180)',
+                                      background: 'var(--portal-salmon, var(--sol-accent))',
                                       color: 'var(--portal-ink, #202020)',
                                     }}
                                   >
@@ -986,7 +986,7 @@ export function CoachClassesPage() {
                               <div
                                 style={{
                                   fontWeight: 750,
-                                  color: 'var(--portal-salmon, #ce9180)',
+                                  color: 'var(--portal-salmon, var(--sol-accent))',
                                   fontSize: 14,
                                   fontVariantNumeric: 'tabular-nums',
                                 }}
@@ -1055,7 +1055,7 @@ export function CoachClassesPage() {
                                 background: rev.bookingId
                                   ? 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)'
                                   : 'color-mix(in srgb, var(--portal-success) 14%, transparent)',
-                                color: rev.bookingId ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-success, #22c55e)',
+                                color: rev.bookingId ? 'var(--portal-salmon, var(--sol-accent))' : 'var(--portal-success, #22c55e)',
                                 fontWeight: 700,
                               }}
                             >

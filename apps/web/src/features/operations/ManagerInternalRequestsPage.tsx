@@ -14,7 +14,7 @@ import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerT
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
   LEAVE: { label: 'Xin nghỉ phép', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
   SHIFT_EXCHANGE: { label: 'Đổi ca trực', bg: 'color-mix(in srgb, var(--portal-violet) 12%, transparent)', color: 'var(--portal-violet)' },
-  SCHEDULE_CHANGE: { label: 'Đổi lịch dạy', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, #ce9180)' },
+  SCHEDULE_CHANGE: { label: 'Đổi lịch dạy', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, var(--sol-accent))' },
   OTHER: { label: 'Đề xuất khác', bg: 'color-mix(in srgb, var(--portal-muted) 12%, transparent)', color: 'var(--portal-muted)' },
 };
 
@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }
 };
 
 const ROLE_DISPLAY: Record<string, { label: string; bg: string; color: string }> = {
-  COACH: { label: 'Huấn luyện viên', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, #ce9180)' },
+  COACH: { label: 'Huấn luyện viên', bg: 'color-mix(in srgb, var(--portal-salmon) 15%, transparent)', color: 'var(--portal-salmon, var(--sol-accent))' },
   STAFF: { label: 'Nhân viên lễ tân', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
   RECEPTIONIST: { label: 'Lễ tân quầy', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
 };
@@ -165,7 +165,7 @@ export function ManagerInternalRequestsPage() {
                   fontWeight: 700,
                   fontSize: 13,
                   cursor: 'pointer',
-                  background: isActive ? 'var(--portal-salmon, #ce9180)' : 'transparent',
+                  background: isActive ? 'var(--portal-salmon, var(--sol-accent))' : 'transparent',
                   color: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-muted)',
                   boxShadow: isActive ? '0 2px 8px color-mix(in srgb, var(--portal-salmon) 25%, transparent)' : 'none',
                   display: 'flex',
@@ -178,7 +178,7 @@ export function ManagerInternalRequestsPage() {
                   <span data-i18n-managed
                     style={{
                       background: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-warning)',
-                      color: isActive ? 'var(--portal-salmon, #ce9180)' : 'var(--portal-on-accent)',
+                      color: isActive ? 'var(--portal-salmon, var(--sol-accent))' : 'var(--portal-on-accent)',
                       fontSize: 12,
                       fontWeight: 800,
                       padding: '1px 7px',
@@ -283,7 +283,7 @@ export function ManagerInternalRequestsPage() {
                   padding: 24,
                   borderRadius: 16,
                   border: isPending
-                    ? '1.5px solid var(--portal-salmon, #ce9180)'
+                    ? '1.5px solid var(--portal-salmon, var(--sol-accent))'
                     : '1px solid var(--portal-border)',
                   background: 'var(--portal-surface)',
                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
@@ -307,7 +307,7 @@ export function ManagerInternalRequestsPage() {
                         width: 38,
                         height: 38,
                         borderRadius: 99,
-                        background: 'var(--portal-salmon, #ce9180)',
+                        background: 'var(--portal-salmon, var(--sol-accent))',
                         color: 'var(--portal-ink, #202020)',
                         display: 'flex',
                         alignItems: 'center',

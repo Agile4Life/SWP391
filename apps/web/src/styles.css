@@ -50,13 +50,13 @@ a {
 }
 
 ::selection {
-  background-color: rgba(206, 145, 128, 0.28);
+  background-color: rgb(var(--sol-accent-rgb) / .28);
   color: inherit;
 }
 
 input,
 textarea {
-  caret-color: var(--portal-salmon, #CE9180);
+  caret-color: var(--portal-salmon, var(--sol-accent));
 }
 
 .metric-value,
@@ -721,8 +721,8 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   transition: background-color 160ms ease, color 160ms ease;
 }
 
-.sol-toast__close:hover { background: var(--portal-tint, rgba(206, 145, 128, 0.16)); color: var(--portal-paper, #FAF9F6); }
-.sol-toast__close:focus-visible { outline: 2px solid var(--portal-salmon, #CE9180); outline-offset: 1px; }
+.sol-toast__close:hover { background: var(--portal-tint, rgb(var(--sol-accent-rgb) / .16)); color: var(--portal-paper, #FAF9F6); }
+.sol-toast__close:focus-visible { outline: 2px solid var(--portal-salmon, var(--sol-accent)); outline-offset: 1px; }
 :root[data-theme='light'] .sol-toast__close { color: #6B6762; }
 :root[data-theme='light'] .sol-toast__close:hover { color: #202020; }
 
