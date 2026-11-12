@@ -85,52 +85,6 @@ paths:
         '200': {$ref: '#/components/responses/BookingPage'}
         '400': {$ref: '#/components/responses/BadRequest'}
         '403': {$ref: '#/components/responses/Forbidden'}
-  /court-bookings/recurring:
-    post:
-      summary: (Disabled) Standing court booking is no longer supported; returns 400 COURT_RECURRING_DISABLED
-      deprecated: true
-      description: >
-        Standing court booking by week or month is no longer supported. This endpoint returns 400 Bad Request with
-        code COURT_RECURRING_DISABLED. Please use single-session booking via POST /court-bookings instead.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [roomId, startDate, startTime, period]
-              properties:
-                roomId: { type: integer, format: int64 }
-                startDate: { type: string, format: date }
-                startTime: { type: string, example: '18:00:00' }
-                period: { type: string, enum: [week, month] }
-                daysOfWeek: { type: array, maxItems: 7, items: { type: integer, minimum: 1, maximum: 7 } }
-                paymentMethod: { type: string, enum: [online_wallet, bank_transfer], description: 'Dates are covered by the plan first, then charged; without a method the dates beyond the quota are skipped with COURT_BOOKING_PAYMENT_REQUIRED' }
-      responses:
-        '201':
-          description: At least one booking created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: object
-                    properties:
-                      booked: { type: array, items: { type: object } }
-                    skipped:
-                      type: array
-                      description: Dates that could not be booked, each with the API error code and a localised reason
-                      items:
-                        type: object
-                        properties:
-                          date: { type: string, format: date }
-                          code: { type: string }
-                          message: { type: string }
-        '200': { description: 'No date could be booked; data.skipped explains each one' }
-        '400': { description: Invalid period, weekdays, court or time }
-        '403': { description: MEMBER required }
-        '409': { description: COURT_BOOKING_COURT_UNAVAILABLE }
   /court-bookings/quota:
     get:
       summary: Court bookings still included in the member's plan (MEMBER)

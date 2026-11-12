@@ -32,36 +32,6 @@ paths:
         '400': {description: Invalid slot, unavailable membership, exhausted quota or INVALID_PAYMENT_METHOD}
         '403': {description: Role denied or trigger rejects inactive membership}
         '409': {description: Schedule conflict, COACH_REST_REQUIRED, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
-  /coach-bookings/recurring:
-    post:
-      summary: (Disabled) Standing 1:1 coach booking is no longer supported; returns 400 COACH_RECURRING_DISABLED
-      deprecated: true
-      description: >
-        Standing 1:1 coach booking by week or month is no longer supported. This endpoint returns 400 Bad Request with
-        code COACH_RECURRING_DISABLED. Please use single-session booking via POST /coach-bookings instead.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [coachId, startDate, startTime, endTime, period]
-              properties:
-                coachId: { type: integer, format: int64 }
-                disciplineId: { type: integer, format: int64 }
-                startDate: { type: string, format: date }
-                startTime: { type: string, example: '18:00:00' }
-                endTime: { type: string, example: '19:00:00' }
-                period: { type: string, enum: [week, month] }
-                daysOfWeek: { type: array, maxItems: 7, items: { type: integer, minimum: 1, maximum: 7 } }
-                paymentMethod: { type: string }
-                notes: { type: string }
-      responses:
-        '201': { description: 'data = { booked: CoachBooking[], skipped: [{ date, code, message }] }' }
-        '200': { description: 'No date could be booked; data.skipped explains each one' }
-        '400': { description: Invalid period or weekdays }
-        '403': { description: MEMBER required }
-        '404': { description: Coach not found }
   /coach-bookings/unpaid:
     get:
       summary: Hourly PT sessions waiting for payment (RECEPTIONIST, CENTER_MANAGER)

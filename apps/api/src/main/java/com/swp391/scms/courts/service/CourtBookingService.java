@@ -1,11 +1,9 @@
 package com.swp391.scms.courts.service;
 
 import com.swp391.scms.common.exception.*;
-import com.swp391.scms.common.RecurrenceDates;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.facilities.PackageBenefits;
 import com.swp391.scms.courts.dto.CourtBookingRequests.BookRequest;
-import com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest;
 import com.swp391.scms.courts.dto.CourtBookingResponses.*;
 import com.swp391.scms.courts.entity.CourtBooking;
 import com.swp391.scms.courts.repository.CourtBookingRepository;
@@ -96,9 +94,8 @@ public class CourtBookingService {
     private static AppException notFound() {
         return new AppException(HttpStatus.NOT_FOUND, "COURT_BOOKING_NOT_FOUND", "error.courts.not_found", null, null);
     }
-    private void dateWindow(LocalDate date) { dateWindow(date, false); }
     /** Only rejects missing/past dates; how far ahead a member may book depends on their plan tier (see bookOne). */
-    private void dateWindow(LocalDate date, boolean recurring) {
+    private void dateWindow(LocalDate date) {
         if (date == null) throw invalid("invalid_slot");
         if (date.isBefore(now().toLocalDate())) throw invalid("past_slot");
     }
@@ -141,34 +138,13 @@ public class CourtBookingService {
 
     @Transactional
     public BookingDto book(AuthenticatedPrincipal principal, BookRequest request) {
-        return bookOne(principal, request.roomId(), request.date(), request.startTime(), false, request.paymentMethod());
-    }
-
-    /**
-     * Books the same slot on every chosen weekday of a week or month. Each date is checked independently so a
-     * full or conflicting day is reported in {@code skipped} instead of failing the whole standing booking.
-     */
-    @Transactional
-    public RecurringResult bookRecurring(AuthenticatedPrincipal principal, RecurringBookRequest request) {
-        throw new AppException(HttpStatus.BAD_REQUEST, "COURT_RECURRING_DISABLED", "error.courts.recurring_disabled", null,
-                "Tính năng đặt sân định kỳ theo tuần hoặc tháng đã ngừng hỗ trợ. Vui lòng đặt từng buổi một.");
-    }
-
-    private String reason(AppException e) {
-        if (messages != null && e.getMessageKey() != null) {
-            try {
-                return messages.getMessage(e.getMessageKey(), e.getMessageArgs() == null ? new Object[0] : e.getMessageArgs());
-            } catch (RuntimeException ignored) {
-                // fall through to the error code
-            }
-        }
-        return e.getErrorCode();
+        return bookOne(principal, request.roomId(), request.date(), request.startTime(), request.paymentMethod());
     }
 
     private BookingDto bookOne(AuthenticatedPrincipal principal, Long roomId, LocalDate date, LocalTime start,
-                               boolean recurring, String paymentMethod) {
+                               String paymentMethod) {
         if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
-        dateWindow(date, recurring);
+        dateWindow(date);
         if (!wholeHour(start)) throw invalid("invalid_slot");
         if (!date.atTime(start).isAfter(now())) throw invalid("past_slot");
         Room room = court(roomId);

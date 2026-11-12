@@ -514,22 +514,6 @@ public class CoachBookingService {
         return mapToDto(saved);
     }
 
-    /**
-     * Books the same 1:1 slot on every chosen weekday of a week or month. Every date goes through the normal
-     * single-booking rules (coach/member conflicts, membership, monthly quota, unpaid cap), so dates that fail are
-     * reported in {@code skipped} while the rest are kept.
-     */
-    @Transactional
-    public com.swp391.scms.coaching.dto.CoachRecurringResultDto createRecurringBooking(
-            AuthenticatedPrincipal principal, com.swp391.scms.coaching.dto.CoachRecurringBookingDto request) {
-        throw new com.swp391.scms.common.exception.AppException(
-                org.springframework.http.HttpStatus.BAD_REQUEST,
-                "COACH_RECURRING_DISABLED",
-                "error.coach_booking.recurring_disabled",
-                null,
-                "Tính năng đặt lịch HLV 1:1 định kỳ đã ngừng hỗ trợ. Vui lòng đặt từng buổi một.");
-    }
-
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getMemberBookings(Long memberId) {
         return coachBookingRepository.findByMemberId(memberId).stream()
