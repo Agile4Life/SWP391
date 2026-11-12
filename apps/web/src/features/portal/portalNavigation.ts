@@ -87,10 +87,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
-  { to: '/staff/kyc', label: 'Duyệt hồ sơ & Bảo lưu', icon: 'shield', roles: ['MANAGER'], tabs: [
-    { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
-    { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
-  ] },
   { to: '/manager/support', label: 'Khiếu nại & Đơn từ', icon: 'inbox', roles: ['MANAGER'], tabs: [
     { to: '/manager/support', label: 'Khiếu nại chuyển lên', en: 'Escalated tickets' },
     { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', en: 'Internal requests' },

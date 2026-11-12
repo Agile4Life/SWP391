@@ -174,6 +174,14 @@ export const router = createBrowserRouter([
             path: '/staff/reception-history',
             lazy: async () => ({ Component: (await import('../features/reception/StaffRequestHistoryPage')).StaffRequestHistoryPage }),
           },
+          {
+            path: '/staff/kyc',
+            lazy: async () => ({ Component: (await import('../features/reception/KycReviewPage')).KycReviewPage }),
+          },
+          {
+            path: '/staff/holds',
+            lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
+          },
           { path: '/staff/support', element: <Navigate to="/messages?tab=support" replace /> },
           { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
         ],
@@ -236,14 +244,6 @@ export const router = createBrowserRouter([
           {
             path: '/staff/pt-attendance',
             lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
-          },
-          {
-            path: '/staff/kyc',
-            lazy: async () => ({ Component: (await import('../features/reception/KycReviewPage')).KycReviewPage }),
-          },
-          {
-            path: '/staff/holds',
-            lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
           },
           {
             path: '/staff/classes',
