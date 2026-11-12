@@ -168,7 +168,7 @@ public class CourseAttendanceService {
      * (from 30 minutes before the start until the end); the session then counts as attended and leaves the
      * remaining count. Sessions already recorded by the coach are left alone. Returns how many were marked.
      */
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public int markPresentOnEntry(Long memberId, LocalDateTime now) {
         if (memberId == null || now == null) return 0;
         Member member = members.findById(memberId).orElse(null);

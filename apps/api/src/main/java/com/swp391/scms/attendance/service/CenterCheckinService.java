@@ -267,27 +267,46 @@ public class CenterCheckinService {
         checkin.setDenialReason(null);
 
         CheckinDto result = toDto(checkins.saveAndFlush(checkin));
-        if (ptAttendance != null) {
-            try {
-                ptAttendance.markArrivedOnEntry(member.getUserId(), now);
-            } catch (RuntimeException ex) {
-                org.slf4j.LoggerFactory.getLogger(CenterCheckinService.class)
-                        .warn("Could not mark 1:1 arrival for member {}", member.getUserId(), ex);
+        Long memberId = member.getUserId();
+        // Attendance marking runs after the entry is committed, in its own transaction: a failure there must neither
+        // roll back the granted entry nor leave this transaction rollback-only (which would turn the scan into a 500).
+        afterEntryCommitted(() -> {
+            if (ptAttendance != null) {
+                try {
+                    ptAttendance.markArrivedOnEntry(memberId, now);
+                } catch (RuntimeException ex) {
+                    org.slf4j.LoggerFactory.getLogger(CenterCheckinService.class)
+                            .warn("Could not mark 1:1 arrival for member {}", memberId, ex);
+                }
             }
-        }
-        if (courseAttendance != null) {
-            try {
-                // Coming to the center on a course day counts the session as attended.
-                courseAttendance.markPresentOnEntry(member.getUserId(), now);
-            } catch (RuntimeException ex) {
-                org.slf4j.LoggerFactory.getLogger(CenterCheckinService.class)
-                        .warn("Could not mark course attendance for member {}", member.getUserId(), ex);
+            if (courseAttendance != null) {
+                try {
+                    // Coming to the center on a course day counts the session as attended.
+                    courseAttendance.markPresentOnEntry(memberId, now);
+                } catch (RuntimeException ex) {
+                    org.slf4j.LoggerFactory.getLogger(CenterCheckinService.class)
+                            .warn("Could not mark course attendance for member {}", memberId, ex);
+                }
             }
-        }
+        });
         return new CheckinDto(result.id(), result.memberId(), result.memberName(), result.checkInTime(),
                 result.checkOutTime(), result.method(), result.gate(), result.status(), result.denialReason(),
                 memberUser.getAvatarUrl(), sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : null,
                 sub.getEndDate() != null ? ChronoUnit.DAYS.between(today, sub.getEndDate()) : null);
+    }
+
+    private static void afterEntryCommitted(Runnable task) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            task.run();
+                        }
+                    });
+        } else {
+            task.run();
+        }
     }
 
     /**

@@ -11,7 +11,7 @@ import { localizableError } from '../../shared/lib/errorMessage';
 import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 
-const destinations = new Set(['/member/packages', '/member/courts', '/member/classes?tab=pt', '/member/invoices']);
+const destinations = new Set(['/member/packages', '/member/courts', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
 function isAllowedDestination(destination: string | null | undefined): destination is string {
   return Boolean(destination && (destinations.has(destination) || /^\/member\/orders\/\d+$/.test(destination)));
 }

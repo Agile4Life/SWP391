@@ -38,6 +38,11 @@ it('vnpay return accepts /member/orders/42 and still rejects other paths',async(
  await render('?vnp_TxnRef=DEF456');
  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe('/member/invoices');
 });
+it('vnpay return sends a paid course fee back to the classes page',async()=>{
+ vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({reference:'CRS123',paymentId:3,subscriptionId:null,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/member/classes'});
+ await render('?vnp_TxnRef=CRS123');
+ expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe('/member/classes');
+});
 
 it('keeps pending uncertain and only announces a delayed success after a backend recheck', async () => {
  const status: api.VnpayStatus = {reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'pending',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'};

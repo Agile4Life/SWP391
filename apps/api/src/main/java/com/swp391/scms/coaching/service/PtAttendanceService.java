@@ -38,7 +38,7 @@ public class PtAttendanceService {
     }
 
     /** Called when a member enters: marks today's sessions they have just arrived for. Returns how many. */
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public int markArrivedOnEntry(Long memberId, LocalDateTime now) {
         if (memberId == null || now == null) return 0;
         int marked = 0;

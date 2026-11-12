@@ -431,6 +431,37 @@ class CenterCheckinServiceTest {
     }
 
     @Test
+    void insideATransactionAttendanceIsMarkedOnlyAfterTheEntryCommits() {
+        Member member = mockMember(10L, "Nguyễn Văn E");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription sub = mockSubscription(member, "active", today.minusDays(1), today.plusDays(30));
+        registerQr("QR-VALID", sub);
+        when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var course = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
+        var pt = org.mockito.Mockito.mock(com.swp391.scms.coaching.service.PtAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", course);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "ptAttendance", pt);
+        org.mockito.Mockito.doThrow(new IllegalStateException("boom")).when(pt).markArrivedOnEntry(any(), any());
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertEquals("GRANTED", service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A")).status());
+            // Nothing runs inside the entry's transaction, so a hook failure cannot make it rollback-only.
+            verify(pt, never()).markArrivedOnEntry(any(), any());
+            verify(course, never()).markPresentOnEntry(any(), any());
+
+            // A failing hook after the commit is swallowed and does not stop the other one.
+            assertDoesNotThrow(() -> org.springframework.transaction.support.TransactionSynchronizationUtils
+                    .invokeAfterCommit(org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()));
+            verify(pt).markArrivedOnEntry(eq(10L), any(LocalDateTime.class));
+            verify(course).markPresentOnEntry(eq(10L), any(LocalDateTime.class));
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
     @DisplayName("BR-02: Gói tập active, đúng hạn, chưa check-in -> result = GRANTED")
     void br02_validSubscription_granted() {
         Member member = mockMember(10L, "Nguyễn Văn E");

@@ -102,6 +102,14 @@ public class EnrollmentService {
         this.vnpayPaymentService = vnpayPaymentService;
     }
 
+    /** Blocks releasing a course fee while a VNPay attempt for it may still be settled by the gateway. */
+    @Autowired(required = false)
+    private com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
+
+    public void setVnpayGuard(com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+        this.vnpayGuard = vnpayGuard;
+    }
+
     @Autowired
     public EnrollmentService(ClassEnrollmentRepository enrollments,
                              ClassSessionRepository sessions,
@@ -325,6 +333,9 @@ public class EnrollmentService {
                     "error.scheduling.cannot_cancel_started_course", null,
                     "Không thể hủy khóa học đã hoặc đang bắt đầu");
         }
+
+        // Releasing the seat while VNPay may still confirm the fee would take the member's money for nothing.
+        if (vnpayGuard != null) vnpayGuard.enrollment(enrollment.getId());
 
         LocalDateTime now = LocalDateTime.now(clock);
         enrollment.setStatus(CANCELLED);
@@ -717,6 +728,7 @@ public class EnrollmentService {
             throw new BadRequestException("SCHEDULING_CANNOT_CANCEL_STARTED_COURSE", "error.scheduling.cannot_cancel_started_course", null,
                     "Không thể hủy khóa học đã hoặc đang bắt đầu");
         }
+        if (vnpayGuard != null) vnpayGuard.enrollment(enrollment.getId());
 
         enrollment.setStatus(CANCELLED);
         enrollment.setCancelledAt(LocalDateTime.now(clock));
@@ -761,6 +773,12 @@ public class EnrollmentService {
         LocalDate today = current.toLocalDate();
         int released = 0;
         for (Payment payment : paymentRepository.findPendingCourseFeesCreatedBefore(current)) {
+            try {
+                // Closes attempts past expiry + IPN grace; one VNPay may still settle keeps the fee and the seat.
+                if (vnpayGuard != null) vnpayGuard.payment(payment.getId());
+            } catch (RuntimeException awaitingGateway) {
+                continue;
+            }
             ClassEnrollment enrollment = enrollments.findById(payment.getClassEnrollmentId()).orElse(null);
             if (enrollment == null || !BOOKED.equals(enrollment.getStatus())) {
                 payment.setStatus("failed");

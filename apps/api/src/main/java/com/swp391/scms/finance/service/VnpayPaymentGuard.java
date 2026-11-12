@@ -49,6 +49,7 @@ public class VnpayPaymentGuard {
     public void coach(Long id) { payments.findAllByCoachBookingId(id).forEach(p -> payment(p.getId())); }
     public void court(Long id) { payments.findAllByCourtBookingId(id).forEach(p -> payment(p.getId())); }
     public void productOrder(Long id) { payments.findAllByProductOrderId(id).forEach(p -> payment(p.getId())); }
+    public void enrollment(Long id) { payments.findByClassEnrollmentId(id).ifPresent(p -> payment(p.getId())); }
     public void refund(Long id) {
         payment(id);
         if (transactions.existsByPaymentIdAndStatus(id, "success")) throw new ConflictException("VNPAY_REFUND_UNSUPPORTED", "finance.vnpay.refund_unsupported", null, null);
