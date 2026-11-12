@@ -467,7 +467,7 @@ function contrastRatio(fg, bg) {
               record(state.overflow <= 1 && state.priceFits, `${label}: cart content overflows ${JSON.stringify(state)}`);
               record(Math.abs(state.height - page.viewportSize().height) <= 1, `${label}: drawer does not fill viewport ${state.height}`);
               record(state.buttonHeight >= 44, `${label}: checkout target ${state.buttonHeight}px`);
-              record(state.bg === 'rgb(206, 145, 128)', `${label}: checkout CTA inconsistent ${state.bg}`);
+              record(state.bg === (theme === 'light' ? 'rgb(206, 145, 128)' : 'rgb(200, 205, 214)'), `${label}: checkout CTA inconsistent ${state.bg}`);
               if (width <= 390) record(state.font >= 16, `${label}: cart input ${state.font}px`);
               if ([390, 1440].includes(width)) await page.screenshot({ path: path.join(output, `cart-${scenario.name}-${theme}-${width}.png`) });
               await page.keyboard.press('Escape');

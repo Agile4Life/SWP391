@@ -9,7 +9,7 @@ const outDir = process.argv[2];
 const filter = process.argv[3] || '';
 const motion = process.argv[4] === 'motion' ? 'no-preference' : 'reduce';
 fs.mkdirSync(outDir, { recursive: true });
-const BASE = 'http://localhost:5173';
+const BASE = process.env.BASE || 'http://localhost:5173';
 const API = 'http://localhost:8080/api/v1';
 
 const ACCOUNTS = {
@@ -41,11 +41,12 @@ const PAGES = [
   ['member-card', 'member', '/member/card'],
   ['member-orders', 'member', '/member/orders'],
   ['member-explore', 'member', '/member/explore', async (page) => { await page.waitForTimeout(6000); }],
+  ['state-explore2d', 'member', '/member/explore', async (page) => { await page.waitForTimeout(4000); await page.locator('button:has-text("Sơ đồ 2D")').first().evaluate(b => b.click()); await page.waitForTimeout(1500); }],
   ['staff-reception', 'staff', '/staff/reception'],
   ['coach-classes', 'coach', '/coach/classes'],
   ['manager-reports', 'manager', '/manager/reports'],
   // open states
-  ['state-chat', 'member', '/member/dashboard', async (page) => { await click(page, '.chat-widget__trigger'); await page.waitForTimeout(1500); }],
+  ['state-chat', 'member', '/member/dashboard', async (page) => { await click(page, '.chat-widget__trigger'); await page.waitForTimeout(Number(process.env.WAIT || 1500)); }],
   ['state-avatar-menu', 'member', '/member/dashboard', async (page) => { await click(page, '.portal-avatar'); }],
   ['state-notifications', 'member', '/member/dashboard', async (page) => { await click(page, '.member-notification-bell'); await page.waitForTimeout(800); }],
   ['state-datepicker', 'member', '/member/courts', async (page) => { await click(page, '.luxury-datepicker-trigger'); }],
@@ -82,7 +83,7 @@ for (const theme of THEMES) {
       try {
         await page.goto(BASE + url, { waitUntil: 'load', timeout: 30000 });
         await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-        await page.waitForTimeout(1500);
+        await page.waitForTimeout(Number(process.env.WAIT || 1500));
         if (state) await state(page);
         const full = !name.startsWith('state-') && vpName === 'd1440' && !role;
         if (name === 'landing' && vpName === 'd1440') {

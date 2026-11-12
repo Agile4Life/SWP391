@@ -112,7 +112,7 @@ const routes = [
       assert.ok(result.height >= page.viewportSize().height, 'shell fills viewport height');
       assert.equal(result.maxWidth, 'none'); assert.equal(result.backdropPadding, '0px');
       assert.equal(result.overflow, false, 'document overflows horizontally'); assert.deepEqual(result.pale, [], 'pale controls');
-      assert.ok(result.primary.every(color => ['rgb(206, 145, 128)', 'rgb(225, 170, 152)'].includes(color)), `primary buttons use landing salmon or its hover color: ${JSON.stringify(result.primary)}`);
+      assert.ok(result.primary.every(color => ['rgb(200, 205, 214)', 'rgb(230, 233, 239)'].includes(color)), `primary buttons use the Dark silver accent or its hover color: ${JSON.stringify(result.primary)}`);
       assert.ok(!['hidden', 'clip'].includes(result.documentScroll) && !['hidden', 'clip'].includes(result.bodyScroll), 'native document scroll remains available');
       if (page.viewportSize().width >= 1101) {
         assert.equal(result.railWidth, 76, 'preserve desktop icon rail');

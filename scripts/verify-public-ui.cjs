@@ -41,7 +41,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
     assert.ok(Math.abs(layout.canvasRight - layout.viewport) <= 1, 'Canvas must fill the viewport width');
     assert.equal(layout.padding, '0px', 'Public page must have no outer padding');
     assert.ok(
-      layout.scrollbar === 'rgb(206, 145, 128) rgb(32, 32, 32)' || layout.scrollbarWidth === 'none',
+      layout.scrollbar === 'rgb(200, 205, 214) rgb(32, 32, 32)' || layout.scrollbarWidth === 'none',
       'Scrollbar must use the public palette or be hidden',
     );
     assert.equal(layout.scheme, 'dark', 'Public browser surfaces must use the dark palette');
@@ -196,7 +196,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
 
     assert.deepEqual(errors, [], 'Browser must have no unhandled JavaScript errors');
     check('no uncaught browser errors');
-    fs.writeFileSync(path.join(output, 'browser-verification.json'), JSON.stringify({ status: 'passed', widths: [320, 375, 390, 768, 1024, 1440, 1920, 2560], fullWidth: true, publicScrollbar: 'salmon on charcoal', auth: 'mocked API; no real accounts created', errors }, null, 2));
+    fs.writeFileSync(path.join(output, 'browser-verification.json'), JSON.stringify({ status: 'passed', widths: [320, 375, 390, 768, 1024, 1440, 1920, 2560], fullWidth: true, publicScrollbar: 'silver on charcoal', auth: 'mocked API; no real accounts created', errors }, null, 2));
   } finally {
     await browser.close();
   }

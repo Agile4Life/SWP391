@@ -20,9 +20,10 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 ## Quy chuẩn thiết kế frontend
 
 - Bắt buộc đọc [DESIGN.md](DESIGN.md) trước khi tạo, sửa hoặc review UI. Đây là quy chuẩn thiết kế chính đang có hiệu lực.
-- Trang công khai (`/`, `/login`, `/register`, OTP và trang công khai mới): **SÖL Fitness charcoal–salmon**, font Plus Jakarta Sans, bố cục full width không có viền ngoài; scrollbar salmon trên nền than. Tái sử dụng `PublicLayout`, `AuthLayout` và `fitness-public.css`.
+- Trang công khai (`/`, `/login`, `/register`, OTP và trang công khai mới): **SÖL Fitness — Light: charcoal–salmon; Dark: charcoal–bạc (silver)**, font Plus Jakarta Sans, bố cục full width không có viền ngoài; scrollbar salmon trên nền than. Tái sử dụng `PublicLayout`, `AuthLayout` và `fitness-public.css`.
 - Quyết định animation mới nhất: **animation xuất hiện của từng component, cuộn dọc native**. Hiệu ứng lặp lại khi component rời rồi quay vào viewport ở cả hai chiều; không reset khi component vẫn còn nhìn thấy một phần. Không dựng lại slide trang ngang–dọc, fullpage scroll hijacking hoặc khóa wheel/touch/keyboard. Tôn trọng `prefers-reduced-motion` và focus bàn phím.
-- Theo yêu cầu mới nhất: portal phủ toàn viewport, đồng bộ màu **charcoal–salmon** và màu nút với landing. Giữ nguyên tổ chức component, dashboard bốn cột, sidebar icon, ảnh/thẻ, thứ tự nội dung, cỡ chữ và khoảng cách bên trong. Không đổi thành dashboard hai cột hoặc sidebar có nhãn thường trực.
+- Theo yêu cầu mới nhất: portal phủ toàn viewport, đồng bộ màu (**Light: charcoal–salmon; Dark: charcoal–bạc**) và màu nút với landing. Giữ nguyên tổ chức component, dashboard bốn cột, sidebar icon, ảnh/thẻ, thứ tự nội dung, cỡ chữ và khoảng cách bên trong. Không đổi thành dashboard hai cột hoặc sidebar có nhãn thường trực.
+- Màu nhấn đi qua bộ token `--sol-accent*` trong `apps/web/src/shared/ui/theme.css`; không viết hex salmon/bạc mới trong CSS hay TSX. Dark từng thử Volt (vàng chanh) nhưng bị đánh giá là chói nên dùng bạc; không đưa Volt trở lại. Chi tiết và ngoại lệ ở mục đầu `DESIGN.md`.
 - Không khôi phục theme Quiet Luxury/serif/nền kem cho trang công khai từ file CSS cũ, ảnh chụp cũ, knowledge graph hoặc gợi ý skill. Hồ sơ tại `docs/qa/portal-redesign*` chỉ là lịch sử đối với landing/login.
 - Khi người dùng thay đổi quyết định thiết kế, cập nhật `DESIGN.md` cùng phạm vi liên quan để agent sau không tiếp tục theo hướng cũ.
 
