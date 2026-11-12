@@ -1,5 +1,4 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
-import { CoachHealthMetrics } from './CoachHealthMetrics';
 import { calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './coachHealthUtils';
 import { listHealthMetrics } from '../member/profileApi';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
@@ -39,9 +38,8 @@ const DAYS_OF_WEEK = [
 /** Soạn giáo án đi theo từng bước để mỗi màn hình chỉ giữ một nhóm thông tin. */
 const PLAN_STEPS = [
   { id: 1, vi: 'Học viên & kế hoạch', en: 'Member & plan' },
-  { id: 2, vi: 'Chỉ số sức khỏe', en: 'Health metrics' },
-  { id: 3, vi: 'Bài tập theo ngày', en: 'Daily exercises' },
-  { id: 4, vi: 'Xem lại & kích hoạt', en: 'Review & activate' },
+  { id: 2, vi: 'Bài tập theo ngày', en: 'Daily exercises' },
+  { id: 3, vi: 'Xem lại & kích hoạt', en: 'Review & activate' },
 ] as const;
 type PlanStep = (typeof PLAN_STEPS)[number]['id'];
 
@@ -587,11 +585,8 @@ export function CoachTrainingPlanPage() {
         </div>
       </div>}
 
-      {/* Bước 2: chỉ số sức khỏe */}
-      {step === 2 && <CoachHealthMetrics memberId={selectedMember.id} memberName={selectedMember.fullName} onMetricsChange={handleHealthMetricsChange} />}
-
-      {/* Bước 3: bài tập theo ngày */}
-      {step === 3 && <div className="portal-card">
+      {/* Bước 2: bài tập theo ngày */}
+      {step === 2 && <div className="portal-card">
         {/* AC: Tab chọn ngày trong tuần */}
         <div className="portal-tabs plan-day-tabs" role="tablist" aria-label={t("Các ngày trong tuần")}>
           {DAYS_OF_WEEK.map((d) => {
@@ -799,8 +794,8 @@ export function CoachTrainingPlanPage() {
         </div>
       </div>}
 
-      {/* Bước 4: xem lại & kích hoạt */}
-      {step === 4 && <div className="plan-meta-card plan-review">
+      {/* Bước 3: xem lại & kích hoạt */}
+      {step === 3 && <div className="plan-meta-card plan-review">
         <h2 className="portal-card-title" style={{ margin: '0 0 16px', fontSize: '1.2rem' }}>{t("Xem lại giáo án")}</h2>
         <div className="kv-list">
           <div className="kv-row"><span>{t("Tên giáo án")}</span><strong>{planTitle}</strong></div>

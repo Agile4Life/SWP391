@@ -543,6 +543,7 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Không thể tạo mã QR cổng. Kiểm tra kết nối rồi thử lại.": "Unable to generate gate QR code. Check your connection and try again.",
   "Mã QR cổng cho hội viên": "Gate QR code for members",
   "Hội viên quét QR cổng": "Members scan the gate QR",
+  "Chỉ số sức khỏe": "Health metrics",
   "Mục tiêu thể lực": "Fitness goal",
   "Lưu ý sức khỏe": "Health notes",
   "Tiếp tục": "Continue",

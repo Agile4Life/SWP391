@@ -102,14 +102,14 @@ test.describe('HLV: đánh giá thể trạng lần đầu', () => {
   });
 });
 
-/** Giáo án soạn theo 4 bước: 1 học viên & kế hoạch, 2 chỉ số sức khỏe, 3 bài tập theo ngày, 4 xem lại & kích hoạt. */
-const openPlanStep = (page: import('@playwright/test').Page, step: 1 | 2 | 3 | 4) => page.locator('.plan-step__button').nth(step - 1).click();
+/** Giáo án soạn theo 3 bước: 1 học viên & kế hoạch, 2 bài tập theo ngày, 3 xem lại & kích hoạt. Chỉ số sức khỏe có tab riêng. */
+const openPlanStep = (page: import('@playwright/test').Page, step: 1 | 2 | 3) => page.locator('.plan-step__button').nth(step - 1).click();
 
 test.describe('HLV: soạn giáo án', () => {
   test('thêm/xóa bài tập; bài tập thiếu tên hoặc số hiệp âm bị chặn', async ({ page }) => {
     await page.goto('/coach/training-plans');
     await settled(page);
-    await openPlanStep(page, 3);
+    await openPlanStep(page, 2);
     await expect(page.locator('#exercise-name-input')).toBeVisible();
     await page.waitForTimeout(1000);
     const total = async () => page.locator('.exercise-item-card').count();
@@ -138,7 +138,7 @@ test.describe('HLV: soạn giáo án', () => {
     await settled(page);
     const name = `Giáo án e2e ${Date.now()}`;
     await page.locator('#plan-title-input').fill(name);
-    await openPlanStep(page, 4);
+    await openPlanStep(page, 3);
     await expect(page.locator('main')).toContainText(name);
     await page.getByRole('button', { name: 'Lưu & Kích hoạt giáo án' }).click();
     await expect(page.locator('main')).toContainText(/Đã kích hoạt/);
@@ -150,9 +150,8 @@ test.describe('HLV: soạn giáo án', () => {
   });
 
   test('thêm số đo sức khỏe: giá trị hợp lệ hiện trong bảng, giá trị âm bị chặn', async ({ page }) => {
-    await page.goto('/coach/training-plans');
+    await page.goto('/coach/health-metrics');
     await settled(page);
-    await openPlanStep(page, 2);
     const value = page.locator('#coach-metric-value');
     await value.fill('-5');
     await page.getByRole('button', { name: 'Thêm số đo' }).click();

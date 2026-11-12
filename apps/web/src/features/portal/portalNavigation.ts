@@ -56,6 +56,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/coach/training-plans', label: 'Giáo án & Đánh giá', icon: 'dumbbell', roles: ['COACH'], tabs: [
     { to: '/coach/training-plans', label: 'Soạn giáo án', en: 'Plan builder' },
+    { to: '/coach/health-metrics', label: 'Chỉ số sức khỏe', en: 'Health metrics' },
     { to: '/coach/saved-plans', label: 'Giáo án đã lưu', en: 'Saved plans' },
     { to: '/coach/first-assessment', label: 'Đánh giá lần đầu', en: 'First assessment' },
   ] },
