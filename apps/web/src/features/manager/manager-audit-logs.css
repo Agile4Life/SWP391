@@ -150,7 +150,7 @@
   border: 1px solid var(--portal-border);
   border-radius: 8px;
   padding: 12px;
-  font-family: monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
   line-height: 1.5;
   color: var(--portal-paper);

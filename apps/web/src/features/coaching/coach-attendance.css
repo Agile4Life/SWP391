@@ -216,7 +216,7 @@
 }
 
 .student-code-badge {
-  font-family: monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 0.82rem;
   color: var(--portal-muted);
 }

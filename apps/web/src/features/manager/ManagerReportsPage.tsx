@@ -409,7 +409,7 @@ export function ManagerReportsPage() {
                 >
                   <div style={{ flex: 1, minWidth: 260 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
                         {t("Yêu cầu #")}{req.id}
                       </span>
                       <strong>{req.memberName || t(`Hội viên #${req.memberId}`, `Member #${req.memberId}`)}</strong>
@@ -688,7 +688,7 @@ export function ManagerReportsPage() {
                 <tbody>
                   {summary.recentTransactions.map((tx) => (
                     <tr data-i18n-managed key={tx.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tx.invoiceNumber ?? t('Chưa xuất hóa đơn')}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{tx.invoiceNumber ?? t('Chưa xuất hóa đơn')}</td>
                       <td>{tx.memberName}</td>
                       <td>{tx.packageName ?? '—'}</td>
                       <td style={{ fontWeight: 600, color: 'var(--portal-success, #86efac)' }}>{vnd(tx.amount)}</td>

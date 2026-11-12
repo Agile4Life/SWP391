@@ -308,7 +308,7 @@ export function ManagerAuditLogsPage() {
                 <tbody>
                   {filteredLogs.map((log) => (
                     <tr data-i18n-managed key={log.id}>
-                      <td style={{ fontSize: '0.82rem', fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>
+                      <td style={{ fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-muted)' }}>
                         {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
                       </td>
                       <td>
@@ -321,7 +321,7 @@ export function ManagerAuditLogsPage() {
                         <span className={`action-badge ${getActionBadgeClass(log.action)}`}>
                           {getActionLabel(log.action)}
                         </span>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--portal-muted)', marginTop: 2, fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
                           {log.action}
                         </div>
                       </td>
@@ -334,7 +334,7 @@ export function ManagerAuditLogsPage() {
                         </code>
                       </td>
                       <td>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>#{log.entityId}</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>#{log.entityId}</span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button

@@ -541,7 +541,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 .student-code-tag {
-  font-family: monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 0.82rem;
   color: var(--portal-muted);
   background: var(--portal-surface);
@@ -649,7 +649,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 
 .student-code,
 .roster-student-code {
-  font-family: monospace;
+  font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
   color: var(--portal-muted);
 }
