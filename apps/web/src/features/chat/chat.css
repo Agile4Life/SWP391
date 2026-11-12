@@ -183,3 +183,11 @@
 .direct-chat__compose-fab { min-height: 44px; padding: 8px 12px; border: 1px solid rgba(206, 145, 128, .45); border-radius: 999px; color: #ce9180; }
 @media (hover: none) { .direct-chat__react-trigger { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .direct-chat *, .direct-chat *::before, .direct-chat *::after { transition: none !important; } }
+
+.direct-chat__notice { display: grid; gap: 6px; margin: 0 18px 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid #ce918066; background: #ce91801f; color: #f5f5f5; font-size: 13px; line-height: 1.55; }
+.direct-chat__notice strong { font-size: 14px; }
+.direct-chat__notice .direct-chat__link { justify-self: start; }
+.direct-chat__notice span, .direct-chat__notice strong { color: inherit; }
+.direct-chat__notice .direct-chat__link { color: inherit; font-weight: 700; text-decoration: underline; }
+.direct-chat__list--pinned { flex: 0 0 auto; overflow: visible; padding: 6px 0 2px; }
+:root[data-theme='light'] .chat-widget .direct-chat__notice { color: var(--chat-glass-ink, #1c1917); }

@@ -176,3 +176,30 @@ it('owns inbox, unread, role, contact and empty labels in both languages without
   expect(host.querySelector('input[type="search"]')!.getAttribute('placeholder')).toBe('Tìm kiếm người nhận...');
   expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai) .direct-chat__preview')!.textContent).toBe('Bạn: Tìm');
 });
+
+it('tells a member without any coach class that only the front desk can be messaged', async () => {
+  vi.mocked(api.getContacts).mockResolvedValue({ content: [{ id: 3, name: 'Lễ tân Ngọc', role: 'RECEPTIONIST', available: true }], totalPages: 1, number: 0 });
+  await render();
+  await act(async () => button('Cuộc trò chuyện mới').click());
+  const notice = host.querySelector('[data-testid="chat-no-coach"]');
+  expect(notice?.textContent).toContain('Chưa có huấn luyện viên để nhắn tin');
+  expect(notice?.querySelector('a')?.getAttribute('href')).toBe('/member/classes');
+  expect(host.querySelector('[data-contact-id="3"]')).not.toBeNull();
+});
+
+it('hides the no-coach notice once the member has a coach to message', async () => {
+  await render();
+  await act(async () => button('Cuộc trò chuyện mới').click());
+  expect(host.querySelector('[data-contact-id="20"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="chat-no-coach"]')).toBeNull();
+});
+
+it('keeps SÖL AI first, above the contact directory and the conversations', async () => {
+  await render();
+  await act(async () => button('Cuộc trò chuyện mới').click());
+  const ai = host.querySelector('.direct-chat__person--ai')!;
+  const directory = host.querySelector('#chat-directory')!;
+  const firstConversation = host.querySelector('.direct-chat__list:not(.direct-chat__list--pinned) .direct-chat__person')!;
+  expect(ai.compareDocumentPosition(directory) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(ai.compareDocumentPosition(firstConversation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});

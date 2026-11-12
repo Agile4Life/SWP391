@@ -147,11 +147,8 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
             <span className="direct-chat__compose-fab-label">{showContacts ? t('Đóng danh bạ', 'Close contacts') : t('Cuộc trò chuyện mới', 'New conversation')}</span>
           </button>
         </div>
-        {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{t(openError)}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} forMember={member} /></div>}
-        {listError && <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
-        {loading && <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversations…")} count={4} />}
-        {/* SÖL AI luôn ghim đầu danh sách như một người để trò chuyện, không còn nút AI riêng. */}
-        {!loading && <ul className="direct-chat__list">
+        {/* SÖL AI luôn ghim ở đầu, trên cả danh bạ, như một người để trò chuyện. */}
+        <ul className="direct-chat__list direct-chat__list--pinned">
           <li><button type="button" className={`direct-chat__person direct-chat__person--ai${aiOpen ? ' is-selected' : ''}`} onClick={selectAi} aria-current={aiOpen ? 'true' : undefined}>
             <ChatAvatar contact={AI_PEER} />
             <span className="direct-chat__person-info">
@@ -159,6 +156,11 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
               <span className="direct-chat__person-sub"><small className="direct-chat__preview">{t("Trợ lý AI · Hỏi về gói tập, lịch lớp, tập luyện", "AI assistant · Ask about memberships, classes and training")}</small></span>
             </span>
           </button></li>
+        </ul>
+        {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{t(openError)}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} forMember={member} /></div>}
+        {listError && <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
+        {loading && <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversations…")} count={4} />}
+        {!loading && <ul className="direct-chat__list">
           {conversations.map(c => <li key={c.id}><button type="button" className={`direct-chat__person${!aiOpen && chat.selectedId === c.id ? ' is-selected' : ''}${c.unreadCount ? ' has-unread' : ''}`} onClick={() => select(c)} aria-current={!aiOpen && chat.selectedId === c.id ? 'true' : undefined}>
               <ChatAvatar contact={c.peer} />
               <span className="direct-chat__person-info">

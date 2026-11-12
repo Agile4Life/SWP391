@@ -93,7 +93,7 @@ test.describe('Tin nhắn — widget nổi (hội viên)', () => {
     await panel(page).getByRole('button', { name: 'Cuộc trò chuyện mới' }).click();
     await panel(page).getByPlaceholder('Tìm kiếm người nhận...').fill('zzzz-khong-ton-tai');
     await panel(page).getByRole('button', { name: 'Tìm', exact: true }).click();
-    await expect(panel(page)).toContainText('Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.');
+    await expect(panel(page)).toContainText('Không tìm thấy lễ tân hoặc huấn luyện viên của lớp bạn đã đăng ký.');
   });
 
   test('SÖL AI: chọn trong danh sách, hội thoại mới, gửi tin', async ({ page }) => {
@@ -169,5 +169,32 @@ test.describe('Tin nhắn — HLV (người nhận)', () => {
       await panel(page).getByRole('button', { name: 'Gửi', exact: true }).click();
       await expect(panel(page).locator('.direct-chat__messages')).toContainText(text);
     });
+  });
+});
+
+test.describe('Tin nhắn — hội viên chưa đăng ký lớp của HLV nào', () => {
+  test.use({ storageState: authFile('lan') });
+
+  test('chỉ thấy lễ tân và có thông báo dẫn tới trang lớp học', async ({ page }) => {
+    await openWidget(page);
+    await panel(page).getByRole('button', { name: 'Cuộc trò chuyện mới' }).click();
+    const notice = panel(page).getByTestId('chat-no-coach');
+    await expect(notice).toContainText('Chưa có huấn luyện viên để nhắn tin');
+    await expect(notice.getByRole('link', { name: 'Xem lớp học' })).toHaveAttribute('href', '/member/classes');
+    await expect(panel(page).locator('button[data-contact-id]').first()).toBeVisible();
+    await expect(panel(page).getByText('Huấn luyện viên', { exact: true })).toHaveCount(0);
+  });
+});
+
+test.describe('Tin nhắn — API chặn HLV không có lớp chung', () => {
+  test('hội viên chưa có lớp bị 403 CHAT_COACH_NOT_ENROLLED, có lớp thì mở được', async () => {
+    const { api } = await import('../helpers/api');
+    const contacts = await api<{ content: { id: number; role: string }[] }>('an', 'GET', '/chat/contacts?query=');
+    const coachId = contacts.data.content.find((c) => c.role === 'COACH')!.id;
+    const denied = await api('lan', 'POST', '/chat/conversations', { contactId: coachId });
+    expect(denied.status).toBe(403);
+    expect(denied.body.code).toBe('CHAT_COACH_NOT_ENROLLED');
+    const allowed = await api('an', 'POST', '/chat/conversations', { contactId: coachId });
+    expect(allowed.status).toBe(200);
   });
 });

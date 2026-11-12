@@ -887,3 +887,5 @@
 .chat-widget .direct-chat__back, .chat-widget .direct-chat__thread-action { flex-shrink: 0; }
 .chat-widget .direct-chat__search .btn-secondary { min-height: 44px; }
 @media (prefers-reduced-motion: reduce) { .chat-widget *, .chat-widget *::before, .chat-widget *::after { transition: none !important; } }
+
+.chat-widget .direct-chat__list--pinned { flex: 0 0 auto; overflow: visible; padding: 6px 0 2px; }
