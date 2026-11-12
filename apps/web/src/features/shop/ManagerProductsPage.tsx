@@ -8,6 +8,8 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { CategoryManager } from './components/CategoryManager';
+import { CounterRequestsPanel } from '../reception/CounterRequestsPanel';
+import { useCounterQueue } from '../reception/useCounterQueue';
 import { StaffOrdersSection } from './StaffOrdersPage';
 import './shop-portal.css';
 import { shopApi } from './shopApi';
@@ -28,6 +30,9 @@ export function ManagerProductsPage() {
   const rawTab = searchParams.get('tab');
   const activeTab: ManagerTab =
     rawTab === 'categories' ? 'categories' : rawTab === 'orders' ? 'orders' : 'products';
+  // Inside the Orders tab: product orders, or what is paid at the counter (membership requests and 1:1 sessions).
+  const orderView: 'products' | 'counter' = searchParams.get('view') === 'counter' ? 'counter' : 'products';
+  const counterQueue = useCounterQueue(activeTab === 'orders');
 
   const [confirm, confirmDialog] = useConfirm();
 
@@ -105,6 +110,10 @@ export function ManagerProductsPage() {
     }
   }, [activeTab, loadProducts, loadOrders]);
 
+  const switchOrderView = (next: 'products' | 'counter') => {
+    setSearchParams(next === 'counter' ? { tab: 'orders', view: 'counter' } : { tab: 'orders' }, { replace: true });
+  };
+
   const switchTab = (next: ManagerTab) => {
     if (next === 'products') {
       setSearchParams({}, { replace: true });
@@ -174,9 +183,9 @@ export function ManagerProductsPage() {
             {activeTab !== 'categories' && (
               <RefreshButton
                 label={sourceText("Làm mới dữ liệu")}
-                disabled={activeTab === 'products' ? productsLoading : ordersLoading}
+                disabled={activeTab === 'products' ? productsLoading : activeTab === 'orders' && orderView === 'counter' ? counterQueue.loading : ordersLoading}
                 onClick={() =>
-                  void (activeTab === 'products' ? loadProducts() : loadOrders())
+                  void (activeTab === 'products' ? loadProducts() : activeTab === 'orders' && orderView === 'counter' ? counterQueue.reload() : loadOrders())
                 }
               />
             )}
@@ -214,7 +223,17 @@ export function ManagerProductsPage() {
       {activeTab === 'categories' ? (
         <CategoryManager />
       ) : activeTab === 'orders' ? (
-        <section className="stack" aria-label={sourceText("Đơn hàng sản phẩm")}>
+        <section className="stack" aria-label={sourceText("Đơn hàng")}>
+          <div className="filter-chips" role="group" aria-label={sourceText("Loại đơn hàng")}>
+            <button type="button" className={`filter-chip ${orderView === 'products' ? 'is-active' : ''}`} aria-pressed={orderView === 'products'} onClick={() => switchOrderView('products')}>
+              {sourceText("Đơn sản phẩm")}
+            </button>
+            <button type="button" className={`filter-chip ${orderView === 'counter' ? 'is-active' : ''}`} aria-pressed={orderView === 'counter'} onClick={() => switchOrderView('counter')}>
+              {sourceText("Đơn tại quầy")}{counterQueue.count > 0 ? ` (${counterQueue.count})` : ''}
+            </button>
+          </div>
+
+          {orderView === 'counter' ? <CounterRequestsPanel queue={counterQueue} /> : <>
           {orderSummary && (
             <div
               style={{
@@ -278,6 +297,7 @@ export function ManagerProductsPage() {
             error={ordersError}
             onRetry={() => void loadOrders()}
           />
+          </>}
         </section>
       ) : (
         <section className="stack" aria-label={sourceText("Danh sách sản phẩm")}>
