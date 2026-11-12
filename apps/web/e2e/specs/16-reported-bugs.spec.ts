@@ -437,3 +437,23 @@ test.describe('Lỗi 9 — gửi CCCD: ảnh lớn không còn làm yêu cầu b
     await context.close();
   });
 });
+
+test.describe('Hạn mức khóa học chỉ hiện khi hội viên đã có gói', () => {
+  test('chưa có gói: không hiện "Còn 0/0 khóa học miễn phí"; có gói thì hiện', async ({ browser }) => {
+    const noPlan = await browser.newContext({ storageState: 'e2e/.auth/lan.json' });
+    const lan = await noPlan.newPage();
+    await lan.goto('/member/classes');
+    await settled(lan);
+    await expect(lan.getByRole('tab', { name: 'Lịch của tôi' })).toBeVisible();
+    await expect(lan.getByTestId('course-quota-banner')).toHaveCount(0);
+    await expect(lan.getByText(/Còn 0\/0 khóa học miễn phí/)).toHaveCount(0);
+    await noPlan.close();
+
+    const withPlan = await browser.newContext({ storageState: 'e2e/.auth/binh.json' });
+    const binh = await withPlan.newPage();
+    await binh.goto('/member/classes');
+    await settled(binh);
+    await expect(binh.getByTestId('course-quota-banner')).toBeVisible();
+    await withPlan.close();
+  });
+});

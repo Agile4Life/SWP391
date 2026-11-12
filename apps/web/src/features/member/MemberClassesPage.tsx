@@ -768,8 +768,8 @@ export function MemberClassesPage() {
         </div>
       )}
 
-      {/* Quota Banner: Hiển thị số lượt đăng ký khóa học còn lại của gói */}
-      {quota && (
+      {/* Quota Banner: Hiển thị số lượt đăng ký khóa học còn lại của gói. Hội viên chưa có gói thì không có hạn mức để hiển thị. */}
+      {quota && (quota.unlimited || Boolean(quota.tier) || (quota.totalCredits ?? 0) > 0) && (
         <div
           className="portal-card"
           data-testid="course-quota-banner"

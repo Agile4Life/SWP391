@@ -557,6 +557,16 @@ describe('MemberClassesPage', () => {
       expect(quotaBanner?.textContent).toContain('Còn 1/2 khóa học miễn phí');
     });
 
+    it('hides the course quota banner for a member who has no plan yet', async () => {
+      // The API still answers with an empty quota (no tier, 0 credits) for a member without a membership.
+      mocks.quota.mockResolvedValue({ tier: '', totalCredits: 0, usedCredits: 0, remainingCredits: 0, unlimited: false });
+      mocks.sessions.mockResolvedValue([]);
+      await render();
+
+      expect(host.querySelector('[data-testid="course-quota-banner"]')).toBeNull();
+      expect(host.textContent).not.toContain('Còn 0/0 khóa học miễn phí');
+    });
+
     it('shows upgrade link when member course quota is exhausted', async () => {
       mocks.quota.mockResolvedValue({
         tier: 'SILVER',
