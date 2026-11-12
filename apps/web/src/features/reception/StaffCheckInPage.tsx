@@ -5,13 +5,16 @@ import { getCurrentUser } from '../../shared/api/client';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { Select } from '../../shared/ui/Select';
 import { formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { checkinApi, type CheckinDto } from './checkinApi';
 import './staff-check-in.css';
 import { GateQrPanel } from './GateQrPanel';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { Link } from 'react-router-dom';
+
+/** The center runs a single gate, so the desk never picks one. */
+const GATE = 'Turnstile A1 - Sảnh Chính';
+const GATE_ID = 'A1';
 
 const formatTime = (iso?: string | null): string => formatCenterTimeSeconds(iso, iso ?? '—');
 
@@ -35,7 +38,6 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
 
   const [scanCode, setScanCode] = useState('');
   const [scanError, setScanError] = useState<StaffMessage | null>(null);
-  const [selectedGate, setSelectedGate] = useState('Turnstile A1 - Sảnh Chính');
   const [isScanning, setIsScanning] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [checkingOutId, setCheckingOutId] = useState<number | null>(null);
@@ -105,7 +107,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
     try {
       const res = await checkinApi.scan({
         qrCode: trimmed,
-        gate: selectedGate,
+        gate: GATE,
       });
       setCurrentResult(res);
       setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)]);
@@ -119,7 +121,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
         checkInTime: new Date().toISOString(),
         checkOutTime: null,
         method: 'qr_code',
-        gate: selectedGate,
+        gate: GATE,
         status: 'DENIED',
         denialReason: msg instanceof Error ? msg.message : typeof msg === 'string' ? msg : msg.vi,
       };
@@ -170,28 +172,11 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
       <div className="checkin-layout">
         {/* Left card: member-card scanner + gate QR to check in, or just the gate QR to check out */}
         <div className="portal-card">
-          <div className="portal-card-header">
-            <h2 className="portal-card-title">{checkingOut ? t("Mã QR check-out") : t("Quét mã hội viên")}</h2>
-          </div>
+          {!checkingOut && <div className="portal-card-header">
+            <h2 className="portal-card-title">{t("Quét mã hội viên")}</h2>
+          </div>}
 
-          <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
-            <div>
-              <label className="portal-label" htmlFor="checkin-gate-select">
-                {t("Cổng kiểm soát")}</label>
-              <Select
-                id="checkin-gate-select"
-                className="portal-select"
-                value={selectedGate}
-                onChange={(e) => setSelectedGate(e.target.value)}
-                disabled={isScanning}
-              >
-                <option value="Turnstile A1 - Sảnh Chính">{t("Turnstile A1 - Sảnh Chính")}</option>
-                <option value="Turnstile A2 - Sảnh Chính">{t("Turnstile A2 - Sảnh Chính")}</option>
-                <option value="Turnstile B1 - Tầng Mezzanine">{t("Turnstile B1 - Tầng Mezzanine")}</option>
-              </Select>
-            </div>
-
-            {!checkingOut && <>
+          {!checkingOut && <form onSubmit={handleSubmit} style={{ marginBottom: '24px', display: 'grid', gap: '14px' }}>
             <div>
               <label className="portal-label" htmlFor="checkin-qr-input">
                 {t("Mã QR hội viên")}</label>
@@ -219,8 +204,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
               </div>
               {scanError && <p id="checkin-qr-error" className="form-error" role="alert">{t(scanError)}</p>}
             </div>
-            </>}
-          </form>
+          </form>}
 
           {!checkingOut && (
 
@@ -238,7 +222,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
             </div>
           )}
 
-          <GateQrPanel purpose={checkingOut ? 'out' : 'in'} gateId={selectedGate.includes('A2') ? 'A2' : selectedGate.includes('B1') ? 'B1' : 'A1'} />
+          <GateQrPanel purpose={checkingOut ? 'out' : 'in'} gateId={GATE_ID} />
 
           {/* Visual Door Gate Feedback */}
           {currentResult && (
@@ -281,7 +265,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
               {isGranted && currentResult.remainingDays != null && <div>{t("Còn ")}{currentResult.remainingDays}{t(" ngày")}</div>}
 
               <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
-                {currentResult.gate || selectedGate} — {formatTime(currentResult.checkInTime)}
+                {currentResult.gate || GATE} — {formatTime(currentResult.checkInTime)}
               </div>
 
               {currentResult.denialReason && (
