@@ -91,7 +91,7 @@ paths:
       responses:
         '200': { description: Hold withdrawn }
     get:
-      summary: Hold details with document metadata (owner, receptionist, manager)
+      summary: Hold details with document metadata (owner, receptionist)
       responses:
         '200': { description: HoldRequestDto with holdStartDate, holdEndDate, documents }
   /subscriptions/{id}/hold/documents/{documentId}:
@@ -102,7 +102,7 @@ paths:
         '404': { description: Not found or not attached to this subscription }
   /subscriptions/holds:
     get:
-      summary: Hold requests and history for the desk (receptionist, manager)
+      summary: Hold requests and history for the desk (receptionist only)
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [ALL, PENDING, APPROVED, REJECTED, COMPLETED] } }
       responses:
@@ -297,7 +297,7 @@ paths:
         '200': { description: ok }
   /subscriptions/{id}/hold/withdraw:
     post:
-      summary: Desk withdraws a hold on behalf of the member (receptionist, manager)
+      summary: Desk withdraws a hold on behalf of the member (receptionist only)
       description: Allowed for a pending request or an approved hold that has not started (400 MEMBERSHIP_HOLD_NOT_PENDING otherwise). The package gets its one hold back, course excuses of the window are released and the member is notified.
       responses:
         '200': { description: Subscription without a hold }

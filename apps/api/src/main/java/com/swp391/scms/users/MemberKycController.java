@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Member KYC review", description = "Approve or reject identity documents before a first package")
 @RestController
 @RequestMapping("/api/v1/members/kyc")
-@PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
+@PreAuthorize("hasRole('RECEPTIONIST')")
 public class MemberKycController {
     public record RejectRequest(String reason) {}
 

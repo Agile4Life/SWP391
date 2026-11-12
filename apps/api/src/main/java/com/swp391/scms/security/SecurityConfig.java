@@ -118,8 +118,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
                     .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
 
-                    // Desk review of identity documents
-                    .requestMatchers("/api/v1/members/kyc/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    // Desk review of identity documents: the front desk owns it, the manager portal no longer does
+                    .requestMatchers("/api/v1/members/kyc/**").hasRole("RECEPTIONIST")
 
                     // Internal Staff Requests (SCRUM-135)
                     .requestMatchers(HttpMethod.POST, "/api/v1/operations/requests").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")
@@ -130,22 +130,23 @@ public class SecurityConfig {
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
-                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending",
                             "/api/v1/memberships/subscriptions/requests/history", "/api/v1/subscriptions/requests/history")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    // Membership holds are reviewed by the front desk only.
                     .requestMatchers(HttpMethod.GET,
+                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending",
                             "/api/v1/memberships/subscriptions/holds", "/api/v1/subscriptions/holds")
-                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
-                    // The owner and desk staff read a hold and its medical documents; the service re-checks ownership.
+                            .hasRole("RECEPTIONIST")
+                    // The owner and the front desk read a hold and its medical documents; the service re-checks ownership.
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/*/hold", "/api/v1/subscriptions/*/hold",
                             "/api/v1/memberships/subscriptions/*/hold/documents/*", "/api/v1/subscriptions/*/hold/documents/*")
-                            .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                            .hasAnyRole("MEMBER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/hold/withdraw", "/api/v1/subscriptions/*/hold/withdraw",
                             "/api/v1/memberships/subscriptions/*/hold/approve", "/api/v1/subscriptions/*/hold/approve",
                             "/api/v1/memberships/subscriptions/*/hold/reject", "/api/v1/subscriptions/*/hold/reject")
-                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                            .hasRole("RECEPTIONIST")
                     // POS: nhân viên mua mới/gia hạn thay hội viên; phải đứng trước matcher MEMBER bên dưới
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/members/*/renewal-candidates",

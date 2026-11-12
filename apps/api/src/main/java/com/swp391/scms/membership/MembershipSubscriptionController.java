@@ -158,7 +158,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Desk withdraws a pending or not-yet-started approved hold on behalf of the member")
     @PostMapping("/{id}/hold/withdraw")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<SubscriptionDto> withdrawHoldForMember(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
@@ -167,7 +167,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Hold request details and document list (owner or desk staff)")
     @GetMapping("/{id}/hold")
-    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST')")
     public ApiResponse<HoldRequestDto> getHold(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
@@ -176,7 +176,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Download a medical document of a hold request (owner or desk staff)")
     @GetMapping("/{id}/hold/documents/{documentId}")
-    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST')")
     public ResponseEntity<byte[]> downloadHoldDocument(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id,
@@ -221,21 +221,21 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "List all pending hold requests for receptionist processing")
     @GetMapping("/holds/pending")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<List<HoldRequestDto>> getPendingHolds() {
         return ApiResponse.ok(msg("membership.subscription.hold_list"), service.listPendingHolds());
     }
 
     @Operation(summary = "List hold requests and hold history for the desk (status: ALL, PENDING, APPROVED, REJECTED, COMPLETED)")
     @GetMapping("/holds")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<List<HoldRequestDto>> listHolds(@RequestParam(value = "status", required = false) String status) {
         return ApiResponse.ok(msg("membership.subscription.hold_list"), service.listHolds(status));
     }
 
     @Operation(summary = "Approve a hold request and cancel future booked class schedules")
     @PostMapping("/{id}/hold/approve")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<HoldRequestDto> approveHold(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
@@ -244,7 +244,7 @@ public class MembershipSubscriptionController {
 
     @Operation(summary = "Reject a hold request")
     @PostMapping("/{id}/hold/reject")
-    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<HoldRequestDto> rejectHold(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id) {
