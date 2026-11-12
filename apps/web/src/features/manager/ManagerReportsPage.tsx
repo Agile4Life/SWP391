@@ -67,11 +67,12 @@ export function ManagerReportsPage() {
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
   const [txSearchTerm, setTxSearchTerm] = useState('');
 
+  const recentTransactions = summary?.recentTransactions;
   const filteredTransactions = useMemo(() => {
-    if (!summary?.recentTransactions) return [];
+    if (!recentTransactions) return [];
     const term = txSearchTerm.trim().toLowerCase();
-    if (!term) return summary.recentTransactions;
-    return summary.recentTransactions.filter((tx) => {
+    if (!term) return recentTransactions;
+    return recentTransactions.filter((tx) => {
       const matchName = tx.memberName?.toLowerCase().includes(term);
       const matchInvoice = tx.invoiceNumber?.toLowerCase().includes(term);
       const matchEmail = tx.email?.toLowerCase().includes(term);
@@ -79,7 +80,7 @@ export function ManagerReportsPage() {
       const matchPackage = tx.packageName?.toLowerCase().includes(term);
       return Boolean(matchName || matchInvoice || matchEmail || matchPhone || matchPackage);
     });
-  }, [summary?.recentTransactions, txSearchTerm]);
+  }, [recentTransactions, txSearchTerm]);
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
 

@@ -1,4 +1,5 @@
 import { setLanguage } from '../../shared/i18n/language';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -70,8 +71,8 @@ describe('SCRUM-85 dashboard', () => {
   });
 
   it('shows paid renewal expiry and remaining days across 120 days', async () => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [y, m, d] = centerNowParts().date.split('-').map(Number);
+    const start = new Date(y, m - 1, d);
     const end = new Date(start); end.setDate(end.getDate() + 29);
     const paid = new Date(start); paid.setDate(paid.getDate() + 119);
     const key = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

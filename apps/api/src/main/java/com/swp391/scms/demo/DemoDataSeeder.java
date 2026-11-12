@@ -449,7 +449,6 @@ public class DemoDataSeeder implements ApplicationRunner {
             // The course runs exactly from its first to its last session: enrolment checks membership against these.
             gymClass.setStartDate(dates.get(0));
             gymClass.setEndDate(dates.get(dates.size() - 1));
-            gymClass.setRepeatType("weekly");
             gymClass.setRecurringDays(String.join(",", spec.days().stream().map(DayOfWeek::name).toList()));
             gymClass.setStartTime(spec.start());
             gymClass.setEndTime(spec.end());
