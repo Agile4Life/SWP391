@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { upgradeQuote } from '../../shared/lib/upgradeQuote';
+import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
 import './member-packages.css';
 import { notify, resolveNotice } from '../../shared/lib/portalNotices';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -146,14 +147,14 @@ export function MemberPackagesPage() {
       setTrialError(memberMessage("Dung lượng ảnh tối đa là 5MB."));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = reader.result as string;
-      if (target === 'front') setTrialFrontImage(b64);
-      else setTrialBackImage(b64);
+    // Scaled down in the browser: two full-size phone photos as base64 pass the proxy's body limit (HTTP 413).
+    void fileToUploadDataUrl(file).then((dataUrl) => {
+      if (target === 'front') setTrialFrontImage(dataUrl);
+      else setTrialBackImage(dataUrl);
       setTrialError('');
-    };
-    reader.readAsDataURL(file);
+    }).catch(() => {
+      setTrialError(sourceMessage('Không đọc được ảnh này. Hãy chọn ảnh JPG hoặc PNG.', 'This photo could not be read. Choose a JPG or PNG image.'));
+    });
   };
 
   const handleClaimTrial = async (e: React.FormEvent) => {

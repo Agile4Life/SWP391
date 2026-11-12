@@ -14,6 +14,7 @@ import {
   MembershipPackage,
 } from './membershipApi';
 import { getProfile, submitMemberKyc, Profile } from './profileApi';
+import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
 import './member-checkout.css';
 import { localizableError } from '../../shared/lib/errorMessage';
 
@@ -121,14 +122,14 @@ export function MemberCheckoutPage() {
       setKycError(memberMessage("Dung lượng ảnh tối đa 2MB."));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = reader.result as string;
-      if (target === 'front') setKycFrontImage(b64);
-      else setKycBackImage(b64);
+    // Re-encoded as a JPEG of at most 1600 px: keeps the request small and avoids formats the server rejects.
+    void fileToUploadDataUrl(file).then((dataUrl) => {
+      if (target === 'front') setKycFrontImage(dataUrl);
+      else setKycBackImage(dataUrl);
       setKycError('');
-    };
-    reader.readAsDataURL(file);
+    }).catch(() => {
+      setKycError(sourceMessage('Không đọc được ảnh này. Hãy chọn ảnh JPG hoặc PNG.', 'This photo could not be read. Choose a JPG or PNG image.'));
+    });
   }
 
   async function handleKycSubmit(e: React.FormEvent) {

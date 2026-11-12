@@ -136,6 +136,11 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     // Phiên đăng nhập hết hạn: đưa người dùng về trang đăng nhập kèm lời giải thích
     if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED', sourceMessage(SESSION_REPLACED_MESSAGE, 'Your login session has changed. Please reload the page.'));
   }
+  if (res.status === 413 && !body?.message) {
+    // The proxy rejects an oversized body before the API sees it, so there is no JSON message to show.
+    const tooLarge = 'Dữ liệu gửi lên quá lớn. Hãy chọn ảnh nhỏ hơn rồi thử lại.';
+    throw new ApiError(tooLarge, 413, 'PAYLOAD_TOO_LARGE', sourceMessage(tooLarge, 'The upload is too large. Choose a smaller photo and try again.'));
+  }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code, body?.message ? undefined : sourceMessage(`Yêu cầu thất bại (HTTP ${res.status})`, `Request failed (HTTP ${res.status})`));
   // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
   if (body && typeof body === 'object' && ('data' in body || body.success === true)) {

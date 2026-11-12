@@ -363,3 +363,77 @@ test.describe('Lỗi 8 — hồ sơ giấy tờ hội viên gửi lên phải hi
     await expect(page.getByTestId(`kyc-${second.id}`)).toBeVisible();
   });
 });
+
+/** Ảnh BMP thật (giải mã được) có dung lượng lớn như ảnh chụp từ điện thoại; nén ở trình duyệt phải thu nhỏ nó. */
+function bigBmp(width: number, height: number) {
+  const row = Math.ceil((width * 3) / 4) * 4;
+  const size = 54 + row * height;
+  const buffer = Buffer.alloc(size);
+  buffer.write('BM', 0); buffer.writeUInt32LE(size, 2); buffer.writeUInt32LE(54, 10); buffer.writeUInt32LE(40, 14);
+  buffer.writeInt32LE(width, 18); buffer.writeInt32LE(height, 22); buffer.writeUInt16LE(1, 26); buffer.writeUInt16LE(24, 28);
+  buffer.writeUInt32LE(row * height, 34);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const at = 54 + y * row + x * 3;
+    buffer[at] = (x * 255) / width; buffer[at + 1] = (y * 255) / height; buffer[at + 2] = ((x + y) * 7) & 255;
+  }
+  return { name: 'cccd.bmp', mimeType: 'image/bmp', buffer };
+}
+
+test.describe('Lỗi 9 — gửi CCCD: ảnh lớn không còn làm yêu cầu bị chặn trước khi tới lễ tân', () => {
+  test('gói trải nghiệm: ảnh ~3,5MB mỗi mặt được thu nhỏ trước khi gửi và lễ tân thấy đơn', async ({ browser }) => {
+    const m = await createActiveMember('e2ebig');
+    const session = await apiLogin(m.username, m.password);
+    const context = await contextFor(browser, { username: m.username, token: session.token });
+    const page = await context.newPage();
+    const photo = bigBmp(1100, 1100); // ~3,6MB
+    expect(photo.buffer.length).toBeGreaterThan(3 * 1024 * 1024);
+    let bodyBytes = 0;
+    page.on('request', (r) => { if (r.url().includes('/trial/claim') && r.method() === 'POST') bodyBytes = r.postDataBuffer()?.length ?? 0; });
+    await page.goto('/member/packages');
+    await settled(page);
+    await page.getByRole('button', { name: /Nhận 3 ngày tập miễn phí/ }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('input:not([type=file])').first().fill('Nguyen Van Anh Lon');
+    await dialog.getByPlaceholder(/001200001234/).fill(String(Math.floor(1e11 + Math.random() * 9e11)));
+    await dialog.locator('input[type=file]').first().setInputFiles(photo);
+    await expect(dialog.locator('img').first()).toBeVisible();
+    await dialog.locator('input[type=file]').first().setInputFiles(photo);
+    await expect(dialog.locator('img')).toHaveCount(2);
+    await dialog.locator('button[type=submit]').click();
+    await expect(dialog).toBeHidden();
+    // Trước khi nén, hai ảnh này thành ~9,6MB và gần chạm giới hạn 10MB của nginx (ảnh lớn hơn nữa bị 413).
+    expect(bodyBytes).toBeGreaterThan(0);
+    expect(bodyBytes).toBeLessThan(1_000_000);
+
+    const list = await api('staff', 'GET', '/reception/trials?status=PENDING_APPROVAL');
+    const mine = ((list.data as any)?.content ?? list.data as any[]).find((x: any) => x.memberEmail === m.email);
+    expect(mine, 'lễ tân phải thấy đơn trải nghiệm').toBeTruthy();
+    expect(String(mine.frontImageUrl)).toMatch(/^data:image\/jpeg;base64,/);
+    await context.close();
+  });
+
+  test('xác minh ở trang thanh toán: ảnh được chuẩn hóa sang JPEG nhỏ và lễ tân thấy hồ sơ', async ({ browser }) => {
+    const m = await createActiveMember('e2ebigkyc');
+    const session = await apiLogin(m.username, m.password);
+    const context = await contextFor(browser, { username: m.username, token: session.token });
+    const page = await context.newPage();
+    const photo = bigBmp(800, 800); // ~1,9MB: dưới giới hạn 2MB của form nhưng không phải JPEG/PNG/WebP mà máy chủ chấp nhận
+    let bodyBytes = 0;
+    page.on('request', (r) => { if (r.url().includes('/profile/kyc') && r.method() === 'POST') bodyBytes = r.postDataBuffer()?.length ?? 0; });
+    await page.goto('/member/packages/checkout?packageId=2');
+    await settled(page);
+    await page.locator('#checkout-doc-number').fill(String(Math.floor(1e11 + Math.random() * 9e11)));
+    await page.locator('#checkout-fullname').fill('Nguyen Van Kyc Lon');
+    await page.locator('input[type=file]').first().setInputFiles(photo);
+    await expect(page.getByRole('button', { name: 'Xóa' })).toHaveCount(1);
+    await page.locator('input[type=file]').first().setInputFiles(photo);
+    await page.getByRole('button', { name: /Xác minh & Đồng bộ họ tên/ }).click();
+    await expect(page.getByTestId('kyc-pending')).toBeVisible();
+    expect(bodyBytes).toBeLessThan(1_000_000);
+    const desk = await api('staff', 'GET', '/members/kyc/pending');
+    const mine = (desk.data as any[]).find((x) => x.fullName === 'Nguyen Van Kyc Lon' && x.membershipCode);
+    expect(mine, 'lễ tân phải thấy hồ sơ').toBeTruthy();
+    expect(String(mine.frontImageUrl)).toMatch(/^data:image\/jpeg;base64,/);
+    await context.close();
+  });
+});
