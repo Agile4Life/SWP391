@@ -39,11 +39,18 @@ it('resolves false when cancelled', async () => {
   await expect(result).resolves.toBe(false);
 });
 
-it('shows a corner toast without covering the page and closes it with Escape', () => {
+it('shows a centered modal notice described by its message and closes it with Escape or the Close button', () => {
   toast('Đã lưu.', 'success');
-  const el = document.querySelector('.sol-toast')!;
-  expect(el.getAttribute('role')).toBe('status');
-  expect(el.querySelector('.sol-toast__close')).not.toBeNull();
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  const el = document.querySelector('dialog.sol-toast')!;
+  expect(el.getAttribute('role')).toBe('dialog');
+  expect(el.getAttribute('aria-modal')).toBe('true');
+  expect(document.getElementById(el.getAttribute('aria-describedby')!)?.textContent).toBe('Đã lưu.');
+  el.dispatchEvent(new Event('cancel', { cancelable: true }));
+  expect(document.querySelector('.sol-toast')).toBeNull();
+
+  toast('Không lưu được.', 'error');
+  const error = document.querySelector('dialog.sol-toast')!;
+  expect(error.getAttribute('role')).toBe('alertdialog');
+  error.querySelector<HTMLButtonElement>('.sol-toast__close')!.click();
   expect(document.querySelector('.sol-toast')).toBeNull();
 });
