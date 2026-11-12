@@ -127,7 +127,6 @@ export function MemberHoldPage() {
       setFormError(t('Thời gian bảo lưu phải nằm trong thời hạn gói tập.', 'The hold must fall inside your membership period.'));
       return;
     }
-    if (files.length === 0) { setFormError(t('Vui lòng đính kèm giấy tờ y tế.', 'Please attach your medical paperwork.')); return; }
     setBusy(true);
     setFormError(null);
     try {
@@ -196,7 +195,7 @@ export function MemberHoldPage() {
               <ul className="hold-rules">
                 <li>{t(`Tối đa ${policy.maxDays} ngày, tối thiểu ${policy.minDays} ngày.`, `Between ${policy.minDays} and ${policy.maxDays} days.`)}</li>
                 <li>{t('Mỗi gói chỉ được bảo lưu một lần.', 'Each package can be put on hold only once.')}</li>
-                <li>{t(`Nộp đơn trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ, kèm giấy tờ y tế.`, `File at least ${policy.noticeHours} hours before it starts, with medical paperwork.`)}</li>
+                <li>{t(`Nộp đơn trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ (có thể đính kèm giấy tờ nếu có).`, `File at least ${policy.noticeHours} hours before it starts (supporting documents optional).`)}</li>
                 <li>{t('Khi được duyệt, các buổi PT và đặt sân trong giai đoạn bảo lưu sẽ tự hủy; ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions and courts booked during the hold are cancelled and the held days are added to your expiry.')}</li>
               </ul>
             ) : (
@@ -255,7 +254,7 @@ export function MemberHoldPage() {
                   onChange={(event) => setReason(event.target.value)} disabled={busy} style={{ width: '100%', resize: 'vertical' }} />
               </div>
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="hold-files">{t('Giấy tờ y tế (JPG, PNG, PDF) *', 'Medical paperwork (JPG, PNG, PDF) *')}</label>
+                <label className="portal-label" htmlFor="hold-files">{t('Giấy tờ đính kèm nếu có (JPG, PNG, PDF)', 'Supporting documents if any (JPG, PNG, PDF)')}</label>
                 <input id="hold-files" className="portal-input" type="file" multiple accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
                   onChange={(event) => onPickFiles(event.target.files)} disabled={busy} />
                 {files.length > 0 && <small className="hold-files">{files.map((file) => file.name).join(', ')}</small>}

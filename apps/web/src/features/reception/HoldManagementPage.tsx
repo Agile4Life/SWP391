@@ -132,7 +132,7 @@ export function HoldManagementPage() {
               {item.holdReason && <div>{t('Lý do', 'Reason')}: {item.holdReason}</div>}
               {item.holdRequestedAt && <small>{t('Nộp lúc', 'Filed')} {formatCenterDateTime(item.holdRequestedAt)}</small>}
               {item.documents.length > 0 ? (
-                <ul aria-label={t('Giấy tờ y tế', 'Medical documents')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, listStyle: 'none', padding: 0 }}>
+                <ul aria-label={t('Giấy tờ đính kèm', 'Attached documents')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, listStyle: 'none', padding: 0 }}>
                   {item.documents.map((document) => (
                     <li key={document.id}>
                       <button type="button" className="btn-secondary btn-sm" onClick={() => void openDocument(item, document.id)}>{document.fileName}</button>
