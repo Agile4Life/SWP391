@@ -627,12 +627,7 @@ export function StaffReceptionPage() {
             </div>
 
             <div className="reception-todo">
-              <section className="reception-todo__group">
-                <div className="portal-card-header">
-                  <h3 className="reception-todo__title">{t("Gói tập chờ thanh toán (")}{pendingList.length})</h3>
-                </div>
-
-                {loadingPending ? (
+              {loadingPending ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
                     {[1, 2].map((idx) => (
@@ -659,11 +654,8 @@ export function StaffReceptionPage() {
                       </div>
                     ))}
                   </div>
-                ) : pendingList.length === 0 ? (
-                  <div data-i18n-managed style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                    {t("Không có yêu cầu chờ thanh toán.")}</div>
                 ) : (
-                  <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }}>
+                  <>
                     {pendingList.map((item) => {
                       const isSelected = selectedPending?.id === item.id;
                       return (
@@ -694,6 +686,7 @@ export function StaffReceptionPage() {
                         >
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className="reception-todo__tag reception-todo__tag--plan">{t("Gói tập")}</span>
                               <span
                                 style={{
                                   fontVariantNumeric: 'tabular-nums',
@@ -748,29 +741,18 @@ export function StaffReceptionPage() {
                         </div>
                       );
                     })}
-                  </div>
+                  </>
                 )}
-              </section>
 
-              <section className="reception-todo__group">
-                <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 className="reception-todo__title">{t("Buổi PT chưa thanh toán (")}{unpaidPt.length})</h3>
-                  </div>
-                </div>
-
-                {loadingPt ? (
+              {loadingPt ? (
                   <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
                 ) : ptError ? (
                   <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
                     <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{t(ptError)}</span>
                     <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>{t("Thử lại")}</button>
                   </div>
-                ) : unpaidPt.length === 0 ? (
-                  <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                    {t("Không có buổi PT nào chờ thu tiền.")}</div>
                 ) : (
-                  <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                  <>
                     {unpaidPt.map((item) => {
                       const isBusy = processingPtId === item.id;
                       return (
@@ -790,6 +772,7 @@ export function StaffReceptionPage() {
                         >
                           <div style={{ flex: 1, minWidth: 240 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="reception-todo__tag reception-todo__tag--pt">{t("Buổi PT")}</span>
                               <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
                                 PT #{item.id}
                               </span>
@@ -822,18 +805,10 @@ export function StaffReceptionPage() {
                         </div>
                       );
                     })}
-                  </div>
+                  </>
                 )}
-              </section>
 
-              <section className="reception-todo__group">
-                <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 className="reception-todo__title">{t("Đơn trải nghiệm 3 ngày chờ duyệt (")}{trialList.length})</h3>
-                  </div>
-                </div>
-
-                {loadingTrials ? (
+              {loadingTrials ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách đơn đăng ký trải nghiệm...")}</span>
                     <div
@@ -849,11 +824,8 @@ export function StaffReceptionPage() {
                       <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
                     </div>
                   </div>
-                ) : trialList.length === 0 ? (
-                  <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                    {t("Không có đơn trải nghiệm chờ duyệt.")}</div>
                 ) : (
-                  <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                  <>
                     {trialList.map((item) => {
                       const isBusy = processingTrialId === item.id;
                       return (
@@ -873,6 +845,7 @@ export function StaffReceptionPage() {
                         >
                           <div style={{ flex: 1, minWidth: 260 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="reception-todo__tag reception-todo__tag--trial">{t("Trải nghiệm")}</span>
                               <span
                                 style={{
                                   fontVariantNumeric: 'tabular-nums',
@@ -951,18 +924,10 @@ export function StaffReceptionPage() {
                         </div>
                       );
                     })}
-                  </div>
+                  </>
                 )}
-              </section>
 
-              <section className="reception-todo__group">
-                <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 className="reception-todo__title">{t("Yêu cầu bảo lưu (")}{holdList.length})</h3>
-                  </div>
-                </div>
-
-                {loadingHolds ? (
+              {loadingHolds ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách yêu cầu bảo lưu...")}</span>
                     <div
@@ -978,11 +943,8 @@ export function StaffReceptionPage() {
                       <div className="portal-skeleton-line" style={{ width: '70%', height: 14 }} />
                     </div>
                   </div>
-                ) : holdList.length === 0 ? (
-                  <div data-i18n-managed style={{ padding: '4px 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                    {t("Hiện không có yêu cầu bảo lưu gói tập nào đang chờ xử lý.")}</div>
                 ) : (
-                  <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                  <>
                     {holdList.map((item) => {
                       return (
                         <div data-i18n-managed
@@ -1001,6 +963,7 @@ export function StaffReceptionPage() {
                         >
                           <div style={{ flex: 1, minWidth: 260 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="reception-todo__tag reception-todo__tag--hold">{t("Bảo lưu")}</span>
                               <span
                                 style={{
                                   fontVariantNumeric: 'tabular-nums',
@@ -1043,9 +1006,12 @@ export function StaffReceptionPage() {
                         </div>
                       );
                     })}
-                  </div>
+                  </>
                 )}
-              </section>
+
+              {!loadingTodo && !ptError && todoCount === 0 && (
+                <div data-i18n-managed className="reception-todo__empty">{t("Không có việc nào cần xử lý.")}</div>
+              )}
             </div>
           </div>
         </div>

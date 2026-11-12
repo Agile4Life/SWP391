@@ -10,10 +10,10 @@
 .reception-checkout { margin-bottom: 24px; scroll-margin-top: 24px; }
 
 /* "Cần xử lý": mọi việc đang chờ lễ tân (gói tập, buổi PT, đơn trải nghiệm, bảo lưu) trong một thẻ */
-.reception-todo { display: grid; gap: 22px; margin-top: 12px; }
-.reception-todo__group { display: grid; gap: 0; min-width: 0; }
-.reception-todo__group + .reception-todo__group { padding-top: 18px; border-top: 1px solid var(--color-border-subtle); }
-.reception-todo__title { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--color-text-main); }
+.reception-todo { display: grid; gap: 10px; margin-top: 12px; min-width: 0; }
+.reception-todo__empty { padding: 24px 16px; text-align: center; color: var(--color-text-muted); font-size: 0.9rem; }
+/* Nhãn nhỏ cho biết mục thuộc loại việc nào; chỉ dùng màu trung tính + viền để không lệch bảng màu portal. */
+.reception-todo__tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--color-border-medium); background: var(--color-bg-card); color: var(--color-text-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
 
 @media (max-width: 767px) {
   .reception-top__search form { flex-wrap: wrap; }

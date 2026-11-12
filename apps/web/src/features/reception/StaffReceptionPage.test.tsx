@@ -58,10 +58,9 @@ it('gathers memberships, 1:1 sessions, trials and holds in one "Cần xử lý" 
   const headings = Array.from(host.querySelectorAll('h2, h3')).map((node) => node.textContent ?? '');
   expect(headings.some((text) => text.startsWith('Cần xử lý ('))).toBe(true);
   const card = host.querySelector('.reception-top__queue')!;
-  expect(card.textContent).toContain('Gói tập chờ thanh toán');
-  expect(card.textContent).toContain('Buổi PT chưa thanh toán');
-  expect(card.textContent).toContain('Đơn trải nghiệm 3 ngày chờ duyệt');
-  expect(card.textContent).toContain('Yêu cầu bảo lưu');
+  // Không còn tiêu đề từng nhóm: mỗi mục chỉ có một nhãn nhỏ chỉ loại việc.
+  expect(card.querySelector('.reception-todo__group')).toBeNull();
+  expect(card.querySelector('.reception-todo__empty')!.textContent).toContain('Không có việc nào cần xử lý');
   expect(host.querySelector('[data-testid="request-history"]')).toBeNull();
 });
 
@@ -169,11 +168,12 @@ it('lets the desk record payment for an unpaid hourly 1:1 session', async () => 
   api.getUnpaidCoachBookings.mockResolvedValueOnce([booking]).mockResolvedValue([]);
   api.confirmCoachBookingPayment.mockResolvedValue({ ...booking, paymentStatus: 'paid' });
   await act(async () => root.render(<StaffReceptionPage />));
-  expect(host.textContent).toContain('Buổi PT chưa thanh toán (1)');
+  expect(host.querySelector('.reception-todo__tag--pt')!.textContent).toBe('Buổi PT');
+  expect(host.querySelector('.reception-top__queue h2')!.textContent).toBe('Cần xử lý (1)');
   const confirm = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Đã thu tiền mặt')!;
   await act(async () => confirm.click());
   expect(api.confirmCoachBookingPayment).toHaveBeenCalledWith(90, 'cash');
-  expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
+  expect(host.querySelector('.reception-todo__tag--pt')).toBeNull();
 });
 
 it('renders pending trial applications and lets the desk approve a trial with name sync', async () => {
@@ -197,7 +197,7 @@ it('renders pending trial applications and lets the desk approve a trial with na
   api.approveTrial.mockResolvedValue({ ...trialItem, status: 'APPROVED' });
 
   await act(async () => root.render(<StaffReceptionPage />));
-  expect(host.textContent).toContain('Đơn trải nghiệm 3 ngày chờ duyệt (1)');
+  expect(host.querySelector('.reception-todo__tag--trial')!.textContent).toBe('Trải nghiệm');
   expect(host.textContent).toContain('Đơn thử #55');
   expect(host.textContent).toContain('NGUYỄN VĂN AN');
   expect(host.textContent).toContain('Đồng bộ họ tên');
@@ -238,7 +238,7 @@ it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
   expect(host.textContent).toContain('Mất kết nối');
   const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
   await act(async () => retry.click());
-  expect(host.textContent).toContain('Không có buổi PT nào chờ thu tiền.');
+  expect(host.querySelector('.reception-todo__tag--pt')).toBeNull();
 });
 
 it('lets the receptionist top up a selected member wallet at the counter', async () => {
