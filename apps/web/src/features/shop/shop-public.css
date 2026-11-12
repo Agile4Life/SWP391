@@ -1198,6 +1198,26 @@
   gap: 12px;
 }
 
+.fit-site .shop-fulfillment-options .shop-address-option {
+  align-items: center;
+  min-height: 56px;
+}
+
+.fit-site .shop-checkout-addresses {
+  display: grid;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.fit-site .shop-checkout-addresses > h3 {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-subtle, #ffffff1a);
+}
+
+:root[data-theme='light'] .fit-site .shop-checkout-addresses > h3 {
+  border-top-color: #e4e2de;
+}
+
 .fit-site .shop-checkout-items {
   list-style: none;
   margin: 0;
@@ -1299,25 +1319,33 @@
 /* Address Form & Picker in Public Checkout */
 .fit-site .shop-address-form {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .fit-site .shop-region-selects {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 18px;
+  align-items: start;
 }
 
 .fit-site .shop-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
+.fit-site .shop-field .form-error {
+  margin: 0;
+}
+
 .fit-site .shop-label {
-  font-size: 13px;
-  font-weight: 600;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
   color: var(--fit-paper);
 }
 
@@ -1383,6 +1411,14 @@
 :root[data-theme='light'] .fit-site .shop-address-option {
   background: #ffffff;
   border-color: #e4e2de;
+}
+
+.fit-site .shop-address-option input[type='radio'] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--fit-salmon);
 }
 
 .fit-site .shop-address-option.is-selected {

@@ -8,7 +8,7 @@ import { setLanguage } from '../../shared/i18n/language';
 import { aiApi, type MemberOption } from './aiApi';
 import * as profileApi from '../member/profileApi';
 
-vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn().mockResolvedValue([]), addHealthMetric: vi.fn() }));
+vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn().mockResolvedValue([]), addHealthMetrics: vi.fn() }));
 
 const MEMBERS: MemberOption[] = [
   { id: 1, memberCode: 'MB-2026-001', fullName: 'Lê Hoàng Long', fitnessGoal: 'Tăng cơ nạc', healthNotes: 'Tránh Deadlift tạ nặng', fitnessLevel: 'intermediate' },
@@ -236,6 +236,46 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).toContain('Dumbbell Hammer Curl');
   });
 
+  it('asks before the AI suggestion overwrites a member plan that is already in use', async () => {
+    vi.mocked(aiApi.listTrainingPlans).mockResolvedValue([
+      { id: 7, memberId: 1, coachId: 3, goal: 'Giảm mỡ bụng', startDate: '2026-11-12', endDate: '2026-12-10', status: 'active' },
+    ]);
+    await renderComponent();
+    const button = (label: string) => Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label));
+    await act(async () => { button('Gợi ý giáo án bằng AI')?.click(); });
+    await act(async () => { button('Phân tích & Sinh giáo án bằng AI')?.click(); });
+
+    await act(async () => { button('Áp dụng vào giáo án')?.click(); });
+    expect(host.ownerDocument.body.textContent).toContain('Ghi đè giáo án đã soạn trước đó?');
+    expect(host.ownerDocument.body.textContent).toContain('Giảm mỡ bụng');
+    expect(aiApi.listTrainingPlans).toHaveBeenCalledWith(1);
+
+    // Keeping the current plan leaves the AI result open and the editor untouched.
+    await act(async () => { button('Giữ giáo án hiện tại')?.click(); });
+    expect(host.ownerDocument.body.textContent).not.toContain('Ghi đè giáo án đã soạn trước đó?');
+    expect(host.ownerDocument.body.textContent).toContain('Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa');
+
+    await act(async () => { button('Áp dụng vào giáo án')?.click(); });
+    await act(async () => { button('Ghi đè bằng giáo án AI')?.click(); });
+    await openStep(2);
+    expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
+  });
+
+  it('does not warn about a plan another coach gave the same member, since it stays active', async () => {
+    vi.mocked(aiApi.listTrainingPlans).mockResolvedValue([
+      { id: 8, memberId: 1, coachId: 99, goal: 'Yoga phục hồi', startDate: '2026-11-12', endDate: '2026-12-10', status: 'active' },
+    ]);
+    await renderComponent();
+    const button = (label: string) => Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label));
+    await act(async () => { button('Gợi ý giáo án bằng AI')?.click(); });
+    await act(async () => { button('Phân tích & Sinh giáo án bằng AI')?.click(); });
+    await act(async () => { button('Áp dụng vào giáo án')?.click(); });
+
+    expect(host.ownerDocument.body.textContent).not.toContain('Ghi đè giáo án đã soạn trước đó?');
+    await openStep(2);
+    expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
+  });
+
   it('opens AI Assistant modal, generates recommendation, and applies it to the plan', async () => {
     await renderComponent();
 
@@ -380,7 +420,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     ]);
 
     await renderComponent();
-    expect(host.querySelector('#coach-metric-value')).toBeNull();
+    expect(host.querySelector('#coach-metric-weight')).toBeNull();
 
     const aiBtn = Array.from(host.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Gợi ý giáo án bằng AI')

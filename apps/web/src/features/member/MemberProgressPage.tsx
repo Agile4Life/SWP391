@@ -1,15 +1,21 @@
-import { memberText, memberMessage, memberRenderMessage } from './memberI18n';
-import type { SourceMessage } from '../../shared/i18n/language';
+import { memberText } from './memberI18n';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
-import { getMyCompletedItemIds, getMyProgressMetrics, getMyTrainingPlans, setTrainingItemCompleted, type ProgressMetric, type TrainingPlan } from './memberProgressApi';
-import { dailyExercises, weeklyMeasurements, type WeeklyPoint } from './progressPresentation';
+import { getMyProgressMetrics, getMyTrainingPlans, type ProgressMetric, type TrainingPlan } from './memberProgressApi';
+import { weeklyMeasurements, type WeeklyPoint } from './progressPresentation';
 import './member-progress.css';
 import { centerNowParts } from '../../shared/lib/centerTime';
-import { CoachEvaluations } from './CoachEvaluations';
+import { ActiveTrainingPlan } from './ActiveTrainingPlan';
 import { WorkoutHistory } from './WorkoutHistory';
+
+/** Số đo HLV nhập trong buổi đánh giá sức khỏe, ngoài cân nặng và BMI đã có biểu đồ. */
+const EXTRA_METRICS: { key: 'height' | 'bodyFat' | 'muscleMass'; vi: string; en: string; unit: string }[] = [
+  { key: 'height', vi: 'Cao', en: 'Height', unit: ' cm' },
+  { key: 'bodyFat', vi: 'Mỡ', en: 'Body fat', unit: '%' },
+  { key: 'muscleMass', vi: 'Cơ', en: 'Muscle', unit: ' kg' },
+];
 
 type LoadState<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: T };
 
@@ -78,13 +84,8 @@ function DailyProgress({ today }: { today: string }) {
   useLanguage();
   const [metrics, setMetrics] = useState<LoadState<ProgressMetric[]>>({ kind: 'loading' });
   const [plans, setPlans] = useState<LoadState<TrainingPlan[]>>({ kind: 'loading' });
-  const [completions, setCompletions] = useState<LoadState<number[]>>({ kind: 'loading' });
-  const [completionError, setCompletionError] = useState<string | SourceMessage>('');
-  const [savingItemId, setSavingItemId] = useState<number | null>(null);
-  const savingRef = useRef<number | null>(null);
   const [metricRetry, setMetricRetry] = useState(0);
   const [planRetry, setPlanRetry] = useState(0);
-  const [completionRetry, setCompletionRetry] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -98,56 +99,19 @@ function DailyProgress({ today }: { today: string }) {
       .catch(() => { if (active) setPlans({ kind: 'error' }); });
     return () => { active = false; };
   }, [planRetry]);
-  useEffect(() => {
-    let active = true;
-    getMyCompletedItemIds(today).then((data) => { if (active) setCompletions({ kind: 'ready', data }); })
-      .catch(() => { if (active) setCompletions({ kind: 'error' }); });
-    return () => { active = false; };
-  }, [today, completionRetry]);
-
-  async function updateCompletion(itemId: number, completed: boolean) {
-    if (savingRef.current != null || completions.kind !== 'ready') return;
-    savingRef.current = itemId;
-    setSavingItemId(itemId); setCompletionError('');
-    try {
-      await setTrainingItemCompleted(itemId, today, completed);
-      setCompletions((previous) => previous.kind === 'ready' ? {
-        kind: 'ready', data: completed
-          ? [...new Set([...previous.data, itemId])]
-          : previous.data.filter((id) => id !== itemId),
-      } : previous);
-    } catch {
-      setCompletionError(memberMessage("Không thể lưu trạng thái bài tập. Vui lòng thử lại."));
-    } finally {
-      savingRef.current = null; setSavingItemId(null);
-    }
-  }
 
   const points = metrics.kind === 'ready' ? weeklyMeasurements(metrics.data) : [];
-  const exercises = plans.kind === 'ready' ? dailyExercises(plans.data, today) : [];
+  const extras = EXTRA_METRICS.filter((extra) => points.some((point) => point[extra.key] != null));
   return <div className="member-progress">
-    <CoachEvaluations />
+    <ActiveTrainingPlan state={plans} today={today} onRetry={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }} />
     <section data-i18n-managed className="portal-card" aria-labelledby="progress-metrics-title">
       <div className="portal-card-header"><h2 id="progress-metrics-title" className="portal-card-title">{memberText("Thay đổi qua các tuần")}</h2></div>
-      {metrics.kind === 'loading' ? <LoadingSkeleton label={memberText("Đang tải số đo…")} variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">{memberText("Không thể tải số đo. ")}<button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div> : points.length === 0 ? <p className="portal-empty">{memberText("Chưa có số đo cân nặng hoặc BMI.")}</p> : <div className="member-progress-charts">
+      {metrics.kind === 'loading' ? <LoadingSkeleton label={memberText("Đang tải số đo…")} variant="cards" count={2} /> : metrics.kind === 'error' ? <div role="alert">{memberText("Không thể tải số đo. ")}<button type="button" className="member-progress-link" onClick={() => { setMetrics({ kind: 'loading' }); setMetricRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div> : points.length === 0 ? <p className="portal-empty">{memberText("Chưa có đánh giá sức khỏe từ huấn luyện viên.")}</p> : <div className="member-progress-charts">
         <ProgressSummary points={points} />
         <div><h3>{memberText("Cân nặng ")}<small>kg</small></h3><WeeklyChart points={points} metric="weight" label={memberText("Cân nặng ")} unit="kg" /></div>
         <div><h3>{memberText("Chỉ số BMI")}</h3><WeeklyChart points={points} metric="bmi" label="BMI" unit="BMI" /></div>
-        <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>{memberText("Tuần ")}{`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span></p>)}</div>
+        <div className="member-progress-values">{points.map((point) => <p key={point.weekStart}><time dateTime={point.weekStart}>{memberText("Tuần ")}{`${point.weekStart.slice(8, 10)}/${point.weekStart.slice(5, 7)}`}</time><span>{point.weight == null ? '—' : `${point.weight} kg`}</span><span>{point.bmi == null ? '—' : `BMI ${point.bmi}`}</span>{extras.map((extra) => <span key={extra.key}>{point[extra.key] == null ? '—' : `${memberText(extra.vi, extra.en)} ${point[extra.key]}${extra.unit}`}</span>)}</p>)}</div>
       </div>}
-    </section>
-    <section data-i18n-managed className="portal-card" aria-labelledby="progress-plan-title">
-      <div className="portal-card-header"><h2 id="progress-plan-title" className="portal-card-title">{memberText("Bài tập hôm nay")}</h2></div>
-      {plans.kind === 'loading' ? <LoadingSkeleton label={memberText("Đang tải giáo án…")} count={3} /> : plans.kind === 'error' ? <div role="alert">{memberText("Không thể tải giáo án. ")}<button type="button" className="member-progress-link" onClick={() => { setPlans({ kind: 'loading' }); setPlanRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div> : exercises.length === 0 ? <p className="portal-empty">{plans.data.length === 0 ? memberText("Chưa có giáo án đang hoạt động được giao.") : plans.data.some(plan => plan.status === 'active' && plan.startDate <= today && plan.endDate >= today) ? memberText("Hôm nay là ngày nghỉ hoặc chưa có bài tập được lên lịch.") : memberText("Chưa có giáo án có hiệu lực trong hôm nay.")}{plans.data.length === 0 && <small style={{ display: 'block', marginTop: 4 }}>{memberText("Giáo án của huấn luyện viên dành cho hội viên gói Gold trở lên.", "Coach plans are included from the Gold package.")}</small>}</p> : <>
-        {completions.kind === 'loading' && <LoadingSkeleton label={memberText("Đang tải trạng thái hoàn thành…")} count={1} />}
-        {completions.kind === 'error' && <div role="alert">{memberText("Không thể tải trạng thái hoàn thành. ")}<button type="button" className="member-progress-link" onClick={() => { setCompletions({ kind: 'loading' }); setCompletionRetry((value) => value + 1); }}>{memberText("Thử lại")}</button></div>}
-        {completionError && <p role="alert">{memberRenderMessage(completionError)}</p>}
-        {completions.kind === 'ready' && <p className="muted">{memberText("Đã hoàn thành ")}{exercises.filter(({item}) => completions.data.includes(item.id)).length}/{exercises.length}{memberText(" bài tập")}</p>}
-        <ol className="member-progress-exercises">{exercises.map(({ plan, item }) => <li key={`${plan.id}-${item.id}`}>
-        {completions.kind === 'ready' && <label className="member-progress-check"><input type="checkbox" aria-label={memberText(`Hoàn thành ${item.exerciseName}`, `Complete ${item.exerciseName}`)} checked={completions.data.includes(item.id)} disabled={savingItemId != null} onChange={(event) => void updateCompletion(item.id, event.target.checked)} />{savingItemId === item.id && <span>{memberText("Đang lưu…")}</span>}</label>}
-        <div><span className="member-progress-day">{plan.coachName || memberText("Huấn luyện viên")}</span><h3>{item.exerciseName}</h3>{item.description && <p>{item.description}</p>}</div>
-        <div className="member-progress-dose">{item.sets != null && item.reps != null && <span>{item.sets}{memberText(" hiệp × ")}{item.reps}{memberText(" lần")}</span>}{item.durationMinutes != null && <span>{item.durationMinutes}{memberText(" phút")}</span>}{item.restSeconds != null && <span>{memberText("Nghỉ ")}{item.restSeconds}{memberText(" giây")}</span>}</div>
-      </li>)}</ol></>}
     </section>
   </div>;
 }

@@ -35,7 +35,8 @@ function failure(error: unknown): string | Error {
   return error instanceof ApiError ? error : 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
 }
 
-export function MemberSupportPage() {
+/** `embedded`: hiển thị bên trong khung Tin nhắn (không tiêu đề trang, khung hẹp một cột). */
+export function MemberSupportPage({ embedded = false }: { embedded?: boolean } = {}) {
   useLanguage();
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -225,8 +226,8 @@ export function MemberSupportPage() {
     }
   }
 
-  return <div data-i18n-managed className="portal-container member-support" >
-    <PageHeader title={t("Hỗ trợ & khiếu nại", "Support & Tickets")} />
+  return <div data-i18n-managed className={`${embedded ? '' : 'portal-container '}member-support${embedded ? ' member-support--embedded' : ''}`}>
+    {!embedded && <PageHeader title={t("Hỗ trợ & khiếu nại", "Support & Tickets")} />}
     <div className="member-support-grid">
       <section data-i18n-managed className="portal-card" aria-labelledby="support-create-title">
         <div className="portal-card-header"><h2 id="support-create-title" className="portal-card-title">{t("Gửi yêu cầu", "Submit request")}</h2></div>

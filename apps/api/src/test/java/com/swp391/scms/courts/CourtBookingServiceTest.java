@@ -199,9 +199,6 @@ class CourtBookingServiceTest {
     @Test void rejectsUnknownPaymentMethod() {
         used(1); error("COURT_BOOKING_INVALID_PAYMENT_METHOD", () -> service.book(member, paid(LocalTime.NOON, "bank_transfer")));
     }
-    @Test void standingBookingThrowsDisabledException() {
-        error("COURT_RECURRING_DISABLED", () -> service.bookRecurring(member, recurring(date, "week", List.of(1, 3, 5))));
-    }
     @Test void quotaReportsPlanUsageAndRemaining() {
         used(1); plan("GOLD");
         var quota = service.quota(member, date);
@@ -330,16 +327,6 @@ class CourtBookingServiceTest {
         assertEquals(1, service.daily(staff, date, null, 0, 20).getTotalElements());
         assertEquals(2, service.daily(staff, date, 10L, 0, 20).getTotalElements());
         verify(bookings, never()).findDailyByRoom(eq(date), isNull(), any());
-    }
-
-    com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest recurring(LocalDate start, String period, List<Integer> days) {
-        return new com.swp391.scms.courts.dto.CourtBookingRequests.RecurringBookRequest(10L, start, LocalTime.NOON, period, days);
-    }
-
-    @Test void standingBookingIsDisabledForWeekAndMonth() {
-        error("COURT_RECURRING_DISABLED", () -> service.bookRecurring(member, recurring(date, "week", List.of(1, 3, 5))));
-        error("COURT_RECURRING_DISABLED", () -> service.bookRecurring(member, recurring(date, "month", null)));
-        verify(bookings, never()).saveAndFlush(any());
     }
 
     @Test void cancellingPaidCourtBookingMarksPaymentRefundedAndCreditsMemberWallet() {

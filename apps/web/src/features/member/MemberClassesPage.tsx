@@ -96,8 +96,7 @@ function formatDayGroupLabel(iso: string): string {
 }
 
 interface CourseScheduleInfo {
-  isMonthly: boolean;
-  /** Short cadence for badges, e.g. "Khóa 4 tuần (3 buổi/tuần)" or "Khóa hằng tháng (2 buổi/tháng)". */
+  /** Short cadence for badges, e.g. "Khóa 4 tuần (3 buổi/tuần)". */
   courseLabel: string;
   cadenceLabel: string;
   /** Same as courseLabel with spaces around the slash, as the course list shows it. */
@@ -117,15 +116,11 @@ function parseCourseSchedule(
   defaultStart?: string,
   defaultEnd?: string,
 ): CourseScheduleInfo {
-  const isMonthly = cls?.repeatType === 'monthly';
-  const monthDayList = isMonthly && cls?.monthDays
-    ? cls.monthDays.split(',').map((d) => Number(d.trim())).filter((d) => d >= 1 && d <= 31)
-    : [];
   const recurringDaysArr = cls?.recurringDays
     ? cls.recurringDays.split(',').map((d) => d.trim().toUpperCase()).filter(Boolean)
     : [];
   // No weekdays on record (and none derivable from sessions server-side): say so instead of guessing a default.
-  const daysUnknown = !isMonthly && recurringDaysArr.length === 0;
+  const daysUnknown = recurringDaysArr.length === 0;
   const daysPerWeek = recurringDaysArr.length;
 
   let durationWeeks = 4;
@@ -138,22 +133,7 @@ function parseCourseSchedule(
     }
   }
 
-  let totalSessions = durationWeeks * Math.max(daysPerWeek, 1);
-  if (isMonthly && cls?.startDate && cls?.endDate) {
-    // Same rule as the server: each chosen day of each month, a short month using its last day.
-    const dates = new Set<string>();
-    const from = new Date(`${cls.startDate}T00:00:00`);
-    const to = new Date(`${cls.endDate}T00:00:00`);
-    for (let y = from.getFullYear(), m = from.getMonth(); y < to.getFullYear() || (y === to.getFullYear() && m <= to.getMonth()); m += 1) {
-      if (m > 11) { m = 0; y += 1; }
-      const last = new Date(y, m + 1, 0).getDate();
-      for (const day of monthDayList) {
-        const date = new Date(y, m, Math.min(day, last));
-        if (date >= from && date <= to) dates.add(date.toDateString());
-      }
-    }
-    totalSessions = dates.size;
-  }
+  const totalSessions = durationWeeks * Math.max(daysPerWeek, 1);
 
   const DAY_LABELS: Record<string, string> = {
     MONDAY: 'Thứ 2',
@@ -165,24 +145,18 @@ function parseCourseSchedule(
     SUNDAY: 'Chủ Nhật',
   };
 
-  const daysText = isMonthly
-    ? memberText(`Ngày ${monthDayList.join(', ')} hằng tháng`, `Day ${monthDayList.join(', ')} of each month`)
-    : daysUnknown
-      ? memberText('Theo lịch từng buổi', 'See each session')
-      : recurringDaysArr.map((d) => DAY_LABELS[d] || d).join(', ');
-  const courseLabel = isMonthly
-    ? memberText(`Khóa hằng tháng (${monthDayList.length} buổi/tháng)`, `Monthly course (${monthDayList.length} sessions/month)`)
-    : daysUnknown
-      ? memberText(`Khóa ${durationWeeks} tuần`, `${durationWeeks}-week course`)
-      : memberText(`Khóa ${durationWeeks} tuần (${daysPerWeek} buổi/tuần)`, `${durationWeeks}-week course (${daysPerWeek} sessions/week)`);
-  const courseLabelSpaced = isMonthly || daysUnknown
+  const daysText = daysUnknown
+    ? memberText('Theo lịch từng buổi', 'See each session')
+    : recurringDaysArr.map((d) => DAY_LABELS[d] || d).join(', ');
+  const courseLabel = daysUnknown
+    ? memberText(`Khóa ${durationWeeks} tuần`, `${durationWeeks}-week course`)
+    : memberText(`Khóa ${durationWeeks} tuần (${daysPerWeek} buổi/tuần)`, `${durationWeeks}-week course (${daysPerWeek} sessions/week)`);
+  const courseLabelSpaced = daysUnknown
     ? courseLabel
     : memberText(`Khóa ${durationWeeks} tuần (${daysPerWeek} buổi / tuần)`, `${durationWeeks}-week course (${daysPerWeek} sessions / week)`);
-  const cadenceLabel = isMonthly
-    ? memberText(`${monthDayList.length} buổi / tháng`, `${monthDayList.length} sessions / month`)
-    : daysUnknown
-      ? memberText('Theo lịch từng buổi', 'See each session')
-      : memberText(`${daysPerWeek} buổi / tuần`, `${daysPerWeek} sessions / week`);
+  const cadenceLabel = daysUnknown
+    ? memberText('Theo lịch từng buổi', 'See each session')
+    : memberText(`${daysPerWeek} buổi / tuần`, `${daysPerWeek} sessions / week`);
   const startTimeStr = cls?.startTime || defaultStart || '08:00';
   const endTimeStr = cls?.endTime || defaultEnd || '09:00';
   const timeRange = `${startTimeStr.slice(0, 5)}–${endTimeStr.slice(0, 5)}`;
@@ -190,7 +164,6 @@ function parseCourseSchedule(
   const endDateIso = cls?.endDate || '';
 
   return {
-    isMonthly,
     courseLabel,
     courseLabelSpaced,
     cadenceLabel,
@@ -324,10 +297,10 @@ function MemberCourseDetailModal({
         >
           <div>
             <div className="meta-label">{memberText("THỜI LƯỢNG KHÓA HỌC", "COURSE DURATION")}</div>
-            <strong>{sched.isMonthly ? memberText(`${sched.totalSessions} buổi học`, `${sched.totalSessions} sessions`) : memberText(`${sched.durationWeeks} tuần (${sched.totalSessions} buổi học)`, `${sched.durationWeeks} weeks (${sched.totalSessions} sessions)`)}</strong>
+            <strong>{memberText(`${sched.durationWeeks} tuần (${sched.totalSessions} buổi học)`, `${sched.durationWeeks} weeks (${sched.totalSessions} sessions)`)}</strong>
           </div>
           <div>
-            <div className="meta-label">{sched.isMonthly ? memberText("TẦN SUẤT / THÁNG", "SESSIONS / MONTH") : memberText("TẦN SUẤT / TUẦN", "SESSIONS / WEEK")}</div>
+            <div className="meta-label">{memberText("TẦN SUẤT / TUẦN", "SESSIONS / WEEK")}</div>
             <strong>{sched.cadenceLabel}</strong>
           </div>
           <div>

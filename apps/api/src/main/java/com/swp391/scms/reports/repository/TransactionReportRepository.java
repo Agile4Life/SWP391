@@ -19,6 +19,7 @@ public interface TransactionReportRepository extends Repository<Payment, Long> {
             left join p.subscription s left join s.membershipPackage pkg
             left join p.classEnrollment e left join e.gymClass c
             where p.status = 'success' and u.deletedAt is null
+                and (p.note is null or p.note not like 'WALLET_TOPUP%')
                 and p.paidAt >= :start and p.paidAt < :endExclusive
             order by p.paidAt desc, p.id desc
             """)

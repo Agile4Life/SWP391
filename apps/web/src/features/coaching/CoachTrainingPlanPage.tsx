@@ -8,6 +8,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Select } from '../../shared/ui/Select';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { StatusMark } from '../../shared/ui/StatusMark';
@@ -18,6 +19,7 @@ import {
   type MemberOption,
   type WorkoutExerciseItem,
   type AiWorkoutPlanResult,
+  type SavedTrainingPlan,
 } from './aiApi';
 import { Link } from 'react-router-dom';
 import './coach-training-plan.css';
@@ -45,6 +47,7 @@ type PlanStep = (typeof PLAN_STEPS)[number]['id'];
 
 export function CoachTrainingPlanPage() {
   const { t } = useStaffI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
   // Role authorization
@@ -281,8 +284,43 @@ export function CoachTrainingPlanPage() {
   };
 
   // AC: Nút "Áp dụng vào giáo án"
-  const handleApplyAiPlan = () => {
+  const handleApplyAiPlan = async () => {
     if (!aiResult || !aiResult.items || aiResult.items.length === 0) return;
+
+    // Đã soạn tay (bài tập chưa lưu trong trình soạn) hoặc HLV phụ trách đã có giáo án đang áp dụng cho học viên: hỏi trước khi ghi đè.
+    // Mỗi cặp hội viên–HLV có một giáo án đang áp dụng; giáo án của HLV khác không bị ảnh hưởng nên không cần cảnh báo.
+    const handComposed = exercises.filter((item) => !item.id?.startsWith('ex-init-') && !item.id?.startsWith('ai-item-')).length;
+    let activePlan: SavedTrainingPlan | undefined;
+    try {
+      const plans = await aiApi.listTrainingPlans(aiResult.memberId);
+      const planCoachId = isManager ? selectedCoachId : Number(currentUser?.id);
+      activePlan = Array.isArray(plans)
+        ? plans.find((plan) => plan.status === 'active' && (planCoachId == null || Number.isNaN(planCoachId) || plan.coachId == null || plan.coachId === planCoachId))
+        : undefined;
+    } catch {
+      // Không tải được giáo án đã lưu thì chỉ kiểm tra phần soạn tay, không chặn việc áp dụng.
+    }
+    if (handComposed > 0 || activePlan) {
+      const memberLabel = aiResult.memberName || 'học viên';
+      const lines: string[] = [];
+      const linesEn: string[] = [];
+      if (handComposed > 0) {
+        lines.push(`Bạn đã soạn tay ${handComposed} bài tập trong trình soạn. Áp dụng gợi ý AI sẽ thay thế các bài tập đó.`);
+        linesEn.push(`You have hand-composed ${handComposed} exercise(s) in the editor. Applying the AI suggestion will replace them.`);
+      }
+      if (activePlan) {
+        const range = `${activePlan.startDate.split('-').reverse().join('/')} – ${activePlan.endDate.split('-').reverse().join('/')}`;
+        lines.push(`${memberLabel} đang có giáo án "${activePlan.goal || 'chưa đặt mục tiêu'}" (${range}) đang áp dụng. Khi lưu giáo án AI, giáo án cũ của HLV này sẽ chuyển vào lịch sử và có thể áp dụng lại bất cứ lúc nào. Giáo án của HLV khác vẫn giữ nguyên.`);
+        linesEn.push(`${memberLabel} already has the plan "${activePlan.goal || 'no goal set'}" (${range}) in use. When you save the AI plan, this coach's old plan moves to history and can be re-applied at any time. Plans from other coaches stay as they are.`);
+      }
+      const confirmed = await confirm({
+        title: staffMessage('Ghi đè giáo án đã soạn trước đó?', 'Overwrite the plan you composed earlier?'),
+        message: staffMessage(lines.join(' '), linesEn.join(' ')),
+        confirmLabel: staffMessage('Ghi đè bằng giáo án AI', 'Overwrite with AI plan'),
+        cancelLabel: staffMessage('Giữ giáo án hiện tại', 'Keep current plan'),
+      });
+      if (!confirmed) return;
+    }
 
     // Cập nhật thông tin hội viên & mục tiêu theo kết quả AI
     setSelectedMemberId(aiResult.memberId);
@@ -959,7 +997,7 @@ export function CoachTrainingPlanPage() {
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button type="button" className="btn-secondary" onClick={() => setIsAiModalOpen(false)}>
                     {t("Hủy bỏ")}</button>
-                  <button type="button" className="btn-primary btn-ai-sparkle" onClick={handleApplyAiPlan}>
+                  <button type="button" className="btn-primary btn-ai-sparkle" onClick={() => void handleApplyAiPlan()}>
                     <span>{t("Áp dụng vào giáo án")}</span>
                   </button>
                 </div>
@@ -983,7 +1021,7 @@ export function CoachTrainingPlanPage() {
           <div className="form-actions"><button type="button" className="btn-secondary" onClick={() => setEditingExercise(null)}>{t("Hủy")}</button><button type="submit" className="btn-primary">{t("Lưu bài tập")}</button></div>
         </form>
       </Modal>}
-
+      {confirmDialog}
     </div>
   );
 }

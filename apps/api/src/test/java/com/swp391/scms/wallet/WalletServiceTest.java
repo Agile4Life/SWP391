@@ -72,7 +72,7 @@ class WalletServiceTest {
 
         assertThat(wallet.getBalance()).isEqualByComparingTo("700000");
         verify(walletTransactionRepository, times(1)).save(any(WalletTransaction.class));
-        verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/packages"));
+        verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/invoices"));
     }
 
     @Test
@@ -149,6 +149,6 @@ class WalletServiceTest {
                         && "COUNTER_TOPUP".equals(tx.getReferenceType())
                         && tx.getDescription().contains("Tiền mặt tại quầy Lễ tân")
         ));
-        verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/packages"));
+        verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/invoices"));
     }
 }

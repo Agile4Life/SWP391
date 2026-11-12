@@ -59,6 +59,16 @@ class PaymentDescriptionTest {
     }
 
     @Test
+    void walletTopupPaymentIsLabelledAsAWalletTopup() throws Exception {
+        Payment payment = new Payment();
+        payment.setNote("WALLET_TOPUP:COUNTER");
+
+        PaymentDto dto = describe(payment);
+
+        assertThat(dto.getServiceType()).isEqualTo("WALLET_TOPUP");
+    }
+
+    @Test
     void unlinkedPaymentIsOther() throws Exception {
         PaymentDto dto = describe(new Payment());
         assertThat(dto.getServiceType()).isEqualTo("OTHER");

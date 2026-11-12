@@ -36,9 +36,6 @@ export interface ClassItem {
   startDate?: string;
   endDate?: string;
   recurringDays?: string;
-  /** `weekly` (on recurringDays) or `monthly` (on monthDays). */
-  repeatType?: string;
-  monthDays?: string;
   startTime?: string;
   endTime?: string;
 }
@@ -56,9 +53,6 @@ export interface CreateRecurringClassPayload {
   endDate: string;
   /** Weekdays of a weekly course. */
   recurringDays?: string[];
-  repeatType?: 'weekly' | 'monthly';
-  /** Days of the month (1-31) of a monthly course. */
-  monthDays?: number[];
   startTime: string;
   endTime: string;
 }

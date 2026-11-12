@@ -76,14 +76,19 @@ export interface SavedTrainingPlan {
   goal: string | null;
   startDate: string;
   endDate: string;
-  status: 'draft' | 'active' | 'completed' | 'cancelled' | string;
+  status: 'draft' | 'active' | 'superseded' | 'completed' | 'cancelled' | string;
   aiGenerated?: boolean;
   items?: SavedTrainingPlanItem[];
 }
 
 export const aiApi = {
   /** Giáo án đã lưu trên server: Coach thấy của mình, Manager thấy tất cả. */
-  listTrainingPlans: () => apiFetch<SavedTrainingPlan[]>('/coaching/training-plans'),
+  listTrainingPlans: (memberId?: number) =>
+    apiFetch<SavedTrainingPlan[]>(memberId != null ? `/coaching/training-plans?memberId=${memberId}` : '/coaching/training-plans'),
+
+  /** Đưa giáo án trong lịch sử về trạng thái đang áp dụng; giáo án đang áp dụng hiện tại chuyển vào lịch sử. */
+  reapplyTrainingPlan: (id: number) =>
+    apiFetch<SavedTrainingPlan>(`/coaching/training-plans/${id}/reapply`, { method: 'PUT' }),
 
   updateTrainingPlan: (id: number, input: { goal: string; startDate: string; endDate: string; items?: SavedTrainingPlanItem[] }) =>
     apiFetch<SavedTrainingPlan>(`/coaching/training-plans/${id}`, {

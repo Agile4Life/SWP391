@@ -60,7 +60,7 @@ public class SecurityConfig {
                     // Profile extensions (SCRUM-66)
                     .requestMatchers(HttpMethod.POST, "/api/v1/profile/avatar").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
-                    .requestMatchers("/api/v1/wallet/members/**").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
+                    .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/wallet/**").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/receptionist").hasRole("RECEPTIONIST")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("ADMIN")
@@ -91,7 +91,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/process").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/payments/**", "/api/v1/invoices/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers("/api/v1/wallet/members/**").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
+                    .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
 
                     // Reports (SCRUM-79)
                     .requestMatchers(HttpMethod.GET, "/api/v1/reports/class-utilization").hasAnyRole("ADMIN", "CENTER_MANAGER", "MANAGER")
@@ -107,7 +107,6 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coaching/evaluations").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/health/first-assessment/candidates").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/health/metrics").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/health/metrics/my").hasRole("MEMBER")
                     .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
@@ -120,8 +119,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
                     .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
 
-                    // Desk review of identity documents
-                    .requestMatchers("/api/v1/members/kyc/**").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    // Desk review of identity documents: the front desk owns it, the manager portal no longer does
+                    .requestMatchers("/api/v1/members/kyc/**").hasRole("RECEPTIONIST")
 
                     // Internal Staff Requests (SCRUM-135)
                     .requestMatchers(HttpMethod.POST, "/api/v1/operations/requests").hasAnyRole("STAFF", "COACH", "RECEPTIONIST")
@@ -132,22 +131,23 @@ public class SecurityConfig {
                     // Membership Subscriptions (SCRUM-71)
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/pending", "/api/v1/subscriptions/pending",
-                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending",
                             "/api/v1/memberships/subscriptions/requests/history", "/api/v1/subscriptions/requests/history")
                             .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                    // Membership holds are reviewed by the front desk only.
                     .requestMatchers(HttpMethod.GET,
+                            "/api/v1/memberships/subscriptions/holds/pending", "/api/v1/subscriptions/holds/pending",
                             "/api/v1/memberships/subscriptions/holds", "/api/v1/subscriptions/holds")
-                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
-                    // The owner and desk staff read a hold and its medical documents; the service re-checks ownership.
+                            .hasRole("RECEPTIONIST")
+                    // The owner and the front desk read a hold and its medical documents; the service re-checks ownership.
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/*/hold", "/api/v1/subscriptions/*/hold",
                             "/api/v1/memberships/subscriptions/*/hold/documents/*", "/api/v1/subscriptions/*/hold/documents/*")
-                            .hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
+                            .hasAnyRole("MEMBER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST,
                             "/api/v1/memberships/subscriptions/*/hold/withdraw", "/api/v1/subscriptions/*/hold/withdraw",
                             "/api/v1/memberships/subscriptions/*/hold/approve", "/api/v1/subscriptions/*/hold/approve",
                             "/api/v1/memberships/subscriptions/*/hold/reject", "/api/v1/subscriptions/*/hold/reject")
-                            .hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
+                            .hasRole("RECEPTIONIST")
                     // POS: nhân viên mua mới/gia hạn thay hội viên; phải đứng trước matcher MEMBER bên dưới
                     .requestMatchers(HttpMethod.GET,
                             "/api/v1/memberships/subscriptions/members/*/renewal-candidates",
@@ -190,7 +190,7 @@ public class SecurityConfig {
                     // Court booking roles are enforced here and at controller boundaries.
                     .requestMatchers(HttpMethod.GET, "/api/v1/courts", "/api/v1/courts/**").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my", "/api/v1/court-bookings/quota").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings", "/api/v1/court-bookings/recurring").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
@@ -206,7 +206,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/attendance").hasAnyRole("COACH", "RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/unpaid").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings", "/api/v1/coach-bookings/recurring").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/coach-bookings").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/my").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/coach-bookings/*").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/members/me/favorite-disciplines/**", "/api/v1/members/me/favorite-disciplines").hasRole("MEMBER")

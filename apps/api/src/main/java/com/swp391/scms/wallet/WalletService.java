@@ -22,6 +22,7 @@ public class WalletService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
+    private CounterTopupService counterTopupService;
 
     public WalletService(
             WalletRepository walletRepository,
@@ -43,6 +44,12 @@ public class WalletService {
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
+    }
+
+    /** Optional: records a front-desk top-up as a settled payment so it reaches the member's invoices. */
+    @Autowired(required = false)
+    public void setCounterTopupService(@org.springframework.context.annotation.Lazy CounterTopupService counterTopupService) {
+        this.counterTopupService = counterTopupService;
     }
 
     @Transactional
@@ -137,7 +144,7 @@ public class WalletService {
                         "payment",
                         "wallet",
                         wallet.getId(),
-                        "/member/packages"
+                        "/member/invoices"
                 );
             } catch (RuntimeException ignored) {
             }
@@ -194,6 +201,10 @@ public class WalletService {
         wallet.setUpdatedAt(now);
         walletRepository.saveAndFlush(wallet);
 
+        if (counterTopupService != null) {
+            counterTopupService.record(memberId, amount, paymentMethod, staffUserId);
+        }
+
         if (notificationService != null) {
             try {
                 String title = messageService != null
@@ -209,7 +220,7 @@ public class WalletService {
                         "payment",
                         "wallet",
                         wallet.getId(),
-                        "/member/packages"
+                        "/member/invoices"
                 );
             } catch (RuntimeException ignored) {
             }

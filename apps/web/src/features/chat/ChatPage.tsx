@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useInRouterContext, useLocation } from 'react-router-dom';
 import { getCurrentUser } from '../../shared/api/client';
 import { chatError, type ChatError } from './chatMessages';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -11,6 +12,7 @@ import { ChatAvatar } from './ChatAvatar';
 import { ChatContacts } from './ChatContacts';
 import { ChatThread } from './ChatThread';
 import { AiChatThread } from './AiChatThread';
+import { SupportThread } from './SupportThread';
 import { AI_PEER } from './aiPeer';
 import { useI18n } from '../../shared/i18n';
 import './chat.css';
@@ -44,10 +46,12 @@ export function ChatPage({ embedded = false, visible = true, realtime, onPeersCh
   const user = getCurrentUser();
   if (!user || !['MEMBER', 'STAFF', 'COACH'].includes(user.role))
     return <div data-i18n-managed className="portal-container"><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1><p role="alert">{t("Bạn không có quyền truy cập chat riêng.", "You do not have access to private chat.")}</p></div>;
-  return <ChatWorkspace member={user.role === 'MEMBER'} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
+  // Hội viên và lễ tân có thêm mục Hỗ trợ & Khiếu nại; huấn luyện viên không nhận khiếu nại.
+  const support = user.role === 'MEMBER' ? 'member' : user.role === 'STAFF' ? 'staff' : null;
+  return <ChatWorkspace member={user.role === 'MEMBER'} support={support} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
 }
 
-function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: { member: boolean; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
+function ChatWorkspace({ member, support, embedded, visible, realtime, onPeersChange }: { member: boolean; support: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selected, setSelected] = useState<ChatConversation | null>(null);
@@ -61,8 +65,11 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
   const [ownConnection, setConnection] = useState<ChatConnection>('connecting');
   const connection = realtime?.connection ?? ownConnection;
   const [connectionAttempt, setConnectionAttempt] = useState(0);
-  const [mobileThread, setMobileThread] = useState(false);
+  // /messages?tab=support (liên kết từ thông báo, email, đường dẫn cũ) mở thẳng mục Hỗ trợ & Khiếu nại.
+  const openSupportFromUrl = !embedded && !!support && new URLSearchParams(window.location.search).get('tab') === 'support';
+  const [mobileThread, setMobileThread] = useState(openSupportFromUrl);
   const [aiOpen, setAiOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(openSupportFromUrl);
   const pageRef = useRef(0), listSequence = useRef(0), opening = useRef(false), mounted = useRef(true);
   const onPeersRef = useRef(onPeersChange);
   const listTitle = useRef<HTMLHeadingElement>(null);
@@ -102,10 +109,13 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
   }, []);
 
   function select(conversation: ChatConversation) {
-    setAiOpen(false); setSelected(conversation); chat.select(conversation.id); setMobileThread(true);
+    setAiOpen(false); setSupportOpen(false); setSelected(conversation); chat.select(conversation.id); setMobileThread(true);
   }
   function selectAi() {
-    setAiOpen(true); setMobileThread(true);
+    setSupportOpen(false); setAiOpen(true); setMobileThread(true);
+  }
+  function selectSupport() {
+    setAiOpen(false); setSupportOpen(true); setMobileThread(true);
   }
   const backToList = () => { setMobileThread(false); requestAnimationFrame(() => listTitle.current?.focus({ preventScroll: true })); };
   async function choose(contact: ChatContact) {
@@ -119,7 +129,9 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
     finally { opening.current = false; if (mounted.current) setPending(null); }
   }
 
+  const inRouter = useInRouterContext();
   return <div data-i18n-managed className={`portal-container direct-chat${mobileThread ? ' direct-chat--thread-open' : ''}`}>
+    {inRouter && !embedded && support && <SupportTabLink onOpen={selectSupport} />}
     {/* Trong widget, tiêu đề, trạng thái kết nối và nút làm mới nằm ở header của widget. */}
     {!embedded && <header className="portal-header"><div><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1></div>
       <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}>{t(...connectionLabel[connection])}</span>
@@ -147,8 +159,17 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
             <span className="direct-chat__compose-fab-label">{showContacts ? t('Đóng danh bạ', 'Close contacts') : t('Cuộc trò chuyện mới', 'New conversation')}</span>
           </button>
         </div>
-        {/* SÖL AI luôn ghim ở đầu, trên cả danh bạ, như một người để trò chuyện. */}
+        {/* Hỗ trợ & Khiếu nại (hội viên → lễ tân) và SÖL AI luôn ghim ở đầu, trên cả danh bạ. */}
         <ul className="direct-chat__list direct-chat__list--pinned">
+          {support && <li><button type="button" className={`direct-chat__person direct-chat__person--support${supportOpen ? ' is-selected' : ''}`} onClick={selectSupport} aria-current={supportOpen ? 'true' : undefined}>
+            <span className="direct-chat__avatar direct-chat__avatar--support" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 18 0" /><path d="M3 12v3a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z" /><path d="M21 12v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2z" /><path d="M18 17v1a3 3 0 0 1-3 3h-2" /></svg>
+            </span>
+            <span className="direct-chat__person-info">
+              <strong>{t("Hỗ trợ & Khiếu nại", "Support & Tickets")}</strong>
+              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{support === 'staff' ? t("Phiếu hội viên gửi lên lễ tân", "Tickets members send to the front desk") : t("Gửi yêu cầu, khiếu nại tới lễ tân", "Send requests and complaints to the front desk")}</small></span>
+            </span>
+          </button></li>}
           <li><button type="button" className={`direct-chat__person direct-chat__person--ai${aiOpen ? ' is-selected' : ''}`} onClick={selectAi} aria-current={aiOpen ? 'true' : undefined}>
             <ChatAvatar contact={AI_PEER} />
             <span className="direct-chat__person-info">
@@ -161,7 +182,7 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
         {listError && <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
         {loading && <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversations…")} count={4} />}
         {!loading && <ul className="direct-chat__list">
-          {conversations.map(c => <li key={c.id}><button type="button" className={`direct-chat__person${!aiOpen && chat.selectedId === c.id ? ' is-selected' : ''}${c.unreadCount ? ' has-unread' : ''}`} onClick={() => select(c)} aria-current={!aiOpen && chat.selectedId === c.id ? 'true' : undefined}>
+          {conversations.map(c => <li key={c.id}><button type="button" className={`direct-chat__person${!aiOpen && !supportOpen && chat.selectedId === c.id ? ' is-selected' : ''}${c.unreadCount ? ' has-unread' : ''}`} onClick={() => select(c)} aria-current={!aiOpen && !supportOpen && chat.selectedId === c.id ? 'true' : undefined}>
               <ChatAvatar contact={c.peer} />
               <span className="direct-chat__person-info">
                 <strong data-i18n-managed>{c.peer.name}</strong>
@@ -189,9 +210,24 @@ function ChatWorkspace({ member, embedded, visible, realtime, onPeersChange }: {
           <button type="button" className="direct-chat__link" disabled={page + 1 >= totalPages} onClick={() => void loadInbox(page + 1)}>{t("Sau", "Next")}</button>
         </nav>}
       </aside>
-      {aiOpen ? <AiChatThread active={mobileThread} onBack={backToList} />
+      {supportOpen && support ? <SupportThread staff={support === 'staff'} active={mobileThread} onBack={backToList} />
+        : aiOpen ? <AiChatThread active={mobileThread} onBack={backToList} />
         : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} />
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}
     </div>
   </div>;
+}
+
+/**
+ * Mở mục Hỗ trợ & Khiếu nại mỗi lần điều hướng tới /messages?tab=support, kể cả khi trang Tin nhắn đang mở sẵn
+ * (bấm thông báo phiếu hỗ trợ ngay trong trang). Theo location.key nên bấm lại cùng liên kết vẫn mở lại mục này.
+ */
+function SupportTabLink({ onOpen }: { onOpen: () => void }) {
+  const location = useLocation();
+  const onOpenRef = useRef(onOpen);
+  useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tab') === 'support') onOpenRef.current();
+  }, [location.key, location.search]);
+  return null;
 }

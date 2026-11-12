@@ -1,6 +1,5 @@
 import { test, expect, settled, field } from '../fixtures';
 import { authFile } from '../helpers/accounts';
-import { newMember } from '../helpers/session';
 
 test.use({ storageState: authFile('coach') });
 
@@ -84,24 +83,6 @@ test.describe('HLV: điểm danh buổi PT 1:1', () => {
   });
 });
 
-test.describe('HLV: đánh giá thể trạng lần đầu', () => {
-  test('tìm hội viên mới; không có kết quả với từ khóa lạ; từ khóa quá ngắn bị chặn', async ({ page }) => {
-    const m = await newMember({ prefix: 'e2ea' });
-    await page.goto('/coach/first-assessment');
-    await settled(page);
-    const search = page.locator('#first-assessment-search');
-    await search.fill('x');
-    await page.getByRole('button', { name: 'Tìm hội viên' }).click();
-    await expect(page.getByText(/ít nhất 2 ký tự/)).toBeVisible();
-    await search.fill(`khong-co-${Date.now()}`);
-    await page.getByRole('button', { name: 'Tìm hội viên' }).click();
-    await expect(page.getByRole('button', { name: 'Đánh giá' })).toHaveCount(0);
-    await search.fill(m.username.slice(0, 10));
-    await page.getByRole('button', { name: 'Tìm hội viên' }).click();
-    await expect(page.getByRole('button', { name: 'Đánh giá' }).first()).toBeVisible();
-  });
-});
-
 /** Giáo án soạn theo 3 bước: 1 học viên & kế hoạch, 2 bài tập theo ngày, 3 xem lại & kích hoạt. Chỉ số sức khỏe có tab riêng. */
 const openPlanStep = (page: import('@playwright/test').Page, step: 1 | 2 | 3) => page.locator('.plan-step__button').nth(step - 1).click();
 
@@ -152,12 +133,13 @@ test.describe('HLV: soạn giáo án', () => {
   test('thêm số đo sức khỏe: giá trị hợp lệ hiện trong bảng, giá trị âm bị chặn', async ({ page }) => {
     await page.goto('/coach/health-metrics');
     await settled(page);
-    const value = page.locator('#coach-metric-value');
-    await value.fill('-5');
-    await page.getByRole('button', { name: 'Thêm số đo' }).click();
+    const weight = page.locator('#coach-metric-weight');
+    await weight.fill('-5');
+    await page.getByRole('button', { name: 'Lưu đánh giá' }).click();
     await expect(page.locator('main')).not.toContainText('-5 kg');
-    await value.fill('75.5');
-    await page.getByRole('button', { name: 'Thêm số đo' }).click();
+    await weight.fill('75.5');
+    await page.locator('#coach-metric-height').fill('175');
+    await page.getByRole('button', { name: 'Lưu đánh giá' }).click();
     await expect(page.locator('main')).toContainText('75.5');
   });
 

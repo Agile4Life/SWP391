@@ -61,14 +61,6 @@ public class GymClass {
     @Column(name = "recurring_days", length = 100)
     private String recurringDays;
 
-    /** How the course repeats: {@code weekly} on {@link #recurringDays}, or {@code monthly} on {@link #monthDays}. */
-    @Column(name = "repeat_type", length = 10)
-    private String repeatType = "weekly";
-
-    /** Comma-separated days of the month (1-31) of a monthly course; a day a month lacks falls on its last day. */
-    @Column(name = "month_days", length = 100)
-    private String monthDays;
-
     @Column(name = "start_time")
     private LocalTime startTime;
 
@@ -114,10 +106,6 @@ public class GymClass {
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
-    public String getRepeatType() { return repeatType; }
-    public void setRepeatType(String repeatType) { this.repeatType = repeatType; }
-    public String getMonthDays() { return monthDays; }
-    public void setMonthDays(String monthDays) { this.monthDays = monthDays; }
     public String getRecurringDays() { return recurringDays; }
     public void setRecurringDays(String recurringDays) { this.recurringDays = recurringDays; }
     public LocalTime getStartTime() { return startTime; }

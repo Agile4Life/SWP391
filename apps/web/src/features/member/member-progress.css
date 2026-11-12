@@ -14,6 +14,12 @@
 .member-progress-exercises p { margin: 6px 0 0; color: var(--portal-muted); font-size: 12px; }
 .member-progress-day { color: var(--portal-salmon); font-size: 12px; }
 .member-progress-dose { display: grid; align-content: center; gap: 5px; flex-shrink: 0; font-size: 12px; }
+.member-progress-plan + .member-progress-plan { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--portal-border); }
+.member-progress-plan__head h3 { margin: 0; font-size: 16px; }
+.member-progress-plan__head p { margin: 4px 0 0; font-size: 12px; }
+.member-progress-plan__day { margin-top: 16px; }
+.member-progress-plan__day h4 { margin: 0 0 2px; font-weight: 600; }
+.member-progress-plan__day li:last-child { border-bottom: 0; }
 .member-progress-dependency { margin: 18px 0 0; color: var(--portal-muted); font-size: 12px; }
 .member-progress-check { display: inline-flex; align-items: center; gap: 8px; color: var(--portal-muted); font-size: 12px; }
 .member-progress-check input { width: 18px; height: 18px; accent-color: var(--portal-salmon); cursor: pointer; }
