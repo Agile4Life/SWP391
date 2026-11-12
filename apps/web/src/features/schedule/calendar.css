@@ -113,11 +113,11 @@
 
 .mcal__event--court { background: var(--mcal-court); color: var(--portal-on-accent); }
 .mcal__event--mine, .mcal__event--class { background: var(--mcal-class); color: var(--portal-on-accent); }
-.mcal__event--open { background: color-mix(in srgb, var(--portal-info) 24%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--portal-info); }
-.mcal__event--full { background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--portal-warning); }
-.mcal__event--neutral { background: var(--portal-raised); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--portal-salmon); }
+.mcal__event--open { background: color-mix(in srgb, var(--portal-info) 24%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-info) 55%, transparent); }
+.mcal__event--full { background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-warning) 55%, transparent); }
+.mcal__event--neutral { background: var(--portal-raised); color: var(--portal-paper); box-shadow: inset 0 0 0 1px var(--portal-border-strong); }
 .mcal__event--past, .mcal__event.is-past { background: color-mix(in srgb, var(--portal-paper) 16%, var(--portal-raised)); color: var(--portal-muted); box-shadow: none; }
-.mcal__event--cancelled, .mcal__event.is-cancelled { background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); color: var(--portal-muted); box-shadow: inset 3px 0 0 var(--portal-danger); }
+.mcal__event--cancelled, .mcal__event.is-cancelled { background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); color: var(--portal-muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-danger) 55%, transparent); }
 .mcal__event--cancelled .mcal__event-title, .mcal__event.is-cancelled .mcal__event-title { text-decoration: line-through; }
 
 /* Khối 1 giờ: tên một dòng để còn chỗ cho phòng */

@@ -244,7 +244,6 @@ export function ManagerEquipmentPage() {
             font: 'inherit',
             color: 'inherit',
             padding: '18px 22px',
-            borderLeft: '5px solid var(--portal-salmon)',
             background: filterRoom === 'STANDARD' ? 'var(--portal-tint)' : undefined,
             cursor: 'pointer',
           }}
@@ -274,7 +273,6 @@ export function ManagerEquipmentPage() {
             font: 'inherit',
             color: 'inherit',
             padding: '18px 22px',
-            borderLeft: '5px solid var(--portal-salmon)',
             background: filterRoom === 'VIP' ? 'var(--portal-tint)' : undefined,
             cursor: 'pointer',
           }}

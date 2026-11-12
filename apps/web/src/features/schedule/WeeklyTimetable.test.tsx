@@ -49,12 +49,13 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelector<HTMLElement>('.mcal__event')!.style.top).toBe('calc(50% + 3px)');
   });
 
-  it('draws one block per session with time, title, place and status', async () => {
+  it('draws one block per session with title, place and status; the time lives in the hour column and tooltip', async () => {
     const onEventClick = vi.fn();
     await render({ onEventClick });
     const blocks = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
     expect(blocks).toHaveLength(1);
-    expect([...blocks[0].children].map((node) => node.textContent)).toEqual(['08:00 - 09:303/12 chỗ', 'Yoga Flow', 'Studio · HLV An']);
+    expect([...blocks[0].children].map((node) => node.textContent)).toEqual(['3/12 chỗ', 'Yoga Flow', 'Studio · HLV An']);
+    expect(blocks[0].getAttribute('title')).toContain('08:00 - 09:30');
     expect(blocks[0].classList).toContain('mcal__event--open');
     await act(async () => blocks[0].click());
     expect(onEventClick).toHaveBeenCalledWith('7');

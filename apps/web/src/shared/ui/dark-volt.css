@@ -11,7 +11,7 @@
 
 /* Member calendar: the "class" type colour follows the accent (court stays blue, PT stays green). */
 :root:not([data-theme='light']) .mcal--member { --mcal-class: var(--sol-accent); }
-:root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class) { border-left-color: var(--sol-accent-deep); }
+:root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class) { border-color: var(--sol-accent-deep); }
 
 /* Landing: pale salmon text and warm tints become Volt text / neutral. */
 :root:not([data-theme='light']) .fit-scroll-progress { background: linear-gradient(90deg, var(--sol-accent), var(--sol-accent-hover)); }
@@ -34,8 +34,8 @@
 :root:not([data-theme='light']) .fit-service p { color: var(--fit-muted); }
 
 /* Calendars: class/mine events are a tinted surface with a Volt edge (a solid Volt block is too bright at this size). */
-:root:not([data-theme='light']) :is(.mcal__event--class, .mcal__event--mine) { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 3px 0 0 var(--sol-accent); }
-:root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class):not(.is-past):not(.is-cancelled) { color: var(--portal-paper); border-left-color: var(--sol-accent); }
+:root:not([data-theme='light']) :is(.mcal__event--class, .mcal__event--mine) { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sol-accent) 60%, transparent); }
+:root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class):not(.is-past):not(.is-cancelled) { color: var(--portal-paper); border-color: var(--sol-accent); }
 :root:not([data-theme='light']) .mcal--member .mcal__chip--class { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); }
 
 /* ---- LED / glow (Dark only). Limits: at most three box-shadow layers per element, no new looping animation,
