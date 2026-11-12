@@ -5,6 +5,7 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { Select } from '../../shared/ui/Select';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { receptionApi, type RequestHistoryItem } from './receptionApi';
+import './request-history.css';
 
 const TYPE_LABELS: Record<RequestHistoryItem['type'], StaffMessage> = {
   REGISTER: staffMessage('Đăng ký', 'Register'),
@@ -52,7 +53,7 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
     <section className="portal-card" aria-label={t('Lịch sử xử lý yêu cầu gói tập')} data-testid="request-history">
       <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h2 className="portal-card-title">{t('Lịch sử xử lý yêu cầu gói tập')}</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="request-history__filters">
           <Select aria-label={t('Loại yêu cầu')} value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
             <option value="ALL">{t('Tất cả loại')}</option>
             <option value="REGISTER">{t(TYPE_LABELS.REGISTER)}</option>
