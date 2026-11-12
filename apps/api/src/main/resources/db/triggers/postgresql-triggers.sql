@@ -346,7 +346,7 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.membership_subscriptions ADD CONSTRAINT ck_subscriptions_status CHECK (status IN (''pending_payment'',''active'',''frozen'',''expired'',''cancelled''))', current_schema());
     END IF;
 
-    -- A member has one active plan; the plan it replaces is kept as history ('superseded') and can be re-applied.
+    -- Each member–coach pair has one active plan; the plan it replaces is kept as history ('superseded') and can be re-applied.
     IF EXISTS (
         SELECT 1
         FROM information_schema.tables
@@ -355,6 +355,9 @@ BEGIN
     ) THEN
         EXECUTE format('ALTER TABLE %I.training_plans DROP CONSTRAINT IF EXISTS ck_plans_status', current_schema());
         EXECUTE format('ALTER TABLE %I.training_plans ADD CONSTRAINT ck_plans_status CHECK (status IN (''draft'',''active'',''superseded'',''completed'',''cancelled''))', current_schema());
+        -- Plans activated before this rule may leave one coach with several active plans for a member: keep the newest
+        -- per member–coach pair, move the rest to history. Plans from the member's other coaches stay active.
+        EXECUTE format('UPDATE %1$I.training_plans p SET status = ''superseded'' WHERE p.status = ''active'' AND EXISTS (SELECT 1 FROM %1$I.training_plans newer WHERE newer.member_id = p.member_id AND newer.coach_id = p.coach_id AND newer.status = ''active'' AND (newer.created_at > p.created_at OR (newer.created_at = p.created_at AND newer.id > p.id)))', current_schema());
     END IF;
 
     IF EXISTS (

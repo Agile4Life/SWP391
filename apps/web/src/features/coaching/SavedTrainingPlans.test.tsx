@@ -109,11 +109,13 @@ it('edits saved exercise sets, reps and rest time with its existing server ID', 
 });
 
 it('tags the current plan and offers re-applying a history plan after confirmation', async () => {
-  const history: SavedTrainingPlan = { ...active, id: 9, goal: 'Giáo án cũ', status: 'superseded' };
-  const list = vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([active, history]);
+  const mine: SavedTrainingPlan = { ...active, coachId: 3 };
+  const otherCoach: SavedTrainingPlan = { ...active, id: 4, coachId: 99, goal: 'Yoga phục hồi' };
+  const history: SavedTrainingPlan = { ...active, id: 9, coachId: 3, goal: 'Giáo án cũ', status: 'superseded' };
+  const list = vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([mine, otherCoach, history]);
   const reapply = vi.spyOn(aiApi, 'reapplyTrainingPlan').mockResolvedValue({ ...history, status: 'active' });
   await render();
-  const [current, old] = rows();
+  const [current, , old] = rows();
   expect(current.textContent).toContain('Đang áp dụng');
   expect(buttonIn(current, 'Áp dụng lại')).toBeFalsy();
   expect(old.textContent).toContain('Lịch sử');
@@ -121,6 +123,9 @@ it('tags the current plan and offers re-applying a history plan after confirmati
 
   await click(buttonIn(old, 'Áp dụng lại'));
   expect(reapply).not.toHaveBeenCalled();
+  // Only this coach's active plan is named as moving to history, not the other coach's.
+  expect(host.ownerDocument.body.textContent).toContain('Tăng cơ');
+  expect(host.ownerDocument.body.textContent).not.toContain('"Yoga phục hồi" hiện tại');
   const confirmButton = [...host.ownerDocument.querySelectorAll('button')].find((b) => b.textContent === 'Áp dụng lại' && b.closest('dialog,[role="dialog"],[role="alertdialog"]'));
   await click(confirmButton);
   expect(reapply).toHaveBeenCalledWith(9);

@@ -101,7 +101,8 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
 
   const reapply = async (plan: SavedTrainingPlan) => {
     if (busyId !== null) return;
-    const current = plans.find((item) => item.status === 'active' && item.memberId === plan.memberId);
+    // Chỉ giáo án đang áp dụng của cùng HLV cho hội viên này bị chuyển vào lịch sử; giáo án của HLV khác giữ nguyên.
+    const current = plans.find((item) => item.status === 'active' && item.memberId === plan.memberId && item.coachId === plan.coachId);
     const confirmed = await confirm({
       title: staffMessage('Áp dụng lại giáo án này?', 'Re-apply this training plan?'),
       message: staffMessage(
@@ -118,7 +119,9 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     try {
       await aiApi.reapplyTrainingPlan(plan.id);
       load();
-      notify(staffMessage('Đã áp dụng lại giáo án. Giáo án trước đó được chuyển vào lịch sử.', 'Training plan re-applied. The previous plan moved to history.'), 'success');
+      notify(current
+        ? staffMessage('Đã áp dụng lại giáo án. Giáo án trước đó của HLV này được chuyển vào lịch sử.', "Training plan re-applied. This coach's previous plan moved to history.")
+        : staffMessage('Đã áp dụng lại giáo án.', 'Training plan re-applied.'), 'success');
     } catch (err) {
       notify(errorMessage(err, 'Không thể áp dụng lại giáo án.'), 'error');
     } finally {

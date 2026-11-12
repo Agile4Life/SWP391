@@ -80,7 +80,7 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.activated"), activated));
     }
 
-    @Operation(summary = "Áp dụng lại giáo án trong lịch sử", description = "Đưa giáo án lịch sử (superseded) về trạng thái đang áp dụng; giáo án đang áp dụng hiện tại chuyển thành lịch sử")
+    @Operation(summary = "Áp dụng lại giáo án trong lịch sử", description = "Đưa giáo án lịch sử (superseded) về trạng thái đang áp dụng; giáo án đang áp dụng của cùng HLV cho hội viên này chuyển thành lịch sử")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/{id}/reapply")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> reapplyPlan(

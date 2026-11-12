@@ -170,8 +170,8 @@ public class TrainingPlanService {
     }
 
     /**
-     * Brings a plan from the member's history back as the active one. The plan that is active right now moves to
-     * history, so the member always has exactly one current plan. A plan whose period already ended gets a fresh
+     * Brings a plan from the member's history back as the active one. The plan the same coach has active for the
+     * member right now moves to history, so each member–coach pair has exactly one current plan. A plan whose period already ended gets a fresh
      * window of the same length starting today, otherwise it would be "active" yet outside its dates.
      */
     public TrainingPlanDto reapplyPlan(Long planId, Long currentUserId, String currentUserRole) {
@@ -194,10 +194,15 @@ public class TrainingPlanService {
         return toDto(saved, trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId));
     }
 
-    /** A member has one active plan; whatever it replaces stays as history instead of being deleted. */
+    /**
+     * Each member–coach pair has one active plan; the plan it replaces stays as history instead of being deleted.
+     * Plans from the member's other coaches are left alone.
+     */
     private void supersedeOtherActivePlans(TrainingPlan current) {
-        if (current.getMember() == null || current.getMember().getUserId() == null) return;
-        var others = trainingPlanRepository.findOtherActiveForMember(current.getMember().getUserId(), current.getId());
+        if (current.getMember() == null || current.getMember().getUserId() == null
+                || current.getCoach() == null || current.getCoach().getUserId() == null) return;
+        var others = trainingPlanRepository.findOtherActiveForMemberAndCoach(
+                current.getMember().getUserId(), current.getCoach().getUserId(), current.getId());
         if (others == null) return;
         for (TrainingPlan other : others) {
             other.setStatus("superseded");

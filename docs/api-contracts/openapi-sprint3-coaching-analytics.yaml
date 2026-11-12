@@ -119,13 +119,13 @@ paths:
             format: int64
       responses:
         '200':
-          description: Training plan activated successfully. A member has one active plan, so any other active plan of the member becomes `superseded` (history).
+          description: Training plan activated successfully. Each member–coach pair has one active plan, so the other active plan the same coach gave this member becomes `superseded` (history); plans from the member's other coaches stay active.
   /api/v1/coaching/training-plans/{id}/reapply:
     put:
       summary: Re-apply a plan from history as the member's active plan
       description: |
-        Only plans with status `superseded` can be re-applied. The plan becomes `active` and the plan that was active
-        for the same member becomes `superseded`. When the plan's end date is already in the past it gets a new window
+        Only plans with status `superseded` can be re-applied. The plan becomes `active` and the plan the same coach
+        had active for the same member becomes `superseded`; plans from the member's other coaches are not touched. When the plan's end date is already in the past it gets a new window
         of the same length starting today. Visible changes: `status` values now include `superseded`.
       tags: [Coaching]
       parameters:
