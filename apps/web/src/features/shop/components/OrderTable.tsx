@@ -22,7 +22,7 @@ function ProductSummary({ order }: { order: OrderDto }) {
     <div>
       <strong>{first.productName}</strong>
       <div className="muted">
-        {first.variantLabel ? `${first.variantLabel} · ` : ''}×{first.quantity}
+        {first.variantLabel ? `${first.variantLabel} · ` : ''}{'×'}{first.quantity}
         {rest.length > 0 ? sourceFormat(" · và {0} sản phẩm khác", rest.length) : ''}
       </div>
     </div>
