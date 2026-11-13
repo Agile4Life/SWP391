@@ -615,11 +615,11 @@ export function ManagerEquipmentPage() {
                     </option>
                   ))}
                 </Select>
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                   <button
                     type="button"
                     className={`btn-sm ${standardGymRooms.some(room => String(room.id) === editing.form.roomId) ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ flex: 1, padding: '8px 12px', fontWeight: 600 }}
+                    style={{ flex: '1 1 auto', padding: '8px 12px', fontWeight: 600, whiteSpace: 'nowrap' }}
                     aria-pressed={standardGymRooms.some(room => String(room.id) === editing.form.roomId)}
                     disabled={isSubmitting || standardGymRooms.length === 0}
                     onClick={() => handleSelectTier('STANDARD')}
@@ -628,7 +628,7 @@ export function ManagerEquipmentPage() {
                   <button
                     type="button"
                     className={`btn-sm ${vipRooms.some(room => String(room.id) === editing.form.roomId) ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ flex: 1, padding: '8px 12px', fontWeight: 700 }}
+                    style={{ flex: '1 1 auto', padding: '8px 12px', fontWeight: 700, whiteSpace: 'nowrap' }}
                     aria-pressed={vipRooms.some(room => String(room.id) === editing.form.roomId)}
                     disabled={isSubmitting || vipRooms.length === 0}
                     onClick={() => handleSelectTier('VIP')}
