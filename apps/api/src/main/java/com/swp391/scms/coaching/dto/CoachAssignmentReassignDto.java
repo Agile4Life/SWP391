@@ -21,6 +21,7 @@ public record CoachAssignmentReassignDto(
         @Pattern(regexp = "TRAINING_PLAN|PT_1_1", message = "{validation.coach_assignment.transfer_type}")
         String assignmentType,
 
+        @NotBlank(message = "{validation.coach_assignment.reason.required}")
         @Size(max = 500, message = "{validation.coach_assignment.reason.size}") String reason
 ) {}
 

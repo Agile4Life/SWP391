@@ -214,7 +214,8 @@ it('pins Support & Tickets above SÖL AI so member complaints to the front desk 
   expect(support.compareDocumentPosition(host.querySelector('.direct-chat__person--ai')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   await act(async () => (support as HTMLButtonElement).click());
   await act(async () => { await Promise.resolve(); });
-  await vi.waitFor(() => expect(host.querySelector('#support-subject')).not.toBeNull());
+  await vi.waitFor(() => expect(host.querySelector('#support-message')).not.toBeNull());
+  expect(host.querySelector('#support-subject')).toBeNull();
   expect(host.querySelector('.direct-chat__support')).not.toBeNull();
 });
 
@@ -222,7 +223,7 @@ it('gives receptionists the ticket inbox and coaches no support entry', async ()
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
   await render();
   await act(async () => (host.querySelector('.direct-chat__person--support') as HTMLButtonElement).click());
-  await vi.waitFor(() => expect(host.querySelector('#staff-support-filter')).not.toBeNull());
+  await vi.waitFor(() => expect(host.querySelector('[role="radiogroup"][aria-label="Lọc theo trạng thái"]')).not.toBeNull());
   await act(async () => root.unmount()); root = createRoot(host);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
   await render();

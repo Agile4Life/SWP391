@@ -92,9 +92,10 @@ paths:
         must have no approved leave or overlapping scheduled class/confirmed PT session.
         Existing database schedule triggers remain enabled. A missing or stale relationship
         fails without success notifications. Audit logs preserve actor, assignment type,
-        reference ID, member ID, old/new coach IDs and optional reason. No plan items,
+        reference ID, member ID, old/new coach IDs and the required reason. No plan items,
         lifecycle dates or unrelated relationships change. Only after a valid transfer are
-        the member and both coaches notified. PT notices open the PT booking tab.
+        the member and both coaches notified. The member's in-app notification and email
+        include the manager's reason. PT notices open the PT booking tab.
       requestBody:
         required: true
         content:
@@ -154,14 +155,14 @@ components:
         endDate: { type: string, format: date }
     ReassignRequest:
       type: object
-      required: [memberId, fromCoachId, toCoachId, referenceId, assignmentType]
+      required: [memberId, fromCoachId, toCoachId, referenceId, assignmentType, reason]
       properties:
         memberId: { type: integer, format: int64 }
         fromCoachId: { type: integer, format: int64 }
         toCoachId: { type: integer, format: int64 }
         referenceId: { type: integer, format: int64 }
         assignmentType: { type: string, enum: [TRAINING_PLAN, PT_1_1] }
-        reason: { type: string, maxLength: 500, nullable: true }
+        reason: { type: string, minLength: 1, maxLength: 500 }
     Student:
       type: object
       properties:

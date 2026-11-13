@@ -147,6 +147,16 @@ class CoachAssignmentServiceTest {
         assertThat(old.get("coachId").asLong()).isEqualTo(10L); assertThat(next.get("coachId").asLong()).isEqualTo(20L);
         assertThat(old.get("referenceId").asLong()).isEqualTo(501L); assertThat(next.get("reason").asText()).isEqualTo("Schedule adjustment");
         verify(notifications, times(3)).send(anyLong(), anyString(), anyString(), eq("system"), eq("training_plan"), eq(501L), anyString());
+        verify(messages).getMessage("manager.coach_assignments.notice.transferred.member", to.getUser().getFullName(), 501L, "Schedule adjustment");
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"", "   "})
+    void rejectsTransferWithoutReasonBeforeWritingOrNotifying(String blank) {
+        assertThatThrownBy(() -> service.reassignStudent(new CoachAssignmentReassignDto(100L, 10L, 20L, 501L, "TRAINING_PLAN", blank)))
+                .isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "REASON_REQUIRED");
+        assertThatThrownBy(() -> service.reassignStudent(new CoachAssignmentReassignDto(100L, 10L, 20L, 501L, "TRAINING_PLAN", null)))
+                .isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "REASON_REQUIRED");
+        verifyNoInteractions(plans, bookings, audit, notifications);
     }
 
     @Test void rejectsClassTransferWithoutWritingOrNotifying() {

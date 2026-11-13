@@ -264,6 +264,20 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Gói tập không còn hiệu lực');
   });
 
+  it('shows a member once per coach even when they hold several assignments', async () => {
+    const [coachA] = mockData.coaches;
+    const [pt, plan] = coachA.students;
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
+      ...mockData,
+      coaches: [{ ...coachA, students: [pt, { ...plan, memberId: pt.memberId, membershipCode: pt.membershipCode, fullName: pt.fullName }] }],
+    });
+    await renderComponent();
+    const rows = [...host.querySelectorAll('.coach-student-row')];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].querySelectorAll('.student-name-block strong')).toHaveLength(1);
+    expect(rows[0].querySelectorAll('.coach-assignment-line')).toHaveLength(2);
+  });
+
   it('keeps class assignments read-only', async () => {
     await renderComponent();
     const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));
@@ -292,8 +306,16 @@ describe('ManagerCoachAssignmentsPage', () => {
     const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
     expect([...target.options].map(o => o.value)).toContain('11');
     await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
+    const reason = host.querySelector('#reassign-reason') as HTMLTextAreaElement;
+    expect(reason.required).toBe(true);
+    expect((host.querySelector('dialog button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(reason, '  HLV cũ nghỉ phép  ');
+      reason.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect((host.querySelector('dialog button[type="submit"]') as HTMLButtonElement).disabled).toBe(false);
     await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
-    expect(coachAssignmentsApi.reassignStudent).toHaveBeenCalledWith(expect.objectContaining({ assignmentType: 'PT_1_1', referenceId: 501, memberId: 101, fromCoachId: 10, toCoachId: 11 }));
+    expect(coachAssignmentsApi.reassignStudent).toHaveBeenCalledWith(expect.objectContaining({ assignmentType: 'PT_1_1', referenceId: 501, memberId: 101, fromCoachId: 10, toCoachId: 11, reason: 'HLV cũ nghỉ phép' }));
     expect(notify).toHaveBeenCalledWith('Điều chuyển phân công đã chọn sang HLV mới thành công!', 'success', { translation: { vi: 'Điều chuyển phân công đã chọn sang HLV mới thành công!', en: 'Selected assignment transferred to the new coach successfully!' } });
   });
 

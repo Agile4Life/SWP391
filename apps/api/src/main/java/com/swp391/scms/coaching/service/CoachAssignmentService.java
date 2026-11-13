@@ -174,6 +174,8 @@ public class CoachAssignmentService {
         if (dto.referenceId() == null || dto.assignmentType() == null || !Set.of("TRAINING_PLAN", "PT_1_1").contains(dto.assignmentType())) {
             throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
         }
+        String reason = dto.reason() == null ? "" : dto.reason().strip();
+        if (reason.isEmpty()) throw invalid("REASON_REQUIRED", "reason_required");
         if (Objects.equals(dto.fromCoachId(), dto.toCoachId())) throw invalid("SAME_COACH", "same_coach");
         Coach from = coachRepository.findById(dto.fromCoachId()).orElseThrow(() -> new ResourceNotFoundException("resource.coach", dto.fromCoachId()));
         Coach to = activeCoach(dto.toCoachId());
@@ -205,12 +207,12 @@ public class CoachAssignmentService {
             coachBookingRepository.save(booking);
             entityType = null; coachPath = "/coach/classes";
         }
-        recordTransfer(dto);
+        recordTransfer(dto, reason);
         notificationService.send(to.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.coach", member.getUser().getFullName(), dto.referenceId()),
                 "system", entityType, dto.referenceId(), coachPath);
         notificationService.send(from.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.from", member.getUser().getFullName(), to.getUser().getFullName(), dto.referenceId()),
                 "system", entityType, dto.referenceId(), coachPath);
-        notificationService.send(member.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.member", to.getUser().getFullName(), dto.referenceId()),
+        notificationService.send(member.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.member", to.getUser().getFullName(), dto.referenceId(), reason),
                 "system", entityType, dto.referenceId(), "TRAINING_PLAN".equals(dto.assignmentType()) ? "/member/progress" : "/member/classes?tab=coach_booking");
     }
 
@@ -233,11 +235,11 @@ public class CoachAssignmentService {
         return booking.getStartTime().isBefore(end) && booking.getEndTime().isAfter(start);
     }
 
-    private void recordTransfer(CoachAssignmentReassignDto dto) {
+    private void recordTransfer(CoachAssignmentReassignDto dto, String reason) {
         // The existing coach audit stream stores both sides of the exact plan / PT relationship.
         var oldValue = objectMapper.createObjectNode().put("assignmentType", dto.assignmentType()).put("referenceId", dto.referenceId())
                 .put("memberId", dto.memberId()).put("coachId", dto.fromCoachId());
-        var newValue = oldValue.deepCopy().put("coachId", dto.toCoachId()).put("reason", dto.reason());
+        var newValue = oldValue.deepCopy().put("coachId", dto.toCoachId()).put("reason", reason);
         AuditLog entry = new AuditLog();
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof AuthenticatedPrincipal principal) entry.setUserId(principal.id());

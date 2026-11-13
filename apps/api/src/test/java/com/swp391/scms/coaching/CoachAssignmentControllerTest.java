@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -102,6 +103,19 @@ class CoachAssignmentControllerTest {
                 .andExpect(status().isOk());
 
         verify(coachAssignmentService).reassignStudent(any(CoachAssignmentReassignDto.class));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/manager/coach-assignments/reassign rejects a blank reason")
+    void testReassignRequiresReason() throws Exception {
+        CoachAssignmentReassignDto dto = new CoachAssignmentReassignDto(100L, 10L, 20L, 888L, "TRAINING_PLAN", "  ");
+
+        mockMvc.perform(post("/api/v1/manager/coach-assignments/reassign")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(coachAssignmentService, never()).reassignStudent(any());
     }
 
     @Test

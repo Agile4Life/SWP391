@@ -30,6 +30,31 @@ function assignmentSchedule(student: CoachAssignmentStudent): string | null {
   return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), student.nextSession) : null;
 }
 
+interface MemberAssignmentGroup {
+  memberId: number;
+  fullName: string;
+  membershipCode: string;
+  phone?: string | null;
+  assignments: CoachAssignmentStudent[];
+}
+
+/** One member may hold several assignments with the same coach; show them under a single profile. */
+function groupStudentsByMember(students: CoachAssignmentStudent[]): MemberAssignmentGroup[] {
+  const groups = new Map<number, MemberAssignmentGroup>();
+  for (const student of students) {
+    const group = groups.get(student.memberId);
+    if (group) group.assignments.push(student);
+    else groups.set(student.memberId, {
+      memberId: student.memberId,
+      fullName: student.fullName,
+      membershipCode: student.membershipCode,
+      phone: student.phone,
+      assignments: [student],
+    });
+  }
+  return [...groups.values()];
+}
+
 export function ManagerCoachAssignmentsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -162,6 +187,11 @@ export function ManagerCoachAssignmentsPage() {
   const handleReassignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || !reassignStudent || !targetCoachId || reassignStudent.student.assignmentType === 'CLASS') return;
+    const reason = reassignReason.trim();
+    if (!reason) {
+      setFormError(staffMessage('Vui lòng nhập lý do điều chuyển để thông báo cho học viên.', staffTranslation('Vui lòng nhập lý do điều chuyển để thông báo cho học viên.')));
+      return;
+    }
 
     setBusy(true);
     setFormError(null);
@@ -172,7 +202,7 @@ export function ManagerCoachAssignmentsPage() {
         toCoachId: Number(targetCoachId),
         referenceId: reassignStudent.student.referenceId,
         assignmentType: reassignStudent.student.assignmentType,
-        reason: reassignReason,
+        reason,
       });
       setReassignStudent(null);
       setTargetCoachId('');
@@ -360,69 +390,73 @@ export function ManagerCoachAssignmentsPage() {
                   {t("HLV hiện chưa có học viên nào trong danh mục lọc này.")}</div>
               ) : (
                 <div data-i18n-managed className="coach-students-list">
-                  {coach.students.map((student) => (
-                    <div data-i18n-managed key={`${student.assignmentType}-${student.referenceId}-${student.memberId}`} className="coach-student-row">
+                  {groupStudentsByMember(coach.students).map((group) => (
+                    <div data-i18n-managed key={group.memberId} className="coach-student-row">
                       <div className="coach-student-profile">
                         <div className="student-avatar-circle">
-                          {student.fullName.charAt(0).toUpperCase()}
+                          {group.fullName.charAt(0).toUpperCase()}
                         </div>
                         <div className="student-name-block">
-                          <strong>{student.fullName}</strong>
-                          <small>{student.membershipCode} {student.phone ? `• ${student.phone}` : ''}</small>
+                          <strong>{group.fullName}</strong>
+                          <small>{group.membershipCode} {group.phone ? `• ${group.phone}` : ''}</small>
                         </div>
                       </div>
 
-                      <div>
-                        <span
-                          className={`coach-student-type-pill coach-student-type-pill--${
-                            student.assignmentType === 'PT_1_1'
-                              ? 'pt'
-                              : student.assignmentType === 'TRAINING_PLAN'
-                              ? 'plan'
-                              : 'class'
-                          }`}
-                        >
-                          {student.assignmentTypeLabel}
-                        </span>
-                      </div>
+                      <div className="coach-student-assignments">
+                        {group.assignments.map((student) => (
+                          <div data-i18n-managed key={`${student.assignmentType}-${student.referenceId}`} className="coach-assignment-line">
+                            <span
+                              className={`coach-student-type-pill coach-student-type-pill--${
+                                student.assignmentType === 'PT_1_1'
+                                  ? 'pt'
+                                  : student.assignmentType === 'TRAINING_PLAN'
+                                  ? 'plan'
+                                  : 'class'
+                              }`}
+                            >
+                              {student.assignmentTypeLabel}
+                            </span>
 
-                      <div className="coach-student-detail">
-                        <div>{student.detail}</div>
-                        {assignmentSchedule(student) && (
-                          <small data-i18n-managed style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
-                            {assignmentSchedule(student)}
-                          </small>
-                        )}
-                      </div>
+                            <div className="coach-student-detail">
+                              <div>{student.detail}</div>
+                              {assignmentSchedule(student) && (
+                                <small data-i18n-managed style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
+                                  {assignmentSchedule(student)}
+                                </small>
+                              )}
+                            </div>
 
-                      <div className="coach-student-actions">
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm coach-action-btn"
-                          onClick={() => setSelectedStudentDetail(student)}
-                        >
-                          {t("Chi tiết")}</button>
-                        {student.assignmentType !== 'CLASS' && <button
-                          type="button"
-                          className="btn-secondary btn-sm coach-action-btn"
-                          disabled={busy}
-                          onClick={() => { setFormError(null); setTargetCoachId(''); setReassignReason('');
-                            setReassignStudent({
-                              student,
-                              currentCoachId: coach.coachId,
-                              currentCoachName: coach.coachName,
-                            }); }}
-                        >
-                          {t("Điều chuyển HLV")}</button>}
-                        {student.assignmentType === 'TRAINING_PLAN' && (
-                          <button data-i18n-managed
-                            type="button"
-                            className="btn-danger btn-sm coach-action-btn"
-                            disabled={busy}
-                            onClick={() => void handleRemoveAssignment(student)}
-                          >
-                            {t("Kết thúc")}</button>
-                        )}
+                            <div className="coach-student-actions">
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm coach-action-btn"
+                                onClick={() => setSelectedStudentDetail(student)}
+                              >
+                                {t("Chi tiết")}</button>
+                              {student.assignmentType !== 'CLASS' && <button
+                                type="button"
+                                className="btn-secondary btn-sm coach-action-btn"
+                                disabled={busy}
+                                onClick={() => { setFormError(null); setTargetCoachId(''); setReassignReason('');
+                                  setReassignStudent({
+                                    student,
+                                    currentCoachId: coach.coachId,
+                                    currentCoachName: coach.coachName,
+                                  }); }}
+                              >
+                                {t("Điều chuyển HLV")}</button>}
+                              {student.assignmentType === 'TRAINING_PLAN' && (
+                                <button data-i18n-managed
+                                  type="button"
+                                  className="btn-danger btn-sm coach-action-btn"
+                                  disabled={busy}
+                                  onClick={() => void handleRemoveAssignment(student)}
+                                >
+                                  {t("Kết thúc")}</button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -692,15 +726,18 @@ export function ManagerCoachAssignmentsPage() {
             </div>
 
             <div className="coach-form-group">
-              <label htmlFor="reassign-reason">{t("Lý do điều chuyển")}</label>
+              <label htmlFor="reassign-reason">{t("Lý do điều chuyển *")}</label>
               <textarea
                 id="reassign-reason"
                 className="coach-form-control"
-                rows={2}
+                rows={3}
+                required
+                maxLength={500}
                 placeholder={t("Nhập lý do điều chuyển (vd: HLV cũ nghỉ phép, điều chỉnh lịch tập...)")}
                 value={reassignReason}
                 onChange={(e) => setReassignReason(e.target.value)}
               />
+              <small className="coach-form-hint">{t("Lý do này sẽ được gửi tới học viên qua thông báo trong ứng dụng và email.")}</small>
             </div>
 
             <div className="coach-modal-actions">
@@ -714,7 +751,7 @@ export function ManagerCoachAssignmentsPage() {
               <button
                 type="submit"
                 className="btn-primary coach-action-btn"
-                disabled={busy || !targetCoachId}
+                disabled={busy || !targetCoachId || !reassignReason.trim()}
               >
                 {busy ? t('Đang điều chuyển…') : t('Xác nhận điều chuyển')}
               </button>

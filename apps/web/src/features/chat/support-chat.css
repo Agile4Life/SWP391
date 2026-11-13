@@ -1,0 +1,35 @@
+/* Hỗ trợ & Khiếu nại dùng khung hội thoại của Tin nhắn; chỉ bổ sung phần riêng của phiếu (loại yêu cầu, trạng thái, danh sách phiếu).
+   Màu đi theo biến kính của widget (sáng/tối) và rơi về bảng màu tối của trang /messages. */
+.support-chat { --support-ink: var(--chat-glass-ink, #f5f5f5); --support-muted: var(--chat-glass-muted, #a8a8a8); --support-line: var(--chat-glass-line, rgba(255, 255, 255, 0.14)); min-height: 0; }
+.support-chat__name { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 700; color: var(--support-muted); }
+.support-chat__connection { margin: 0; padding: 6px 20px; font-size: 12px; color: var(--support-muted); border-bottom: 1px solid var(--support-line); }
+
+.support-chat__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 10px 4px 20px; border-bottom: 1px solid var(--support-line); }
+.support-chat__ticketbar { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 0; margin: 0; font-size: 13px; color: var(--support-ink); }
+.support-chat__tools { display: flex; flex-shrink: 0; gap: 4px; }
+.support-chat__tool { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--support-ink); cursor: pointer; transition: background-color 120ms ease; }
+.support-chat__tool:hover:not(:disabled), .support-chat__tool[aria-pressed='true'] { background: rgb(var(--sol-accent-rgb) / .18); }
+@media (pointer: coarse) { .support-chat__tool { width: 44px; height: 44px; } }
+.support-chat__ticketbar-subject { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.support-chat__note { margin: 0; padding: 8px 20px; border-bottom: 1px solid var(--support-line); overflow-wrap: anywhere; }
+
+.support-chat__pill { flex-shrink: 0; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--support-line); font-size: 12px; font-weight: 600; line-height: 1.4; white-space: nowrap; color: var(--support-ink); }
+.support-chat__pill--open { border-color: rgb(var(--sol-accent-rgb) / .55); }
+.support-chat__pill--in_progress { background: rgb(var(--sol-accent-rgb) / .2); border-color: transparent; }
+.support-chat__pill--resolved { color: var(--support-muted); }
+.support-chat__pill--closed { color: var(--support-muted); opacity: .8; }
+.support-chat__pill--escalated { background: rgb(var(--sol-accent-rgb) / .28); border-color: transparent; }
+.support-chat__badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+
+/* Chip chọn loại yêu cầu / trạng thái, nằm ngay trên ô soạn tin */
+.support-chat__categories { display: flex; gap: 8px; padding: 10px 16px 4px; overflow-x: auto; overscroll-behavior-x: contain; }
+.support-chat__chip { flex: 0 0 auto; white-space: nowrap; min-height: 34px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--support-line); background: transparent; color: var(--support-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; }
+.support-chat__chip:hover:not(:disabled) { background: rgb(var(--sol-accent-rgb) / .14); }
+.support-chat__chip.is-selected, .support-chat__chip[aria-checked='true'] { background: rgb(var(--sol-accent-rgb) / .26); border-color: var(--sol-accent); }
+@media (pointer: coarse) { .support-chat__chip { min-height: 44px; } }
+
+.support-chat__tickets { height: auto; flex: 1; min-height: 0; padding: 8px 0; }
+.support-chat__ticket-list { list-style: none; margin: 0; padding: 0; }
+.support-chat__ticket-list .direct-chat__person { width: calc(100% - 16px); }
+.support-chat__closed { display: grid; gap: 4px; border-top: 1px solid var(--support-line); }
+.support-chat__closed .direct-chat__link { justify-self: start; }
