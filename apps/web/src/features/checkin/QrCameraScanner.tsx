@@ -1,11 +1,18 @@
 import { memberMessage, memberText, memberRenderMessage } from '../member/memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type QrScanner from 'qr-scanner';
 import './qr-checkin.css';
 
 const DEFAULT_HINT = 'Quét mã QR cổng tại quầy lễ tân.';
+
+function stopStream(element: HTMLVideoElement | null) {
+  if (!element) return;
+  const stream = element.srcObject;
+  if (stream && 'getTracks' in stream) stream.getTracks().forEach((track) => track.stop());
+  element.srcObject = null;
+}
 
 export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT }: { onScan: (code: string) => void; disabled?: boolean; hint?: string }) {
   const { lang } = useLanguage();
@@ -18,19 +25,12 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
   const [phase, setPhase] = useState<'ready' | 'starting' | 'scanning' | 'done'>('ready');
   const [error, setError] = useState<string | SourceMessage>('');
 
-  function stopStream(element: HTMLVideoElement | null) {
-    if (!element) return;
-    const stream = element.srcObject;
-    if (stream && 'getTracks' in stream) stream.getTracks().forEach((track) => track.stop());
-    element.srcObject = null;
-  }
-
-  function release() {
+  const release = useCallback(() => {
     run.current += 1;
     scanner.current?.destroy();
     scanner.current = null;
     stopStream(video.current);
-  }
+  }, []);
 
   useEffect(() => {
     const hide = () => {
@@ -40,11 +40,11 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
     document.addEventListener('visibilitychange', hide);
     window.addEventListener('pagehide', pagehide);
     return () => { release(); document.removeEventListener('visibilitychange', hide); window.removeEventListener('pagehide', pagehide); };
-  }, []);
+  }, [release]);
 
   useEffect(() => {
     if (disabled) { release(); setPhase((current) => current === 'done' ? 'done' : 'ready'); }
-  }, [disabled]);
+  }, [disabled, release]);
 
   async function start() {
     if (disabled || phase === 'starting' || phase === 'scanning') return;
