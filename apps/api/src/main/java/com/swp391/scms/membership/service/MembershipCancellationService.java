@@ -229,10 +229,18 @@ public class MembershipCancellationService {
             }
             // Enrollments reference member and class, not subscription. The member-wide
             // cancellation below is safe only when this is the sole remaining entitlement.
-            ensureSoleEntitlement(memberId, subscription.getId());
+            ensureSoleEntitlement(memberId, subscription);
             subscription.setStatus("cancelled");
             subscription.setUpdatedAt(LocalDateTime.now(clock));
             subscriptions.saveAndFlush(subscription);
+            List<MembershipSubscription> memberSubs = subscriptions.findByMemberUserId(memberId);
+            for (MembershipSubscription sub : memberSubs) {
+                if (List.of("active", "frozen", "pending_payment").contains(sub.getStatus())) {
+                    sub.setStatus("cancelled");
+                    sub.setUpdatedAt(LocalDateTime.now(clock));
+                    subscriptions.save(sub);
+                }
+            }
             String cancelReason = messages != null
                     ? messages.getMessage("scheduling.enrollment.cancelled_by_membership")
                     : "Gói tập đã được quản lý duyệt hủy.";
@@ -352,19 +360,27 @@ public class MembershipCancellationService {
         return toDto(requests.saveAndFlush(request));
     }
 
-    private void ensureSoleEntitlement(Long memberId, Long cancellingId) {
+    private void ensureSoleEntitlement(Long memberId, MembershipSubscription cancelling) {
         LocalDate today = LocalDate.now(clock);
         if (payments.hasUnsettledUpcomingEnrollmentPayment(memberId, today, LocalDateTime.now(clock).toLocalTime())) {
             throw new ConflictException("CANCELLATION_PAID_ENROLLMENT",
                     "error.membership.cancellation_paid_enrollment", null, null);
         }
+        Long cancellingId = cancelling != null ? cancelling.getId() : null;
+        LocalDate cancellingEnd = cancelling != null ? cancelling.getEndDate() : null;
         List<MembershipSubscription> history = subscriptions.findByMemberUserId(memberId);
         for (MembershipSubscription other : history) {
-            if (other.getId().equals(cancellingId)) continue;
+            if (cancellingId != null && other.getId().equals(cancellingId)) continue;
             String status = other.getStatus();
             if (("active".equalsIgnoreCase(status) || "frozen".equalsIgnoreCase(status))
                     && other.getEndDate() != null && !other.getEndDate().isBefore(today)) {
-                throw new ConflictException("CANCELLATION_OTHER_ENTITLEMENT", "error.membership.cancellation_paid_future", null, null);
+                boolean isFutureRenewal = (other.getPreviousSubscription() != null
+                        && cancellingId != null && cancellingId.equals(other.getPreviousSubscription().getId()))
+                        || (cancellingEnd != null && other.getStartDate() != null
+                        && other.getStartDate().isAfter(cancellingEnd));
+                if (isFutureRenewal) {
+                    throw new ConflictException("CANCELLATION_OTHER_ENTITLEMENT", "error.membership.cancellation_paid_future", null, null);
+                }
             }
             if ("pending_payment".equalsIgnoreCase(status)) {
                 throw new ConflictException("CANCELLATION_PENDING_PAYMENT", "error.membership.cancellation_pending_payment", null, null);
@@ -396,7 +412,6 @@ public class MembershipCancellationService {
     private boolean isActiveNow(MembershipSubscription subscription) {
         LocalDate today = LocalDate.now(clock);
         return "active".equalsIgnoreCase(subscription.getStatus())
-                && subscription.getStartDate() != null && !subscription.getStartDate().isAfter(today)
                 && subscription.getEndDate() != null && !subscription.getEndDate().isBefore(today);
     }
 

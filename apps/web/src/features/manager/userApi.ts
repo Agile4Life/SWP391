@@ -43,6 +43,7 @@ interface UserDto {
   status: string;
   createdAt: string;
   lastLoginAt?: string | null;
+  deletedAt?: string | null;
   subscriptionFrozen?: boolean;
 }
 
@@ -71,7 +72,7 @@ const toAccount = (u: UserDto): UserAccount => ({
   role: u.roleCode,
   gender: normalizeGender(u.gender),
   status: u.status === 'active' ? 'ACTIVE' : 'LOCKED',
-  deleted_at: null,
+  deleted_at: u.deletedAt ?? null,
   created_at: u.createdAt?.split('T')[0] ?? '',
   last_login_at: u.lastLoginAt ?? null,
   is_frozen: Boolean(u.subscriptionFrozen),
@@ -169,6 +170,16 @@ export const userApi = {
   // Xóa mềm tài khoản người dùng
   async deleteUser(userId: string): Promise<void> {
     await apiFetch(`/users/${userId}`, { method: 'DELETE' });
+  },
+
+  // Lấy danh sách tài khoản đã xóa mềm
+  async getDeletedUsers(): Promise<UserAccount[]> {
+    return (await apiFetch<UserDto[]>('/users/deleted')).map(toAccount);
+  },
+
+  // Khôi phục tài khoản đã bị xóa mềm
+  async restoreUser(userId: string): Promise<UserAccount> {
+    return toAccount(await apiFetch<UserDto>(`/users/${userId}/restore`, { method: 'PATCH' }));
   },
 
   // Quét và tự động xóa tài khoản không hoạt động > 6 tháng (ngoại trừ hội viên đang bảo lưu tập)

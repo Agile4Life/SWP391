@@ -54,7 +54,9 @@ export function UserManagerPage() {
     RECEPTIONIST: [],
     MEMBER: [],
   });
-  const [activeTab, setActiveTab] = useState<'USERS' | 'ROLES'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'DELETED' | 'ROLES'>('USERS');
+  const [deletedUsers, setDeletedUsers] = useState<UserAccount[]>([]);
+  const [restoringUserId, setRestoringUserId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -111,14 +113,16 @@ export function UserManagerPage() {
     setLoading(true);
     try {
       setLoadError('');
-      const [u, r, p] = await Promise.all([
+      const [u, r, p, d] = await Promise.all([
         userApi.getUsers(),
         userApi.getRolePermissions(),
         userApi.getPermissions(),
+        typeof userApi.getDeletedUsers === 'function' ? userApi.getDeletedUsers().catch(() => []) : Promise.resolve([]),
       ]);
       setUsers(u);
       setRolePerms(r);
       setPermissions(p);
+      setDeletedUsers(d);
     } catch (err) {
       setLoadError(errorMessage(err, 'Không thể tải dữ liệu.'));
     } finally {
@@ -138,6 +142,19 @@ export function UserManagerPage() {
       return matchSearch && matchRole;
     });
   }, [users, searchTerm, roleFilter]);
+
+  const filteredDeletedUsers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return deletedUsers.filter((u) => {
+      const matchSearch =
+        !term ||
+        u.name.toLowerCase().includes(term) ||
+        u.email.toLowerCase().includes(term) ||
+        u.phone.includes(term);
+      const matchRole = roleFilter === 'ALL' || u.role === roleFilter;
+      return matchSearch && matchRole;
+    });
+  }, [deletedUsers, searchTerm, roleFilter]);
 
   async function handleToggleLock(user: UserAccount) {
     const locking = user.status === 'ACTIVE';
@@ -171,14 +188,45 @@ export function UserManagerPage() {
     setIsDeleting(true);
     try {
       await userApi.deleteUser(deletingUser.id);
+      const deletedItem: UserAccount = { ...deletingUser, deleted_at: new Date().toISOString() };
       setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
-      notify(staffMessage(`Đã xóa tài khoản "${deletingUser.name}".`, `Deleted account "${deletingUser.name}".`), 'success');
+      setDeletedUsers((prev) => [deletedItem, ...prev.filter((u) => u.id !== deletingUser.id)]);
+      notify(staffMessage(`Đã xóa mềm tài khoản "${deletingUser.name}". Bạn có thể khôi phục lại từ tab "Tài khoản đã xóa".`, `Soft-deleted account "${deletingUser.name}". You can restore it from the "Deleted accounts" tab.`), 'success');
       setDeletingUser(null);
     } catch (err) {
       const msg = errorMessage(err, 'Không thể xóa tài khoản.');
       notify(msg, 'error');
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  async function handleRestoreUser(user: UserAccount) {
+    if (restoringUserId) return;
+    const confirmed = await confirm({
+      title: staffMessage('Khôi phục tài khoản?', staffTranslation('Khôi phục tài khoản?')),
+      message: staffMessage(
+        `Tài khoản "${user.name}" sẽ được khôi phục hoạt động và chuyển lại về danh sách tài khoản chính.`,
+        `Account "${user.name}" will be restored to active status and moved back to the main accounts list.`
+      ),
+      confirmLabel: staffMessage('Khôi phục tài khoản', staffTranslation('Khôi phục tài khoản')),
+      danger: false,
+    });
+    if (!confirmed) return;
+
+    setRestoringUserId(user.id);
+    try {
+      const restored = await userApi.restoreUser(user.id);
+      setDeletedUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setUsers((prev) => [restored, ...prev.filter((u) => u.id !== user.id)]);
+      notify(
+        staffMessage(`Đã khôi phục thành công tài khoản "${user.name}".`, `Successfully restored account "${user.name}".`),
+        'success'
+      );
+    } catch (err) {
+      notify(errorMessage(err, 'Không thể khôi phục tài khoản.'), 'error');
+    } finally {
+      setRestoringUserId(null);
     }
   }
 
@@ -380,6 +428,13 @@ export function UserManagerPage() {
         </button>
         <button
           type="button"
+          className={`portal-tab ${activeTab === 'DELETED' ? 'active' : ''}`}
+          onClick={() => setActiveTab('DELETED')}
+        >
+          {t("Tài khoản đã xóa (")}{deletedUsers.length})
+        </button>
+        <button
+          type="button"
           className={`portal-tab ${activeTab === 'ROLES' ? 'active' : ''}`}
           onClick={() => setActiveTab('ROLES')}
         >
@@ -576,6 +631,130 @@ export function UserManagerPage() {
                               {t("Xóa")}</button>
                             </ActionMenu>
                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : activeTab === 'DELETED' ? (
+        <div data-i18n-managed>
+          {/* Controls / Filter Bar for Deleted Users */}
+          <div className="portal-toolbar">
+            <input
+              type="text"
+              className="portal-input"
+              placeholder={t("Tìm kiếm trong tài khoản đã xóa...")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Select
+              className="portal-select"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
+              <option value="ALL">{t("Tất cả vai trò")}</option>
+              <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
+              <option value="ADMIN">{t("Quản trị hệ thống")}</option>
+              <option value="COACH">{t("Huấn luyện viên")}</option>
+              <option value="RECEPTIONIST">{t("Lễ tân")}</option>
+              <option value="MEMBER">{t("Hội viên")}</option>
+            </Select>
+          </div>
+
+          {/* Deleted Users Table */}
+          <div className="portal-card portal-card--flush">
+            {filteredDeletedUsers.length === 0 ? (
+              <div data-i18n-managed className="portal-state" style={{ minHeight: '180px' }}>
+                <p style={{ margin: 0 }}>
+                  {deletedUsers.length === 0
+                    ? t("Thùng rác trống. Chưa có tài khoản nào bị xóa mềm.")
+                    : t("Không tìm thấy tài khoản đã xóa nào phù hợp với bộ lọc hiện tại.")}
+                </p>
+                {(searchTerm || roleFilter !== 'ALL') && deletedUsers.length > 0 && (
+                  <button data-i18n-managed
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    style={{ marginTop: 8 }}
+                    onClick={() => {
+                      setSearchTerm('');
+                      setRoleFilter('ALL');
+                    }}
+                  >
+                    {t("Xóa bộ lọc tìm kiếm")}</button>
+                )}
+              </div>
+            ) : (
+              <div data-i18n-managed className="portal-table-wrapper">
+                <table className="portal-table">
+                  <thead>
+                    <tr>
+                      <th>{t("Họ và tên")}</th>
+                      <th>{t("Giới tính")}</th>
+                      <th>{t("Liên hệ")}</th>
+                      <th>{t("Vai trò")}</th>
+                      <th>{t("Trạng thái")}</th>
+                      <th>{t("Thời gian xóa")}</th>
+                      <th className="actions">{t("Thao tác")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDeletedUsers.map((u) => (
+                      <tr data-i18n-managed key={u.id} style={{ opacity: 0.9 }}>
+                        <td>
+                          <strong>{u.name}</strong>
+                          <div className="muted">ID: {u.id}</div>
+                        </td>
+                        <td>
+                          {u.gender === 'male' ? (
+                            <span data-i18n-managed className="badge badge-neutral">{t("Nam")}</span>
+                          ) : u.gender === 'female' ? (
+                            <span data-i18n-managed className="badge badge-neutral" style={{ color: 'var(--portal-salmon)' }}>{t("Nữ")}</span>
+                          ) : (
+                            <span data-i18n-managed className="badge badge-neutral">{t("Khác")}</span>
+                          )}
+                        </td>
+                        <td>
+                          <div>{u.email}</div>
+                          <div className="muted">{u.phone || '—'}</div>
+                        </td>
+                        <td>{getRoleBadge(u.role)}</td>
+                        <td>
+                          <span
+                            data-i18n-managed
+                            className="badge badge-danger"
+                            style={{
+                              background: 'color-mix(in srgb, var(--portal-danger) 15%, transparent)',
+                              color: 'var(--portal-danger)',
+                              border: '1px solid color-mix(in srgb, var(--portal-danger) 30%, transparent)'
+                            }}
+                          >
+                            {t("Đã xóa mềm")}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ fontSize: '0.85rem' }}>
+                            {u.deleted_at ? (
+                              <span data-i18n-managed>{formatCenterDateTime(u.deleted_at.replace(' ', 'T'))}</span>
+                            ) : (
+                              <span data-i18n-managed className="muted">{t("Đã xóa")}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="actions">
+                          <button
+                            type="button"
+                            className="btn-primary btn-sm"
+                            disabled={restoringUserId === u.id}
+                            title={t("Khôi phục tài khoản này hoạt động trở lại")}
+                            onClick={() => void handleRestoreUser(u)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            {restoringUserId === u.id ? t("Đang khôi phục...") : t("Khôi phục")}
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -965,6 +1144,9 @@ export function UserManagerPage() {
           <div style={{ display: 'grid', gap: 14 }}>
             <p style={{ margin: 0, lineHeight: 1.5 }}>
               {t("Bạn có chắc chắn muốn xóa tài khoản của ")}<strong>{deletingUser.name}</strong> ({deletingUser.email})?
+            </p>
+            <p className="muted" style={{ margin: 0, fontSize: '0.86rem' }}>
+              {t("Tài khoản này sẽ được xóa mềm và chuyển vào tab \"Tài khoản đã xóa\". Bạn có thể khôi phục lại bất kỳ lúc nào.")}
             </p>
             {deletingUser.is_frozen && (
               <div data-i18n-managed

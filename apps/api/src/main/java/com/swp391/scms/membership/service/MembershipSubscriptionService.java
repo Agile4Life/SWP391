@@ -644,6 +644,7 @@ public class MembershipSubscriptionService {
         subscription.setHoldRequestedAt(now);
         subscription.setHoldResolvedAt(null);
         subscription.setHoldResolvedBy(null);
+        subscription.setHoldDaysCredited(null);
         subscription.setUpdatedAt(now);
 
         MembershipSubscription saved = subscriptions.saveAndFlush(subscription);
@@ -685,22 +686,20 @@ public class MembershipSubscriptionService {
             throw new BadRequestException("MEMBERSHIP_HOLD_OUT_OF_PERIOD", "error.membership.hold_out_of_period", null,
                     "The hold must fall inside the membership period");
         }
-        if (documents == null || documents.isEmpty()) {
-            throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_REQUIRED", "error.membership.hold_document_required",
-                    null, "Medical paperwork is required for a hold request");
-        }
-        if (documents.size() > MAX_HOLD_DOCUMENTS) {
-            throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_INVALID", "error.membership.hold_document_invalid",
-                    new Object[]{MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)}, "Too many documents");
-        }
-        for (HoldDocumentUpload document : documents) {
-            if (document == null || document.content() == null || document.content().length == 0
-                    || document.content().length > MAX_HOLD_DOCUMENT_BYTES
-                    || document.contentType() == null
-                    || !HOLD_DOCUMENT_TYPES.contains(document.contentType().toLowerCase(java.util.Locale.ROOT))) {
+        if (documents != null && !documents.isEmpty()) {
+            if (documents.size() > MAX_HOLD_DOCUMENTS) {
                 throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_INVALID", "error.membership.hold_document_invalid",
-                        new Object[]{MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)},
-                        "Documents must be JPG, PNG or PDF files of at most 5 MB");
+                        new Object[]{MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)}, "Too many documents");
+            }
+            for (HoldDocumentUpload document : documents) {
+                if (document == null || document.content() == null || document.content().length == 0
+                        || document.content().length > MAX_HOLD_DOCUMENT_BYTES
+                        || document.contentType() == null
+                        || !HOLD_DOCUMENT_TYPES.contains(document.contentType().toLowerCase(java.util.Locale.ROOT))) {
+                    throw new BadRequestException("MEMBERSHIP_HOLD_DOCUMENT_INVALID", "error.membership.hold_document_invalid",
+                            new Object[]{MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)},
+                            "Documents must be JPG, PNG or PDF files of at most 5 MB");
+                }
             }
         }
     }
@@ -769,10 +768,20 @@ public class MembershipSubscriptionService {
             throw new ConflictException("MEMBERSHIP_RESUME_CONFLICT", "error.membership.resume_conflict", null, null);
         }
         // Preserve the original paid period and class-credit usage; only extend its expiry, by at most MAX_HOLD_DAYS.
-        long heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(heldOn, today), MAX_HOLD_DAYS);
-        subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+        // Holds approved since days are credited at approval give back the unused days; older approved holds were not
+        // credited yet, so they still get their held days added now.
+        if (subscription.isHoldDaysCredited() && subscription.getHoldEndDate() != null) {
+            if (today.isBefore(subscription.getHoldEndDate())) {
+                long unusedDays = java.time.temporal.ChronoUnit.DAYS.between(today, subscription.getHoldEndDate());
+                subscription.setEndDate(subscription.getEndDate().minusDays(unusedDays));
+            }
+        } else {
+            long heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(heldOn, today), MAX_HOLD_DAYS);
+            subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+        }
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
+        subscription.setHoldDaysCredited(null);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         MembershipSubscription resumed = subscriptions.saveAndFlush(subscription);
         // Coming back early: the rest of the hold window no longer excuses course sessions.
@@ -845,6 +854,10 @@ public class MembershipSubscriptionService {
             LocalDate from = subscription.getHoldStartDate() != null ? subscription.getHoldStartDate()
                     : subscription.getHoldEndDate();
             heldDays = java.time.temporal.ChronoUnit.DAYS.between(from, subscription.getHoldEndDate()) + 1;
+            // Holds approved with days credited already have them in endDate; older approved holds get them now.
+            if (!subscription.isHoldDaysCredited()) {
+                subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+            }
         } else {
             if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
                     || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
@@ -854,10 +867,11 @@ public class MembershipSubscriptionService {
             }
             heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(
                     subscription.getHoldResolvedAt().toLocalDate(), now.toLocalDate()), MAX_HOLD_DAYS);
+            subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
         }
-        subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
+        subscription.setHoldDaysCredited(null);
         subscription.setUpdatedAt(now);
         subscriptions.saveAndFlush(subscription);
         if (notificationService != null) {
@@ -980,8 +994,14 @@ public class MembershipSubscriptionService {
             // The hold never started, so the package gets its one hold back. Bookings released at approval stay released.
             subscription.setHoldUsed(false);
             if (courseAttendance != null) courseAttendance.releaseHoldExcuses(subscription.getMember().getUserId(), subscription.getHoldStartDate());
+            if (subscription.isHoldDaysCredited() && subscription.getHoldStartDate() != null
+                    && subscription.getHoldEndDate() != null && subscription.getEndDate() != null) {
+                long heldDays = java.time.temporal.ChronoUnit.DAYS.between(subscription.getHoldStartDate(), subscription.getHoldEndDate()) + 1;
+                subscription.setEndDate(subscription.getEndDate().minusDays(heldDays));
+            }
         }
         if (holdDocuments != null) holdDocuments.deleteBySubscriptionId(subscriptionId);
+        subscription.setHoldDaysCredited(null);
         subscription.setHoldStatus(null);
         subscription.setHoldReason(null);
         subscription.setHoldRequestedAt(null);
@@ -1042,6 +1062,11 @@ public class MembershipSubscriptionService {
                 // Approved late: the days the member already lived through are not held, so no days are added for them.
                 holdStart = today;
                 subscription.setHoldStartDate(today);
+            }
+            long heldDays = java.time.temporal.ChronoUnit.DAYS.between(holdStart, holdEnd) + 1;
+            if (subscription.getEndDate() != null) {
+                subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+                subscription.setHoldDaysCredited(true);
             }
         }
         // A dated hold stays active until its first day; the daily sweep freezes it then.

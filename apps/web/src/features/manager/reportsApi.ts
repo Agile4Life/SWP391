@@ -19,6 +19,8 @@ export interface RecentTransaction {
   id: number;
   invoiceNumber: string | null;
   memberName: string;
+  email?: string | null;
+  phone?: string | null;
   packageName: string | null;
   amount: number;
   method: string;

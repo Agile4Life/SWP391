@@ -94,8 +94,9 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
 
                     // Reports (SCRUM-79)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/reports/class-utilization").hasAnyRole("ADMIN", "CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/reports/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
-                    .requestMatchers("/api/v1/admin/audit-logs/**", "/api/v1/admin/audit-logs").hasAnyRole("CENTER_MANAGER", "MANAGER")
+                    .requestMatchers("/api/v1/admin/audit-logs/**", "/api/v1/admin/audit-logs").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/my", "/api/v1/training-plans/my").hasRole("MEMBER")
                     .requestMatchers("/api/v1/coaching/training-completions/my", "/api/v1/coaching/training-completions/my/*").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/*", "/api/v1/training-plans/*").hasAnyRole("COACH", "CENTER_MANAGER", "MEMBER")
