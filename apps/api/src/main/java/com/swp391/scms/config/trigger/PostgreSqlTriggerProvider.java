@@ -15,6 +15,18 @@ import java.nio.charset.StandardCharsets;
 public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
 
     private static final Logger log = LoggerFactory.getLogger(PostgreSqlTriggerProvider.class);
+    private final boolean auditEntityTypeUpgradeEnabled;
+
+    public PostgreSqlTriggerProvider() {
+        this(false);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PostgreSqlTriggerProvider(
+            @org.springframework.beans.factory.annotation.Value("${app.database.audit-entity-type-upgrade-enabled:false}")
+            boolean auditEntityTypeUpgradeEnabled) {
+        this.auditEntityTypeUpgradeEnabled = auditEntityTypeUpgradeEnabled;
+    }
 
     @Override
     public boolean supports(String databaseProductName) {
@@ -24,6 +36,11 @@ public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
     @Override
     public void applyTriggers(JdbcTemplate jdbcTemplate) {
         CenterCheckinSchemaUpgrade.relaxMemberNullability(jdbcTemplate);
+        if (auditEntityTypeUpgradeEnabled) {
+            AuditEntityTypeSchemaUpgrade.allowCoachBookings(jdbcTemplate);
+        } else {
+            log.info("Audit entity-type CHECK migration disabled; explicit deployment opt-in is required.");
+        }
         ClassPathResource resource = new ClassPathResource("db/triggers/postgresql-triggers.sql");
         if (!resource.exists()) {
             throw new IllegalStateException("Mandatory PostgreSQL trigger script is missing");

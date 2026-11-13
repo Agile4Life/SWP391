@@ -200,13 +200,15 @@ paths:
         A coach reads their own sessions; a receptionist or manager reads everyone's. Query: `from`, `to` (ISO dates;
         default the last 14 days; at most 62 days, otherwise 400 COACH_BOOKING_ATTENDANCE_RANGE) and `outcome`
         (ALL, ATTENDED, MISSED, UPCOMING). Cancelled sessions are never returned. MISSED is a finished session without
-        `attendedAt`. Members get 403.
+        `attendedAt`. UPCOMING means start strictly after now, in Asia/Ho_Chi_Minh, with no arrival.
+        Ongoing unmarked sessions appear in ALL only, not MISSED or UPCOMING. End time equal to now is finished.
+        MISSED is derived, not a persisted ABSENT status. Members get 403.
       parameters:
         - { name: from, in: query, schema: { type: string, format: date } }
         - { name: to, in: query, schema: { type: string, format: date } }
         - { name: outcome, in: query, schema: { type: string, enum: [ALL, ATTENDED, MISSED, UPCOMING] } }
       responses:
-        '200': { description: List of CoachBookingDto }
+        '200': { description: "List of CoachBookingDto including attendedAt and attendanceLocked (whether staff removed the mark; false for legacy null locks)" }
   /coach-bookings/{id}/mark-attended:
     post:
       summary: Record that the member attended a 1:1 session (forgot to scan)
@@ -281,7 +283,13 @@ paths:
   /coach-bookings/{id}/unmark-attended:
     post:
       summary: Remove a wrong attendance mark of a 1:1 session
-      description: Coach (own sessions), receptionist or manager. Clears `attendedAt` and locks the session so a gate scan or the sweep does not record it again; marking by hand unlocks it. Audited as PT_ATTENDANCE_UNMARK.
+      description: |
+        Coach (own sessions), receptionist or manager. Clears `attendedAt` and sets `attendanceLocked=true`
+        so a gate scan or the sweep does not record it again; marking by hand unlocks it.
+        Booking status is unchanged. No ABSENT value is persisted; an ended session without an arrival is derived MISSED.
+        Audited as PT_ATTENDANCE_UNMARK. The explicit PostgreSQL provider CHECK upgrade must be installed on legacy
+        databases before serving attendance writes; it is disabled by default and requires the approved deployment
+        flag app.database.audit-entity-type-upgrade-enabled=true. A rollback must not be treated as a successful unmark.
       responses:
         '200': { description: The booking without attendedAt }
   /subscriptions/{id}/hold#approval:

@@ -42,6 +42,8 @@ export interface CoachBookingDto {
   cancelReason: string | null;
   /** When the member was recorded as present (gate scan during the session); null when not recorded. */
   attendedAt?: string | null;
+  /** Staff removed the mark; scans and the sweep must not restore it automatically. */
+  attendanceLocked?: boolean;
 }
 
 export interface CoachBookingCreatePayload {

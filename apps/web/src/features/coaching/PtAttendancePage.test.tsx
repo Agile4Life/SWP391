@@ -43,6 +43,8 @@ describe('PtAttendancePage', () => {
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
     mocks.load.mockReset();
+    mocks.mark.mockReset();
+    mocks.unmark.mockReset();
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '2', name: 'Lễ tân', identifier: 'desk', role: 'STAFF' });
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -99,5 +101,101 @@ describe('PtAttendancePage', () => {
     await act(async () => remove.click());
     expect(mocks.unmark).toHaveBeenCalledWith(1);
     expect(mocks.load).toHaveBeenCalledTimes(2);
+  });
+
+  it('reloads actual unmarked data, updates counts and retains it after remount', async () => {
+    mocks.load.mockResolvedValueOnce([attended]).mockResolvedValue([{ ...attended, attendedAt: null, attendanceLocked: true }]);
+    mocks.unmark.mockResolvedValue({ ...attended, attendedAt: null });
+    await render();
+    await act(async () => tab('Đã có mặt').click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
+    expect(tab('Đã có mặt').textContent).toContain('(0)');
+    expect(tab('Không có mặt').textContent).toContain('(1)');
+    expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
+    await act(async () => tab('Không có mặt').click());
+    expect(host.querySelector('[data-testid="pt-row-1"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-1"]')?.textContent).toContain('Đã bỏ ghi nhận có mặt');
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await render();
+    expect(tab('Đã có mặt').textContent).toContain('(0)');
+  });
+
+  it.each(['Không có quyền', 'API unavailable'])('retains attendance on unmark failure: %s', async (message) => {
+    mocks.load.mockResolvedValue([attended]);
+    mocks.unmark.mockRejectedValue(new Error(message));
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(message);
+    expect(tab('Đã có mặt').textContent).toContain('(1)');
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.disabled).toBe(false);
+  });
+
+  it('blocks duplicate clicks until unmark and backend reload finish', async () => {
+    mocks.load.mockResolvedValue([attended]);
+    let finish!: (value: object) => void;
+    mocks.unmark.mockReset().mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    await render();
+    const button = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!;
+    await act(async () => { button.click(); button.click(); });
+    expect(mocks.unmark).toHaveBeenCalledTimes(1);
+    expect(button.disabled).toBe(true);
+    await act(async () => finish({}));
+  });
+
+  it('refreshes real backend attendance when returning to the page', async () => {
+    mocks.load.mockResolvedValueOnce([attended]).mockResolvedValue([{ ...attended, attendedAt: null }]);
+    await render();
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(tab('Đã có mặt').textContent).toContain('(0)');
+    expect(tab('Không có mặt').textContent).toContain('(1)');
+  });
+
+  it('ignores a slow response for the previous date range', async () => {
+    let finishOld!: (rows: object[]) => void;
+    mocks.load.mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; }))
+      .mockResolvedValue([missed]);
+    await render();
+    await pickDate(host, 'pt-from', isoOffset(-5));
+    expect(host.querySelector('[data-testid="pt-row-2"]')).not.toBeNull();
+    await act(async () => finishOld([attended]));
+    expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-2"]')).not.toBeNull();
+    expect(tab('Đã có mặt').textContent).toContain('(0)');
+  });
+
+  it('excludes cancelled sessions and keeps attendance unchanged until the backend reload completes', async () => {
+    mocks.load.mockResolvedValueOnce([attended, { ...upcoming, status: 'cancelled' }]);
+    let finishReload!: (rows: object[]) => void;
+    mocks.load.mockImplementationOnce(() => new Promise((resolve) => { finishReload = resolve; }));
+    mocks.unmark.mockResolvedValue({ ...attended, attendedAt: null });
+    await render();
+    expect(tab('Tất cả').textContent).toContain('(1)');
+    expect(host.querySelector('[data-testid="pt-row-3"]')).toBeNull();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
+    expect(host.textContent).toContain('Đang cập nhật điểm danh');
+    expect(host.querySelector<HTMLButtonElement>('#pt-from')!.disabled).toBe(true);
+    await act(async () => finishReload([{ ...attended, attendedAt: null }]));
+    expect(tab('Không có mặt').textContent).toContain('(1)');
+    expect(host.querySelector<HTMLButtonElement>('#pt-from')!.disabled).toBe(false);
+  });
+
+  it('keeps ongoing sessions out of upcoming and recomputes counts at the Vietnam end boundary', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-12T17:30:00Z')); // 00:30 on Nov 13 in Vietnam
+    mocks.load.mockResolvedValue([
+      { ...missed, id: 4, bookingDate: '2026-11-13', startTime: '00:00:00', endTime: '00:31:00' },
+      { ...upcoming, bookingDate: '2026-11-13', startTime: '01:00:00', endTime: '02:00:00' },
+    ]);
+    try {
+      await render();
+      expect(tab('Sắp diễn ra').textContent).toContain('(1)');
+      expect(host.querySelector('[data-testid="pt-row-4"]')?.textContent).toContain('Đang diễn ra');
+      await act(async () => tab('Sắp diễn ra').click());
+      expect(host.querySelector('[data-testid="pt-row-4"]')).toBeNull();
+      expect(host.querySelector('[data-testid="pt-row-3"] button')).toBeNull();
+      await act(async () => vi.advanceTimersByTime(60000));
+      expect(tab('Không có mặt').textContent).toContain('(1)');
+    } finally { vi.useRealTimers(); }
   });
 });

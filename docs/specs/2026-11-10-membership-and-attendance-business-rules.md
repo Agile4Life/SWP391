@@ -221,6 +221,9 @@ Job quét mỗi **30 phút**, nhìn lại 7 ngày:
 - Job quét lúc phút 5 và 35 mỗi giờ, nhìn lại 3 ngày: buổi đã kết thúc mà chưa có mặt, nếu hội viên vào trung tâm trong 3 giờ trước và ở lại qua buổi → ghi nhận có mặt.
 - Buổi đã kết thúc không có mặt là **no-show**: vẫn trừ vào hạn mức, **không có buổi bù** (xem 1.2 cho hạn mức/chu kỳ).
 - Huấn luyện viên, lễ tân và quản lý có thể đánh dấu tay đã tham dự trên màn hình điểm danh 1:1.
+- Đánh dấu tay chỉ từ giờ bắt đầu trở đi; code hiện tại cho phép sửa buổi đã kết thúc. Bỏ đánh dấu xóa `attended_at`, đặt `attendance_locked=true`, giữ nguyên trạng thái booking và lịch sử cổng; đánh dấu tay lại sẽ mở khóa. DTO trả `attendanceLocked` để phân biệt đã bỏ ghi nhận với chưa ghi nhận.
+- Bộ lọc điểm danh dùng Asia/Ho_Chi_Minh: Đã có mặt có `attendedAt`; Không có mặt là buổi đã kết thúc không có `attendedAt` (kết quả suy ra, không ghi ABSENT); Sắp diễn ra là buổi chưa bắt đầu không có `attendedAt`. Buổi đang diễn ra chưa có dấu có mặt chỉ nằm trong Tất cả, có nhãn riêng. Buổi đã hủy không nằm trong danh sách/số lượng.
+- Cập nhật 13/11/2026 sau khi Leader duyệt: Entity và migration tường minh `AuditEntityTypeSchemaUpgrade` cho phép `coach_bookings`; migration chạy qua PostgreSQL provider, giữ nguyên predicate CHECK cũ và mọi log lịch sử. Đã kiểm thử transaction/migration trên PostgreSQL isolated; chưa áp dụng database chung. Trigger vẫn kiểm tra gói active với booking `confirmed` lịch sử; xem `docs/qa/2026-11-13-pt-attendance-audit-migration.md` trước khi triển khai.
 
 ### 2.7 Lỗi quét không làm hỏng check-in
 
