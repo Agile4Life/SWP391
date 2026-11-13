@@ -49,6 +49,15 @@ Khởi động lại API một lần. Seeder idempotent (bỏ qua nếu `manager
 
 Dữ liệu đi kèm: thanh toán + hóa đơn cho mỗi gói đã trả (cash/pos/bank_transfer/online_wallet), 4 lớp với buổi 4 tuần trước (completed, có điểm danh present/late/absent) và 2 tuần tới (scheduled, đã đặt chỗ), check-in cổng, đặt PT quá khứ (completed) và sắp tới (confirmed), chỉ số cơ thể theo tháng.
 
+## Thời khóa biểu dày hơn (`DemoClassSeeder`)
+
+Cùng cờ `APP_DEMO_SEED_ENABLED=true`, nhưng chạy **độc lập** với `DemoDataSeeder` nên bổ sung được cho DB đã seed trước đó (chỉ cần khởi động lại API).
+
+- Thêm 26 khóa học định kỳ do quản lý tạo: Gym, Yoga, Boxing, Bơi lội. Gồm khóa đang chạy (3 tuần trước → 5 tuần tới, buổi quá khứ `completed`), khóa sắp khai giảng (`scheduled`) và khóa đã kết thúc (lớp `archived`). Có lớp miễn phí và lớp có phí.
+- Idempotent theo **tên lớp**: lớp đã tồn tại thì bỏ qua, không sửa. Không tạo hội viên hay ghi danh.
+- HLV lấy từ HLV `active` theo chuyên môn, phòng theo tên (bỏ qua phòng không `available`, ví dụ Ring Arena đang bảo trì). Mỗi khóa chỉ được đặt vào khung giờ trống của HLV và phòng (trigger DB không cho trùng); nếu giờ ưa thích bận thì dịch ±1–4 giờ trong 06:00–22:00, không xếp được thì bỏ qua và ghi cảnh báo trong log.
+- Muốn nạp lại: xóa các lớp này (và buổi học của chúng) rồi khởi động lại API.
+
 ## Ghi chú kỹ thuật
 
 Trigger DB chỉ cho phép dòng `booked`/`GRANTED` mới nếu hội viên đang có gói active hôm nay, nên bản ghi quá khứ dùng trạng thái cuối (`completed`, `DENIED`) và chỉ gắn cho hội viên đang active.
