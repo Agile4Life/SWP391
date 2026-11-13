@@ -19,9 +19,9 @@ const PACKAGE_TIER_LABEL: Record<string, string> = {
 };
 const QUICK_PRICE_PRESETS = [199000, 299000, 549000, 599000, 799000, 1599000, 1990000, 2990000, 5990000];
 const QUICK_DURATION_PRESETS = [
-  { days: 30, label: '1 tháng (30 ngày)' },
   { days: 90, label: '3 tháng (90 ngày)' },
   { days: 180, label: '6 tháng (180 ngày)' },
+  { days: 270, label: '9 tháng (270 ngày)' },
   { days: 365, label: '12 tháng (365 ngày)' },
 ];
 
@@ -94,7 +94,7 @@ export function ManagerCatalogsPage() {
       ? { name: '', description: '' }
       : tab === 'rooms'
         ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00', tier: 'STANDARD' }
-        : { name: '', description: '', price: '199000', durationDays: '30', classCreditLimit: '', status: 'active', tier: 'SILVER' };
+        : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,8 +113,10 @@ export function ManagerCatalogsPage() {
         setFormError('Giá bán gói tập phải từ 0 đ trở lên.');
         return;
       }
-      if (!Number.isFinite(parsedDuration) || parsedDuration < 1) {
-        setFormError('Thời hạn gói tập phải từ 1 ngày trở lên.');
+      const outOfRange = parsedDuration !== 3 && (parsedDuration < 90 || parsedDuration > 365);
+      // Existing packages keep their saved term unless it changes; the server enforces the rule for edits.
+      if (!Number.isFinite(parsedDuration) || (isNew && outOfRange)) {
+        setFormError('Thời hạn gói tập phải từ 3 đến 12 tháng (90–365 ngày); chỉ gói trải nghiệm 3 ngày được ngắn hơn.');
         return;
       }
     }
@@ -442,9 +444,10 @@ export function ManagerCatalogsPage() {
                       id="cat-duration"
                       className="portal-input"
                       type="number"
-                      min="1"
+                      min="3"
+                      max="365"
                       required
-                      placeholder="Vd: 30"
+                      placeholder="Vd: 90"
                       value={editing.form.durationDays ?? ''}
                       onChange={(e) => set('durationDays', e.target.value)}
                     />

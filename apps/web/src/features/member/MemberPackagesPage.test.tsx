@@ -43,15 +43,15 @@ vi.mock('./membershipApi', () => ({
 
 const membershipPackage = {
   id: 5, name: 'Essential', description: null, price: 500000,
-  durationDays: 30, classCreditLimit: null, status: 'active',
+  durationDays: 90, classCreditLimit: null, status: 'active',
 };
 const higherPackage = {
   id: 6, name: 'VIP Sanctuary', description: null, price: 1500000,
-  durationDays: 30, classCreditLimit: null, status: 'active',
+  durationDays: 90, classCreditLimit: null, status: 'active',
 };
 const lowerPackage = {
   id: 4, name: 'Starter', description: null, price: 250000,
-  durationDays: 15, classCreditLimit: 4, status: 'active',
+  durationDays: 90, classCreditLimit: 4, status: 'active',
 };
 const pending = {
   id: 12, memberId: 34, packageId: 5, packageName: 'Essential',
@@ -118,17 +118,17 @@ describe('SCRUM-86 packages', () => {
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
   it('renders the requested prices and durations only when returned by the catalog API', async () => {
     api.packages.mockResolvedValue([
-      { ...membershipPackage, price: 299000, durationDays: 30, classCreditLimit: 2 },
-      { ...higherPackage, price: 499000, durationDays: 30, classCreditLimit: 4 },
-      { ...lowerPackage, price: 999000, durationDays: 90, classCreditLimit: 6 },
+      { ...membershipPackage, price: 299000, durationDays: 90, classCreditLimit: 2 },
+      { ...higherPackage, price: 499000, durationDays: 90, classCreditLimit: 4 },
+      { ...lowerPackage, price: 999000, durationDays: 180, classCreditLimit: 6 },
     ]);
     await render();
-    for (const value of ['299.000', '499.000', '30 ngày']) {
+    for (const value of ['299.000', '499.000', '90 ngày']) {
       expect(host.textContent).toContain(value);
     }
     expect(host.textContent).not.toContain('999.000');
-    await act(async () => button('Đồng hành dài hạn')?.click());
-    for (const value of ['999.000', '90 ngày']) {
+    await act(async () => button('Đồng hành dài hạn (6–12 tháng)')?.click());
+    for (const value of ['999.000', '180 ngày']) {
       expect(host.textContent).toContain(value);
     }
     expect(host.textContent).not.toContain('299.000');

@@ -47,7 +47,9 @@ interface RequestResult {
 }
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
-const LONG_TERM_DAYS = 60;
+/** Sellable plans run 3-12 months: 3 months is "short", 6 months and up is "long". */
+const MIN_TERM_DAYS = 90;
+const LONG_TERM_DAYS = 180;
 const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.';
 
 // The backend VNPay guard decides whether a pending online attempt can still settle.
@@ -623,7 +625,7 @@ export function MemberPackagesPage() {
   }
 
 
-  const purchasablePackages = packages.filter((item) => item.status === 'active' && !isTrialPackage(item));
+  const purchasablePackages = packages.filter((item) => item.status === 'active' && !isTrialPackage(item) && item.durationDays >= MIN_TERM_DAYS);
   const hasRegisteredAnyPackage = Boolean(
     current ||
     (historyState.status === 'success' && historyState.data.length > 0) ||
@@ -995,8 +997,8 @@ export function MemberPackagesPage() {
         <>
           {purchasablePackages.some((p) => p.durationDays >= LONG_TERM_DAYS) && purchasablePackages.some((p) => p.durationDays < LONG_TERM_DAYS) && (
             <div className="portal-switch package-term-tabs" role="group" aria-label={t("Thời hạn gói tập", "Membership duration")}>
-              <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>{t("Gói 1 tháng", "1-month plans")}</button>
-              <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>{t("Đồng hành dài hạn", "Long-term plans")}</button>
+              <button type="button" className={durationTab === 'short' ? 'is-active' : ''} aria-pressed={durationTab === 'short'} onClick={() => setDurationTab('short')}>{t("Gói 3 tháng", "3-month plans")}</button>
+              <button type="button" className={durationTab === 'long' ? 'is-active' : ''} aria-pressed={durationTab === 'long'} onClick={() => setDurationTab('long')}>{t("Đồng hành dài hạn (6–12 tháng)", "Long-term plans (6–12 months)")}</button>
             </div>
           )}
           <section data-i18n-managed className="grid-3" ref={pending ? undefined : membershipFocus} tabIndex={-1} role="region" aria-label={t("Danh mục gói tập", "Membership catalog")}>

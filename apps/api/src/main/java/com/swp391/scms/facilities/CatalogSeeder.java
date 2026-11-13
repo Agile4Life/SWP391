@@ -309,8 +309,13 @@ public class CatalogSeeder implements ApplicationRunner {
             for (var pkg : existingList) {
                 for (String alias : legacyAliases) {
                     if (alias.equalsIgnoreCase(pkg.name())) {
-                        packages.update(pkg.id(), new PackageRequest(name, pkg.description(),
-                                correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status(), tier));
+                        try {
+                            packages.update(pkg.id(), new PackageRequest(name, pkg.description(),
+                                    correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status(), tier));
+                        } catch (com.swp391.scms.common.exception.ConflictException sold) {
+                            // Already sold under the legacy name: keep history intact and seed the standard package below.
+                            continue;
+                        }
                         return;
                     }
                 }

@@ -28,10 +28,35 @@ class PackageServiceTest {
     void createDefaultsToActiveWhenStatusOmitted() {
         when(packages.save(any(MembershipPackage.class))).thenAnswer(i -> i.getArgument(0));
 
-        var dto = service.create(new PackageRequest("Basic", null, BigDecimal.TEN, 30, 8, null));
+        var dto = service.create(new PackageRequest("Basic", null, BigDecimal.TEN, 90, 8, null));
 
         assertEquals("active", dto.status());
-        assertEquals(30, dto.durationDays());
+        assertEquals(90, dto.durationDays());
+    }
+
+    @Test
+    void createRejectsTermsOutsideThreeToTwelveMonths() {
+        assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.create(new PackageRequest("Short", null, BigDecimal.TEN, 30, 8, null)));
+        assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.create(new PackageRequest("Long", null, BigDecimal.TEN, 400, 8, null)));
+    }
+
+    @Test
+    void soldPackageCannotBeRenamedOrRetimed() {
+        MembershipPackage pkg = new MembershipPackage();
+        pkg.setName("GOLD 6 THÁNG");
+        pkg.setDurationDays(180);
+        pkg.setPrice(BigDecimal.TEN);
+        var subscriptions = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "subscriptions", subscriptions);
+        when(packages.findById(1L)).thenReturn(Optional.of(pkg));
+        when(subscriptions.existsByMembershipPackageId(1L)).thenReturn(true);
+
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.update(1L, new PackageRequest("GOLD 9 THÁNG", null, BigDecimal.TEN, 270, 8, null)));
+        // price/benefit edits that keep the name and term stay allowed
+        assertEquals("GOLD 6 THÁNG", service.update(1L, new PackageRequest("GOLD 6 THÁNG", null, BigDecimal.ONE, 180, 8, null)).name());
     }
 
     @Test
@@ -48,7 +73,7 @@ class PackageServiceTest {
         when(packages.findById(9L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> service.update(9L, new PackageRequest("A", null, BigDecimal.ONE, 1, null, null)));
+                () -> service.update(9L, new PackageRequest("A", null, BigDecimal.ONE, 90, null, null)));
     }
 
     @Test

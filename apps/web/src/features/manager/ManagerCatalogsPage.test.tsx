@@ -174,7 +174,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
       expect.objectContaining({
         name: 'GOLD SUMMER PROMO',
         price: 299000,
-        durationDays: 30,
+        durationDays: 90,
         status: 'active',
       })
     );

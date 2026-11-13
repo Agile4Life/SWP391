@@ -28,6 +28,7 @@ public class PackageService {
     @Transactional
     @Audited(action = "PACKAGE_CREATE", entity = "membership_packages")
     public PackageDto create(PackageRequest request) {
+        requireValidDuration(request.durationDays());
         MembershipPackage pkg = new MembershipPackage();
         apply(pkg, request);
         return PackageDto.of(packages.save(pkg));
@@ -37,6 +38,17 @@ public class PackageService {
     @Audited(action = "PACKAGE_UPDATE", entity = "membership_packages")
     public PackageDto update(Long id, PackageRequest request) {
         MembershipPackage pkg = find(id);
+        boolean durationChanged = request.durationDays() != pkg.getDurationDays();
+        boolean nameChanged = !request.name().trim().equals(pkg.getName());
+        if (durationChanged) {
+            requireValidDuration(request.durationDays());
+        }
+        // Subscriptions point at the package row, so renaming/retiming a sold package would relabel history
+        // (e.g. a "GOLD 6 THÁNG" purchase suddenly reading "GOLD 12 THÁNG"). Create a new package instead.
+        if ((durationChanged || nameChanged) && subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
+            throw new com.swp391.scms.common.exception.ConflictException(
+                    "PACKAGE_IDENTITY_LOCKED", "catalog.package.identity_locked", null, null);
+        }
         apply(pkg, request);
         return PackageDto.of(pkg);
     }
@@ -47,6 +59,19 @@ public class PackageService {
         MembershipPackage pkg = find(id);
         pkg.setStatus(status);
         return PackageDto.of(pkg);
+    }
+
+    /** Sellable terms are 3 to 12 months; the 3-day trial is the only shorter package. */
+    public static final int TRIAL_DAYS = 3;
+    public static final int MIN_TERM_DAYS = 90;
+    public static final int MAX_TERM_DAYS = 365;
+
+    private static void requireValidDuration(int days) {
+        if (days != TRIAL_DAYS && (days < MIN_TERM_DAYS || days > MAX_TERM_DAYS)) {
+            throw new com.swp391.scms.common.exception.BadRequestException(
+                    "PACKAGE_DURATION_INVALID", "catalog.package.duration_invalid",
+                    new Object[] {MIN_TERM_DAYS, MAX_TERM_DAYS}, null);
+        }
     }
 
     private MembershipPackage find(Long id) {
