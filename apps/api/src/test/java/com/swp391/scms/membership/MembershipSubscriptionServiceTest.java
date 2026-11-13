@@ -668,7 +668,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(approved.cancelledEnrollmentsCount()).isEqualTo(3);
         assertThat(approved.holdStartDate()).isEqualTo(today.plusDays(2));
         verify(revocation).releaseBookingsBetween(eq(10L), eq(today.plusDays(2)), eq(today.plusDays(8)), any());
-        verify(attendance).excuseSessionsBetween(10L, today.plusDays(2), today.plusDays(8));
+        verify(enrollmentService).releaseCoursesForHold(eq(10L), any(), eq(today.plusDays(2)), eq(today.plusDays(8)));
         verify(revocation, org.mockito.Mockito.never()).revokeUncoveredBookings(any(), any());
     }
 

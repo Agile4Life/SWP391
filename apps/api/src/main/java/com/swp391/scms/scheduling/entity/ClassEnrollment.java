@@ -39,6 +39,13 @@ public class ClassEnrollment {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    /**
+     * Set when a free course credit was given up for good (a membership hold that came too late to restore it): the
+     * cancelled enrollment keeps counting against the package's course allowance. Null/false for every other case.
+     */
+    @Column(name = "credit_forfeited")
+    private Boolean creditForfeited;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public GymClass getGymClass() { return gymClass; }
@@ -55,4 +62,6 @@ public class ClassEnrollment {
     public void setCancelledBy(User cancelledBy) { this.cancelledBy = cancelledBy; }
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+    public boolean isCreditForfeited() { return Boolean.TRUE.equals(creditForfeited); }
+    public void setCreditForfeited(boolean creditForfeited) { this.creditForfeited = creditForfeited; }
 }

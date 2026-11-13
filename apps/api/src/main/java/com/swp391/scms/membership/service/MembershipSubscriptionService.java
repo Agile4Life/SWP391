@@ -1086,20 +1086,24 @@ public class MembershipSubscriptionService {
         int cancelledCount = 0;
         if (saved.getMember() != null && saved.getMember().getUserId() != null) {
             String cancelReason = msg("scheduling.enrollment.cancelled_by_hold");
+            // Courses first: a hold approved 3+ days before a course starts gives the credit or fee back, a later one
+            // (or one on a running course) gives it up. The 1:1 sessions and courts below never touch enrollments.
+            if (enrollmentService != null) {
+                var courses = enrollmentService.releaseCoursesForHold(
+                        saved.getMember().getUserId(), cancelReason, holdStart, holdEnd);
+                if (courses != null) cancelledCount += courses.cancelled();
+            }
             if (holdStart != null && holdEnd != null) {
-                // Only the held window is released; course seats are kept and their sessions become excused.
+                // Only the held window is released for 1:1 sessions and courts.
                 if (entitlementRevocation != null) {
-                    cancelledCount = entitlementRevocation.releaseBookingsBetween(
+                    cancelledCount += entitlementRevocation.releaseBookingsBetween(
                             saved.getMember().getUserId(), holdStart, holdEnd, cancelReason);
-                }
-                if (courseAttendance != null) {
-                    courseAttendance.excuseSessionsBetween(saved.getMember().getUserId(), holdStart, holdEnd);
                 }
             } else if (entitlementRevocation != null) {
                 // A frozen period covers no date, so classes, 1:1 sessions and courts are all released.
-                cancelledCount = entitlementRevocation.revokeUncoveredBookings(saved.getMember().getUserId(), cancelReason);
+                cancelledCount += entitlementRevocation.revokeUncoveredBookings(saved.getMember().getUserId(), cancelReason);
             } else if (enrollmentService != null) {
-                cancelledCount = enrollmentService.cancelFutureEnrollmentsForMember(
+                cancelledCount += enrollmentService.cancelFutureEnrollmentsForMember(
                         saved.getMember().getUserId(), cancelReason);
             }
         }

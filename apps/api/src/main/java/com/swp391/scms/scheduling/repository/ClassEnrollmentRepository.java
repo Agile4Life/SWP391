@@ -89,4 +89,19 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @org.springframework.data.repository.query.Param("status") String status,
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
+    /** Free credits given up for good (cancelled by a late membership hold) inside the allowance window. */
+    @org.springframework.data.jpa.repository.Query("""
+            select count(e) from ClassEnrollment e
+            where e.member.userId = :memberId and e.status = 'cancelled' and e.creditForfeited = true
+              and coalesce(e.gymClass.startDate, cast(e.enrolledAt as date)) between :startDate and :endDate
+              and not exists (
+                select 1 from Payment p
+                where p.classEnrollmentId = e.id and p.status in ('pending', 'success')
+              )
+            """)
+    long countForfeitedCreditsBetween(
+            @org.springframework.data.repository.query.Param("memberId") Long memberId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 }

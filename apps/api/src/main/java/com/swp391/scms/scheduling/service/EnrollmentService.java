@@ -421,6 +421,129 @@ public class EnrollmentService {
         return cancelledCount;
     }
 
+    /** A hold approved at least this many days before the course starts gives the credit or the fee back. */
+    public static final int HOLD_REFUND_NOTICE_DAYS = 3;
+
+    /** What a membership hold did to the member's course enrollments. */
+    public record CourseHoldOutcome(int cancelled, int creditsRestored, int creditsLost, BigDecimal refunded) {
+        public static final CourseHoldOutcome NONE = new CourseHoldOutcome(0, 0, 0, BigDecimal.ZERO);
+    }
+
+    /**
+     * Applies an approved membership hold to the member's course enrollments. A hold approved at least
+     * {@value #HOLD_REFUND_NOTICE_DAYS} days before the course starts restores the free credit, or refunds the paid
+     * fee in full to the wallet; a later hold, or one on a course already running, gives the credit or fee up.
+     * Every affected enrollment is cancelled. With {@code to == null} (an open hold) all unfinished courses are
+     * affected; with a dated hold only the courses that still have a session inside {@code from..to}.
+     */
+    @Transactional
+    public CourseHoldOutcome releaseCoursesForHold(Long memberId, String cancelReason, LocalDate from, LocalDate to) {
+        if (memberId == null || enrollments == null) {
+            return CourseHoldOutcome.NONE;
+        }
+        String resolvedReason = (cancelReason != null && !cancelReason.isBlank())
+                ? cancelReason
+                : msg("scheduling.enrollment.cancelled_by_hold");
+        lockMember(memberId);
+        List<Long> classIds = enrollments.findBookedClassIdsByMemberId(memberId).stream()
+                .distinct().sorted().toList();
+        List<GymClass> lockedClasses = classIds.stream().map(this::lockClass).toList();
+        LocalDateTime now = SessionEligibility.now(clock);
+        LocalDate today = now.toLocalDate();
+        LocalTime nowTime = now.toLocalTime();
+        int cancelled = 0;
+        int restored = 0;
+        int lost = 0;
+        BigDecimal refunded = BigDecimal.ZERO;
+        for (GymClass gymClass : lockedClasses) {
+            java.util.Optional<LocalDate> nextSession = nextOpenSessionDate(gymClass, today, nowTime);
+            if (nextSession.isEmpty() || (to != null && !hasOpenSessionBetween(gymClass, from, to))) {
+                continue;
+            }
+            var booking = enrollments.findByGymClassIdAndMemberUserIdAndStatus(gymClass.getId(), memberId, BOOKED);
+            if (booking.isEmpty()) {
+                continue;
+            }
+            ClassEnrollment enrollment = booking.get();
+            LocalDate courseStart = gymClass.getStartDate() != null ? gymClass.getStartDate() : nextSession.get();
+            boolean inTime = !courseStart.isBefore(today.plusDays(HOLD_REFUND_NOTICE_DAYS));
+            Payment payment = paymentRepository != null
+                    ? paymentRepository.findByClassEnrollmentId(enrollment.getId()).orElse(null) : null;
+            if (payment != null && "pending".equalsIgnoreCase(payment.getStatus())) {
+                try {
+                    if (vnpayGuard != null) vnpayGuard.enrollment(enrollment.getId());
+                } catch (RuntimeException awaitingGateway) {
+                    continue; // The gateway may still settle this fee: leave the seat for the expiry sweep.
+                }
+            }
+
+            enrollment.setStatus(CANCELLED);
+            enrollment.setCancelledAt(now);
+            enrollment.setCancelReason(resolvedReason);
+            String bodyKey;
+            Object[] bodyArgs;
+            BigDecimal refund = BigDecimal.ZERO;
+            if (payment != null && "pending".equalsIgnoreCase(payment.getStatus())) {
+                payment.setStatus("failed");
+                paymentRepository.save(payment);
+                bodyKey = "notifications.membership.course_hold.cancelled.body";
+                bodyArgs = new Object[]{gymClass.getName()};
+            } else if (payment != null && "success".equalsIgnoreCase(payment.getStatus())
+                    && payment.netAmount().signum() > 0) {
+                if (inTime) {
+                    refund = refundCoursePayment(payment, memberId, enrollment.getId(), "Membership hold");
+                    refunded = refunded.add(refund);
+                    bodyKey = "notifications.membership.course_hold.refunded.body";
+                    bodyArgs = new Object[]{gymClass.getName(), refund.toPlainString()};
+                } else {
+                    lost++;
+                    bodyKey = "notifications.membership.course_hold.fee_lost.body";
+                    bodyArgs = new Object[]{gymClass.getName(), HOLD_REFUND_NOTICE_DAYS};
+                }
+            } else if (inTime) {
+                restored++;
+                bodyKey = "notifications.membership.course_hold.credit_restored.body";
+                bodyArgs = new Object[]{gymClass.getName()};
+            } else {
+                enrollment.setCreditForfeited(true);
+                lost++;
+                bodyKey = "notifications.membership.course_hold.credit_lost.body";
+                bodyArgs = new Object[]{gymClass.getName(), HOLD_REFUND_NOTICE_DAYS};
+            }
+            ClassEnrollment saved = enrollments.saveAndFlush(enrollment);
+            cancelled++;
+            if (notifications != null) {
+                notifications.send(memberId, msg("notifications.booking.cancelled.title"), msg(bodyKey, bodyArgs),
+                        "system", "class_enrollment", saved.getId());
+            }
+        }
+        return new CourseHoldOutcome(cancelled, restored, lost, refunded);
+    }
+
+    /** True when the course still has a session that is neither cancelled nor completed inside {@code from..to}. */
+    private boolean hasOpenSessionBetween(GymClass gymClass, LocalDate from, LocalDate to) {
+        if (gymClass == null || gymClass.getId() == null || sessions == null) return true;
+        List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(gymClass.getId());
+        if (classSessions == null || classSessions.isEmpty()) return true;
+        return classSessions.stream()
+                .filter(sess -> !"cancelled".equalsIgnoreCase(sess.getStatus())
+                        && !"completed".equalsIgnoreCase(sess.getStatus()))
+                .anyMatch(sess -> sess.getSessionDate() != null
+                        && !sess.getSessionDate().isBefore(from) && !sess.getSessionDate().isAfter(to));
+    }
+
+    /** Refunds the whole settled fee to the wallet and marks the payment refunded; returns the amount refunded. */
+    private BigDecimal refundCoursePayment(Payment payment, Long memberId, Long enrollmentId, String reason) {
+        BigDecimal refundable = payment.netAmount();
+        payment.setRefundedAmount(payment.getAmount());
+        payment.setStatus("refunded");
+        paymentRepository.save(payment);
+        if (wallets != null) {
+            wallets.creditCourseRefund(memberId, refundable, "COURSE_REFUND_" + enrollmentId, reason);
+        }
+        return refundable;
+    }
+
     /** Date of the class's next session that has not ended; today when the schedule is unknown, empty when none. */
     private java.util.Optional<LocalDate> nextOpenSessionDate(GymClass gymClass, LocalDate today, LocalTime nowTime) {
         if (gymClass == null || gymClass.getId() == null || sessions == null) {
@@ -498,6 +621,9 @@ public class EnrollmentService {
                 creditWindowStart(currentSub),
                 currentSub.getEndDate()
         );
+        // A credit given up to a late membership hold stays spent even though its enrollment was cancelled.
+        used += enrollments.countForfeitedCreditsBetween(
+                member.getUserId(), creditWindowStart(currentSub), currentSub.getEndDate());
 
         int total = unlimited ? 999999 : creditLimit;
         int remaining = unlimited ? 999999 : Math.max(0, creditLimit - (int) used);
