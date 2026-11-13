@@ -44,8 +44,16 @@ public class WalletController {
             @Size(max = 30)
             String paymentMethod,
             @Size(max = 500)
-            String note
-    ) {}
+            String note,
+            /** Same value on every retry of one top-up, so a resend after a lost response credits only once. */
+            @Size(min = 8, max = 64)
+            @jakarta.validation.constraints.Pattern(regexp = "[A-Za-z0-9-]+")
+            String clientRequestId
+    ) {
+        public StaffTopupRequest(BigDecimal amount, String paymentMethod, String note) {
+            this(amount, paymentMethod, note, null);
+        }
+    }
 
     private final WalletService walletService;
     private final MessageService messageService;
@@ -130,7 +138,8 @@ public class WalletController {
                 body.amount(),
                 body.paymentMethod(),
                 body.note(),
-                staffId
+                staffId,
+                body.clientRequestId()
         );
         String msg = messageService != null
                 ? messageService.getMessage("wallet.topup.counter.success")

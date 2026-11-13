@@ -114,12 +114,38 @@ const SESSION_ROLE: Record<string, UserSession['role']> = {
 };
 
 // Calls the real API with the stored JWT; unwraps ApiResponse.data and throws ApiError on failure
+/** Default wait before giving up on a request; uploads get longer. A caller passing its own `signal` controls it. */
+export const API_TIMEOUT_MS = 30_000;
+export const API_UPLOAD_TIMEOUT_MS = 120_000;
+const TIMEOUT_MESSAGE = sourceMessage(
+  'Máy chủ phản hồi quá lâu. Kiểm tra mạng rồi thử lại. Nếu đang thanh toán, hãy xem lại lịch sử giao dịch trước khi làm lại.',
+  'The server took too long to respond. Check your connection and try again. If you were paying, check your transaction history before retrying.',
+);
+
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const isUpload = typeof FormData !== 'undefined' && init.body instanceof FormData;
+  const timeoutController = !init.signal && typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timedOut = false;
+  const timer = timeoutController
+    ? setTimeout(() => { timedOut = true; timeoutController.abort(); }, isUpload ? API_UPLOAD_TIMEOUT_MS : API_TIMEOUT_MS)
+    : undefined;
+  try {
+    return await sendApiRequest<T>(path, init, token, timeoutController?.signal);
+  } catch (error) {
+    if (timedOut) throw new ApiError(TIMEOUT_MESSAGE.vi, 0, 'TIMEOUT', TIMEOUT_MESSAGE);
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function sendApiRequest<T>(path: string, init: RequestInit, token: string | null, timeoutSignal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api/v1${path}`, {
       ...init,
+      ...(timeoutSignal ? { signal: timeoutSignal } : {}),
       headers: {
         // A FormData body needs the browser's multipart boundary, so no JSON content type then.
         ...(typeof FormData !== 'undefined' && init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),

@@ -264,8 +264,30 @@ it('lets the receptionist top up a selected member wallet at the counter', async
     amount: 500000,
     paymentMethod: 'cash',
     note: undefined,
+    clientRequestId: expect.any(String),
   });
   expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toContain('650.000');
+});
+
+it('resends the same request id when the receptionist retries a top-up after a network error', async () => {
+  api.topupMemberWallet.mockRejectedValueOnce(new Error('network down'));
+  await selectMember();
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="open-counter-topup-modal-btn"]')!.click());
+  const amountInput = document.body.querySelector<HTMLInputElement>('[data-testid="counter-topup-amount-input"]')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(amountInput, '500000');
+    amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const submit = async () => act(async () => document.body.querySelector<HTMLButtonElement>('[data-testid="submit-counter-topup-btn"]')!
+    .closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+
+  await submit();
+  await submit();
+
+  expect(api.topupMemberWallet).toHaveBeenCalledTimes(2);
+  const [first, second] = api.topupMemberWallet.mock.calls.map((call: unknown[]) => (call[1] as { clientRequestId: string }).clientRequestId);
+  expect(first).toBeTruthy();
+  expect(second).toBe(first);
 });
 
 it('offers only renewal, not a second new package, while the member still has a running paid period', async () => {

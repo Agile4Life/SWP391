@@ -158,6 +158,21 @@ public class WalletService {
             String paymentMethod,
             String note,
             Long staffUserId) {
+        return creditByReceptionist(memberId, amount, paymentMethod, note, staffUserId, null);
+    }
+
+    /**
+     * Credits a counter top-up. With a {@code clientRequestId}, a resend of the same top-up (the desk retried after
+     * the response was lost) returns the current wallet without crediting again.
+     */
+    @Transactional
+    public WalletDto creditByReceptionist(
+            Long memberId,
+            BigDecimal amount,
+            String paymentMethod,
+            String note,
+            Long staffUserId,
+            String clientRequestId) {
         if (memberId == null || amount == null
                 || amount.compareTo(new BigDecimal("10000")) < 0
                 || amount.compareTo(new BigDecimal("100000000")) > 0) {
@@ -170,6 +185,13 @@ public class WalletService {
         }
 
         Wallet wallet = getOrCreateWalletForUpdate(memberId);
+        boolean keyed = clientRequestId != null && !clientRequestId.isBlank();
+        String refId = keyed
+                ? "POS-REQ-" + clientRequestId.trim()
+                : "POS-" + System.currentTimeMillis() + (staffUserId != null ? ("-S" + staffUserId) : "");
+        if (keyed && walletTransactionRepository.existsByWallet_IdAndReferenceId(wallet.getId(), refId)) {
+            return toDto(wallet);
+        }
         LocalDateTime now = LocalDateTime.now();
         BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(amount);
@@ -179,7 +201,6 @@ public class WalletService {
             case "pos" -> "Thẻ / POS tại quầy Lễ tân";
             default -> "Tiền mặt tại quầy Lễ tân";
         };
-        String refId = "POS-" + System.currentTimeMillis() + (staffUserId != null ? ("-S" + staffUserId) : "");
         String description = "Nạp tiền vào Ví (" + methodLabel + ")"
                 + (note != null && !note.isBlank() ? (": " + note.trim()) : "");
         if (description.length() > 500) {
@@ -399,6 +420,18 @@ public class WalletService {
                 ? ("Hoàn tiền hủy buổi tập PT 1:1: " + reason)
                 : "Hoàn tiền hủy buổi tập PT 1:1 về Ví";
         credit(userId, amount, referenceId, "COACH_REFUND", description, "/member/classes?tab=pt");
+    }
+
+    /**
+     * Credits a VNPay debit confirmed after its payment was already settled or closed another way; idempotent per
+     * gateway reference.
+     */
+    @Transactional
+    public void creditLateGatewayPayment(Long userId, BigDecimal amount, String reference) {
+        String description = messageService != null
+                ? messageService.getMessage("wallet.description.vnpay_late_refund", reference)
+                : "Hoàn tiền VNPay xác nhận muộn cho khoản đã thanh toán (#" + reference + ")";
+        credit(userId, amount, reference + ":LATE_REFUND", "VNPAY_LATE_REFUND", description, "/member/invoices");
     }
 
     private void credit(Long userId, BigDecimal amount, String referenceId, String referenceType,

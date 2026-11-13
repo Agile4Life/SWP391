@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   apiFetch,
+  API_TIMEOUT_MS,
   clearAuthSession,
   getCurrentUser,
   homePath,
@@ -79,12 +80,36 @@ describe('client.ts (API client & Auth session)', () => {
 
     expect(result).toEqual(fakeResponseData);
     expect(mockFetch).toHaveBeenCalledWith('/api/v1/disciplines', {
+      signal: expect.any(AbortSignal),
       headers: {
         'Content-Type': 'application/json',
         'Accept-Language': 'vi',
         Authorization: 'Bearer bearer-token-123',
       },
     });
+  });
+
+  it('apiFetch gives up after the timeout with a TIMEOUT error instead of waiting forever', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      })));
+      const pending = apiFetch('/wallet/pay', { method: 'POST', body: '{}' });
+      const assertion = expect(pending).rejects.toMatchObject({ status: 0, code: 'TIMEOUT' });
+      await vi.advanceTimersByTimeAsync(API_TIMEOUT_MS);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('apiFetch leaves a caller-provided signal in charge of cancellation', async () => {
+    const controller = new AbortController();
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: 1 }) });
+    vi.stubGlobal('fetch', mockFetch);
+    await apiFetch('/ai/chat/sessions', { signal: controller.signal });
+    expect(mockFetch.mock.calls[0][1].signal).toBe(controller.signal);
   });
 
   it('apiFetch throws ApiError when server returns error status', async () => {

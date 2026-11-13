@@ -497,9 +497,16 @@ paths:
                 amount: { type: number, minimum: 10000, maximum: 100000000 }
                 paymentMethod: { type: string, enum: [cash, bank_transfer, pos], default: cash }
                 note: { type: string, maxLength: 500 }
+                clientRequestId:
+                  type: string
+                  minLength: 8
+                  maxLength: 64
+                  pattern: '^[A-Za-z0-9-]+$'
+                  description: "Same value on every retry of one top-up. A resend with an id already credited to this member returns the current WalletDto without crediting again."
       responses:
-        '200': { description: "data = WalletDto" }
+        '200': { description: "data = WalletDto (also returned unchanged for a replayed clientRequestId)" }
         '400': { description: INVALID_TOPUP_AMOUNT }
+        '409': { description: "RESOURCE_BUSY: the wallet is locked by another operation; retry with the same clientRequestId" }
   /disciplines:
     get: { summary: List disciplines (any authenticated user), responses: { '200': { description: "data = Discipline[]" } } }
     post: { summary: Create discipline (CENTER_MANAGER), responses: { '201': { description: Created }, '409': { description: Name exists } } }

@@ -135,10 +135,36 @@ class VnpayPaymentServiceTest {
         assertEquals("00",service.ipn(callback("00","00","65000000")));
         verify(settlement).updatePaymentStatus(9L,"success");assertEquals("success",closed.getStatus());
     }
-    @Test void delayedSuccessIsNotSettledOnceTheOrderWasClosed() {
+    @Test void delayedSuccessOnceTheOrderWasClosedIsRefundedToTheWalletNotSettled() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
         var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
         closed.setStatus("failed");payment.setStatus("failed");when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+        assertEquals("00",service.ipn(callback("00","00","65000000")));
+        verify(walletService).creditLateGatewayPayment(7L,new BigDecimal("650000"),"ABC123");
+        verifyNoInteractions(settlement,invoices);
+        assertEquals("success",closed.getStatus()); assertEquals("12345",closed.getGatewayTransactionNo());
+    }
+    @Test void delayedSuccessAfterPaymentWasSettledAnotherWayIsRefundedOnce() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
+        closed.setStatus("failed");payment.setStatus("success"); // paid at the counter after the attempt expired
+        when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+
+        assertEquals("00",service.ipn(callback("00","00","65000000")));
+        verify(walletService).creditLateGatewayPayment(7L,new BigDecimal("650000"),"ABC123");
+        verifyNoInteractions(settlement,invoices);
+
+        // VNPay retries the same callback: the attempt is now settled, nothing is credited again.
         assertEquals("02",service.ipn(callback("00","00","65000000")));
+        verify(walletService,times(1)).creditLateGatewayPayment(any(),any(),any());
+    }
+    @Test void delayedSuccessForASettledPaymentWithoutWalletIsLeftForRetry() {
+        var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
+        closed.setStatus("failed");payment.setStatus("success");when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
+        assertEquals("99",service.ipn(callback("00","00","65000000")));
+        assertEquals("failed",closed.getStatus());
         verifyNoInteractions(settlement,invoices);
     }
     @Test void delayedFailureForAClosedAttemptChangesNothing() {

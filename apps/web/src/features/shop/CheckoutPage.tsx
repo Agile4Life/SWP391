@@ -23,13 +23,7 @@ import type {
   ShopConfigDto,
 } from './shopTypes';
 import './shop-public.css';
-
-function generateRequestId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
+import { generateRequestId } from '../../shared/lib/requestId';
 
 const EMPTY_ADDRESS: AddressRequest = {
   recipientName: '',

@@ -384,7 +384,7 @@ export const receptionApi = {
    */
   topupMemberWallet: async (
     memberId: number,
-    payload: { amount: number; paymentMethod: string; note?: string }
+    payload: { amount: number; paymentMethod: string; note?: string; clientRequestId?: string }
   ): Promise<{ balance: number; updatedAt?: string }> => {
     return apiFetch<{ balance: number; updatedAt?: string }>(`/wallet/members/${memberId}/topup`, {
       method: 'POST',

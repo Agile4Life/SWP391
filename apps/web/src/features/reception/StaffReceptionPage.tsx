@@ -2,6 +2,7 @@ import { staffLocale, useStaffI18n, type StaffMessage, staffMessage, staffError 
 import { CoachHealthMetrics } from '../coaching/CoachHealthMetrics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
+import { generateRequestId } from '../../shared/lib/requestId';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
@@ -98,6 +99,7 @@ export function StaffReceptionPage() {
   const [topupNote, setTopupNote] = useState('');
   const [topupModalError, setTopupModalError] = useState<StaffMessage | null>(null);
   const [isSubmittingTopup, setIsSubmittingTopup] = useState(false);
+  const topupAttemptRef = useRef<{ key: string; id: string } | null>(null);
 
   // Danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày chờ Lễ tân duyệt
   const [trialList, setTrialList] = useState<ReceptionTrialItem[]>([]);
@@ -135,6 +137,7 @@ export function StaffReceptionPage() {
     setTopupMethod('cash');
     setTopupNote('');
     setTopupModalError(null);
+    topupAttemptRef.current = null;
     setIsTopupModalOpen(true);
   };
 
@@ -146,6 +149,11 @@ export function StaffReceptionPage() {
       setTopupModalError(staffMessage('Số tiền nạp Ví phải từ 10.000 đ đến 100.000.000 đ.', 'Top-up amount must be between 10,000 VND and 100,000,000 VND.'));
       return;
     }
+    // Keep one request id per member/amount/method so a retry after a lost response is not credited twice.
+    const attemptKey = `${selectedMember.userId}|${parsed}|${topupMethod}`;
+    if (!topupAttemptRef.current || topupAttemptRef.current.key !== attemptKey) {
+      topupAttemptRef.current = { key: attemptKey, id: generateRequestId() };
+    }
     setIsSubmittingTopup(true);
     setTopupModalError(null);
     try {
@@ -153,7 +161,9 @@ export function StaffReceptionPage() {
         amount: parsed,
         paymentMethod: topupMethod,
         note: topupNote.trim() || undefined,
+        clientRequestId: topupAttemptRef.current.id,
       });
+      topupAttemptRef.current = null;
       const newBalance = Number(updated?.balance ?? 0);
       setMemberWalletBalance(newBalance);
       setIsTopupModalOpen(false);

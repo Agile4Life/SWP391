@@ -374,6 +374,23 @@ public class GlobalExceptionHandler {
         log.debug("Client closed connection before response completed: {}", ex.getMessage());
     }
 
+    /**
+     * A row lock was not granted within {@code lock_timeout} (another operation on the same record is still running)
+     * or the database chose this transaction as a deadlock victim. Nothing was saved; the user can retry.
+     */
+    @ExceptionHandler({org.springframework.dao.PessimisticLockingFailureException.class,
+            jakarta.persistence.PessimisticLockException.class,
+            jakarta.persistence.LockTimeoutException.class})
+    public ResponseEntity<ApiResponse<Object>> handleLockBusy(Exception ex) {
+        log.warn("Row lock not acquired ({})", ex.getClass().getSimpleName());
+        ApiResponse<Object> response = ApiResponse.error(
+                HttpStatus.CONFLICT.value(),
+                "RESOURCE_BUSY",
+                resolveMessage("error.resource_busy", "error.resource_busy")
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGeneral(Exception ex) {
         log.error("Unhandled server error: ", ex);

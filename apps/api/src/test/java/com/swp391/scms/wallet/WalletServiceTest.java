@@ -151,4 +151,33 @@ class WalletServiceTest {
         ));
         verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/invoices"));
     }
+
+    @Test
+    void creditByReceptionist_resendWithSameRequestIdCreditsOnce() {
+        when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "POS-REQ-desk-req-0001"))
+                .thenReturn(false)
+                .thenReturn(true);
+
+        walletService.creditByReceptionist(7L, new BigDecimal("300000"), "cash", null, 99L, "desk-req-0001");
+        WalletDto replay = walletService.creditByReceptionist(7L, new BigDecimal("300000"), "cash", null, 99L, "desk-req-0001");
+
+        assertThat(replay.balance()).isEqualByComparingTo("800000");
+        assertThat(wallet.getBalance()).isEqualByComparingTo("800000");
+        verify(walletTransactionRepository, times(1)).save(argThat(tx ->
+                "TOPUP_COUNTER".equals(tx.getType()) && "POS-REQ-desk-req-0001".equals(tx.getReferenceId())));
+    }
+
+    @Test
+    void creditLateGatewayPayment_creditsWalletOncePerReference() {
+        when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "REF9:LATE_REFUND"))
+                .thenReturn(false)
+                .thenReturn(true);
+
+        walletService.creditLateGatewayPayment(7L, new BigDecimal("150000"), "REF9");
+        walletService.creditLateGatewayPayment(7L, new BigDecimal("150000"), "REF9");
+
+        assertThat(wallet.getBalance()).isEqualByComparingTo("650000");
+        verify(walletTransactionRepository, times(1)).save(argThat(tx ->
+                "REFUND_CREDIT".equals(tx.getType()) && "VNPAY_LATE_REFUND".equals(tx.getReferenceType())));
+    }
 }

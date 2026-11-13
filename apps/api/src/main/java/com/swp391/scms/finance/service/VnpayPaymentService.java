@@ -317,6 +317,8 @@ public class VnpayPaymentService {
                 && "pending".equals(p.getStatus());
         String lateOrderCode=refundLateOrderPayment(fields,t,p,reference);
         if(lateOrderCode!=null) return lateOrderCode;
+        String settledElsewhereCode=refundPaymentSettledElsewhere(fields,t,p,reference);
+        if(settledElsewhereCode!=null) return settledElsewhereCode;
         if((!"pending".equals(t.getStatus()) && !lateAfterLocalExpiry) || !"pending".equals(p.getStatus())) return "02";
         String response=fields.get("vnp_ResponseCode"),status=fields.getOrDefault("vnp_TransactionStatus", response);
         if(response==null || status==null || !response.matches("[0-9]{2}") || !status.matches("[0-9]{2}")) return "97";
@@ -391,6 +393,32 @@ public class VnpayPaymentService {
                 "order","product_order",order.getId(),"/member/orders/"+order.getId());
         return "00";
     }
+    /**
+     * The gateway confirms a debit for an attempt whose payment is no longer pending: it was settled another way
+     * (cash, wallet, a newer VNPay attempt) or closed (cancelled booking) after this attempt expired locally. The
+     * member was charged twice, so the money is credited to their wallet and the attempt is recorded as settled.
+     * Returns the IPN code to answer with, or {@code null} when this is not that case.
+     */
+    private String refundPaymentSettledElsewhere(Map<String,String> fields, VnpayTransaction t, Payment p, String reference) {
+        if("pending".equals(p.getStatus()) || t.getGatewayTransactionNo()!=null
+                || !Set.of("pending","failed").contains(t.getStatus())) return null;
+        String response=fields.get("vnp_ResponseCode"),status=fields.getOrDefault("vnp_TransactionStatus", response);
+        if(!"00".equals(response) || !"00".equals(status)) return null; // nothing was charged: answered as already handled
+        String gatewayId=fields.get("vnp_TransactionNo");
+        if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
+        if(walletService==null) {
+            LATE_LOG.error("VNPay charged attempt {} for payment {} already {}, but no wallet is available to refund it",
+                    reference, p.getId(), p.getStatus());
+            return "99";
+        }
+        t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
+        transactions.saveAndFlush(t);
+        walletService.creditLateGatewayPayment(p.getMember().getUserId(), t.getAmount(), reference);
+        LATE_LOG.warn("VNPay confirmed attempt {} after payment {} was already {}; credited {} to the member wallet",
+                reference, p.getId(), p.getStatus(), t.getAmount().toPlainString());
+        return "00";
+    }
+    private static final org.slf4j.Logger LATE_LOG = org.slf4j.LoggerFactory.getLogger(VnpayPaymentService.class);
     private String orderWalletDescription(Payment p) {
         String code = "#" + p.getProductOrderId();
         if (orders != null && p.getProductOrderId() != null) {
