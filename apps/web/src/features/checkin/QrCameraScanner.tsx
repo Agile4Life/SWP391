@@ -18,13 +18,18 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
   const [phase, setPhase] = useState<'ready' | 'starting' | 'scanning' | 'done'>('ready');
   const [error, setError] = useState<string | SourceMessage>('');
 
+  function stopStream(element: HTMLVideoElement | null) {
+    if (!element) return;
+    const stream = element.srcObject;
+    if (stream && 'getTracks' in stream) stream.getTracks().forEach((track) => track.stop());
+    element.srcObject = null;
+  }
+
   function release() {
     run.current += 1;
     scanner.current?.destroy();
     scanner.current = null;
-    const stream = video.current?.srcObject;
-    if (stream && 'getTracks' in stream) stream.getTracks().forEach((track) => track.stop());
-    if (video.current) video.current.srcObject = null;
+    stopStream(video.current);
   }
 
   useEffect(() => {
@@ -51,7 +56,8 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
     setPhase('starting');
     try {
       const { default: Decoder } = await import('qr-scanner');
-      if (run.current !== current || !videoHost.current || document.hidden) return;
+      if (run.current !== current) return;
+      if (!videoHost.current || document.hidden) { setPhase('ready'); return; }
       // The decoder owns this child. A fresh node isolates its delayed stop callback
       // from the next run, even when the user retries immediately after a scan.
       const element = document.createElement('video');
@@ -68,7 +74,7 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
       }, { preferredCamera: 'environment', returnDetailedScanResult: true, maxScansPerSecond: 8 });
       scanner.current = instance;
       await instance.start();
-      if (run.current !== current) { instance.destroy(); return; }
+      if (run.current !== current) { instance.destroy(); stopStream(element); return; }
       setPhase('scanning');
     } catch {
       if (run.current !== current) return;
@@ -85,9 +91,9 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
     </div>
     <p className="qr-checkin-hint">{hint === DEFAULT_HINT ? memberText(DEFAULT_HINT) : hint}</p>
     {error && <p role="alert" className="qr-checkin-error">{memberRenderMessage(error)}</p>}
-    <button type="button" className="btn-primary qr-camera__button" disabled={disabled || phase === 'starting'}
-      onClick={() => { if (phase === 'scanning') { release(); setPhase('ready'); } else void start(); }}>
-      {phase === 'starting' ? memberText("Đang mở camera…") : phase === 'scanning' ? memberText("Dừng camera") : phase === 'done' ? memberText("Quét lại") : memberText("Bật camera")}
+    <button type="button" className="btn-primary qr-camera__button" disabled={disabled}
+      onClick={() => { if (phase === 'scanning' || phase === 'starting') { release(); setPhase('ready'); } else void start(); }}>
+      {phase === 'starting' || phase === 'scanning' ? memberText("Dừng camera") : phase === 'done' ? memberText("Quét lại") : memberText("Bật camera")}
     </button>
   </section>;
 }
