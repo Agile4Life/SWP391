@@ -7,4 +7,6 @@
 .action-menu__list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 1050; display: grid; gap: 6px; min-width: 190px; padding: 8px; border: 1px solid var(--portal-border-strong, var(--color-border-medium)); border-radius: 12px; background: var(--portal-surface, var(--color-bg-card)); box-shadow: 0 14px 34px #0003; }
 .action-menu__list--up { top: auto; bottom: calc(100% + 6px); }
 .action-menu__list > button, .action-menu__list > a { width: 100%; justify-content: flex-start; text-align: left; white-space: nowrap; }
+/* Menu dùng `gap` để cách nút; chặn rule `td.actions .btn + .btn { margin-left }` của bảng làm nút thứ hai lệch phải. */
+.portal-table td.actions .action-menu .action-menu__list > .btn-secondary { margin: 0; }
 @media (max-width: 767px) { .action-menu__trigger { min-width: 44px; min-height: 44px; } .action-menu__list > button, .action-menu__list > a { min-height: 44px; } }
