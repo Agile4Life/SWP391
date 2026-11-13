@@ -1,0 +1,4 @@
+/* Ô chọn hình thức thu tiền cùng chiều cao với nút btn-sm cạnh nó (36px desktop, 44px mobile). */
+@media (min-width: 768px) {
+  .portal-v2 .portal-select.counter-method-select { min-height: 36px; padding-block: 6px; font-size: 12px; }
+}

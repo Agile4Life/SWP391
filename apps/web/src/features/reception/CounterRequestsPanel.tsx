@@ -10,6 +10,7 @@ import { formatVnd } from '../shop/shopFormat';
 import { PaymentInvoice } from './PaymentInvoice';
 import { receptionApi, type PaymentMethod, type PaymentResponseDto, type PendingSubscriptionItem, type UnpaidCoachBooking } from './receptionApi';
 import type { CounterQueue } from './useCounterQueue';
+import './counter-requests.css';
 
 type CounterMethod = Extract<PaymentMethod, 'cash' | 'pos' | 'bank_transfer'>;
 const METHODS: Array<{ value: CounterMethod; vi: string; en: string }> = [
@@ -120,7 +121,7 @@ export function CounterRequestsPanel({ queue }: { queue: CounterQueue }) {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   <label className="shop-sr-only" htmlFor={`counter-method-${item.id}`}>{t('Hình thức thu tiền', 'Payment method')}</label>
-                  <select id={`counter-method-${item.id}`} className="portal-select" style={{ width: 'auto' }} value={methodOf(item.id)} disabled={busyKey !== null}
+                  <select id={`counter-method-${item.id}`} className="portal-select counter-method-select" style={{ width: 'auto' }} value={methodOf(item.id)} disabled={busyKey !== null}
                     onChange={(event) => setMethods((current) => ({ ...current, [item.id]: event.target.value as CounterMethod }))}>
                     {METHODS.map((method) => <option key={method.value} value={method.value}>{t(method.vi, method.en)}</option>)}
                   </select>
