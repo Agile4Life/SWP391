@@ -48,13 +48,13 @@ export function PtAttendancePage() {
 
   const load = useCallback(async () => {
     const current = ++requestId.current;
-    setLoading(true);
     setError(null);
-    setRows([]);
     if (!from || !to || from > to) {
+      setRows([]);
       setLoading(false);
       return;
     }
+    setLoading(true);
     try {
       const data = await getPtAttendance(from, to, 'ALL');
       if (current === requestId.current) {
@@ -62,7 +62,10 @@ export function PtAttendancePage() {
         setNow(new Date());
       }
     } catch (cause) {
-      if (current === requestId.current) setError(localizableError(cause, 'Không tải được danh sách điểm danh. Vui lòng thử lại.'));
+      if (current === requestId.current) {
+        setRows([]);
+        setError(localizableError(cause, 'Không tải được danh sách điểm danh. Vui lòng thử lại.'));
+      }
     } finally {
       if (current === requestId.current) setLoading(false);
     }
@@ -84,7 +87,7 @@ export function PtAttendancePage() {
   }, [load]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
   const counts = { ATTENDED: 0, MISSED: 0, UPCOMING: 0, IN_PROGRESS: 0 };
@@ -145,7 +148,7 @@ export function PtAttendancePage() {
       </div>
       {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong> <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null || loading} onClick={() => void load()}>{t('Thử lại', 'Retry')}</button></div>}
       {busyId !== null && <p role="status">{t('Đang cập nhật điểm danh…', 'Updating attendance…')}</p>}
-      {loading ? <LoadingSkeleton label={t('Đang tải điểm danh', 'Loading attendance')} /> : visible.length === 0 ? (
+      {loading && rows.length === 0 ? <LoadingSkeleton label={t('Đang tải điểm danh', 'Loading attendance')} /> : visible.length === 0 ? (
         <div className="portal-card" role="status">{t('Không có buổi PT nào trong khoảng này.', 'No 1:1 sessions in this range.')}</div>
       ) : (
         <ul className="stack" style={{ listStyle: 'none', padding: 0 }} aria-label={t('Danh sách buổi PT', '1:1 sessions')}>

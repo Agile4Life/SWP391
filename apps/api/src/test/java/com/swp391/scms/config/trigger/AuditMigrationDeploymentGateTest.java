@@ -18,13 +18,13 @@ class AuditMigrationDeploymentGateTest {
                 .withUserConfiguration(PostgreSqlTriggerProvider.class);
     }
 
-    @Test void migrationIsDisabledWhenNoDeploymentFlagIsProvided() {
-        context().run(ctx -> check(ctx.getBean(PostgreSqlTriggerProvider.class), 1));
+    @Test void migrationRunsByDefault() {
+        context().run(ctx -> check(ctx.getBean(PostgreSqlTriggerProvider.class), 2));
     }
 
     @ParameterizedTest
     @CsvSource({"false,1", "true,2"})
-    void onlyExplicitOptInAddsTheAuditMigration(String enabled, int callbacks) {
+    void theFlagCanTurnTheAuditMigrationOff(String enabled, int callbacks) {
         context().withPropertyValues("app.database.audit-entity-type-upgrade-enabled=" + enabled)
                 .run(ctx -> check(ctx.getBean(PostgreSqlTriggerProvider.class), callbacks));
     }
@@ -32,7 +32,7 @@ class AuditMigrationDeploymentGateTest {
     private void check(PostgreSqlTriggerProvider provider, int callbacks) {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         provider.applyTriggers(jdbc);
-        // The legacy check-in upgrade remains; only approved deployment enables the additional audit callback.
+        // The check-in upgrade always runs; the audit upgrade adds a second callback unless turned off.
         verify(jdbc, times(callbacks)).execute(org.mockito.ArgumentMatchers.<ConnectionCallback<Void>>any());
         verify(jdbc).execute(contains("trg_pt_schedule_booking"));
     }
