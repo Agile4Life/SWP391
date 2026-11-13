@@ -195,32 +195,20 @@ test.describe('Lỗi 4 — hiển thị họ tên thật thay vì email/tên đ�
   });
 });
 
-test.describe('Lỗi 5 — Lịch lớp học không còn khối "lịch buổi học theo tuần" thừa', () => {
+test.describe('Lỗi 5 — Lịch lớp học chỉ còn danh sách khóa học', () => {
   test.use({ storageState: 'e2e/.auth/binh.json' });
 
-  test('chỉ một nhóm chuyển chế độ; bộ lọc tuần/thứ chỉ hiện khi xem buổi học', async ({ page }) => {
+  test('chỉ còn danh sách khóa học: không chế độ buổi theo tuần, không lọc tuần/thứ', async ({ page }) => {
     await page.goto('/member/classes?tab=list');
     await settled(page);
     await expect(page.getByRole('tab', { name: 'Lịch lớp học' })).toHaveAttribute('aria-selected', 'true');
-    const view = page.getByRole('group', { name: 'Chế độ xem lịch lớp học' });
-    await expect(view.getByRole('button', { name: 'Buổi học theo tuần' })).toHaveAttribute('aria-pressed', 'true');
-    // Tuần và thứ chỉ có ý nghĩa với từng buổi học.
-    await expect(page.getByRole('group', { name: 'Lọc theo tuần' })).toBeVisible();
-    await expect(page.getByLabel('Thứ trong tuần')).toBeVisible();
-    // Dòng chuyển chế độ riêng và câu giải thích trùng lặp đã bị bỏ.
-    await expect(page.getByText('Xem chi tiết lịch học từng buổi trong tuần')).toHaveCount(0);
-    await expect(page.getByText('Lịch buổi học theo tuần')).toHaveCount(0);
-
-    await view.getByRole('button', { name: /Khóa học định kỳ/ }).click();
-    await expect(view.getByRole('button', { name: /Khóa học định kỳ/ })).toHaveAttribute('aria-pressed', 'true');
-    // Khóa học trọn gói không phụ thuộc tuần/thứ: các bộ lọc đó không còn hiện.
+    // Đăng ký theo khóa học nên chế độ "Buổi học theo tuần" và các bộ lọc tuần/thứ đã bị gỡ hẳn.
+    await expect(page.getByRole('group', { name: 'Chế độ xem lịch lớp học' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Buổi học theo tuần' })).toHaveCount(0);
     await expect(page.getByRole('group', { name: 'Lọc theo tuần' })).toHaveCount(0);
     await expect(page.getByLabel('Thứ trong tuần')).toHaveCount(0);
-    await expect(page.getByText(/Tổng cộng \d+ khóa học trọn gói/)).toBeVisible();
     await expect(page.getByRole('group', { name: 'Lọc theo bộ môn' })).toBeVisible();
-
-    await view.getByRole('button', { name: 'Buổi học theo tuần' }).click();
-    await expect(page.getByRole('group', { name: 'Lọc theo tuần' })).toBeVisible();
+    await expect(page.getByTestId('course-count')).toHaveText(/\d+ khóa học/);
   });
 });
 

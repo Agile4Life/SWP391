@@ -1,24 +1,19 @@
-.member-classes .btn-primary.member-class-enroll {
-  display: inline-grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  padding: 0;
-  border: 1px solid var(--portal-salmon);
-  border-radius: 50%;
-  font: inherit;
-  cursor: pointer;
+/* Thanh lọc gọn của tab Lịch lớp học: một hàng bộ môn + số khóa học, lời nhắc gói tách dòng khi cần */
+.member-classes-toolbar { display: grid; gap: 10px; padding: 14px 20px; margin-bottom: 20px; }
+.member-classes-toolbar__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.member-classes-toolbar__count { font-size: 13px; font-weight: 600; color: var(--portal-muted); white-space: nowrap; }
+.member-classes-toolbar__hint {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--portal-border);
+  font-size: 13px;
+  color: var(--portal-muted);
 }
-.member-class-enroll > svg { display: block; width: 36px; height: 36px; grid-area: 1 / 1; }
-.member-class-enroll:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 3px; }
-.member-class-enroll:disabled { opacity: .65; cursor: wait; }
-.member-classes-more { display: grid; justify-items: center; gap: 8px; padding: 12px 0; }
-.member-classes-more p { margin: 0; font-size: 13px; color: var(--portal-muted); }
-.member-classes-more button { min-height: 44px; }
-.member-class-session { min-width: 0; overflow-wrap: anywhere; }
+
+.member-course-card { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 767px) {
   .member-classes .portal-card--list { flex-wrap: wrap; }
-  .member-class-session > div { min-width: 0; max-width: 100%; }
+  .member-course-card > div { min-width: 0; max-width: 100%; }
 }
 
 /* Link trong dòng nhắc đủ vùng chạm trên mobile */

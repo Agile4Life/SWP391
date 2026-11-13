@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassesPage } from './MemberClassesPage';
 import { setLanguage } from '../../shared/i18n/language';
-import { centerNowParts } from '../../shared/lib/centerTime';
 import { ApiError } from '../../shared/api/client';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 
@@ -59,12 +58,15 @@ vi.mock('./coachBookingApi', () => ({
   getCoachSchedule: vi.fn().mockResolvedValue([]),
 }));
 
-const session = {
-  id: 8, classId: 3, className: 'Yoga Flow', disciplineId: 2, disciplineName: 'Yoga',
-  coachId: 4, coachName: 'An', roomId: 5, roomName: 'Studio', sessionDate: '2099-10-19',
-  startTime: '08:00:00', endTime: '09:00:00', status: 'scheduled', cancelReason: null,
-  capacity: 12, bookedCount: 12,
+const course = {
+  id: 3, name: 'Yoga Flow', disciplineId: 2, disciplineName: 'Yoga', coachId: 4, coachName: 'An',
+  roomId: 5, roomName: 'Studio', capacity: 12, level: 'Beginner', description: null, status: 'active',
+  price: 500000, startDate: '2099-10-01', endDate: '2099-10-29', recurringDays: 'MONDAY,WEDNESDAY,FRIDAY',
+  startTime: '08:00:00', endTime: '09:00:00',
 };
+const silverQuota = { tier: 'SILVER', totalCredits: 2, usedCredits: 1, remainingCredits: 1, unlimited: false };
+const enrollment = { id: 41, sessionId: null, classId: 3, className: 'Yoga Flow', memberId: 9, sessionDate: null,
+  startTime: null, endTime: null, status: 'enrolled', enrolledAt: '2099-09-20T08:00:00', cancelledAt: null, cancelReason: null };
 
 describe('MemberClassesPage', () => {
   let host: HTMLDivElement;
@@ -75,593 +77,215 @@ describe('MemberClassesPage', () => {
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
     clearNotices();
-    mocks.sessions.mockReset();
+    mocks.sessions.mockReset().mockResolvedValue([]);
     mocks.mySubscription.mockReset().mockResolvedValue(null);
-    mocks.enrollments.mockReset();
+    mocks.enrollments.mockReset().mockResolvedValue([]);
     mocks.upcoming.mockReset();
     mocks.cancelEnrollment.mockReset();
-    mocks.coaches.mockReset();
-    mocks.coachSlots.mockReset();
-    mocks.myCoachBookings.mockReset();
+    mocks.coaches.mockReset().mockResolvedValue([]);
+    mocks.coachSlots.mockReset().mockResolvedValue([]);
+    mocks.myCoachBookings.mockReset().mockResolvedValue([]);
     mocks.quota.mockReset().mockResolvedValue(null);
     mocks.checkout.mockReset();
     mocks.enroll.mockReset();
     mocks.classes.mockReset().mockResolvedValue([]);
-    mocks.enrollments.mockResolvedValue([]);
-    mocks.coaches.mockResolvedValue([]);
-    mocks.coachSlots.mockResolvedValue([]);
-    mocks.myCoachBookings.mockResolvedValue([]);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
   async function render(path = '/?tab=list') { await act(async () => root.render(<MemoryRouter initialEntries={[path]}><MemberClassesPage /></MemoryRouter>)); }
-  const manySessions = () => Array.from({ length: 14 }, (_, index) => ({ ...session, id: 100 + index, classId: 100 + index,
-    className: `Buổi ${index + 1}`, disciplineName: index < 7 ? 'Yoga' : 'Boxing', bookedCount: 1 }));
-  async function clickText(text: string) {
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.includes(text))!.click());
-  }
+  const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent?.includes(text));
+  async function clickText(text: string) { await act(async () => button(text)!.click()); }
+  const titles = () => [...host.querySelectorAll('h3.row-card__title')].map(el => el.textContent);
 
   it('switches schedule header, tabs and empty state between VI and EN', async () => {
-    mocks.sessions.mockResolvedValue([]);
     await render();
     await act(async () => setLanguage('en'));
     expect(host.querySelector('h1')!.textContent).toBe('Classes & bookings');
     expect([...host.querySelectorAll('[role="tab"]')].map(node => node.textContent?.trim())).toEqual(['My schedule', 'Class schedule', 'Book a personal trainer (PT)']);
-    expect(host.textContent).toContain('No classes scheduled');
+    expect(host.textContent).toContain('No courses available');
     await act(async () => setLanguage('vi'));
     expect(host.querySelector('h1')!.textContent).toBe('Lịch học & đặt chỗ');
   });
 
+  it('shows only the course list: no weekly-session view, week navigation or weekday picker', async () => {
+    mocks.classes.mockResolvedValue([course]);
+    await render('/member/classes?tab=list&week=1');
+    expect(host.textContent).not.toContain('Buổi học theo tuần');
+    expect(host.textContent).not.toContain('Khóa học định kỳ (Trọn gói)');
+    expect(button('Tuần này')).toBeUndefined();
+    expect(button('Tuần kế tiếp')).toBeUndefined();
+    expect(host.querySelector('select')).toBeNull();
+    expect(host.querySelector('[data-testid="course-count"]')?.textContent).toBe('1 khóa học');
+    expect(titles()).toEqual(['Yoga Flow']);
+    expect(mocks.sessions).not.toHaveBeenCalled();
+  });
+
   it('opens on the discipline from the sport page link and ignores unknown values', async () => {
-    mocks.sessions.mockResolvedValue([
-      { ...session, id: 1, className: 'Gym sáng', disciplineName: 'Gym' },
-      { ...session, id: 2, className: 'Boxing tối', disciplineName: 'Boxing & Kickfit' },
+    mocks.classes.mockResolvedValue([
+      { ...course, id: 1, name: 'Gym sáng', disciplineName: 'Gym' },
+      { ...course, id: 2, name: 'Boxing tối', disciplineName: 'Boxing & Kickfit' },
     ]);
     await render('/member/classes?tab=list&discipline=Boxing');
-    expect(host.textContent).toContain('Boxing tối');
-    expect(host.textContent).not.toContain('Gym sáng');
+    expect(titles()).toEqual(['Boxing tối']);
     await act(async () => root.unmount());
     root = createRoot(host);
     await render('/member/classes?tab=list&discipline=Karate');
-    expect(host.textContent).toContain('Gym sáng');
-    expect(host.textContent).toContain('Boxing tối');
+    expect(titles()).toHaveLength(2);
   });
 
-  it('offers an accessible circular plus that enrolls the whole course', async () => {
-    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);
-    mocks.enroll.mockResolvedValue({});
+  it('filters by discipline locally and reports when nothing matches', async () => {
+    mocks.classes.mockResolvedValue([course, { ...course, id: 4, name: 'Boxing Basics', disciplineName: 'Boxing' }]);
     await render();
-    const plus = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
-    expect(plus).not.toBeNull();
-    expect(plus.getAttribute('aria-label')).toContain('Yoga Flow');
-    expect(plus.querySelector('svg[aria-hidden="true"]')?.getAttribute('viewBox')).toBe('0 0 24 24');
-    await act(async () => plus.click());
-    expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(3);
+    await act(async () => [...host.querySelectorAll('button')].find(item => item.textContent === 'Boxing')!.click());
+    expect(titles()).toEqual(['Boxing Basics']);
+    expect(host.querySelector('[data-testid="course-count"]')?.textContent).toBe('1 khóa học');
+    await act(async () => [...host.querySelectorAll('button')].find(item => item.textContent === 'Tennis')!.click());
+    expect(host.textContent).toContain('Không có khóa học phù hợp');
+    await clickText('Tất cả bộ môn');
+    expect(titles()).toHaveLength(2);
+    expect(mocks.classes).toHaveBeenCalledTimes(1);
   });
 
-  it('loads more locally after filtering and resets visible count on discipline/day changes', async () => {
-    mocks.sessions.mockResolvedValue(manySessions());
-    await render();
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
-    await clickText('Xem thêm');
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(12);
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === 'Boxing')!.click());
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
-    expect(host.textContent).toContain('Buổi 8');
-    expect(host.querySelector('.member-class-session h3')?.textContent).toBe('Buổi 8');
-    await clickText('Xem thêm');
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(7);
-    const day = host.querySelector('select')!;
-    await act(async () => { day.value = String(new Date(2099, 9, 19).getDay()); day.dispatchEvent(new Event('change', { bubbles: true })); });
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
-    expect(mocks.sessions).toHaveBeenCalledTimes(1);
-  });
-
-  it('resets load-more on week changes and ignores a late response from the old week', async () => {
-    mocks.sessions.mockResolvedValueOnce(manySessions());
-    await render(); await clickText('Xem thêm');
-    let finishNext!: (value: typeof session[]) => void;
-    mocks.sessions.mockReturnValueOnce(new Promise(done => { finishNext = done; }));
-    await clickText('Tuần kế tiếp');
-    expect(host.textContent).toContain('Đang tải lịch học');
-    mocks.sessions.mockResolvedValueOnce(manySessions());
-    await clickText('Tuần này');
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
-    await act(async () => finishNext([{ ...session, className: 'STALE WEEK' }]));
-    expect(host.textContent).not.toContain('STALE WEEK');
-    expect(host.querySelectorAll('.member-class-session')).toHaveLength(6);
-  });
-
-  it('does not treat failed enrollments as empty or offer booking and recovers the booked badge on retry', async () => {
-    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);
-    mocks.enrollments.mockRejectedValueOnce(new ApiError('Không tải được đăng ký', 500)).mockResolvedValueOnce([
-      { id: 41, classId: 3, sessionId: 8, className: 'Yoga Flow', status: 'booked', enrolledAt: '2099-10-01T08:00:00' },
+  it('lists open courses before courses that have already started and disables joining a started one', async () => {
+    mocks.quota.mockResolvedValue(silverQuota);
+    mocks.classes.mockResolvedValue([
+      { ...course, id: 7, name: 'Started Course', startDate: '2000-01-03', endDate: '2000-02-28' },
+      { ...course, id: 8, name: 'Open Course' },
     ]);
     await render();
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải được');
-    expect(host.querySelector('.member-class-enroll')).toBeNull();
+    expect(titles()).toEqual(['Open Course', 'Started Course']);
+    expect(button('Khóa đã bắt đầu')?.disabled).toBe(true);
+    expect(host.querySelector('[data-testid="enroll-course-8"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="enroll-course-7"]')).toBeNull();
+  });
+
+  it('shows loading, then an error, and retries the course request', async () => {
+    let fail!: (reason: unknown) => void;
+    mocks.classes.mockReturnValueOnce(new Promise((_, reject) => { fail = reject; })).mockResolvedValueOnce([course]);
+    await render();
+    expect(host.textContent).toContain('Đang tải khóa học');
+    await act(async () => fail(new Error('offline')));
+    expect(host.textContent).toContain('Không tải được danh sách khóa học');
+    await act(async () => [...host.querySelectorAll('button')].find(item => item.textContent === 'Thử lại')!.click());
+    expect(titles()).toEqual(['Yoga Flow']);
+    expect(mocks.classes).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for personal enrollment data before offering an enroll action and retries only it', async () => {
+    mocks.quota.mockResolvedValue(silverQuota);
+    mocks.classes.mockResolvedValue([course]);
+    mocks.enrollments.mockRejectedValueOnce(new ApiError('Không tải được đăng ký', 500)).mockResolvedValueOnce([enrollment]);
+    await render();
+    expect(host.textContent).toContain('Không tải được lịch học của tôi');
+    expect(host.querySelector('[data-testid="enroll-course-3"]')).toBeNull();
+    expect(button('Chưa thể kiểm tra đăng ký')?.disabled).toBe(true);
     await clickText('Thử lại lịch học của tôi');
-    expect(host.textContent).toContain('Đã đăng ký khóa');
-    expect(mocks.sessions).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('Hủy khóa học');
+    expect(mocks.classes).toHaveBeenCalledTimes(1);
   });
 
-  it('waits for personal booking data before offering any booking action', async () => {
-    mocks.sessions.mockResolvedValue([session, { ...session, id: 9, classId: 4, bookedCount: 1 }]);
-    let finish!: (value: unknown[]) => void;
-    mocks.enrollments.mockReturnValue(new Promise(done => { finish = done; }));
+  it('shows the buy-a-package hint only for a member without an active package', async () => {
+    mocks.classes.mockResolvedValue([course]);
     await render();
-    expect(host.querySelector('.member-class-enroll')).toBeNull();
-    await act(async () => finish([]));
-    expect(host.querySelector('.member-class-enroll')).not.toBeNull();
-    expect(host.textContent).toContain('Buổi đã đầy');
-    expect(host.textContent).not.toContain('Tham gia hàng chờ');
-  });
-
-  it('shows loading, then real sessions and marks a full session as full', async () => {
-    let resolve!: (value: typeof session[]) => void;
-    mocks.sessions.mockReturnValue(new Promise((done) => { resolve = done; }));
-    await render();
-    expect(host.textContent).toContain('Đang tải lịch học');
-    await act(async () => resolve([session]));
-    expect(host.textContent).toContain('Yoga Flow');
-    expect(host.textContent).toContain('12 / 12');
-    const button = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Buổi đã đầy'));
-    expect(button?.disabled).toBe(true);
-    expect(host.querySelector('a')?.getAttribute('href')).toBe('/member/packages');
-  });
-
-  it('hides the buy-a-package reminder when the member already has an active package', async () => {
+    expect(host.textContent).toContain('Cần gói tập đang hoạt động');
+    await act(async () => root.unmount());
+    root = createRoot(host);
     const end = new Date(Date.now() + 20 * 86400000).toLocaleDateString('en-CA');
     mocks.mySubscription.mockResolvedValue({ id: 1, status: 'active', endDate: end });
-    mocks.sessions.mockResolvedValue([session]);
     await render();
-    expect(host.textContent).toContain('Yoga Flow');
-    expect(host.textContent).not.toContain('Cần gói tập đang hoạt động để đặt chỗ');
+    expect(host.textContent).not.toContain('Cần gói tập đang hoạt động');
   });
 
-  it('shows empty schedule', async () => {
-    mocks.sessions.mockResolvedValueOnce([]);
+  it('enrolls the whole course once with plan credit and cancels it as a whole course', async () => {
+    mocks.quota.mockResolvedValue(silverQuota);
+    mocks.classes.mockResolvedValue([course]);
+    mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([enrollment]).mockResolvedValue([]);
+    let finish!: (value: unknown) => void;
+    mocks.enroll.mockReturnValue(new Promise((done) => { finish = done; }));
     await render();
-    expect(host.textContent).toContain('Chưa có lịch học');
-  });
-
-  it('filters disciplines and weekdays without changing backend data', async () => {
-    mocks.sessions.mockResolvedValue([session, { ...session, id: 9, className: 'Boxing Basics', disciplineName: 'Boxing', sessionDate: '2099-10-20' }]);
-    await render();
-    const yoga = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Yoga')!;
-    await act(async () => yoga.click());
-    expect(host.textContent).toContain('Yoga Flow');
-    expect(host.textContent).not.toContain('Boxing Basics');
-    const select = host.querySelector('select')!;
-    await act(async () => { select.value = '2'; select.dispatchEvent(new Event('change', { bubbles: true })); });
-    expect(host.textContent).toContain('Không có buổi học phù hợp');
-  });
-
-  it('shows an error and retries the backend request', async () => {
-    mocks.sessions.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([session]);
-    await render();
-    expect(host.textContent).toContain('Không tải được lịch học');
-    const retry = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Thử lại')!;
-    await act(async () => retry.click());
-    expect(host.textContent).toContain('Yoga Flow');
-    expect(mocks.sessions).toHaveBeenCalledTimes(2);
-  });
-
-  it('keeps the schedule when personal bookings fail to load and retries only them', async () => {
-    mocks.sessions.mockResolvedValue([session]);
-    mocks.enrollments.mockRejectedValueOnce(new Error('enrollments offline')).mockResolvedValueOnce([]);
-    await render();
-    expect(host.textContent).toContain('Yoga Flow');
-    expect([...host.querySelectorAll('h3')].some(heading => heading.textContent === 'Không tải được lịch học')).toBe(false);
-    expect(host.textContent).toContain('Không tải được lịch học của tôi');
-    const retry = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Thử lại lịch học của tôi')!;
-    await act(async () => retry.click());
-    expect(host.textContent).not.toContain('Không tải được lịch học của tôi');
-    expect(mocks.sessions).toHaveBeenCalledTimes(1);
-    expect(mocks.enrollments).toHaveBeenCalledTimes(2);
-  });
-
-  it('disables booking for cancelled sessions and does not render the removed my-schedule list tab', async () => {
-    mocks.sessions.mockResolvedValue([{ ...session, status: 'cancelled' }]);
-    await render();
-    expect(host.textContent).toContain('Không thể đặt');
-    const tabs = [...host.querySelectorAll('[role="tab"]')].map((item) => item.textContent?.trim());
-    expect(tabs).toEqual(['Lịch của tôi', 'Lịch lớp học', 'Đặt lịch HLV 1:1 (PT)']);
-  });
-
-  it('normalizes legacy ?tab=my to the Lịch của tôi calendar tab while keeping exactly 3 tabs', async () => {
-    mocks.sessions.mockResolvedValue([session]);
-    await render('/member/classes?tab=my');
-    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-    expect(tabs.map((item) => item.textContent?.trim())).toEqual([
-      'Lịch của tôi',
-      'Lịch lớp học',
-      'Đặt lịch HLV 1:1 (PT)',
-    ]);
-    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
-  });
-
-  it('marks a past session unavailable even when capacity remains', async () => {
-    mocks.sessions.mockResolvedValue([{ ...session, sessionDate: '2020-10-19', bookedCount: 2 }]);
-    await render();
-    expect(host.textContent).toContain('Không thể đặt');
-  });
-
-  it('marks a session that has started today unavailable', async () => {
-    const today = centerNowParts().date;
-    mocks.sessions.mockResolvedValue([{ ...session, sessionDate: today, startTime: '00:00:00', endTime: '23:59:59', bookedCount: 2 }]);
-    await render();
-    expect(host.textContent).toContain('Không thể đặt');
-  });
-
-  it('reports a rejected booking as a centred toast instead of an inline banner', async () => {
-    mocks.sessions.mockResolvedValueOnce([{ ...session, bookedCount: 1 }]).mockResolvedValueOnce([]);
-    mocks.enroll.mockRejectedValue(new ApiError('Hội viên đã có chỗ trong lớp học này.', 400));
-    await render();
-    const join = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
-    await act(async () => join.click());
-    expect(document.querySelector('dialog.sol-toast--error')?.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
-    expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần kế tiếp')!.click());
-    expect(host.textContent).toContain('Chưa có lịch học');
+    const enroll = host.querySelector<HTMLButtonElement>('[data-testid="enroll-course-3"]')!;
+    await act(async () => { enroll.click(); enroll.click(); });
     expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(3);
-  });
-
-  it('clears old action error on discipline, day and tab changes', async () => {
-    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);
-    mocks.enroll.mockRejectedValue(new ApiError('Đã có chỗ', 400));
-    await render();
-    const join = () => host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
-    await act(async () => join().click());
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Boxing')!.click());
-    expect(host.textContent).not.toContain('Đã có chỗ');
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Yoga')!.click());
-    await act(async () => join().click());
-    const day = host.querySelector('select')!;
-    await act(async () => { day.value = '2'; day.dispatchEvent(new Event('change', { bubbles: true })); });
-    expect(host.textContent).not.toContain('Đã có chỗ');
-    await act(async () => { day.value = 'ALL'; day.dispatchEvent(new Event('change', { bubbles: true })); });
-    await act(async () => join().click());
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Đặt lịch HLV 1:1'))!.click());
-    expect(host.textContent).not.toContain('Đã có chỗ');
-  });
-
-  it('keeps a real schedule load error when changing filters', async () => {
-    mocks.sessions.mockRejectedValue(new Error('offline'));
-    await render();
-    expect(host.textContent).toContain('Không tải được lịch học');
-    await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Boxing')!.click());
-    expect(host.textContent).toContain('Không tải được lịch học');
-  });
-
-  it('does not send duplicate booking requests while pending', async () => {
-    mocks.sessions.mockResolvedValue([{ ...session, bookedCount: 1 }]);
-    let resolve!: (value: unknown) => void;
-    mocks.enroll.mockReturnValue(new Promise((done) => { resolve = done; }));
-    await render();
-    const join = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
-    await act(async () => { join.click(); join.click(); });
-    expect(mocks.enroll).toHaveBeenCalledTimes(1);
-    expect(join.disabled).toBe(true);
-    await act(async () => resolve({ id: 30 }));
-  });
-
-  it('enrolls the whole course once and cancels it as a whole course', async () => {
-    const available = { ...session, bookedCount: 1 };
-    const enrolled = { id: 41, sessionId: 8, classId: 3, className: 'Yoga Flow', memberId: 9, sessionDate: '2099-10-19',
-      startTime: '08:00:00', endTime: '09:00:00', status: 'booked', enrolledAt: '2099-10-01T08:00:00',
-      cancelledAt: null, cancelReason: null };
-    mocks.sessions.mockResolvedValueOnce([available]).mockResolvedValueOnce([{ ...available, bookedCount: 2 }])
-      .mockResolvedValueOnce([available]);
-    mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([enrolled]).mockResolvedValueOnce([]);
-    let finishBooking!: (value: unknown) => void;
-    mocks.enroll.mockReturnValue(new Promise((done) => { finishBooking = done; }));
-    await render();
-    const book = [...host.querySelectorAll('button')].find((item) => item.getAttribute('aria-label') === 'Đăng ký khóa: Yoga Flow')!;
-    await act(async () => { book.click(); book.click(); });
-    expect(mocks.enroll).toHaveBeenCalledTimes(1);
-    expect(book.disabled).toBe(true);
-    await act(async () => finishBooking({ id: 41 }));
+    expect(enroll.disabled).toBe(true);
+    await act(async () => finish({ id: 41 }));
     expect(noticeText()).toContain('Đã đăng ký khóa học "Yoga Flow"');
-    const cancel = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy khóa học')!;
-    await act(async () => cancel.click());
-    const confirm = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận hủy')!;
+    await clickText('Hủy khóa học');
     mocks.cancelEnrollment.mockResolvedValueOnce({ id: 41, status: 'cancelled' });
-    await act(async () => confirm.click());
+    await clickText('Xác nhận hủy');
     expect(mocks.cancelEnrollment).toHaveBeenCalledWith(41);
   });
 
-  it('sorts sessions chronologically by date and start-time, grouping by date, and disabling overlapping sessions', async () => {
-    const session1 = {
-      ...session,
-      id: 8,
-      className: 'Yoga Flow',
-      sessionDate: '2099-10-19',
-      startTime: '08:00:00',
-      endTime: '09:30:00',
-      bookedCount: 5,
-    };
-    const session2 = {
-      ...session,
-      id: 9,
-      className: 'Pilates Core',
-      sessionDate: '2099-10-19',
-      startTime: '08:30:00',
-      endTime: '10:00:00',
-      bookedCount: 3,
-    };
-    const session3 = {
-      ...session,
-      id: 10,
-      className: 'Boxing Burn',
-      sessionDate: '2099-10-19',
-      startTime: '10:00:00',
-      endTime: '11:00:00',
-      bookedCount: 2,
-    };
-
-    mocks.sessions.mockResolvedValue([session3, session1, session2]);
-    mocks.enrollments.mockResolvedValue([
-      {
-        id: 41,
-        classId: 3,
-        className: 'Yoga Flow',
-        memberId: 9,
-        sessionId: 8,
-        sessionDate: '2099-10-19',
-        startTime: '08:00:00',
-        endTime: '09:30:00',
-        status: 'booked',
-        enrolledAt: '2099-10-01T08:00:00',
-        cancelledAt: null,
-        cancelReason: null,
-      },
-    ]);
-
+  it('reports a rejected enrollment as a centred toast instead of an inline banner', async () => {
+    mocks.quota.mockResolvedValue(silverQuota);
+    mocks.classes.mockResolvedValue([course]);
+    mocks.enroll.mockRejectedValue(new ApiError('Hội viên đã có chỗ trong lớp học này.', 400));
     await render();
-
-    // Grouped under day-group-2099-10-19
-    expect(host.querySelector('[data-testid="day-group-2099-10-19"]')).not.toBeNull();
-
-    // Bookable classes come first (Boxing Burn), then upcoming ones that cannot be booked, each in time order:
-    // Yoga Flow (already booked, 08:00), Pilates Core (overlapping, 08:30)
-    const titles = [...host.querySelectorAll('h3.row-card__title')].map((el) => el.textContent);
-    expect(titles).toEqual(['Boxing Burn', 'Yoga Flow', 'Pilates Core']);
-
-    // Overlapping session #9 (08:30-10:00) is marked and disabled
-    expect(host.querySelector('[data-testid="overlap-badge-9"]')).not.toBeNull();
-    const overlapBtn = host.querySelector('[data-testid="overlap-btn-9"]') as HTMLButtonElement;
-    expect(overlapBtn).not.toBeNull();
-    expect(overlapBtn.disabled).toBe(true);
-    expect(overlapBtn.textContent).toBe('Trùng giờ đã đặt');
-
-    // Non-overlapping adjacent session #10 (10:00-11:00) remains bookable
-    expect(host.querySelector('[data-testid="overlap-badge-10"]')).toBeNull();
-    const bookBtn = [...host.querySelectorAll('button')].find((b) => b.getAttribute('aria-label')?.startsWith('Đăng ký khóa:')) as HTMLButtonElement;
-    expect(bookBtn).not.toBeUndefined();
-    expect(bookBtn.disabled).toBe(false);
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="enroll-course-3"]')!.click());
+    expect(document.querySelector('dialog.sol-toast--error')?.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
+    expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
   });
 
-  it('lists bookable sessions before sessions whose start time has passed', async () => {
-    const past = { ...session, id: 21, className: 'Past Class', sessionDate: '2000-01-03', startTime: '06:00:00', endTime: '07:00:00' };
-    const open = { ...session, id: 22, className: 'Open Class', sessionDate: '2099-10-19', startTime: '09:00:00', endTime: '10:00:00', bookedCount: 1 };
-    mocks.sessions.mockResolvedValue([past, open]);
-    mocks.enrollments.mockResolvedValue([]);
-
-    await render();
-
-    const titles = [...host.querySelectorAll('h3.row-card__title')].map((el) => el.textContent);
-    expect(titles).toEqual(['Open Class', 'Past Class']);
-  });
-
-  it('keeps the selected discipline without showing retired favorites controls', async () => {
-    mocks.sessions.mockResolvedValue([session, { ...session, id: 9, className: 'Gym sáng', disciplineName: 'Gym' }]);
-    await render('/member/classes?tab=list&discipline=Gym');
-    expect(host.querySelector('.btn-favorite-star')).toBeNull();
-    expect(host.textContent).not.toContain('yêu thích');
-    expect(host.textContent).toContain('Gym sáng');
-    expect(host.textContent).not.toContain('Yoga Flow');
-    await clickText('Tất cả bộ môn');
-    expect(host.textContent).toContain('Yoga Flow');
-  });
-
-  it('offers only three calendar weeks and keeps the sport when changing weeks', async () => {
-    mocks.sessions.mockImplementation(async (offset = 0) => [{ ...session, className: 'Week ' + offset, disciplineName: 'Gym' }]);
-    await render('/member/classes?tab=list&discipline=Gym&week=month');
-    expect(host.textContent).not.toContain('30 ngày');
-    expect(host.textContent).toContain('Week 0');
-    await clickText('Tuần trước');
-    expect(mocks.sessions).toHaveBeenLastCalledWith(-1);
-    expect(host.textContent).toContain('Week -1');
-    await clickText('Tuần kế tiếp');
-    expect(mocks.sessions).toHaveBeenLastCalledWith(1);
-    expect(host.textContent).toContain('Week 1');
-    await clickText('Tuần này');
-    expect(host.textContent).toContain('Week 0');
-    expect(mocks.upcoming).not.toHaveBeenCalled();
-    expect(host.querySelector('[aria-label="Lọc theo bộ môn"] [aria-pressed="true"]')?.textContent).toBe('Gym');
+  it('normalizes legacy ?tab=my to the Lịch của tôi calendar tab while keeping exactly 3 tabs', async () => {
+    await render('/member/classes?tab=my');
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    expect(tabs.map((item) => item.textContent?.trim())).toEqual(['Lịch của tôi', 'Lịch lớp học', 'Đặt lịch HLV 1:1 (PT)']);
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
   });
 
   it('renders coach 1:1 booking tab and switches correctly', async () => {
-    mocks.sessions.mockResolvedValue([session]);
-    mocks.coaches.mockResolvedValue([
-      { id: 101, fullName: 'Trần Văn Nam', specialization: 'Gym & Thể hình', defaultHourlyRate: 200000 },
-    ]);
+    mocks.coaches.mockResolvedValue([{ id: 101, fullName: 'Trần Văn Nam', specialization: 'Gym & Thể hình', defaultHourlyRate: 200000 }]);
     await render();
-
-    const ptTab = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Đặt lịch HLV 1:1'))!;
-    expect(ptTab).not.toBeUndefined();
-    await act(async () => ptTab.click());
-
+    await clickText('Đặt lịch HLV 1:1');
     expect(host.textContent).toContain('Chọn Huấn luyện viên cá nhân (PT 1:1)');
     expect(host.textContent).toContain('Trần Văn Nam');
   });
 
-  describe('course enrollment options', () => {
-    const week = () => [
-      { ...session, id: 8, classId: 3, className: 'Yoga Flow', bookedCount: 1 },
-      { ...session, id: 9, classId: 4, className: 'Pilates Core', startTime: '10:00:00', endTime: '11:00:00', bookedCount: 2 },
-      { ...session, id: 10, classId: 5, className: 'Boxing Burn', startTime: '12:00:00', endTime: '13:00:00', bookedCount: 12 },
-    ];
-
-    it('has no multi-session booking controls and enrolls only the chosen course', async () => {
-      mocks.sessions.mockResolvedValue(week());
-      mocks.enroll.mockResolvedValue({});
-      await render();
-      expect(host.textContent).not.toContain('Đặt nhiều buổi');
-      expect(host.textContent).not.toContain('Chọn tất cả');
-      expect(host.querySelector('input[type="checkbox"]')).toBeNull();
-      const buttons = host.querySelectorAll<HTMLButtonElement>('.member-class-enroll');
-      expect(buttons).toHaveLength(2);
-      await act(async () => buttons[1].click());
-      expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(4);
-      expect(noticeText()).toContain('thành công');
-    });
-
-    it('does not offer a session that clashes with an enrolled course and shows enrolled courses as cancellable', async () => {
-      mocks.sessions.mockResolvedValue([
-        { ...session, id: 8, classId: 3, className: 'Yoga Flow', bookedCount: 1 },
-        { ...session, id: 9, classId: 4, className: 'Pilates Core', startTime: '08:30:00', endTime: '09:30:00', bookedCount: 1 },
-      ]);
-      mocks.enrollments.mockResolvedValue([{ id: 41, sessionId: 8, classId: 3, className: 'Yoga Flow', memberId: 9,
-        sessionDate: '2099-10-19', startTime: '08:00:00', endTime: '09:00:00', status: 'booked',
-        enrolledAt: '2099-10-01T08:00:00', cancelledAt: null, cancelReason: null }]);
-      await render();
-      expect(host.textContent).toContain('Hủy khóa học');
-      expect(host.querySelector('[data-testid="overlap-btn-9"]')).not.toBeNull();
-      expect(host.querySelector('.member-class-enroll')).toBeNull();
-    });
-
+  describe('course quota and pricing', () => {
     it('displays membership course quota banner with tier and remaining credits', async () => {
-      mocks.quota.mockResolvedValue({
-        tier: 'SILVER',
-        totalCredits: 2,
-        usedCredits: 1,
-        remainingCredits: 1,
-        unlimited: false,
-      });
-      mocks.sessions.mockResolvedValue([]);
+      mocks.quota.mockResolvedValue(silverQuota);
       await render();
-
       const quotaBanner = host.querySelector('[data-testid="course-quota-banner"]');
-      expect(quotaBanner).not.toBeNull();
       expect(quotaBanner?.textContent).toContain('GÓI SILVER');
       expect(quotaBanner?.textContent).toContain('Còn 1/2 khóa học miễn phí');
     });
 
     it('hides the course quota banner for a member who has no plan yet', async () => {
-      // The API still answers with an empty quota (no tier, 0 credits) for a member without a membership.
       mocks.quota.mockResolvedValue({ tier: '', totalCredits: 0, usedCredits: 0, remainingCredits: 0, unlimited: false });
-      mocks.sessions.mockResolvedValue([]);
       await render();
-
       expect(host.querySelector('[data-testid="course-quota-banner"]')).toBeNull();
       expect(host.textContent).not.toContain('Còn 0/0 khóa học miễn phí');
     });
 
     it('shows upgrade link when member course quota is exhausted', async () => {
-      mocks.quota.mockResolvedValue({
-        tier: 'SILVER',
-        totalCredits: 2,
-        usedCredits: 2,
-        remainingCredits: 0,
-        unlimited: false,
-      });
-      mocks.sessions.mockResolvedValue([]);
+      mocks.quota.mockResolvedValue({ ...silverQuota, usedCredits: 2, remainingCredits: 0 });
       await render();
-
       const quotaBanner = host.querySelector('[data-testid="course-quota-banner"]');
-      expect(quotaBanner).not.toBeNull();
       expect(quotaBanner?.textContent).toContain('Còn 0/2 khóa học miễn phí');
       expect(quotaBanner?.textContent).toContain('Nâng cấp gói tập');
     });
 
-    it('displays course duration, frequency badge on session cards and opens course detail modal', async () => {
-      mocks.classes.mockResolvedValue([
-        {
-          id: 3,
-          name: 'Yoga Flow',
-          disciplineName: 'Yoga',
-          coachName: 'An',
-          roomName: 'Studio',
-          capacity: 12,
-          startDate: '2099-10-01',
-          endDate: '2099-10-29',
-          recurringDays: 'MONDAY,WEDNESDAY,FRIDAY',
-          startTime: '08:00:00',
-          endTime: '09:00:00',
-          price: 500000,
-          level: 'Beginner',
-          description: 'Lớp học yoga tăng cường dẻo dai',
-        },
-      ]);
-      mocks.sessions.mockResolvedValue([
-        { ...session, id: 8, classId: 3, className: 'Yoga Flow', bookedCount: 1 },
-      ]);
-      mocks.quota.mockResolvedValue({
-        tier: 'GOLD',
-        totalCredits: 3,
-        usedCredits: 1,
-        remainingCredits: 2,
-        unlimited: false,
-      });
-
+    it('shows course duration and cadence and opens the course detail modal', async () => {
+      mocks.classes.mockResolvedValue([{ ...course, description: 'Lớp học yoga tăng cường dẻo dai' }]);
+      mocks.quota.mockResolvedValue({ tier: 'GOLD', totalCredits: 3, usedCredits: 1, remainingCredits: 2, unlimited: false });
       await render();
-
-      // Check course duration and frequency badge on the session card
-      expect(host.textContent).toContain('Khóa 4 tuần (3 buổi/tuần)');
+      expect(host.textContent).toContain('Khóa 4 tuần (3 buổi / tuần)');
       expect(host.textContent).toContain('Thứ 2, Thứ 4, Thứ 6');
-
-      // Click "Chi tiết khóa học & Gói tập" button to open modal
-      await clickText('Chi tiết khóa học & Gói tập');
-
+      await clickText('Xem chi tiết & Lộ trình');
       expect(host.textContent).toContain('Thông tin khóa học & Gói tập');
-      expect(host.textContent).toContain('THỜI LƯỢNG KHÓA HỌC');
       expect(host.textContent).toContain('4 tuần (12 buổi học)');
-      expect(host.textContent).toContain('3 buổi / tuần');
-      expect(host.textContent).toContain('QUYỀN LỢI GÓI TẬP CỦA BẠN');
       expect(host.textContent).toContain('Bạn còn 2/3 khóa học miễn phí theo hạn mức gói');
-      expect(host.textContent).toContain('0 VNĐ (Miễn phí theo gói)');
       expect(host.textContent).toContain('Xác nhận đăng ký (Miễn phí theo gói)');
     });
 
-    it('allows switching to recurring course view and shows syllabus and package options', async () => {
-      mocks.classes.mockResolvedValue([
-        {
-          id: 5,
-          name: 'Pilates Mastery',
-          disciplineName: 'Pilates',
-          coachName: 'Bảo',
-          roomName: 'Studio B',
-          capacity: 15,
-          startDate: '2099-11-01',
-          endDate: '2099-12-27',
-          recurringDays: 'TUESDAY,THURSDAY',
-          startTime: '10:00:00',
-          endTime: '11:00:00',
-          price: 600000,
-          level: 'Intermediate',
-          description: 'Khóa học pilates 8 tuần cốt lõi',
-        },
-      ]);
-      mocks.sessions.mockResolvedValue([]);
-      mocks.quota.mockResolvedValue({
-        tier: 'BRONZE',
-        totalCredits: 1,
-        usedCredits: 1,
-        remainingCredits: 0,
-        unlimited: false,
-      });
-
+    it('charges tuition once plan credits are used up', async () => {
+      mocks.classes.mockResolvedValue([{ ...course, id: 5, name: 'Pilates Mastery', disciplineName: 'Pilates', price: 600000,
+        startDate: '2099-11-01', endDate: '2099-12-27', recurringDays: 'TUESDAY,THURSDAY' }]);
+      mocks.quota.mockResolvedValue({ tier: 'BRONZE', totalCredits: 1, usedCredits: 1, remainingCredits: 0, unlimited: false });
       await render();
-
-      // Switch to recurring course view
-      await clickText('Khóa học định kỳ (Trọn gói)');
-
-      expect(host.textContent).toContain('Pilates Mastery');
       expect(host.textContent).toContain('Khóa 8 tuần (2 buổi / tuần)');
       expect(host.textContent).toContain('16 buổi trọn gói');
       expect(host.textContent).toContain('Học phí ngoài gói: 600.000 VNĐ');
-      expect(host.textContent).toContain('Đăng ký & Thanh toán');
+      await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pay-course-5"]')!.click());
+      expect(host.textContent).toContain('Thanh toán học phí khóa học');
     });
   });
 });

@@ -1,11 +1,10 @@
 import { memberMessage, memberText, memberRenderMessage, memberNotify } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
-import { Select } from '../../shared/ui/Select';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberCalendar } from './components/MemberCalendar';
@@ -15,29 +14,16 @@ import { cardStatus } from './cardStatus';
 import { DISCIPLINES, matchesDiscipline } from '../../shared/lib/disciplines';
 import {
   cancelEnrollment,
-  currentWeek,
-  filterSessions,
   getMyEnrollments,
-  getSessions,
   getMyQuota,
   getClasses,
   enrollCourse,
   checkoutCourse,
-  type ClassSessionDto,
   type EnrollmentDto,
   type QuotaDto,
   type GymClassDto,
 } from './memberClassesApi';
-import { weekRangeLabel } from '../schedule/timetable';
-import '../schedule/timetable.css';
 import './member-classes.css';
-
-const SESSION_BATCH_SIZE = 6;
-
-const days = [
-  ['ALL', 'Tất cả các ngày'], ['1', 'Thứ 2'], ['2', 'Thứ 3'], ['3', 'Thứ 4'],
-  ['4', 'Thứ 5'], ['5', 'Thứ 6'], ['6', 'Thứ 7'], ['0', 'Chủ nhật'],
-];
 
 function errorMessage(error: unknown): string | SourceMessage {
   if (error instanceof ApiError) {
@@ -52,11 +38,6 @@ function errorMessage(error: unknown): string | SourceMessage {
   return memberMessage('Không thể tải lịch học. Vui lòng thử lại.');
 }
 
-/** Only Monday–Sunday calendar weeks are supported. */
-function weekFromQuery(value: string | null): -1 | 0 | 1 {
-  return value === '-1' ? -1 : value === '1' ? 1 : 0;
-}
-
 /** Course fee after the member's tier discount (the server applies the same rule when it charges). */
 function discountedPrice(price: number, percent?: number): number {
   return percent && percent > 0 ? Math.round((price * (100 - percent)) / 100) : price;
@@ -65,22 +46,6 @@ function discountedPrice(price: number, percent?: number): number {
 function formatShortDate(iso: string): string {
   const [y, m, d] = iso.split('-');
   return d && m && y ? `${d}/${m}/${y}` : iso;
-}
-
-const DAY_NAMES_VI: Record<number, string> = {
-  0: 'Chủ nhật',
-  1: 'Thứ Hai',
-  2: 'Thứ Ba',
-  3: 'Thứ Tư',
-  4: 'Thứ Năm',
-  5: 'Thứ Sáu',
-  6: 'Thứ Bảy',
-};
-
-function formatDayGroupLabel(iso: string): string {
-  const parsed = new Date(`${iso}T00:00:00`);
-  const dayLabel = Number.isNaN(parsed.getTime()) ? '' : DAY_NAMES_VI[parsed.getDay()] ?? '';
-  return dayLabel ? `${memberText(dayLabel)} • ${formatShortDate(iso)}` : formatShortDate(iso);
 }
 
 interface CourseScheduleInfo {
@@ -176,45 +141,6 @@ function levelLabel(level?: string | null): string {
     default:
       return 'Mọi cấp độ (All levels)';
   }
-}
-
-function findOverlappingEnrollment(
-  targetSession: ClassSessionDto,
-  activeEnrollments: EnrollmentDto[],
-  allSessions: ClassSessionDto[],
-): { className: string; startTime: string; endTime: string } | null {
-  const targetStart = targetSession.startTime.slice(0, 5);
-  const targetEnd = targetSession.endTime.slice(0, 5);
-  for (const enrollment of activeEnrollments) {
-    if (enrollment.sessionId ? enrollment.sessionId === targetSession.id : enrollment.classId === targetSession.classId) {
-      continue;
-    }
-    const matchedSession =
-      enrollment.sessionDate && enrollment.startTime && enrollment.endTime
-        ? {
-            sessionDate: enrollment.sessionDate,
-            startTime: enrollment.startTime,
-            endTime: enrollment.endTime,
-          }
-        : allSessions.find(
-            (s) =>
-              s.id === enrollment.sessionId ||
-              (enrollment.sessionId === null && s.classId === enrollment.classId && s.sessionDate === targetSession.sessionDate),
-          );
-    if (!matchedSession || matchedSession.sessionDate !== targetSession.sessionDate) {
-      continue;
-    }
-    const otherStart = matchedSession.startTime.slice(0, 5);
-    const otherEnd = matchedSession.endTime.slice(0, 5);
-    if (targetStart < otherEnd && targetEnd > otherStart) {
-      return {
-        className: enrollment.className,
-        startTime: otherStart,
-        endTime: otherEnd,
-      };
-    }
-  }
-  return null;
 }
 
 /** Liên kết từ trang bộ môn (`?discipline=Boxing`); giá trị lạ quay về tất cả bộ môn. */
@@ -427,14 +353,10 @@ export function MemberClassesPage() {
   // Liên kết như "Quản lý lịch PT" (?tab=pt) nằm ngay trong trang này nên không remount: đồng bộ lại tab mỗi khi URL đổi.
   // Bấm tab vẫn đổi state ngay (không chờ router), sau đó URL được cập nhật cùng giá trị.
   useEffect(() => { setTab(tabFromQuery(rawTab)); }, [rawTab]);
-  const weekOffset = weekFromQuery(searchParams.get('week'));
-  const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
   const [discipline, setDiscipline] = useState(() => disciplineFromQuery(searchParams.get('discipline')));
-  const [day, setDay] = useState('ALL');
   // null: chưa biết (đang tải hoặc lỗi) — khi đó không hiện lời nhắc mua gói
   const [hasActivePackage, setHasActivePackage] = useState<boolean | null>(null);
-  const [visibleCount, setVisibleCount] = useState(SESSION_BATCH_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
   const [retry, setRetry] = useState(0);
@@ -447,7 +369,6 @@ export function MemberClassesPage() {
   const [quota, setQuota] = useState<QuotaDto | null>(null);
   const [classes, setClasses] = useState<GymClassDto[]>([]);
   const [subscription, setSubscription] = useState<CardSubscription | null>(null);
-  const [scheduleView, setScheduleView] = useState<'sessions' | 'courses'>('sessions');
   const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<GymClassDto | null>(null);
   const [courseCheckoutTarget, setCourseCheckoutTarget] = useState<{ classId: number; className: string; price: number } | null>(null);
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'online_wallet' | 'vnpay' | 'cash'>('online_wallet');
@@ -459,7 +380,6 @@ export function MemberClassesPage() {
   useEffect(() => { setCheckoutError(''); }, [courseCheckoutTarget]);
 
   function clearActionFeedback() {
-    setVisibleCount(SESSION_BATCH_SIZE);
     actionGenRef.current += 1;
   }
 
@@ -477,17 +397,13 @@ export function MemberClassesPage() {
     setSearchParams(params, { replace: true });
   }
 
-  // Normalize removed/unknown URL ranges and legacy ?tab=my without losing tab or discipline.
+  // Bỏ tham số ?week cũ (lịch theo tuần đã gỡ) và chuyển ?tab=my cũ về tab Lịch của tôi, giữ nguyên bộ môn.
   useEffect(() => {
-    const week = searchParams.get('week');
-    const next = weekFromQuery(week);
-    const needsWeekNormalize = week !== null && week !== String(next);
+    const hasLegacyWeek = searchParams.has('week');
     const needsTabNormalize = searchParams.get('tab') === 'my';
-    if (needsWeekNormalize || needsTabNormalize) {
+    if (hasLegacyWeek || needsTabNormalize) {
       const params = new URLSearchParams(searchParams);
-      if (needsWeekNormalize) {
-        params.set('week', String(next));
-      }
+      params.delete('week');
       if (needsTabNormalize) {
         params.delete('tab');
         setTab('timetable');
@@ -495,13 +411,6 @@ export function MemberClassesPage() {
       setSearchParams(params, { replace: true });
     }
   }, [searchParams, setSearchParams]);
-
-  function changeWeek(next: -1 | 0 | 1) {
-    clearActionFeedback();
-    const params = new URLSearchParams(searchParams);
-    params.set('week', String(next));
-    setSearchParams(params, { replace: true });
-  }
 
   useEffect(() => {
     let active = true;
@@ -528,30 +437,12 @@ export function MemberClassesPage() {
 
   useEffect(() => {
     let active = true;
-    void getClasses()
-      .then((data) => {
-        if (active && data) setClasses(data);
-      })
-      .catch(() => {});
-    return () => { active = false; };
-  }, [retry]);
-
-  const classesMap = useMemo(() => {
-    const map = new Map<number, GymClassDto>();
-    for (const c of classes) {
-      map.set(c.id, c);
-    }
-    return map;
-  }, [classes]);
-
-  useEffect(() => {
-    let active = true;
     async function load() {
       setLoading(true);
       setError('');
       try {
-        const nextSessions = weekOffset === 0 ? await getSessions() : await getSessions(weekOffset);
-        if (active) setSessions(nextSessions);
+        const data = await getClasses();
+        if (active) setClasses(data ?? []);
       } catch (cause) {
         if (active) setError(errorMessage(cause));
       } finally {
@@ -560,7 +451,7 @@ export function MemberClassesPage() {
     }
     void load();
     return () => { active = false; };
-  }, [retry, weekOffset]);
+  }, [retry]);
 
   useEffect(() => {
     let active = true;
@@ -658,39 +549,21 @@ export function MemberClassesPage() {
     }
   }
 
-  const weekRange = currentWeek(weekOffset);
   const disciplines = DISCIPLINES.map(item => item.name);
   const myScheduleReady = !myScheduleLoading && !myScheduleError;
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
-  const seatsInView: EnrollmentDto[] = activeEnrollments;
+  const today = centerNowParts().date;
+  // Khóa học đăng ký trọn gói (quy tắc phía server): qua ngày khai giảng thì không nhận thêm hội viên.
+  const courseStarted = (cls: GymClassDto) => Boolean(cls.startDate && cls.startDate < today);
 
-  // Order: 0 = open for booking now, 1 = still upcoming but not bookable (already mine, overlapping, full,
-  // course already started), 2 = past or cancelled. Date/time order is kept inside each tier.
-  const sessionTier = (item: ClassSessionDto, now: { date: string; time: string }): number => {
-    const past = item.sessionDate < now.date || (item.sessionDate === now.date && item.startTime.slice(0, 5) <= now.time);
-    if (past || item.status !== 'scheduled') return 2;
-    const parentClass = classesMap.get(item.classId);
-    const courseStarted = Boolean(parentClass?.startDate && parentClass.startDate < now.date);
-    const isMine =
-      activeEnrollments.some((e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId));
-    if (courseStarted || isMine || item.bookedCount >= item.capacity || findOverlappingEnrollment(item, seatsInView, sessions)) return 1;
-    return 0;
-  };
-  const sortNow = centerNowParts();
-  const visible = filterSessions(sessions, discipline, day)
-    .map((item) => ({ item, tier: sessionTier(item, sortNow) }))
-    .sort((a, b) => a.tier - b.tier || a.item.sessionDate.localeCompare(b.item.sessionDate) || a.item.startTime.localeCompare(b.item.startTime))
-    .map(({ item }) => item);
-
-  const visibleCourses = useMemo(() => {
-    return classes.filter((cls) => {
-      if (discipline !== 'ALL') {
-        const clsDiscName = cls.disciplineName || '';
-        if (!matchesDiscipline(clsDiscName, discipline)) return false;
-      }
-      return true;
-    });
-  }, [classes, discipline]);
+  // Khóa còn nhận đăng ký lên trước, khóa đã khai giảng xuống sau; trong mỗi nhóm xếp theo ngày khai giảng.
+  const visibleCourses = classes
+    .filter((cls) => discipline === 'ALL' || matchesDiscipline(cls.disciplineName || '', discipline))
+    .map((cls) => ({ cls, started: courseStarted(cls) }))
+    .sort((a, b) => Number(a.started) - Number(b.started)
+      || (a.cls.startDate ?? '').localeCompare(b.cls.startDate ?? '')
+      || a.cls.name.localeCompare(b.cls.name, 'vi'))
+    .map(({ cls }) => cls);
 
   return (
     <div data-i18n-managed className="portal-container member-classes">
@@ -803,76 +676,34 @@ export function MemberClassesPage() {
             </div>
           )}
 
-          {/* Thanh công cụ và bộ lọc bộ môn của Lịch lớp học */}
-          <div
-            className="portal-card"
-            style={{
-              padding: '16px 20px',
-              marginBottom: 20,
-              display: 'grid',
-              gap: 14,
-            }}
-          >
-            <div className="tt__toolbar" style={{ margin: 0, justifyContent: 'space-between' }}>
-              <div className="filter-chips" role="group" aria-label={memberText("Chế độ xem lịch lớp học", "Class schedule view")}>
-                <button type="button" className={`filter-chip ${scheduleView === 'sessions' ? 'is-active' : ''}`} aria-pressed={scheduleView === 'sessions'} onClick={() => setScheduleView('sessions')}>
-                  {memberText("Buổi học theo tuần", "Weekly sessions")}
-                </button>
-                <button type="button" className={`filter-chip ${scheduleView === 'courses' ? 'is-active' : ''}`} aria-pressed={scheduleView === 'courses'} onClick={() => setScheduleView('courses')}>
-                  {memberText("Khóa học định kỳ (Trọn gói)", "Recurring Courses")}
-                </button>
-              </div>
-              {scheduleView === 'courses' && <strong className="tt__range" aria-live="polite">{memberText(`Tổng cộng ${visibleCourses.length} khóa học trọn gói`, `Total ${visibleCourses.length} full courses`)}</strong>}
-            </div>
-
-            {scheduleView === 'sessions' && <div className="tt__toolbar" style={{ margin: 0 }}>
-              <div className="tt__nav" role="group" aria-label={memberText("Lọc theo tuần")}>
-                {([-1, 0, 1] as const).map((offset) => (
-                  <button key={offset} type="button" className={`filter-chip ${weekOffset === offset ? 'is-active' : ''}`}
-                    aria-pressed={weekOffset === offset} onClick={() => changeWeek(offset)}>
-                    {offset === -1 ? memberText("Tuần trước") : offset === 0 ? memberText("Tuần này") : memberText("Tuần kế tiếp")}
+          {/* Thanh lọc gọn: bộ môn + số khóa học; lời nhắc mua gói chỉ hiện khi cần */}
+          <div className="portal-card member-classes-toolbar">
+            <div className="member-classes-toolbar__row">
+              <div className="filter-chips" role="group" aria-label={memberText("Lọc theo bộ môn", "Filter by discipline")}>
+                {['ALL', ...disciplines].map((value) => (
+                  <button key={value} type="button" className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
+                    aria-pressed={discipline === value} onClick={() => { clearActionFeedback(); setDiscipline(value); }}>
+                    {value === 'ALL' ? memberText("Tất cả bộ môn", "All disciplines") : value}
                   </button>
                 ))}
               </div>
-              <strong className="tt__range" aria-live="polite">{weekRangeLabel(weekRange.fromDate)}</strong>
-            </div>}
-
-            <div className="filter-chips" role="group" aria-label={memberText("Lọc theo bộ môn")}>
-              {['ALL', ...disciplines].map((value) => (
-                <button key={value} type="button" className={`filter-chip ${discipline === value ? 'is-active' : ''}`}
-                  aria-pressed={discipline === value} onClick={() => { clearActionFeedback(); setDiscipline(value); }}>
-                  {value === 'ALL' ? memberText("Tất cả bộ môn") : value}
-                </button>
-              ))}
-            </div>
-
-            {(scheduleView === 'sessions' || hasActivePackage === false) && <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingTop: 10, borderTop: '1px solid var(--portal-border, #e4e2de)' }}>
-              {scheduleView === 'sessions' ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <label htmlFor="member-classes-day" className="meta-label">{memberText("Thứ trong tuần")}</label>
-                <Select
-                  id="member-classes-day"
-                  className="portal-select"
-                  style={{ width: 'auto', minWidth: 196 }}
-                  value={day}
-                  onChange={(event) => {
-                    clearActionFeedback();
-                    setDay(event.target.value);
-                  }}
-                >
-                  {days.map(([value, label]) => <option key={value} value={value}>{memberText(label)}</option>)}
-                </Select>
-              </div> : <span />}
-              {hasActivePackage === false && (
-                <p className="row-card__meta" style={{ margin: 0 }}>
-                  {memberText("Cần gói tập đang hoạt động để đặt chỗ. ")}<Link className="member-classes-package-link" to="/member/packages">{memberText("Xem gói tập")}</Link>
-                </p>
+              {!loading && !error && (
+                <span className="member-classes-toolbar__count" aria-live="polite" data-testid="course-count">
+                  {memberText(`${visibleCourses.length} khóa học`, `${visibleCourses.length} courses`)}
+                </span>
               )}
-            </div>}
+            </div>
+            {hasActivePackage === false && (
+              <p className="member-classes-toolbar__hint">
+                {memberText("Cần gói tập đang hoạt động để được miễn phí khóa học. ", "An active membership makes courses free. ")}
+                <Link className="member-classes-package-link" to="/member/packages">{memberText("Xem gói tập", "View plans")}</Link>
+              </p>
+            )}
           </div>
 
           {loading ? (
           <div className="stack" role="status" aria-busy="true">
-            <span className="sr-only">{text("Đang tải lịch học...", "Loading classes...")}</span>
+            <span className="sr-only">{text("Đang tải khóa học...", "Loading courses...")}</span>
             {[1, 2, 3].map((idx) => (
               <div key={idx} className="portal-card portal-card--list" aria-hidden="true">
                 <div style={{ flex: 1 }}>
@@ -889,24 +720,25 @@ export function MemberClassesPage() {
           </div>
         ) : error ? (
           <div data-i18n-managed className="portal-card portal-empty" role="alert">
-            <h3>{text("Không tải được lịch học", "Unable to load class schedule")}</h3>
+            <h3>{text("Không tải được danh sách khóa học", "Unable to load courses")}</h3>
             <p>{memberRenderMessage(error)}</p>
             <button type="button" className="btn-secondary btn-sm" onClick={() => setRetry((value) => value + 1)}>
               {text("Thử lại", "Retry")}
             </button>
           </div>
-        ) : scheduleView === 'courses' ? (
+        ) : (
           <div className="stack" id="member-course-results">
             {visibleCourses.length === 0 ? (
               <div data-i18n-managed className="portal-card portal-empty">
-                <h3>{text("Chưa có khóa học trọn gói", "No recurring courses available")}</h3>
-                <p>{text("Hãy thử chọn bộ môn khác hoặc quay lại sau.", "Try another discipline or check back later.")}</p>
+                <h3>{classes.length === 0 ? text("Chưa có khóa học", "No courses available") : text("Không có khóa học phù hợp", "No matching courses")}</h3>
+                <p>{classes.length === 0 ? text("Hãy quay lại sau.", "Please check back later.") : text("Hãy thử chọn bộ môn khác.", "Try another discipline.")}</p>
               </div>
             ) : (
               visibleCourses.map((c) => {
                 const sched = parseCourseSchedule(c);
                 const myEnrollment = activeEnrollments.find((e) => e.classId === c.id);
                 const isEnrolled = !!myEnrollment;
+                const started = courseStarted(c);
                 const isBusy = busyKey === `course-${c.id}` || (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false);
                 const priceNum = c.price ?? 500000;
                 const hasQuota = quota?.unlimited || (quota && quota.remainingCredits > 0);
@@ -920,7 +752,8 @@ export function MemberClassesPage() {
                         <span className="badge badge-success" style={{ fontWeight: 600 }}>
                           {sched.courseLabelSpaced}
                         </span>
-                        {isEnrolled && <span className="badge badge-success">{memberText("Đã đăng ký trọn gói", "Enrolled full course")}</span>}
+                        {isEnrolled && <span className="badge badge-success">{memberText("Đã đăng ký", "Enrolled")}</span>}
+                        {started && !isEnrolled && <span className="badge badge-warning">{memberText("Đã khai giảng", "Already started")}</span>}
                         {myEnrollment?.totalSessions != null && myEnrollment.remainingSessions != null && (
                           <span className="badge" data-testid={`course-progress-${c.id}`}>
                             {memberText(
@@ -939,6 +772,11 @@ export function MemberClassesPage() {
                         <span>{memberText("Khai giảng: ", "Starts: ")}<strong>{sched.startDateFormatted}</strong></span>
                         {sched.endDateFormatted && <span>{memberText("Bế giảng: ", "Ends: ")}<strong>{sched.endDateFormatted}</strong></span>}
                         <span>{memberText("Phòng: ", "Room: ")}<strong>{c.roomName}</strong></span>
+                        {c.roomName && (
+                          <Link to={`/member/explore?focus=${encodeURIComponent(c.roomName)}`} className="member-classes-package-link">
+                            {text('Xem trong 3D', 'View in 3D')}
+                          </Link>
+                        )}
                         <span>{memberText("HLV: ", "Coach: ")}<strong>{c.coachName}</strong></span>
                       </div>
                       {c.description && (
@@ -973,7 +811,11 @@ export function MemberClassesPage() {
                         >
                           {memberText("Xem chi tiết & Lộ trình", "Details & Syllabus")}
                         </button>
-                        {isEnrolled ? (
+                        {!myScheduleReady ? (
+                          <button type="button" className="btn-secondary btn-sm" disabled>
+                            {myScheduleLoading ? memberText("Đang kiểm tra đăng ký...", "Checking enrollment...") : memberText("Chưa thể kiểm tra đăng ký", "Cannot check enrollment")}
+                          </button>
+                        ) : isEnrolled ? (
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
@@ -983,12 +825,17 @@ export function MemberClassesPage() {
                               setCancelTarget({ id: myEnrollment.id, className: c.name, kind: 'enrollment' });
                             }}
                           >
-                            {isBusy ? memberText("Đang xử lý...") : memberText("Hủy khóa học", "Cancel course")}
+                            {isBusy ? memberText("Đang xử lý...", "Processing...") : memberText("Hủy khóa học", "Cancel course")}
+                          </button>
+                        ) : started ? (
+                          <button type="button" className="btn-secondary btn-sm" disabled title={memberText("Khóa học đã bắt đầu, không thể đăng ký thêm.", "This course has already started and no longer accepts enrollments.")}>
+                            {memberText("Khóa đã bắt đầu", "Course started")}
                           </button>
                         ) : hasQuota ? (
                           <button
                             type="button"
-                            className="btn-primary btn-sm member-class-enroll"
+                            className="btn-primary btn-sm"
+                            data-testid={`enroll-course-${c.id}`}
                             disabled={isBusy}
                             onClick={() => void handleEnrollCourse(c.id, c.name)}
                           >
@@ -998,10 +845,11 @@ export function MemberClassesPage() {
                           <button
                             type="button"
                             className="btn-primary btn-sm"
+                            data-testid={`pay-course-${c.id}`}
                             disabled={isBusy}
                             onClick={() => setCourseCheckoutTarget({ classId: c.id, className: c.name, price: priceNum })}
                           >
-                            {isBusy ? memberText("Đang xử lý...") : memberText("Đăng ký & Thanh toán", "Enroll & Pay")}
+                            {isBusy ? memberText("Đang xử lý...", "Processing...") : memberText("Đăng ký & Thanh toán", "Enroll & Pay")}
                           </button>
                         )}
                       </div>
@@ -1009,166 +857,6 @@ export function MemberClassesPage() {
                   </div>
                 );
               })
-            )}
-          </div>
-        ) : (
-          <div className="stack" id="member-class-results">
-            {sessions.length === 0 ? (
-              <div data-i18n-managed className="portal-card portal-empty">
-                <h3>{text("Chưa có lịch học", "No classes scheduled")}</h3>
-                <p>{text("Tuần này chưa có buổi học.", "No sessions this week.")}</p>
-                {weekOffset === 0 && (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-sm"
-                    onClick={() => {
-                      changeWeek(1);
-                    }}
-                  >
-                    {text("Xem lịch tuần sau", "View next week")}
-                  </button>
-                )}
-              </div>
-            ) : visible.length === 0 ? (
-              <div data-i18n-managed className="portal-card portal-empty">
-                <h3>{text("Không có buổi học phù hợp", "No matching classes")}</h3>
-                <p>{text("Hãy thử bộ lọc khác.", "Try another filter.")}</p>
-              </div>
-            ) : (
-              <>{visible.slice(0, visibleCount).map((item, index) => {
-                const [year, month, date] = item.sessionDate.split('-');
-                const parentClass = classesMap.get(item.classId);
-                const courseSched = parseCourseSchedule(parentClass, item.sessionDate, item.startTime, item.endTime);
-                const now = centerNowParts();
-                const past =
-                  item.sessionDate < now.date ||
-                  (item.sessionDate === now.date && item.startTime.slice(0, 5) <= now.time);
-                const unavailable = past || item.status !== 'scheduled';
-                // A course is joined as a whole (server rule): once its first day has passed it is closed to new members.
-                const courseStarted = Boolean(parentClass?.startDate && parentClass.startDate < now.date);
-                const overlap = findOverlappingEnrollment(item, seatsInView, sessions);
-                const myEnrollment = activeEnrollments.find(
-                  (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
-                );
-                const isBusy = busyKey === `session-${item.id}` || busyKey === `course-${item.classId}` ||
-                  (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false);
-
-                return (
-                  <div key={item.id} className="portal-card portal-card--list member-class-session">
-                    <div>
-                      {(index === 0 || visible[index - 1].sessionDate !== item.sessionDate) && <h4 data-testid={`day-group-${item.sessionDate}`}>{formatDayGroupLabel(item.sessionDate)}</h4>}
-                      <div className="row-card__meta row-card__meta--inline">
-                        <span className="badge badge-info">{item.disciplineName}</span>
-                        {overlap && <span className="badge badge-warning" data-testid={`overlap-badge-${item.id}`}>{memberText("Trùng giờ đã đặt")}</span>}
-                        <span>{date}/{month}/{year}</span>
-                        {myEnrollment && (
-                          <span className="badge badge-success">{memberText("Đã đăng ký khóa", "Enrolled")}</span>
-                        )}
-                      </div>
-                      <h3 className="row-card__title">{item.className}</h3>
-                      <div className="row-card__meta row-card__meta--inline">
-                        <span><strong>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)}</strong></span>
-                        <span>{item.roomName}</span>
-                        {item.roomName && (
-                          <Link
-                            to={`/member/explore?focus=${encodeURIComponent(item.roomName)}`}
-                            className="member-classes-package-link"
-                          >
-                            {text('Xem trong 3D', 'View in 3D')}
-                          </Link>
-                        )}
-                        <span>{item.coachName.trim().toLowerCase().startsWith('hlv') ? item.coachName : `HLV ${item.coachName}`}</span>
-                      </div>
-                      <div className="row-card__meta row-card__meta--inline" style={{ marginTop: 4 }}>
-                        <span className="badge badge-warning" style={{ fontWeight: 600 }}>
-                          {courseSched.courseLabel}
-                        </span>
-                        <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
-                          {memberText(`Lịch: ${courseSched.daysText}`, `Schedule: ${courseSched.daysText}`)}
-                        </span>
-                      </div>
-                      <div className="row-card__meta">
-                        {memberText("Trạng thái: ")}{past ? memberText("Đã qua giờ mở lớp") : item.status === 'scheduled' ? memberText("Đã lên lịch") : item.status === 'cancelled' ? memberText("Đã hủy") : item.status}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div className="meta-label">{memberText("SĨ SỐ HIỆN TẠI")}</div>
-                      <strong>{item.bookedCount} / {item.capacity}{memberText(" học viên")}</strong>
-                      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm"
-                          style={{ fontSize: '0.82rem' }}
-                          onClick={() => {
-                            const courseDto = parentClass || ({
-                              id: item.classId,
-                              name: item.className,
-                              disciplineName: item.disciplineName,
-                              roomName: item.roomName,
-                              coachName: item.coachName,
-                              capacity: item.capacity,
-                              startDate: item.sessionDate,
-                              startTime: item.startTime,
-                              endTime: item.endTime,
-                            } as GymClassDto);
-                            setSelectedCourseForDetail(courseDto);
-                          }}
-                        >
-                          {memberText("Chi tiết khóa học & Gói tập", "Course & Plan Details")}
-                        </button>
-                        {!myScheduleReady ? <button type="button" className="btn-secondary btn-sm" disabled>
-                          {myScheduleLoading ? memberText("Đang kiểm tra đặt chỗ...") : memberText("Chưa thể kiểm tra đặt chỗ")}
-                        </button> : myEnrollment ? (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy || past}
-                            onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: myEnrollment.id, className: item.className, kind: 'enrollment' }); }}
-                          >
-                            {isBusy ? memberText("Đang xử lý...") : memberText("Hủy khóa học", "Cancel course")}
-                          </button>
-                        ) : overlap ? <button type="button" className="btn-secondary btn-sm" data-testid={`overlap-btn-${item.id}`} disabled>{memberText("Trùng giờ đã đặt")}</button> : courseStarted && !unavailable ? (
-                          <button type="button" className="btn-secondary btn-sm" disabled title={memberText("Khóa học đã bắt đầu, không thể đăng ký thêm.")}>
-                            {memberText("Khóa đã bắt đầu")}</button>
-                        ) : unavailable ? (
-                          <button type="button" className="btn-secondary btn-sm" disabled>
-                            {memberText("Không thể đặt")}</button>
-                        ) : item.bookedCount < item.capacity ? (
-                          quota && !quota.unlimited && quota.remainingCredits <= 0 ? (
-                            <button
-                              type="button"
-                              className="btn-secondary btn-sm"
-                              data-testid={`pay-course-${item.classId}`}
-                              disabled={isBusy}
-                              onClick={() => setCourseCheckoutTarget({ classId: item.classId, className: item.className, price: 500000 })}
-                            >
-                              {text("Thanh toán học phí", "Pay course fee")}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn-primary member-class-enroll"
-                              aria-label={`${isBusy ? memberText("Đang đăng ký", "Enrolling") : memberText("Đăng ký khóa", "Enroll in course")}: ${item.className}`}
-                              title={memberText(`Đăng ký khóa: ${item.className}`, `Enroll in course: ${item.className}`)}
-                              disabled={isBusy}
-                              onClick={() => void handleEnrollCourse(item.classId, item.className)}
-                            >
-                              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đăng ký...", "Enrolling...") : memberText("Đăng ký khóa", "Enroll in course")}</span>
-                            </button>
-                          )
-                        ) : (
-                          <button type="button" className="btn-secondary btn-sm" disabled>
-                            {memberText("Buổi đã đầy")}</button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="member-classes-more">
-                <p role="status">{memberText("Hiển thị ")}{Math.min(visibleCount, visible.length)} / {visible.length}{memberText(" buổi học")}</p>
-                {visibleCount < visible.length && <button type="button" className="btn-secondary" aria-controls="member-class-results" onClick={() => setVisibleCount(count => count + SESSION_BATCH_SIZE)}>{memberText("Xem thêm (")}{visible.length - visibleCount})</button>}
-              </div></>
             )}
           </div>)}
         </div>
