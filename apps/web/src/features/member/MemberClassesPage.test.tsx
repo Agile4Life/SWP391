@@ -293,16 +293,16 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).toContain('Không thể đặt');
   });
 
-  it('clears rejected booking error when the week changes', async () => {
+  it('reports a rejected booking as a centred toast instead of an inline banner', async () => {
     mocks.sessions.mockResolvedValueOnce([{ ...session, bookedCount: 1 }]).mockResolvedValueOnce([]);
     mocks.enroll.mockRejectedValue(new ApiError('Hội viên đã có chỗ trong lớp học này.', 400));
     await render();
     const join = host.querySelector<HTMLButtonElement>('.member-class-enroll')!;
     await act(async () => join.click());
-    expect(host.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
+    expect(document.querySelector('dialog.sol-toast--error')?.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
+    expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
     await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Tuần kế tiếp')!.click());
     expect(host.textContent).toContain('Chưa có lịch học');
-    expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
     expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(3);
   });
 

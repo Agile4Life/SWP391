@@ -109,6 +109,9 @@ export function MemberCoachBookingView({
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined | SourceMessage>();
+  // Lỗi gửi của hộp thoại hiện ngay trong hộp thoại (không dùng banner đầu trang nằm sau lớp nền mờ).
+  const [bookingError, setBookingError] = useState<string | SourceMessage>('');
+  const [cancelError, setCancelError] = useState<string | SourceMessage>('');
   // quotaStatus stays null while loading or when the request fails; only a loaded answer without a package means none.
   const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
   const isTrial = Boolean(
@@ -317,9 +320,13 @@ export function MemberCoachBookingView({
 
   const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
 
+  useEffect(() => { setCancelError(''); }, [cancelTarget]);
+
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
     setModalSlot(slot);
     setError('');
+    setBookingError('');
+    setErrorCode(undefined);
     if (hasRemainingQuota) {
       setPaymentMethod('package_quota');
     } else {
@@ -331,6 +338,8 @@ export function MemberCoachBookingView({
     if (!selectedCoach || !modalSlot) return;
     setSubmitting(true);
     setError('');
+    setBookingError('');
+    setErrorCode(undefined);
 
     try {
       const created = await createCoachBooking({
@@ -375,7 +384,7 @@ export function MemberCoachBookingView({
       }
     } catch (err: unknown) {
       setErrorCode(err instanceof ApiError ? err.code : undefined);
-      setError(coachBookingErrorMessage(err));
+      setBookingError(coachBookingErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -402,7 +411,6 @@ export function MemberCoachBookingView({
       setReviewComment('');
     } catch (err: unknown) {
       const errMsg = memberError(err, 'Không thể gửi đánh giá.');
-      setError(errMsg);
       notify(memberRenderMessage(errMsg), 'error', typeof errMsg === 'string' ? {} : { translation: errMsg });
     } finally {
       setReviewSubmitting(false);
@@ -412,6 +420,7 @@ export function MemberCoachBookingView({
   async function handleConfirmCancel() {
     if (!cancelTarget) return;
     setCancelling(true);
+    setCancelError('');
     try {
       const wasPaid = cancelTarget.paymentMethod !== 'package_quota' && cancelTarget.paymentStatus === 'paid';
       await cancelCoachBooking(cancelTarget.id, 'Hội viên chủ động hủy');
@@ -445,7 +454,7 @@ export function MemberCoachBookingView({
         if (updatedQuota) setQuotaStatus(updatedQuota);
       }
     } catch (err: unknown) {
-      setError((memberError(err, 'Không thể hủy lịch.')));
+      setCancelError(memberError(err, 'Không thể hủy lịch.'));
     } finally {
       setCancelling(false);
     }
@@ -1703,6 +1712,15 @@ export function MemberCoachBookingView({
               </div>
             )}
 
+            {bookingError && (
+              <div className="form-error" role="alert" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                <span>{memberRenderMessage(bookingError)}</span>
+                {errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && (
+                  <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')}>{memberText("Đăng ký / Kích hoạt gói tập")}</button>
+                )}
+              </div>
+            )}
+
             {/* Footer Action Buttons */}
             <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
               <button
@@ -1876,6 +1894,7 @@ export function MemberCoachBookingView({
               {memberText("Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV ")}<strong>{formatCoachName(cancelTarget.coachName)}</strong>{memberText(" vào")}{' '}
               <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
             </p>
+            {cancelError && <p className="form-error" role="alert">{memberRenderMessage(cancelError)}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button
                 type="button"

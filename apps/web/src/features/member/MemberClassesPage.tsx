@@ -442,7 +442,7 @@ export function MemberClassesPage() {
   const [myScheduleError, setMyScheduleError] = useState<string | SourceMessage>('');
   const [myScheduleRetry, setMyScheduleRetry] = useState(0);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | SourceMessage>('');
+  const [checkoutError, setCheckoutError] = useState<string | SourceMessage>('');
   const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string; kind: 'enrollment' } | null>(null);
   const [quota, setQuota] = useState<QuotaDto | null>(null);
   const [classes, setClasses] = useState<GymClassDto[]>([]);
@@ -456,10 +456,11 @@ export function MemberClassesPage() {
   const busyRef = useRef<string | null>(null);
   const actionGenRef = useRef(0);
 
+  useEffect(() => { setCheckoutError(''); }, [courseCheckoutTarget]);
+
   function clearActionFeedback() {
     setVisibleCount(SESSION_BATCH_SIZE);
     actionGenRef.current += 1;
-    setActionError('');
   }
 
   function handleSelectTab(nextTab: 'timetable' | 'schedule' | 'coach_booking') {
@@ -585,8 +586,6 @@ export function MemberClassesPage() {
     busyRef.current = key;
     setBusyKey(key);
     const gen = ++actionGenRef.current;
-    
-    setActionError('');
     try {
       await cancelEnrollment(enrollmentId);
       if (actionGenRef.current === gen) {
@@ -596,7 +595,7 @@ export function MemberClassesPage() {
       setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
       if (actionGenRef.current === gen) {
-        setActionError(errorMessage(cause));
+        memberNotify(errorMessage(cause), 'error');
         if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
       }
     } finally {
@@ -610,14 +609,13 @@ export function MemberClassesPage() {
     if (busyRef.current) return;
     busyRef.current = key;
     setBusyKey(key);
-    setActionError('');
     try {
       await enrollCourse(classId);
       memberNotify(memberMessage(`Đã đăng ký khóa học "${className}" thành công!`, `Course "${className}" enrolled successfully!`), 'success', { record: true });
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
-      setActionError(errorMessage(cause));
+      memberNotify(errorMessage(cause), 'error');
     } finally {
       busyRef.current = null;
       setBusyKey(null);
@@ -627,7 +625,7 @@ export function MemberClassesPage() {
   async function handleConfirmCourseCheckout() {
     if (!courseCheckoutTarget || isCheckingOut) return;
     setIsCheckingOut(true);
-    setActionError('');
+    setCheckoutError('');
     try {
       const res = await checkoutCourse(courseCheckoutTarget.classId, checkoutPaymentMethod);
       if (res.paymentUrl) {
@@ -654,7 +652,7 @@ export function MemberClassesPage() {
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
     } catch (cause) {
-      setActionError(errorMessage(cause));
+      setCheckoutError(errorMessage(cause));
     } finally {
       setIsCheckingOut(false);
     }
@@ -788,17 +786,6 @@ export function MemberClassesPage() {
           {text("Đặt lịch HLV 1:1 (PT)", "Book a personal trainer (PT)")}
         </button>
       </div>
-
-      {actionError && (
-        <div className="portal-card" role="alert" style={{ marginBottom: 16, borderColor: 'color-mix(in srgb, var(--portal-danger) 35%, transparent)' }}>
-          <strong style={{ color: 'var(--portal-danger, #fca5a5)' }}>{memberRenderMessage(actionError)}</strong>
-          <div style={{ marginTop: 8 }}>
-            <Link to="/member/packages" className="btn-secondary btn-sm" style={{ textDecoration: 'none' }}>
-              {text("Kiểm tra gói tập của tôi", "Check my membership")}
-            </Link>
-          </div>
-        </div>
-      )}
 
       {tab === 'timetable' ? (
         <MemberCalendar onBookingChange={() => { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }} />
@@ -1288,6 +1275,8 @@ export function MemberClassesPage() {
                 </label>
               </div>
             </div>
+
+            {checkoutError && <p className="form-error" role="alert">{memberRenderMessage(checkoutError)}</p>}
 
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
               <button type="button" className="btn-secondary" onClick={() => setCourseCheckoutTarget(null)} disabled={isCheckingOut}>
