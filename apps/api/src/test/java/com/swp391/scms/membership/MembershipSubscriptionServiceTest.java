@@ -1446,7 +1446,7 @@ class MembershipSubscriptionServiceTest {
         var attendance = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", attendance);
 
-        service.withdrawHoldForMember(principal, 100L);
+        service.withdrawHoldForMember(staffPrincipal, 100L);
 
         assertThat(future.getEndDate()).isEqualTo(futureEnd);
     }
