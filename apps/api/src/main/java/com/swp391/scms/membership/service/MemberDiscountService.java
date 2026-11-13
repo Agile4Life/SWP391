@@ -8,6 +8,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Tier discount (Gold 10%, Platinum 20%) on extra PT sessions, course fees and shop products
@@ -23,7 +24,12 @@ public class MemberDiscountService {
         this.clock = clock;
     }
 
-    /** Best discount among the member's active, currently valid periods; 0 when none applies. */
+    /**
+     * Best discount among the member's active, currently valid periods; 0 when none applies.
+     * Transactional because the package is a lazy association and callers such as the public quote
+     * endpoint run outside a transaction (open-in-view is off), which otherwise throws LazyInitializationException.
+     */
+    @Transactional(readOnly = true)
     public int percentFor(Long memberId) {
         if (memberId == null) return 0;
         LocalDate today = LocalDate.now(clock.withZone(CenterTime.ZONE));

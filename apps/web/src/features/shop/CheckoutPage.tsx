@@ -428,6 +428,12 @@ export function CheckoutPage() {
                     </p>
                   )}
 
+                  {quoteError && !quote && (
+                    <p className="shop-checkout__hint" role="status">
+                      {sourceText("Chưa có báo giá nên chưa thể thanh toán. Hãy bấm Thử lại ở phần Đơn hàng.")}
+                    </p>
+                  )}
+
                   <VnpayPayButton
                     prepare={placeOrderOnline}
                     disabled={
@@ -466,8 +472,13 @@ export function CheckoutPage() {
 
               <aside className="shop-checkout-summary shop-checkout-card" aria-label={sourceText("Tóm tắt đơn hàng")} aria-busy={quoting}>
                 <h2>{sourceText("Đơn hàng")}</h2>
-                {quoting && <p role="status">{sourceText("Đang cập nhật báo giá…")}</p>}
-                {quoteError && <div role="alert"><p>{sourceText(quoteError)}</p><button type="button" className="btn-secondary" onClick={() => void refreshQuote(cartLines, fulfillment)}>{sourceText("Thử lại")}</button></div>}
+                {quoting && <p className="shop-checkout-status" role="status">{sourceText("Đang cập nhật báo giá…")}</p>}
+                {quoteError && (
+                  <div className="shop-checkout-alert" role="alert">
+                    <p>{sourceText(quoteError)}</p>
+                    <button type="button" className="btn-secondary" onClick={() => void refreshQuote(cartLines, fulfillment)}>{sourceText("Thử lại")}</button>
+                  </div>
+                )}
                 {quote && !quoting && (
                   <ul className="shop-checkout-items">
                     {quote.lines.map(line => (
@@ -484,7 +495,7 @@ export function CheckoutPage() {
                   </ul>
                 )}
                 {quote && !quote.valid && <p className="form-error" role="alert">{sourceText("Giỏ hàng có sản phẩm hết hàng hoặc ngừng bán.")}</p>}
-                <button ref={cartFocusRef} type="button" className="btn-secondary" onClick={() => setCartOpen(true)}>{sourceText("Sửa giỏ hàng")}</button>
+                <button ref={cartFocusRef} type="button" className="btn-secondary shop-checkout__edit-cart" onClick={() => setCartOpen(true)}>{sourceText("Sửa giỏ hàng")}</button>
 
                 <div className="shop-checkout-totals">
                   <div className="shop-checkout-row">

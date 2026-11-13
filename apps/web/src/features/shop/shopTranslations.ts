@@ -31,6 +31,7 @@ export const englishShopPublicLabels: Readonly<Record<string, string>> = {
   "phút để thanh toán.": "minutes to complete payment.",
   "Đang cập nhật báo giá…": "Refreshing quote…",
   "Giỏ hàng có sản phẩm hết hàng hoặc ngừng bán.": "Your cart has items that are unavailable or out of stock.",
+  "Chưa có báo giá nên chưa thể thanh toán. Hãy bấm Thử lại ở phần Đơn hàng.": "There is no quote yet, so payment is unavailable. Press Retry in the Order section.",
   "Sửa giỏ hàng": "Edit cart",
   "Tạm tính": "Subtotal",
   "Phí giao": "Delivery fee",
