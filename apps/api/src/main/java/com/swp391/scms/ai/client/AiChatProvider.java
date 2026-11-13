@@ -16,6 +16,8 @@ import java.util.Map;
 @Component
 public class AiChatProvider {
     public record Turn(String role, String content) {}
+    /** Room for a short Vietnamese answer that lists a few classes without being cut mid-sentence. */
+    static final int MAX_OUTPUT_TOKENS = 600;
     private final String provider;
     private final String apiKey;
     private final String model;
@@ -118,8 +120,10 @@ public class AiChatProvider {
                 messages.add(Map.of("role", "system", "content", systemPrompt));
                 turns.forEach(turn -> messages.add(Map.of("role", turn.role(), "content", turn.content())));
                 Map<String, Object> body = "groq".equals(provider)
-                        ? Map.of("model", model, "messages", messages, "stream", false)
-                        : Map.of("model", model, "messages", messages, "stream", false, "store", false);
+                        ? Map.of("model", model, "messages", messages, "stream", false,
+                                "max_completion_tokens", MAX_OUTPUT_TOKENS)
+                        : Map.of("model", model, "messages", messages, "stream", false, "store", false,
+                                "max_completion_tokens", MAX_OUTPUT_TOKENS);
                 response = client.post().uri(endpoint)
                         .header("Authorization", "Bearer " + apiKey).contentType(MediaType.APPLICATION_JSON)
                         .body(body)
@@ -157,8 +161,8 @@ public class AiChatProvider {
         var contents = turns.stream().map(turn -> Map.of("role", "assistant".equals(turn.role()) ? "model" : "user",
                 "parts", List.of(Map.of("text", turn.content())))).toList();
         Map<String, Object> generationConfig = targetModel.contains("lite")
-                ? Map.of("maxOutputTokens", 350, "temperature", 0.4)
-                : Map.of("maxOutputTokens", 350, "temperature", 0.4, "thinkingConfig", Map.of("thinkingBudget", 0));
+                ? Map.of("maxOutputTokens", MAX_OUTPUT_TOKENS, "temperature", 0.4)
+                : Map.of("maxOutputTokens", MAX_OUTPUT_TOKENS, "temperature", 0.4, "thinkingConfig", Map.of("thinkingBudget", 0));
         JsonNode response = client.post().uri("https://generativelanguage.googleapis.com/v1beta/models/" + targetModel + ":generateContent")
                 .header("x-goog-api-key", apiKey).contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of(

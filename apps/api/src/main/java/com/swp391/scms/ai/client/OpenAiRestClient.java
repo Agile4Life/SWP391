@@ -61,6 +61,15 @@ public class OpenAiRestClient implements AiClient {
 
     @Override
     public String generate(String systemPrompt, String userMessage) {
+        return call(systemPrompt, userMessage, false);
+    }
+
+    @Override
+    public String generateJson(String systemPrompt, String userMessage) {
+        return call(systemPrompt, userMessage, true);
+    }
+
+    private String call(String systemPrompt, String userMessage, boolean json) {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
         }
@@ -69,11 +78,19 @@ public class OpenAiRestClient implements AiClient {
                     Map.of("role", "system", "content", systemPrompt != null ? systemPrompt : ""),
                     Map.of("role", "user", "content", userMessage != null ? userMessage : "")
             );
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", model);
+            body.put("messages", messages);
+            body.put("stream", false);
+            if (json) {
+                // OpenAI and Groq both accept JSON mode; it needs the word "JSON" in the prompt, which the plan prompt has.
+                body.put("response_format", Map.of("type", "json_object"));
+            }
             JsonNode response = restClient.post()
                 .uri("/chat/completions")
                 .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("model", model, "messages", messages, "stream", false))
+                .body(body)
                 .retrieve()
                 .body(JsonNode.class);
             String content = response == null ? "" : response.path("choices").path(0).path("message").path("content").asText("");

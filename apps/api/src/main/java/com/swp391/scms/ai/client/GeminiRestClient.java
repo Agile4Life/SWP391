@@ -50,11 +50,27 @@ public class GeminiRestClient implements AiClient {
 
     @Override
     public String generate(String systemPrompt, String userMessage) {
+        return call(systemPrompt, userMessage, false);
+    }
+
+    @Override
+    public String generateJson(String systemPrompt, String userMessage) {
+        return call(systemPrompt, userMessage, true);
+    }
+
+    private String call(String systemPrompt, String userMessage, boolean json) {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
         }
         try {
-            Map<String, Object> generationConfig = model.contains("lite") ? Map.of("temperature", 0.4) : Map.of("temperature", 0.4, "thinkingConfig", Map.of("thinkingBudget", 0));
+            Map<String, Object> generationConfig = new LinkedHashMap<>();
+            generationConfig.put("temperature", 0.4);
+            if (!model.contains("lite")) {
+                generationConfig.put("thinkingConfig", Map.of("thinkingBudget", 0));
+            }
+            if (json) {
+                generationConfig.put("responseMimeType", "application/json");
+            }
             Map<String, Object> body = Map.of("generationConfig", generationConfig,
                     "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt != null ? systemPrompt : ""))),
                     "contents", List.of(Map.of(

@@ -18,6 +18,7 @@ class AiChatProviderTest {
         server.expect(requestTo("https://api.openai.com/v1/chat/completions"))
                 .andExpect(header("Authorization", "Bearer unit-test-key"))
                 .andExpect(jsonPath("$.messages[1].content").value("Câu hỏi"))
+                .andExpect(jsonPath("$.max_completion_tokens").value(600))
                 .andRespond(withSuccess("{\"choices\":[{\"message\":{\"content\":\"Provider answer\"}}]}", MediaType.APPLICATION_JSON));
         var provider = new AiChatProvider("openai", "unit-test-key", "test-model", builder);
         assertEquals("Provider answer", provider.generate("System", List.of(new AiChatProvider.Turn("user", "Câu hỏi"))));
@@ -29,6 +30,7 @@ class AiChatProviderTest {
         var server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent"))
                 .andExpect(header("x-goog-api-key", "unit-test-key"))
+                .andExpect(jsonPath("$.generationConfig.maxOutputTokens").value(600))
                 .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Gemini answer\"}]}}]}", MediaType.APPLICATION_JSON));
         assertEquals("Gemini answer", new AiChatProvider("gemini", "unit-test-key", "test-model", builder)
                 .generate("System", List.of(new AiChatProvider.Turn("user", "Question"))));

@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -101,6 +102,36 @@ class AiClientTest {
 
         assertEquals("{\"goal\":\"Mobility\",\"analysis\":\"Good\",\"items\":[]}", result);
         server.verify();
+    }
+
+    @Test
+    @DisplayName("JSON mode is requested only by generateJson, for both OpenAI-compatible and Gemini clients")
+    void testJsonModeOnlyForGenerateJson() {
+        RestClient.Builder openAiBuilder = RestClient.builder().baseUrl("https://api.openai.com/v1");
+        MockRestServiceServer openAi = MockRestServiceServer.bindTo(openAiBuilder).build();
+        openAi.expect(requestTo("https://api.openai.com/v1/chat/completions"))
+                .andExpect(jsonPath("$.response_format.type").value("json_object"))
+                .andRespond(withSuccess("{\"choices\":[{\"message\":{\"content\":\"{}\"}}]}", MediaType.APPLICATION_JSON));
+        openAi.expect(requestTo("https://api.openai.com/v1/chat/completions"))
+                .andExpect(jsonPath("$.response_format").doesNotExist())
+                .andRespond(withSuccess("{\"choices\":[{\"message\":{\"content\":\"text\"}}]}", MediaType.APPLICATION_JSON));
+        OpenAiRestClient openAiClient = new OpenAiRestClient("k", "gpt-4o-mini", openAiBuilder.build());
+        assertEquals("{}", openAiClient.generateJson("Trả về JSON", "u"));
+        assertEquals("text", openAiClient.generate("s", "u"));
+        openAi.verify();
+
+        RestClient.Builder geminiBuilder = RestClient.builder().baseUrl("https://generativelanguage.googleapis.com/v1beta");
+        MockRestServiceServer gemini = MockRestServiceServer.bindTo(geminiBuilder).build();
+        gemini.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"))
+                .andExpect(jsonPath("$.generationConfig.responseMimeType").value("application/json"))
+                .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{}\"}]}}]}", MediaType.APPLICATION_JSON));
+        gemini.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"))
+                .andExpect(jsonPath("$.generationConfig.responseMimeType").doesNotExist())
+                .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"text\"}]}}]}", MediaType.APPLICATION_JSON));
+        GeminiRestClient geminiClient = new GeminiRestClient("k", "gemini-1.5-flash", geminiBuilder.build());
+        assertEquals("{}", geminiClient.generateJson("s", "u"));
+        assertEquals("text", geminiClient.generate("s", "u"));
+        gemini.verify();
     }
 
     @Test

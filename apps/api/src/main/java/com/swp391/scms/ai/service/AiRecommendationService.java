@@ -214,7 +214,7 @@ public class AiRecommendationService {
         // Phase 2: call AI outside transaction (no DB connection held)
         String userPrompt = "DỮ LIỆU\nHồ sơ thể chất hội viên (JSON): " + snapshot.inputContextJson()
                 + snapshot.retrievedContext();
-        String rawAiOutput = aiClient.generate(WORKOUT_SYSTEM_PROMPT, userPrompt);
+        String rawAiOutput = aiClient.generateJson(WORKOUT_SYSTEM_PROMPT, userPrompt);
 
         Member member = snapshot.member();
         Coach coach = snapshot.coach();
