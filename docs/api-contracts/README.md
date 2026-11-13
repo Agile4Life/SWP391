@@ -10,6 +10,8 @@ Frontend may use a local mock matching the contract, but must remove the mock be
 
 [`openapi-session-booking.yaml`](openapi-session-booking.yaml) defines per-session class booking: one session, any hand-picked set, a week or a month, and their cancellation.
 
+[`openapi-admin-reconciliation.yaml`](openapi-admin-reconciliation.yaml) defines the read-only admin payment reconciliation: VNPay attempts, recorded IPN/return callbacks, automatic late-confirmation wallet refunds and a per-payment timeline (ADMIN only).
+
 [`openapi-tester-report-2026-11-12.yaml`](openapi-tester-report-2026-11-12.yaml) adds the service description to member payments, the desk history of processed membership requests and the "course already started" enrolment error.
 
 ## Sprint 3 Contract Files

@@ -72,4 +72,17 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByPaidAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
     boolean existsByMemberUserIdAndPaidAtGreaterThanEqual(Long memberId, java.time.LocalDateTime since);
+
+    /**
+     * Self-service online payments (no cashier) marked paid without a successful VNPay attempt and without the wallet
+     * debit {@code WALLET_PAY_<id>}: should never happen.
+     */
+    @Query("""
+            select count(p) from Payment p
+            where p.status = 'success' and p.method = 'online_wallet' and p.receivedBy is null
+              and not exists (select t from VnpayTransaction t where t.payment = p and t.status = 'success')
+              and not exists (select w from WalletTransaction w
+                              where w.referenceId = concat('WALLET_PAY_', cast(p.id as String)))
+            """)
+    long countOnlinePaymentsWithoutSource();
 }

@@ -262,6 +262,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/admin/users', lazy: async () => ({ Component: (await import('../features/manager/UserManagerPage')).UserManagerPage }) },
           { path: '/admin/audit-logs', lazy: async () => ({ Component: (await import('../features/admin/AdminAuditLogsPage')).AdminAuditLogsPage }) },
+          { path: '/admin/payments', lazy: async () => ({ Component: (await import('../features/admin/AdminPaymentReconciliationPage')).AdminPaymentReconciliationPage }) },
         ],
       },
       // Center Manager Dedicated Routes

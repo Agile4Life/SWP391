@@ -1,0 +1,153 @@
+/* Admin payment reconciliation: reuses the audit page layout; colours come from portal tokens only. */
+.recon-intro {
+  margin: -8px 0 16px;
+  color: var(--portal-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  max-width: 72ch;
+}
+
+.recon-range-hint {
+  align-self: center;
+}
+
+.recon-muted {
+  color: var(--portal-muted);
+  font-size: 0.78rem;
+}
+
+.recon-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.recon-code {
+  font-size: 0.78rem;
+  color: var(--sol-accent-text);
+  word-break: break-all;
+}
+
+.recon-grow {
+  flex: 1 1 220px;
+}
+
+.recon-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Warnings (not errors): same shape as .portal-alert, amber status token instead of the error palette. */
+.recon-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--portal-warning) 45%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--portal-warning) 10%, transparent);
+  color: var(--portal-warning);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.recon-metrics {
+  margin-bottom: 20px;
+}
+
+.recon-table-scroll {
+  overflow-x: auto;
+}
+
+.recon-row-click {
+  cursor: pointer;
+}
+
+.recon-row-click:hover td {
+  background: rgb(var(--sol-accent-rgb) / 0.06);
+}
+
+.recon-empty {
+  text-align: center;
+  padding: 36px 16px;
+}
+
+.recon-timeline {
+  display: grid;
+  gap: 16px;
+}
+
+.recon-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.recon-facts dt {
+  font-size: 0.75rem;
+  color: var(--portal-muted);
+}
+
+.recon-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.recon-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid rgb(var(--sol-accent-rgb) / 0.4);
+  display: grid;
+  gap: 12px;
+}
+
+.recon-steps li {
+  display: grid;
+  gap: 2px;
+  position: relative;
+}
+
+.recon-steps li::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sol-accent);
+}
+
+.recon-date {
+  flex: 0 1 200px;
+  min-width: 180px;
+}
+
+.recon-page .audit-filter-group:not(.recon-grow):not(.recon-date) {
+  min-width: 180px;
+}
+
+/* Six counters read best as two even rows; phones keep the shared two-column metric grid. */
+@media (min-width: 768px) {
+  .recon-page .metrics-grid.recon-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.recon-warning .btn-sm {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .recon-warning {
+    flex-wrap: wrap;
+  }
+}

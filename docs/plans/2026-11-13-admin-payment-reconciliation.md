@@ -1,7 +1,7 @@
 # Bàn giao: Trang đối soát thanh toán cho Admin
 
 > Dành cho coding agent tiếp nhận. Đọc trước: `AGENTS.md`, `docs/rules/backend-architecture.md`, `DESIGN.md`, `docs/PROJECT_MASTER_GUIDE.md`.
-> Ngày lập: 13/11/2026. Trạng thái: **chưa triển khai**. Jira: chưa có ticket — đề xuất tạo `SCRUM-136` (xác nhận với nhóm trước khi mở PR, ghi key vào mô tả PR).
+> Ngày lập: 13/11/2026. Trạng thái: **đã triển khai** (13/11/2026, xem mục 8). Jira: chưa có ticket — đề xuất tạo `SCRUM-136` (xác nhận với nhóm trước khi mở PR, ghi key vào mô tả PR).
 > Làm trên nhánh/worktree riêng (ví dụ `feat/admin-payment-reconciliation`). Thư mục chính hay có phiên khác sửa song song; không commit file mình không sửa.
 
 ## 1. Bối cảnh và mục tiêu
@@ -155,3 +155,12 @@ Hoàn thành khi:
 - Không vai trò nào khác ngoài Admin gọi được API (kiểm tra ở backend, không chỉ ẩn menu).
 - Không có thao tác nào trên trang thay đổi tiền hay trạng thái thanh toán.
 - Test backend và frontend xanh; i18n đủ vi/en; OpenAPI cập nhật.
+
+## 8. Ghi chú triển khai (13/11/2026)
+
+- Mặc định D1–D5 giữ nguyên. Lượt treo, lượt đang chờ và bất thường là hiện trạng (không lọc theo ngày); các số còn lại lọc theo `[from, to]`. Khi lọc `stale=true` danh sách lượt bỏ qua khoảng ngày.
+- Anomaly (b) chỉ tính khoản tự thanh toán trực tuyến (`received_by IS NULL`): khoản do lễ tân ghi nhận với `method = 'online_wallet'` (kể cả dữ liệu demo) là hợp lệ, không phải bất thường.
+- Bảng `vnpay_ipn_events` do Hibernate tạo; recorder chạy `REQUIRES_NEW`, handler bắt mọi lỗi của recorder nên mã trả lời VNPay không đổi. Chỉ lưu các trường ở D4.
+- Mã lỗi 400: `RECONCILIATION_RANGE_INVALID`, `RECONCILIATION_RANGE_TOO_LONG`, `RECONCILIATION_PAGE_INVALID`, `RECONCILIATION_FILTER_INVALID`; 404 `PAYMENT_NOT_FOUND`.
+- `PaymentReconciliationPostgreSqlTest` chạy truy vấn trên PostgreSQL thật khi có `SCMS_POSTGRES_TEST_URL` (đã chạy với PostgreSQL 16 cục bộ có TLS). Test này mock `CatalogSeeder` vì lúc viết seeder tạo gói 30 ngày mà `PackageService` từ chối trên schema mới; lỗi đó đã sửa ở `6b894949`, mock giữ lại cho test độc lập với dữ liệu danh mục.
+

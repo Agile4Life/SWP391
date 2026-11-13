@@ -44,7 +44,7 @@ public class VnpayController {
             @RequestBody(required = false) Map<String,String> params) {
         String reference = params != null ? params.get("vnp_TxnRef") : null;
         if (params != null && params.containsKey("vnp_SecureHash")) {
-            ipn.process(params);
+            ipn.process(params, com.swp391.scms.finance.entity.VnpayIpnEvent.SOURCE_RETURN);
         }
         return ApiResponse.ok(msg("finance.vnpay.status"),payments.status(principal,reference));
     }
