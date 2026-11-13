@@ -9,23 +9,33 @@
 .member-progress-values p { display: grid; gap: 5px; min-width: 110px; padding: 12px; border-radius: 12px; background: var(--portal-surface); margin: 0; font-size: 12px; }
 .member-progress-values time { color: var(--portal-muted); }
 .member-progress-exercises { list-style: none; padding: 0; margin: 0; }
-.member-progress-exercises li { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--portal-border); }
+.member-progress-exercises li { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--portal-border); }
 .member-progress-exercises h3 { margin: 5px 0; font-size: 15px; }
 .member-progress-exercises p { margin: 6px 0 0; color: var(--portal-muted); font-size: 12px; }
 .member-progress-day { color: var(--portal-salmon); font-size: 12px; }
-.member-progress-dose { display: grid; align-content: center; gap: 5px; flex-shrink: 0; font-size: 12px; }
 .member-progress-plan + .member-progress-plan { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--portal-border); }
-.member-progress-plan__head h3 { margin: 0; font-size: 16px; }
-.member-progress-plan__head p { margin: 4px 0 0; font-size: 12px; }
-.member-progress-plan__day { margin-top: 16px; }
-.member-progress-plan__day h4 { margin: 0 0 2px; font-weight: 600; }
+.member-progress-plan__head h3 { margin: 0; font-size: 17px; line-height: 1.4; }
+.member-progress-plan__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 0; color: var(--portal-muted); font-size: 12px; }
+.member-progress-plan__days { display: grid; gap: 14px; margin-top: 16px; }
+.member-progress-plan__day { padding: 6px 18px; border: 1px solid var(--portal-border); border-radius: 14px; background: var(--portal-surface); }
+.member-progress-plan__day-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0 10px; border-bottom: 1px solid var(--portal-border); }
+.member-progress-plan__day h4 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.member-progress-plan__count { color: var(--portal-muted); font-size: 12px; }
 .member-progress-plan__day li:last-child { border-bottom: 0; }
+.member-progress-exercises__index { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--portal-border-strong); color: var(--portal-muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.member-progress-exercises__body { flex: 1 1 auto; min-width: 0; }
+.member-progress-exercises__body strong { display: block; font-size: 14px; line-height: 1.4; }
+.member-progress-exercises__body p { margin: 4px 0 0; color: var(--portal-muted); font-size: 12px; line-height: 1.5; }
+.member-progress-dose { display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: flex-start; gap: 6px; flex: 0 1 auto; max-width: 45%; }
+.member-progress-dose__chip { padding: 3px 10px; border: 1px solid var(--portal-border-strong); border-radius: 999px; color: var(--portal-paper); font-size: 12px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.member-progress-dose__chip.is-volume { border-color: var(--portal-salmon); color: var(--portal-salmon); font-weight: 600; }
+.member-progress-dose__chip.is-rest { border-style: dashed; color: var(--portal-muted); }
 .member-progress-dependency { margin: 18px 0 0; color: var(--portal-muted); font-size: 12px; }
 .member-progress-check { display: inline-flex; align-items: center; gap: 8px; color: var(--portal-muted); font-size: 12px; }
 .member-progress-check input { width: 18px; height: 18px; accent-color: var(--portal-salmon); cursor: pointer; }
 .member-progress-link { border: 0; background: transparent; color: var(--portal-salmon); font: inherit; cursor: pointer; text-decoration: underline; }
 .member-progress-link:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
-@media (max-width: 760px) { .member-progress-charts { grid-template-columns: minmax(0, 1fr); } .member-progress-values { grid-column: 1; } .member-progress-exercises li { flex-direction: column; gap: 8px; } }
+@media (max-width: 760px) { .member-progress-charts { grid-template-columns: minmax(0, 1fr); } .member-progress-values { grid-column: 1; } .member-progress-plan__day { padding: 4px 14px; } .member-progress-exercises li { flex-wrap: wrap; } .member-progress-exercises__body { flex-basis: calc(100% - 40px); } .member-progress-dose { flex-basis: 100%; max-width: none; justify-content: flex-start; padding-left: 40px; } }
 .workout-history { min-width: 0; color: var(--portal-paper); }
 .workout-history-heading, .workout-month-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .workout-history-heading h2, .workout-history-heading h3 { color: var(--portal-paper); margin: 0; }

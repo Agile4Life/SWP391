@@ -24,9 +24,9 @@ const formatDate = (iso: string) => iso.slice(0, 10).split('-').reverse().join('
 
 function Dose({ item }: { item: TrainingItem }) {
   return <div className="member-progress-dose">
-    {item.sets != null && item.reps != null && <span>{item.sets}{memberText(' hiệp × ')}{item.reps}{memberText(' lần')}</span>}
-    {item.durationMinutes != null && <span>{item.durationMinutes}{memberText(' phút')}</span>}
-    {item.restSeconds != null && <span>{memberText('Nghỉ ')}{item.restSeconds}{memberText(' giây')}</span>}
+    {item.sets != null && item.reps != null && <span className="member-progress-dose__chip is-volume">{item.sets}{memberText(' hiệp × ')}{item.reps}{memberText(' lần')}</span>}
+    {item.durationMinutes != null && <span className="member-progress-dose__chip">{item.durationMinutes}{memberText(' phút')}</span>}
+    {item.restSeconds != null && <span className="member-progress-dose__chip is-rest">{memberText('Nghỉ ')}{item.restSeconds}{memberText(' giây')}</span>}
   </div>;
 }
 
@@ -42,16 +42,24 @@ export function ActiveTrainingPlan({ state, today, onRetry }: { state: PlanLoadS
       : plans.map((plan) => <article key={plan.id} className="member-progress-plan">
         <header className="member-progress-plan__head">
           <h3>{plan.goal || memberText('Giáo án đang áp dụng')}</h3>
-          <p className="muted">{plan.coachName || memberText('Huấn luyện viên')} · {formatDate(plan.startDate)} – {formatDate(plan.endDate)}</p>
+          <p className="member-progress-plan__meta">
+            <span>{plan.coachName || memberText('Huấn luyện viên')}</span>
+            <span aria-hidden="true">·</span>
+            <time>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</time>
+          </p>
         </header>
         {plan.items.length === 0 ? <p className="portal-empty">{memberText('Giáo án này chưa có bài tập nào.')}</p>
-          : planDays(plan).map(({ day, items }) => <div key={String(day)} className="member-progress-plan__day">
-            <h4 className="member-progress-day">{dayLabel(day)}</h4>
-            <ol className="member-progress-exercises">{items.map((item) => <li key={item.id}>
-              <div><strong>{item.exerciseName}</strong>{item.description && <p>{item.description}</p>}</div>
+          : <div className="member-progress-plan__days">{planDays(plan).map(({ day, items }) => <div key={String(day)} className="member-progress-plan__day">
+            <div className="member-progress-plan__day-head">
+              <h4 className="member-progress-day">{dayLabel(day)}</h4>
+              <span className="member-progress-plan__count">{items.length}{memberText(' bài tập', items.length === 1 ? ' exercise' : ' exercises')}</span>
+            </div>
+            <ol className="member-progress-exercises">{items.map((item, index) => <li key={item.id}>
+              <span className="member-progress-exercises__index" aria-hidden="true">{index + 1}</span>
+              <div className="member-progress-exercises__body"><strong>{item.exerciseName}</strong>{item.description && <p>{item.description}</p>}</div>
               <Dose item={item} />
             </li>)}</ol>
-          </div>)}
+          </div>)}</div>}
       </article>)}
   </section>;
 }
