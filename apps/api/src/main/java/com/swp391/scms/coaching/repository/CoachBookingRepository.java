@@ -111,6 +111,13 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             """)
     List<CoachBooking> findOpenBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
+    /** Confirmed PT sessions between two dates: the ones the schedule trigger checks class sessions against. */
+    @Query("""
+            select cb from CoachBooking cb join fetch cb.coach
+            where cb.bookingDate between :fromDate and :toDate and cb.status = 'confirmed'
+            """)
+    List<CoachBooking> findConfirmedBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
+
     @Query("""
             select cb from CoachBooking cb
             where cb.member.userId = :memberId

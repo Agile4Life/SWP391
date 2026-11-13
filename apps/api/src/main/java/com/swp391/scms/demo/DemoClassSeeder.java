@@ -1,5 +1,6 @@
 package com.swp391.scms.demo;
 
+import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -41,8 +42,9 @@ import org.springframework.transaction.annotation.Transactional;
  * ({@code app.demo.seed-enabled}) but independent of it: it can top up a database that was demo-seeded before, and it is
  * idempotent per class name, so a class that already exists is never duplicated or modified.
  *
- * <p>The database trigger rejects overlapping sessions of the same coach or room, so every course is placed only into a
- * free slot (checked against the sessions already stored); a course that cannot be placed is skipped with a warning.
+ * <p>The database triggers reject a session that overlaps another session of the same coach or room, or a confirmed PT
+ * booking of the same coach, so every course is placed only into a free slot (checked against the sessions and confirmed
+ * PT bookings already stored); a course that cannot be placed is skipped with a warning.
  * Coaches are taken from the active staff by specialization, rooms by name, and no member or enrollment is created.
  */
 @Component
@@ -172,15 +174,18 @@ public class DemoClassSeeder implements ApplicationRunner {
     private final RoomRepository rooms;
     private final DisciplineRepository disciplines;
     private final UserRepository users;
+    private final CoachBookingRepository coachBookings;
 
     public DemoClassSeeder(GymClassRepository classes, ClassSessionRepository sessions, CoachRepository coaches,
-                           RoomRepository rooms, DisciplineRepository disciplines, UserRepository users) {
+                           RoomRepository rooms, DisciplineRepository disciplines, UserRepository users,
+                           CoachBookingRepository coachBookings) {
         this.classes = classes;
         this.sessions = sessions;
         this.coaches = coaches;
         this.rooms = rooms;
         this.disciplines = disciplines;
         this.users = users;
+        this.coachBookings = coachBookings;
     }
 
     @Override
@@ -204,8 +209,11 @@ public class DemoClassSeeder implements ApplicationRunner {
         Set<String> existingNames = new HashSet<>();
         classes.findAll().forEach(c -> existingNames.add(c.getName()));
 
-        // Slots the database trigger would reject: every non-cancelled session, by coach and by room, per day.
+        // Slots the database triggers would reject: every non-cancelled session, by coach and by room, and every
+        // confirmed PT booking of a coach (trg_sessions_check_conflict in scms_guard_pt_schedule), per day.
         Map<String, List<Slot>> busy = new HashMap<>();
+        coachBookings.findConfirmedBetween(today.minusDays(150), today.plusDays(150)).forEach(b ->
+                reserve(busy, "coach", b.getCoach().getUserId(), b.getBookingDate(), b.getStartTime(), b.getEndTime()));
         sessions.findNotCancelledBetween(today.minusDays(150), today.plusDays(150)).forEach(s -> {
             GymClass owner = s.getGymClass();
             if (owner.getCoach() != null) {

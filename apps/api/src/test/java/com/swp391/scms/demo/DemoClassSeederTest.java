@@ -35,6 +35,7 @@ class DemoClassSeederTest {
     @Mock RoomRepository rooms;
     @Mock DisciplineRepository disciplines;
     @Mock UserRepository users;
+    @Mock com.swp391.scms.coaching.repository.CoachBookingRepository coachBookings;
 
     private final List<GymClass> savedClasses = new ArrayList<>();
     private final List<ClassSession> savedSessions = new ArrayList<>();
@@ -42,7 +43,7 @@ class DemoClassSeederTest {
 
     @BeforeEach
     void setUp() {
-        seeder = new DemoClassSeeder(classes, sessions, coaches, rooms, disciplines, users);
+        seeder = new DemoClassSeeder(classes, sessions, coaches, rooms, disciplines, users, coachBookings);
         lenient().when(coaches.findActiveWithUser()).thenReturn(List.of(
                 coach(1L, "Gym - Sức mạnh"), coach(2L, "Yoga"), coach(3L, "Boxing"), coach(4L, "Bơi lội")));
         lenient().when(rooms.findAllByOrderByNameAsc()).thenReturn(List.of(
@@ -52,6 +53,7 @@ class DemoClassSeederTest {
                 discipline(1L, "Gym"), discipline(2L, "Yoga"), discipline(3L, "Boxing"), discipline(4L, "Bơi lội")));
         lenient().when(classes.findAll()).thenReturn(List.of());
         lenient().when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of());
+        lenient().when(coachBookings.findConfirmedBetween(any(), any())).thenReturn(List.of());
         lenient().when(users.findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(any())).thenReturn(List.of());
         lenient().when(classes.save(any())).thenAnswer(call -> {
             GymClass saved = call.getArgument(0);
@@ -91,6 +93,31 @@ class DemoClassSeederTest {
                 }
             }
         }
+    }
+
+    /** The schedule trigger also rejects a class session that overlaps a confirmed PT booking of its coach. */
+    @Test
+    void doesNotPlaceAScheduledSessionOverAConfirmedPtBookingOfTheCoach() {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        List<com.swp391.scms.coaching.entity.CoachBooking> bookings = new ArrayList<>();
+        for (int day = -100; day <= 100; day++) {
+            for (long coachId = 1; coachId <= 4; coachId++) {
+                var booking = new com.swp391.scms.coaching.entity.CoachBooking();
+                booking.setCoach(coach(coachId, "any"));
+                booking.setBookingDate(today.plusDays(day));
+                booking.setStartTime(java.time.LocalTime.of(18, 0));
+                booking.setEndTime(java.time.LocalTime.of(19, 0));
+                bookings.add(booking);
+            }
+        }
+        lenient().when(coachBookings.findConfirmedBetween(any(), any())).thenReturn(bookings);
+
+        seeder.run(null);
+
+        assertThat(savedSessions).isNotEmpty().noneSatisfy(s -> {
+            assertThat(s.getStartTime()).isBefore(java.time.LocalTime.of(19, 0));
+            assertThat(s.getEndTime()).isAfter(java.time.LocalTime.of(18, 0));
+        });
     }
 
     @Test
