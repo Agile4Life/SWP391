@@ -24,7 +24,7 @@ server:
 spring:
   servlet:
     multipart:
-      # Hold requests carry up to five medical documents of at most 5 MB each.
+      # Hold requests carry up to five optional supporting documents of at most 5 MB each.
       max-file-size: 6MB
       max-request-size: 32MB
   profiles:

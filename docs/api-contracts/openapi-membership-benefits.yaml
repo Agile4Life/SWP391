@@ -67,13 +67,13 @@ paths:
     post:
       summary: Request a hold (multipart/form-data)
       description: |
-        Parts: `reason` (required, max 500), `startDate`, `endDate` (ISO dates, inclusive), `documents` (1 to 5 files,
+        Parts: `reason` (required, max 500), `startDate`, `endDate` (ISO dates, inclusive), `documents` (optional, up to 5 files,
         JPG/PNG/PDF, at most 5 MB each). Rules: the package must allow holds (3-month Silver 7 days, Gold 15,
         Platinum 30; 1-month Platinum 7; 1-month Silver/Gold and the trial cannot be held); one hold per package;
         the start is at least 24 hours away; length is 3 days up to the allowance; the window lies inside the
         membership period. Errors: MEMBERSHIP_HOLD_NOT_ALLOWED, MEMBERSHIP_HOLD_ALREADY_USED,
         MEMBERSHIP_HOLD_DATES_INVALID, MEMBERSHIP_HOLD_TOO_LATE, MEMBERSHIP_HOLD_DURATION_INVALID,
-        MEMBERSHIP_HOLD_OUT_OF_PERIOD, MEMBERSHIP_HOLD_DOCUMENT_REQUIRED, MEMBERSHIP_HOLD_DOCUMENT_INVALID.
+        MEMBERSHIP_HOLD_OUT_OF_PERIOD, MEMBERSHIP_HOLD_DOCUMENT_INVALID.
       requestBody:
         content:
           multipart/form-data:
