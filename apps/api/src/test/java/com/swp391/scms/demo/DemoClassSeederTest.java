@@ -48,7 +48,7 @@ class DemoClassSeederTest {
                 coach(1L, "Gym - Sức mạnh"), coach(2L, "Yoga"), coach(3L, "Boxing"), coach(4L, "Bơi lội")));
         lenient().when(rooms.findAllByOrderByNameAsc()).thenReturn(List.of(
                 room(1L, "Phòng Gym Tiêu chuẩn", 50), room(2L, "Phòng Gym VIP", 25),
-                room(3L, "Zen Garden Studio", 18), room(4L, "Oasis Lap Pool", 20)));
+                room(3L, "Zen Garden Studio", 18), room(4L, "Oasis Lap Pool", 20), room(5L, "Boxing Studio", 20)));
         lenient().when(disciplines.findAll()).thenReturn(List.of(
                 discipline(1L, "Gym"), discipline(2L, "Yoga"), discipline(3L, "Boxing"), discipline(4L, "Bơi lội")));
         lenient().when(classes.findAll()).thenReturn(List.of());
@@ -141,6 +141,14 @@ class DemoClassSeederTest {
 
         verify(classes, never()).save(any());
         verify(sessions, never()).save(any());
+    }
+
+    /** Basic-tier members cannot book Platinum-room courses, so the demo keeps at most one of them. */
+    @Test
+    void keepsAtMostOneDemoCourseInTheVipRoom() {
+        long vipCourses = DemoClassSeeder.CLASSES.stream().filter(c -> "Phòng Gym VIP".equals(c.room())).count();
+
+        assertThat(vipCourses).isLessThanOrEqualTo(1);
     }
 
     @Test

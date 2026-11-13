@@ -7,7 +7,7 @@ Căn cứ nghiệp vụ: [specs/2026-11-10-membership-and-attendance-business-ru
 ## Vì sao chọn Lan + Platinum 3 tháng
 
 - Lan chưa có gói, KYC đang chờ duyệt → có sẵn bước KYC (bắt buộc cho gói đầu tiên: `MEMBERSHIP_KYC_REQUIRED`).
-- **Chỉ gói dài hạn (≥ 60 ngày) hoặc Platinum 1 tháng mới được bảo lưu** (Silver/Gold 1 tháng không được). Platinum 3 tháng bảo lưu tối đa 30 ngày, và có 6 buổi PT miễn phí / chu kỳ, 4 khóa nhóm miễn phí → đặt lịch không vướng thanh toán.
+- **Mọi gói trả phí (3, 6, 9, 12 tháng) đều được bảo lưu một lần**; gói trải nghiệm thì không. Platinum 3 tháng bảo lưu tối đa 30 ngày, và có 6 buổi PT miễn phí / chu kỳ, 4 khóa nhóm miễn phí → đặt lịch không vướng thanh toán.
 - Gói mới bắt đầu **hôm nay** → check-in `GRANTED` ngay trong buổi demo.
 
 ## Chuẩn bị (làm trước 1 ngày + 15 phút trước giờ)
@@ -99,7 +99,7 @@ Chính sách: **không có lớp lẻ / đặt từng buổi** (`SingleSessionPo
 7. **Chứng minh bằng dữ liệu có sẵn**: mở `em@` (Silver, **đang bảo lưu**) → `/member/hold` hiện đơn đã duyệt; dán QR của `em@` vào `/staff/check-in` → từ chối. Kết nối lại với phần C.
 8. Nhấn mạnh: có thể **hủy bảo lưu chưa bắt đầu** (lịch đã hủy không tự khôi phục, gói được trả lại lượt bảo lưu), và buổi lớp trong kỳ bảo lưu được đánh dấu `excused` nên không tính vắng, không dính quy tắc 50%.
 
-Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo lưu không?"* Không — chỉ gói dài hạn và Platinum 1 tháng. *"Bảo lưu hai lần?"* Không — `hold_used` đặt khi duyệt và không xóa.
+Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gói trải nghiệm có bảo lưu không?"* Không — chỉ gói trả phí 3–12 tháng. *"Bảo lưu hai lần?"* Không — `hold_used` đặt khi duyệt và không xóa.
 
 ## F. Tổng kết và báo cáo (23:00–25:00)
 
@@ -120,7 +120,7 @@ Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo
 | Camera điện thoại không quét được QR cổng | Quay lại cách 2: sao chép mã QR từ `/member/card` dán vào `/staff/check-in`. |
 | QR cổng hết hạn khi vừa quét | Mã sống 60 giây; bấm "Tạo lại mã QR cổng". |
 | Lan bị `MEMBERSHIP_KYC_REQUIRED` | Chưa duyệt KYC ở bước A; quay lại `/staff/kyc`. |
-| Nút "Gửi đơn bảo lưu" không hiện | Gói chưa `active`, hoặc đã dùng lượt bảo lưu, hoặc gói không đủ điều kiện (Silver/Gold 1 tháng). Dùng `an@` (Platinum 3 tháng, hạn 31/12) làm phương án thay thế. |
+| Nút "Gửi đơn bảo lưu" không hiện | Gói chưa `active`, hoặc đã dùng lượt bảo lưu, hoặc gói không đủ điều kiện (gói trải nghiệm). Dùng `an@` (Platinum 12 tháng) làm phương án thay thế. |
 | Không có khung giờ PT/lớp trong khoảng 3–9 ngày tới | Đổi ngày bảo lưu cho khớp, hoặc bỏ phần PT. Seed lại 1–2 ngày trước demo giải quyết phần lớn. |
 | VNPay lỗi cấu hình (503) | Chuyển sang tiền mặt tại quầy, không giải thích dài. |
 | Mạng chậm | Các trang đều có skeleton/lỗi/thử lại; chờ, đừng tải lại liên tục (QR cổng tải lại sẽ đổi mã). |

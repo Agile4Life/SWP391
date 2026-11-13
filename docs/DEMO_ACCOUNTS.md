@@ -20,15 +20,15 @@ Các tài khoản chỉ có sau khi bật `APP_DEMO_SEED_ENABLED=true` và khở
 
 | Họ tên | Email | Gói | Trạng thái | Kịch bản |
 |---|---|---|---|---|
-| Nguyễn Minh An | `an@demo.sol.vn` | Platinum 3 tháng | Đang hoạt động | Gia hạn từ Gold cũ; lịch sử check-in, lớp, PT, chỉ số 4 tháng |
-| Trần Thu Bình | `binh@demo.sol.vn` | Gold | Đang hoạt động | Yoga + bơi, PT với HLV Yoga |
-| Lê Khánh Chi | `chi@demo.sol.vn` | Silver | Đang hoạt động | Hội viên mới 5 ngày |
-| Phạm Quốc Dũng | `dung@demo.sol.vn` | Gold | Hết hạn | Check-in bị từ chối |
-| Võ Ngọc Em | `em@demo.sol.vn` | Silver | Bảo lưu | Bảo lưu đã duyệt, đang trong thời gian bảo lưu |
-| Đặng Hoàng Phúc | `phuc@demo.sol.vn` | Gold | Chờ thanh toán | KYC chờ duyệt |
-| Bùi Hương Giang | `giang@demo.sol.vn` | Gold | Đang hoạt động | Gia hạn từ Silver; Boxing + Yoga |
-| Ngô Trung Hiếu | `hieu@demo.sol.vn` | Platinum | Sắp hết hạn (3 ngày) | Nhắc gia hạn |
-| Đỗ Anh Khoa | `khoa@demo.sol.vn` | Silver | Đã hủy | Gói bị hủy |
+| Nguyễn Minh An | `an@demo.sol.vn` | Platinum 12 tháng | Đang hoạt động | Gia hạn từ Gold 3 tháng cũ; lịch sử check-in, lớp, PT, chỉ số 4 tháng |
+| Trần Thu Bình | `binh@demo.sol.vn` | Gold 6 tháng | Đang hoạt động | Yoga + bơi, PT với HLV Yoga |
+| Lê Khánh Chi | `chi@demo.sol.vn` | Silver 3 tháng | Đang hoạt động | Hội viên mới 5 ngày |
+| Phạm Quốc Dũng | `dung@demo.sol.vn` | Gold 3 tháng | Hết hạn | Check-in bị từ chối |
+| Võ Ngọc Em | `em@demo.sol.vn` | Silver 6 tháng | Bảo lưu | Bảo lưu đã duyệt, đang trong thời gian bảo lưu |
+| Đặng Hoàng Phúc | `phuc@demo.sol.vn` | Gold 3 tháng | Chờ thanh toán | KYC chờ duyệt |
+| Bùi Hương Giang | `giang@demo.sol.vn` | Gold 9 tháng | Đang hoạt động | Gia hạn từ Silver 3 tháng; Boxing + Yoga |
+| Ngô Trung Hiếu | `hieu@demo.sol.vn` | Platinum 3 tháng | Sắp hết hạn (3 ngày) | Nhắc gia hạn |
+| Đỗ Anh Khoa | `khoa@demo.sol.vn` | Silver 3 tháng | Đã hủy | Gói bị hủy |
 | Hồ Mỹ Lan | `lan@demo.sol.vn` | — | Chưa có gói | Mới đăng ký, KYC chờ duyệt |
 
 ## Gợi ý luồng demo

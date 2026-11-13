@@ -81,6 +81,7 @@ public class DemoClassSeeder implements ApplicationRunner {
 
     private static final String GYM = "Phòng Gym Tiêu chuẩn";
     private static final String VIP = "Phòng Gym VIP";
+    private static final String BOX = "Boxing Studio";
     private static final String ZEN = "Zen Garden Studio";
     private static final String POOL = "Oasis Lap Pool";
 
@@ -140,15 +141,15 @@ public class DemoClassSeeder implements ApplicationRunner {
             finished("Yoga Chào Hè", "Yoga", ZEN, "beginner", 15, 0, "MON,WED", "07:30", 60, 20,
                     "Khóa Yoga khởi động mùa hè đã kết thúc."),
             // Boxing
-            ongoing("Boxing Cơ Bản", "Boxing", VIP, "beginner", 14, 0, "TUE,THU", "19:00", 75,
+            ongoing("Boxing Cơ Bản", "Boxing", BOX, "beginner", 14, 0, "TUE,THU", "19:00", 75,
                     "Tư thế, đòn thẳng, móc và di chuyển chân cơ bản."),
-            ongoing("Kickfit Cardio", "Boxing", VIP, "all", 20, 0, "MON,WED", "19:00", 60,
+            ongoing("Kickfit Cardio", "Boxing", BOX, "all", 20, 0, "MON,WED", "19:00", 60,
                     "Boxing aerobic cường độ vừa, đốt năng lượng và thư giãn."),
-            ongoing("Boxing Sparring Kỹ Thuật", "Boxing", VIP, "advanced", 10, 500000, "FRI", "19:30", 90,
+            ongoing("Boxing Sparring Kỹ Thuật", "Boxing", BOX, "advanced", 10, 500000, "FRI", "19:30", 90,
                     "Tập đối kháng có kiểm soát với bảo hộ đầy đủ."),
-            upcoming("Boxing Bootcamp Sáng", "Boxing", VIP, "intermediate", 16, 0, "SAT,SUN", "07:30", 75, 8,
+            upcoming("Boxing Bootcamp Sáng", "Boxing", BOX, "intermediate", 16, 0, "SAT,SUN", "07:30", 75, 8,
                     "Bootcamp cuối tuần: bao cát, mitt và thể lực theo hiệp."),
-            finished("Boxing Bootcamp 4 Tuần", "Boxing", VIP, "intermediate", 14, 400000, "MON,WED", "20:15", 60, 14,
+            finished("Boxing Bootcamp 4 Tuần", "Boxing", BOX, "intermediate", 14, 400000, "MON,WED", "20:15", 60, 14,
                     "Khóa bootcamp 4 tuần đã hoàn thành."),
             // Bơi lội
             ongoing("Bơi Cơ Bản Người Lớn", "Bơi lội", POOL, "beginner", 10, 0, "MON,WED", "06:00", 60,

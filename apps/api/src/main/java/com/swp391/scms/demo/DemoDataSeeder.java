@@ -82,23 +82,23 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     private static final List<MemberSpec> MEMBERS = List.of(
             new MemberSpec("an", "Nguyễn Minh An", "male", 28, "advanced", "Tăng cơ, giảm mỡ", null,
-                    "PLATINUM 3 THÁNG", "ACTIVE_LONG", 150),
+                    "PLATINUM 12 THÁNG", "ACTIVE_LONG", 150),
             new MemberSpec("binh", "Trần Thu Bình", "female", 31, "intermediate", "Giảm cân, cải thiện sức bền", null,
-                    "GOLD", "ACTIVE_MID", 75),
+                    "GOLD 6 THÁNG", "ACTIVE_MID", 75),
             new MemberSpec("chi", "Lê Khánh Chi", "female", 24, "beginner", "Làm quen với gym", null,
-                    "SILVER", "ACTIVE_NEW", 5),
+                    "SILVER 3 THÁNG", "ACTIVE_NEW", 5),
             new MemberSpec("dung", "Phạm Quốc Dũng", "male", 35, "intermediate", "Tăng sức bền", "Đau gối nhẹ",
-                    "GOLD", "EXPIRED", 120),
+                    "GOLD 3 THÁNG", "EXPIRED", 120),
             new MemberSpec("em", "Võ Ngọc Em", "female", 29, "beginner", "Yoga, thư giãn", null,
-                    "SILVER", "FROZEN", 90),
+                    "SILVER 6 THÁNG", "FROZEN", 90),
             new MemberSpec("phuc", "Đặng Hoàng Phúc", "male", 22, "beginner", "Tăng cân lành mạnh", null,
-                    "GOLD", "PENDING", 1),
+                    "GOLD 3 THÁNG", "PENDING", 1),
             new MemberSpec("giang", "Bùi Hương Giang", "female", 33, "intermediate", "Boxing, giảm stress", null,
-                    "GOLD", "RENEWED", 110),
+                    "GOLD 9 THÁNG", "RENEWED", 110),
             new MemberSpec("hieu", "Ngô Trung Hiếu", "male", 40, "advanced", "Duy trì thể lực", null,
-                    "PLATINUM", "EXPIRING", 27),
+                    "PLATINUM 3 THÁNG", "EXPIRING", 27),
             new MemberSpec("khoa", "Đỗ Anh Khoa", "male", 26, "beginner", "Bơi lội", null,
-                    "SILVER", "CANCELLED", 60),
+                    "SILVER 3 THÁNG", "CANCELLED", 60),
             new MemberSpec("lan", "Hồ Mỹ Lan", "female", 27, "beginner", "Chưa chọn gói", null,
                     null, "NO_PLAN", 2));
 
@@ -129,7 +129,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), LocalTime.of(18, 0), LocalTime.of(19, 15), 0),
             new ClassSpec("Morning Flow Yoga", "mai", "Zen Garden Studio", "Yoga", "beginner", 10,
                     Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), LocalTime.of(18, 0), LocalTime.of(19, 0), 0),
-            new ClassSpec("Boxing Cardio Rounds", "long", "Phòng Gym VIP", "Boxing", "intermediate", 8,
+            new ClassSpec("Boxing Cardio Rounds", "long", "Boxing Studio", "Boxing", "intermediate", 8,
                     Set.of(DayOfWeek.SATURDAY), LocalTime.of(9, 0), LocalTime.of(10, 15), 0),
             new ClassSpec("Aqua Technique", "thao", "Oasis Lap Pool", "Bơi lội", "all", 8,
                     Set.of(DayOfWeek.FRIDAY), LocalTime.of(17, 0), LocalTime.of(18, 0), 0),
@@ -306,10 +306,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         MembershipPackage pkg = findPackage(spec.pkg());
         int days = pkg.getDurationDays();
         return switch (spec.scenario()) {
-            // 3 months bought 40 days ago -> a Gold month before it (history), a long active run now.
+            // 12 months bought 40 days ago -> a Gold 3-month plan before it (history), a long active run now.
             case "ACTIVE_LONG" -> {
-                MembershipPackage first = findPackage("GOLD");
-                MembershipSubscription old = subscribe(member, first, today.minusDays(120), today.minusDays(91),
+                MembershipPackage first = findPackage("GOLD 3 THÁNG");
+                MembershipSubscription old = subscribe(member, first, today.minusDays(130), today.minusDays(41),
                         "expired", null, receptionist, "cash");
                 yield subscribe(member, pkg, today.minusDays(40), today.minusDays(40).plusDays(days - 1L),
                         "active", old, receptionist, "bank_transfer");
@@ -318,18 +318,19 @@ public class DemoDataSeeder implements ApplicationRunner {
                     "active", null, receptionist, "pos");
             case "ACTIVE_NEW" -> subscribe(member, pkg, today.minusDays(5), today.minusDays(5).plusDays(days - 1L),
                     "active", null, receptionist, "online_wallet");
-            case "EXPIRED" -> subscribe(member, pkg, today.minusDays(52), today.minusDays(52).plusDays(days - 1L),
+            case "EXPIRED" -> subscribe(member, pkg, today.minusDays(days + 10L), today.minusDays(11),
                     "expired", null, receptionist, "cash");
             case "FROZEN" -> {
+                // Silver long-term may hold up to 7 days, once.
                 MembershipSubscription sub = subscribe(member, pkg, today.minusDays(18),
-                        today.minusDays(18).plusDays(days - 1L + 14), "frozen", null, receptionist, "cash");
+                        today.minusDays(18).plusDays(days - 1L + 7), "frozen", null, receptionist, "cash");
                 sub.setHoldStatus("APPROVED");
-                sub.setHoldReason("Đi công tác xa hai tuần");
+                sub.setHoldReason("Đi công tác xa một tuần");
                 sub.setHoldRequestedAt(LocalDateTime.now(ZONE).minusDays(8));
                 sub.setHoldResolvedAt(LocalDateTime.now(ZONE).minusDays(7));
                 sub.setHoldResolvedBy(receptionist);
-                sub.setHoldStartDate(today.minusDays(7));
-                sub.setHoldEndDate(today.plusDays(7));
+                sub.setHoldStartDate(today.minusDays(3));
+                sub.setHoldEndDate(today.plusDays(3));
                 sub.setHoldUsed(true);
                 yield subscriptions.save(sub);
             }
@@ -338,15 +339,15 @@ public class DemoDataSeeder implements ApplicationRunner {
                         "pending_payment", null, receptionist);
                 yield subscriptions.save(sub);
             }
-            // Expired Silver month then renewed into Gold: shows the renewal chain.
+            // Expired Silver 3 months then renewed into Gold 9 months: shows the renewal chain.
             case "RENEWED" -> {
-                MembershipPackage first = findPackage("SILVER");
-                MembershipSubscription old = subscribe(member, first, today.minusDays(50), today.minusDays(21),
+                MembershipPackage first = findPackage("SILVER 3 THÁNG");
+                MembershipSubscription old = subscribe(member, first, today.minusDays(110), today.minusDays(21),
                         "expired", null, receptionist, "cash");
                 yield subscribe(member, pkg, today.minusDays(20), today.minusDays(20).plusDays(days - 1L),
                         "active", old, receptionist, "pos");
             }
-            case "EXPIRING" -> subscribe(member, pkg, today.minusDays(27), today.plusDays(3),
+            case "EXPIRING" -> subscribe(member, pkg, today.minusDays(days - 4L), today.plusDays(3),
                     "active", null, receptionist, "bank_transfer");
             case "CANCELLED" -> {
                 MembershipSubscription sub = newSubscription(member, pkg, today.minusDays(45),

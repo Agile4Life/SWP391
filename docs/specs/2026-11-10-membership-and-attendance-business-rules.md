@@ -47,7 +47,7 @@ Mọi quyền lợi suy ra từ **hạng gói + thời hạn**, không kiểm tr
 - Chống giữ chỗ không thanh toán: lượt VNPay chưa trả tự hủy sau thời gian chờ của cổng (15 phút + 1); lượt tiền mặt chưa thu tự hủy **2 giờ trước giờ bắt đầu** (`app.courts.cash-release-lead-minutes`), nhưng được giữ tối thiểu **30 phút** kể từ lúc đặt (`app.courts.cash-min-hold-minutes`). Job chạy mỗi phút (`CourtBookingExpiryScheduler`).
 - Hủy: hội viên hủy trước giờ bắt đầu ít nhất 2 giờ; lễ tân/quản lý hủy mọi lượt chưa bắt đầu.
 
-- Gói 3 tháng nhận số khóa miễn phí **gấp ba** gói 1 tháng (`credits = base × số chu kỳ`).
+- Số khóa miễn phí = số khóa mỗi chu kỳ × số chu kỳ (gói 3 tháng: ×3, 6 tháng: ×6, 9 tháng: ×9, 12 tháng: ×12). Gói bán: ngắn hạn 3 tháng; dài hạn 6, 9, 12 tháng; cộng gói trải nghiệm 3 ngày.
 - Gói trải nghiệm được coi là hạng Gold khi hiển thị dịch vụ.
 - Gói trải nghiệm nhận diện qua tên (có "TRẢI NGHIỆM"/"TRIAL") hoặc `duration_days` ≤ 3.
 
@@ -108,9 +108,7 @@ Số tiền phải thu là giá **lúc tạo yêu cầu** (`upgrade_charge` ho�
 
 | Gói | Bảo lưu tối đa |
 |---|---|
-| Silver / Gold 1 tháng | Không được |
-| Platinum 1 tháng | 7 ngày |
-| Dài hạn (≥ 60 ngày): Silver / Gold / Platinum | 7 / 15 / 30 ngày |
+| Gói trả phí 3, 6, 9, 12 tháng: Silver / Gold / Platinum | 7 / 15 / 30 ngày |
 | Trải nghiệm | Không được |
 
 **Quy tắc yêu cầu:**

@@ -34,20 +34,6 @@ public class PackageService {
         return PackageDto.of(packages.save(pkg));
     }
 
-    /**
-     * Seeds a catalog entry that predates the 3-12 month rule: the 1-month SILVER/GOLD/PLATINUM plans, which existing
-     * databases already hold and the demo dataset and older subscriptions reference. Seeding them keeps a fresh schema
-     * identical to deployed ones. Only {@code CatalogSeeder} calls this; no controller exposes it, so Manager/API
-     * callers always go through {@link #create(PackageRequest)} and {@code requireValidDuration}.
-     */
-    @Transactional
-    @Audited(action = "PACKAGE_CREATE", entity = "membership_packages")
-    public PackageDto seedLegacyPackage(PackageRequest request) {
-        MembershipPackage pkg = new MembershipPackage();
-        apply(pkg, request);
-        return PackageDto.of(packages.save(pkg));
-    }
-
     @Transactional
     @Audited(action = "PACKAGE_UPDATE", entity = "membership_packages")
     public PackageDto update(Long id, PackageRequest request) {

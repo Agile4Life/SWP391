@@ -12,7 +12,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** Seeds sample disciplines, rooms and packages into empty catalogs (idempotent). */
+/** Seeds disciplines, rooms and packages (idempotent): 3-day trial, short-term 3 months, long-term 6/9/12 months. */
 @Component
 @Order(50)
 public class CatalogSeeder implements ApplicationRunner {
@@ -31,106 +31,62 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 0;
     public static final String TRIAL_PACKAGE_TIER = "GOLD";
 
-    // --- 1 THÁNG (30 NGÀY) - gói cũ, có trước quy tắc thời hạn 3–12 tháng ---
-    // Vẫn seed qua PackageService.seedLegacyPackage để DB mới giống DB đang chạy (dữ liệu demo, lịch sử đăng ký
-    // và e2e trỏ tới các gói này); PackageService.create (đường API) tiếp tục từ chối thời hạn 30 ngày.
-    public static final String SILVER_NAME = "SILVER";
-    public static final String SILVER_DESC = "BASIC – Cơ bản\n"
-            + "Quyền lợi:\n"
-            + "- Tập luyện không giới hạn trong giờ hoạt động.\n"
-            + "- Sử dụng khu vực tập luyện tiêu chuẩn.\n"
-            + "- Sử dụng phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 1 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
-    public static final BigDecimal SILVER_PRICE = new BigDecimal("199000");
-    public static final int SILVER_DURATION = 30;
-    public static final Integer SILVER_CREDIT_LIMIT = 1;
+    // --- Gói trả phí: ngắn hạn = 3 tháng; dài hạn = 6, 9, 12 tháng (quy tắc 3-12 tháng của PackageService) ---
+    // Tên gói: "<HẠNG> <n> THÁNG". Hạn mức khóa Group Fitness = số khóa/tháng của hạng x số tháng (PackageBenefits).
+    public static final String BOXING_ROOM = "Boxing Studio";
+    private static final int DAYS_PER_MONTH = 30;
+    private static final int[] TERMS = {3, 6, 9, 12};
+    private static final int LAST_SHORT_TERM_MONTHS = 3;
+    private static final String[] SAVINGS = {null, "~10%", "~15%", "~20%"};
 
+    /** Hạng gói: nhãn, giá theo kỳ hạn (3, 6, 9, 12 tháng) và quyền lợi. */
+    private record Tier(String code, String label, int[] prices, int ptPerMonth, int holdDays, String[] perks) {}
+
+    private static final Tier[] TIERS = {
+        new Tier("SILVER", "BASIC", new int[] {549_000, 990_000, 1_390_000, 1_750_000}, 0, 7, new String[] {
+            "Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.",
+            "Miễn phí nước uống.",
+            "Đánh giá thể trạng và chỉ số BMI ban đầu."}),
+        new Tier("GOLD", "STANDARD", new int[] {799_000, 1_440_000, 2_040_000, 2_550_000}, 3, 15, new String[] {
+            "Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.",
+            "Tủ khóa cá nhân cố định, đánh giá thể trạng định kỳ mỗi tháng.",
+            "Kế hoạch tập luyện cá nhân cơ bản do huấn luyện viên soạn.",
+            "Giảm 10% dịch vụ PT bổ sung, phí khóa học và sản phẩm tại trung tâm."}),
+        new Tier("PLATINUM", "VIP", new int[] {1_599_000, 2_890_000, 4_090_000, 5_120_000}, 6, 30, new String[] {
+            "Đặc quyền sử dụng phòng tập VIP riêng biệt và phòng xông hơi.",
+            "Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.",
+            "Đánh giá chỉ số cơ thể chuyên sâu: BMI, Body Fat, Muscle Mass.",
+            "Giáo án tập luyện riêng theo mục tiêu và tư vấn dinh dưỡng cơ bản.",
+            "Giảm 20% dịch vụ PT bổ sung, phí khóa học và sản phẩm tại trung tâm.",
+            "Được mời tham gia các sự kiện và chương trình độc quyền."}),
+    };
+
+    public static String packageName(String tier, int months) {
+        return tier + " " + months + " THÁNG";
+    }
+
+    /** Mô tả sinh từ hạng + kỳ hạn để quyền lợi luôn khớp {@link PackageBenefits}. */
+    static String describe(Tier tier, int months, int termIndex) {
+        int days = months * DAYS_PER_MONTH;
+        StringBuilder sb = new StringBuilder(tier.label()).append(" – Gói ").append(months).append(" tháng (")
+                .append(months > LAST_SHORT_TERM_MONTHS ? "Dài hạn" : "Ngắn hạn");
+        if (SAVINGS[termIndex] != null) sb.append(", tiết kiệm ").append(SAVINGS[termIndex]);
+        sb.append(")\nQuyền lợi:\n- Tập luyện không giới hạn trong giờ hoạt động suốt ").append(days).append(" ngày.\n");
+        for (String perk : tier.perks()) sb.append("- ").append(perk).append('\n');
+        if (tier.ptPerMonth() > 0) {
+            sb.append("- ").append(tier.ptPerMonth() * months).append(" buổi tập Personal Trainer 1:1 trong ")
+                    .append(months).append(" tháng.\n");
+        }
+        sb.append("- ").append(PackageBenefits.courseCredits(tier.code(), days)).append(" lượt đăng ký khóa Group Fitness.\n");
+        sb.append("- Được bảo lưu tối đa ").append(tier.holdDays()).append(" ngày (một lần, cần giấy tờ y tế).");
+        return sb.toString();
+    }
+
+    /** Tên gói Gold dùng làm phương án dự phòng cho gói trải nghiệm khi chưa seed (xem MemberTrialService). */
     public static final String GOLD_NAME = "GOLD";
-    public static final String GOLD_DESC = "STANDARD – Trung cấp\n"
-            + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
-            + "- 03 buổi tập Personal Trainer 1:1 mỗi tháng.\n"
-            + "- Sử dụng khu vực máy tập nâng cao.\n"
-            + "- Cung cấp khăn tập riêng trong mỗi buổi tập.\n"
-            + "- Tủ khóa cá nhân cố định.\n"
-            + "- Được đánh giá thể trạng định kỳ mỗi tháng.\n"
-            + "- Xây dựng kế hoạch tập luyện cá nhân cơ bản.\n"
-            + "- 2 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
-    public static final BigDecimal GOLD_PRICE = new BigDecimal("299000");
-    public static final int GOLD_DURATION = 30;
-    public static final Integer GOLD_CREDIT_LIMIT = 2;
 
-    public static final String PLATINUM_NAME = "PLATINUM";
-    public static final String PLATINUM_DESC = "VIP – Cao cấp\n"
-            + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
-            + "- 06 buổi tập Personal Trainer 1:1 mỗi tháng.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt.\n"
-            + "- Sử dụng hệ thống máy tập cao cấp và thiết bị chuyên biệt.\n"
-            + "- Khăn tập và khăn tắm cá nhân theo tiêu chuẩn VIP.\n"
-            + "- Tủ đồ cá nhân cao cấp, có khóa riêng.\n"
-            + "- Sử dụng phòng xông hơi.\n"
-            + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
-            + "- Đánh giá chỉ số cơ thể chuyên sâu: BMI, Body Fat, Muscle Mass.\n"
-            + "- Thiết kế giáo án tập luyện riêng theo mục tiêu.\n"
-            + "- Tư vấn dinh dưỡng cơ bản cùng huấn luyện viên.\n"
-            + "- 4 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.\n"
-            + "- Được mời tham gia các sự kiện và chương trình độc quyền.";
-    public static final BigDecimal PLATINUM_PRICE = new BigDecimal("599000");
-    public static final int PLATINUM_DURATION = 30;
-    public static final Integer PLATINUM_CREDIT_LIMIT = 4;
-
-    // --- 3 THÁNG (90 NGÀY) - ĐỒNG HÀNH DÀI HẠN (giá thấp hơn mua 3 lần gói 1 tháng) ---
-    public static final String SILVER_3M_NAME = "SILVER 3 THÁNG";
-    public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)\n"
-            + "Quyền lợi:\n"
-            + "- Tập luyện không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
-            + "- Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 3 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
-    public static final BigDecimal SILVER_3M_PRICE = new BigDecimal("549000");
-    public static final int SILVER_3M_DURATION = 90;
-    public static final Integer SILVER_3M_CREDIT_LIMIT = 3;
-
-    public static final String GOLD_3M_NAME = "GOLD 3 THÁNG";
-    public static final String GOLD_3M_DESC = "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
-            + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
-            + "- 09 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.\n"
-            + "- Tủ khóa cá nhân cố định.\n"
-            + "- 6 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
-    public static final BigDecimal GOLD_3M_PRICE = new BigDecimal("799000");
-    public static final int GOLD_3M_DURATION = 90;
-    public static final Integer GOLD_3M_CREDIT_LIMIT = 6;
-
-    public static final String PLATINUM_3M_NAME = "PLATINUM 3 THÁNG";
-    public static final String PLATINUM_3M_DESC = "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
-            + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
-            + "- 18 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt và phòng xông hơi.\n"
-            + "- Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.\n"
-            + "- Giáo án tập luyện riêng và tư vấn dinh dưỡng cơ bản.\n"
-            + "- 12 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
-    public static final BigDecimal PLATINUM_3M_PRICE = new BigDecimal("1599000");
-    public static final int PLATINUM_3M_DURATION = 90;
-    public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
-
-    // --- 6 và 12 THÁNG: đã ngừng bán ---
-    // Chỉ giữ tên để chuyển gói đã có trong CSDL về inactive; không xóa vì hội viên có thể đang dùng.
-    public static final String SILVER_6M_NAME = "SILVER 6 THÁNG";
-    public static final String GOLD_6M_NAME = "GOLD 6 THÁNG";
-    public static final String PLATINUM_6M_NAME = "PLATINUM 6 THÁNG";
-    public static final String SILVER_12M_NAME = "SILVER 12 THÁNG";
-    public static final String GOLD_12M_NAME = "GOLD 12 THÁNG";
-    public static final String PLATINUM_12M_NAME = "PLATINUM 12 THÁNG";
-    public static final BigDecimal SILVER_12M_PRICE = new BigDecimal("1990000");
-    public static final BigDecimal GOLD_12M_PRICE = new BigDecimal("2990000");
-    public static final BigDecimal PLATINUM_12M_PRICE = new BigDecimal("5990000");
+    // Gói 1 tháng đã ngừng bán: chỉ chuyển về inactive nếu còn trong CSDL cũ (không xóa vì hội viên có thể đang dùng).
+    private static final String[] RETIRED_ONE_MONTH_NAMES = {"SILVER", "GOLD", "PLATINUM"};
 
     private final DisciplineService disciplines;
     private final RoomService rooms;
@@ -166,31 +122,22 @@ public class CatalogSeeder implements ApplicationRunner {
             rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
         }
 
-        // Upsert 3-day trial package
+        // Phòng Boxing riêng hạng tiêu chuẩn: các lớp Boxing mở cho mọi gói, không dồn vào phòng VIP.
+        upsertRoom(BOXING_ROOM, "Tầng 1 - Khu Chiến đấu", 20, "available", "STANDARD");
+
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
 
-        // Upsert legacy 1-month base packages (outside the 3-12 month rule, see seedLegacyPackage)
-        upsertLegacyPackage(SILVER_NAME, SILVER_DESC, SILVER_PRICE, SILVER_DURATION, SILVER_CREDIT_LIMIT, "The Essential");
-        upsertLegacyPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
-        upsertLegacyPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
+        // Ngắn hạn 3 tháng; dài hạn 6, 9, 12 tháng. Mỗi hạng một giá theo kỳ hạn.
+        for (Tier tier : TIERS) {
+            for (int i = 0; i < TERMS.length; i++) {
+                int days = TERMS[i] * DAYS_PER_MONTH;
+                upsertPackage(packageName(tier.code(), TERMS[i]), describe(tier, TERMS[i], i),
+                        BigDecimal.valueOf(tier.prices()[i]), days, PackageBenefits.courseCredits(tier.code(), days));
+            }
+        }
 
-        // Upsert 3-month long-term packages
-        upsertPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT);
-        upsertPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT);
-        upsertPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT);
-
-        // Đồng bộ quyền lợi mới (spec 2026-11-09) vào các gói đã seed từ trước.
-        alignBenefits(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, 3);
-        alignBenefits(SILVER_NAME, SILVER_DESC, SILVER_CREDIT_LIMIT, "SILVER", 2);
-        alignBenefits(GOLD_NAME, GOLD_DESC, GOLD_CREDIT_LIMIT, "GOLD", 5);
-        alignBenefits(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_CREDIT_LIMIT, "PLATINUM", null);
-        alignBenefits(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_CREDIT_LIMIT, "SILVER", 6);
-        alignBenefits(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_CREDIT_LIMIT, "GOLD", 15);
-        alignBenefits(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM", null);
-
-        // Ngừng bán các gói 6 và 12 tháng đã seed trước đây
-        for (String retired : new String[] {SILVER_6M_NAME, GOLD_6M_NAME, PLATINUM_6M_NAME,
-                SILVER_12M_NAME, GOLD_12M_NAME, PLATINUM_12M_NAME}) {
+        // Ngừng bán gói 1 tháng (nếu còn trong CSDL cũ).
+        for (String retired : RETIRED_ONE_MONTH_NAMES) {
             retirePackage(retired);
         }
 
@@ -275,41 +222,12 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
-    /**
-     * Chuyển gói seed cũ sang quyền lợi mới (spec 2026-11-09). Chỉ đụng vào gói còn nguyên mô tả và hạn mức seed cũ;
-     * gói mà Manager đã chỉnh sửa thì giữ nguyên, kể cả giá.
-     */
-    private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
-        String marker = desc.substring(0, desc.indexOf('\n'));
-        for (var pkg : packages.list()) {
-            if (!name.equalsIgnoreCase(pkg.name())) continue;
-            boolean untouched = pkg.description() != null && pkg.description().startsWith(marker)
-                    && java.util.Objects.equals(legacyCreditLimit, pkg.classCreditLimit());
-            boolean upToDate = java.util.Objects.equals(desc, pkg.description())
-                    && java.util.Objects.equals(creditLimit, pkg.classCreditLimit())
-                    && tier.equalsIgnoreCase(pkg.tier());
-            if (untouched && !upToDate) {
-                packages.update(pkg.id(), new PackageRequest(pkg.name(), desc, pkg.price(), pkg.durationDays(),
-                        creditLimit, pkg.status(), tier));
-            }
-            return;
-        }
-    }
-
     private void upsertPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
-        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, false, legacyAliases);
-    }
-
-    private void upsertLegacyPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
-        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, true, legacyAliases);
-    }
-
-    private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier, String... legacyAliases) {
-        upsertPackageWithTier(name, desc, price, duration, creditLimit, tier, false, legacyAliases);
+        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, legacyAliases);
     }
 
     private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier,
-                                       boolean legacyTerm, String... legacyAliases) {
+                                       String... legacyAliases) {
         var existingList = packages.list();
         for (var pkg : existingList) {
             if (name.equalsIgnoreCase(pkg.name())) {
@@ -333,11 +251,7 @@ public class CatalogSeeder implements ApplicationRunner {
             }
         }
         PackageRequest request = new PackageRequest(name, desc, price, duration, creditLimit, "active", tier);
-        if (legacyTerm) {
-            packages.seedLegacyPackage(request);
-        } else {
-            packages.create(request);
-        }
+        packages.create(request);
     }
     /**
      * Preserves any price customized by a Manager in the database; only converts the original

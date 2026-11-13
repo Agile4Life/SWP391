@@ -67,7 +67,7 @@ class CatalogSeederTest {
         org.assertj.core.api.Assertions.assertThat(equipment.getAllValues())
                 .extracting(item -> item.getRoom().getName())
                 .containsOnly("Phòng Gym Tiêu chuẩn", "Phòng Gym VIP");
-        verify(rooms, never()).create(any());
+        verify(rooms, times(1)).create(any()); // only the Boxing Studio is missing
     }
 
     private Room namedRoom(String name) {
@@ -85,15 +85,14 @@ class CatalogSeederTest {
         seeder.run(null);
 
         verify(disciplines, times(6)).create(any());
-        verify(rooms, times(5)).create(any());
+        verify(rooms, times(6)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(4)).create(requests.capture());
+        verify(packages, times(13)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(0, 549000, 799000, 1599000);
-        var legacy = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(3)).seedLegacyPackage(legacy.capture());
-        org.assertj.core.api.Assertions.assertThat(legacy.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(199000, 299000, 599000);
+                .containsExactly(0,
+                        549000, 990000, 1390000, 1750000,
+                        799000, 1440000, 2040000, 2550000,
+                        1599000, 2890000, 4090000, 5120000);
     }
 
     /** Uses the real PackageService so its term validation runs: an empty catalog must seed without errors. */
@@ -119,12 +118,18 @@ class CatalogSeederTest {
                         com.swp391.scms.facilities.entity.MembershipPackage::getDurationDays)
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.TRIAL_PACKAGE_NAME, 3),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_NAME, 30),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_NAME, 30),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_NAME, 30),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_3M_NAME, 90),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_3M_NAME, 90),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_3M_NAME, 90));
+                        org.assertj.core.groups.Tuple.tuple("SILVER 3 THÁNG", 90),
+                        org.assertj.core.groups.Tuple.tuple("SILVER 6 THÁNG", 180),
+                        org.assertj.core.groups.Tuple.tuple("SILVER 9 THÁNG", 270),
+                        org.assertj.core.groups.Tuple.tuple("SILVER 12 THÁNG", 360),
+                        org.assertj.core.groups.Tuple.tuple("GOLD 3 THÁNG", 90),
+                        org.assertj.core.groups.Tuple.tuple("GOLD 6 THÁNG", 180),
+                        org.assertj.core.groups.Tuple.tuple("GOLD 9 THÁNG", 270),
+                        org.assertj.core.groups.Tuple.tuple("GOLD 12 THÁNG", 360),
+                        org.assertj.core.groups.Tuple.tuple("PLATINUM 3 THÁNG", 90),
+                        org.assertj.core.groups.Tuple.tuple("PLATINUM 6 THÁNG", 180),
+                        org.assertj.core.groups.Tuple.tuple("PLATINUM 9 THÁNG", 270),
+                        org.assertj.core.groups.Tuple.tuple("PLATINUM 12 THÁNG", 360));
     }
 
     @Test
@@ -138,56 +143,47 @@ class CatalogSeederTest {
         // "Yoga" đã có sẵn nên chỉ 5 bộ môn chuẩn còn lại được tạo thêm
         verify(disciplines, times(5)).create(any());
         verify(disciplines, never()).update(any(), any());
-        verify(rooms, never()).create(any());
-        verify(packages, times(4)).create(any());
-        verify(packages, times(3)).seedLegacyPackage(any());
+        verify(rooms, times(1)).create(any());
+        verify(packages, times(13)).create(any());
     }
     @Test
-    void correctsOriginalCatalogPricesWithoutChangingTermsOrManagerPrices() {
+    void retiresOneMonthPackagesWithoutDeletingThem() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
         when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
         when(packages.list()).thenReturn(List.of(
-                new PackageDto(1L, "The Essential", "8 classes", new BigDecimal("2800000"), 30, 8, "active"),
-                new PackageDto(2L, "The Sanctuary VIP", "Unlimited", new BigDecimal("7500000"), 90, null, "active"),
-                new PackageDto(3L, "The Sovereign Annual", "Annual", new BigDecimal("26000000"), 365, null, "active"),
-                new PackageDto(4L, "Manager package", null, new BigDecimal("450000"), 45, 3, "active")));
+                new PackageDto(1L, "SILVER", null, new BigDecimal("199000"), 30, 1, "active"),
+                new PackageDto(2L, "GOLD", null, new BigDecimal("299000"), 30, 2, "inactive"),
+                new PackageDto(3L, "PLATINUM", null, new BigDecimal("599000"), 30, 4, "active"),
+                new PackageDto(4L, "SILVER 3 THÁNG", null, new BigDecimal("549000"), 90, 3, "active")));
+
         seeder.run(null);
+
+        verify(packages).updateStatus(1L, "inactive");
+        verify(packages, never()).updateStatus(2L, "inactive");
+        verify(packages).updateStatus(3L, "inactive");
+        verify(packages, never()).updateStatus(4L, "inactive");
+        verify(packages, never()).update(any(), any());
+    }
+
+    @Test
+    void describesShortAndLongTermPackagesWithTheirBenefits() {
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(packages.list()).thenReturn(List.of());
+
+        seeder.run(null);
+
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(3)).update(any(), requests.capture());
-        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(299000, 499000, 999000);
-        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.durationDays()).toList())
-                .containsExactly(30, 90, 365);
-        org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().classCreditLimit()).isEqualTo(8);
-    }
-
-    @Test
-    void preservesManagerChangesToSeededPackage() {
-        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
-        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
-        when(packages.list()).thenReturn(List.of(new PackageDto(1L, CatalogSeeder.SILVER_NAME,
-                "Manager terms", new BigDecimal("450000"), 45, 3, "inactive")));
-        seeder.run(null);
-        verify(packages, never()).update(any(), any());
-    }
-
-    @Test
-    void retiresSixAndTwelveMonthPackagesWithoutDeletingThem() {
-        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
-        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
-        when(packages.list()).thenReturn(List.of(
-                new PackageDto(7L, CatalogSeeder.SILVER_6M_NAME, null, new BigDecimal("999000"), 180, 2, "active"),
-                new PackageDto(8L, CatalogSeeder.GOLD_6M_NAME, null, new BigDecimal("1499000"), 180, 5, "inactive"),
-                new PackageDto(9L, CatalogSeeder.SILVER_12M_NAME, null, new BigDecimal("1799000"), 365, 2, "active"),
-                new PackageDto(10L, CatalogSeeder.SILVER_3M_NAME, null, new BigDecimal("549000"), 90, 6, "active")));
-
-        seeder.run(null);
-
-        verify(packages).updateStatus(7L, "inactive");
-        verify(packages, never()).updateStatus(8L, "inactive");
-        verify(packages).updateStatus(9L, "inactive");
-        verify(packages, never()).updateStatus(10L, "inactive");
-        verify(packages, never()).update(any(), any());
+        verify(packages, times(13)).create(requests.capture());
+        var byName = requests.getAllValues().stream().collect(java.util.stream.Collectors.toMap(
+                com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest::name, r -> r));
+        var gold12 = byName.get("GOLD 12 THÁNG");
+        org.assertj.core.api.Assertions.assertThat(gold12.durationDays()).isEqualTo(360);
+        org.assertj.core.api.Assertions.assertThat(gold12.classCreditLimit()).isEqualTo(24);
+        org.assertj.core.api.Assertions.assertThat(gold12.description()).contains("Dài hạn").contains("36 buổi tập Personal Trainer");
+        org.assertj.core.api.Assertions.assertThat(byName.get("SILVER 3 THÁNG").description()).contains("Ngắn hạn")
+                .doesNotContain("Personal Trainer");
+        org.assertj.core.api.Assertions.assertThat(byName.get("PLATINUM 9 THÁNG").description()).contains("30 ngày");
     }
 
     @Test
@@ -223,7 +219,7 @@ class CatalogSeederTest {
         when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
         when(packages.list()).thenReturn(List.of(
                 new PackageDto(10L, "The Essential", "Old alias", new BigDecimal("150000"), 30, 2, "inactive"),
-                new PackageDto(11L, CatalogSeeder.SILVER_NAME, "Manager custom", new BigDecimal("450000"), 30, 2, "active")));
+                new PackageDto(11L, "SILVER 3 THÁNG", "Manager custom", new BigDecimal("450000"), 30, 2, "active")));
 
         seeder.run(null);
 

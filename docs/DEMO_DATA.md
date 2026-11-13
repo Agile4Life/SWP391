@@ -15,8 +15,25 @@ Khởi động lại API một lần. Seeder idempotent (bỏ qua nếu `manager
 
 - Chỉ bật trên DB demo/dev, **không** bật trên DB thật.
 - Ngày tháng tính theo ngày chạy seed (múi giờ Asia/Ho_Chi_Minh): seed **1–2 ngày trước buổi demo** để "sắp hết hạn", "buổi sắp tới" còn đúng.
-- Cần CatalogSeeder chạy trước (gói, bộ môn, phòng). Gói GOLD/SILVER/PLATINUM(+3 THÁNG) phải tồn tại.
+- Cần CatalogSeeder chạy trước (gói, bộ môn, phòng). Gói SILVER/GOLD/PLATINUM × 3, 6, 9, 12 THÁNG phải tồn tại (xem mục *Danh mục gói*).
 - Muốn seed lại: xóa các user `*@demo.sol.vn` (và dữ liệu liên quan) rồi khởi động lại.
+
+## Danh mục gói (CatalogSeeder)
+
+Gói 1 tháng đã ngừng bán (tự chuyển `inactive` nếu còn trong DB cũ). Gói trả phí gồm hai nhóm, đều có ba hạng:
+
+| Nhóm | Thời hạn | Silver | Gold | Platinum |
+|---|---|---|---|---|
+| Ngắn hạn | 3 tháng (90 ngày) | 549.000 | 799.000 | 1.599.000 |
+| Dài hạn | 6 tháng (180 ngày) | 990.000 | 1.440.000 | 2.890.000 |
+| Dài hạn | 9 tháng (270 ngày) | 1.390.000 | 2.040.000 | 4.090.000 |
+| Dài hạn | 12 tháng (360 ngày) | 1.750.000 | 2.550.000 | 5.120.000 |
+
+Cộng gói **Trải nghiệm 3 ngày** (miễn phí). Dài hạn rẻ hơn khoảng 10% / 15% / 20% (6 / 9 / 12 tháng) so với đơn giá tháng của gói 3 tháng. Khóa nhóm miễn phí = số khóa/tháng của hạng × số tháng; bảo lưu tối đa 7 / 15 / 30 ngày (Silver / Gold / Platinum).
+
+## Khóa học và phòng
+
+Hầu hết khóa học ở phòng **tiêu chuẩn** (Phòng Gym Tiêu chuẩn, Boxing Studio, Zen Garden Studio, Oasis Lap Pool) để mọi hạng gói đặt được. Chỉ **Powerlifting Technique** ở Phòng Gym VIP làm khóa đặc quyền Platinum.
 
 ## Tài khoản (mật khẩu chung: `APP_DEMO_PASSWORD`)
 
@@ -34,15 +51,15 @@ Khởi động lại API một lần. Seeder idempotent (bỏ qua nếu `manager
 
 | Email | Gói / trạng thái | Câu chuyện để demo |
 |---|---|---|
-| `an@` | PLATINUM 3 THÁNG, active | Gia hạn từ Gold cũ; lịch sử 35 ngày check-in, lớp, PT, chỉ số 4 tháng |
-| `binh@` | GOLD, active | Yoga + bơi, PT với HLV Yoga |
-| `chi@` | SILVER, active | Hội viên mới 5 ngày |
-| `dung@` | GOLD, **hết hạn** | Check-in bị từ chối (DENIED) |
-| `em@` | SILVER, **bảo lưu** | Đang trong thời gian bảo lưu đã duyệt |
-| `phuc@` | GOLD, **chờ thanh toán** | KYC chờ duyệt |
-| `giang@` | GOLD, active | Gia hạn từ Silver đã hết hạn; Boxing + Yoga |
-| `hieu@` | PLATINUM, **sắp hết hạn (3 ngày)** | Nhắc gia hạn |
-| `khoa@` | SILVER, **đã hủy** | |
+| `an@` | PLATINUM 12 THÁNG, active | Gia hạn từ Gold 3 tháng cũ; lịch sử 35 ngày check-in, lớp, PT, chỉ số 4 tháng |
+| `binh@` | GOLD 6 THÁNG, active | Yoga + bơi, PT với HLV Yoga |
+| `chi@` | SILVER 3 THÁNG, active | Hội viên mới 5 ngày |
+| `dung@` | GOLD 3 THÁNG, **hết hạn** | Check-in bị từ chối (DENIED) |
+| `em@` | SILVER 6 THÁNG, **bảo lưu** | Đang trong thời gian bảo lưu đã duyệt |
+| `phuc@` | GOLD 3 THÁNG, **chờ thanh toán** | KYC chờ duyệt |
+| `giang@` | GOLD 9 THÁNG, active | Gia hạn từ Silver 3 tháng đã hết hạn; Boxing + Yoga |
+| `hieu@` | PLATINUM 3 THÁNG, **sắp hết hạn (3 ngày)** | Nhắc gia hạn |
+| `khoa@` | SILVER 3 THÁNG, **đã hủy** | |
 | `lan@` | chưa có gói | Mới đăng ký, KYC chờ duyệt |
 
 (Tất cả email có hậu tố `@demo.sol.vn`.)

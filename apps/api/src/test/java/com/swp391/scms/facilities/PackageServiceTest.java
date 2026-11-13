@@ -43,18 +43,6 @@ class PackageServiceTest {
     }
 
     @Test
-    void seedLegacyPackageKeepsTheOneMonthPlansThatCreateRejects() {
-        when(packages.save(any(MembershipPackage.class))).thenAnswer(i -> i.getArgument(0));
-
-        var dto = service.seedLegacyPackage(new PackageRequest("SILVER", null, BigDecimal.TEN, 30, 1, "active", null));
-
-        assertEquals(30, dto.durationDays());
-        assertEquals("active", dto.status());
-        assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
-                () -> service.create(new PackageRequest("SILVER", null, BigDecimal.TEN, 30, 1, "active", null)));
-    }
-
-    @Test
     void soldPackageCannotBeRenamedOrRetimed() {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName("GOLD 6 THÁNG");
