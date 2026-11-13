@@ -84,7 +84,7 @@ public class EnrollmentService {
     private com.swp391.scms.wallet.WalletService wallets;
 
     /** Online (wallet/VNPay) course fees hold the seat this long; cash fees hold it until the course starts. */
-    private static final long ONLINE_HOLD_MINUTES = 15;
+    public static final long ONLINE_HOLD_MINUTES = 15;
 
     public void setMemberDiscounts(MemberDiscountService memberDiscounts) {
         this.memberDiscounts = memberDiscounts;

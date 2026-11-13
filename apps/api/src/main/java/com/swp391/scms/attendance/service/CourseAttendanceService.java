@@ -159,9 +159,9 @@ public class CourseAttendanceService {
     }
 
     /** How early before a session starts a gate scan already counts as arriving for it. */
-    private static final int EARLY_MINUTES = 30;
+    public static final int EARLY_MINUTES = 30;
     /** A scan later than this after the start is recorded as late. */
-    private static final int LATE_AFTER_MINUTES = 15;
+    public static final int LATE_AFTER_MINUTES = 15;
 
     /**
      * A member entering the center is marked present for today's sessions of the courses they are booked in

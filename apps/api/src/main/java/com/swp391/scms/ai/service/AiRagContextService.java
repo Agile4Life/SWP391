@@ -74,6 +74,10 @@ public class AiRagContextService {
     private final TrainingPlanRepository trainingPlanRepository;
     private final TrainingPlanItemRepository trainingPlanItemRepository;
 
+    /** Centre rules; built from the bundled file when the context does not provide one (unit tests). */
+    @Autowired(required = false)
+    private AiKnowledgeBase knowledgeBase;
+
     /** Optional so tests can pin "today"; the centre's own clock otherwise. */
     @Autowired(required = false)
     private Clock clock;
@@ -126,7 +130,7 @@ public class AiRagContextService {
             }
         }
         appendCatalogContext(sb, bookedClassIds, normalize(userQuery), today);
-        appendPolicyContext(sb);
+        appendPolicyContext(sb, userQuery);
         return sb.toString().trim();
     }
 
@@ -391,12 +395,21 @@ public class AiRagContextService {
         return fresh;
     }
 
-    private void appendPolicyContext(StringBuilder sb) {
-        sb.append("\n5. QUY ĐỊNH & TIỆN ÍCH TRUNG TÂM SÖL:\n");
-        sb.append("- Điều kiện: Chỉ hội viên có gói tập active và chưa hết hạn mới đặt lớp và check-in được.\n");
-        sb.append("- Check-in: Hội viên có gói tập active quét mã QR cổng tại sảnh lễ tân từ mục 'Quét QR Check-in' trên Portal.\n");
-        sb.append("- Đặt lớp: Đặt lịch trực tiếp tại mục 'Lịch học'. Hội viên đặt từng buổi, hoặc bật 'Đặt nhiều buổi' để đặt cả tuần hay cả tháng một lượt; buổi đã đầy chỗ thì không đặt được.\n");
-        sb.append("- Bảo lưu & Hỗ trợ: Gửi yêu cầu bảo lưu gói tập hoặc tạo phiếu tại mục 'Hỗ trợ & Khiếu nại' / nút 'Tin nhắn' để nhân viên lễ tân xử lý.\n");
+    private void appendPolicyContext(StringBuilder sb, String userQuery) {
+        AiKnowledgeBase base = knowledgeBase != null ? knowledgeBase : defaultKnowledgeBase();
+        sb.append("\n5. QUY ĐỊNH & TIỆN ÍCH TRUNG TÂM SÖL:");
+        sb.append(base.sectionsFor(userQuery));
+    }
+
+    private static volatile AiKnowledgeBase fallbackKnowledgeBase;
+
+    private static AiKnowledgeBase defaultKnowledgeBase() {
+        AiKnowledgeBase base = fallbackKnowledgeBase;
+        if (base == null) {
+            base = new AiKnowledgeBase();
+            fallbackKnowledgeBase = base;
+        }
+        return base;
     }
 }
 
