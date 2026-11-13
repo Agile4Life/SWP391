@@ -31,7 +31,9 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 0;
     public static final String TRIAL_PACKAGE_TIER = "GOLD";
 
-    // --- 1 THÁNG (30 NGÀY) ---
+    // --- 1 THÁNG (30 NGÀY) - gói cũ, có trước quy tắc thời hạn 3–12 tháng ---
+    // Vẫn seed qua PackageService.seedLegacyPackage để DB mới giống DB đang chạy (dữ liệu demo, lịch sử đăng ký
+    // và e2e trỏ tới các gói này); PackageService.create (đường API) tiếp tục từ chối thời hạn 30 ngày.
     public static final String SILVER_NAME = "SILVER";
     public static final String SILVER_DESC = "BASIC – Cơ bản\n"
             + "Quyền lợi:\n"
@@ -167,10 +169,10 @@ public class CatalogSeeder implements ApplicationRunner {
         // Upsert 3-day trial package
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
 
-        // Upsert 1-month base packages
-        upsertPackage(SILVER_NAME, SILVER_DESC, SILVER_PRICE, SILVER_DURATION, SILVER_CREDIT_LIMIT, "The Essential");
-        upsertPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
-        upsertPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
+        // Upsert legacy 1-month base packages (outside the 3-12 month rule, see seedLegacyPackage)
+        upsertLegacyPackage(SILVER_NAME, SILVER_DESC, SILVER_PRICE, SILVER_DURATION, SILVER_CREDIT_LIMIT, "The Essential");
+        upsertLegacyPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
+        upsertLegacyPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
 
         // Upsert 3-month long-term packages
         upsertPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT);
@@ -295,10 +297,19 @@ public class CatalogSeeder implements ApplicationRunner {
     }
 
     private void upsertPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
-        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, legacyAliases);
+        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, false, legacyAliases);
+    }
+
+    private void upsertLegacyPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
+        upsertPackageWithTier(name, desc, price, duration, creditLimit, null, true, legacyAliases);
     }
 
     private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier, String... legacyAliases) {
+        upsertPackageWithTier(name, desc, price, duration, creditLimit, tier, false, legacyAliases);
+    }
+
+    private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier,
+                                       boolean legacyTerm, String... legacyAliases) {
         var existingList = packages.list();
         for (var pkg : existingList) {
             if (name.equalsIgnoreCase(pkg.name())) {
@@ -321,7 +332,12 @@ public class CatalogSeeder implements ApplicationRunner {
                 }
             }
         }
-        packages.create(new PackageRequest(name, desc, price, duration, creditLimit, "active", tier));
+        PackageRequest request = new PackageRequest(name, desc, price, duration, creditLimit, "active", tier);
+        if (legacyTerm) {
+            packages.seedLegacyPackage(request);
+        } else {
+            packages.create(request);
+        }
     }
     /**
      * Preserves any price customized by a Manager in the database; only converts the original
