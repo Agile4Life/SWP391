@@ -11,12 +11,17 @@
 ![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)
 ![Docker Compose](https://img.shields.io/badge/VPS-Docker_Compose-2496ED?logo=docker&logoColor=white)
 
-**Nền tảng quản trị trung tâm thể thao & chăm sóc sức khỏe (SWP391 Monorepo)**  
+**Nền tảng vận hành trung tâm thể thao & chăm sóc sức khỏe — SWP391 Monorepo**
+
 *Gói hội viên · Khóa học định kỳ · PT 1:1 & đặt sân · Check-in QR động · Bảo lưu có giấy tờ · Cửa hàng · Báo cáo doanh thu*
 
 <br />
 
-<img src="docs/ui-review/fitness-reference/hero-desktop.png" alt="SÖL Wellness Sanctuary Landing Page" width="100%" />
+<img src="docs/readme/landing-hero-dark.png" alt="Trang chủ SÖL Fitness" width="100%" />
+
+<sub>Trang chủ công khai — giao diện tối charcoal–bạc với điểm nhấn salmon</sub>
+
+[Giới thiệu](#-giới-thiệu) · [Tính năng](#-tính-năng-theo-vai-trò) · [Giao diện](#️-giao-diện) · [Kiến trúc](#️-kiến-trúc) · [CI/CD](#-cicd--một-workflow-hai-đường-deploy) · [Chạy local](#-chạy-local) · [Tài liệu](#-tài-liệu)
 
 </div>
 
@@ -24,29 +29,31 @@
 
 ## ✨ Giới thiệu
 
-**SCMS** là hệ thống vận hành trung tâm thể hình & wellness: cổng thông tin nhiều vai trò (**React + Vite + TypeScript**), **Spring Boot 3 REST API (Java 21)** và cơ sở dữ liệu **PostgreSQL** theo hướng **Hibernate Code-First** kèm **trigger PostgreSQL** bảo vệ các ràng buộc nghiệp vụ (sức chứa, trùng lịch).
+**SCMS** là hệ thống vận hành cho trung tâm thể hình & wellness, gồm ba phần:
 
-| Chủ đề | Ở đâu |
+- **Web portal nhiều vai trò** — React + Vite + TypeScript (`apps/web`), song ngữ Việt/Anh, hai giao diện sáng/tối.
+- **REST API** — Spring Boot 3, Java 21 (`apps/api`), kiến trúc ba lớp theo package-by-feature, JWT, i18n qua `Accept-Language`.
+- **Cơ sở dữ liệu PostgreSQL** — Hibernate Code-First (`ddl-auto: update`) cùng trigger PostgreSQL bảo vệ ràng buộc nghiệp vụ (sức chứa lớp, trùng lịch).
+
+| Bạn cần | Xem ở |
 | :--- | :--- |
-| Một workflow GitHub Actions cho cả CI, Render/Vercel và VPS | [Pipeline](#-cicd--một-workflow-hai-đường-deploy), [CICD_SETUP.md](docs/CICD_SETUP.md) |
-| Chạy web + API bằng Docker Compose trên VPS | [DOCKER_COMPOSE.md](docs/DOCKER_COMPOSE.md), [VPS_CICD_SETUP.md](docs/VPS_CICD_SETUP.md) |
-| Cơ sở dữ liệu Supabase PostgreSQL (profile `supabase`, JDBC qua TLS) | [SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) |
-| Quy tắc nghiệp vụ gói tập, khóa học, bảo lưu, điểm danh | [Business rules](docs/specs/2026-11-10-membership-and-attendance-business-rules.md), [Thiết kế quyền lợi gói](docs/superpowers/specs/2026-11-09-membership-benefits-design.md) |
+| Nghiệp vụ tổng thể | [PROJECT_MASTER_GUIDE.md](docs/PROJECT_MASTER_GUIDE.md) |
+| Quy tắc gói tập, khóa học, bảo lưu, điểm danh | [Business rules](docs/specs/2026-11-10-membership-and-attendance-business-rules.md) |
 | Hợp đồng API (OpenAPI) | [docs/api-contracts](docs/api-contracts) |
+| Quy chuẩn thiết kế giao diện | [DESIGN.md](DESIGN.md) |
+| Tài khoản demo | [DEMO_ACCOUNTS.md](docs/DEMO_ACCOUNTS.md) |
 
 ---
 
-## 🎯 Tính năng chính
-
-### Theo vai trò
+## 🎯 Tính năng theo vai trò
 
 | Vai trò | Việc chính |
 | :--- | :--- |
-| **Hội viên** | Mua, gia hạn, nâng cấp gói; đăng ký khóa học; đặt PT 1:1 và sân; thẻ hội viên với QR đổi mỗi 60 giây; xin bảo lưu kèm giấy tờ y tế; xem lịch tuần/tháng; chỉ số sức khỏe & tiến độ; mua sản phẩm |
-| **Lễ tân** | POS và xác nhận thanh toán; duyệt hồ sơ định danh (KYC) và bảo lưu; cổng quét QR; đánh dấu có mặt buổi PT; đơn hàng và hỗ trợ |
-| **Huấn luyện viên** | Lịch dạy, điểm danh lớp, đánh giá thể trạng lần đầu, giáo án, theo dõi học viên được phân công |
-| **Quản lý trung tâm** | Tạo khóa học (lặp theo tuần hoặc tháng), danh mục gói/phòng/bộ môn, báo cáo doanh thu, duyệt đơn nội bộ, nhật ký kiểm toán |
-| **Quản trị hệ thống** | Tài khoản và phân quyền |
+| 🧑‍🤝‍🧑 **Hội viên** | Mua, gia hạn, nâng cấp gói · đăng ký khóa học · đặt PT 1:1 và sân · thẻ hội viên với QR đổi mỗi 60 giây · xin bảo lưu kèm giấy tờ y tế · lịch tuần/tháng · chỉ số sức khỏe · mua sản phẩm · khám phá cơ sở 3D · nhắn tin với HLV và trợ lý AI |
+| 🛎️ **Lễ tân** | Quầy POS và xác nhận thanh toán · duyệt hồ sơ định danh (KYC) và bảo lưu · mã QR cổng check-in · đánh dấu có mặt buổi PT · xử lý đơn hàng và hỗ trợ |
+| 🏋️ **Huấn luyện viên** | Thời khóa biểu, điểm danh lớp · đánh giá thể trạng lần đầu · giáo án · theo dõi học viên phụ trách |
+| 📊 **Quản lý trung tâm** | Tạo khóa học lặp theo tuần/tháng · danh mục gói, phòng, bộ môn, sản phẩm · báo cáo doanh thu · duyệt hủy gói & hoàn tiền · nhật ký kiểm toán |
+| 🔐 **Quản trị hệ thống** | Tài khoản và phân quyền |
 
 ### Gói hội viên
 
@@ -61,65 +68,100 @@
 | Đánh giá thể trạng | lần đầu | + 1 lần mỗi chu kỳ | + Body Fat, Muscle Mass | như Gold |
 | Bảo lưu (chỉ gói 3 tháng, Platinum 1 tháng) | 7 ngày | 15 ngày | 30 ngày (1 tháng: 7) | – |
 
-Điểm cần nhớ:
+<details>
+<summary><b>Quy tắc cần nhớ</b></summary>
 
-- **Chu kỳ quyền lợi** là 30 ngày tính từ ngày bắt đầu gói; nâng cấp tiếp tục chu kỳ cũ, ngày bảo lưu không bị tính vào chu kỳ. Lượt không cộng dồn.
+- **Chu kỳ quyền lợi** là 30 ngày tính từ ngày bắt đầu gói; nâng cấp tiếp tục chu kỳ cũ, ngày bảo lưu không tính vào chu kỳ. Lượt không cộng dồn.
 - **Khóa học** chỉ có dạng định kỳ (lặp theo tuần hoặc tháng), phải kết thúc trước ngày hết hạn gói, vắng không hoàn tiền hay dạy bù. Vắng quá 50% số buổi thì bị khóa đăng ký khóa mới 30 ngày.
-- **Điểm danh:** quét cổng đúng khung giờ tự ghi có mặt buổi khóa và buổi PT; ai vào sớm rồi ở lại vẫn được tính; lượt vào quên checkout tự đóng sau 8 giờ.
+- **Điểm danh:** quét cổng đúng khung giờ tự ghi có mặt buổi khóa và buổi PT; vào sớm rồi ở lại vẫn được tính; lượt vào quên checkout tự đóng sau 8 giờ.
 - **Bảo lưu:** tối thiểu 3 ngày, nộp trước 24 giờ kèm giấy tờ y tế, mỗi gói một lần; lịch trong kỳ bảo lưu được giải phóng.
 - **Định danh:** hồ sơ CCCD/hộ chiếu cần lễ tân duyệt trước khi mua gói đầu tiên; số giấy tờ lưu dạng mã hóa.
+- **Chỉ Member có gói `active` và chưa hết hạn** mới được đặt chỗ và check-in.
+
+</details>
 
 ---
 
-## 🖥️ Các màn hình chính
+## 🖥️ Giao diện
 
-### 1. Trang chủ & Cổng đăng nhập (`/` & `/login`)
+Mọi màn hình đều có hai chế độ: **Light — charcoal & salmon**, **Dark — charcoal & bạc**. Font Plus Jakarta Sans, sidebar icon, dashboard bốn cột. Quy chuẩn chi tiết ở [DESIGN.md](DESIGN.md).
 
-**Quy chuẩn thiết kế:** [DESIGN.md](DESIGN.md). Phần công khai dùng SÖL Fitness charcoal–salmon, bố cục full width và animation xuất hiện từng component khi cuộn dọc.
+### 1. Trang công khai
 
-| Trang chủ (`/`) | Đăng nhập đa vai trò (`/login`) |
+| Đăng nhập — Light (`/login`) | Đăng nhập — Dark |
 | :---: | :---: |
-| <img src="docs/ui-review/fitness-reference/hero-desktop.png" alt="Landing Page" width="100%" /> | <img src="docs/ui-review/fitness-reference/login-desktop.png" alt="Login Page" width="100%" /> |
+| <img src="docs/readme/login-light.png" alt="Đăng nhập giao diện sáng" width="100%" /> | <img src="docs/readme/login-dark.png" alt="Đăng nhập giao diện tối" width="100%" /> |
+| Đăng nhập bằng email/mật khẩu hoặc Google, chuyển ngôn ngữ ở footer | Cùng bố cục, nút chính đổi sang tông bạc |
 
-### 2. Hội viên — Member Portal (`/member/*`)
+<details>
+<summary><b>🛒 Cửa hàng thực phẩm bổ sung (<code>/products</code>)</b></summary>
+<br />
+<p align="center"><img src="docs/readme/shop-dark.png" alt="Cửa hàng sản phẩm" width="80%" /></p>
+<p align="center"><sub>Lọc theo nhu cầu (tăng cơ, phục hồi, năng lượng…), sắp xếp, nhãn "Sắp hết/Mới", giá theo lần dùng và giỏ hàng.</sub></p>
+</details>
+
+### 2. Hội viên (`/member/*`)
 
 <p align="center">
-  <img src="docs/qa/portal-redesign/member-dashboard-1440.png" alt="Member Dashboard" width="100%" />
+  <img src="docs/readme/member-dashboard-light.png" alt="Tổng quan hội viên" width="100%" />
+  <br />
+  <sub><b>Tổng quan</b> — bốn cột: gói đang dùng và số ngày còn lại · lớp đã đăng ký · thẻ & thanh toán · hồ sơ sức khỏe</sub>
 </p>
 
-| 💳 Gói tập & thanh toán (`/member/packages`) | 📅 Lớp học & lịch của tôi (`/member/classes`) |
+| 💳 Gói tập (`/member/packages`) | 📅 Lịch học & đặt chỗ (`/member/classes`) |
 | :---: | :---: |
-| <img src="docs/qa/portal-redesign/member-packages-1440.png" alt="Member Packages" width="100%" /> | <img src="docs/qa/portal-redesign/member-classes-1440.png" alt="Member Classes" width="100%" /> |
+| <img src="docs/readme/member-packages-light.png" alt="Gói tập" width="100%" /> | <img src="docs/readme/member-schedule-light.png" alt="Lịch học" width="100%" /> |
+| Gói hiện tại, so sánh Silver/Gold/Platinum, tab bảo lưu | Lịch tuần/tháng, hạn mức khóa miễn phí, đặt lớp và PT 1:1 |
+| 🪪 **Thẻ hội viên & QR** (`/member/card`) | 🎾 **Đặt sân** (`/member/courts`) |
+| <img src="docs/readme/member-card-dark.png" alt="Thẻ hội viên QR" width="100%" /> | <img src="docs/readme/member-courts-light.png" alt="Đặt sân" width="100%" /> |
+| QR động đổi mỗi 60 giây, tải thẻ về máy | Bơi lội, tennis, cầu lông; quy định theo hạng gói |
+| 🧭 **Khám phá cơ sở 3D** (`/member/explore`) | 💬 **Tin nhắn & trợ lý AI** |
+| <img src="docs/readme/member-explore-3d-light.png" alt="Bản đồ 3D" width="100%" /> | <img src="docs/readme/member-chat-light.png" alt="Tin nhắn" width="100%" /> |
+| Mô hình tòa nhà theo tầng, cắt tường, tham quan có hướng dẫn | Chat với huấn luyện viên và SÖL AI ngay trong portal |
 
-| 🪪 Thẻ hội viên & QR (`/member/card`) | 🧬 Hồ sơ & chỉ số sức khỏe (`/member/profile`) |
-| :---: | :---: |
-| <img src="docs/qa/portal-redesign/member-card-1440.png" alt="Member QR Card" width="100%" /> | <img src="docs/qa/portal-redesign/member-profile-1440.png" alt="Member Profile" width="100%" /> |
-
-### 3. Lễ tân — Front Desk & POS (`/staff/*`)
-
-| 🧾 Quầy POS & cấp gói (`/staff/reception`) | 🔍 Cổng quét QR (`/staff/check-in`) |
-| :---: | :---: |
-| <img src="docs/qa/portal-redesign/staff-reception-1440.png" alt="Staff Reception POS" width="100%" /> | <img src="docs/qa/portal-redesign/staff-checkin-1440.png" alt="Staff QR Check-in" width="100%" /> |
+### 3. Lễ tân (`/staff/*`)
 
 <p align="center">
-  <img src="docs/qa/portal-redesign/staff-classes-1440.png" alt="Staff Class Scheduling" width="100%" />
+  <img src="docs/readme/staff-reception-dark.png" alt="Quầy lễ tân" width="100%" />
+  <br />
+  <sub><b>Quầy lễ tân & POS</b> — QR cổng tự làm mới, tra cứu hội viên theo SĐT/mã/CCCD, xác nhận gói chờ thanh toán, lịch sử xử lý</sub>
 </p>
 
-### 4. Huấn luyện viên (`/staff/attendance`)
+### 4. Huấn luyện viên (`/coach/*`)
 
 <p align="center">
-  <img src="docs/qa/portal-redesign/coach-attendance-1440.png" alt="Coach Attendance and Evaluation" width="100%" />
+  <img src="docs/readme/coach-schedule-light.png" alt="Lịch dạy huấn luyện viên" width="100%" />
+  <br />
+  <sub><b>Lịch dạy & học viên</b> (`/coach/classes`) — thời khóa biểu lớp và PT 1:1, học viên phụ trách, đánh giá và bảng xếp hạng tháng</sub>
 </p>
 
 ### 5. Quản lý trung tâm (`/manager/*`)
 
 <p align="center">
-  <img src="docs/qa/portal-redesign/manager-reports-1440.png" alt="Manager Revenue Reports" width="100%" />
+  <img src="docs/readme/manager-reports-light.png" alt="Báo cáo doanh thu" width="100%" />
+  <br />
+  <sub><b>Báo cáo doanh thu</b> — lọc theo khoảng ngày, duyệt hủy gói & hoàn tiền, doanh thu theo ngày và theo gói, tỷ lệ gia hạn</sub>
 </p>
 
-| 🗂️ Danh mục vận hành (`/manager/catalogs`) | 🔐 Tài khoản & phân quyền (`/manager/users`) |
+### 6. Trên điện thoại
+
+Portal là PWA, có thanh điều hướng dưới cùng trên màn hình hẹp.
+
+| Trang chủ | Tổng quan hội viên | Thẻ QR | Quầy lễ tân |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/readme/mobile-landing-light.png" alt="Trang chủ mobile" width="100%" /> | <img src="docs/readme/mobile-member-dashboard-light.png" alt="Dashboard mobile" width="100%" /> | <img src="docs/readme/mobile-member-card-dark.png" alt="Thẻ QR mobile" width="100%" /> | <img src="docs/readme/mobile-staff-reception-dark.png" alt="Lễ tân mobile" width="100%" /> |
+
+<details>
+<summary><b>🌗 So sánh Light / Dark</b></summary>
+<br />
+
+| Light | Dark |
 | :---: | :---: |
-| <img src="docs/qa/portal-redesign/manager-catalogs-1440.png" alt="Manager Catalogs" width="100%" /> | <img src="docs/qa/portal-redesign/manager-users-1440.png" alt="Manager Users & RBAC" width="100%" /> |
+| <img src="docs/readme/member-dashboard-light.png" alt="Dashboard sáng" width="100%" /> | <img src="docs/readme/member-dashboard-dark.png" alt="Dashboard tối" width="100%" /> |
+
+Màu nhấn đi qua token `--sol-accent*` trong `apps/web/src/shared/ui/theme.css`.
+
+</details>
 
 ---
 
@@ -143,21 +185,23 @@ flowchart LR
 
 | Vòng đời tài khoản (`users.status`) | Vòng đời gói hội viên (`membership_subscriptions.status`) |
 | :---: | :---: |
-| <img src="docs/diagrams/screenshots/page_1.png" alt="User Account State Diagram" width="100%" /> | <img src="docs/diagrams/screenshots/page_2.png" alt="Membership Subscription State Diagram" width="100%" /> |
+| <img src="docs/diagrams/screenshots/page_1.png" alt="State diagram tài khoản" width="100%" /> | <img src="docs/diagrams/screenshots/page_2.png" alt="State diagram gói hội viên" width="100%" /> |
+
+Sơ đồ dữ liệu theo miền (Users, Classes, Bookings, Memberships, Payments, E-commerce…) nằm trong [docs/design](docs/design); các state diagram khác trong [docs/diagrams](docs/diagrams).
 
 > [!IMPORTANT]
-> **Bất biến kiến trúc dữ liệu:**
+> **Bất biến kiến trúc dữ liệu**
 > - **Code-First:** bảng, cột, khóa định nghĩa bằng JPA Entity (`ddl-auto: update`). File SQL trong `db/` chỉ là tài liệu lịch sử, không dùng để triển khai.
-> - **Trigger bắt buộc:** sức chứa lớp và chống trùng lịch nạp tự động qua `PostgreSqlTriggerProvider`.
+> - **Trigger bắt buộc:** sức chứa lớp và chống trùng lịch nạp tự động qua `PostgreSqlTriggerProvider`; lỗi trigger được map thành lỗi HTTP dễ hiểu.
 > - **Chính sách database:** `DatabasePolicyTest`, `DatabaseProfilesTest` và `scripts/test-database-config.ps1` chỉ cho phép profile `supabase` (PostgreSQL).
-> - **Đa ngôn ngữ:** `vi` (mặc định) và `en` qua `Accept-Language`; mọi thông báo mới phải có cả `messages_vi` và `messages_en`.
+> - **Đa ngôn ngữ:** `vi` (mặc định) và `en`; mọi thông báo mới phải có cả `messages_vi` và `messages_en`.
 > - **Phân quyền ở backend:** ẩn menu ở frontend không phải là authorization.
 
 ---
 
 ## 🔄 CI/CD — một workflow, hai đường deploy
 
-Toàn bộ kiểm tra và deploy nằm trong **một workflow** [`pipeline.yml`](.github/workflows/pipeline.yml), nên mở một lần chạy trong tab **Actions** là thấy cả hai đường deploy trên cùng một đồ thị:
+Toàn bộ kiểm tra và deploy nằm trong **một workflow** [`pipeline.yml`](.github/workflows/pipeline.yml):
 
 ```mermaid
 flowchart LR
@@ -170,9 +214,9 @@ flowchart LR
 ```
 
 - **PR và `develop`:** chỉ chạy test và build image Docker, không deploy.
-- **`main`:** thêm hai đường deploy. Render rồi Vercel (có health check và rollback); VPS qua SSH (`git merge --ff-only`, `docker compose up --wait`, health check, tự quay về commit cũ nếu lỗi). Thiếu secret của đường nào thì đường đó tự bỏ qua.
+- **`main`:** thêm hai đường deploy — Render rồi Vercel (health check, rollback); VPS qua SSH (`git merge --ff-only`, `docker compose up --wait`, health check, tự quay về commit cũ nếu lỗi). Thiếu secret của đường nào thì đường đó tự bỏ qua.
 - **Run workflow** trong tab Actions để chạy lại commit mới nhất hoặc một commit chỉ định.
-- Cấu hình secrets: [CICD_SETUP.md](docs/CICD_SETUP.md) (Render, Vercel), [DOCKER_COMPOSE.md](docs/DOCKER_COMPOSE.md) (VPS).
+- Cấu hình: [CICD_SETUP.md](docs/CICD_SETUP.md) (Render, Vercel) · [DOCKER_COMPOSE.md](docs/DOCKER_COMPOSE.md) và [VPS_CICD_SETUP.md](docs/VPS_CICD_SETUP.md) (VPS).
 
 ---
 
@@ -184,7 +228,8 @@ SWP391/
 │   ├── api/        Spring Boot 3 REST API (Java 21, Maven, JPA/Hibernate, Security, i18n)
 │   └── web/        React + Vite + TypeScript Web Portal (UI theo feature)
 ├── db/             Tài liệu cấu trúc dữ liệu lịch sử (chỉ tham chiếu)
-├── docs/           Master guide, plans, specs, API contracts, diagrams, QA
+├── docs/           Master guide, plans, specs, API contracts, diagrams, QA, ảnh README
+├── postman/        Bộ collection gọi thử API
 ├── scripts/        Chạy local (run-local, stop-local, init-db) và kiểm tra database
 ├── compose.yml     Docker Compose cho VPS (web + API)
 └── .github/        workflows/pipeline.yml: CI + CD Render/Vercel + CD VPS
@@ -194,26 +239,26 @@ SWP391/
 
 ## 🚀 Chạy local
 
-### Cách 1: một lệnh (Windows)
-1. Chạy `npm start` (hoặc bấm đúp [`scripts/run-local.bat`](scripts/run-local.bat)).
-2. Bộ chạy kiểm tra môi trường và cấu hình Supabase rồi khởi chạy **Web + API**; Hibernate tự tạo/cập nhật bảng và nạp trigger.
-3. Dừng bằng `npm run stop`.
+**Yêu cầu:** Java 21+, Node.js 22, thông tin kết nối Supabase PostgreSQL ([hướng dẫn](docs/SUPABASE_SETUP.md)).
 
-Chi tiết: [docs/LOCAL_DEV_GUIDE.md](docs/LOCAL_DEV_GUIDE.md).
+### Cách 1 — một lệnh (Windows)
 
-### Cách 2: thủ công
-1. Cài **Java 21+**, **Node.js 22**, chuẩn bị thông tin **Supabase PostgreSQL**.
-2. Sao chép `.env.example` thành `.env` và điền theo [hướng dẫn Supabase](docs/SUPABASE_SETUP.md).
-3. Backend:
-   ```powershell
-   cd apps/api
-   .\mvnw.cmd spring-boot:run
+```bash
+npm start
+```
+
+Lệnh này gọi [`scripts/run-local.bat`](scripts/run-local.bat): kiểm tra môi trường và cấu hình Supabase rồi khởi chạy **Web + API**; Hibernate tự tạo/cập nhật bảng và nạp trigger. Dừng bằng `npm run stop`. Chi tiết: [LOCAL_DEV_GUIDE.md](docs/LOCAL_DEV_GUIDE.md).
+
+### Cách 2 — thủ công (mọi hệ điều hành)
+
+1. Sao chép `.env.example` thành `.env` và điền thông tin Supabase.
+2. Backend:
+   ```bash
+   cd apps/api && ./mvnw spring-boot:run
    ```
-4. Frontend:
-   ```powershell
-   cd apps/web
-   npm install
-   npm run dev
+3. Frontend:
+   ```bash
+   cd apps/web && npm install && npm run dev
    ```
 
 | Điểm truy cập | Địa chỉ |
@@ -222,10 +267,16 @@ Chi tiết: [docs/LOCAL_DEV_GUIDE.md](docs/LOCAL_DEV_GUIDE.md).
 | API healthcheck | `http://localhost:8080/api/v1/health` |
 | Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
 
+> [!TIP]
+> Bật `APP_DEMO_SEED_ENABLED=true` để có sẵn dữ liệu và tài khoản demo cho mọi vai trò — xem [DEMO_ACCOUNTS.md](docs/DEMO_ACCOUNTS.md) và [DEMO_DATA.md](docs/DEMO_DATA.md).
+
 ### Kiểm tra trước khi mở PR
 
 ```bash
 npm --prefix apps/web test && npm --prefix apps/web run lint && npm --prefix apps/web run build
+```
+
+```bash
 cd apps/api && ./mvnw test
 ```
 
@@ -233,17 +284,19 @@ Hai lệnh này giống các job `test-web` và `test-api` trong Pipeline.
 
 ---
 
-## 📚 Tài liệu nhanh
+## 📚 Tài liệu
 
 | Tài liệu | Mô tả |
 | :--- | :--- |
 | [📘 PROJECT_MASTER_GUIDE.md](docs/PROJECT_MASTER_GUIDE.md) | Đặc tả nghiệp vụ tổng thể, vai trò và quy trình cốt lõi |
 | [🧾 Business rules](docs/specs/2026-11-10-membership-and-attendance-business-rules.md) | Gói tập, khóa học, điểm danh, bảo lưu và QR cổng |
 | [🎁 Quyền lợi gói](docs/superpowers/specs/2026-11-09-membership-benefits-design.md) | Thiết kế và trạng thái triển khai quyền lợi theo hạng |
+| [🎨 DESIGN.md](DESIGN.md) | Quy chuẩn thiết kế giao diện đang có hiệu lực |
 | [🏛️ backend-architecture.md](docs/rules/backend-architecture.md) | Kiến trúc 3 lớp, SOLID, IoC, JPA |
 | [☁️ SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) | JDBC TLS, RLS và schema test biệt lập |
 | [🔄 CICD_SETUP.md](docs/CICD_SETUP.md) | Thiết lập Pipeline: Render, Vercel |
 | [🐳 DOCKER_COMPOSE.md](docs/DOCKER_COMPOSE.md) | Chạy web + API bằng Docker Compose và deploy VPS |
+| [🎬 DEMO_MAINFLOW_25MIN.md](docs/DEMO_MAINFLOW_25MIN.md) | Kịch bản demo luồng chính |
 | [📋 AGILE_SCRUM_JIRA_PLAN.md](docs/plans/AGILE_SCRUM_JIRA_PLAN.md) | Backlog, phân công màn hình, tiêu chí nghiệm thu |
 | [🤖 AGENTS.md](AGENTS.md) | Quy tắc bắt buộc cho contributor và AI coding agent |
 
@@ -251,13 +304,13 @@ Hai lệnh này giống các job `test-web` và `test-api` trong Pipeline.
 
 ## 🤝 Quy ước làm việc
 
-Xem [CONTRIBUTING.md](CONTRIBUTING.md) và [bản đồ cấu trúc repo](docs/architecture/REPOSITORY_STRUCTURE.md). Graphify là output local, không commit.
+Xem [CONTRIBUTING.md](CONTRIBUTING.md) và [bản đồ cấu trúc repo](docs/architecture/REPOSITORY_STRUCTURE.md).
 
-- Đọc [AGENTS.md](AGENTS.md), [backend-architecture.md](docs/rules/backend-architecture.md) và [AGILE_SCRUM_JIRA_PLAN.md](docs/plans/AGILE_SCRUM_JIRA_PLAN.md) trước khi nhận ticket; mỗi PR xử lý một Jira ticket, nhánh đặt theo `SCMS-123/short-description`.
+- Đọc [AGENTS.md](AGENTS.md), [backend-architecture.md](docs/rules/backend-architecture.md) và [backlog](docs/plans/AGILE_SCRUM_JIRA_PLAN.md) trước khi nhận ticket; mỗi PR xử lý một Jira ticket, nhánh đặt theo `SCMS-123/short-description`.
 - Đổi API thì cập nhật OpenAPI trong `docs/api-contracts/` cùng PR.
 - Mọi thay đổi schema đi qua **JPA Entity**; trigger cập nhật qua `PostgreSqlTriggerProvider`.
 - Thông báo hoặc mã lỗi mới ở backend phải có cả `messages_vi.properties` và `messages_en.properties`.
-- Giao diện đọc [DESIGN.md](DESIGN.md) trước khi sửa.
+- Đọc [DESIGN.md](DESIGN.md) trước khi sửa giao diện; frontend luôn có trạng thái loading, empty và error.
 - **Tuyệt đối không** commit `.env`, mật khẩu, JWT secret, API token hay dữ liệu nhạy cảm.
 
 ---
