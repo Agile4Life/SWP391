@@ -34,6 +34,7 @@ export function CourtBookingFeature() {
   const [conflict, setConflict] = useState(false);
   const [needsMembership, setNeedsMembership] = useState(false);
   const [quota, setQuota] = useState<CourtQuota | null>(null);
+  const [view, setView] = useState<'booking' | 'rules'>('booking');
   const gridHeading = useRef<HTMLHeadingElement>(null);
   const today = centerDate();
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= today;
@@ -78,11 +79,16 @@ export function CourtBookingFeature() {
       <span>{memberText("Cần có gói tập đang hoạt động để đặt sân.")}</span>
       <Link className="btn-primary btn-sm" to="/member/packages">{memberText("Xem gói tập")}</Link>
     </div>}
+    <div className="portal-tabs" role="tablist" aria-label={memberText("Đặt sân", "Court booking")}>
+      <button type="button" role="tab" id="court-tab-booking" aria-selected={view === 'booking'} aria-controls="court-panel" className={`portal-tab ${view === 'booking' ? 'active' : ''}`} onClick={() => setView('booking')}>{memberText("Đặt sân", "Book a court")}</button>
+      <button type="button" role="tab" id="court-tab-rules" aria-selected={view === 'rules'} aria-controls="court-panel" className={`portal-tab ${view === 'rules' ? 'active' : ''}`} onClick={() => setView('rules')}>{memberText("Quy định đặt sân", "Booking rules")}</button>
+    </div>
+    <div id="court-panel" role="tabpanel" aria-labelledby={view === 'booking' ? 'court-tab-booking' : 'court-tab-rules'}>
+    {view === 'rules' ? (quota?.packageName ? <CourtPolicyCard quota={quota} /> : <div className="portal-card portal-state">{memberText("Chưa có quy định đặt sân. Cần có gói tập đang hoạt động.", "No court booking rules yet. An active membership is required.")}</div>) : <>
     <div className="portal-tabs" aria-label={memberText("Bộ môn có sân")}>
       {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
     <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">{memberText("Ngày đặt")}</span><DatePicker id="court-date" min={today} max={quota ? addDays(today, quota.advanceDays) : undefined} value={date} onChange={event => setDate(event.target.value)} /></label></div>
-    <CourtPolicyCard quota={quota} />
     <section data-i18n-managed aria-labelledby="court-grid-title">
       <div className="court-section-header">
         <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>{memberText("Khung giờ theo sân")}</h2>
@@ -101,6 +107,8 @@ export function CourtBookingFeature() {
       </div>}
     </section>
     <CourtBookingList refresh={refresh} onChanged={reload} />
+    </>}
+    </div>
     {selection && <Modal title={memberText("Xác nhận đặt sân")} busy={busy} onClose={() => setSelection(null)} returnFocusRef={gridHeading}>
       <p><strong>{selection.court.name}</strong> · {selection.court.disciplineName}</p>
       <p>{displayDate(selection.date)} · {shortTime(selection.slot.startTime)}–{shortTime(selection.slot.endTime)}</p>

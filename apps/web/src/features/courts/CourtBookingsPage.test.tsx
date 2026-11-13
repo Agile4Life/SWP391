@@ -146,6 +146,8 @@ it('renders distinct payment status labels for pending, paid, refunded, and canc
 it('shows the plan tier rules from the API and limits the date picker to the advance window', async () => {
   vi.mocked(courtsApi.quota).mockResolvedValue({ packageName: 'GOLD', monthlyQuota: 2, used: 1, remaining: 1, advanceDays: 14, maxUpcoming: 4, upcoming: 3, maxUnpaid: 2, unpaid: 1, releaseLeadMinutes: 120 });
   await render();
+  expect(host.querySelector('.court-policy')).toBeNull();
+  await click('Quy định đặt sân');
   const card = host.querySelector('.court-policy');
   expect(card?.textContent).toContain('Quy định đặt sân của gói GOLD');
   expect(card?.textContent).toContain('Đặt trước tối đa 14 ngày');
