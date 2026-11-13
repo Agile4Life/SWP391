@@ -1,4 +1,5 @@
 import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceNotify as notify } from '../shopI18n';
+import { FilePicker } from '../../../shared/ui/FilePicker';
 import { useRef, useState } from 'react';
 import { shopApi } from '../shopApi';
 import type { ProductImageDto } from '../shopTypes';
@@ -262,12 +263,12 @@ export function ProductImagesEditor({
         <div className="shop-field">
           <label className="shop-label" htmlFor="product-image-file">
             {sourceText("Tệp ảnh")}</label>
-          <input
+          <FilePicker
             ref={fileInputRef}
             id="product-image-file"
-            type="file"
             accept="image/jpeg,image/png,image/webp"
-            className="shop-input"
+            buttonLabel={sourceText("Chọn ảnh")}
+            fileNames={selectedFile ? [selectedFile.name] : []}
             disabled={busy || disabled || images.length >= MAX_IMAGES}
             onChange={handleFileChange}
           />

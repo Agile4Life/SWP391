@@ -1922,7 +1922,6 @@ textarea.portal-textarea:focus-visible,
 .hold-notice--warn { background: color-mix(in srgb, #d6a638 16%, transparent); border-color: color-mix(in srgb, #d6a638 40%, transparent); }
 .hold-period { margin: 0; font-size: 18px; }
 .hold-reason { margin: 0; color: var(--color-text-muted); }
-.hold-files { display: block; margin-top: 6px; color: var(--color-text-muted); }
 
 /* Kết quả thanh toán VNPay */
 .payment-result__title { margin: 0; font-size: 22px; font-weight: 800; }

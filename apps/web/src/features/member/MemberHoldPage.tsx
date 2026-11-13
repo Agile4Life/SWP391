@@ -2,6 +2,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../shared/i18n';
+import { FilePicker } from '../../shared/ui/FilePicker';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -255,9 +256,8 @@ export function MemberHoldPage() {
               </div>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-files">{t('Giấy tờ đính kèm nếu có (JPG, PNG, PDF)', 'Supporting documents if any (JPG, PNG, PDF)')}</label>
-                <input id="hold-files" className="portal-input" type="file" multiple accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  onChange={(event) => onPickFiles(event.target.files)} disabled={busy} />
-                {files.length > 0 && <small className="hold-files">{files.map((file) => file.name).join(', ')}</small>}
+                <FilePicker id="hold-files" multiple accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  fileNames={files.map((file) => file.name)} onChange={(event) => onPickFiles(event.target.files)} disabled={busy} />
               </div>
               {formError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{t(formError)}</p>}
               <div><button type="submit" className="btn-primary" disabled={busy}>{busy ? t('Đang gửi…', 'Sending…') : t('Gửi đơn bảo lưu', 'Send hold request')}</button></div>

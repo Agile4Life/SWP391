@@ -201,6 +201,7 @@ export const englishShopPublicLabels: Readonly<Record<string, string>> = {
   "JPEG, PNG, WEBP · Tối đa 1,5 MB/ảnh": "JPEG, PNG, WEBP · Maximum 1.5 MB per image",
   "Ảnh #": "Image #",
   "Tệp ảnh": "Image file",
+  "Chọn ảnh": "Choose image",
   "Mô tả ảnh (alt)": "Image alt text",
   "Mặt trước hũ SÖL Whey Isolate": "Front of SÖL Whey Isolate container",
   "Tải ảnh lên": "Upload image",

@@ -2,6 +2,7 @@ import { memberMessage } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
+import { FilePicker } from '../../shared/ui/FilePicker';
 import { VnpayPayButton } from '../payments/VnpayPayButton';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
@@ -390,7 +391,7 @@ export function MemberCheckoutPage() {
                         <button type="button" onClick={() => setKycFrontImage('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}>{t("Xóa", "Remove")}</button>
                       </div>
                     ) : (
-                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'front')} className="portal-input" style={{ fontSize: '0.85rem' }} />
+                      <FilePicker accept="image/*" buttonLabel={t("Chọn ảnh", "Choose image")} ariaLabel={t("Ảnh mặt trước", "Front image")} onChange={(e) => handleImageUpload(e, 'front')} />
                     )}
                   </div>
 
@@ -405,7 +406,7 @@ export function MemberCheckoutPage() {
                           <button type="button" onClick={() => setKycBackImage('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}>{t("Xóa", "Remove")}</button>
                         </div>
                       ) : (
-                        <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'back')} className="portal-input" style={{ fontSize: '0.85rem' }} />
+                        <FilePicker accept="image/*" buttonLabel={t("Chọn ảnh", "Choose image")} ariaLabel={t("Ảnh mặt sau", "Back image")} onChange={(e) => handleImageUpload(e, 'back')} />
                       )}
                     </div>
                   )}
