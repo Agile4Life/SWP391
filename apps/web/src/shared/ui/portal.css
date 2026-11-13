@@ -1049,8 +1049,10 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   height: 0;
 }
 
+/* `backwards`, không dùng `both`: fill `forwards` giữ transform trên <dialog> sau khi animation kết thúc, khiến
+   nó thành containing block của con `position: fixed` (popover lịch/giờ) và làm popover lệch khỏi ô bấm. */
 .portal-dialog[open] {
-  animation: fade-up var(--dur-base) var(--ease-luxury) both;
+  animation: fade-up var(--dur-base) var(--ease-luxury) backwards;
 }
 
 .portal-dialog::backdrop {
