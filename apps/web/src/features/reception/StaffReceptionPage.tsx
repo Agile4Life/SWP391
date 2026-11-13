@@ -1000,7 +1000,7 @@ export function StaffReceptionPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                             <Link to="/staff/holds" className="btn-primary btn-sm">
-                              {t('Xem giấy tờ y tế & xử lý', 'Review documents & decide')}
+                              {t('Xem giấy tờ & xử lý', 'Review documents & decide')}
                             </Link>
                           </div>
                         </div>

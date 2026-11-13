@@ -1254,9 +1254,13 @@ class MembershipSubscriptionServiceTest {
         // Outside the membership period.
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(gold.getEndDate().compareTo(LocalDate.now(clock)) , 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class);
-        // Paperwork is mandatory and limited to JPG, PNG or PDF.
-        assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), List.of()))
-                .isInstanceOf(BadRequestException.class).hasMessageContaining("paperwork");
+        // Paperwork is optional, but if provided must be JPG, PNG or PDF.
+        SubscriptionDto withoutDocs = service.requestHold(principal, 100L, holdDays(2, 3), List.of());
+        assertThat(withoutDocs.holdStatus()).isEqualTo("PENDING");
+        gold.setHoldStatus(null);
+        gold.setHoldStartDate(null);
+        gold.setHoldEndDate(null);
+
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), List.of(
                 new MembershipSubscriptionService.HoldDocumentUpload("x.exe", "application/octet-stream", new byte[]{1}))))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("JPG, PNG or PDF");
@@ -1279,6 +1283,7 @@ class MembershipSubscriptionServiceTest {
     @Test
     void approvingAFutureHoldKeepsTheMembershipActiveUntilItsFirstDay() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate originalEnd = sub.getEndDate();
         sub.setHoldStatus("PENDING");
         sub.setHoldStartDate(LocalDate.now(clock).plusDays(3));
         sub.setHoldEndDate(LocalDate.now(clock).plusDays(12));
@@ -1288,6 +1293,8 @@ class MembershipSubscriptionServiceTest {
         assertThat(approved.status()).isEqualTo("active");
         assertThat(approved.holdStatus()).isEqualTo("APPROVED");
         assertThat(sub.isHoldUsed()).isTrue();
+        assertThat(sub.getEndDate()).isEqualTo(originalEnd.plusDays(10));
+        assertThat(approved.endDate()).isEqualTo(originalEnd.plusDays(10));
         // On its first day the sweep freezes it...
         sub.setHoldStartDate(LocalDate.now(clock));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
@@ -1299,10 +1306,12 @@ class MembershipSubscriptionServiceTest {
     void deskStaffCanWithdrawAnApprovedHoldThatHasNotStartedButMembersAndOthersCannotUseThatPath() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
         LocalDate today = LocalDate.now(clock);
+        LocalDate originalEnd = sub.getEndDate();
         sub.setHoldStatus("APPROVED");
         sub.setHoldUsed(true);
         sub.setHoldStartDate(today.plusDays(4));
         sub.setHoldEndDate(today.plusDays(10));
+        sub.setEndDate(originalEnd.plusDays(7));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
         assertThatThrownBy(() -> service.withdrawHoldForMember(principal, 100L)).isInstanceOf(ForbiddenException.class);
 
@@ -1310,6 +1319,7 @@ class MembershipSubscriptionServiceTest {
 
         assertThat(result.holdStatus()).isNull();
         assertThat(sub.isHoldUsed()).isFalse();
+        assertThat(sub.getEndDate()).isEqualTo(originalEnd);
         // A hold that already started is not withdrawn from the desk either.
         sub.setStatus("frozen");
         sub.setHoldStatus("APPROVED");
@@ -1349,10 +1359,12 @@ class MembershipSubscriptionServiceTest {
     void theMemberCanWithdrawAnApprovedHoldThatHasNotStartedAndGetsTheHoldBack() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
         LocalDate today = LocalDate.now(clock);
+        LocalDate originalEnd = sub.getEndDate();
         sub.setHoldStatus("APPROVED");
         sub.setHoldUsed(true);
         sub.setHoldStartDate(today.plusDays(3));
         sub.setHoldEndDate(today.plusDays(9));
+        sub.setEndDate(originalEnd.plusDays(7));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
         var attendance = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", attendance);
@@ -1363,6 +1375,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.isHoldUsed()).isFalse();
         assertThat(sub.getHoldStartDate()).isNull();
         assertThat(sub.getStatus()).isEqualTo("active");
+        assertThat(sub.getEndDate()).isEqualTo(originalEnd);
         verify(attendance).releaseHoldExcuses(10L, today.plusDays(3));
         // Once the hold has started it is no longer something to withdraw.
         sub.setStatus("frozen");
@@ -1391,6 +1404,8 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.minusDays(7));
         sub.setHoldEndDate(today.minusDays(1));
         sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
+        // For dated holds, held days were added upon approval
+        sub.setEndDate(originalEnd.plusDays(7));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
 
         assertThat(service.autoResumeHold(100L)).isTrue();

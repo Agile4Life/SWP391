@@ -61,17 +61,21 @@ describe('MemberHoldPage', () => {
     expect(host.querySelector('form')).toBeNull();
   });
 
-  it('refuses to send a request without the medical paperwork and validates the notice period', async () => {
+  it('allows sending a request without documents for business trip or vacation', async () => {
     mocks.history.mockResolvedValue([subscription]);
     mocks.policy.mockResolvedValue(policy);
+    mocks.submit.mockResolvedValue({});
     await render();
-    // bộ chọn ngày không cho chọn ngày trước hạn 24 giờ nên chỉ còn lỗi thiếu giấy tờ
     await pickDate('hold-start', isoOffset(3));
     await pickDate('hold-end', isoOffset(6));
-    await act(async () => setValue(host.querySelector<HTMLTextAreaElement>('#hold-reason')!, 'Phẫu thuật'));
+    await act(async () => setValue(host.querySelector<HTMLTextAreaElement>('#hold-reason')!, 'Đi công tác'));
     await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('giấy tờ y tế');
-    expect(mocks.submit).not.toHaveBeenCalled();
+    expect(mocks.submit).toHaveBeenCalledWith(7, {
+      reason: 'Đi công tác',
+      startDate: isoOffset(3),
+      endDate: isoOffset(6),
+      files: [],
+    });
   });
 
   it('lets the member withdraw a pending request and hides the form meanwhile', async () => {
