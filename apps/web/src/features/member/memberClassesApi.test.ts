@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { bookSession, cancelBooking, cancelBookings, getMyBookings, getClasses, getSessions, cancelEnrollment, filterSessions, currentWeek, type ClassSessionDto } from './memberClassesApi';
+import { enrollCourse, getClasses, getSessions, cancelEnrollment, filterSessions, currentWeek, type ClassSessionDto } from './memberClassesApi';
 
 const session: ClassSessionDto = {
   id: 8, classId: 3, className: 'Yoga Flow', disciplineId: 2, disciplineName: 'Yoga',
@@ -89,21 +89,15 @@ describe('memberClassesApi', () => {
     expect(localDay(toDate)).toBe(0);
   });
 
-  it('talks to the per-session booking endpoints', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { booked: [], skipped: [], cancelled: [] } }) });
+  it('enrols in a whole course and has no per-session booking call', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: {} }) });
     vi.stubGlobal('fetch', fetchMock);
-    await bookSession(8);
-    await cancelBooking(41);
-    await cancelBookings([41, 42]);
-    await getMyBookings();
-    const calls = fetchMock.mock.calls;
-    expect(calls[0][0]).toBe('/api/v1/classes/sessions/8/bookings');
-    expect(calls[0][1]).toMatchObject({ method: 'POST' });
-    expect(calls[1][0]).toBe('/api/v1/classes/session-bookings/41');
-    expect(calls[1][1]).toMatchObject({ method: 'DELETE' });
-    expect(calls[2][0]).toBe('/api/v1/classes/session-bookings/cancel');
-    expect(JSON.parse(calls[2][1].body)).toEqual({ bookingIds: [41, 42] });
-    expect(calls[3][0]).toMatch(/^\/api\/v1\/classes\/session-bookings\/my\?status=booked&from=\d{4}-\d{2}-\d{2}$/);
+    await enrollCourse(3);
+    await cancelEnrollment(9);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/classes/3/enroll');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/classes/enrollments/9');
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'DELETE' });
   });
 
 });

@@ -14,11 +14,9 @@ import { getMySubscription, type CardSubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
 import { DISCIPLINES, matchesDiscipline } from '../../shared/lib/disciplines';
 import {
-  cancelBooking,
   cancelEnrollment,
   currentWeek,
   filterSessions,
-  getMyBookings,
   getMyEnrollments,
   getSessions,
   getMyQuota,
@@ -27,7 +25,6 @@ import {
   checkoutCourse,
   type ClassSessionDto,
   type EnrollmentDto,
-  type SessionBookingDto,
   type QuotaDto,
   type GymClassDto,
 } from './memberClassesApi';
@@ -53,15 +50,6 @@ function errorMessage(error: unknown): string | SourceMessage {
     return error.message;
   }
   return memberMessage('Không thể tải lịch học. Vui lòng thử lại.');
-}
-
-/** A per-session booking in the shape the overlap check already understands. */
-function bookingAsEnrollment(booking: SessionBookingDto): EnrollmentDto {
-  return {
-    id: booking.id, classId: booking.classId, className: booking.className, memberId: booking.memberId,
-    sessionId: booking.sessionId, sessionDate: booking.sessionDate, startTime: booking.startTime,
-    endTime: booking.endTime, status: 'booked', enrolledAt: booking.bookedAt, cancelledAt: null, cancelReason: null,
-  };
 }
 
 /** Only Monday–Sunday calendar weeks are supported. */
@@ -442,7 +430,6 @@ export function MemberClassesPage() {
   const weekOffset = weekFromQuery(searchParams.get('week'));
   const [sessions, setSessions] = useState<ClassSessionDto[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
-  const [bookings, setBookings] = useState<SessionBookingDto[]>([]);
   const [discipline, setDiscipline] = useState(() => disciplineFromQuery(searchParams.get('discipline')));
   const [day, setDay] = useState('ALL');
   // null: chưa biết (đang tải hoặc lỗi) — khi đó không hiện lời nhắc mua gói
@@ -456,7 +443,7 @@ export function MemberClassesPage() {
   const [myScheduleRetry, setMyScheduleRetry] = useState(0);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | SourceMessage>('');
-  const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string; kind: 'enrollment' | 'booking' } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{ id: number; className: string; kind: 'enrollment' } | null>(null);
   const [quota, setQuota] = useState<QuotaDto | null>(null);
   const [classes, setClasses] = useState<GymClassDto[]>([]);
   const [subscription, setSubscription] = useState<CardSubscription | null>(null);
@@ -580,14 +567,8 @@ export function MemberClassesPage() {
       setMyScheduleLoading(true);
       setMyScheduleError('');
       try {
-        const [nextEnrollments, nextBookings] = await Promise.all([
-          getMyEnrollments(),
-          getMyBookings(),
-        ]);
-        if (active) {
-          setEnrollments(nextEnrollments ?? []);
-          setBookings(nextBookings ?? []);
-        }
+        const nextEnrollments = await getMyEnrollments();
+        if (active) setEnrollments(nextEnrollments ?? []);
       } catch (cause) {
         if (active) setMyScheduleError(errorMessage(cause));
       } finally {
@@ -609,7 +590,7 @@ export function MemberClassesPage() {
     try {
       await cancelEnrollment(enrollmentId);
       if (actionGenRef.current === gen) {
-        memberNotify(memberMessage(`Đã hủy đặt chỗ lớp "${className}".`, `Booking for class "${className}" cancelled.`), 'success', { record: true });
+        memberNotify(memberMessage(`Đã hủy đăng ký khóa "${className}".`, `Enrollment in course "${className}" cancelled.`), 'success', { record: true });
       }
       setRetry((v) => v + 1);
       setMyScheduleRetry((v) => v + 1);
@@ -617,31 +598,6 @@ export function MemberClassesPage() {
       if (actionGenRef.current === gen) {
         setActionError(errorMessage(cause));
         if (cause instanceof ApiError && (cause.status === 409 || cause.status === 403)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
-      }
-    } finally {
-      busyRef.current = null;
-      setBusyKey(null);
-    }
-  }
-
-  async function handleCancelBooking(bookingId: number, className: string) {
-    const key = `booking-${bookingId}`;
-    if (busyRef.current || !myScheduleReady) return;
-    busyRef.current = key;
-    setBusyKey(key);
-    const gen = ++actionGenRef.current;
-    setActionError('');
-    try {
-      await cancelBooking(bookingId);
-      if (actionGenRef.current === gen) {
-        memberNotify(memberMessage(`Đã hủy chỗ buổi học "${className}".`, `Booking for session "${className}" cancelled.`), 'success', { record: true });
-      }
-      setRetry((v) => v + 1);
-      setMyScheduleRetry((v) => v + 1);
-    } catch (cause) {
-      if (actionGenRef.current === gen) {
-        setActionError(errorMessage(cause));
-        if (cause instanceof ApiError && [400, 403, 404, 409].includes(cause.status)) { setRetry((v) => v + 1); setMyScheduleRetry((v) => v + 1); }
       }
     } finally {
       busyRef.current = null;
@@ -708,8 +664,7 @@ export function MemberClassesPage() {
   const disciplines = DISCIPLINES.map(item => item.name);
   const myScheduleReady = !myScheduleLoading && !myScheduleError;
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
-  const activeBookings = myScheduleReady ? bookings.filter((item) => item.status === 'booked') : [];
-  const seatsInView: EnrollmentDto[] = [...activeEnrollments, ...activeBookings.map(bookingAsEnrollment)];
+  const seatsInView: EnrollmentDto[] = activeEnrollments;
 
   // Order: 0 = open for booking now, 1 = still upcoming but not bookable (already mine, overlapping, full,
   // course already started), 2 = past or cancelled. Date/time order is kept inside each tier.
@@ -719,7 +674,6 @@ export function MemberClassesPage() {
     const parentClass = classesMap.get(item.classId);
     const courseStarted = Boolean(parentClass?.startDate && parentClass.startDate < now.date);
     const isMine =
-      activeBookings.some((b) => b.sessionId === item.id) ||
       activeEnrollments.some((e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId));
     if (courseStarted || isMine || item.bookedCount >= item.capacity || findOverlappingEnrollment(item, seatsInView, sessions)) return 1;
     return 0;
@@ -1106,12 +1060,10 @@ export function MemberClassesPage() {
                 // A course is joined as a whole (server rule): once its first day has passed it is closed to new members.
                 const courseStarted = Boolean(parentClass?.startDate && parentClass.startDate < now.date);
                 const overlap = findOverlappingEnrollment(item, seatsInView, sessions);
-                const myBooking = activeBookings.find((b) => b.sessionId === item.id);
                 const myEnrollment = activeEnrollments.find(
                   (e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId),
                 );
                 const isBusy = busyKey === `session-${item.id}` || busyKey === `course-${item.classId}` ||
-                  (myBooking ? busyKey === `booking-${myBooking.id}` : false) ||
                   (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false);
 
                 return (
@@ -1122,8 +1074,8 @@ export function MemberClassesPage() {
                         <span className="badge badge-info">{item.disciplineName}</span>
                         {overlap && <span className="badge badge-warning" data-testid={`overlap-badge-${item.id}`}>{memberText("Trùng giờ đã đặt")}</span>}
                         <span>{date}/{month}/{year}</span>
-                        {(myEnrollment || myBooking) && (
-                          <span className="badge badge-success">{memberText("Đã đặt chỗ")}</span>
+                        {myEnrollment && (
+                          <span className="badge badge-success">{memberText("Đã đăng ký khóa", "Enrolled")}</span>
                         )}
                       </div>
                       <h3 className="row-card__title">{item.className}</h3>
@@ -1179,23 +1131,14 @@ export function MemberClassesPage() {
                         </button>
                         {!myScheduleReady ? <button type="button" className="btn-secondary btn-sm" disabled>
                           {myScheduleLoading ? memberText("Đang kiểm tra đặt chỗ...") : memberText("Chưa thể kiểm tra đặt chỗ")}
-                        </button> : myBooking ? (
-                          <button
-                            type="button"
-                            className="btn-secondary btn-sm"
-                            disabled={isBusy || past}
-                            onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: myBooking.id, className: item.className, kind: 'booking' }); }}
-                          >
-                            {isBusy ? memberText("Đang xử lý...") : memberText("Hủy buổi này")}
-                          </button>
-                        ) : myEnrollment ? (
+                        </button> : myEnrollment ? (
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
                             disabled={isBusy || past}
                             onClick={(event) => { cancelFocusRef.current = event.currentTarget; setCancelTarget({ id: myEnrollment.id, className: item.className, kind: 'enrollment' }); }}
                           >
-                            {isBusy ? memberText("Đang xử lý...") : memberText("Hủy đặt chỗ")}
+                            {isBusy ? memberText("Đang xử lý...") : memberText("Hủy khóa học", "Cancel course")}
                           </button>
                         ) : overlap ? <button type="button" className="btn-secondary btn-sm" data-testid={`overlap-btn-${item.id}`} disabled>{memberText("Trùng giờ đã đặt")}</button> : courseStarted && !unavailable ? (
                           <button type="button" className="btn-secondary btn-sm" disabled title={memberText("Khóa học đã bắt đầu, không thể đăng ký thêm.")}>
@@ -1218,12 +1161,12 @@ export function MemberClassesPage() {
                             <button
                               type="button"
                               className="btn-primary member-class-enroll"
-                              aria-label={`${isBusy ? memberText("Đang đặt chỗ") : memberText("Đặt chỗ ngay")}: ${item.className}`}
-                              title={memberText(`Đặt chỗ ngay: ${item.className}`, `Book now: ${item.className}`)}
+                              aria-label={`${isBusy ? memberText("Đang đăng ký", "Enrolling") : memberText("Đăng ký khóa", "Enroll in course")}: ${item.className}`}
+                              title={memberText(`Đăng ký khóa: ${item.className}`, `Enroll in course: ${item.className}`)}
                               disabled={isBusy}
                               onClick={() => void handleEnrollCourse(item.classId, item.className)}
                             >
-                              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đặt chỗ...") : memberText("Đặt chỗ ngay")}</span>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg><span className="sr-only">{isBusy ? memberText("Đang đăng ký...", "Enrolling...") : memberText("Đăng ký khóa", "Enroll in course")}</span>
                             </button>
                           )
                         ) : (
@@ -1244,15 +1187,13 @@ export function MemberClassesPage() {
         </div>
       )}
       {cancelTarget && (
-        <Modal title={memberText("Hủy đặt chỗ?")} onClose={() => setCancelTarget(null)} returnFocusRef={cancelFocusRef}>
+        <Modal title={memberText("Hủy đăng ký khóa?", "Cancel course enrollment?")} onClose={() => setCancelTarget(null)} returnFocusRef={cancelFocusRef}>
           <p className="row-card__meta">
-            {cancelTarget.kind === 'booking'
-              ? memberText(`Bạn có chắc muốn hủy chỗ của buổi học lớp ${cancelTarget.className}?`, `Cancel your booking for the ${cancelTarget.className} session?`)
-              : memberText(`Bạn có chắc muốn hủy đặt chỗ lớp ${cancelTarget.className}?`, `Cancel your booking for class ${cancelTarget.className}?`)}
+            {memberText(`Bạn có chắc muốn hủy đăng ký khóa ${cancelTarget.className}?`, `Cancel your enrollment in the ${cancelTarget.className} course?`)}
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
-            <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>{memberText("Giữ đặt chỗ")}</button>
-            <button type="button" className="btn-danger" onClick={() => { const target = cancelTarget; setCancelTarget(null); if (target.kind === 'booking') void handleCancelBooking(target.id, target.className); else void handleCancelEnrollment(target.id, target.className); }}>{memberText("Xác nhận hủy")}</button>
+            <button type="button" className="btn-secondary" onClick={() => setCancelTarget(null)}>{memberText("Giữ đăng ký", "Keep enrollment")}</button>
+            <button type="button" className="btn-danger" onClick={() => { const target = cancelTarget; setCancelTarget(null); void handleCancelEnrollment(target.id, target.className); }}>{memberText("Xác nhận hủy")}</button>
           </div>
         </Modal>
       )}

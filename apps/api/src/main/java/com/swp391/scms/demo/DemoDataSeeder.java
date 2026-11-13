@@ -22,10 +22,10 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
-import com.swp391.scms.scheduling.entity.SessionBooking;
+import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.GymClassRepository;
-import com.swp391.scms.scheduling.repository.SessionBookingRepository;
+import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.ReceptionistRepository;
@@ -149,7 +149,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final RoomRepository rooms;
     private final GymClassRepository classes;
     private final ClassSessionRepository sessions;
-    private final SessionBookingRepository bookings;
+    private final ClassEnrollmentRepository enrollments;
     private final SessionAttendanceRepository attendance;
     private final CenterCheckinRepository checkins;
     private final CoachBookingRepository coachBookings;
@@ -162,7 +162,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                           MembershipPackageRepository packages, MembershipSubscriptionRepository subscriptions,
                           PaymentRepository payments, DisciplineRepository disciplines, RoomRepository rooms,
                           GymClassRepository classes, ClassSessionRepository sessions,
-                          SessionBookingRepository bookings, SessionAttendanceRepository attendance,
+                          ClassEnrollmentRepository enrollments, SessionAttendanceRepository attendance,
                           CenterCheckinRepository checkins, CoachBookingRepository coachBookings,
                           MemberProgressLogRepository progressLogs, PasswordEncoder passwordEncoder,
                           @Value("${app.demo.password:Demo@12345}") String demoPassword) {
@@ -178,7 +178,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.rooms = rooms;
         this.classes = classes;
         this.sessions = sessions;
-        this.bookings = bookings;
+        this.enrollments = enrollments;
         this.attendance = attendance;
         this.checkins = checkins;
         this.coachBookings = coachBookings;
@@ -410,7 +410,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .orElseThrow(() -> new IllegalStateException("Demo seed needs package '" + name + "' (CatalogSeeder)"));
     }
 
-    // ---- classes, sessions, bookings, attendance ------------------------------------------------------------
+    // ---- classes, sessions, course enrollments, attendance ------------------------------------------------------------
 
     private Map<String, List<ClassSession>> createClasses(User manager, Map<String, Coach> coachByKey,
                                                           LocalDate today) {
@@ -485,23 +485,31 @@ public class DemoDataSeeder implements ApplicationRunner {
         for (String key : activeKeys) {
             Member member = memberByKey.get(key);
             for (String className : plan.getOrDefault(key, List.of())) {
+                List<ClassSession> courseSessions = sessionsByClass.getOrDefault(className, List.of());
+                if (courseSessions.isEmpty()) {
+                    continue;
+                }
+                // Classes are recurring courses: a member enrols in the whole course, never in a single session.
+                GymClass course = courseSessions.get(0).getGymClass();
+                boolean hasUpcoming = courseSessions.stream().anyMatch(s -> !s.getSessionDate().isBefore(today));
+                LocalDate firstDay = courseSessions.get(0).getSessionDate();
+                LocalDate enrolledOn = firstDay.minusDays(3).isBefore(member.getJoinDate())
+                        ? member.getJoinDate() : firstDay.minusDays(3);
+                ClassEnrollment enrollment = new ClassEnrollment();
+                enrollment.setGymClass(course);
+                enrollment.setMember(member);
+                enrollment.setStatus(hasUpcoming ? "booked" : "completed");
+                enrollment.setEnrolledAt(enrolledOn.atTime(10, 0));
+                enrollments.save(enrollment);
+
                 int index = 0;
-                for (ClassSession session : sessionsByClass.getOrDefault(className, List.of())) {
+                for (ClassSession session : courseSessions) {
                     // A newer member (joined recently) has no earlier history.
                     if (session.getSessionDate().isBefore(member.getJoinDate())) {
                         continue;
                     }
-                    SessionBooking booking = new SessionBooking();
-                    booking.setSession(session);
-                    booking.setMember(member);
-                    booking.setBookedAt(session.getSessionDate().minusDays(3).atTime(10, 0));
                     if (session.getSessionDate().isBefore(today)) {
-                        booking.setStatus("completed");
-                        bookings.save(booking);
                         markAttendance(session, member, coachByKey.get(coachOfClass.get(className)), index++);
-                    } else {
-                        booking.setStatus("booked");
-                        bookings.save(booking);
                     }
                 }
             }

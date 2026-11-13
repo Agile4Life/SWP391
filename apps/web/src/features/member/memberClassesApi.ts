@@ -50,18 +50,6 @@ export interface EnrollmentDto {
   totalSessions?: number | null; attendedSessions?: number | null; remainingSessions?: number | null;
 }
 
-/** One seat in one session (the per-session booking feature, as opposed to a class-wide enrollment). */
-export interface SessionBookingDto {
-  id: number; sessionId: number; classId: number; className: string; memberId: number;
-  sessionDate: string; startTime: string; endTime: string; roomName: string | null;
-  coachName: string | null; status: string; bookedAt: string; cancelledAt: string | null;
-  cancelReason: string | null; batchId: string | null;
-}
-
-/** An id a bulk request could not process, with the API error code and a localised reason. */
-export interface BulkSkipped { id: number; date: string | null; code: string; message: string }
-export interface BulkCancelResult { cancelled: SessionBookingDto[]; skipped: BulkSkipped[] }
-
 export const getClasses = () => apiFetch<GymClassDto[]>('/classes')
   .then((classes) => classes.filter((item) => isStandardDiscipline(item.disciplineName)));
 // Center calendar week, Monday through Sunday, independent of the browser timezone.
@@ -79,15 +67,6 @@ export const getSessions = (weekOffset = 0) => {
 export const getSessionsBetween = (fromDate: string, toDate: string) =>
   apiFetch<ClassSessionDto[]>(`/classes/sessions?fromDate=${fromDate}&toDate=${toDate}`)
     .then((sessions) => sessions.filter((item) => isStandardDiscipline(item.disciplineName)));
-/** Lượt đặt buổi của tôi trong khoảng ngày (gồm cả buổi đã học), bỏ lượt đã hủy ở phía gọi. */
-export const getMyBookingsBetween = (from: string, to: string) =>
-  apiFetch<SessionBookingDto[]>(`/classes/session-bookings/my?from=${from}&to=${to}`);
-export const getMyBookings = () => apiFetch<SessionBookingDto[]>(`/classes/session-bookings/my?status=booked&from=${centerNowParts().date}`);
-export const bookSession = (sessionId: number) => apiFetch<SessionBookingDto>(`/classes/sessions/${sessionId}/bookings`, { method: 'POST' });
-export const cancelBooking = (bookingId: number) => apiFetch<SessionBookingDto>(`/classes/session-bookings/${bookingId}`, { method: 'DELETE' });
-export const cancelBookings = (bookingIds: number[]) => apiFetch<BulkCancelResult>('/classes/session-bookings/cancel', {
-  method: 'POST', body: JSON.stringify({ bookingIds }),
-});
 export const getMyEnrollments = () => apiFetch<EnrollmentDto[]>('/classes/enrollments/my');
 export const cancelEnrollment = (enrollmentId: number) => apiFetch<EnrollmentDto>(`/classes/enrollments/${enrollmentId}`, { method: 'DELETE' });
 

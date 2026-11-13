@@ -13,12 +13,7 @@ const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 const mocks = vi.hoisted(() => ({
   sessions: vi.fn(),
   enrollments: vi.fn(),
-  bookings: vi.fn(),
   upcoming: vi.fn(),
-  book: vi.fn(),
-  bookMany: vi.fn(),
-  cancelBooking: vi.fn(),
-  cancelBookings: vi.fn(),
   cancelEnrollment: vi.fn(),
   mySubscription: vi.fn(),
   coaches: vi.fn(),
@@ -36,12 +31,7 @@ vi.mock('./memberClassesApi', async (importOriginal) => {
     ...original,
     getSessions: mocks.sessions,
     getMyEnrollments: mocks.enrollments,
-    getMyBookings: mocks.bookings,
     getUpcomingSessions: mocks.upcoming,
-    bookSession: mocks.book,
-    bookSessions: mocks.bookMany,
-    cancelBooking: mocks.cancelBooking,
-    cancelBookings: mocks.cancelBookings,
     cancelEnrollment: mocks.cancelEnrollment,
     getMyQuota: mocks.quota,
     enrollCourse: mocks.enroll,
@@ -88,12 +78,7 @@ describe('MemberClassesPage', () => {
     mocks.sessions.mockReset();
     mocks.mySubscription.mockReset().mockResolvedValue(null);
     mocks.enrollments.mockReset();
-    mocks.bookings.mockReset().mockResolvedValue([]);
     mocks.upcoming.mockReset();
-    mocks.book.mockReset();
-    mocks.bookMany.mockReset();
-    mocks.cancelBooking.mockReset();
-    mocks.cancelBookings.mockReset();
     mocks.cancelEnrollment.mockReset();
     mocks.coaches.mockReset();
     mocks.coachSlots.mockReset();
@@ -151,7 +136,6 @@ describe('MemberClassesPage', () => {
     expect(plus.querySelector('svg[aria-hidden="true"]')?.getAttribute('viewBox')).toBe('0 0 24 24');
     await act(async () => plus.click());
     expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(3);
-    expect(mocks.book).not.toHaveBeenCalled();
   });
 
   it('loads more locally after filtering and resets visible count on discipline/day changes', async () => {
@@ -196,7 +180,7 @@ describe('MemberClassesPage', () => {
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải được');
     expect(host.querySelector('.member-class-enroll')).toBeNull();
     await clickText('Thử lại lịch học của tôi');
-    expect(host.textContent).toContain('Đã đặt chỗ');
+    expect(host.textContent).toContain('Đã đăng ký khóa');
     expect(mocks.sessions).toHaveBeenCalledTimes(1);
   });
 
@@ -264,7 +248,7 @@ describe('MemberClassesPage', () => {
 
   it('keeps the schedule when personal bookings fail to load and retries only them', async () => {
     mocks.sessions.mockResolvedValue([session]);
-    mocks.bookings.mockRejectedValueOnce(new Error('bookings offline')).mockResolvedValueOnce([]);
+    mocks.enrollments.mockRejectedValueOnce(new Error('enrollments offline')).mockResolvedValueOnce([]);
     await render();
     expect(host.textContent).toContain('Yoga Flow');
     expect([...host.querySelectorAll('h3')].some(heading => heading.textContent === 'Không tải được lịch học')).toBe(false);
@@ -273,7 +257,7 @@ describe('MemberClassesPage', () => {
     await act(async () => retry.click());
     expect(host.textContent).not.toContain('Không tải được lịch học của tôi');
     expect(mocks.sessions).toHaveBeenCalledTimes(1);
-    expect(mocks.bookings).toHaveBeenCalledTimes(2);
+    expect(mocks.enrollments).toHaveBeenCalledTimes(2);
   });
 
   it('disables booking for cancelled sessions and does not render the removed my-schedule list tab', async () => {
@@ -361,30 +345,29 @@ describe('MemberClassesPage', () => {
     await act(async () => resolve({ id: 30 }));
   });
 
-  it('enrolls the whole course once and still cancels a legacy per-session booking', async () => {
+  it('enrolls the whole course once and cancels it as a whole course', async () => {
     const available = { ...session, bookedCount: 1 };
-    const booked = { id: 41, sessionId: 8, classId: 3, className: 'Yoga Flow', memberId: 9, sessionDate: '2099-10-19',
-      startTime: '08:00:00', endTime: '09:00:00', roomName: 'Studio', coachName: 'An', status: 'booked',
-      bookedAt: '2099-10-01T08:00:00', cancelledAt: null, cancelReason: null, batchId: null };
+    const enrolled = { id: 41, sessionId: 8, classId: 3, className: 'Yoga Flow', memberId: 9, sessionDate: '2099-10-19',
+      startTime: '08:00:00', endTime: '09:00:00', status: 'booked', enrolledAt: '2099-10-01T08:00:00',
+      cancelledAt: null, cancelReason: null };
     mocks.sessions.mockResolvedValueOnce([available]).mockResolvedValueOnce([{ ...available, bookedCount: 2 }])
       .mockResolvedValueOnce([available]);
-    mocks.bookings.mockResolvedValueOnce([]).mockResolvedValueOnce([booked]).mockResolvedValueOnce([]);
+    mocks.enrollments.mockResolvedValueOnce([]).mockResolvedValueOnce([enrolled]).mockResolvedValueOnce([]);
     let finishBooking!: (value: unknown) => void;
     mocks.enroll.mockReturnValue(new Promise((done) => { finishBooking = done; }));
     await render();
-    const book = [...host.querySelectorAll('button')].find((item) => item.getAttribute('aria-label') === 'Đặt chỗ ngay: Yoga Flow')!;
+    const book = [...host.querySelectorAll('button')].find((item) => item.getAttribute('aria-label') === 'Đăng ký khóa: Yoga Flow')!;
     await act(async () => { book.click(); book.click(); });
     expect(mocks.enroll).toHaveBeenCalledTimes(1);
     expect(book.disabled).toBe(true);
     await act(async () => finishBooking({ id: 41 }));
     expect(noticeText()).toContain('Đã đăng ký khóa học "Yoga Flow"');
-    const cancel = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy buổi này')!;
+    const cancel = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Hủy khóa học')!;
     await act(async () => cancel.click());
     const confirm = [...host.querySelectorAll('button')].find((item) => item.textContent === 'Xác nhận hủy')!;
-    mocks.cancelBooking.mockResolvedValueOnce({ id: 41, status: 'cancelled' });
+    mocks.cancelEnrollment.mockResolvedValueOnce({ id: 41, status: 'cancelled' });
     await act(async () => confirm.click());
-    expect(mocks.cancelBooking).toHaveBeenCalledWith(41);
-    expect(mocks.cancelEnrollment).not.toHaveBeenCalled();
+    expect(mocks.cancelEnrollment).toHaveBeenCalledWith(41);
   });
 
   it('sorts sessions chronologically by date and start-time, grouping by date, and disabling overlapping sessions', async () => {
@@ -453,7 +436,7 @@ describe('MemberClassesPage', () => {
 
     // Non-overlapping adjacent session #10 (10:00-11:00) remains bookable
     expect(host.querySelector('[data-testid="overlap-badge-10"]')).toBeNull();
-    const bookBtn = [...host.querySelectorAll('button')].find((b) => b.getAttribute('aria-label')?.startsWith('Đặt chỗ ngay:')) as HTMLButtonElement;
+    const bookBtn = [...host.querySelectorAll('button')].find((b) => b.getAttribute('aria-label')?.startsWith('Đăng ký khóa:')) as HTMLButtonElement;
     expect(bookBtn).not.toBeUndefined();
     expect(bookBtn.disabled).toBe(false);
   });
@@ -513,12 +496,7 @@ describe('MemberClassesPage', () => {
     expect(host.textContent).toContain('Trần Văn Nam');
   });
 
-  describe('per-session booking options', () => {
-    const seat = (id: number, sessionId: number, className: string, startTime: string, endTime: string) => ({
-      id, sessionId, classId: sessionId, className, memberId: 9, sessionDate: '2099-10-19', startTime, endTime,
-      roomName: 'Studio', coachName: 'An', status: 'booked', bookedAt: '2099-10-01T08:00:00',
-      cancelledAt: null, cancelReason: null, batchId: null,
-    });
+  describe('course enrollment options', () => {
     const week = () => [
       { ...session, id: 8, classId: 3, className: 'Yoga Flow', bookedCount: 1 },
       { ...session, id: 9, classId: 4, className: 'Pilates Core', startTime: '10:00:00', endTime: '11:00:00', bookedCount: 2 },
@@ -536,19 +514,19 @@ describe('MemberClassesPage', () => {
       expect(buttons).toHaveLength(2);
       await act(async () => buttons[1].click());
       expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(4);
-      expect(mocks.book).not.toHaveBeenCalled();
-      expect(mocks.bookMany).not.toHaveBeenCalled();
       expect(noticeText()).toContain('thành công');
     });
 
-    it('does not offer a session that clashes with a booked one and shows booked sessions as cancellable', async () => {
+    it('does not offer a session that clashes with an enrolled course and shows enrolled courses as cancellable', async () => {
       mocks.sessions.mockResolvedValue([
         { ...session, id: 8, classId: 3, className: 'Yoga Flow', bookedCount: 1 },
         { ...session, id: 9, classId: 4, className: 'Pilates Core', startTime: '08:30:00', endTime: '09:30:00', bookedCount: 1 },
       ]);
-      mocks.bookings.mockResolvedValue([seat(41, 8, 'Yoga Flow', '08:00:00', '09:00:00')]);
+      mocks.enrollments.mockResolvedValue([{ id: 41, sessionId: 8, classId: 3, className: 'Yoga Flow', memberId: 9,
+        sessionDate: '2099-10-19', startTime: '08:00:00', endTime: '09:00:00', status: 'booked',
+        enrolledAt: '2099-10-01T08:00:00', cancelledAt: null, cancelReason: null }]);
       await render();
-      expect(host.textContent).toContain('Hủy buổi này');
+      expect(host.textContent).toContain('Hủy khóa học');
       expect(host.querySelector('[data-testid="overlap-btn-9"]')).not.toBeNull();
       expect(host.querySelector('.member-class-enroll')).toBeNull();
     });

@@ -47,7 +47,7 @@ Khởi động lại API một lần. Seeder idempotent (bỏ qua nếu `manager
 
 (Tất cả email có hậu tố `@demo.sol.vn`.)
 
-Dữ liệu đi kèm: thanh toán + hóa đơn cho mỗi gói đã trả (cash/pos/bank_transfer/online_wallet), 4 lớp với buổi 4 tuần trước (completed, có điểm danh present/late/absent) và 2 tuần tới (scheduled, đã đặt chỗ), check-in cổng, đặt PT quá khứ (completed) và sắp tới (confirmed), chỉ số cơ thể theo tháng.
+Dữ liệu đi kèm: thanh toán + hóa đơn cho mỗi gói đã trả (cash/pos/bank_transfer/online_wallet), 4 lớp với buổi 4 tuần trước (completed, có điểm danh present/late/absent) và 2 tuần tới (scheduled); hội viên đăng ký **trọn khóa** (`class_enrollments`), không có đặt từng buổi, check-in cổng, đặt PT quá khứ (completed) và sắp tới (confirmed), chỉ số cơ thể theo tháng.
 
 ## Thời khóa biểu dày hơn (`DemoClassSeeder`)
 

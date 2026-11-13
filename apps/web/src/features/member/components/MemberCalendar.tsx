@@ -12,7 +12,7 @@ import {
   weekDays, weekdayLabel, type TimetableEvent,
 } from '../../schedule/timetable';
 import {
-  cancelBooking, cancelEnrollment, getMyBookingsBetween, getMyEnrollments, getSessionsBetween,
+  cancelEnrollment, getMyEnrollments, getSessionsBetween,
   type ClassSessionDto,
 } from '../memberClassesApi';
 import '../../schedule/calendar.css';
@@ -27,7 +27,7 @@ export interface CalendarEvent extends TimetableEvent {
   coach?: string;
   cancelled: boolean;
   /** Chỗ của hội viên để hủy: lượt đặt buổi, ghi danh lớp hoặc lượt đặt sân. */
-  seat: { type: 'booking' | 'enrollment' | 'court' | 'pt'; id: number };
+  seat: { type: 'enrollment' | 'court' | 'pt'; id: number };
 }
 
 const HOUR_PX = 76;
@@ -155,28 +155,17 @@ async function loadPtBookings(): Promise<CoachBookingDto[]> {
   }
 }
 
-/** Buổi học của hội viên trong khoảng ngày: lượt đặt từng buổi (gồm buổi đã qua) và ghi danh cả lớp. */
+/** Buổi học của hội viên trong khoảng ngày: mọi lớp là khóa định kỳ nên chỉ lấy từ ghi danh cả khóa. */
 async function loadClassEvents(from: string, to: string): Promise<CalendarEvent[]> {
-  const [sessions, bookings, enrollments] = await Promise.all([
-    getSessionsBetween(from, to), getMyBookingsBetween(from, to), getMyEnrollments(),
-  ]);
+  const [sessions, enrollments] = await Promise.all([getSessionsBetween(from, to), getMyEnrollments()]);
   const sessionById = new Map<number, ClassSessionDto>((sessions ?? []).map((item) => [item.id, item]));
   const bySession = new Map<number, CalendarEvent>();
 
-  for (const booking of bookings ?? []) {
-    if (booking.status === 'cancelled' || booking.sessionDate < from || booking.sessionDate > to) continue;
-    const session = sessionById.get(booking.sessionId);
-    bySession.set(booking.sessionId, classEvent(
-      `class-${booking.sessionId}`, booking.sessionDate, booking.startTime, booking.endTime, booking.className,
-      booking.roomName ?? session?.roomName ?? '', booking.coachName ?? session?.coachName,
-      session?.status === 'cancelled', { type: 'booking', id: booking.id },
-    ));
-  }
-
   for (const enrollment of enrollments ?? []) {
-    if (enrollment.status !== 'booked' && enrollment.status !== 'enrolled') continue;
+    if (enrollment.status !== 'booked' && enrollment.status !== 'enrolled' && enrollment.status !== 'completed') continue;
     // An enrollment covers the whole course: show every session of it in the range, not just the next one.
-    const courseSessions = (sessions ?? []).filter((item) => item.classId === enrollment.classId);
+    const courseSessions = (sessions ?? []).filter((item) => item.classId === enrollment.classId
+      && item.sessionDate >= from && item.sessionDate <= to);
     const matches = courseSessions.length > 0
       ? courseSessions
       : enrollment.sessionId !== null
@@ -347,8 +336,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
     setBusy(true);
     setDialogError('');
     try {
-      if (selected.seat.type === 'booking') await cancelBooking(selected.seat.id);
-      else await cancelEnrollment(selected.seat.id);
+      await cancelEnrollment(selected.seat.id);
       memberNotify(memberMessage(`Đã hủy chỗ lớp "${selected.title}".`, `Booking for class "${selected.title}" cancelled.`), 'success', { record: true });
       setSelected(null);
       setRetry((value) => value + 1);
@@ -587,7 +575,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
                 </>
               ) : (
                 <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(true)}>
-                  {selected.seat.type === 'booking' ? text("Hủy buổi này", 'Cancel this session') : text("Hủy đặt chỗ", 'Cancel booking')}
+                  {text("Hủy đặt chỗ", 'Cancel booking')}
                 </button>
               )
             )}
