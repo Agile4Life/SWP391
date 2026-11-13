@@ -48,10 +48,12 @@ export function ChatPage({ embedded = false, visible = true, realtime, onPeersCh
     return <div data-i18n-managed className="portal-container"><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1><p role="alert">{t("Bạn không có quyền truy cập chat riêng.", "You do not have access to private chat.")}</p></div>;
   // Hội viên và lễ tân có thêm mục Hỗ trợ & Khiếu nại; huấn luyện viên không nhận khiếu nại.
   const support = user.role === 'MEMBER' ? 'member' : user.role === 'STAFF' ? 'staff' : null;
-  return <ChatWorkspace member={user.role === 'MEMBER'} support={support} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
+  // SÖL AI: hội viên hỏi về bản thân, lễ tân tra nhanh quy định; huấn luyện viên chỉ dùng AI để gợi ý giáo án.
+  const ai = support;
+  return <ChatWorkspace member={user.role === 'MEMBER'} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
 }
 
-function ChatWorkspace({ member, support, embedded, visible, realtime, onPeersChange }: { member: boolean; support: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
+function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPeersChange }: { member: boolean; support: 'member' | 'staff' | null; ai: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selected, setSelected] = useState<ChatConversation | null>(null);
@@ -170,13 +172,13 @@ function ChatWorkspace({ member, support, embedded, visible, realtime, onPeersCh
               <span className="direct-chat__person-sub"><small className="direct-chat__preview">{support === 'staff' ? t("Phiếu hội viên gửi lên lễ tân", "Tickets members send to the front desk") : t("Gửi yêu cầu, khiếu nại tới lễ tân", "Send requests and complaints to the front desk")}</small></span>
             </span>
           </button></li>}
-          <li><button type="button" className={`direct-chat__person direct-chat__person--ai${aiOpen ? ' is-selected' : ''}`} onClick={selectAi} aria-current={aiOpen ? 'true' : undefined}>
+          {ai && <li><button type="button" className={`direct-chat__person direct-chat__person--ai${aiOpen ? ' is-selected' : ''}`} onClick={selectAi} aria-current={aiOpen ? 'true' : undefined}>
             <ChatAvatar contact={AI_PEER} />
             <span className="direct-chat__person-info">
               <strong>{AI_PEER.name}</strong>
-              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{t("Trợ lý AI · Hỏi về gói tập, lịch lớp, tập luyện", "AI assistant · Ask about memberships, classes and training")}</small></span>
+              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{ai === 'staff' ? t("Trợ lý AI · Tra nhanh bảng giá, lịch lớp, quy định", "AI assistant · Look up prices, classes and centre rules") : t("Trợ lý AI · Hỏi về gói tập, lịch lớp, tập luyện", "AI assistant · Ask about memberships, classes and training")}</small></span>
             </span>
-          </button></li>
+          </button></li>}
         </ul>
         {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{t(openError)}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} forMember={member} /></div>}
         {listError && <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
@@ -211,7 +213,7 @@ function ChatWorkspace({ member, support, embedded, visible, realtime, onPeersCh
         </nav>}
       </aside>
       {supportOpen && support ? <SupportThread staff={support === 'staff'} active={mobileThread} onBack={backToList} />
-        : aiOpen ? <AiChatThread active={mobileThread} onBack={backToList} />
+        : aiOpen && ai ? <AiChatThread audience={ai} active={mobileThread} onBack={backToList} />
         : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} />
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}
     </div>

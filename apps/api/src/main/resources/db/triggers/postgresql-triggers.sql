@@ -336,6 +336,18 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.notifications ALTER COLUMN message DROP NOT NULL', current_schema());
     END IF;
 
+    -- Reception and managers have their own AI chat sessions with no member attached (staff_user_id instead).
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'ai_chat_sessions'
+          AND column_name = 'member_id'
+          AND is_nullable = 'NO'
+    ) THEN
+        EXECUTE format('ALTER TABLE %I.ai_chat_sessions ALTER COLUMN member_id DROP NOT NULL', current_schema());
+    END IF;
+
     IF EXISTS (
         SELECT 1
         FROM information_schema.tables

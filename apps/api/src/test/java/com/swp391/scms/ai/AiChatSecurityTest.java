@@ -46,8 +46,28 @@ class AiChatSecurityTest {
     @Test void allowsAuthenticatedMember() {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null,
                 List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
-        when(service.getMySessions(10L)).thenReturn(List.of());
+        when(service.getMySessions(10L, "MEMBER")).thenReturn(List.of());
         assertNotNull(controller.getMySessions(principal));
-        verify(service).getMySessions(10L);
+        verify(service).getMySessions(10L, "MEMBER");
+    }
+
+    @Test void allowsReceptionistToAskTheAssistant() {
+        var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(receptionist, null,
+                List.of(new SimpleGrantedAuthority("ROLE_RECEPTIONIST"))));
+        when(service.getMySessions(30L, "RECEPTIONIST")).thenReturn(List.of());
+        assertNotNull(controller.getMySessions(receptionist));
+        verify(service).getMySessions(30L, "RECEPTIONIST");
+    }
+
+    /** Coaches use the AI only for workout plan suggestions, not the chat. */
+    @Test void rejectsCoach() {
+        var coach = new AuthenticatedPrincipal(20L, "coach", "COACH");
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(coach, null,
+                List.of(new SimpleGrantedAuthority("ROLE_COACH"))));
+        assertThrows(AccessDeniedException.class, () -> controller.getMySessions(coach));
+        assertThrows(AccessDeniedException.class, () -> controller.sendQuickMessage(
+                new com.swp391.scms.ai.dto.AiChatMessageCreateDto("Xin chào"), coach));
+        verifyNoInteractions(service);
     }
 }

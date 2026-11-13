@@ -28,6 +28,8 @@ import java.util.List;
 
 /**
  * REST Controller for the 24/7 AI Chatbot consulting assistant (SCRUM-118).
+ * Members chat with their own profile as context; reception and managers ask about centre rules, prices and
+ * schedules. Coaches use the AI only for workout plan suggestions ({@code AiRecommendationController}).
  */
 @Tag(name = "AI Chatbot", description = "Trợ lý ảo AI tư vấn thể thao và dinh dưỡng 24/7 (SCRUM-118)")
 @RestController
@@ -49,7 +51,7 @@ public class AiChatController {
 
     @Operation(summary = "Tạo phiên trò chuyện AI mới")
     @PostMapping("/sessions")
-    @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<AiChatSessionDto>> createSession(
             @Valid @RequestBody(required = false) AiChatSessionCreateDto request,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -62,17 +64,18 @@ public class AiChatController {
 
     @Operation(summary = "Lấy danh sách phiên trò chuyện của hội viên hiện tại")
     @GetMapping("/sessions")
-    @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<AiChatSessionDto>>> getMySessions(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
         Long userId = principal != null ? principal.id() : null;
-        List<AiChatSessionDto> sessions = aiChatService.getMySessions(userId);
+        String role = principal != null ? principal.role() : "MEMBER";
+        List<AiChatSessionDto> sessions = aiChatService.getMySessions(userId, role);
         return ResponseEntity.ok(ApiResponse.ok(msg("success.ai.chat.session.created"), sessions));
     }
 
     @Operation(summary = "Gửi tin nhắn trực tiếp (tự tạo phiên nếu chưa truyền sessionId)")
     @PostMapping({"/message", "/messages"})
-    @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<AiChatReplyDto>> sendQuickMessage(
             @Valid @RequestBody AiChatMessageCreateDto request,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -85,7 +88,7 @@ public class AiChatController {
 
     @Operation(summary = "Gửi tin nhắn và nhận phản hồi từ AI Chatbot")
     @PostMapping("/sessions/{id}/messages")
-    @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<AiChatReplyDto>> sendMessage(
             @PathVariable("id") Long sessionId,
             @Valid @RequestBody AiChatMessageCreateDto request,
@@ -99,7 +102,7 @@ public class AiChatController {
 
     @Operation(summary = "Lấy lịch sử trò chuyện theo thứ tự thời gian")
     @GetMapping({"/sessions/{id}/history", "/sessions/{id}/messages"})
-    @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<ApiResponse<List<AiChatMessageDto>>> getSessionHistory(
             @PathVariable("id") Long sessionId,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {

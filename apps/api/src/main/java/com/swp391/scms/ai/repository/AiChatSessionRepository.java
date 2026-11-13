@@ -13,4 +13,6 @@ import java.util.List;
 public interface AiChatSessionRepository extends JpaRepository<AiChatSession, Long> {
 
     List<AiChatSession> findByMemberUserIdOrderByStartedAtDesc(Long memberId);
+
+    List<AiChatSession> findByStaffUserIdOrderByStartedAtDesc(Long staffUserId);
 }

@@ -229,6 +229,20 @@ it('gives receptionists the ticket inbox and coaches no support entry', async ()
   expect(host.querySelector('.direct-chat__person--support')).toBeNull();
 });
 
+it('offers SÖL AI to members and receptionists but not to coaches, who use AI only for workout plans', async () => {
+  await render();
+  expect(host.querySelector('.direct-chat__person--ai')?.textContent).toContain('Hỏi về gói tập');
+  await act(async () => root.unmount()); root = createRoot(host);
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
+  await render();
+  expect(host.querySelector('.direct-chat__person--ai')?.textContent).toContain('Tra nhanh bảng giá');
+  await act(async () => root.unmount()); root = createRoot(host);
+  vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
+  await render();
+  expect(host.querySelector('.direct-chat__person--ai')).toBeNull();
+  expect(host.textContent).toContain('Coach Linh');
+});
+
 it('opens Support & Tickets when a notification links to ?tab=support while Messages is already open', async () => {
   let go!: (to: string) => void;
   function Nav() { go = useNavigate(); return null; }

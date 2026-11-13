@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -317,5 +318,85 @@ class AiChatServiceTest {
         txChatService.sendMessage(500L, new AiChatMessageCreateDto("Xin chào"), 100L, "MEMBER");
         org.junit.jupiter.api.Assertions.assertFalse(txActiveDuringProvider.get(),
                 "Transaction must NOT be active while calling AiChatProvider.generate");
+    }
+
+    private com.swp391.scms.users.entity.User staffAccount(long id) {
+        var user = new com.swp391.scms.users.entity.User();
+        ReflectionTestUtils.setField(user, "id", id);
+        return user;
+    }
+
+    private AiChatSession deskSession(com.swp391.scms.users.entity.User staff) {
+        AiChatSession desk = new AiChatSession();
+        ReflectionTestUtils.setField(desk, "id", 600L);
+        desk.setStaffUser(staff);
+        desk.setStartedAt(LocalDateTime.now());
+        return desk;
+    }
+
+    @Test
+    void receptionistGetsADeskSessionWithNoMemberAndTheDeskPrompt() {
+        var users = mock(com.swp391.scms.users.UserRepository.class);
+        var staff = staffAccount(30L);
+        when(users.getReferenceById(30L)).thenReturn(staff);
+        ReflectionTestUtils.setField(aiChatService, "userRepository", users);
+        when(sessionRepository.save(any(AiChatSession.class))).thenAnswer(inv -> {
+            AiChatSession saved = inv.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 600L);
+            return saved;
+        });
+
+        AiChatSessionDto created = aiChatService.createSession(null, 30L, "RECEPTIONIST");
+
+        assertEquals(600L, created.id());
+        assertEquals(null, created.memberId());
+        assertEquals("Hỏi đáp quầy lễ tân", created.topic());
+        verify(memberRepository, never()).findById(any());
+
+        AiChatSession desk = deskSession(staff);
+        when(sessionRepository.findById(600L)).thenReturn(Optional.of(desk));
+        when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(600L)).thenReturn(List.of());
+        when(messageRepository.save(any(AiChatMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        aiChatService.sendMessage(600L, new AiChatMessageCreateDto("Gói Gold bảo lưu được bao lâu?"), 30L, "RECEPTIONIST");
+
+        verify(chatProvider).generate(eq(AiChatService.STAFF_SYSTEM_PROMPT), any());
+    }
+
+    @Test
+    void sessionsArePrivateBetweenMembersAndStaff() {
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.getSessionHistory(500L, 30L, "RECEPTIONIST"));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.getSessionHistory(500L, 40L, "CENTER_MANAGER"));
+
+        AiChatSession desk = deskSession(staffAccount(30L));
+        when(sessionRepository.findById(600L)).thenReturn(Optional.of(desk));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.getSessionHistory(600L, 31L, "RECEPTIONIST"));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.getSessionHistory(600L, 100L, "MEMBER"));
+    }
+
+    @Test
+    void coachCannotChatEvenIfTheEndpointWereReached() {
+        assertThrows(AccessDeniedException.class, () -> aiChatService.createSession(null, 20L, "COACH"));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.getMySessions(20L, "COACH"));
+        when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
+        assertThrows(AccessDeniedException.class, () -> aiChatService.sendMessage(
+                500L, new AiChatMessageCreateDto("Xin chào"), 20L, "COACH"));
+        verify(chatProvider, never()).generate(any(), any());
+    }
+
+    /** The assistant has no tools: both prompts must forbid claiming an action, promising exceptions and leaking internal data. */
+    @Test
+    void bothPromptsSetTheLimitsOfTheAssistantsAuthority() {
+        for (String prompt : List.of(AiChatService.SYSTEM_PROMPT, AiChatService.STAFF_SYSTEM_PROMPT)) {
+            assertTrue(prompt.contains("không thực hiện thao tác"));
+            assertTrue(prompt.contains("quản lý trung tâm"));
+            assertTrue(prompt.contains("doanh thu"));
+            assertTrue(prompt.contains("mật khẩu"));
+            assertTrue(prompt.contains("đổi vai trò"));
+            assertTrue(prompt.contains("quản trị viên"));
+            assertTrue(prompt.contains("Khi từ chối"));
+        }
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("thông tin của hội viên khác"));
     }
 }
