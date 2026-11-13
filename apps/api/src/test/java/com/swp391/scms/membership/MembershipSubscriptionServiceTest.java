@@ -1312,6 +1312,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.plusDays(4));
         sub.setHoldEndDate(today.plusDays(10));
         sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
         assertThatThrownBy(() -> service.withdrawHoldForMember(principal, 100L)).isInstanceOf(ForbiddenException.class);
 
@@ -1365,6 +1366,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.plusDays(3));
         sub.setHoldEndDate(today.plusDays(9));
         sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
         var attendance = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", attendance);
@@ -1406,6 +1408,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
         // For dated holds, held days were added upon approval
         sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
 
         assertThat(service.autoResumeHold(100L)).isTrue();
@@ -1413,6 +1416,39 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.getStatus()).isEqualTo("active");
         assertThat(sub.getEndDate()).isEqualTo(originalEnd.plusDays(7));
         assertThat(sub.isHoldUsed()).isTrue();
+    }
+
+    @Test
+    void aDatedHoldApprovedBeforeDaysWereCreditedStillGetsItsDaysAtResumeAndKeepsThemOnWithdraw() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalEnd = sub.getEndDate();
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.minusDays(7));
+        sub.setHoldEndDate(today.minusDays(1));
+        sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
+        // holdDaysCredited stays null: this hold was approved before days were added at approval.
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+
+        assertThat(service.autoResumeHold(100L)).isTrue();
+
+        assertThat(sub.getEndDate()).isEqualTo(originalEnd.plusDays(7));
+
+        MembershipSubscription future = holdableSubscription("PLATINUM", 90);
+        LocalDate futureEnd = future.getEndDate();
+        future.setHoldStatus("APPROVED");
+        future.setHoldUsed(true);
+        future.setHoldStartDate(today.plusDays(3));
+        future.setHoldEndDate(today.plusDays(9));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(future));
+        var attendance = org.mockito.Mockito.mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "courseAttendance", attendance);
+
+        service.withdrawHoldForMember(staffPrincipal, 100L);
+
+        assertThat(future.getEndDate()).isEqualTo(futureEnd);
     }
 
     @Test

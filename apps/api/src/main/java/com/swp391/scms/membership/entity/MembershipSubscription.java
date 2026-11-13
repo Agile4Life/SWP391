@@ -94,6 +94,10 @@ public class MembershipSubscription {
     @Column(name = "hold_used")
     private Boolean holdUsed = false;
 
+    /** True when the approved hold's days were already added to endDate; null for holds approved before that change. */
+    @Column(name = "hold_days_credited")
+    private Boolean holdDaysCredited;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -152,6 +156,8 @@ public class MembershipSubscription {
     public void setHoldStartDate(LocalDate holdStartDate) { this.holdStartDate = holdStartDate; }
     public LocalDate getHoldEndDate() { return holdEndDate; }
     public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
+    public boolean isHoldDaysCredited() { return Boolean.TRUE.equals(holdDaysCredited); }
+    public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
     public boolean isHoldUsed() { return Boolean.TRUE.equals(holdUsed); }
     public void setHoldUsed(boolean holdUsed) { this.holdUsed = holdUsed; }
     public User getHoldResolvedBy() { return holdResolvedBy; }
