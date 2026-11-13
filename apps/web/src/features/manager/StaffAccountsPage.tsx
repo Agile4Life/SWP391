@@ -121,6 +121,7 @@ export function StaffAccountsPage() {
       <h2 id="staff-create-heading" className="portal-card-title">{t("Thêm nhân sự")}</h2>
       <form onSubmit={event => void submit(event)}>
         <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <div className="portal-form-grid">
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="staff-name">{t("Họ và tên *")}</label>
             <input id="staff-name" className="portal-input" required maxLength={150} autoComplete="name" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
@@ -187,6 +188,7 @@ export function StaffAccountsPage() {
             <Select id="staff-role" className="portal-select" value={form.roleCode} onChange={e => setForm({ ...form, roleCode: e.target.value as StaffAccountInput['roleCode'] })}>
               <option value="COACH">{t("Huấn luyện viên")}</option><option value="RECEPTIONIST">{t("Lễ tân")}</option>
             </Select>
+          </div>
           </div>
           <button className="btn-primary" type="submit" disabled={loading || Boolean(loadError)} aria-busy={saving}>{saving ? t('Đang tạo…') : t('Tạo tài khoản nhân sự')}</button>
         </fieldset>

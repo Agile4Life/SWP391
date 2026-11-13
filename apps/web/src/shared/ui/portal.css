@@ -312,6 +312,25 @@
   margin-bottom: 18px;
 }
 
+/* Compact multi-column form: fields flow into 2-3 columns instead of one tall stack */
+.portal-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 20px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.portal-form-grid > .portal-form-group { margin: 0; min-width: 0; }
+
+@media (max-width: 900px) {
+  .portal-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .portal-form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 .portal-label {
   display: block;
   font-family: var(--font-sans);
