@@ -27,6 +27,6 @@ Thư mục này tập trung toàn bộ các tài liệu kế hoạch, phân chia
 ## 3. Liên Kết Tài Liệu Hướng Dẫn Kỹ Thuật
 
 - **Cẩm nang kiến trúc toàn diện (Master Guide):** [`../../PROJECT_MASTER_GUIDE.md`](../../PROJECT_MASTER_GUIDE.md) (Quy cách 33 bảng CSDL, 6 Luồng nghiệp vụ cốt lõi, 12 Trạng thái UML).
-- **Sơ đồ hệ thống & Minh chứng:** [`../diagrams/README.md`](../diagrams/README.md) (ERD Draw.io, Swimlane flows, State Machine diagrams & Screenshots).
+- **SRS & sơ đồ hệ thống:** [`../srs/`](../srs/Group1_SportsCenterManagement_SRS.docx) (ERD, conceptual model, swimlane, screen flow và state diagram; file draw.io trong `../srs/diagrams/drawio/`).
 - **Quy tắc kiến trúc Backend:** [`../rules/backend-architecture.md`](../rules/backend-architecture.md) (SOLID, IoC, Package-by-feature, i18n đa ngôn ngữ).
 - **Hợp đồng API (OpenAPI):** [`../api-contracts/`](../api-contracts/)

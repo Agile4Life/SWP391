@@ -22,7 +22,7 @@
    - [4.1. Ma trận chức năng tổng hợp (Actor × Flow Matrix)](#41-ma-trận-chức-năng-tổng-hợp-actor--flow-matrix)
    - [4.2. Bóc tách chi tiết từng Luồng từ Flow 1 đến Flow 6](#42-bóc-tách-chi-tiết-từng-luồng-từ-flow-1-đến-flow-6)
 5. [Hệ Thống 12 Biểu Đồ Trạng Thái UML (12 State Machine Diagrams)](#5-hệ-thống-12-biểu-đồ-trạng-thái-uml-12-state-machine-diagrams)
-6. [Bộ Công Cụ Tự Động Hóa & Quản Trị Sơ Đồ (Tooling & Scripts)](#6-bộ-công-cụ-tự-động-hóa--quản-trị-sơ-đồ-tooling--scripts)
+6. [Bộ Sơ Đồ Hệ Thống (Diagrams)](#6-bộ-sơ-đồ-hệ-thống-diagrams)
 7. [Hướng Dẫn Triển Khai Phần Mềm Cho Agent Tiếp Theo (Implementation Blueprint)](#7-hướng-dẫn-triển-khai-phần-mềm-cho-agent-tiếp-theo-implementation-blueprint)
 
 ---
@@ -77,14 +77,9 @@ SWP391/
 │   │   ├── AGILE_SCRUM_JIRA_PLAN.md # Kế hoạch Agile/Scrum & User Stories phân hệ
 │   │   ├── 2026-09-26-scms-luxury-editorial-frontend.md
 │   │   └── 2026-10-01-backend-layered-jpa.md
-│   ├── diagrams/                    # Tài liệu sơ đồ hệ thống & ảnh minh chứng
-│   │   ├── README.md                # Bảng tổng hợp thuyết minh chi tiết các sơ đồ
-│   │   ├── build_state_diagrams.js  # Script tự động sinh State Diagram ra XML Draw.io & PNG
-│   │   ├── erd_sports_center.drawio # ERD tổng thể 33 bảng chia 6 tabs phân hệ
-│   │   ├── erd_complete_all_relationships.drawio # ERD chi tiết 54 quan hệ
-│   │   ├── sports_center_all_flows_swimlane.drawio # Swimlane phân làn hoàn chỉnh (7 tabs)
-│   │   ├── state_diagrams.drawio    # 12 Biểu đồ trạng thái UML chuẩn
-│   │   └── screenshots/             # Bộ ảnh chụp minh chứng kết xuất trực tiếp từ các sơ đồ
+│   ├── srs/                         # Tài liệu SRS & sơ đồ hệ thống
+│   │   ├── Group1_SportsCenterManagement_SRS.docx
+│   │   └── diagrams/                # drawio/ (file chỉnh sửa) và png/ (ảnh dùng trong SRS)
 │   ├── rules/                       # Quy tắc kiến trúc mã nguồn & tiêu chuẩn kỹ thuật
 │   │   └── backend-architecture.md  # Chuẩn 3 lớp, SOLID, IoC, JPA & i18n
 │   ├── api-contracts/               # Hợp đồng giao tiếp API (OpenAPI YAML)
@@ -227,7 +222,7 @@ SQL examples below describe PostgreSQL constraints installed by `PostgreSqlTrigg
 
 ## 4. HỆ THỐNG 6 LUỒNG NGHIỆP VỤ CỐT LÕI (6 CORE BUSINESS FLOWS)
 
-Mô hình quy trình nghiệp vụ được chuẩn hóa qua sơ đồ Swimlane trong [sports_center_all_flows_swimlane.drawio](file:///d:/SWP391_PROJECT/SWP391/sports_center_all_flows_swimlane.drawio) và tài liệu quy chuẩn.
+Mô hình quy trình nghiệp vụ được chuẩn hóa qua sơ đồ Swimlane trong [srs_swimlanes.drawio](srs/diagrams/drawio/srs_swimlanes.drawio) và tài liệu quy chuẩn.
 
 ### 4.1. Ma trận chức năng tổng hợp (Actor × Flow Matrix)
 
@@ -351,7 +346,7 @@ Mô hình quy trình nghiệp vụ được chuẩn hóa qua sơ đồ Swimlane 
 
 ## 5. HỆ THỐNG 12 BIỂU ĐỒ TRẠNG THÁI UML (12 STATE MACHINE DIAGRAMS)
 
-Hệ thống được mô hình hóa trạng thái nghiêm ngặt bằng 12 biểu đồ State Machine chuẩn UML trong [state_diagrams.drawio](file:///d:/SWP391_PROJECT/SWP391/state_diagrams.drawio), tương ứng với các trường trạng thái trong CSDL:
+Hệ thống được mô hình hóa trạng thái nghiêm ngặt bằng 12 biểu đồ State Machine chuẩn UML trong [srs_statecharts.drawio](srs/diagrams/drawio/srs_statecharts.drawio), tương ứng với các trường trạng thái trong CSDL:
 
 ```
 +----------------------------------------------------------------------------------------------------+
@@ -471,41 +466,22 @@ Hệ thống được mô hình hóa trạng thái nghiêm ngặt bằng 12 bi�
 
 ---
 
-## 6. BỘ CÔNG CỤ TỰ ĐỘNG HÓA & QUẢN TRỊ SƠ ĐỒ (TOOLING & SCRIPTS)
+## 6. BỘ SƠ ĐỒ HỆ THỐNG (DIAGRAMS)
 
-Nhóm phát triển đã thiết lập bộ công cụ tự động hóa mạnh mẽ bằng **Node.js** giúp render và kiểm thử chất lượng đồ họa phần mềm:
+Toàn bộ sơ đồ hiện hành nằm trong `docs/srs/diagrams/`: thư mục `drawio/` chứa file draw.io chỉnh sửa được, `png/` chứa ảnh dùng trong tài liệu SRS.
 
-### 6.1. Script sinh State Diagrams tự động: [build_state_diagrams.js](file:///d:/SWP391_PROJECT/SWP391/build_state_diagrams.js)
-- **Chức năng:** Tự động sinh file `state_diagrams.drawio` chứa đầy đủ 12 tab biểu đồ trạng thái chuẩn UML.
-- **Quy chuẩn đồ họa tích hợp:**
-  - Sử dụng hệ màu pastel theo chuẩn thiết kế quốc tế: Xanh lá (`#E8F5E9`) cho Thành công/Hoạt động, Vàng chanh (`#FFF8E1`) cho Khởi tạo/Chờ, Xanh dương (`#E3F2FD`) cho Xử lý/Thông tin, Tím (`#F3E5F5`) cho Tạm ngưng/Cảnh báo, Đỏ hồng (`#FFEBEE`) cho Khóa/Lỗi/Hủy.
-  - Tự động tính toán tọa độ X/Y của các nút trạng thái, nút bắt đầu (`STYLE_START`) và nút kết thúc (`STYLE_END_OUTER` + `STYLE_END_INNER`).
-  - Đường nối tự động định tuyến vuông góc (`orthogonalEdgeStyle`) với nhãn có nền trắng (`labelBackgroundColor=#ffffff`) chống đè vạch kẻ.
-- **Lệnh thực thi:**
-  ```powershell
-  node build_state_diagrams.js
-  ```
+| File draw.io | Nội dung |
+|---|---|
+| `srs_context_diagram.drawio` | Sơ đồ ngữ cảnh: 6 vai trò và 4 dịch vụ ngoài (VNPay, Email, Google, AI). |
+| `srs_feature_tree.drawio` | Cây chức năng theo vai trò. |
+| `srs_use_case_diagram.drawio` | Use case diagram (2 trang). |
+| `srs_conceptual_model.drawio` | Conceptual model các thực thể chính. |
+| `srs_erd.drawio` | ERD 61 bảng sinh từ JPA entity, chia 6 trang theo module. |
+| `srs_swimlanes.drawio` | 9 swimlane F0–F8. |
+| `srs_screen_flows.drawio` | 6 screen flow theo vai trò. |
+| `srs_statecharts.drawio` | 12 state diagram. |
 
-### 6.2. Script sinh Swimlane Diagrams tự động: [build_clean_swimlane.js](file:///d:/SWP391_PROJECT/SWP391/build_clean_swimlane.js)
-- **Chức năng:** Tạo ra file sơ đồ phân làn `sports_center_all_flows_swimlane.drawio` và cập nhật `sports_center_flow.drawio` với 7 tabs hoàn chỉnh (Master Swimlane + 6 Flows độc lập).
-- **Quy chuẩn kỹ thuật:**
-  - **Zero Overlap:** Mỗi bước quy trình sở hữu tọa độ X tịnh tiến riêng biệt trên trục thời gian, tuyệt đối không đè nhau trong cùng một làn.
-  - **Phân vùng giai đoạn (Phase Banners & Separators):** Header màu phân tách từng giai đoạn nghiệp vụ rõ ràng, đường nét đứt (`dashed=1`) chạy dọc toàn bộ các làn.
-  - **Màu sắc làn phân vai chuẩn hóa:** Hội viên (Xanh dương pastel), Lễ tân (Xanh lá pastel), Hệ thống (Cam pastel), Huấn luyện viên (Hồng pastel), AI Engine (Vàng pastel), Quản lý (Tím pastel).
-- **Lệnh thực thi:**
-  ```powershell
-  node build_clean_swimlane.js
-  ```
-
-### 6.3. Script kiểm thử tĩnh tính hợp lệ: [verify_diagrams.js](file:///d:/SWP391_PROJECT/SWP391/verify_diagrams.js)
-- **Chức năng:** Kiểm thử tự động tính đúng đắn của toàn bộ các file `.drawio` trước khi bàn giao:
-  - Phân tích cú pháp XML, đếm số nodes và số edges trong từng tab.
-  - Kiểm tra tính toàn vẹn của liên kết: Xác thực 100% `source` và `target` của từng edge phải tồn tại trong tập hợp Node IDs (chống hiện tượng cạnh mồ côi - Dangling edges).
-  - Quét va chạm không gian: Phát hiện bất kỳ 2 node nào trong cùng một swimlane bị giao thoa tọa độ `[x .. x+w]`.
-- **Lệnh thực thi:**
-  ```powershell
-  node verify_diagrams.js
-  ```
+Khi entity hoặc trạng thái thay đổi, cập nhật sơ đồ tương ứng và tài liệu SRS.
 
 ---
 

@@ -185,9 +185,9 @@ flowchart LR
 
 | Vòng đời tài khoản (`users.status`) | Vòng đời gói hội viên (`membership_subscriptions.status`) |
 | :---: | :---: |
-| <img src="docs/diagrams/screenshots/page_1.png" alt="State diagram tài khoản" width="100%" /> | <img src="docs/diagrams/screenshots/page_2.png" alt="State diagram gói hội viên" width="100%" /> |
+| <img src="docs/srs/diagrams/png/statechart_f0_user.png" alt="State diagram tài khoản" width="100%" /> | <img src="docs/srs/diagrams/png/statechart_f1_member_package.png" alt="State diagram gói hội viên" width="100%" /> |
 
-Sơ đồ dữ liệu theo miền (Users, Classes, Bookings, Memberships, Payments, E-commerce…) nằm trong [docs/design](docs/design); các state diagram khác trong [docs/diagrams](docs/diagrams).
+Sơ đồ dữ liệu theo miền (Users, Classes, Bookings, Memberships, Payments, E-commerce…) nằm trong [docs/design](docs/design). Bộ sơ đồ của SRS (ERD sinh từ entity, conceptual model, swimlane, screen flow và 12 state diagram) kèm file draw.io nằm trong [docs/srs/diagrams](docs/srs/diagrams).
 
 > [!IMPORTANT]
 > **Bất biến kiến trúc dữ liệu**

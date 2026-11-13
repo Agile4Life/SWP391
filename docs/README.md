@@ -18,14 +18,11 @@ docs/
 │   ├── 2026-09-26-scms-luxury-editorial-frontend.md
 │   └── 2026-10-01-backend-layered-jpa.md
 │
-├── diagrams/          # Toàn bộ sơ đồ kiến trúc hệ thống (Draw.io) & screenshots
-│   ├── README.md
-│   ├── build_state_diagrams.js
-│   ├── erd_sports_center.drawio
-│   ├── erd_complete_all_relationships.drawio
-│   ├── sports_center_all_flows_swimlane.drawio
-│   ├── state_diagrams.drawio
-│   └── screenshots/
+├── srs/               # Tài liệu SRS (Word) & toàn bộ sơ đồ hệ thống
+│   ├── Group1_SportsCenterManagement_SRS.docx
+│   └── diagrams/
+│       ├── drawio/    # File draw.io chỉnh sửa được (ERD, swimlane, screen flow, state diagram…)
+│       └── png/       # Ảnh xuất từ các sơ đồ, dùng trong SRS
 │
 ├── rules/             # Quy tắc kiến trúc mã nguồn & tiêu chuẩn kỹ thuật
 │   └── backend-architecture.md  # Chuẩn 3 lớp, SOLID, IoC, JPA & i18n
@@ -52,7 +49,7 @@ docs/
 | 📖 **Cẩm nang Master Guide** | [`PROJECT_MASTER_GUIDE.md`](PROJECT_MASTER_GUIDE.md) | Toàn bộ 10 Modules, 33 Bảng, 6 Luồng nghiệp vụ cốt lõi, 12 Trạng thái UML. |
 | 💻 **Hướng dẫn Local Dev** | [`LOCAL_DEV_GUIDE.md`](LOCAL_DEV_GUIDE.md) | Cài đặt Node.js, Java 21, cấu hình Supabase PostgreSQL và chạy local. |
 | 📋 **Kế hoạch & Backlog Jira** | [`plans/`](plans/README.md) | Epics, User Stories, Sprint Backlog 1-4, AC và phân công Jira keys. |
-| 📊 **Sơ đồ hệ thống** | [`diagrams/`](diagrams/README.md) | ERD 33 bảng, sơ đồ phân làn Swimlane 6 luồng và 12 biểu đồ trạng thái UML kèm ảnh minh chứng. |
+| 📊 **SRS & sơ đồ hệ thống** | [`srs/`](srs/Group1_SportsCenterManagement_SRS.docx) | Tài liệu SRS; ERD 61 bảng sinh từ entity, conceptual model, 9 swimlane, 6 screen flow và 12 state diagram (draw.io + PNG trong `srs/diagrams/`). |
 | ⚖️ **Quy tắc Backend** | [`rules/backend-architecture.md`](rules/backend-architecture.md) | Chuẩn 3 lớp, ORM Code-First, Trigger Strategy và xử lý đa ngôn ngữ i18n. |
 | 🔌 **Hợp đồng API** | [`api-contracts/`](api-contracts/README.md) | OpenAPI YAML specification cho các API Sprint 1. |
 | 🏛️ **Kiến trúc ADR** | [`adr/`](adr/0001-modular-monolith.md) | Quyết định kiến trúc Modular Monolith (Spring Boot + React). |
