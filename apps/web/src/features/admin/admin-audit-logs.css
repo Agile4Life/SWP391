@@ -160,6 +160,11 @@
   overflow-y: auto;
 }
 
+/* Skeleton thay cho .metrics-grid: giữ cùng khoảng cách dưới để không dính vào thẻ biểu đồ. */
+.occupancy-summary-skeleton {
+  margin-bottom: 24px;
+}
+
 .occupancy-chart-card {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);

@@ -385,7 +385,7 @@ export function AdminAuditLogsPage() {
               <button type="button" className="btn-secondary btn-sm" onClick={() => setOccupancyReload((n) => n + 1)}>{t("Thử lại")}</button>
             </div>
           )}
-          {loadingOccupancy ? <LoadingSkeleton label={t("Đang tải tổng quan công suất lớp học…")} variant="cards" count={3} /> : occupancyError ? null : <div className="metrics-grid occupancy-summary-cards">
+          {loadingOccupancy ? <LoadingSkeleton label={t("Đang tải tổng quan công suất lớp học…")} variant="cards" count={3} className="occupancy-summary-skeleton" /> : occupancyError ? null : <div className="metrics-grid occupancy-summary-cards">
             <div className="metric-card occupancy-stat-card">
               <span className="metric-label stat-card-title">{t("Tỷ lệ lấp đầy trung bình")}</span>
               <span className="metric-value stat-card-number">{occupancyMetrics.avgUtilization}%</span>
