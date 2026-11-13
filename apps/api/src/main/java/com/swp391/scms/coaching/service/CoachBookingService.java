@@ -619,7 +619,9 @@ public class CoachBookingService {
     private static String attendanceOutcome(CoachBooking booking, LocalDateTime now) {
         if (booking.getAttendedAt() != null) return "ATTENDED";
         LocalDateTime end = LocalDateTime.of(booking.getBookingDate(), booking.getEndTime());
-        return end.isAfter(now) ? "UPCOMING" : "MISSED";
+        if (!end.isAfter(now)) return "MISSED";
+        LocalDateTime start = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        return start.isAfter(now) ? "UPCOMING" : "IN_PROGRESS";
     }
 
     @Transactional(readOnly = true)
@@ -806,7 +808,8 @@ public class CoachBookingService {
                 b.getCreatedAt(),
                 b.getCancelledAt(),
                 b.getCancelReason(),
-                b.getAttendedAt()
+                b.getAttendedAt(),
+                b.isAttendanceLocked()
         );
     }
     private String msg(String key, Object... args) {

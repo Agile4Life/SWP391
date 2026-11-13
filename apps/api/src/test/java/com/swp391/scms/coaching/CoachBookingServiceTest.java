@@ -797,6 +797,8 @@ class CoachBookingServiceTest {
         var dto = service.unmarkAttended(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 11L);
 
         assertThat(dto.attendedAt()).isNull();
+        assertThat(dto.attendanceLocked()).isTrue();
+        assertThat(dto.status()).isEqualTo("confirmed");
         assertThat(attended.isAttendanceLocked()).isTrue();
         verify(coachBookingRepository).save(attended);
         // Unmarking again changes nothing; marking by hand unlocks it.
@@ -815,5 +817,26 @@ class CoachBookingServiceTest {
 
         assertThatThrownBy(() -> service.unmarkAttended(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 12L))
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
+    }
+
+    @Test
+    void upcomingExcludesOngoingAndEndedSessionsAtVietnamBoundaries() {
+        var ended = ptSession(1, LocalDate.of(2026, 10, 31), LocalTime.of(7, 0), LocalTime.of(8, 0), null);
+        var ongoing = ptSession(2, LocalDate.of(2026, 10, 31), LocalTime.of(8, 0), LocalTime.of(9, 0), null);
+        var future = ptSession(3, LocalDate.of(2026, 10, 31), LocalTime.of(9, 0), LocalTime.of(10, 0), null);
+        when(coachBookingRepository.findForAttendance(any(), any())).thenReturn(List.of(ended, ongoing, future));
+        var desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+        assertThat(service.getAttendance(desk, null, null, "UPCOMING")).extracting(d -> d.id()).containsExactly(3L);
+        assertThat(service.getAttendance(desk, null, null, "MISSED")).extracting(d -> d.id()).containsExactly(1L);
+        assertThat(service.getAttendance(desk, null, null, "ALL")).hasSize(3);
+    }
+
+    @Test
+    void defaultAttendanceDatesUseVietnamEvenWhenClockZoneIsUtc() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "clock",
+                Clock.fixed(Instant.parse("2026-10-31T17:01:00Z"), ZoneOffset.UTC));
+        when(coachBookingRepository.findForAttendance(any(), any())).thenReturn(List.of());
+        service.getAttendance(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), null, null, "ALL");
+        verify(coachBookingRepository).findForAttendance(LocalDate.of(2026, 10, 19), LocalDate.of(2026, 11, 1));
     }
 }

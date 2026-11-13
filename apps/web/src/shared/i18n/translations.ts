@@ -1,5 +1,8 @@
 // Source-owned UI labels only. Never apply this catalog to user or API content.
 export const englishLabels: Readonly<Record<string, string>> = {
+  "Không thể bỏ ghi nhận có mặt. Vui lòng thử lại.": "Unable to remove the attendance mark. Please try again.",
+  "Không thể ghi nhận có mặt. Vui lòng thử lại.": "Unable to mark attendance. Please try again.",
+  "Không tải được danh sách điểm danh. Vui lòng thử lại.": "Unable to load attendance. Please try again.",
   "Trang chủ": "Home",
   "Khám phá": "Explore",
   "Gói tập": "Memberships",

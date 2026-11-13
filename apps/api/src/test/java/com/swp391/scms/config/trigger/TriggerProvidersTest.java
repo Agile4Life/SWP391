@@ -124,6 +124,7 @@ class TriggerProvidersTest {
         when(connection.getMetaData()).thenReturn(metadata);
         when(connection.getCatalog()).thenReturn("scms");
         when(connection.getSchema()).thenReturn("tenant");
+        when(metadata.getTables("scms", "tenant", "audit_logs", new String[]{"TABLE"})).thenReturn(mock(ResultSet.class));
         when(metadata.getColumns("scms", "tenant", "center_checkins", "member_id")).thenReturn(columns);
         when(columns.next()).thenReturn(exists, false, exists, false);
         when(columns.getString("TABLE_SCHEM")).thenReturn("tenant");

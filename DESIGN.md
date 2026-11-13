@@ -303,6 +303,8 @@ Kết quả audit "AI-slop" về nội dung chữ; áp dụng cho mọi màn hì
 
 ## Nguồn hiện hành và nguồn lịch sử
 
+Điểm danh PT 1:1 (13/11/2026): giữ bốn tab hiện có. “Sắp diễn ra” chỉ gồm buổi chưa bắt đầu; buổi đang diễn ra chưa có dấu có mặt nằm trong “Tất cả” với nhãn riêng. “Không có mặt” là kết quả suy ra sau giờ kết thúc, không ghi trạng thái ABSENT. Hiển thị “Đã bỏ ghi nhận có mặt” theo `attendanceLocked` từ API. Giữ token/bố cục hiện tại, dùng giờ Asia/Ho_Chi_Minh, khóa thao tác và chọn ngày khi đang cập nhật, tải lại dữ liệu backend sau thao tác và khi quay lại trang.
+
 Thứ tự tra cứu khi làm UI: yêu cầu mới nhất của người dùng → `AGENTS.md` và tài liệu này → component/CSS đang được route sử dụng → ảnh chụp kiểm chứng mới.
 
 - [Báo cáo và ảnh hiện hành](docs/ui-review/fitness-reference/README.md).
