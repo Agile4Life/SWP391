@@ -870,7 +870,7 @@ export function StaffReceptionPage() {
                                   color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
                                 }}
                               >
-                                {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Nước ngoài'})`) : 'CCCD'}
+                                {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}
                               </span>
                             </div>
 
@@ -1138,7 +1138,7 @@ export function StaffReceptionPage() {
               </h3>
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
-                  ? t(`Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`, `No results match "${searchQuery}". Please check the phone number, membership code or national ID.`)
+                  ? t(`Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`, `No results match "${searchQuery}". Please check the phone number, membership code or identity card.`)
                   : t('Chọn một yêu cầu hoặc tra cứu hội viên.')}
               </p>
             </div>
@@ -1465,7 +1465,7 @@ export function StaffReceptionPage() {
               </div>
               <div>
                 <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
-                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Nước ngoài'})`) : t('Căn cước công dân (CCCD)')}</strong>
+                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)')}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>

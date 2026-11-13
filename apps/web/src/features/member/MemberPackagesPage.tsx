@@ -180,13 +180,13 @@ export function MemberPackagesPage() {
       if (/^(vn|vnm|vietnam|việt nam|viet nam)$/i.test(natClean)) {
         setTrialError(sourceMessage(
           "Hộ chiếu chỉ áp dụng cho người nước ngoài. Công dân Việt Nam vui lòng sử dụng CCCD.",
-          "Passports are only accepted for foreign nationals. Vietnamese citizens must use a citizen ID.",
+          "Passports are only accepted for foreign nationals. Vietnamese citizens must use a identity card.",
         ));
         return;
       }
     }
     if (!trialFullName.trim()) {
-      setTrialError({ vi: `Vui lòng nhập họ và tên theo ${trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'}.`, en: `Please enter your full name as shown on your ${trialDocType === 'PASSPORT' ? 'passport' : 'citizen ID'}.` });
+      setTrialError({ vi: `Vui lòng nhập họ và tên theo ${trialDocType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD'}.`, en: `Please enter your full name as shown on your ${trialDocType === 'PASSPORT' ? 'passport' : 'identity card'}.` });
       return;
     }
     if (!trialFrontImage) {
@@ -732,7 +732,7 @@ export function MemberPackagesPage() {
           <h3 style={{ margin: '10px 0 6px', fontSize: 18, fontWeight: 700 }}>
             {t(" Đơn đăng ký Gói Trải Nghiệm 3 Ngày đang được xử lý ", "Your 3-day trial application is being processed")}</h3>
           <p className="row-card__meta" style={{ margin: 0, lineHeight: 1.5 }}>
-            {t("Đã ghi nhận (", "Received (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}{t("). Mang theo ", "). Bring")}<strong>{t("giấy tờ bản gốc (", "original identity document (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'})</strong> {t(" đến quầy Lễ tân để kích hoạt gói. ", "to the front desk to activate your trial.")}</p>
+            {t("Đã ghi nhận (", "Received (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "passport") : t("CCCD", "identity card")} • {trialStatus.documentNumberMasked ?? trialStatus.cccd ?? '—'}{t("). Mang theo ", "). Bring ")}<strong>{t("giấy tờ bản gốc (", "original identity document (")}{trialStatus.documentType === 'PASSPORT' ? t("Hộ chiếu", "passport") : t("CCCD", "identity card")})</strong> {t(" đến quầy Lễ tân để kích hoạt gói. ", "to the front desk to activate your trial.")}</p>
         </section>
       )}
 
@@ -1285,7 +1285,7 @@ export function MemberPackagesPage() {
           onClose={() => setIsTrialModalOpen(false)}
           busy={isClaimingTrial}
         >
-          <div className="meta-label">{t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify citizen ID / passport")}</div>
+          <div className="meta-label">{t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify identity card / passport")}</div>
           <p className="row-card__meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
             {t("Mỗi hội viên nhận Gói Trải Nghiệm 1 lần. Gồm 1 buổi PT 1:1, không bảo lưu.", "One trial per member. Includes one 1:1 PT session; cannot be paused.")}</p>
 
@@ -1300,7 +1300,7 @@ export function MemberPackagesPage() {
                   onClick={() => { setTrialDocType('CCCD'); setTrialError(''); }}
                   style={{ flex: 1 }}
                 >
-                  {t(" Căn cước công dân (Việt Nam) ", "Citizen ID (Vietnam)")}</button>
+                  {t(" Căn cước công dân (Việt Nam) ", "Identity card (Vietnam)")}</button>
                 <button
                   type="button"
                   className={`btn-secondary btn-sm ${trialDocType === 'PASSPORT' ? 'btn-primary' : ''}`}
@@ -1330,7 +1330,7 @@ export function MemberPackagesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-full-name">
-                {t(" Họ và tên trên ", "Full name on ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} *
+                {t(" Họ và tên trên ", "Full name on ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "passport") : t("CCCD", "identity card")} *
               </label>
               <input
                 id="trial-full-name"
@@ -1349,7 +1349,7 @@ export function MemberPackagesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-cccd">
-                {t(" Số ", "Number ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : t("CCCD (12 chữ số)", "Citizen ID (12 digits)")} *
+                {trialDocType === 'PASSPORT' ? t("Số hộ chiếu", "Passport number") : t("Số CCCD (12 chữ số)", "Identity card number (12 digits)")} *
               </label>
               <input
                 id="trial-cccd"
@@ -1370,7 +1370,7 @@ export function MemberPackagesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
               <div>
                 <label className="portal-label" style={{ fontSize: '0.82rem' }}>
-                  {t(" Ảnh mặt trước ", "Front image ")}{trialDocType} *
+                  {trialDocType === 'PASSPORT' ? t("Ảnh mặt trước Hộ chiếu", "Front of passport") : t("Ảnh mặt trước CCCD", "Front of identity card")} *
                 </label>
                 {trialFrontImage ? (
                   <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>

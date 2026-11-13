@@ -149,7 +149,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
       }
       notify('Đã ghi nhận hội viên checkout thành công.', 'success');
     } catch (err: unknown) {
-      notify(errorMessage(err, 'Checkout thất bại.'), 'error');
+      notify(errorMessage(err, 'Check-out thất bại.'), 'error');
     } finally {
       checkoutBusy.current = false;
       setCheckingOutId(null);
@@ -356,11 +356,11 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
                             <button data-i18n-managed
                               type="button"
                               className="btn-secondary btn-sm"
-                              aria-label={t(`Checkout / Ra về: ${rec.memberName || `HV #${rec.memberId}`}`, `Checkout / Exit: ${rec.memberName || `HV #${rec.memberId}`}`)}
+                              aria-label={t(`Ra về: ${rec.memberName || `HV #${rec.memberId}`}`, `Check out: ${rec.memberName || `HV #${rec.memberId}`}`)}
                               disabled={checkingOutId !== null}
                               onClick={() => void handleCheckout(rec.id)}
                             >
-                              {checkingOutId === rec.id ? t('Đang ghi nhận...') : t('Checkout / Ra về')}
+                              {checkingOutId === rec.id ? t('Đang ghi nhận...') : t('Ra về')}
                             </button>
                           ) : rec.checkOutTime ? (
                             <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>{t("Đã ra về")}</span>

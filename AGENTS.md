@@ -33,6 +33,7 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 - **Trigger đa hình:** Các trigger nghiệp vụ bắt buộc (capacity, trùng lịch) được nạp tự động qua `DatabaseTriggerProvider` và `PostgreSqlTriggerProvider` sau Hibernate. Chỉ hỗ trợ Supabase PostgreSQL; không tạo adapter cho database khác.
 - **CI bắt buộc:** `DatabasePolicyTest`, `DatabaseProfilesTest` và `scripts/test-database-config.ps1` kiểm tra chính sách database. `db/databaseschema.sql` và ba migration V1–V3 là tài liệu lịch sử; không sửa hoặc chạy chúng để triển khai, không thêm migration DDL mới.
 - **Đa ngôn ngữ (i18n bắt buộc):** Hệ thống hỗ trợ đa ngôn ngữ qua `Accept-Language` (mặc định `vi`). Bất kỳ tính năng backend mới nào khi thêm thông báo/mã lỗi bắt buộc phải cập nhật đồng thời cả `i18n/messages_vi.properties` và `i18n/messages_en.properties`, dùng `MessageService` để resolve.
+- **Thuật ngữ song ngữ:** không trộn hai ngôn ngữ trong một chuỗi (không viết "Hội viên (Member)", không để "CCCD" lọt vào bản tiếng Anh). Tiếng Việt dùng CCCD/Hộ chiếu; tiếng Anh luôn là "identity card"/"passport", không dùng "citizen ID" hay "national ID". Mã enum (`CCCD`, `PASSPORT`) không hiển thị thẳng ra UI, phải đi qua `t()` hoặc `MessageService`.
 - Chỉ Member có subscription `active` và chưa hết hạn được booking/check-in.
 - Database trigger kiểm tra capacity và trùng lịch là bắt buộc. Map lỗi SQL đó thành lỗi HTTP dễ hiểu, không vô hiệu trigger.
 - `users.deleted_at IS NOT NULL` không được xác thực hoặc hiện trong list mặc định.

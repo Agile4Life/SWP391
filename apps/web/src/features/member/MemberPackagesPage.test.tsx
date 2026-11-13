@@ -734,7 +734,7 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('dialog')?.textContent).toContain('Số CCCD không hợp lệ');
     await act(async () => setLanguage('en'));
     expect(host.querySelector('dialog')?.textContent).toContain('Apply for a 3-day trial');
-    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Invalid citizen ID number');
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Invalid identity card number');
     expect(host.querySelector('dialog button[aria-label="Close dialog"]')).not.toBeNull();
     expect(host.querySelector('.package-benefit-list')?.getAttribute('aria-label')).toBe('Essential benefits');
     expect(host.textContent).toContain('Essential');

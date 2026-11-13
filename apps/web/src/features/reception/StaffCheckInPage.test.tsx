@@ -43,7 +43,7 @@ async function renderPage(mode: 'in' | 'out' = 'in') {
 }
 
 function checkoutButtons() {
-  return [...host.querySelectorAll('button')].filter((button) => button.textContent?.includes('Checkout'));
+  return [...host.querySelectorAll('button')].filter((button) => button.textContent?.includes('Ra về'));
 }
 
 it('keeps every open visit available for checkout, including visits older than the newest ten scans', async () => {
@@ -58,7 +58,7 @@ it('keeps every open visit available for checkout, including visits older than t
 
 it('places the checkout action before horizontally scrollable history details', async () => {
   await renderPage('out');
-  expect(host.querySelector('tbody tr td:first-child button')?.textContent).toContain('Checkout');
+  expect(host.querySelector('tbody tr td:first-child button')?.textContent).toContain('Ra về');
 });
 
 it('check-in tab scans member cards and lists recent entries without checkout actions', async () => {

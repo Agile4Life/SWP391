@@ -6,7 +6,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
     vi.restoreAllMocks();
   });
 
-  it('BR-05: maskCitizenId masks the middle digits of citizen ID', () => {
+  it('BR-05: maskCitizenId masks the middle digits of the identity card number', () => {
     expect(maskCitizenId('079198001234')).toBe('079******234');
     expect(maskCitizenId('123456789')).toBe('123******789');
     expect(maskCitizenId(null)).toBe('Chưa cập nhật');

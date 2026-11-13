@@ -279,13 +279,13 @@ export function MemberCheckoutPage() {
               {kycSuccess && <p role="status">{t(kycSuccess)}</p>}
             </section>
           ) : !isKycVerified ? (
-            <section data-i18n-managed className="portal-card stack" aria-label={t("Xác minh CCCD hoặc Hộ chiếu trước khi đăng ký gói tập đầu tiên", "Verify your citizen ID or passport before your first membership")}>
+            <section data-i18n-managed className="portal-card stack" aria-label={t("Xác minh CCCD hoặc Hộ chiếu trước khi đăng ký gói tập đầu tiên", "Verify your identity card or passport before your first membership")}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <h2 className="portal-card-title" style={{ margin: 0 }}>
                   {t("Xác minh danh tính trước khi đăng ký gói tập đầu tiên", "Verify your identity before your first membership")}</h2>
               </div>
               <p className="hold-notice hold-notice--warn">
-                {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify a citizen ID (or passport for foreign nationals). Your account name will match the document.")}</p>
+                {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify a identity card (or passport for foreign nationals). Your account name will match the document.")}</p>
 
               {profile?.kycStatus === 'REJECTED' && (
                 <div role="alert" data-testid="kyc-rejected" className="hold-notice hold-notice--danger">
@@ -315,7 +315,7 @@ export function MemberCheckoutPage() {
                         checked={kycDocType === 'CCCD'}
                         onChange={() => setKycDocType('CCCD')}
                       />
-                      <span>{t("Căn cước công dân (Việt Nam)", "Citizen ID (Vietnam)")}</span>
+                      <span>{t("Căn cước công dân (Việt Nam)", "Identity card (Vietnam)")}</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.95rem' }}>
                       <input
@@ -349,13 +349,13 @@ export function MemberCheckoutPage() {
 
                 <div>
                   <label htmlFor="checkout-doc-number" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                    {kycDocType === 'CCCD' ? t("Số Căn cước công dân (12 chữ số)", "Citizen ID number (12 digits)") : t("Số Hộ chiếu (Passport Number)", "Passport number")} <span className="required-mark" aria-hidden="true">*</span>
+                    {kycDocType === 'CCCD' ? t("Số Căn cước công dân (12 chữ số)", "Identity card number (12 digits)") : t("Số Hộ chiếu", "Passport number")} <span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
                     id="checkout-doc-number"
                     type="text"
                     className="portal-input"
-                    placeholder={kycDocType === 'CCCD' ? t("Nhập 12 chữ số CCCD", "Enter 12-digit citizen ID") : t("Nhập mã số hộ chiếu", "Enter passport number")}
+                    placeholder={kycDocType === 'CCCD' ? t("Nhập 12 chữ số CCCD", "Enter 12-digit identity card") : t("Nhập mã số hộ chiếu", "Enter passport number")}
                     value={kycNumber}
                     onChange={(e) => setKycNumber(e.target.value)}
                     maxLength={30}
@@ -365,7 +365,7 @@ export function MemberCheckoutPage() {
 
                 <div>
                   <label htmlFor="checkout-fullname" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                    {t(" Họ và tên đầy đủ (trên CCCD / Hộ chiếu) ", "Full name (on citizen ID / passport)")}<span className="required-mark" aria-hidden="true">*</span>
+                    {t(" Họ và tên đầy đủ (trên CCCD / Hộ chiếu) ", "Full name (on identity card / passport)")}<span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
                     id="checkout-fullname"
@@ -383,7 +383,7 @@ export function MemberCheckoutPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: kycDocType === 'CCCD' ? '1fr 1fr' : '1fr', gap: 12 }}>
                   <div>
                     <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                      {t(" Ảnh mặt trước ", "Front image")}{kycDocType === 'PASSPORT' ? t("Hộ chiếu", "Passport") : 'CCCD'} <span className="required-mark" aria-hidden="true">*</span>
+                      {kycDocType === 'PASSPORT' ? t("Ảnh mặt trước Hộ chiếu", "Front of passport") : t("Ảnh mặt trước CCCD", "Front of identity card")} <span className="required-mark" aria-hidden="true">*</span>
                     </label>
                     {kycFrontImage ? (
                       <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -398,7 +398,7 @@ export function MemberCheckoutPage() {
                   {kycDocType === 'CCCD' && (
                     <div>
                       <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                        {t(" Ảnh mặt sau CCCD ", "Back of citizen ID")}<span className="required-mark" aria-hidden="true">*</span>
+                        {t(" Ảnh mặt sau CCCD ", "Back of identity card")}<span className="required-mark" aria-hidden="true">*</span>
                       </label>
                       {kycBackImage ? (
                         <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -425,7 +425,7 @@ export function MemberCheckoutPage() {
           ) : (
             <div className="hold-notice hold-notice--success kyc-verified">
               <span aria-hidden="true">✓</span>
-              <span>{t("Đã xác minh định danh theo ", "Identity verified using")}{profile?.documentType || 'CCCD'}: <strong>{profile?.fullName}</strong> {profile?.citizenId ? t(`(Số: ${profile.citizenId})`, `(Number: ${profile.citizenId})`) : ''}</span>
+              <span>{t("Đã xác minh định danh theo ", "Identity verified using ")}{profile?.documentType === 'PASSPORT' ? t("Hộ chiếu", "passport") : t("CCCD", "identity card")}: <strong>{profile?.fullName}</strong> {profile?.citizenId ? t(`(Số: ${profile.citizenId})`, `(Number: ${profile.citizenId})`) : ''}</span>
             </div>
           )}
 

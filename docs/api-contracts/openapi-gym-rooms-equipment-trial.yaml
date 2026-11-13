@@ -6,7 +6,7 @@ info:
     Three related extensions. (1) Rooms carry a tier: STANDARD rooms are open to every active member, PLATINUM
     (VIP) rooms only accept class enrollment and session booking from members whose active subscription covering
     the session date is a PLATINUM package. (2) Managers maintain gym equipment per room. (3) A new member (one who
-    has never held a membership package) can claim a free 3-day GOLD trial once, verified by Citizen ID (CCCD).
+    has never held a membership package) can claim a free 3-day GOLD trial once, verified by identity card (CCCD).
     The CCCD is never stored in clear text: the server keeps an HMAC-SHA256 digest (peppered by
     app.trial.cccd-pepper) to detect reuse and only the last four digits for display. Trial subscriptions create no
     payment, so they do not appear in revenue reports. All responses use the standard ApiResponse wrapper and all

@@ -922,7 +922,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                       {/* Thang điểm tiến bộ */}
                       <div className="eval-form-row">
                         <div className="eval-slider-header">
-                          <span className="eval-label">{t("Thang điểm tiến bộ (Progress Score):")}</span>
+                          <span className="eval-label">{t("Thang điểm tiến bộ:")}</span>
                           <span className="score-badge">{student.progressScore || 80}/100</span>
                         </div>
                         <input

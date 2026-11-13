@@ -228,7 +228,7 @@ export function ManagerCoachReviewsPage() {
           className={`filter-chip ${activeTab === 'leaderboard' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
         >
-          {t("Bảng xếp hạng Top Coach (")}{reviews.length})
+          {t("Bảng xếp hạng huấn luyện viên hàng đầu (")}{reviews.length})
         </button>
         <button
           type="button"
@@ -382,7 +382,7 @@ export function ManagerCoachReviewsPage() {
           <div style={{ display: 'grid', gap: 14 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                {t("Thứ hạng (Rank):")}</label>
+                {t("Thứ hạng:")}</label>
               <input
                 type="number"
                 min={1}
@@ -395,11 +395,11 @@ export function ManagerCoachReviewsPage() {
 
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                {t("Danh hiệu trao tặng (Badge / Title):")}</label>
+                {t("Danh hiệu trao tặng:")}</label>
               <input
                 type="text"
                 className="portal-input"
-                placeholder={t("Ví dụ: Top 1: Coach of the Month")}
+                placeholder={t("Ví dụ: Top 1: Huấn luyện viên của tháng")}
                 value={editBadge}
                 onChange={(e) => setEditBadge(e.target.value)}
               />
@@ -419,7 +419,7 @@ export function ManagerCoachReviewsPage() {
 
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
-                {t("Nhận xét tổng kết của Quản lý gửi cho Coach:")}</label>
+                {t("Nhận xét tổng kết của Quản lý gửi cho Huấn luyện viên:")}</label>
               <textarea
                 rows={3}
                 className="portal-input"

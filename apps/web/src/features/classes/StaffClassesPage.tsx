@@ -1381,7 +1381,7 @@ export function StaffClassesPage() {
                   disabled={isSubmitting}
                 >
                   <option value="active">{t("Đang hoạt động (Active)")}</option>
-                  <option value="cancelled">{t("Tạm ngưng / Đã hủy (Cancelled)")}</option>
+                  <option value="cancelled">{t("Tạm ngưng / Đã hủy")}</option>
                   <option value="archived">{t("Lưu trữ (Archived)")}</option>
                 </Select>
               </div>

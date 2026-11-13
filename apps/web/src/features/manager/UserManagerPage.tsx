@@ -971,7 +971,7 @@ export function UserManagerPage() {
               >
                 <option value="COACH">{t("Huấn luyện viên")}</option>
                 <option value="RECEPTIONIST">{t("Lễ tân")}</option>
-                <option value="MEMBER">{t("Hội viên (Member)")}</option>
+                <option value="MEMBER">{t("Hội viên")}</option>
                 <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
                 <option value="ADMIN">{t("Quản trị hệ thống")}</option>
               </Select>
@@ -1100,7 +1100,7 @@ export function UserManagerPage() {
               >
                 <option value="COACH">{t("Huấn luyện viên")}</option>
                 <option value="RECEPTIONIST">{t("Lễ tân")}</option>
-                <option value="MEMBER">{t("Hội viên (Member)")}</option>
+                <option value="MEMBER">{t("Hội viên")}</option>
                 <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
                 <option value="ADMIN">{t("Quản trị hệ thống")}</option>
               </Select>

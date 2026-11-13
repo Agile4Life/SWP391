@@ -403,7 +403,7 @@ export function StaffInternalRequestsPage() {
               >
                 <option value="LEAVE">{t("Xin nghỉ phép (Leave)")}</option>
                 <option value="SHIFT_EXCHANGE">{t("Đổi ca trực / làm việc (Shift Exchange)")}</option>
-                <option value="SCHEDULE_CHANGE">{t("Đổi lịch dạy / đứng lớp (Schedule Change)")}</option>
+                <option value="SCHEDULE_CHANGE">{t("Đổi lịch dạy / đứng lớp")}</option>
                 <option value="OTHER">{t("Đề xuất công việc / khác (Other)")}</option>
               </Select>
             </div>

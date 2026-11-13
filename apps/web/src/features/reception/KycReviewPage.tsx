@@ -95,7 +95,7 @@ export function KycReviewPage() {
               </div>
               <dl className="kyc-card__doc">
                 <div>
-                  <dt>{item.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Citizen ID')}</dt>
+                  <dt>{item.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Identity card')}</dt>
                   <dd>{item.citizenId ? <strong className="kyc-card__number">{item.citizenId}</strong> : <span className="kyc-card__missing">{t('Chưa có số giấy tờ', 'No document number')}</span>}</dd>
                 </div>
                 {item.nationality && <div><dt>{t('Quốc tịch', 'Nationality')}</dt><dd>{item.nationality}</dd></div>}
