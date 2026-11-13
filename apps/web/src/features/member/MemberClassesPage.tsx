@@ -706,12 +706,29 @@ export function MemberClassesPage() {
 
   const weekRange = currentWeek(weekOffset);
   const disciplines = DISCIPLINES.map(item => item.name);
-  const visible = filterSessions(sessions, discipline, day)
-    .sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.startTime.localeCompare(b.startTime));
   const myScheduleReady = !myScheduleLoading && !myScheduleError;
   const activeEnrollments = myScheduleReady ? enrollments.filter((item) => item.status === 'booked' || item.status === 'enrolled') : [];
   const activeBookings = myScheduleReady ? bookings.filter((item) => item.status === 'booked') : [];
   const seatsInView: EnrollmentDto[] = [...activeEnrollments, ...activeBookings.map(bookingAsEnrollment)];
+
+  // Order: 0 = open for booking now, 1 = still upcoming but not bookable (already mine, overlapping, full,
+  // course already started), 2 = past or cancelled. Date/time order is kept inside each tier.
+  const sessionTier = (item: ClassSessionDto, now: { date: string; time: string }): number => {
+    const past = item.sessionDate < now.date || (item.sessionDate === now.date && item.startTime.slice(0, 5) <= now.time);
+    if (past || item.status !== 'scheduled') return 2;
+    const parentClass = classesMap.get(item.classId);
+    const courseStarted = Boolean(parentClass?.startDate && parentClass.startDate < now.date);
+    const isMine =
+      activeBookings.some((b) => b.sessionId === item.id) ||
+      activeEnrollments.some((e) => e.sessionId === item.id || (e.sessionId === null && e.classId === item.classId));
+    if (courseStarted || isMine || item.bookedCount >= item.capacity || findOverlappingEnrollment(item, seatsInView, sessions)) return 1;
+    return 0;
+  };
+  const sortNow = centerNowParts();
+  const visible = filterSessions(sessions, discipline, day)
+    .map((item) => ({ item, tier: sessionTier(item, sortNow) }))
+    .sort((a, b) => a.tier - b.tier || a.item.sessionDate.localeCompare(b.item.sessionDate) || a.item.startTime.localeCompare(b.item.startTime))
+    .map(({ item }) => item);
 
   const visibleCourses = useMemo(() => {
     return classes.filter((cls) => {

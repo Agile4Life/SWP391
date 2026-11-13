@@ -439,9 +439,10 @@ describe('MemberClassesPage', () => {
     // Grouped under day-group-2099-10-19
     expect(host.querySelector('[data-testid="day-group-2099-10-19"]')).not.toBeNull();
 
-    // Verify chronological card titles order: Yoga Flow (08:00), Pilates Core (08:30), Boxing Burn (10:00)
+    // Bookable classes come first (Boxing Burn), then upcoming ones that cannot be booked, each in time order:
+    // Yoga Flow (already booked, 08:00), Pilates Core (overlapping, 08:30)
     const titles = [...host.querySelectorAll('h3.row-card__title')].map((el) => el.textContent);
-    expect(titles).toEqual(['Yoga Flow', 'Pilates Core', 'Boxing Burn']);
+    expect(titles).toEqual(['Boxing Burn', 'Yoga Flow', 'Pilates Core']);
 
     // Overlapping session #9 (08:30-10:00) is marked and disabled
     expect(host.querySelector('[data-testid="overlap-badge-9"]')).not.toBeNull();
@@ -455,6 +456,18 @@ describe('MemberClassesPage', () => {
     const bookBtn = [...host.querySelectorAll('button')].find((b) => b.getAttribute('aria-label')?.startsWith('Đặt chỗ ngay:')) as HTMLButtonElement;
     expect(bookBtn).not.toBeUndefined();
     expect(bookBtn.disabled).toBe(false);
+  });
+
+  it('lists bookable sessions before sessions whose start time has passed', async () => {
+    const past = { ...session, id: 21, className: 'Past Class', sessionDate: '2000-01-03', startTime: '06:00:00', endTime: '07:00:00' };
+    const open = { ...session, id: 22, className: 'Open Class', sessionDate: '2099-10-19', startTime: '09:00:00', endTime: '10:00:00', bookedCount: 1 };
+    mocks.sessions.mockResolvedValue([past, open]);
+    mocks.enrollments.mockResolvedValue([]);
+
+    await render();
+
+    const titles = [...host.querySelectorAll('h3.row-card__title')].map((el) => el.textContent);
+    expect(titles).toEqual(['Open Class', 'Past Class']);
   });
 
   it('keeps the selected discipline without showing retired favorites controls', async () => {
