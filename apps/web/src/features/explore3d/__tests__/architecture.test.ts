@@ -329,3 +329,13 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
     });
   });
 });
+
+describe('metro timetable', () => {
+  it('dwells at the station and stays on the track', async () => {
+    const { metroPosition, LOOP } = await import('../renderers/architecture/metroMotion');
+    const samples = Array.from({ length: 400 }, (_, i) => metroPosition(i * 0.5, 15, 4));
+    expect(Math.min(...samples)).toBeGreaterThanOrEqual(-LOOP / 2 - 1);
+    expect(Math.max(...samples)).toBeLessThanOrEqual(LOOP / 2 + 1);
+    expect(samples.filter(p => Math.abs(p - 4) < 0.01).length).toBeGreaterThan(10);
+  });
+});

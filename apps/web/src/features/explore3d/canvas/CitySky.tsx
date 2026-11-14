@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { STATION_X, metroPosition } from '../renderers/architecture/metroMotion';
 import { useDocumentTheme } from '../renderers/materials';
 
 const NOOP = () => null;
@@ -59,10 +60,8 @@ function buildTrain(glow: boolean, bright: number): THREE.BufferGeometry {
 const DECK_Y = 9.2 + 0.5;
 const TRACKS = [
   { z: -58.4, dir: 1, speed: 15, phase: 0 },
-  { z: -54.6, dir: -1, speed: 13, phase: 170 },
+  { z: -54.6, dir: -1, speed: 13, phase: 30 },
 ] as const;
-const LOOP = 760;
-
 /** Two metro trainsets shuttling along the elevated viaduct. */
 function Metro({ isLight }: { isLight: boolean }) {
   const bodyGeo = useMemo(() => buildTrain(false, 1), []);
@@ -79,7 +78,7 @@ function Metro({ isLight }: { isLight: boolean }) {
     TRACKS.forEach((tr, i) => {
       const g = groups.current[i];
       if (!g) return;
-      const s = ((tr.phase + clock.elapsedTime * tr.speed) % LOOP) - LOOP / 2;
+      const s = metroPosition(clock.elapsedTime + tr.phase, tr.speed, STATION_X * tr.dir);
       g.position.set(s * tr.dir, DECK_Y, tr.z);
       g.rotation.y = tr.dir === 1 ? 0 : Math.PI;
     });
