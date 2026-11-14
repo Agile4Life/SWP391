@@ -283,7 +283,7 @@ describe('MemberClassesPage', () => {
       await render();
       expect(host.textContent).toContain('Khóa 8 tuần (2 buổi / tuần)');
       expect(host.textContent).toContain('16 buổi trọn gói');
-      expect(host.textContent).toContain('Học phí ngoài gói: 600.000 VNĐ');
+      expect(host.textContent).toContain('Học phí ngoài gói: 600.000\u00a0₫');
       await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pay-course-5"]')!.click());
       expect(host.textContent).toContain('Thanh toán học phí khóa học');
     });

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { useStaffI18n, type StaffMessage, staffError as errorMessage } from '../operations/staffI18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -62,13 +63,13 @@ function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: b
 }
 
 export function AdminPaymentReconciliationPage() {
-  const { t, locale } = useStaffI18n();
+  const { t } = useStaffI18n();
   const today = centerNowParts().date;
   const [from, setFrom] = useState(() => shiftIsoDate(today, -(DEFAULT_DAYS - 1)));
   const [to, setTo] = useState(today);
   const [tab, setTab] = useState<Tab>('attempts');
 
-  const vnd = (n: number | null | undefined) => (n == null ? '—' : `${Math.round(Number(n)).toLocaleString(locale)} đ`);
+  const vnd = (n: number | null | undefined) => (n == null ? '—' : formatPrice(Math.round(Number(n))));
 
   // Summary
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);

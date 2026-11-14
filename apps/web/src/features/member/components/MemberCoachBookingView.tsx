@@ -1245,6 +1245,7 @@ export function MemberCoachBookingView({
         <Modal
           title={memberText(`Đánh giá Huấn luyện viên: ${formatCoachName(reviewTargetBooking.coachName)}`, `Review coach: ${formatCoachName(reviewTargetBooking.coachName)}`)}
           onClose={() => setReviewTargetBooking(null)}
+          busy={reviewSubmitting}
         >
           <div style={{ display: 'grid', gap: 16 }}>
             <div
@@ -1375,6 +1376,7 @@ export function MemberCoachBookingView({
             </span>
           }
           onClose={() => setModalSlot(null)}
+          busy={submitting}
         >
           <div style={{ display: 'grid', gap: 18 }}>
             {/* Coach & Session Info Card */}
@@ -1888,6 +1890,7 @@ export function MemberCoachBookingView({
         <Modal
           title={memberText("Hủy lịch tập 1:1")}
           onClose={() => setCancelTarget(null)}
+          busy={cancelling}
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p>

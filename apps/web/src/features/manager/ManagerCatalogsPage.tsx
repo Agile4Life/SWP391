@@ -1,4 +1,5 @@
 import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { Select } from '../../shared/ui/Select';
 import { useCallback, useEffect, useState } from 'react';
 import { catalogApi, type Discipline, type MembershipPackage, type Room } from './catalogApi';
@@ -25,7 +26,7 @@ const QUICK_DURATION_PRESETS = [
   { days: 365, label: '12 tháng (365 ngày)' },
 ];
 
-const vnd = (n: number) => `${n.toLocaleString(staffLocale())} đ`;
+const vnd = formatPrice;
 
 function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILVER' | 'GOLD' | 'PLATINUM' {
   const explicit = pkg.tier?.trim().toUpperCase();

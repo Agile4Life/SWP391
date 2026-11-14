@@ -1,4 +1,4 @@
-import { memberError, memberRenderMessage, memberNotify, memberMessage } from '../memberI18n';
+import { memberError, memberRenderMessage, memberNotify, memberMessage, memberText } from '../memberI18n';
 import type { SourceMessage } from '../../../shared/i18n/language';
 import { useLanguage } from '../../../shared/i18n/language';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -129,7 +129,7 @@ function classEvent(
 }
 
 function courtEvent(booking: CourtBooking): CalendarEvent {
-  const title = `Đặt sân ${booking.disciplineName}`;
+  const title = memberText(`Đặt sân ${booking.disciplineName}`, `Court booking: ${booking.disciplineName}`);
   return {
     id: `court-${booking.id}`, kind: 'court', date: booking.date, startTime: booking.startTime, endTime: booking.endTime,
     title, place: booking.roomName, cancelled: false, seat: { type: 'court', id: booking.id }, tone: 'neutral',
@@ -138,7 +138,7 @@ function courtEvent(booking: CourtBooking): CalendarEvent {
 }
 
 function ptEvent(booking: CoachBookingDto): CalendarEvent {
-  const title = `Tập 1:1 cùng ${booking.coachName}`;
+  const title = memberText(`Tập 1:1 cùng ${booking.coachName}`, `1:1 session with ${booking.coachName}`);
   return {
     id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
     title, place: '', coach: booking.coachName, cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',

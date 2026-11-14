@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { useStaffI18n, staffMessage, staffError, type StaffMessage } from '../operations/staffI18n';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -12,7 +13,7 @@ const METHOD_LABELS: Record<string, StaffMessage> = {
   pos: staffMessage('Thẻ (POS)', 'Card (POS)'),
   bank_transfer: staffMessage('Chuyển khoản', 'Bank transfer'),
 };
-const vnd = (amount: number) => `${Number(amount).toLocaleString('vi-VN')} ₫`;
+const vnd = (amount: number) => formatPrice(Number(amount));
 
 /** Wallet top-ups the desk took, so the cash it collected can be looked up and reconciled. */
 export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) {

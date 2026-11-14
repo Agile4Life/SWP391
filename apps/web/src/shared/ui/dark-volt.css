@@ -1,10 +1,8 @@
 /* Dark-only accent corrections (silver accent; the file keeps its Volt name from the first palette). Everything here is scoped to Dark so Light keeps its salmon palette.
    Colours must come from the --sol-accent* tokens in theme.css, never from hex values. */
 
-/* Legacy names that were never defined (inline styles fell back to a coral hex). */
+/* The legacy --color-salmon/--color-brand-salmon names now live in theme.css for both themes. */
 :root:not([data-theme='light']) {
-  --color-salmon: var(--sol-accent);
-  --color-brand-salmon: var(--sol-accent);
   accent-color: var(--sol-accent);
 }
 :root:not([data-theme='light']) :is(.portal-input[type='time'], .portal-input[type='datetime-local'], input[type='date'], input[type='time'], input[type='datetime-local']) { accent-color: var(--sol-accent); }

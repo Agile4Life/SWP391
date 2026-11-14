@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { useStaffI18n, staffMessage, staffError, type StaffMessage } from '../operations/staffI18n';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
@@ -22,7 +23,7 @@ const METHOD_LABELS: Record<string, StaffMessage> = {
   bank_transfer: staffMessage('Chuyển khoản', 'Bank transfer'),
   online_wallet: staffMessage('VNPay / Ví SÖL', 'VNPay / SÖL Wallet'),
 };
-const vnd = (amount: number | null) => (amount == null ? '—' : `${Number(amount).toLocaleString('vi-VN')} ₫`);
+const vnd = (amount: number | null) => (amount == null ? '—' : formatPrice(Number(amount)));
 
 type Filter = 'ALL' | RequestHistoryItem['type'];
 

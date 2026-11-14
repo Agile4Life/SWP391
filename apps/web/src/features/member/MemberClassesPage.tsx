@@ -1,4 +1,5 @@
 import { memberMessage, memberText, memberRenderMessage, memberNotify } from './memberI18n';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { useEffect, useRef, useState } from 'react';
@@ -293,7 +294,7 @@ function MemberCourseDetailModal({
             <div style={{ textAlign: 'right' }}>
               <div className="meta-label">{memberText("CHI PHÍ ĐĂNG KÝ", "TUITION FEE")}</div>
               <strong style={{ fontSize: '1.15rem', color: hasQuota ? '#4ade80' : 'var(--color-salmon, #eb7e6b)' }}>
-                {hasQuota ? memberText("0 VNĐ (Miễn phí theo gói)", "0 VND (Free with plan)") : `${discountedPrice(priceNum, quota?.discountPercent).toLocaleString('vi-VN')} ${memberText("VNĐ", "VND")}${quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''}`}
+                {hasQuota ? memberText("0 đ (Miễn phí theo gói)", "Free with plan") : `${formatPrice(discountedPrice(priceNum, quota?.discountPercent))}${quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''}`}
               </strong>
             </div>
           </div>
@@ -526,8 +527,8 @@ export function MemberClassesPage() {
       if (checkoutPaymentMethod === 'cash') {
         memberNotify(
           memberMessage(
-            `Đã đăng ký khóa học "${courseCheckoutTarget.className}". Vui lòng thanh toán ${res.amount ? Number(res.amount).toLocaleString('vi-VN') : ''} đ tại quầy lễ tân trước ngày khai giảng.`,
-            `Registered for "${courseCheckoutTarget.className}". Please pay ${res.amount ? Number(res.amount).toLocaleString('vi-VN') : ''} VND at the reception before the course starts.`
+            `Đã đăng ký khóa học "${courseCheckoutTarget.className}". Vui lòng thanh toán ${res.amount ? formatPrice(Number(res.amount)) : ''} tại quầy lễ tân trước ngày khai giảng.`,
+            `Registered for "${courseCheckoutTarget.className}". Please pay ${res.amount ? formatPrice(Number(res.amount)) : ''} at the reception before the course starts.`
           ),
           'success',
           { record: true }
@@ -604,12 +605,12 @@ export function MemberClassesPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span className="badge badge-info" style={{ fontWeight: 700 }}>
-                {quota.tier ? `GÓI ${quota.tier.toUpperCase()}` : 'GÓI HỘI VIÊN'}
+                {quota.tier ? memberText(`GÓI ${quota.tier.toUpperCase()}`, `${quota.tier.toUpperCase()} PLAN`) : memberText('GÓI HỘI VIÊN', 'MEMBER PLAN')}
               </span>
               <strong style={{ fontSize: '0.96rem', color: 'var(--color-salmon, #eb7e6b)' }}>
                 {quota.unlimited
                   ? memberText("Đăng ký khóa học: Không giới hạn", "Course Enrollment: Unlimited")
-                  : memberText(`Hạn mức: Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí`)}
+                  : memberText(`Hạn mức: Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí`, `Quota: ${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses left`)}
               </strong>
             </div>
             <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
@@ -795,7 +796,7 @@ export function MemberClassesPage() {
                           </span>
                         ) : (
                           <span style={{ color: 'var(--color-text-muted)' }}>
-                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--color-salmon, #eb7e6b)' }}>{discountedPrice(priceNum, quota?.discountPercent).toLocaleString('vi-VN')} {memberText("VNĐ", "VND")}</strong>{quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''} {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
+                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--color-salmon, #eb7e6b)' }}>{formatPrice(discountedPrice(priceNum, quota?.discountPercent))}</strong>{quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''} {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
                           </span>
                         )}
                       </div>
@@ -905,6 +906,7 @@ export function MemberClassesPage() {
         <Modal
           title={text("Thanh toán học phí khóa học", "Course fee payment")}
           onClose={() => setCourseCheckoutTarget(null)}
+          busy={isCheckingOut}
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <div>
@@ -912,9 +914,7 @@ export function MemberClassesPage() {
               <p className="row-card__meta" style={{ margin: 0 }}>
                 {text("Học phí khóa học trọn gói:", "Full course tuition fee:")}{' '}
                 <strong style={{ color: 'var(--color-salmon, #eb7e6b)', fontSize: '1.1rem' }}>
-                  {lang === 'en'
-                    ? `${discountedPrice(courseCheckoutTarget.price, quota?.discountPercent).toLocaleString('en-US')} VND`
-                    : `${discountedPrice(courseCheckoutTarget.price, quota?.discountPercent).toLocaleString('vi-VN')} đ`}
+                  {formatPrice(discountedPrice(courseCheckoutTarget.price, quota?.discountPercent))}
                 </strong>
               </p>
             </div>

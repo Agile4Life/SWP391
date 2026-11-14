@@ -100,7 +100,7 @@
   .member-packages .portal-dialog { animation: none; }
 }
 
-.member-packages .package-price-term { font-size: .9rem; font-weight: 500; color: var(--portal-muted); }
+.member-packages .package-price-term { font-size: .9rem; font-weight: 500; color: var(--portal-muted); white-space: nowrap; }
 .member-packages .package-benefit-more { margin-top: 8px; }
 .member-packages .package-benefit-more summary { cursor: pointer; color: var(--portal-salmon); font-size: 13px; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
 .member-packages .package-manage { position: relative; }

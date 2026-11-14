@@ -7,6 +7,10 @@
   --sol-accent-deep: #9aa1ad;
   --sol-on-accent: #202020;
   --sol-accent-rgb: 200 205 214;
+  /* Legacy names still read by inline styles; without them Light fell back to off-brand coral/red hex values. */
+  --color-salmon: var(--sol-accent);
+  --color-brand-salmon: var(--sol-accent);
+  --color-primary: var(--sol-accent);
 }
 :root[data-theme='light'] {
   --sol-accent: #ce9180;

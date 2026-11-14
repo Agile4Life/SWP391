@@ -102,9 +102,9 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     )!;
     await act(async () => pkgTabBtn.click());
 
-    expect(host.textContent).toContain('199.000 đ');
-    expect(host.textContent).toContain('299.000 đ');
-    expect(host.textContent).toContain('599.000 đ');
+    expect(host.textContent).toContain('199.000\u00a0₫');
+    expect(host.textContent).toContain('299.000\u00a0₫');
+    expect(host.textContent).toContain('599.000\u00a0₫');
     expect(host.textContent).toContain('+ Tạo gói tập mới');
 
     // Quick price update on SILVER package
@@ -161,7 +161,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     });
 
     const preset299 = [...host.querySelectorAll('button')].find((b) =>
-      b.textContent === '299.000 đ'
+      b.textContent === '299.000\u00a0₫'
     )!;
     await act(async () => preset299.click());
 

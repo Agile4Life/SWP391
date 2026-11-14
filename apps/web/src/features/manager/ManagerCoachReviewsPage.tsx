@@ -378,6 +378,7 @@ export function ManagerCoachReviewsPage() {
         <Modal
           title={t(`Đánh giá tháng & Khen thưởng: HLV ${editingReview.coachName}`, `Monthly evaluation & Award: Coach ${editingReview.coachName}`)}
           onClose={() => setEditingReview(null)}
+          busy={savingId !== null}
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <div>

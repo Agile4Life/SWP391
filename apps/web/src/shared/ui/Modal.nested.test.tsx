@@ -49,6 +49,22 @@ it('keeps Tab focus inside the innermost dialog', async () => {
   expect(document.activeElement).toBe(innerClose);
 });
 
+it('closes on a backdrop click but not when a text selection is dragged out of a field', async () => {
+  const onClose = vi.fn();
+  await act(async () => root.render(<Modal title="Thêm tài khoản" onClose={onClose}><input aria-label="Họ tên" /></Modal>));
+  const dialog = host.querySelector('dialog')!;
+  const input = host.querySelector('input')!;
+
+  // Press inside the field, release on the backdrop: the browser fires the click on the dialog itself.
+  await act(async () => input.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })));
+  await act(async () => dialog.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  expect(onClose).not.toHaveBeenCalled();
+
+  await act(async () => dialog.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })));
+  await act(async () => dialog.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
 it('stays open when a file picker inside it is dismissed', async () => {
   const onClose = vi.fn();
   await act(async () => root.render(<Modal title="Gói trải nghiệm" onClose={onClose}><input type="file" aria-label="Ảnh mặt trước" /></Modal>));

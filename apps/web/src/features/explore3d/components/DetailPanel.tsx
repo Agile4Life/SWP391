@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { useI18n } from '../../../shared/i18n';
 import { formatCenterDate } from '../../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
@@ -86,7 +87,7 @@ function getEquipmentStatusLabel(
 }
 
 function formatVnd(amount: number): string {
-  return `${Math.round(amount).toLocaleString('vi-VN')}đ`;
+  return formatPrice(Math.round(amount));
 }
 
 export function DetailPanel({

@@ -15,6 +15,7 @@ export function Modal({ title, onClose, children, busy = false, className, retur
   const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const pressStartedOnBackdrop = useRef(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -58,7 +59,14 @@ export function Modal({ title, onClose, children, busy = false, className, retur
         e.preventDefault();
         if (!busy) onClose();
       }}
-      onClick={(e) => e.target === e.currentTarget && !busy && onClose()}
+      // A click is fired on the dialog when a text selection starts in a field and ends on the backdrop; only a press
+      // that also started on the backdrop is a deliberate "click outside", so what was typed is not lost.
+      onPointerDown={(e) => { pressStartedOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => {
+        const fromBackdrop = pressStartedOnBackdrop.current;
+        pressStartedOnBackdrop.current = false;
+        if (fromBackdrop && e.target === e.currentTarget && !busy) onClose();
+      }}
     >
       <div className="portal-dialog__body" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="portal-dialog__header">

@@ -1,4 +1,4 @@
-import { getIntlLocale } from '../../shared/i18n/language';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { memberMessage, memberError } from '../member/memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { apiFetch, ApiError } from '../../shared/api/client';
@@ -19,7 +19,7 @@ export interface CourtQuota {
 }
 export type CourtPaymentMethod = 'cash' | 'vnpay';
 export const PAYMENT_METHODS: { value: CourtPaymentMethod; label: string }[] = [{ value: 'vnpay', label: 'VNPay' }, { value: 'cash', label: 'Tiền mặt tại quầy' }];
-export const formatVnd = (amount: number) => `${new Intl.NumberFormat(getIntlLocale()).format(amount)}đ`;
+export const formatVnd = formatPrice;
 export interface CourtBooking {
   id: number; roomId: number; roomName: string; disciplineName: string; memberId: number; memberName: string;
   date: string; startTime: string; endTime: string; status: 'booked' | 'cancelled'; createdAt: string;

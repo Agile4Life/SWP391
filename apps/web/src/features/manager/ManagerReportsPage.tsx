@@ -1,4 +1,5 @@
 import { staffLocale, useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -8,7 +9,7 @@ import { centerNowParts, formatCenterDate, formatCenterTimeSeconds } from '../..
 import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 
-const vnd = (n: number) => `${Math.round(n).toLocaleString(staffLocale())} đ`;
+const vnd = (n: number) => formatPrice(Math.round(n));
 const paymentMethods: Record<string, string> = {
   cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
 };

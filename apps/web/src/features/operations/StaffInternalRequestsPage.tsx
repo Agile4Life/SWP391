@@ -374,7 +374,7 @@ export function StaffInternalRequestsPage() {
 
       {/* Modal tạo đơn từ mới */}
       {showCreateModal && (
-        <Modal title={t("Tạo đơn từ & đề xuất mới")} onClose={() => setShowCreateModal(false)}>
+        <Modal title={t("Tạo đơn từ & đề xuất mới")} onClose={() => setShowCreateModal(false)} busy={submitting}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gap: 16 }}>
             {formError && (
               <div data-i18n-managed
