@@ -202,30 +202,23 @@ export function Lights() {
       />
       {/* Warm architectural interior ceiling lights on the active floor */}
       {/* Every point light is evaluated for every lit pixel in the scene (~3 fps each on an M4) and
-          is barely visible in the whole-campus overview, so they only exist when a floor is in focus. */}
+          is barely visible in the whole-campus overview, so they only exist when a floor is in focus;
+          two placed at the old trio's centres of mass keep the same warmth. */}
       {(walkMode || focusLevel !== 'ALL') && (
         <>
           <pointLight
-            position={[-9, ceilingY, -2]}
-            color="#ffe4d0"
-            intensity={1.55 * interiorBoost}
-            distance={34}
-            decay={2}
-            castShadow={false}
-          />
-          <pointLight
-            position={[2, ceilingY, 4]}
-            color="#fff0e4"
-            intensity={1.4 * interiorBoost}
-            distance={32}
+            position={[-4.5, ceilingY, 1]}
+            color="#ffe9d8"
+            intensity={2.9 * interiorBoost}
+            distance={40}
             decay={2}
             castShadow={false}
           />
           <pointLight
             position={[13, ceilingY, -1]}
             color="#ffe4d0"
-            intensity={1.5 * interiorBoost}
-            distance={34}
+            intensity={1.7 * interiorBoost}
+            distance={36}
             decay={2}
             castShadow={false}
           />
