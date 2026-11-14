@@ -84,6 +84,8 @@ export function MemberOrdersPage({
     }
   };
 
+  const orders = Array.isArray(data?.content) ? data.content : [];
+
   return (
     <div className="portal-container stack">
       <PageHeader
@@ -178,7 +180,7 @@ export function MemberOrdersPage({
               >
                 {sourceText("Thử lại")}</button>
             </div>
-          ) : !data?.content.length ? (
+          ) : !orders.length ? (
             <div className="portal-card portal-state stack" style={{ alignItems: 'flex-start' }}>
               <p style={{ margin: 0 }}>{sourceText("Chưa có đơn hàng nào trong mục này.")}</p>
               <button type="button" className="btn-secondary" onClick={() => switchTab('shop')}>
@@ -188,7 +190,7 @@ export function MemberOrdersPage({
           ) : (
             <>
               <div className="stack">
-                {data.content.map(o => (
+                {orders.map(o => (
                   <article key={o.id} className="portal-card stack" style={{ gap: 10 }}>
                     <div
                       style={{
@@ -237,7 +239,7 @@ export function MemberOrdersPage({
                 ))}
               </div>
 
-              {data.totalPages > 1 && (
+              {(data?.totalPages ?? 0) > 1 && (
                 <nav className="court-pagination" aria-label={sourceText("Phân trang đơn hàng")}>
                   <button
                     type="button"
@@ -247,12 +249,12 @@ export function MemberOrdersPage({
                   >
                     {sourceText("Trang trước")}</button>
                   <span>
-                    {sourceText("Trang ")}{page + 1} / {data.totalPages}
+                    {sourceText("Trang ")}{page + 1} / {data!.totalPages}
                   </span>
                   <button
                     type="button"
                     className="btn-secondary"
-                    disabled={page + 1 >= data.totalPages}
+                    disabled={page + 1 >= data!.totalPages}
                     onClick={() => setPage(p => p + 1)}
                   >
                     {sourceText("Trang sau")}</button>

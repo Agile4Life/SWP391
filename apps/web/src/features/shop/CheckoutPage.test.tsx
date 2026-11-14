@@ -234,11 +234,17 @@ it('pay at counter is offered only for pickup', async () => {
   expect(
     [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Đặt hàng, trả tại quầy')),
   ).toBeUndefined();
+  expect(host.querySelector('.shop-checkout__hold-note')?.textContent).toContain('30');
+  expect(host.querySelector('.shop-checkout__hold-note')?.textContent).not.toContain('48 giờ');
 
   const pickupRadio = host.querySelector<HTMLInputElement>('input[name="fulfillment"][value="pickup"]')!;
   await act(async () => {
     pickupRadio.click();
   });
+
+  expect(host.querySelector('.shop-checkout__hold-note')?.textContent).toContain(
+    'Thanh toán online giữ giỏ 30 phút · Trả tại quầy giữ đơn 48 giờ tại quầy SÖL.',
+  );
 
   const counterBtn = [...host.querySelectorAll('button')].find(b =>
     b.textContent?.includes('Đặt hàng, trả tại quầy'),

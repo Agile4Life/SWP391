@@ -1,4 +1,5 @@
 import { getIntlLocale } from '../../../shared/i18n';
+import { localizeSeededShopText } from '../shopFormat';
 import { useSourceLanguage, sourceText } from "../shopI18n";
 import type { NutrientDto } from '../shopTypes';
 
@@ -23,7 +24,7 @@ export function NutritionFacts({
         <thead>
           <tr className="shop-facts__serving">
             <td colSpan={hasDv ? 3 : 2}>
-              {sourceText("Khẩu phần: ")}{servingSize}
+              {sourceText("Khẩu phần: ")}{localizeSeededShopText(servingSize)}
               {servings ? (
                 <>
                   <br />
@@ -48,7 +49,7 @@ export function NutritionFacts({
           <tbody>
             {nutrients.map((n, index) => (
               <tr key={`${n.name}-${index}`} className={n.subRow ? 'is-sub' : undefined}>
-                <th scope="row">{n.name}</th>
+                <th scope="row">{localizeSeededShopText(n.name)}</th>
                 <td className="is-num">
                   {num.format(n.amount)} {n.unit}
                 </td>

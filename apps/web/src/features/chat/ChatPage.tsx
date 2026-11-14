@@ -83,9 +83,10 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
     try {
       const data = await getConversations(nextPage);
       if (!mounted.current || request !== listSequence.current) return;
-      setConversations(data.content); setPage(nextPage); pageRef.current = nextPage; setTotalPages(data.totalPages); setListError(null);
-      if (nextPage === 0) onPeersRef.current?.(data.content.slice(0, 3).map(c => c.peer));
-      setSelected(old => data.content.find(c => c.id === old?.id) ?? old);
+      const items = Array.isArray(data?.content) ? data.content : [];
+      setConversations(items); setPage(nextPage); pageRef.current = nextPage; setTotalPages(typeof data?.totalPages === 'number' ? data.totalPages : 0); setListError(null);
+      if (nextPage === 0) onPeersRef.current?.(items.slice(0, 3).map(c => c.peer));
+      setSelected(old => items.find(c => c.id === old?.id) ?? old);
     } catch (e) { if (mounted.current && request === listSequence.current) setListError(chatError(e, 'Không thể tải hội thoại.', 'Unable to load conversations.')); }
     finally { if (mounted.current && request === listSequence.current) setLoading(false); }
   }, []);

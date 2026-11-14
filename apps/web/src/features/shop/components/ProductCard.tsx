@@ -2,7 +2,7 @@ import { getIntlLocale } from '../../../shared/i18n';
 import { useSourceLanguage, sourceText, sourceToast as toast } from '../shopI18n';
 import { Link, useLocation } from 'react-router-dom';
 import { addToCart } from '../cart';
-import { FORM_LABELS, formatVnd, pricePerServingLabel } from '../shopFormat';
+import { FORM_LABELS, formatVnd, localizeSeededShopText, pricePerServingLabel } from '../shopFormat';
 import type { ProductSummaryDto } from '../shopTypes';
 import { ProductPackshot } from './ProductPackshot';
 
@@ -60,7 +60,7 @@ export function ProductCard({
       </Link>
 
       <span className="shop-card__kicker">
-        {product.categoryName} · {FORM_LABELS[product.form]}
+        {localizeSeededShopText(product.categoryName)} · {FORM_LABELS[product.form]}
       </span>
 
       <h3 className="shop-card__title">
@@ -81,7 +81,7 @@ export function ProductCard({
 
       {product.highlight && (
         <p className="shop-card__highlight">
-          {num.format(product.highlight.amount)} {product.highlight.unit} {product.highlight.name.toLowerCase()}
+          {num.format(product.highlight.amount)} {product.highlight.unit} {localizeSeededShopText(product.highlight.name).toLowerCase()}
         </p>
       )}
 

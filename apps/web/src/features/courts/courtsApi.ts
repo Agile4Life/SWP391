@@ -28,14 +28,26 @@ export interface CourtBooking {
 }
 export interface BookingPage { content: CourtBooking[]; number: number; totalPages: number; totalElements: number }
 export interface BookCourtRequest { roomId: number; date: string; startTime: string; paymentMethod?: CourtPaymentMethod }
+function normalizeBookingPage(res: BookingPage | CourtBooking[] | null | undefined, page = 0): BookingPage {
+  if (Array.isArray(res)) {
+    return { content: res, number: page, totalPages: res.length > 0 ? 1 : 0, totalElements: res.length };
+  }
+  const content = Array.isArray(res?.content) ? res.content : [];
+  return {
+    content,
+    number: typeof res?.number === 'number' ? res.number : page,
+    totalPages: typeof res?.totalPages === 'number' ? res.totalPages : (content.length > 0 ? 1 : 0),
+    totalElements: typeof res?.totalElements === 'number' ? res.totalElements : content.length,
+  };
+}
 const json = (method: string, body: unknown) => ({ method, body: JSON.stringify(body) });
 export const courtsApi = {
-  courts: (discipline = '') => apiFetch<Court[]>(`/courts${discipline ? `?discipline=${encodeURIComponent(discipline)}` : ''}`),
-  availability: (id: number, date: string) => apiFetch<CourtSlot[]>(`/courts/${id}/availability?date=${date}`),
+  courts: (discipline = '') => apiFetch<Court[]>(`/courts${discipline ? `?discipline=${encodeURIComponent(discipline)}` : ''}`).then(res => (Array.isArray(res) ? res : [])),
+  availability: (id: number, date: string) => apiFetch<CourtSlot[]>(`/courts/${id}/availability?date=${date}`).then(res => (Array.isArray(res) ? res : [])),
   book: (body: BookCourtRequest) => apiFetch<CourtBooking>('/court-bookings', json('POST', body)),
   quota: (date: string) => apiFetch<CourtQuota>(`/court-bookings/quota?date=${date}`),
-  my: (page = 0) => apiFetch<BookingPage>(`/court-bookings/my?page=${page}&size=20`),
-  list: (date: string, roomId = '', page = 0) => apiFetch<BookingPage>(`/court-bookings?date=${date}&page=${page}&size=20${roomId ? `&roomId=${encodeURIComponent(roomId)}` : ''}`),
+  my: (page = 0) => apiFetch<BookingPage>(`/court-bookings/my?page=${page}&size=20`).then(res => normalizeBookingPage(res, page)),
+  list: (date: string, roomId = '', page = 0) => apiFetch<BookingPage>(`/court-bookings?date=${date}&page=${page}&size=20${roomId ? `&roomId=${encodeURIComponent(roomId)}` : ''}`).then(res => normalizeBookingPage(res, page)),
   confirmPayment: (id: number) => apiFetch<CourtBooking>(`/court-bookings/${id}/confirm-payment`, { method: 'PATCH' }),
   cancel: (id: number, reason = '') => apiFetch<CourtBooking>(`/court-bookings/${id}/cancel`, json('PATCH', { reason: reason.trim() || null })),
 };

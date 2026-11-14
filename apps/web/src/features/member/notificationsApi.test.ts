@@ -16,6 +16,11 @@ describe('SCRUM-127 notification API', () => {
     await markAllNotificationsRead();
     expect(fetchMock.mock.calls[2]).toMatchObject(['/api/v1/notifications/7/read', { method: 'PATCH' }]);
     expect(fetchMock.mock.calls[3]).toMatchObject(['/api/v1/notifications/read-all', { method: 'PATCH' }]);
+
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) });
+    await expect(getNotifications(0)).resolves.toEqual({ content: [], number: 0, totalPages: 0 });
+    fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [] }) });
+    await expect(getUnreadCount()).resolves.toBe(0);
   });
 
   it('maps only existing member destinations', () => {

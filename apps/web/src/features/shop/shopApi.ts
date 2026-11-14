@@ -47,9 +47,35 @@ export interface ListProductsParams {
   signal?: AbortSignal;
 }
 
+function normalizePage<T>(res: Page<T> | T[] | null | undefined, fallbackSize = 12): Page<T> {
+  if (Array.isArray(res)) {
+    return {
+      content: res,
+      number: 0,
+      size: res.length || fallbackSize,
+      totalElements: res.length,
+      totalPages: res.length > 0 ? 1 : 0,
+    };
+  }
+  if (!res || typeof res !== 'object') {
+    return { content: [], number: 0, size: fallbackSize, totalElements: 0, totalPages: 0 };
+  }
+  const content = Array.isArray(res.content) ? res.content : [];
+  return {
+    ...res,
+    content,
+    number: typeof res.number === 'number' ? res.number : 0,
+    size: typeof res.size === 'number' ? res.size : fallbackSize,
+    totalElements: typeof res.totalElements === 'number' ? res.totalElements : content.length,
+    totalPages: typeof res.totalPages === 'number' ? res.totalPages : (content.length > 0 ? 1 : 0),
+  };
+}
+
 export const shopApi = {
   listCategories: (signal?: AbortSignal) =>
-    apiFetch<CategoryDto[]>('/public/product-categories', publicInit({ signal })),
+    apiFetch<CategoryDto[]>('/public/product-categories', publicInit({ signal })).then(res =>
+      Array.isArray(res) ? res : [],
+    ),
 
   listProducts: async (params: ListProductsParams = {}) => {
     const query = new URLSearchParams();
@@ -62,10 +88,11 @@ export const shopApi = {
     if (params.page != null) query.set('page', String(params.page));
     if (params.size != null) query.set('size', String(params.size));
     const qs = query.toString();
-    return apiFetch<Page<ProductSummaryDto>>(
+    const res = await apiFetch<Page<ProductSummaryDto>>(
       `/public/products${qs ? `?${qs}` : ''}`,
       publicInit({ signal: params.signal }),
     );
+    return normalizePage(res, params.size ?? 12);
   },
 
   getProduct: (slug: string, signal?: AbortSignal) =>
@@ -80,16 +107,19 @@ export const shopApi = {
     apiFetch<QuoteDto>('/public/shop/quote', { method: 'POST', body: JSON.stringify(request), signal }),
 
   listProvinces: (signal?: AbortSignal) =>
-    apiFetch<GeoRegion[]>('/public/geo/provinces', publicInit({ signal })),
+    apiFetch<GeoRegion[]>('/public/geo/provinces', publicInit({ signal })).then(res =>
+      Array.isArray(res) ? res : [],
+    ),
 
   listWards: (provinceCode: string, signal?: AbortSignal) =>
     apiFetch<GeoRegion[]>(
       `/public/geo/provinces/${encodeURIComponent(provinceCode)}/wards`,
       publicInit({ signal }),
-    ),
+    ).then(res => (Array.isArray(res) ? res : [])),
 
   // Member addresses
-  listAddresses: () => apiFetch<AddressDto[]>('/shop/addresses'),
+  listAddresses: () =>
+    apiFetch<AddressDto[]>('/shop/addresses').then(res => (Array.isArray(res) ? res : [])),
 
   saveAddress: (request: AddressRequest, id?: number | null) =>
     id != null
@@ -106,13 +136,14 @@ export const shopApi = {
   createOrder: (request: CreateOrderRequest) =>
     apiFetch<OrderDto>('/shop/orders', { method: 'POST', body: JSON.stringify(request) }),
 
-  listMyOrders: (params: { status?: string; page?: number; size?: number } = {}) => {
+  listMyOrders: async (params: { status?: string; page?: number; size?: number } = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.set('status', params.status);
     if (params.page != null) query.set('page', String(params.page));
     if (params.size != null) query.set('size', String(params.size));
     const qs = query.toString();
-    return apiFetch<Page<OrderSummaryDto>>(`/shop/orders${qs ? `?${qs}` : ''}`);
+    const res = await apiFetch<Page<OrderSummaryDto>>(`/shop/orders${qs ? `?${qs}` : ''}`);
+    return normalizePage(res, params.size ?? 10);
   },
 
   getMyOrder: (id: number) => apiFetch<OrderDto>(`/shop/orders/${id}`),
@@ -125,14 +156,15 @@ export const shopApi = {
 
   // Staff order fulfillment
   staff: {
-    listOrders: (params: { status?: string; q?: string; page?: number; size?: number } = {}) => {
+    listOrders: async (params: { status?: string; q?: string; page?: number; size?: number } = {}) => {
       const query = new URLSearchParams();
       if (params.status) query.set('status', params.status);
       if (params.q && params.q.trim()) query.set('q', params.q.trim());
       if (params.page != null) query.set('page', String(params.page));
       if (params.size != null) query.set('size', String(params.size));
       const qs = query.toString();
-      return apiFetch<Page<OrderDto>>(`/staff/product-orders${qs ? `?${qs}` : ''}`);
+      const res = await apiFetch<Page<OrderDto>>(`/staff/product-orders${qs ? `?${qs}` : ''}`);
+      return normalizePage(res, params.size ?? 20);
     },
     counts: () => apiFetch<OrderCountsDto>('/staff/product-orders/counts'),
     getOrder: (id: number) => apiFetch<OrderDto>(`/staff/product-orders/${id}`),
@@ -161,7 +193,10 @@ export const shopApi = {
 
   // Manager administration
   manager: {
-    listCategories: () => apiFetch<CategoryAdminDto[]>('/manager/product-categories'),
+    listCategories: () =>
+      apiFetch<CategoryAdminDto[]>('/manager/product-categories').then(res =>
+        Array.isArray(res) ? res : [],
+      ),
     createCategory: (payload: CategoryUpsertRequest) =>
       apiFetch<CategoryAdminDto>('/manager/product-categories', {
         method: 'POST',
@@ -185,7 +220,8 @@ export const shopApi = {
       if (params.page != null) query.set('page', String(params.page));
       if (params.size != null) query.set('size', String(params.size));
       const qs = query.toString();
-      return apiFetch<Page<ProductAdminSummaryDto>>(`/manager/products${qs ? `?${qs}` : ''}`);
+      const res = await apiFetch<Page<ProductAdminSummaryDto>>(`/manager/products${qs ? `?${qs}` : ''}`);
+      return normalizePage(res, params.size ?? 12);
     },
     getProduct: (id: number) => apiFetch<ProductAdminDto>(`/manager/products/${id}`),
     createProduct: (payload: ProductUpsertRequest) =>

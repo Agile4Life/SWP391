@@ -25,9 +25,10 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
     try {
       const data = await getContacts(term, nextPage);
       if (request !== sequence.current.value) return;
-      setContacts(data.content); setPage(nextPage); setTotal(data.totalPages);
+      const items = Array.isArray(data?.content) ? data.content : [];
+      setContacts(items); setPage(nextPage); setTotal(typeof data?.totalPages === 'number' ? data.totalPages : 0);
       // Coaches are listed first, so none on the first unfiltered page means the member has no coach to write to yet.
-      if (term === '' && nextPage === 0) setNoCoach(!data.content.some(contact => contact.role === 'COACH'));
+      if (term === '' && nextPage === 0) setNoCoach(!items.some(contact => contact.role === 'COACH'));
     } catch (e) { if (request === sequence.current.value) setError(chatError(e, 'Không thể tải danh bạ.', 'Unable to load contacts.')); }
     finally { if (request === sequence.current.value) setLoading(false); }
   }, []);

@@ -2,8 +2,8 @@ import { useSourceLanguage, sourceText, sourceFormat } from "../../shop/shopI18n
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
-import { sessionDate } from '../publicCatalog';
-import { formatPrice, getPackageDetails, isTrialPackage } from '../../../shared/lib/membershipPresentation';
+import { localizeSeededCatalogText, sessionDate } from '../publicCatalog';
+import { formatPrice, getPackageDetails, isTrialPackage, localizeSeededPackageName } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
@@ -46,7 +46,7 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
         const details = getPackageDetails(pkg);
         const isFeatured = index === 1;
         return <article key={pkg.id} className={`fit-plan ${isFeatured ? 'fit-plan-featured' : ''}`} data-reveal="lift">
-          <h3>{pkg.name}</h3>
+          <h3>{localizeSeededPackageName(pkg.name)}</h3>
           <div className="fit-plan-price">{formatPrice(pkg.price)}<span>/ {pkg.durationDays} {sourceText(" ngày")}</span></div>
           <p className="fit-plan-summary">{details.summary}</p>
           <ul>{details.benefits.slice(0, 3).map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
@@ -83,7 +83,7 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
   return <>
     <p className="fit-catalog-caption">{sourceText("Lịch trong 7 ngày tới · đặt chỗ qua portal khi gói tập còn hiệu lực.")}</p>
     {disciplines.length > 1 && <div className="fit-pricing-switch fit-schedule-switch" aria-label={sourceText("Lọc bộ môn trong lịch lớp")}>
-      {['all', ...disciplines].map(value => <button type="button" key={value} aria-pressed={activeDiscipline === value} onClick={() => setDiscipline(value)}>{value === 'all' ? sourceText('Tất cả bộ môn') : value}</button>)}
+      {['all', ...disciplines].map(value => <button type="button" key={value} aria-pressed={activeDiscipline === value} onClick={() => setDiscipline(value)}>{value === 'all' ? sourceText('Tất cả bộ môn') : localizeSeededCatalogText(value)}</button>)}
     </div>}
     {visible.length === 0 && <p className="fit-catalog-state" role="status">{sourceText("Chưa có lịch lớp phù hợp trong 7 ngày tới.")}</p>}
     <div className="fit-schedule-grid" key={activeDiscipline}>
@@ -95,7 +95,7 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
         return <article key={session.id} className="fit-schedule-card" data-reveal="lift">
           <div className="fit-schedule-top"><span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {(session.startTime || '').slice(0, 5)} — {(session.endTime || '').slice(0, 5)}</span>
             <span className="fit-schedule-spots">{Math.max(0, session.capacity - session.bookedCount)}{sourceText(" chỗ trống")}</span></div>
-          <h3>{session.className}</h3><p className="fit-schedule-meta">{session.disciplineName} · {session.roomName}</p>
+          <h3>{localizeSeededCatalogText(session.className)}</h3><p className="fit-schedule-meta">{localizeSeededCatalogText(session.disciplineName)} · {localizeSeededCatalogText(session.roomName)}</p>
           <Link to={`/trainers/${session.coachId}`} className="fit-text-link">{sourceText("HLV: ")}{session.coachName}</Link>
           <Link to={sessionJoinPath} className="fit-text-link">{session.bookedCount >= session.capacity ? sourceText('Đã đầy chỗ') : sourceText('Đặt lớp')}<RoundArrow diagonal /></Link>
         </article>;
@@ -120,7 +120,7 @@ export function CatalogTrainers({ catalog }: { catalog: PublicCatalog }) {
           <Link to={`/trainers/${coach.id}`} className="fit-trainer-card-link" aria-label={sourceFormat("Xem hồ sơ của {0}", coach.name)}>
             <LoadingImage src={avatarUrl || coachIllustration(coach.specialization, coach.name)} alt={avatarUrl || portrait ? coach.name : sourceText('Ảnh minh họa huấn luyện viên theo bộ môn')} loading="lazy" />
             {!avatarUrl && !portrait && <span className="fit-image-caption">{sourceText("Ảnh minh họa")}</span>}
-            <div className="fit-trainer-card-info"><span className="fit-trainer-vn-name">{sourceText("Huấn luyện viên")}</span><h3>{coach.name}</h3><p>{coach.specialization || sourceText('Huấn luyện thể thao')}</p><span className="fit-trainer-story-cta">{sourceText("Xem hồ sơ & lịch lớp →")}</span></div>
+            <div className="fit-trainer-card-info"><span className="fit-trainer-vn-name">{sourceText("Huấn luyện viên")}</span><h3>{coach.name}</h3><p>{coach.specialization ? localizeSeededCatalogText(coach.specialization) : sourceText('Huấn luyện thể thao')}</p><span className="fit-trainer-story-cta">{sourceText("Xem hồ sơ & lịch lớp →")}</span></div>
             <RoundArrow diagonal />
           </Link>
         </article>;

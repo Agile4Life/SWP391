@@ -1,3 +1,4 @@
+import { localizeSeededShopText } from '../shopFormat';
 import { useSourceLanguage, sourceText } from "../shopI18n";
 import { useId } from 'react';
 import type { ProductVariantDto } from '../shopTypes';
@@ -36,7 +37,7 @@ export function VariantPicker({
                   if (!soldOut) onChange(variant.id);
                 }}
               />
-              <span>{variant.label}</span>
+              <span>{localizeSeededShopText(variant.label)}</span>
               {soldOut && <span className="shop-variant-pill__soldout">{sourceText("Hết hàng")}</span>}
             </label>
           );

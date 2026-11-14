@@ -12,7 +12,7 @@ import { QuantityStepper } from './components/QuantityStepper';
 import { ShopDisclaimer } from './components/ShopDisclaimer';
 import { VariantPicker } from './components/VariantPicker';
 import { shopApi } from './shopApi';
-import { FORM_LABELS, formatVnd, GOAL_LABELS, pricePerServingLabel } from './shopFormat';
+import { FORM_LABELS, formatVnd, GOAL_LABELS, localizeSeededShopText, pricePerServingLabel } from './shopFormat';
 import type { ProductDetailDto } from './shopTypes';
 import './shop-public.css';
 
@@ -141,7 +141,7 @@ export function ProductDetailPage() {
                   {sourceText("← Sản phẩm")}</Link>
                 <span aria-hidden="true">/</span>
                 <Link to={`${productsBase}?category=${encodeURIComponent(product.categorySlug)}`} className="fit-text-link">
-                  {product.categoryName}
+                  {localizeSeededShopText(product.categoryName)}
                 </Link>
               </nav>
 
@@ -176,12 +176,12 @@ export function ProductDetailPage() {
 
                 <div className="shop-detail__summary" data-reveal="soft">
                   <span className="fit-kicker">
-                    {product.categoryName} · {FORM_LABELS[product.form] ?? product.form}
+                    {localizeSeededShopText(product.categoryName)} · {FORM_LABELS[product.form] ?? product.form}
                   </span>
                   <h1 id="product-detail-title" className="shop-detail__title">
                     {product.name}
                   </h1>
-                  <p className="shop-detail__lead">{product.shortDescription}</p>
+                  <p className="shop-detail__lead">{localizeSeededShopText(product.shortDescription)}</p>
                   {product.goals.length > 0 && (
                     <p className="shop-detail__goals">
                       <strong>{sourceText("Mục tiêu:")}</strong> {product.goals.map(g => GOAL_LABELS[g] ?? g).join(' · ')}
@@ -259,19 +259,19 @@ export function ProductDetailPage() {
                   {product.description && (
                     <div className="shop-detail__block">
                       <h2>{sourceText("Mô tả sản phẩm")}</h2>
-                      <p>{product.description}</p>
+                      <p>{localizeSeededShopText(product.description)}</p>
                     </div>
                   )}
                   {product.usageInstructions && (
                     <div className="shop-detail__block">
                       <h2>{sourceText("Cách dùng")}</h2>
-                      <p>{product.usageInstructions}</p>
+                      <p>{localizeSeededShopText(product.usageInstructions)}</p>
                     </div>
                   )}
                   {product.warnings && (
                     <div className="shop-detail__block">
                       <h2>{sourceText("Lưu ý")}</h2>
-                      <p>{product.warnings}</p>
+                      <p>{localizeSeededShopText(product.warnings)}</p>
                     </div>
                   )}
                   {Boolean(product.registrationNumber?.trim()) && (

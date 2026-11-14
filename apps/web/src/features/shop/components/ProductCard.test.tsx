@@ -114,7 +114,7 @@ describe('ProductCard', () => {
 });
 
 
-it('switches all source card chrome VI → EN → VI and preserves product data', async () => {
+it('switches all source card chrome VI → EN → VI, localizes seeded catalog labels, and preserves custom product data', async () => {
   await act(async () => root.render(<MemoryRouter><ProductCard product={baseProduct} /></MemoryRouter>));
   expect(host.textContent).toContain('Thêm vào giỏ');
   await act(async () => setLanguage('en'));
@@ -122,10 +122,25 @@ it('switches all source card chrome VI → EN → VI and preserves product data'
   expect(host.textContent).toContain('Low stock');
   expect(host.textContent).toContain('Powder');
   expect(host.textContent).toContain('/ serving');
-  expect(host.textContent).toContain('đạm');
+  expect(host.textContent).toContain('25 g protein');
   expect(host.textContent).toContain(baseProduct.name);
   await act(async () => host.querySelector<HTMLButtonElement>('button.shop-card__cta')!.click());
   expect(document.querySelector('.sol-toast')?.textContent).toContain('Added to cart');
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <ProductCard
+          product={{
+            ...baseProduct,
+            categoryName: 'Dòng thử nghiệm riêng',
+            highlight: { name: 'Collagen thủy phân', amount: 10, unit: 'g' },
+          }}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  expect(host.textContent).toContain('Dòng thử nghiệm riêng');
+  expect(host.textContent).toContain('10 g collagen thủy phân');
   await act(async () => setLanguage('vi'));
   expect(host.textContent).toContain('Thêm vào giỏ');
   expect(host.textContent).toContain('Bột');

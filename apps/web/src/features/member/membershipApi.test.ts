@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createPaymentRequest, getMyPayments, type MemberSubscription } from './membershipApi';
+import { createPaymentRequest, getCurrentMembership, getMembershipPackages, getMyPayments, type MemberSubscription } from './membershipApi';
 
 const subscription: MemberSubscription = {
   id: 12, memberId: 34, packageId: 5, packageName: 'Essential',
@@ -38,5 +38,12 @@ describe('SCRUM-86 payment API', () => {
     await expect(createPaymentRequest(subscription, 500000)).rejects.toMatchObject({
       status, code: 'PAYMENT_REJECTED', message: 'Yêu cầu bị từ chối',
     });
+  });
+
+  it('normalizes malformed stub payloads to empty arrays or null instead of crashing renderers', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) }));
+    await expect(getCurrentMembership()).resolves.toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: {} }) }));
+    await expect(getMembershipPackages()).resolves.toEqual([]);
   });
 });

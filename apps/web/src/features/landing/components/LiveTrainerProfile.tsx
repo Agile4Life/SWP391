@@ -5,7 +5,7 @@ import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { PublicLayout, RoundArrow } from './PublicLayout';
 import { CatalogSchedule, CatalogStatus } from './CatalogSections';
-import { usePublicCatalog } from '../publicCatalog';
+import { localizeSeededCatalogText, usePublicCatalog } from '../publicCatalog';
 
 export function LiveTrainerProfile() {
   useSourceLanguage();
@@ -34,8 +34,8 @@ export function LiveTrainerProfile() {
             </div>
             <div className="fit-trainer-hero-copy" data-reveal="soft">
               <span className="fit-kicker">{sourceText("HUẤN LUYỆN VIÊN SÖL")}</span>
-              <h1 id="trainer-story-title">{coach.name}<span className="fit-title-dot">.</span><small>{coach.specialization || sourceText('Huấn luyện thể thao')}</small></h1>
-              <p className="fit-coach-bio">{coach.bio || sourceText('Thông tin giới thiệu đang được cập nhật.')}</p>
+              <h1 id="trainer-story-title">{coach.name}<span className="fit-title-dot">.</span><small>{coach.specialization ? localizeSeededCatalogText(coach.specialization) : sourceText('Huấn luyện thể thao')}</small></h1>
+              <p className="fit-coach-bio">{coach.bio ? localizeSeededCatalogText(coach.bio) : sourceText('Thông tin giới thiệu đang được cập nhật.')}</p>
               {coach.certification && <div className="fit-trainer-specialty-box"><span className="fit-kicker">{sourceText("CHỨNG CHỈ")}</span><p>{coach.certification}</p></div>}
               <Link to={classPath} className="fit-pill">{sourceText("Xem lịch & đặt lớp")}<RoundArrow diagonal /></Link>
             </div>

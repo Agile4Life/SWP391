@@ -1,4 +1,4 @@
-import { useSourceLanguage, sourceText, sourceError, sourceNotify as notify, sourceFormatPair } from './shopI18n';
+import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceNotify as notify, sourceFormatPair } from './shopI18n';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError, getCurrentUser, homePath } from '../../shared/api/client';
@@ -347,6 +347,7 @@ export function CheckoutPage() {
   };
 
   const holdMinutes = config?.paymentWindowMinutes ?? 30;
+  const counterHoldHours = config?.counterHoldHours ?? 48;
   const pickupAddress = config?.pickupAddress ?? '120 Hai Bà Trưng, Phường Sài Gòn, TP.HCM';
 
   return wrapCheckout(
@@ -474,7 +475,18 @@ export function CheckoutPage() {
                   )}
 
                   <p className="shop-checkout__hold-note">
-                    {sourceText("Giữ hàng ")}{holdMinutes} {sourceText(" phút để thanh toán.")}</p>
+                    {fulfillment === 'pickup'
+                      ? sourceFormat(
+                          "Thanh toán online giữ giỏ {0} phút · Trả tại quầy giữ đơn {1} giờ tại quầy SÖL.",
+                          holdMinutes,
+                          counterHoldHours,
+                        )
+                      : (
+                        <>
+                          {sourceText("Giữ hàng ")}{holdMinutes} {sourceText(" phút để thanh toán.")}
+                        </>
+                      )}
+                  </p>
                 </div>
               </div>
 

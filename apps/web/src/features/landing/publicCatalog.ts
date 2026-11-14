@@ -1,4 +1,4 @@
-import { getIntlLocale } from '../../shared/i18n';
+import { getIntlLocale, getLanguage } from '../../shared/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../shared/api/client';
 import type { MembershipPackage } from '../member/membershipApi';
@@ -63,4 +63,30 @@ export function sessionDate(value: string) {
   const [year, month, day] = (value || '').split('-').map(Number);
   if (!year || !month || !day) return value;
   return new Date(year, month - 1, day).toLocaleDateString(getIntlLocale(), { weekday: 'short', day: '2-digit', month: '2-digit' });
+}
+
+const SEEDED_CATALOG_TEXT_EN: Readonly<Record<string, string>> = {
+  'Gym - Sức mạnh': 'Gym - Strength',
+  'Bơi lội': 'Swimming',
+  'Cầu lông': 'Badminton',
+  'Phòng Gym Tiêu chuẩn': 'Standard Gym Floor',
+  'Phòng Gym VIP': 'VIP Platinum Gym',
+  'Yoga Cơ Bản (khóa mới)': 'Beginner Yoga (New Course)',
+  '8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.':
+    '8 years of strength coaching, muscle building, and fat loss for members of all levels.',
+  'Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.':
+    'Yoga instructor with 6 years of experience focusing on breathwork, balance, and recovery.',
+  'Cựu vận động viên Boxing, chuyên kỹ thuật đấm và thể lực theo hiệp.':
+    'Former competitive boxer specializing in striking technique and round-based conditioning.',
+  'Huấn luyện viên bơi 7 năm kinh nghiệm: kỹ thuật bơi và sức bền dưới nước.':
+    'Swimming coach with 7 years of experience in stroke technique and aquatic endurance.',
+};
+
+export function localizeSeededCatalogText(
+  value: string | null | undefined,
+  lang: 'vi' | 'en' = getLanguage(),
+): string {
+  if (!value) return '';
+  if (lang !== 'en') return value;
+  return SEEDED_CATALOG_TEXT_EN[value.trim()] ?? value;
 }

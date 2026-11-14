@@ -9,8 +9,8 @@ it('uses the court resource and booking endpoints with distinct identifiers', as
   await courtsApi.courts('Cầu lông');
   await courtsApi.availability(5, '2026-11-03');
   await courtsApi.book({ roomId: 5, date: '2026-11-03', startTime: '09:00' });
-  await courtsApi.my(1);
-  await courtsApi.list('2026-11-03', '5', 2);
+  await expect(courtsApi.my(1)).resolves.toEqual({ content: [], number: 1, totalPages: 0, totalElements: 0 });
+  await expect(courtsApi.list('2026-11-03', '5', 2)).resolves.toEqual({ content: [], number: 2, totalPages: 0, totalElements: 0 });
   await courtsApi.cancel(17, 'Sân bảo trì');
   expect(fetcher.mock.calls.map(([path]) => path)).toEqual([
     '/api/v1/courts?discipline=C%E1%BA%A7u%20l%C3%B4ng',

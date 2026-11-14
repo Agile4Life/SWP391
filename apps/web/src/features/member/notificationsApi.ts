@@ -18,10 +18,22 @@ export interface NotificationPage {
   totalPages: number;
 }
 
-export const getNotifications = (page = 0) =>
-  apiFetch<NotificationPage>(`/notifications?page=${page}&size=20`);
-export const getUnreadCount = async () =>
-  (await apiFetch<{ count: number }>('/notifications/unread-count')).count;
+export const getNotifications = async (page = 0): Promise<NotificationPage> => {
+  const res = await apiFetch<NotificationPage | MemberNotification[]>(`/notifications?page=${page}&size=20`);
+  if (Array.isArray(res)) {
+    return { content: res, number: page, totalPages: res.length > 0 ? 1 : 0 };
+  }
+  const content = Array.isArray(res?.content) ? res.content : [];
+  return {
+    content,
+    number: typeof res?.number === 'number' ? res.number : page,
+    totalPages: typeof res?.totalPages === 'number' ? res.totalPages : (content.length > 0 ? 1 : 0),
+  };
+};
+export const getUnreadCount = async () => {
+  const res = await apiFetch<{ count?: number } | null>('/notifications/unread-count');
+  return typeof res?.count === 'number' ? res.count : 0;
+};
 export const markNotificationRead = (id: number) =>
   apiFetch<void>(`/notifications/${id}/read`, { method: 'PATCH' });
 export const markAllNotificationsRead = () =>

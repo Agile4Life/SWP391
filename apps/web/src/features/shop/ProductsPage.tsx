@@ -7,6 +7,7 @@ import { GoalChips } from './components/GoalChips';
 import { ProductCard } from './components/ProductCard';
 import { ShopDisclaimer } from './components/ShopDisclaimer';
 import { shopApi } from './shopApi';
+import { localizeSeededShopText } from './shopFormat';
 import type { CategoryDto, ProductGoal, ProductSort, ProductSummaryDto } from './shopTypes';
 import './shop-public.css';
 
@@ -133,9 +134,10 @@ export function ProductsPage() {
       })
       .then(res => {
         if (!active) return;
-        setItems(res?.content ?? []);
-        setTotalElements(res?.totalElements ?? (res?.content?.length ?? 0));
-        setTotalPages(res?.totalPages ?? 1);
+        const content = Array.isArray(res?.content) ? res.content : [];
+        setItems(content);
+        setTotalElements(typeof res?.totalElements === 'number' ? res.totalElements : content.length);
+        setTotalPages(typeof res?.totalPages === 'number' ? res.totalPages : 1);
         setLoading(false);
       })
       .catch(() => {
@@ -169,10 +171,11 @@ export function ProductsPage() {
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
-      setItems(prev => [...prev, ...(res?.content ?? [])]);
+      const nextContent = Array.isArray(res?.content) ? res.content : [];
+      setItems(prev => [...prev, ...nextContent]);
       setPage(nextPage);
-      setTotalElements(res?.totalElements ?? totalElements);
-      setTotalPages(res?.totalPages ?? totalPages);
+      setTotalElements(typeof res?.totalElements === 'number' ? res.totalElements : totalElements);
+      setTotalPages(typeof res?.totalPages === 'number' ? res.totalPages : totalPages);
     } catch {
       if (!controller.signal.aborted) setMoreError(true);
     } finally {
@@ -223,7 +226,7 @@ export function ProductsPage() {
                 <option value="">{sourceText("Tất cả loại")}</option>
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.slug}>
-                    {cat.name}
+                    {localizeSeededShopText(cat.name)}
                   </option>
                 ))}
               </Select>

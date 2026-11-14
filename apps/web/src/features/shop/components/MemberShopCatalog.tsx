@@ -5,7 +5,7 @@ import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../../shared/ui/Modal';
 import { addToCart, useCart } from '../cart';
 import { shopApi } from '../shopApi';
-import { FORM_LABELS, formatVnd, pricePerServingLabel } from '../shopFormat';
+import { FORM_LABELS, formatVnd, localizeSeededShopText, pricePerServingLabel } from '../shopFormat';
 import type {
   CategoryDto,
   Page,
@@ -123,6 +123,8 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
     navigate('/member/checkout');
   };
 
+  const products = Array.isArray(data?.content) ? data.content : [];
+
   return (
     <section className="stack" aria-label={sourceText("Cửa hàng thực phẩm bổ sung")}>
       <div className="portal-card stack" style={{ gap: 14 }}>
@@ -159,7 +161,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
               <option value="">{sourceText("Tất cả danh mục")}</option>
               {categories.map(c => (
                 <option key={c.id} value={c.slug}>
-                  {c.name}
+                  {localizeSeededShopText(c.name)}
                 </option>
               ))}
             </Select>
@@ -216,7 +218,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadProducts()}>
             {sourceText("Thử lại")}</button>
         </div>
-      ) : !data?.content.length ? (
+      ) : !products.length ? (
         <div className="portal-card portal-state stack" style={{ alignItems: 'flex-start' }}>
           <p style={{ margin: 0 }}>{sourceText("Không tìm thấy sản phẩm phù hợp với bộ lọc.")}</p>
           <button
@@ -235,7 +237,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
       ) : (
         <>
           <div className="portal-shop-grid">
-            {data.content.map(product => (
+            {products.map(product => (
               <ProductCard
                 key={product.id}
                 product={product}
@@ -244,7 +246,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
             ))}
           </div>
 
-          {data.totalPages > 1 && (
+          {(data?.totalPages ?? 0) > 1 && (
             <nav className="court-pagination" aria-label={sourceText("Phân trang sản phẩm")}>
               <button
                 type="button"
@@ -254,12 +256,12 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
               >
                 {sourceText("Trang trước")}</button>
               <span>
-                {sourceText("Trang ")}{page + 1} / {data.totalPages}
+                {sourceText("Trang ")}{page + 1} / {data!.totalPages}
               </span>
               <button
                 type="button"
                 className="btn-secondary"
-                disabled={page + 1 >= data.totalPages}
+                disabled={page + 1 >= data!.totalPages}
                 onClick={() => setPage(p => p + 1)}
               >
                 {sourceText("Trang sau")}</button>
@@ -317,9 +319,9 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
                   </div>
                   <div className="stack" style={{ gap: 12 }}>
                     <span className="shop-card__kicker">
-                      {detail.categoryName} · {FORM_LABELS[detail.form]}
+                      {localizeSeededShopText(detail.categoryName)} · {FORM_LABELS[detail.form]}
                     </span>
-                    <p style={{ margin: 0 }}>{detail.shortDescription}</p>
+                    <p style={{ margin: 0 }}>{localizeSeededShopText(detail.shortDescription)}</p>
 
                     {selectedVariant && (
                       <div style={{ fontVariantNumeric: 'tabular-nums' }}>

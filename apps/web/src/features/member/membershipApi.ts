@@ -75,19 +75,30 @@ export interface MembershipCancellationRequest {
   resolutionNote: string | null;
 }
 
-export const getMyMembershipCancellations = () =>
-  apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations/my');
+export const getMyMembershipCancellations = async () => {
+  const res = await apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations/my');
+  return Array.isArray(res) ? res : [];
+};
 
-export const getMembershipPackages = () =>
-  apiFetch<MembershipPackage[]>('/packages');
+export const getMembershipPackages = async () => {
+  const res = await apiFetch<MembershipPackage[]>('/packages');
+  return Array.isArray(res) ? res : [];
+};
 
-export const getCurrentMembership = () =>
-  apiFetch<MemberSubscription | null>('/memberships/subscriptions/my');
+export const getCurrentMembership = async () => {
+  const res = await apiFetch<MemberSubscription | null>('/memberships/subscriptions/my');
+  return res && !Array.isArray(res) && typeof res === 'object' && 'id' in res ? res : null;
+};
 
-export const getMembershipHistory = () =>
-  apiFetch<MemberSubscription[]>('/memberships/subscriptions/history');
+export const getMembershipHistory = async () => {
+  const res = await apiFetch<MemberSubscription[]>('/memberships/subscriptions/history');
+  return Array.isArray(res) ? res : [];
+};
 
-export const getMyPayments = () => apiFetch<Payment[]>('/payments/my');
+export const getMyPayments = async () => {
+  const res = await apiFetch<Payment[]>('/payments/my');
+  return Array.isArray(res) ? res : [];
+};
 
 export const createPaymentRequest = (subscription: MemberSubscription, amount: number) =>
   apiFetch<Payment>('/payments', {

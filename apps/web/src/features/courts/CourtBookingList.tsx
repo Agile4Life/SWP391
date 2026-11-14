@@ -29,7 +29,7 @@ export function StaffCourtBookings() {
   useEffect(() => {
     let current = true;
     setRoomError('');
-    void catalogApi.rooms().then(result => { if (current) setRooms(result.filter(room => room.disciplineId != null)); })
+    void catalogApi.rooms().then(result => { if (current) setRooms((Array.isArray(result) ? result : []).filter(room => room.disciplineId != null)); })
       .catch(reason => { if (current) setRoomError(courtError(reason)); });
     return () => { current = false; };
   }, [refresh]);
@@ -61,7 +61,8 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     setLoading(true); setError('');
     void (staff ? courtsApi.list(date, roomId, page) : courtsApi.my(page)).then(result => {
       if (!current) return;
-      if (page > 0 && page >= result.totalPages) { setPage(Math.max(0, result.totalPages - 1)); return; }
+      const totalPages = typeof result?.totalPages === 'number' ? result.totalPages : 0;
+      if (page > 0 && page >= totalPages) { setPage(Math.max(0, totalPages - 1)); return; }
       setData(result);
     }).catch(failure => { if (current) setError(courtError(failure)); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
@@ -82,10 +83,11 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
     } catch (failure) { const msg = courtError(failure); setActionError(msg); notify(memberRenderMessage(msg), 'error', typeof msg === 'string' ? {} : { translation: msg }); onChanged(); }
     finally { setBusy(false); }
   };
+  const bookings = Array.isArray(data?.content) ? data.content : [];
   return <section data-i18n-managed className="court-booking-list" aria-labelledby="court-booking-list-title">
     <h2 id="court-booking-list-title" className="portal-card-title" tabIndex={-1} ref={headingRef}>{staff ? memberText("Danh sách theo ngày") : memberText("Lượt đặt của tôi")}</h2>
-    {loading ? <LoadingSkeleton label={memberText("Đang tải lượt đặt sân")} variant="rows" count={3} /> : error ? <CourtLoadError message={memberRenderMessage(error)} retry={() => setRetry(value => value + 1)} /> : !data?.content.length ? <div className="portal-card portal-state">{staff ? memberText("Chưa có lượt đặt trong ngày này") : memberText("Bạn chưa có lượt đặt sân nào")}</div> : <>
-      <div className="stack">{data.content.map(booking => <article className="portal-card court-booking-row" key={booking.id}>
+    {loading ? <LoadingSkeleton label={memberText("Đang tải lượt đặt sân")} variant="rows" count={3} /> : error ? <CourtLoadError message={memberRenderMessage(error)} retry={() => setRetry(value => value + 1)} /> : !bookings.length ? <div className="portal-card portal-state">{staff ? memberText("Chưa có lượt đặt trong ngày này") : memberText("Bạn chưa có lượt đặt sân nào")}</div> : <>
+      <div className="stack">{bookings.map(booking => <article className="portal-card court-booking-row" key={booking.id}>
         <div><h3 className="portal-card-title">{booking.roomName}</h3><p>{booking.disciplineName} · {displayDate(booking.date)} · <strong>{shortTime(booking.startTime)}–{shortTime(booking.endTime)}</strong></p>{staff && <p className="muted">{memberText("Hội viên: ")}{booking.memberName}</p>}<span className={`badge ${booking.status === 'cancelled' ? 'badge-danger' : bookingEnded(booking) ? 'badge-neutral' : 'badge-success'}`}>{booking.status === 'cancelled' ? memberText("Đã hủy") : bookingEnded(booking) ? memberText("Đã diễn ra") : memberText("Đã đặt")}</span><p className="muted">{booking.paymentMethod === 'package_quota' ? memberText("Miễn phí (theo gói)") : booking.price > 0 ? `${booking.paymentStatus === 'paid' ? memberText("Đã thanh toán") : booking.paymentStatus === 'refunded' ? memberText("Đã hoàn tiền", "Refunded") : booking.status === 'cancelled' ? memberText("Chưa thanh toán", "Unpaid") : memberText("Chờ thanh toán")} ${formatVnd(booking.price)}` : memberText("Không phí")}</p>{booking.cancelReason && <p className="muted">{memberText("Lý do hủy: ")}{booking.cancelReason}</p>}</div>
         {( (!staff && booking.status === 'booked' && booking.paymentStatus === 'pending' && booking.paymentMethod !== 'package_quota') ||
           (staff && booking.status === 'booked' && booking.paymentStatus === 'pending' && booking.paymentMethod !== 'package_quota') ||
@@ -97,7 +99,7 @@ export function CourtBookingList({ staff = false, date = '', roomId = '', refres
           </div>
         )}
       </article>)}</div>
-      {data.totalPages > 1 && <nav className="court-pagination" aria-label={memberText("Phân trang lượt đặt")}><button type="button" className="btn-secondary" disabled={page === 0} onClick={() => setPage(value => value - 1)}>{memberText("Trang trước")}</button><span>{memberText("Trang ", "Page ")}{page + 1} / {data.totalPages}</span><button type="button" className="btn-secondary" disabled={page + 1 >= data.totalPages} onClick={() => setPage(value => value + 1)}>{memberText("Trang sau", "Next page")}</button></nav>}
+      {(data?.totalPages ?? 0) > 1 && <nav className="court-pagination" aria-label={memberText("Phân trang lượt đặt")}><button type="button" className="btn-secondary" disabled={page === 0} onClick={() => setPage(value => value - 1)}>{memberText("Trang trước")}</button><span>{memberText("Trang ", "Page ")}{page + 1} / {data!.totalPages}</span><button type="button" className="btn-secondary" disabled={page + 1 >= data!.totalPages} onClick={() => setPage(value => value + 1)}>{memberText("Trang sau", "Next page")}</button></nav>}
     </>}
     {cancel && <Modal title={memberText("Hủy lượt đặt sân")} onClose={() => setCancel(null)} busy={busy} returnFocusRef={headingRef}>
       <p><strong>{cancel.roomName}</strong> · {displayDate(cancel.date)} · {shortTime(cancel.startTime)}–{shortTime(cancel.endTime)}</p>

@@ -80,7 +80,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
         await markNotificationRead(item.id);
         window.dispatchEvent(new Event('member-notifications-changed'));
         if (version !== request.current.version) return;
-        setData((current) => current && ({ ...current, content: current.content.map((n) => n.id === item.id ? { ...n, isRead: true } : n) }));
+        setData((current) => current && ({ ...current, content: (Array.isArray(current.content) ? current.content : []).map((n) => n.id === item.id ? { ...n, isRead: true } : n) }));
         setCount((current) => Math.max(0, current - 1));
       }
       const destination = notificationDestination(item, role);
@@ -94,14 +94,15 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     setBusy(true); setError(null);
     try {
       await markAllNotificationsRead();
-      setData((current) => current && ({ ...current, content: current.content.map((n) => ({ ...n, isRead: true })) }));
+      setData((current) => current && ({ ...current, content: (Array.isArray(current.content) ? current.content : []).map((n) => ({ ...n, isRead: true })) }));
       setCount(0);
       window.dispatchEvent(new Event('member-notifications-changed'));
     } catch (reason) { setError(errorMessage(reason)); }
     finally { setBusy(false); }
   }
 
-  const hasUnread = count > 0 || Boolean(data?.content.some((item) => !item.isRead));
+  const notificationItems = Array.isArray(data?.content) ? data.content : [];
+  const hasUnread = count > 0 || notificationItems.some((item) => !item.isRead);
 
   return <div className="notification-panel" data-i18n-managed>
     {serverEnabled && <div className="notification-panel__actions"><span>{loading ? t('Đang tải…', "Loading…") : data ? t(`${count} chưa đọc`, `${count} unread`) : t('Chưa cập nhật', "Not updated")}</span><button className="notification-action" type="button" disabled={loading || busy || !hasUnread} onClick={() => void readAll()}>{t("Đánh dấu tất cả đã đọc", "Mark all as read")}</button></div>}
@@ -116,10 +117,10 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
       </li>)}
     </ul>}
     {error && <div className="portal-alert notification-error" role="alert">{t(error)} <button type="button" onClick={() => void load()}>{t("Thử lại", "Retry")}</button></div>}
-    {loading ? <LoadingSkeleton label={t("Đang tải thông báo…", "Loading notifications…")} count={5} /> : !data?.content.length && !error && notices.length === 0 ?
+    {loading ? <LoadingSkeleton label={t("Đang tải thông báo…", "Loading notifications…")} count={5} /> : !notificationItems.length && !error && notices.length === 0 ?
       <div className="portal-empty"><h3>{t("Chưa có thông báo", "No notifications yet")}</h3><p>{t("Thông báo mới sẽ xuất hiện tại đây.", "New notifications will appear here.")}</p></div> :
       <div className="notification-list" aria-label={t("Danh sách thông báo", "Notifications list")}>
-        {data?.content.map((item) => {
+        {notificationItems.map((item) => {
           const cat = category[item.type?.toLowerCase()] ?? category.system;
           return <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
           <span className="notification-copy"><small className="notification-category">{t(cat.label, cat.en)}</small><strong>{lang === 'vi' ? localizeTitle(item.title) : item.title}</strong><span>{lang === 'vi' ? localizeMessage(item.message) : item.message}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>

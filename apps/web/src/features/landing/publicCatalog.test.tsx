@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { setLanguage } from '../../shared/i18n';
 import { CatalogPackages, CatalogSchedule, CatalogTrainers } from './components/CatalogSections';
 import { calculateBmi, FitnessLanding, parseBmiMetric } from './components/FitnessLanding';
 import { usePublicCatalog } from './publicCatalog';
@@ -24,7 +25,7 @@ beforeEach(() => {
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
   document.body.append(host);
 });
-afterEach(async () => { if (root) await act(async () => root.unmount()); host.replaceChildren(); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { if (root) await act(async () => root.unmount()); host.replaceChildren(); host.remove(); localStorage.clear(); setLanguage('vi'); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it('renders API price, duration, benefits, coaches and actual session seats without sample identities', async () => {
   root = createRoot(host);
@@ -191,4 +192,46 @@ it('supports Hero Muscle Map hover/focus activation, Escape key dismissal and pl
   expect(packagesIdx).toBeGreaterThanOrEqual(0);
   expect(productsIdx).toBeGreaterThan(packagesIdx);
   expect(faqIdx).toBeGreaterThan(productsIdx);
+});
+
+it('localizes seeded package perks and coach specialization in English while leaving custom manager copy verbatim', async () => {
+  root = createRoot(host);
+  const seededAndCustom: PublicCatalog = {
+    packages: [
+      {
+        id: 1,
+        name: 'SILVER',
+        price: 199000,
+        durationDays: 30,
+        classCreditLimit: 1,
+        description: 'BASIC – Cơ bản\nQuyền lợi:\n- Tập luyện không giới hạn trong giờ hoạt động.',
+        status: 'active',
+      },
+      ...catalog.packages,
+    ],
+    coaches: [
+      {
+        id: 21,
+        name: 'Trịnh Quang Hùng',
+        specialization: 'Gym - Sức mạnh',
+        bio: '8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.',
+        certification: 'NSCA-CPT',
+        avatarUrl: null,
+      },
+    ],
+    sessions: [],
+  };
+  await act(async () => setLanguage('en'));
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <CatalogPackages catalog={seededAndCustom} joinPath="/register" />
+        <CatalogTrainers catalog={seededAndCustom} />
+      </MemoryRouter>,
+    ),
+  );
+  expect(host.textContent).toContain('BASIC – Essential');
+  expect(host.textContent).toContain('Unlimited gym access during operating hours.');
+  expect(host.textContent).toContain('Gym - Strength');
+  expect(host.textContent).toContain('Quyền lợi mới');
 });
