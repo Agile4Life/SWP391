@@ -9,6 +9,8 @@ import { Modal } from '../../shared/ui/Modal';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberCalendar } from './components/MemberCalendar';
+import { navigateToVnpay } from '../payments/vnpayApi';
+import { releaseAbandonedVnpay } from '../payments/vnpaySession';
 import { centerNowParts } from '../../shared/lib/centerTime';
 import { getMySubscription, type CardSubscription } from './memberCardApi';
 import { cardStatus } from './cardStatus';
@@ -512,9 +514,13 @@ export function MemberClassesPage() {
     setIsCheckingOut(true);
     setCheckoutError('');
     try {
+      if (checkoutPaymentMethod === 'vnpay') {
+        await releaseAbandonedVnpay();
+      }
       const res = await checkoutCourse(courseCheckoutTarget.classId, checkoutPaymentMethod);
       if (res.paymentUrl) {
-        window.location.href = res.paymentUrl;
+        setCourseCheckoutTarget(null);
+        navigateToVnpay(res.paymentUrl);
         return;
       }
       if (checkoutPaymentMethod === 'cash') {

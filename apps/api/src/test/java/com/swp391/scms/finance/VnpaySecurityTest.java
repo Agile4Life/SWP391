@@ -39,4 +39,20 @@ class VnpaySecurityTest {
     @Test @WithMockUser(roles="MEMBER") void memberCanReadAvailability() throws Exception {
         mvc.perform(get("/api/v1/payments/vnpay/config")).andExpect(status().isOk()).andExpect(jsonPath("$.data.enabled").value(false));
     }
+    @Test void cancelEndpointsRequireMemberRole() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/payments/vnpay/transactions/ABC/cancel"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/payments/vnpay/cancel")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"subscriptionId\":11}"))
+                .andExpect(status().isUnauthorized());
+    }
+    @Test @WithMockUser(roles="MEMBER") void memberCanCancelPendingAttempt() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/payments/vnpay/transactions/ABC/cancel"))
+                .andExpect(status().isOk());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/payments/vnpay/cancel")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"subscriptionId\":11}"))
+                .andExpect(status().isOk());
+    }
 }

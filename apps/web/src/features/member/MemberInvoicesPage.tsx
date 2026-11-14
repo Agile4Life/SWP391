@@ -80,6 +80,12 @@ export function MemberInvoicesPage() {
   }, [reload]);
 
   useEffect(() => {
+    const onReleased = () => setReload((n) => n + 1);
+    window.addEventListener('vnpay-attempt-released', onReleased);
+    return () => window.removeEventListener('vnpay-attempt-released', onReleased);
+  }, []);
+
+  useEffect(() => {
     if (!selected) return;
     let active = true;
     setInvoice(null);

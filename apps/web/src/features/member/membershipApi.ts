@@ -58,6 +58,7 @@ export interface Payment {
   coachBookingId?: number | null;
   courtBookingId?: number | null;
   productOrderId?: number | null;
+  vnpayPending?: boolean;
 }
 
 export interface MembershipCancellationRequest {

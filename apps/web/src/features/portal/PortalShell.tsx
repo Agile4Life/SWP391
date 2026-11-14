@@ -22,6 +22,8 @@ import { ChatWidget } from '../chat/ChatWidget';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { NotificationsPopover } from '../member/NotificationsPopover';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
+import { navigateToVnpay } from '../payments/vnpayApi';
+import { releaseAbandonedVnpay, rememberActiveVnpay } from '../payments/vnpaySession';
 
 // Only members see the AI assistant; its WebGL shaders stay out of every other role's first load.
 
@@ -113,17 +115,20 @@ function PortalShellContent({ user }: { user: UserSession }) {
     setTopupBusy(true);
     setTopupError(null);
     try {
-      const checkout = await apiFetch<{ paymentUrl?: string }>('/wallet/topup/vnpay', {
+      await releaseAbandonedVnpay();
+      const checkout = await apiFetch<{ reference?: string; paymentUrl?: string }>('/wallet/topup/vnpay', {
         method: 'POST',
         body: JSON.stringify({ amount: numeric }),
       });
       if (checkout?.paymentUrl) {
-        window.location.assign(checkout.paymentUrl);
+        if (checkout.reference) rememberActiveVnpay(checkout.reference);
+        navigateToVnpay(checkout.paymentUrl);
       } else {
         setTopupBusy(false);
       }
     } catch (err) {
       setTopupError(localizableError(err, 'Không thể tạo giao dịch nạp tiền VNPay.'));
+      setTopupBusy(false);
     }
   };
 
@@ -204,6 +209,22 @@ function PortalShellContent({ user }: { user: UserSession }) {
         setWalletLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (!isMember || location.pathname.startsWith('/member/payments/vnpay/return')) return;
+    if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
+      void releaseAbandonedVnpay();
+    }
+    const handleRestore = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      setTopupBusy(false);
+      if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
+        void releaseAbandonedVnpay();
+      }
+    };
+    window.addEventListener('pageshow', handleRestore);
+    return () => window.removeEventListener('pageshow', handleRestore);
+  }, [isMember, location.pathname]);
 
   useEffect(() => {
     if (localStorage.getItem(TOKEN_STORAGE_KEY)) {

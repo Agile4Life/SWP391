@@ -46,6 +46,9 @@ export function MemberOrderDetailPage() {
 
   useEffect(() => {
     void load();
+    const onReleased = () => void load();
+    window.addEventListener('vnpay-attempt-released', onReleased);
+    return () => window.removeEventListener('vnpay-attempt-released', onReleased);
   }, [load]);
 
   const handleCancel = async () => {

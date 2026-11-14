@@ -60,11 +60,23 @@ public class VnpayPaymentGuard {
         LocalDateTime now = now();
         var attempts = transactions.findAllByPaymentId(paymentId);
         if (attempts == null) return;
+        boolean closedAny = false;
         for (VnpayTransaction attempt : attempts) {
             if (isStale(attempt, now)) {
                 attempt.setStatus("failed");
                 transactions.save(attempt);
+                closedAny = true;
             }
+        }
+        if (closedAny && payments != null
+                && !transactions.existsByPaymentIdAndStatus(paymentId, "pending")
+                && !transactions.existsByPaymentIdAndStatus(paymentId, "success")) {
+            payments.findById(paymentId).ifPresent(p -> {
+                if ("pending".equals(p.getStatus()) && p.getNote() != null && p.getNote().startsWith("WALLET_TOPUP")) {
+                    p.setStatus("failed");
+                    payments.save(p);
+                }
+            });
         }
     }
 

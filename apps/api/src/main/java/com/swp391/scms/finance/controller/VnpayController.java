@@ -39,6 +39,16 @@ public class VnpayController {
     public ApiResponse<Status> status(@AuthenticationPrincipal AuthenticatedPrincipal principal,@PathVariable String reference) {
         return ApiResponse.ok(msg("finance.vnpay.status"),payments.status(principal,reference));
     }
+    @PostMapping("/transactions/{reference}/cancel") @PreAuthorize("hasRole('MEMBER')")
+    public ApiResponse<Status> cancel(@AuthenticationPrincipal AuthenticatedPrincipal principal,@PathVariable String reference) {
+        return ApiResponse.ok(msg("finance.vnpay.cancelled"),payments.cancel(principal,reference));
+    }
+    @PostMapping("/cancel") @PreAuthorize("hasRole('MEMBER')")
+    public ApiResponse<Void> cancelTarget(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody CheckoutRequest body) {
+        payments.cancelTarget(principal, body);
+        return ApiResponse.ok(msg("finance.vnpay.cancelled"), null);
+    }
     @PostMapping("/verify-return") @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<Status> verifyReturn(@AuthenticationPrincipal AuthenticatedPrincipal principal,
             @RequestBody(required = false) Map<String,String> params) {

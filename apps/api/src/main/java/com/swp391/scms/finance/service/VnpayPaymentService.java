@@ -268,6 +268,67 @@ public class VnpayPaymentService {
         String status="refunded".equals(p.getStatus())?"refunded":t.getStatus();
         return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath(p));
     }
+
+    /**
+     * Releases an unsettled VNPay checkout attempt when the owning member exits the gateway without paying.
+     * If a delayed successful IPN arrives later, {@link #ipn} still settles or refunds to the member's wallet.
+     */
+    public Status cancel(AuthenticatedPrincipal principal, String reference) {
+        String normalizedRef = reference == null ? "" : reference.trim();
+        if (normalizedRef.isEmpty()) {
+            throw new ResourceNotFoundException("resource.payment", reference);
+        }
+        var t = transactions.findById(normalizedRef)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.payment", normalizedRef));
+        Payment p = t.getPayment();
+        requireOwner(principal, p.getMember().getUserId());
+        lockMember(principal.id());
+        lockTargets(p);
+        entities.refresh(t);
+        entities.refresh(p);
+        if ("pending".equals(t.getStatus()) && t.getGatewayTransactionNo() == null) {
+            closePendingAttempt(t, p);
+        }
+        String status = "refunded".equals(p.getStatus()) ? "refunded" : t.getStatus();
+        return new Status(normalizedRef, p.getId(), p.getSubscriptionId(), t.getAmount(), status, t.getExpiresAt(), targetPath(p));
+    }
+
+    /** Releases any unsettled pending VNPay attempts on a target payment/booking owned by the member. */
+    public void cancelTarget(AuthenticatedPrincipal principal, CheckoutRequest request) {
+        requireMember(principal);
+        Payment payment = resolveTargetPayment(principal, request);
+        if (payment.getId() == null) return;
+        var attempts = transactions.findAllByPaymentId(payment.getId());
+        boolean closedAny = false;
+        if (attempts != null) {
+            for (VnpayTransaction attempt : attempts) {
+                entities.refresh(attempt);
+                if ("pending".equals(attempt.getStatus()) && attempt.getGatewayTransactionNo() == null) {
+                    attempt.setStatus("failed");
+                    transactions.saveAndFlush(attempt);
+                    closedAny = true;
+                }
+            }
+        }
+        if (closedAny) {
+            closeOrphanWalletTopup(payment);
+        }
+    }
+
+    private void closePendingAttempt(VnpayTransaction t, Payment p) {
+        t.setStatus("failed");
+        transactions.saveAndFlush(t);
+        closeOrphanWalletTopup(p);
+    }
+
+    private void closeOrphanWalletTopup(Payment p) {
+        if (isWalletTopup(p) && "pending".equals(p.getStatus())
+                && (p.getId() == null || (!transactions.existsByPaymentIdAndStatus(p.getId(), "pending")
+                    && !transactions.existsByPaymentIdAndStatus(p.getId(), "success")))) {
+            p.setStatus("failed");
+            payments.save(p);
+        }
+    }
     public String ipn(Map<String,String> fields) {
         if(!gateway.validSignature(fields)) return "97";
         String reference=fields.get("vnp_TxnRef");
@@ -320,9 +381,10 @@ public class VnpayPaymentService {
             }
         } else {
             if (lateAfterLocalExpiry) return "02"; // already closed as failed
-            // A provisional/in-progress status (01, 05, 06) is not proof of a failed debit; keep it blocked for reconciliation.
-            if (Set.of("01", "05", "06").contains(status)) return "99";
-            t.setStatus("failed");
+            // Provisional/in-progress gateway status (05, 06, or 00 response with incomplete 01 status) stays pending;
+            // explicit non-00 failure/cancel responses (e.g. 24 + 01 on VNPay Sandbox cancel) close immediately.
+            if (Set.of("05", "06").contains(status) || ("00".equals(response) && "01".equals(status))) return "99";
+            closePendingAttempt(t, p);
         }
         return "00";
     }

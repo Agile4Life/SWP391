@@ -945,4 +945,19 @@ describe('SCRUM-86 packages', () => {
     expect(api.upgrade).toHaveBeenCalledWith(99, membershipPackage.id);
   });
 
+  it('does not show VNPay awaiting confirmation banner once VNPay attempt was exited (vnpayPending is false)', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.payments.mockResolvedValue([{ ...payment, method: 'online_wallet', status: 'pending', vnpayPending: false }]);
+    await render();
+    expect(host.textContent).not.toContain('VNPay đang chờ xác nhận giao dịch');
+    expect(button('Hủy yêu cầu đăng ký')?.disabled).toBe(false);
+  });
+
+  it('shows VNPay awaiting confirmation banner only when vnpayPending is true', async () => {
+    api.history.mockResolvedValue([pending]);
+    api.payments.mockResolvedValue([{ ...payment, method: 'online_wallet', status: 'pending', vnpayPending: true }]);
+    await render();
+    expect(host.textContent).toContain('VNPay đang chờ xác nhận giao dịch');
+  });
+
 });

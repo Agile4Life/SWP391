@@ -25,6 +25,7 @@ public interface PaymentMapper {
     @Mapping(target = "receiptImage", ignore = true)
     @Mapping(target = "serviceType", ignore = true)
     @Mapping(target = "serviceName", ignore = true)
+    @Mapping(target = "vnpayPending", ignore = true)
     PaymentDto toDto(Payment entity);
 
     List<PaymentDto> toDtoList(List<Payment> entities);

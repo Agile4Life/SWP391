@@ -176,6 +176,7 @@ public class PaymentDto {
     private Long coachBookingId;
     private Long courtBookingId;
     private Long productOrderId;
+    private boolean vnpayPending;
 
     public String getServiceType() { return serviceType; }
     public void setServiceType(String serviceType) { this.serviceType = serviceType; }
@@ -187,4 +188,6 @@ public class PaymentDto {
     public void setCourtBookingId(Long courtBookingId) { this.courtBookingId = courtBookingId; }
     public Long getProductOrderId() { return productOrderId; }
     public void setProductOrderId(Long productOrderId) { this.productOrderId = productOrderId; }
+    public boolean isVnpayPending() { return vnpayPending; }
+    public void setVnpayPending(boolean vnpayPending) { this.vnpayPending = vnpayPending; }
 }

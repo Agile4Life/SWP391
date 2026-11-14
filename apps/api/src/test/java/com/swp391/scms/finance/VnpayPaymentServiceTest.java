@@ -381,4 +381,96 @@ class VnpayPaymentServiceTest {
         assertEquals("failed", transaction.getStatus());
         assertEquals("pending", payment.getStatus());
     }
+
+    @Test void customerCancelledVnpayReturnWithIncompleteStatus01ClosesTransactionImmediately() {
+        // VNPay Sandbox sends vnp_ResponseCode=24 with vnp_TransactionStatus=01 ("Giao dịch chưa hoàn tất") on cancel.
+        assertEquals("00", service.ipn(callback("24", "01", "65000000")));
+        assertEquals("failed", transaction.getStatus());
+        assertEquals("pending", payment.getStatus());
+
+        // Ambiguous/provisional gateway states (response=00 + status=01, or status=05/06) still stay pending (99).
+        var pendingAmbiguous = new VnpayTransaction("AMB001", payment, payment.getAmount(),
+                LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
+        when(transactions.findById("AMB001")).thenReturn(Optional.of(pendingAmbiguous));
+        var data01 = new HashMap<>(Map.of("vnp_TmnCode", "TEST1234", "vnp_TxnRef", "AMB001", "vnp_Amount", "65000000",
+                "vnp_ResponseCode", "00", "vnp_TransactionStatus", "01", "vnp_TransactionNo", "12345", "vnp_PayDate", "20261103120100"));
+        data01.put("vnp_SecureHash", gateway.sign(data01));
+        assertEquals("99", service.ipn(data01));
+        assertEquals("pending", pendingAmbiguous.getStatus());
+
+        var data05 = new HashMap<>(Map.of("vnp_TmnCode", "TEST1234", "vnp_TxnRef", "AMB001", "vnp_Amount", "65000000",
+                "vnp_ResponseCode", "24", "vnp_TransactionStatus", "05", "vnp_TransactionNo", "12345", "vnp_PayDate", "20261103120100"));
+        data05.put("vnp_SecureHash", gateway.sign(data05));
+        assertEquals("99", service.ipn(data05));
+        assertEquals("pending", pendingAmbiguous.getStatus());
+    }
+
+    @Test void memberAbandoningPendingAttemptUnlocksWalletRetryAndFreshVnpayCheckout() {
+        var other = new AuthenticatedPrincipal(8L, "other", "MEMBER");
+        assertThrows(ForbiddenException.class, () -> service.cancel(other, "ABC123"));
+        assertEquals("pending", transaction.getStatus());
+
+        var cancelledStatus = service.cancel(owner, "ABC123");
+        assertEquals("failed", cancelledStatus.status());
+        assertEquals("failed", transaction.getStatus());
+        assertEquals("pending", payment.getStatus());
+
+        // Settled transactions can never be downgraded by a late browser cancel call.
+        var settled = new VnpayTransaction("PAID99", payment, payment.getAmount(),
+                LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
+        settled.setStatus("success");
+        settled.setGatewayTransactionNo("999111");
+        when(transactions.findById("PAID99")).thenReturn(Optional.of(settled));
+        assertEquals("success", service.cancel(owner, "PAID99").status());
+        assertEquals("success", settled.getStatus());
+
+        // Once ABC123 is closed, no pending attempt remains: member can immediately start a fresh VNPay checkout.
+        var sub = new MembershipSubscription();
+        sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
+        when(payments.save(payment)).thenReturn(payment);
+        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.empty());
+
+        var fresh = service.checkout(owner, 11L, "127.0.0.1");
+        assertNotEquals("ABC123", fresh.reference());
+    }
+
+    @Test void cancelTargetAndAbandonedWalletTopupCleanUpPendingStateSafely() {
+        // 1. cancelTarget closes pending attempts on a subscription payment while keeping the payment payable.
+        var sub = new MembershipSubscription();
+        sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
+        when(transactions.findAllByPaymentId(9L)).thenReturn(List.of(transaction));
+
+        service.cancelTarget(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null));
+        assertEquals("failed", transaction.getStatus());
+        assertEquals("pending", payment.getStatus());
+
+        // 2. Abandoning a standalone WALLET_TOPUP also closes its Payment so it does not linger in pending invoices,
+        // while a delayed successful IPN still credits the member's wallet via refundPaymentSettledElsewhere.
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        var topupPayment = new Payment();
+        topupPayment.setId(88L); topupPayment.setMember(payment.getMember());
+        topupPayment.setAmount(new BigDecimal("200000")); topupPayment.setMethod("online_wallet");
+        topupPayment.setNote("WALLET_TOPUP"); topupPayment.setStatus("pending");
+        var topupTx = new VnpayTransaction("TOPUP1", topupPayment, topupPayment.getAmount(),
+                LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
+        when(transactions.findById("TOPUP1")).thenReturn(Optional.of(topupTx));
+
+        assertEquals("failed", service.cancel(owner, "TOPUP1").status());
+        assertEquals("failed", topupTx.getStatus());
+        assertEquals("failed", topupPayment.getStatus());
+
+        var lateSuccess = new HashMap<>(Map.of(
+                "vnp_TmnCode", "TEST1234", "vnp_TxnRef", "TOPUP1", "vnp_Amount", "20000000",
+                "vnp_ResponseCode", "00", "vnp_TransactionStatus", "00", "vnp_TransactionNo", "777888",
+                "vnp_PayDate", "20261103120200"));
+        lateSuccess.put("vnp_SecureHash", gateway.sign(lateSuccess));
+        assertEquals("00", service.ipn(lateSuccess));
+        assertEquals("success", topupTx.getStatus());
+        verify(walletService, times(1)).creditLateGatewayPayment(7L, new BigDecimal("200000"), "TOPUP1");
+    }
 }

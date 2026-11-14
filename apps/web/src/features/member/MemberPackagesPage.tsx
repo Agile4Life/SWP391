@@ -33,6 +33,7 @@ import {
   type Payment,
 } from './membershipApi';
 import { localizableError } from '../../shared/lib/errorMessage';
+import { cancelVnpayTarget } from '../payments/vnpaySession';
 import { trialApi, type TrialStatus } from './trialApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
@@ -227,6 +228,7 @@ export function MemberPackagesPage() {
 
   const [isResuming, setIsResuming] = useState(false);
   const [isCancellingPending, setIsCancellingPending] = useState(false);
+  const [releasingVnpay, setReleasingVnpay] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
 
   const loadPackages = useCallback(async () => {
@@ -468,6 +470,7 @@ export function MemberPackagesPage() {
     window.addEventListener('focus', onRefresh);
     window.addEventListener('online', onRefresh);
     window.addEventListener('pageshow', onRestore);
+    window.addEventListener('vnpay-attempt-released', onRefresh);
     document.addEventListener('visibilitychange', onRefresh);
     return () => {
       disposed = true;
@@ -477,6 +480,7 @@ export function MemberPackagesPage() {
       window.removeEventListener('focus', onRefresh);
       window.removeEventListener('online', onRefresh);
       window.removeEventListener('pageshow', onRestore);
+      window.removeEventListener('vnpay-attempt-released', onRefresh);
       document.removeEventListener('visibilitychange', onRefresh);
     };
   }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId, loadTrialStatus]);
@@ -917,8 +921,26 @@ export function MemberPackagesPage() {
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'success') && (
             <p role="alert">{t("Đã nhận thanh toán nhưng gói chưa kích hoạt. Liên hệ nhân viên để kiểm tra.", "Payment received but the plan is not active yet. Contact staff to check.")}</p>
           )}
-          {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending' && payment.method === 'online_wallet') && (
-            <p role="status">{t("VNPay đang chờ xác nhận giao dịch. Chưa thể hủy yêu cầu lúc này.", 'VNPay is still confirming the transaction. The request cannot be cancelled yet.')}</p>
+          {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'pending' && payment.vnpayPending === true) && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <p role="status" style={{ margin: 0 }}>{t("VNPay đang chờ xác nhận giao dịch. Chưa thể hủy yêu cầu lúc này.", 'VNPay is still confirming the transaction. The request cannot be cancelled yet.')}</p>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                disabled={releasingVnpay}
+                onClick={() => {
+                  if (typeof cancelVnpayTarget !== 'function') return;
+                  setReleasingVnpay(true);
+                  setActionError(null);
+                  void cancelVnpayTarget({ subscriptionId: pending.id })
+                    .then(() => loadPayments())
+                    .catch((err) => setActionError(localizableError(err, 'Không thể mở khóa giao dịch VNPay.')))
+                    .finally(() => setReleasingVnpay(false));
+                }}
+              >
+                {releasingVnpay ? t("Đang mở khóa…", "Unlocking…") : t("Đã thoát VNPay? Mở khóa giao dịch", "Exited VNPay? Unlock transaction")}
+              </button>
+            </div>
           )}
           {paymentsState.status === 'success' && relatedPayments.some((payment) => payment.status === 'failed') && (
             <p role="alert">{t("Giao dịch thất bại. Chọn lại phương thức thanh toán hoặc hủy yêu cầu.", 'The transaction failed. Choose another payment method or cancel the request.')}</p>

@@ -891,4 +891,53 @@ class PaymentServiceTest {
         assertThrows(ConflictException.class, () -> paymentService.updatePaymentStatus(14L, "success"));
         assertEquals("cancelled", cancelled.getStatus());
     }
+
+    @Test
+    @DisplayName("getPaymentsByMemberId sets vnpayPending only when a non-stale pending VnpayTransaction exists")
+    void getPaymentsByMemberIdMarksVnpayPendingOnlyWhileUnexpiredAttemptExists() {
+        var vnpayTxRepo = mock(com.swp391.scms.finance.repository.VnpayTransactionRepository.class);
+        paymentService.setVnpayTransactionRepository(vnpayTxRepo);
+
+        Payment activeOnline = new Payment();
+        activeOnline.setId(21L);
+        activeOnline.setStatus("pending");
+        activeOnline.setMethod("online_wallet");
+        activeOnline.setSubscriptionId(101L);
+
+        Payment cancelledVnpayOnline = new Payment();
+        cancelledVnpayOnline.setId(22L);
+        cancelledVnpayOnline.setStatus("pending");
+        cancelledVnpayOnline.setMethod("online_wallet");
+        cancelledVnpayOnline.setSubscriptionId(102L);
+
+        PaymentDto dtoActive = new PaymentDto();
+        dtoActive.setId(21L);
+        dtoActive.setStatus("pending");
+        dtoActive.setMethod("online_wallet");
+
+        PaymentDto dtoClosed = new PaymentDto();
+        dtoClosed.setId(22L);
+        dtoClosed.setStatus("pending");
+        dtoClosed.setMethod("online_wallet");
+
+        // clock is 2026-10-01T10:00:00Z -> 17:00 in Asia/Ho_Chi_Minh
+        var liveAttempt = new com.swp391.scms.finance.entity.VnpayTransaction(
+                "LIVE1", activeOnline, BigDecimal.TEN,
+                LocalDateTime.of(2026, 10, 1, 16, 55), LocalDateTime.of(2026, 10, 1, 17, 10), "127.0.0.1");
+        var closedAttempt = new com.swp391.scms.finance.entity.VnpayTransaction(
+                "CLOSED1", cancelledVnpayOnline, BigDecimal.TEN,
+                LocalDateTime.of(2026, 10, 1, 16, 55), LocalDateTime.of(2026, 10, 1, 17, 10), "127.0.0.1");
+        closedAttempt.setStatus("failed");
+
+        when(memberRepository.existsById(2L)).thenReturn(true);
+        when(paymentRepository.findByMemberUserId(2L)).thenReturn(List.of(activeOnline, cancelledVnpayOnline));
+        when(paymentMapper.toDtoList(List.of(activeOnline, cancelledVnpayOnline))).thenReturn(List.of(dtoActive, dtoClosed));
+        when(vnpayTxRepo.findAllByPaymentId(21L)).thenReturn(List.of(liveAttempt));
+        when(vnpayTxRepo.findAllByPaymentId(22L)).thenReturn(List.of(closedAttempt));
+
+        List<PaymentDto> result = paymentService.getPaymentsByMemberId(2L);
+        assertEquals(2, result.size());
+        assertTrue(result.get(0).isVnpayPending());
+        assertFalse(result.get(1).isVnpayPending());
+    }
 }

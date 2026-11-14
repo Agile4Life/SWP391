@@ -41,6 +41,42 @@ paths:
         '200': { description: 'ApiResponse of reference, paymentId, subscriptionId, amount, status (pending/success/failed/refunded), expiresAt and destination' }
         '403': { description: Not the transaction owner }
         '404': { description: Unknown reference }
+  /api/v1/payments/vnpay/transactions/{reference}/cancel:
+    post:
+      summary: Releases an unsettled pending VNPay attempt when the owning member exits the gateway without paying
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: reference, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'ApiResponse of updated Status (failed when unsettled; unchanged if already settled)' }
+        '403': { description: Not the transaction owner }
+        '404': { description: Unknown reference }
+  /api/v1/payments/vnpay/cancel:
+    post:
+      summary: Releases any unsettled pending VNPay attempts on a target payment/booking owned by the member
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Exactly one of subscriptionId, coachBookingId, courtBookingId, productOrderId or paymentId is required.
+              properties:
+                subscriptionId: { type: integer, format: int64, minimum: 1 }
+                coachBookingId: { type: integer, format: int64, minimum: 1 }
+                courtBookingId: { type: integer, format: int64, minimum: 1 }
+                productOrderId: { type: integer, format: int64, minimum: 1 }
+                paymentId: { type: integer, format: int64, minimum: 1 }
+      responses:
+        '200': { description: 'ApiResponse confirming unsettled pending VNPay attempts were closed' }
+        '403': { description: Not the target owner or not a member }
+  /api/v1/payments/vnpay/verify-return:
+    post:
+      summary: Verifies signed VNPay browser return parameters and returns authoritative transaction status
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 'ApiResponse of authoritative Status' }
   /api/v1/payments/vnpay/ipn:
     get:
       summary: Public VNPay signed callback; duplicates and invalid requests never grant entitlement

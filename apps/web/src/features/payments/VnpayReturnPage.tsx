@@ -10,6 +10,7 @@ import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
+import { clearActiveVnpay } from './vnpaySession';
 
 const destinations = new Set(['/member/packages', '/member/courts', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
 function isAllowedDestination(destination: string | null | undefined): destination is string {
@@ -29,6 +30,7 @@ export function VnpayReturnPage() {
     let active = true; let timer: ReturnType<typeof setTimeout> | undefined; let attempts = 0; let notified = false;
     setData(null); setError(''); setLoading(true);
     if (!valid) { setLoading(false); return; }
+    if (typeof clearActiveVnpay === 'function') clearActiveVnpay(reference);
     async function load() {
       try {
         const hasSignedCallback = params.has('vnp_SecureHash') && params.has('vnp_ResponseCode');

@@ -77,6 +77,13 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.membership.service.EntitlementRevocationService entitlementRevocation;
 
+    @Autowired(required = false)
+    private com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository;
+
+    public void setVnpayTransactionRepository(com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository) {
+        this.vnpayTransactionRepository = vnpayTransactionRepository;
+    }
+
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -229,7 +236,10 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
         PaymentDto dto = paymentMapper.toDto(payment);
-        dto.setReceiptImage(payment.getReceiptImage());
+        if (dto != null) {
+            dto.setReceiptImage(payment.getReceiptImage());
+            populateVnpayPending(payment, dto);
+        }
         return dto;
     }
 
@@ -242,9 +252,29 @@ public class PaymentService {
         List<PaymentDto> dtos = paymentMapper.toDtoList(payments);
         if (dtos == null) return List.of();
         for (int i = 0; i < dtos.size() && i < payments.size(); i++) {
-            if (dtos.get(i) != null) describe(payments.get(i), dtos.get(i));
+            if (dtos.get(i) != null) {
+                describe(payments.get(i), dtos.get(i));
+                populateVnpayPending(payments.get(i), dtos.get(i));
+            }
         }
         return dtos;
+    }
+
+    private void populateVnpayPending(Payment payment, PaymentDto dto) {
+        if (payment == null || dto == null || payment.getId() == null || vnpayTransactionRepository == null) return;
+        if (!"pending".equalsIgnoreCase(payment.getStatus())) {
+            dto.setVnpayPending(false);
+            return;
+        }
+        LocalDateTime now = vnpayGuard != null
+                ? vnpayGuard.now()
+                : LocalDateTime.ofInstant(clock.instant(), java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var attempts = vnpayTransactionRepository.findAllByPaymentId(payment.getId());
+        boolean hasLiveAttempt = attempts != null && attempts.stream()
+                .anyMatch(t -> t != null && "pending".equals(t.getStatus())
+                        && (t.getExpiresAt() == null
+                            || !t.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now)));
+        dto.setVnpayPending(hasLiveAttempt);
     }
 
     /**

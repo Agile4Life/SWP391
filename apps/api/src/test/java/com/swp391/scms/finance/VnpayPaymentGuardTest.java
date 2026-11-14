@@ -55,4 +55,25 @@ class VnpayPaymentGuardTest {
         assertEquals(1,new VnpayExpiryScheduler(transactions,guard).closeAbandonedAttempts());
         assertEquals("failed",abandoned.getStatus());
     }
+
+    @Test void expiringStaleWalletTopupAlsoClosesStandaloneTopupPayment() {
+        var transactions = mock(VnpayTransactionRepository.class);
+        var payments = mock(PaymentRepository.class);
+        var topup = new Payment();
+        topup.setId(88L);
+        topup.setStatus("pending");
+        topup.setMethod("online_wallet");
+        topup.setNote("WALLET_TOPUP");
+        var stale = new VnpayTransaction("OLDTOPUP", topup, java.math.BigDecimal.TEN,
+                LocalDateTime.of(2026, 11, 3, 11, 0), LocalDateTime.of(2026, 11, 3, 11, 15), "127.0.0.1");
+        when(transactions.findAllByPaymentId(88L)).thenReturn(List.of(stale));
+        when(payments.findById(88L)).thenReturn(java.util.Optional.of(topup));
+
+        var guard = new VnpayPaymentGuard(transactions, payments, clock);
+        guard.expireStale(88L);
+
+        assertEquals("failed", stale.getStatus());
+        assertEquals("failed", topup.getStatus());
+        verify(payments).save(topup);
+    }
 }

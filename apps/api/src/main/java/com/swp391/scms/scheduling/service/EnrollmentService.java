@@ -815,10 +815,19 @@ public class EnrollmentService {
 
             if ("vnpay".equals(normalizedMethod) && vnpayPaymentService != null && vnpayPaymentService.enabled()) {
                 try {
+                    String ip = "127.0.0.1";
+                    String origin = null;
+                    var reqAttrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+                    if (reqAttrs instanceof org.springframework.web.context.request.ServletRequestAttributes servletAttrs) {
+                        var req = servletAttrs.getRequest();
+                        if (req.getRemoteAddr() != null) ip = req.getRemoteAddr();
+                        origin = req.getHeader("Origin") != null ? req.getHeader("Origin") : req.getHeader("Referer");
+                    }
                     var checkout = vnpayPaymentService.checkout(
                             principal,
                             new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, savedPayment.getId()),
-                            "127.0.0.1"
+                            ip,
+                            origin
                     );
                     paymentUrl = checkout.paymentUrl();
                 } catch (Exception ex) {
