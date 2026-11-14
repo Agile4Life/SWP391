@@ -560,7 +560,6 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
           </div>
           {dialogError && <div className="form-error" role="alert">{memberRenderMessage(dialogError)}</div>}
           <div className="mcal__dialog-actions">
-            <button type="button" className="btn-secondary" onClick={closeDialog} disabled={busy}>{text("Đóng", "Close")}</button>
             {selected.kind === 'court' ? (
               <Link to="/member/courts" className="btn-primary">{text("Quản lý đặt sân", "Manage court bookings")}</Link>
             ) : selected.kind === 'pt' ? (

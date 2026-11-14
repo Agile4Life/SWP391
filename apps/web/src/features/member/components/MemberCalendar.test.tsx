@@ -143,7 +143,7 @@ describe('MemberCalendar', () => {
     await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--class')!.click());
     expect(document.querySelector('dialog')!.textContent).toContain('Cancel booking');
     expect(document.querySelector('dialog')!.textContent).toContain('Coach');
-    await act(async () => button('Close').click());
+    await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
     expect(host.querySelector('.mcal__event--class')!.getAttribute('title')!.startsWith('Class session')).toBe(true);
     expect(host.querySelector('.mcal__event--court')!.getAttribute('title')!.startsWith('Court / room')).toBe(true);
   });

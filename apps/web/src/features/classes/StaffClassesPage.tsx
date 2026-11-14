@@ -1219,7 +1219,6 @@ export function StaffClassesPage() {
               ) : (
                 <div data-i18n-managed />
               )}
-              <button type="button" className="btn-secondary" onClick={() => setSelectedClassDetail(null)}>{t("Đóng")}</button>
             </div>
           </div>
         </Modal>

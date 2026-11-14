@@ -1864,13 +1864,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setPaymentModalBooking(null)}
-              >
-                {memberText("Đóng")}</button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
               <button
                 type="button"
                 className="btn-primary"

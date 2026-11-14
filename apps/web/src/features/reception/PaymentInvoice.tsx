@@ -63,7 +63,6 @@ export function PaymentInvoice({ onClose, ...invoice }: InvoiceProps & { onClose
       <p data-i18n-managed className="payment-invoice__success" role="status">{t("Đã ghi nhận thanh toán thành công.")}</p>
       <div className="payment-invoice__preview"><InvoiceDocument {...invoice} /></div>
       <div className="payment-invoice__actions">
-        <button type="button" className="btn-secondary" onClick={onClose}>{t("Đóng")}</button>
         <button type="button" className="btn-primary" onClick={() => window.print()}>{t("In hóa đơn (80 mm)")}</button>
       </div>
     </Modal>

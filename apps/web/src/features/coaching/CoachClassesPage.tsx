@@ -474,7 +474,6 @@ export function CoachClassesPage() {
                   {t("Hủy buổi kèm 1:1")}</button>
               )}
             </div>
-            <button type="button" className="btn-secondary" onClick={() => setSelectedPt(null)}>{t("Đóng")}</button>
           </div>
         </Modal>
       )}

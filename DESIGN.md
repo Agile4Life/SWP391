@@ -1,5 +1,12 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Audit UI/UX trước buổi demo (14/11/2026, yêu cầu người dùng — **ghi đè** các mục cũ ở đúng những điểm nêu dưới):
+- **Mua/gia hạn/nâng cấp gói**: khi đủ điều kiện, bấm nút không tạo yêu cầu ngay mà mở `useConfirm()` nêu tên gói và số tiền (`formatPrice`; nâng cấp dùng `upgradeQuote`), nút “Gửi yêu cầu”/“Để sau”. Chưa đủ điều kiện vẫn mở popup giải thích như cũ.
+- **Nút “Đóng” trùng nút X**: hộp thoại dạng xem (chi tiết, hóa đơn, thông tin thanh toán) không đặt thêm nút “Đóng” ở chân khi chân đã có thao tác khác; nút X của `Modal` là lối thoát. Hộp thoại form vẫn giữ nút “Hủy” cạnh nút gửi; hộp thoại chỉ có một nút ở chân hoặc danh sách dài (chân có bộ đếm) được giữ “Đóng”.
+- **Tiền mặt tại quầy**: mục “Thanh toán & Ví điện tử SÖL (05/11/2026)” cấm selector tiền mặt phía hội viên cho gói tập, đặt sân và PT. Học phí khóa học là ngoại lệ theo quy tắc nghiệp vụ 10/11/2026: hội viên được chọn “Tiền mặt tại quầy lễ tân” để giữ chỗ đến trước ngày khai giảng.
+- **Định dạng tiền**: mọi số tiền hiển thị dùng `formatPrice` (`shared/lib/membershipPresentation.ts`); không viết helper `vnd`/`toLocaleString` riêng.
+- **Hộp thoại**: `Modal` chỉ đóng khi cú bấm bắt đầu và kết thúc trên nền mờ (kéo bôi đen chữ ra ngoài không đóng); hộp thoại form truyền `busy` khi đang gửi.
+
 Nhật ký & Lấp đầy (12/11/2026, yêu cầu Leader — cập nhật SCRUM-124):
 - Màn hình Audit Trail và tỷ lệ lấp đầy thuộc Admin, route `/admin/audit-logs`, dùng chung PortalShell, bảng, tab, bộ lọc và theme portal hiện hành; duy trì VI/EN.
 - Manager chỉ giữ mục Doanh thu ở `/manager/reports`; bỏ mục Nhật ký & Lấp đầy và route `/manager/audit-logs`. URL cũ đi qua fallback route hiện hành, không render màn hình audit.
