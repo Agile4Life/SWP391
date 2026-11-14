@@ -69,7 +69,7 @@ export function getLightingBudgetConfig(
 ): LightingBudgetConfig {
   const palette = getExploreThemePalette(theme);
   // Saltline-style: 4096 map on high, 2048 on medium.
-  const mapResolution = tier === 'high' ? 4096 : 2048;
+  const mapResolution = tier === 'high' ? 3072 : 2048;
   const isDark = theme === 'dark';
   // Saltline lighting model: one strong HDR sun + sky image-based light, with
   // only a small flat ambient. The low tier has no sky probe, so it keeps a

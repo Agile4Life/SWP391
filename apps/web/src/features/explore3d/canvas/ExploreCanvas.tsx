@@ -84,7 +84,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
 
     // Scanned PBR surface sets stream in; materials use procedural detail until then.
     if (useExploreStore.getState().tier !== 'low') {
-      loadSurfaceTextures(() => state.invalidate(), state.gl.capabilities?.getMaxAnisotropy?.() ?? 8);
+      loadSurfaceTextures(() => state.invalidate(), Math.min(4, state.gl.capabilities?.getMaxAnisotropy?.() ?? 4));
     }
 
     const domElement = state.gl.domElement;

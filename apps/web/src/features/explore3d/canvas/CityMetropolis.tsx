@@ -26,7 +26,7 @@ export function CityMetropolis() {
     () =>
       applySurfaceDetail(
         new THREE.MeshStandardMaterial({ name: 'sol-city-opaque', vertexColors: true, roughness: 0.66, envMapIntensity: 1.2 }),
-        { ...SURFACE_DETAIL_PRESETS.wall, wet: 0.85, wetDarkOnly: true, grime: 0.5, textureChroma: 0.2 },
+        { ...SURFACE_DETAIL_PRESETS.wall, texture: undefined, bump: 0, wet: 0.85, wetDarkOnly: true, grime: 0.5 },
       ),
     [],
   );

@@ -5,13 +5,12 @@ import { SOFT_SHADOW_TAPS, patchSoftShadowChunk } from '../postfx/softShadows';
 import { GRADE_FRAG, SSAO_FRAG } from '../postfx/shaders';
 
 describe('Cinematic post-processing presets', () => {
-  it('scales MSAA, AO taps and pixel budget with the quality tier', () => {
+  it('scales AO taps and pixel budget with the quality tier', () => {
     const high = getPostFxConfig('high', 'dark');
     const medium = getPostFxConfig('medium', 'dark');
     const low = getPostFxConfig('low', 'dark');
-    expect(high.msaa).toBe(4);
-    expect(medium.msaa).toBe(2);
-    expect(low.msaa).toBe(0);
+    // MSAA is off on every tier: it dominated frame time; FXAA + sharpen handle edges.
+    expect([high.msaa, medium.msaa, low.msaa]).toEqual([0, 0, 0]);
     expect(high.ao.taps).toBeGreaterThan(medium.ao.taps);
     expect(high.pixelBudget).toBeGreaterThan(medium.pixelBudget);
     expect(medium.pixelBudget).toBeGreaterThan(low.pixelBudget);
