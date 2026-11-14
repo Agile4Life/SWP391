@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CAMPUS_FLAGPOLE_ANCHORS } from '../renderers/architecture/buildCampusGeometry';
-import { buildCityMetropolis } from '../renderers/architecture/buildCityMetropolis';
-import { useDocumentTheme } from '../renderers/materials';
+import { buildCityMetropolis, buildGymCrown } from '../renderers/architecture/buildCityMetropolis';
+import { useDocumentTheme, type ExploreTheme } from '../renderers/materials';
 import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
 import { useExploreStore } from '../state/exploreStore';
 import { CityLife } from './CityLife';
@@ -64,6 +64,7 @@ export function CityMetropolis() {
       <mesh name="sol-city-metal" geometry={city.metalGeometry} material={metalMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-glass" geometry={city.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
+      <GymCrown theme={theme} glassMat={glassMat} emissiveMat={emissiveMat} opaqueMat={opaqueMat} metalMat={metalMat} />
       <CityTraffic />
       <CityLife city={city} />
       <CitySky />
@@ -119,5 +120,27 @@ function Flags({ isLight }: { isLight: boolean }) {
         <mesh key={f.a.id} geometry={f.geom} material={f.mat} position={[f.a.x, f.a.y, f.a.z]} castShadow raycast={NOOP_RAYCAST} />
       ))}
     </>
+  );
+}
+
+interface GymCrownProps {
+  theme: ExploreTheme;
+  glassMat: THREE.Material;
+  emissiveMat: THREE.Material;
+  opaqueMat: THREE.Material;
+  metalMat: THREE.Material;
+}
+
+/** Roof crown sits on the stacked roof slab, so it hides when levels are exploded or isolated. */
+function GymCrown({ theme, glassMat, emissiveMat, opaqueMat, metalMat }: GymCrownProps) {
+  const levelMode = useExploreStore(s => s.levelMode);
+  const crown = useMemo(() => buildGymCrown(theme), [theme]);
+  return (
+    <group name="sol-gym-crown" visible={levelMode === 'stacked'}>
+      <mesh geometry={crown.opaqueGeometry} material={opaqueMat} receiveShadow raycast={NOOP_RAYCAST} />
+      <mesh geometry={crown.metalGeometry} material={metalMat} receiveShadow raycast={NOOP_RAYCAST} />
+      <mesh geometry={crown.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
+      <mesh geometry={crown.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
+    </group>
   );
 }
