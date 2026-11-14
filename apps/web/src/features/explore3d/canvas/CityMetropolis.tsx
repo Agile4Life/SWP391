@@ -3,7 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CAMPUS_FLAGPOLE_ANCHORS } from '../renderers/architecture/buildCampusGeometry';
 import { buildCityMetropolis } from '../renderers/architecture/buildCityMetropolis';
-import { useDocumentTheme, useExploreMaterials } from '../renderers/materials';
+import { useDocumentTheme } from '../renderers/materials';
+import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
 import { useExploreStore } from '../state/exploreStore';
 import { CityLife } from './CityLife';
 import { CitySky } from './CitySky';
@@ -17,10 +18,28 @@ export function CityMetropolis() {
   const tier = useExploreStore(s => s.tier);
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
-  const materials = useExploreMaterials(theme);
   const city = useMemo(() => buildCityMetropolis(theme, tier), [theme, tier]);
   const visible = levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'L1' || focusLevel === 'OUT';
 
+  // Scanned-concrete grain, grime and wet streets break up the flat vertex colours.
+  const opaqueMat = useMemo(
+    () =>
+      applySurfaceDetail(
+        new THREE.MeshStandardMaterial({ name: 'sol-city-opaque', vertexColors: true, roughness: 0.66, envMapIntensity: 1.2 }),
+        { ...SURFACE_DETAIL_PRESETS.wall, wet: 0.85, wetDarkOnly: true, grime: 0.5, textureChroma: 0.2 },
+      ),
+    [],
+  );
+  const metalMat = useMemo(
+    () =>
+      applySurfaceDetail(
+        new THREE.MeshStandardMaterial({ name: 'sol-city-metal', vertexColors: true, roughness: 0.38, metalness: 0.65, envMapIntensity: 1.5 }),
+        SURFACE_DETAIL_PRESETS.metal,
+      ),
+    [],
+  );
+  useEffect(() => () => opaqueMat.dispose(), [opaqueMat]);
+  useEffect(() => () => metalMat.dispose(), [metalMat]);
   const glassMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -42,8 +61,8 @@ export function CityMetropolis() {
   const castShadows = tier !== 'low';
   return (
     <group name="sol-city-metropolis" visible={visible}>
-      <mesh name="sol-city-opaque" geometry={city.opaqueGeometry} material={materials.vertexColored} receiveShadow castShadow={castShadows} raycast={NOOP_RAYCAST} />
-      <mesh name="sol-city-metal" geometry={city.metalGeometry} material={materials.vertexColored} receiveShadow raycast={NOOP_RAYCAST} />
+      <mesh name="sol-city-opaque" geometry={city.opaqueGeometry} material={opaqueMat} receiveShadow castShadow={castShadows} raycast={NOOP_RAYCAST} />
+      <mesh name="sol-city-metal" geometry={city.metalGeometry} material={metalMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-glass" geometry={city.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
       <CityTraffic />
