@@ -58,10 +58,9 @@ export function CityMetropolis() {
   useEffect(() => () => glassMat.dispose(), [glassMat]);
   useEffect(() => () => emissiveMat.dispose(), [emissiveMat]);
 
-  const castShadows = tier !== 'low';
   return (
     <group name="sol-city-metropolis" visible={visible}>
-      <mesh name="sol-city-opaque" geometry={city.opaqueGeometry} material={opaqueMat} receiveShadow castShadow={castShadows} raycast={NOOP_RAYCAST} />
+      <mesh name="sol-city-opaque" geometry={city.opaqueGeometry} material={opaqueMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-metal" geometry={city.metalGeometry} material={metalMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-glass" geometry={city.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
