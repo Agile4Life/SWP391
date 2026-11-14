@@ -40,8 +40,10 @@ describe('SCRUM-86 payment API', () => {
     });
   });
 
-  it('normalizes malformed stub payloads to empty arrays or null instead of crashing renderers', async () => {
+  it('normalizes malformed stub payloads to empty arrays or falsy instead of crashing renderers', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) }));
+    await expect(getCurrentMembership()).resolves.toBeUndefined();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: null }) }));
     await expect(getCurrentMembership()).resolves.toBeNull();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: {} }) }));
     await expect(getMembershipPackages()).resolves.toEqual([]);

@@ -247,4 +247,78 @@ describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp 
     expect(host.textContent).toContain('Athletic Conditioning');
     expect(host.textContent).toContain('80%');
   });
+
+  it('localizes operational audit actions, entities, system actors, and IPv6 loopback cleanly in VI and EN (C5)', async () => {
+    vi.mocked(auditApi.getAuditLogs).mockResolvedValue({
+      content: [
+        {
+          id: 201,
+          userId: null,
+          userFullName: '',
+          userEmail: '',
+          action: 'STAFF_ACCOUNT_STATUS_CHANGE',
+          entityType: 'members',
+          entityId: 77,
+          oldValue: { kycStatus: 'pending', fitness_goal: 'lose_weight' },
+          newValue: { kycStatus: 'approved', fitness_goal: 'lose_weight' },
+          ipAddress: '0:0:0:0:0:0:0:1',
+          createdAt: '2026-11-14T08:00:00',
+        },
+        {
+          id: 202,
+          userId: 5,
+          userFullName: 'Lê Minh Quân',
+          userEmail: 'quan.le@sol.vn',
+          action: 'COMPLETE_ORDER',
+          entityType: 'product_orders',
+          entityId: 309,
+          oldValue: { status: 'READY_FOR_PICKUP' },
+          newValue: { status: 'COMPLETED' },
+          ipAddress: '::1',
+          createdAt: '2026-11-14T08:15:00',
+        },
+      ],
+      totalElements: 2,
+      totalPages: 1,
+      number: 0,
+      size: 8,
+    });
+
+    await act(async () => {
+      root.render(<AdminAuditLogsPage />);
+    });
+
+    expect(host.textContent).toContain('Hệ thống');
+    expect(host.textContent).toContain('Tác vụ tự động');
+    expect(host.textContent).not.toContain('User #null');
+    expect(host.textContent).toContain('Đổi trạng thái nhân sự');
+    expect(host.textContent).toContain('Hội viên');
+    expect(host.textContent).toContain('Hoàn tất đơn hàng');
+    expect(host.textContent).toContain('Đơn hàng sản phẩm');
+    expect(host.textContent).not.toContain('STAFF_ACCOUNT_STATUS_CHANGE');
+    expect(host.textContent).not.toContain('COMPLETE_ORDER');
+    expect(host.textContent).not.toContain('product_orders');
+
+    const diffBtn = host.querySelector('button[aria-label="Xem diff bản ghi #201"]') as HTMLButtonElement;
+    expect(diffBtn).not.toBeNull();
+    await act(async () => {
+      diffBtn.click();
+    });
+
+    const modalText = host.querySelector('.diff-modal-container')?.textContent ?? '';
+    expect(modalText).toContain('Hệ thống · Tác vụ tự động');
+    expect(modalText).not.toContain('()');
+    expect(modalText).toContain('127.0.0.1');
+    expect(modalText).not.toContain('0:0:0:0:0:0:0:1');
+    expect(host.querySelectorAll('.diff-kv-row.is-changed').length).toBeGreaterThanOrEqual(2);
+
+    await act(async () => {
+      setLanguage('en');
+    });
+
+    expect(host.textContent).toContain('Change staff status');
+    expect(host.textContent).toContain('Complete order');
+    expect(host.textContent).toContain('Product orders');
+    expect(host.textContent).toContain('Automated task');
+  });
 });

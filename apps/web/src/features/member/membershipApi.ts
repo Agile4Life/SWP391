@@ -85,9 +85,11 @@ export const getMembershipPackages = async () => {
   return Array.isArray(res) ? res : [];
 };
 
-export const getCurrentMembership = async () => {
+export const getCurrentMembership = async (): Promise<MemberSubscription | null> => {
   const res = await apiFetch<MemberSubscription | null>('/memberships/subscriptions/my');
-  return res && !Array.isArray(res) && typeof res === 'object' && 'id' in res ? res : null;
+  if (res === null) return null;
+  if (res && !Array.isArray(res) && typeof res === 'object' && 'id' in res) return res;
+  return undefined as unknown as MemberSubscription | null;
 };
 
 export const getMembershipHistory = async () => {

@@ -150,4 +150,15 @@
   .recon-warning {
     flex-wrap: wrap;
   }
+
+  .portal-v2 .recon-page .audit-view-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .portal-v2 .recon-page .audit-view-tabs .audit-tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
 }

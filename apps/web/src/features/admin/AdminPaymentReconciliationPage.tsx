@@ -69,7 +69,7 @@ export function AdminPaymentReconciliationPage() {
   const [to, setTo] = useState(today);
   const [tab, setTab] = useState<Tab>('attempts');
 
-  const vnd = (n: number | null | undefined) => (n == null ? '—' : formatPrice(Math.round(Number(n))));
+  const formatOptionalPrice = (n: number | null | undefined) => (n == null ? '—' : formatPrice(Math.round(Number(n))));
 
   // Summary
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
@@ -223,7 +223,7 @@ export function AdminPaymentReconciliationPage() {
               <div className="metric-card">
                 <span className="metric-label">{t('Hoàn tiền tự động', 'Automatic refunds')}</span>
                 <span className="metric-value">{summary.lateRefundCount}</span>
-                <span className="metric-unit">{vnd(summary.lateRefundAmount)}</span>
+                <span className="metric-unit">{formatOptionalPrice(summary.lateRefundAmount)}</span>
               </div>
               <div className="metric-card">
                 <span className="metric-label">{t('IPN cần gửi lại (99)', 'IPN to retry (99)')}</span>
@@ -323,7 +323,7 @@ export function AdminPaymentReconciliationPage() {
                 </td>
                 <td>{memberCell(row.member)}</td>
                 <td>{targetLabel(t, row.targetType, row.targetId)}</td>
-                <td className="recon-num">{vnd(row.amount)}</td>
+                <td className="recon-num">{formatOptionalPrice(row.amount)}</td>
                 <td>
                   <span className={`badge ${attemptBadge(row)}`}>{row.stale ? t('Treo', 'Stuck') : attemptStatusLabel(t, row.status)}</span>
                   <div className="recon-muted">{t('Thanh toán:', 'Payment:')} {paymentStatusLabel(t, row.paymentStatus)}</div>
@@ -352,7 +352,7 @@ export function AdminPaymentReconciliationPage() {
               <tr key={row.walletTransactionId} className={row.paymentId != null ? 'recon-row-click' : undefined} onClick={() => openTimeline(row.paymentId)}>
                 <td className="recon-num">{formatCenterDateTime(row.createdAt)}</td>
                 <td>{memberCell(row.member)}</td>
-                <td className="recon-num">{vnd(row.amount)}</td>
+                <td className="recon-num">{formatOptionalPrice(row.amount)}</td>
                 <td>
                   {row.kind === 'ORDER_LATE_REFUND'
                     ? t('Đơn hàng đã hủy, VNPay báo thành công muộn', 'Order cancelled, VNPay confirmed late')
@@ -434,7 +434,7 @@ export function AdminPaymentReconciliationPage() {
                   {row.gatewayResponseCode ?? '—'} / {row.gatewayTransactionStatus ?? '—'}
                   {row.gatewayTransactionNo && <div className="recon-muted">VNPay {row.gatewayTransactionNo}</div>}
                 </td>
-                <td className="recon-num">{vnd(row.amount)}</td>
+                <td className="recon-num">{formatOptionalPrice(row.amount)}</td>
                 <td><span className={`badge ${rspBadge(row.rspCode)}`}>{row.rspCode} · {rspLabel(t, row.rspCode)}</span></td>
               </tr>
             ))}
@@ -457,7 +457,7 @@ export function AdminPaymentReconciliationPage() {
                 <dl className="recon-facts">
                   <div><dt>{t('Hội viên', 'Member')}</dt><dd>{timeline.payment.member?.fullName ?? '—'} {timeline.payment.member?.email ? `· ${timeline.payment.member.email}` : ''}</dd></div>
                   <div><dt>{t('Đối tượng', 'For')}</dt><dd>{targetLabel(t, timeline.payment.targetType, timeline.payment.targetId)}</dd></div>
-                  <div><dt>{t('Số tiền', 'Amount')}</dt><dd>{vnd(timeline.payment.amount)}{timeline.payment.refundedAmount ? ` · ${t('đã hoàn', 'refunded')} ${vnd(timeline.payment.refundedAmount)}` : ''}</dd></div>
+                  <div><dt>{t('Số tiền', 'Amount')}</dt><dd>{formatOptionalPrice(timeline.payment.amount)}{timeline.payment.refundedAmount ? ` · ${t('đã hoàn', 'refunded')} ${formatOptionalPrice(timeline.payment.refundedAmount)}` : ''}</dd></div>
                   <div><dt>{t('Trạng thái', 'Status')}</dt><dd>{paymentStatusLabel(t, timeline.payment.status)} · {methodLabel(t, timeline.payment.method)}</dd></div>
                   {timeline.payment.invoiceNumber && <div><dt>{t('Hóa đơn', 'Invoice')}</dt><dd>{timeline.payment.invoiceNumber}</dd></div>}
                 </dl>
@@ -470,7 +470,7 @@ export function AdminPaymentReconciliationPage() {
                     <li key={`${entry.type}-${entry.at}-${index}`}>
                       <span className="recon-num recon-muted">{formatCenterDateTime(entry.at)}</span>
                       <strong>{entryLabel(t, entry.type)}</strong>
-                      <span>{entryDetail(t, entry, vnd)}</span>
+                      <span>{entryDetail(t, entry, formatOptionalPrice)}</span>
                     </li>
                   ))}
                 </ol>
@@ -619,7 +619,11 @@ function entryLabel(t: Translate, type: string): string {
   }
 }
 
-function entryDetail(t: Translate, entry: PaymentTimeline['entries'][number], vnd: (n: number | null | undefined) => string): string {
+function entryDetail(
+  t: Translate,
+  entry: PaymentTimeline['entries'][number],
+  formatAmount: (n: number | null | undefined) => string,
+): string {
   const parts: string[] = [];
   if (entry.reference) parts.push(entry.reference);
   switch (entry.type) {
@@ -640,6 +644,6 @@ function entryDetail(t: Translate, entry: PaymentTimeline['entries'][number], vn
     default:
       break;
   }
-  if (entry.amount != null) parts.push(vnd(entry.amount));
+  if (entry.amount != null) parts.push(formatAmount(entry.amount));
   return parts.join(' · ');
 }

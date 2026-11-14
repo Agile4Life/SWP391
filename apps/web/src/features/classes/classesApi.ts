@@ -29,7 +29,7 @@ export interface ClassItem {
   capacity: number;
   level?: string;
   description?: string | null;
-  status: 'ACTIVE' | 'ARCHIVED' | 'INACTIVE';
+  status: 'ACTIVE' | 'ARCHIVED' | 'INACTIVE' | 'active' | 'archived' | 'inactive';
   schedule?: string;
   activeSessions?: number;
   price?: number;

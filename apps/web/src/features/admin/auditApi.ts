@@ -3,9 +3,9 @@ import { apiFetch } from '../../shared/api/client';
 
 export interface AuditLogItem {
   id: number;
-  userId: number;
-  userFullName: string;
-  userEmail: string;
+  userId: number | null;
+  userFullName: string | null;
+  userEmail: string | null;
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'CANCEL' | 'SCAN' | string;
   entityType: string;
   entityId: number;
