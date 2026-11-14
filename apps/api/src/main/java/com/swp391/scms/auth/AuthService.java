@@ -380,9 +380,10 @@ public class AuthService {
 
     /** Display name for the current session (never the login identifier when the account has a real name). */
     @Transactional(readOnly = true)
-    public String fullNameOf(String username) {
-        if (username == null) return null;
-        return userRepository.findByUsernameIgnoreCase(username).map(User::getFullName).orElse(null);
+    public String fullNameOf(Long userId) {
+        // By id: accounts provisioned with only an email (staff, demo, bootstrap admin) have no username to look up.
+        if (userId == null) return null;
+        return userRepository.findByIdAndDeletedAtIsNull(userId).map(User::getFullName).orElse(null);
     }
 
     private User createMemberAccount(

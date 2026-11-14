@@ -47,4 +47,15 @@ class AuthSessionEndpointTest {
                 .andExpect(jsonPath("$.data.username").value("manager01"))
                 .andExpect(jsonPath("$.data.role").value("CENTER_MANAGER"));
     }
+
+    @Test
+    void emailOnlyAccountGetsItsFullNameLookedUpById() throws Exception {
+        // Demo and staff accounts have no username: the principal carries the email, so the name must come by id.
+        org.mockito.Mockito.when(authService.fullNameOf(7L)).thenReturn("Nguyễn Minh An");
+        var auth = new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(7L, "an@demo.sol.vn", "MEMBER"),
+                null, List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));
+        mvc.perform(get("/api/v1/auth/me").with(authentication(auth)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fullName").value("Nguyễn Minh An"));
+    }
 }
