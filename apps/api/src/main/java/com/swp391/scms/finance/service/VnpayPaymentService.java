@@ -144,35 +144,12 @@ public class VnpayPaymentService {
         payment.setMethod("online_wallet");
         payment = payments.saveAndFlush(payment);
 
-        String targetPath = payment.getProductOrderId() != null
-                ? "/member/orders/" + payment.getProductOrderId()
-                : payment.getCourtBookingId() != null
-                        ? "/member/courts"
-                        : payment.getCoachBookingId() != null
-                                ? "/member/classes?tab=pt"
-                                : payment.getClassEnrollmentId() != null
-                                        ? "/member/classes"
-                                        : payment.getSubscriptionId() != null
-                                                ? "/member/packages"
-                                                : "/member/invoices";
-        String desc = payment.getProductOrderId() != null
-                ? orderWalletDescription(payment)
-                : payment.getSubscriptionId() != null
-                        ? "Thanh toán gói tập hội viên (#" + payment.getId() + ")"
-                        : payment.getCoachBookingId() != null
-                                ? "Thanh toán lịch PT 1:1 (#" + payment.getId() + ")"
-                                : payment.getCourtBookingId() != null
-                                        ? "Thanh toán đặt sân (#" + payment.getId() + ")"
-                                        : payment.getClassEnrollmentId() != null
-                                                ? "Thanh toán học phí khóa học (#" + payment.getId() + ")"
-                                                : "Thanh toán dịch vụ (#" + payment.getId() + ")";
-
         com.swp391.scms.wallet.WalletDto updatedWallet = walletService.debitForPayment(
                 principal.id(),
                 payment.getAmount(),
                 "WALLET_PAY_" + payment.getId(),
-                desc,
-                targetPath
+                walletDescription(payment, String.valueOf(payment.getId())),
+                targetPath(payment)
         );
         settlement.updatePaymentStatus(payment.getId(), "success");
         markBookingPaid(payment);
@@ -289,18 +266,7 @@ public class VnpayPaymentService {
         var t=transactions.findById(normalizedRef).orElseThrow(()->new ResourceNotFoundException("resource.payment",normalizedRef));
         Payment p=t.getPayment();requireOwner(principal,p.getMember().getUserId());
         String status="refunded".equals(p.getStatus())?"refunded":t.getStatus();
-        String targetPath = p.getProductOrderId()!=null
-                ? "/member/orders/" + p.getProductOrderId()
-                : p.getCourtBookingId()!=null
-                        ? "/member/courts"
-                        : p.getCoachBookingId()!=null
-                                ? "/member/classes?tab=pt"
-                                : p.getClassEnrollmentId()!=null
-                                        ? "/member/classes"
-                                        : p.getSubscriptionId()!=null
-                                                ? "/member/packages"
-                                                : "/member/invoices";
-        return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath);
+        return new Status(normalizedRef,p.getId(),p.getSubscriptionId(),t.getAmount(),status,t.getExpiresAt(),targetPath(p));
     }
     public String ipn(Map<String,String> fields) {
         if(!gateway.validSignature(fields)) return "97";
@@ -340,16 +306,8 @@ public class VnpayPaymentService {
                 if (isDirectTopup) {
                     walletService.creditTopup(p.getMember().getUserId(), t.getAmount(), reference);
                 } else {
-                    String desc = p.getProductOrderId() != null
-                            ? orderWalletDescription(p)
-                            : p.getSubscriptionId() != null
-                                    ? "Thanh toán gói tập hội viên (#" + reference + ")"
-                                    : p.getCoachBookingId() != null
-                                            ? "Thanh toán lịch PT 1:1 (#" + reference + ")"
-                                            : p.getCourtBookingId() != null
-                                                    ? "Thanh toán đặt sân (#" + reference + ")"
-                                                    : "Thanh toán dịch vụ (#" + reference + ")";
-                    walletService.recordVnpayTopupAndDebit(p.getMember().getUserId(), t.getAmount(), reference, desc);
+                    walletService.recordVnpayTopupAndDebit(p.getMember().getUserId(), t.getAmount(), reference,
+                            walletDescription(p, reference));
                 }
             }
             if (notifications != null && messages != null) {
@@ -419,6 +377,26 @@ public class VnpayPaymentService {
         return "00";
     }
     private static final org.slf4j.Logger LATE_LOG = org.slf4j.LoggerFactory.getLogger(VnpayPaymentService.class);
+    /** Where the member lands after paying; one place so wallet, VNPay and status always agree. */
+    private static String targetPath(Payment p) {
+        if (p.getProductOrderId() != null) return "/member/orders/" + p.getProductOrderId();
+        if (p.getCourtBookingId() != null) return "/member/courts";
+        if (p.getCoachBookingId() != null) return "/member/classes?tab=pt";
+        if (p.getClassEnrollmentId() != null) return "/member/classes";
+        if (p.getSubscriptionId() != null) return "/member/packages";
+        return "/member/invoices";
+    }
+
+    /** Wallet history line for a payment, the same whether it was paid from the wallet or through VNPay. */
+    private String walletDescription(Payment p, String ref) {
+        if (p.getProductOrderId() != null) return orderWalletDescription(p);
+        if (p.getSubscriptionId() != null) return "Thanh toán gói tập hội viên (#" + ref + ")";
+        if (p.getCoachBookingId() != null) return "Thanh toán lịch PT 1:1 (#" + ref + ")";
+        if (p.getCourtBookingId() != null) return "Thanh toán đặt sân (#" + ref + ")";
+        if (p.getClassEnrollmentId() != null) return "Thanh toán học phí khóa học (#" + ref + ")";
+        return "Thanh toán dịch vụ (#" + ref + ")";
+    }
+
     private String orderWalletDescription(Payment p) {
         String code = "#" + p.getProductOrderId();
         if (orders != null && p.getProductOrderId() != null) {

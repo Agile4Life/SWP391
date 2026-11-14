@@ -135,6 +135,13 @@ class VnpayPaymentServiceTest {
         assertEquals("00",service.ipn(callback("00","00","65000000")));
         verify(settlement).updatePaymentStatus(9L,"success");assertEquals("success",closed.getStatus());
     }
+    @Test void courseFeePaidThroughVnpayIsLabelledAsCourseFeeInTheWallet() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        payment.setSubscriptionId(null); payment.setClassEnrollmentId(15L);
+        assertEquals("00",service.ipn(callback("00","00","65000000")));
+        verify(walletService).recordVnpayTopupAndDebit(7L,new BigDecimal("650000"),"ABC123","Thanh toán học phí khóa học (#ABC123)");
+    }
     @Test void delayedSuccessOnceTheOrderWasClosedIsRefundedToTheWalletNotSettled() {
         var walletService = mock(com.swp391.scms.wallet.WalletService.class);
         service.setWalletService(walletService);
