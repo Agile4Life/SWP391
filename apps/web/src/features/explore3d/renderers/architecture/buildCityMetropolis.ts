@@ -1087,6 +1087,47 @@ export function getCityColliders(): readonly CityCollider[] {
 
 const metropolisCache = new Map<string, CityMetropolisGeometries>();
 
+
+/** SÖL Beacon: a slender landmark mast beside the campus that gives the gym a taller silhouette. */
+function addSolBeacon(
+  buckets: CityBuckets,
+  beaconAnchors: Array<readonly [number, number, number]>,
+  x: number,
+  z: number,
+  isLight: boolean,
+): void {
+  const steel = isLight ? '#3a4352' : '#222a36';
+  const glass = isLight ? '#7fa0b5' : '#1d3347';
+  const salmon = '#f07654';
+  const hdr = isLight ? 1.1 : 4.0;
+  pushBox(buckets.opaque, 7.5, 0.9, 7.5, x, 0.45, z, isLight ? '#a69d91' : '#2e333d');
+  pushBox(buckets.metal, 5.6, 0.5, 5.6, x, 1.15, z, steel);
+  const shaftH = 38;
+  // Four lattice legs that taper toward the crown.
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      pushCylinder(buckets.metal, 0.16, 0.34, shaftH, x + sx * 1.3, 1.4 + shaftH / 2, z + sz * 1.3, steel, 8, sz * 0.012, 0, -sx * 0.012);
+    }
+  }
+  // Cross bracing rings + glass elevator core with salmon light ribbons.
+  for (let y = 4; y < shaftH; y += 4.5) {
+    const k = 1 - y / (shaftH * 1.5);
+    pushBox(buckets.metal, 3.0 * k + 0.4, 0.16, 3.0 * k + 0.4, x, 1.4 + y, z, steel);
+  }
+  pushBox(buckets.glass, 1.7, shaftH - 6, 1.7, x, 1.4 + (shaftH - 6) / 2 + 2, z, glass);
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      pushBox(buckets.emissive, 0.12, shaftH - 8, 0.12, x + sx * 0.95, 1.4 + (shaftH - 8) / 2 + 3, z + sz * 0.95, salmon, 0, 0, 0, hdr);
+    }
+  }
+  // Observation ring and crown halo.
+  pushCylinder(buckets.metal, 3.1, 2.4, 1.1, x, 1.4 + shaftH - 5, z, steel, 16);
+  pushCylinder(buckets.glass, 2.7, 2.7, 1.3, x, 1.4 + shaftH - 3.7, z, glass, 16);
+  pushCylinder(buckets.emissive, 3.2, 3.2, 0.18, x, 1.4 + shaftH - 5.6, z, salmon, 24, 0, 0, 0, hdr);
+  pushCylinder(buckets.metal, 0.06, 0.3, 14, x, 1.4 + shaftH + 6, z, '#9aa2ad', 6);
+  beaconAnchors.push([x, 1.4 + shaftH + 13.2, z]);
+}
+
 /**
  * Generates the entire 360° AAA surrounding metropolis around SÖL Campus as 4
  * batched BufferGeometry buckets (`opaque`, `metal`, `glass`, `emissive`), cached
@@ -1113,6 +1154,7 @@ export function buildCityMetropolis(
 
   addRoadNetworkAndSouthPark(buckets, trafficSignalAnchors, boulevardBannerAnchors, isLight, tier);
   addElevatedMetroViaductAndStation(buckets, isLight, tier);
+  addSolBeacon(buckets, beaconAnchors, -34, -25, isLight);
 
   const towers = generateDistrictTowers(tier, isLight);
   towers.forEach((spec, idx) => {
