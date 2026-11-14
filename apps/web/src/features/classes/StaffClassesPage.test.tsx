@@ -436,4 +436,21 @@ describe('StaffClassesPage weekly timetable', () => {
     expect(host.querySelector('.mcal__event')).not.toBeNull();
     expect(host.querySelectorAll('button.mcal__slot')).toHaveLength(0);
   });
+
+  it('localizes lowercase active and archived class statuses without leaking raw codes', async () => {
+    as('MANAGER');
+    vi.spyOn(classesApi, 'getClasses').mockResolvedValue([
+      { ...cls, id: 101, status: 'active' },
+      { ...cls, id: 102, name: 'Archived Stretch', status: 'archived' },
+    ]);
+    await render();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="view-list"]')!.click();
+    });
+    const tableText = host.querySelector('tbody')!.textContent ?? '';
+    expect(tableText).toContain('Đang hoạt động');
+    expect(tableText).toContain('Lưu trữ');
+    expect(tableText).not.toContain('active');
+    expect(tableText).not.toContain('archived');
+  });
 });

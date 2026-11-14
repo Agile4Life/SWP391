@@ -23,7 +23,7 @@ function validateUserEmail(raw: string, existingUsers: UserAccount[] = []): stri
     return 'Có vẻ bạn gõ nhầm @gmail.co? Vui lòng sửa thành @gmail.com';
   }
   if (!isValidEmailAddress(cleanEmail)) {
-    return 'Email liên hệ không đúng định dạng (vd: mai@sol-wellness.vn).';
+    return 'Email liên hệ không đúng định dạng (vd: mai@sol.vn).';
   }
   if (existingUsers.some(u => u.email?.trim().toLowerCase() === cleanEmail.toLowerCase())) {
     return 'Email đã tồn tại.';
@@ -876,7 +876,7 @@ export function UserManagerPage() {
                 id="user-email"
                 type="email"
                 className="portal-input"
-                placeholder="mai.nguyen@sol-wellness.vn"
+                placeholder="mai.nguyen@sol.vn"
                 aria-invalid={!!fieldErrors.email}
                 value={formData.email}
                 onChange={(e) => {

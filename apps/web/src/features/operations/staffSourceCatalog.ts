@@ -1338,7 +1338,7 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Họ và tên quá ngắn (tối thiểu 2 ký tự).": "Full name is too short (at least 2 characters).",
   "Vui lòng nhập email liên hệ.": "Please enter a contact email.",
   "Có vẻ bạn gõ nhầm @gmail.co? Vui lòng sửa thành @gmail.com": "Did you mean @gmail.com instead of @gmail.co? Please correct it.",
-  "Email liên hệ không đúng định dạng (vd: mai@sol-wellness.vn).": "Invalid contact email (e.g. mai@sol-wellness.vn).",
+  "Email liên hệ không đúng định dạng (vd: mai@sol.vn).": "Invalid contact email (e.g. mai@sol.vn).",
   "Email đã tồn tại.": "Email already exists.",
   "Vui lòng nhập số điện thoại.": "Please enter a phone number.",
   "Số điện thoại không hợp lệ (Phải là 10 số, vd: 0912345678).": "Invalid phone number (must be 10 digits, e.g. 0912345678).",

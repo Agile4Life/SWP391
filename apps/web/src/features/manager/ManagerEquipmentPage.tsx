@@ -145,6 +145,27 @@ export function ManagerEquipmentPage() {
     setEditing(current => current ? { ...current, form: { ...current.form, [field]: value } } : current);
   };
 
+  const renderCategoryLabel = (category: string | null | undefined) => {
+    switch (category) {
+      case 'Tất cả':
+        return t('Tất cả', 'All categories');
+      case 'Cardio':
+        return t('Tim mạch', 'Cardio');
+      case 'Strength':
+        return t('Kháng lực', 'Strength');
+      case 'Free Weights':
+        return t('Tạ tự do', 'Free weights');
+      case 'Diagnostic':
+        return t('Thiết bị đo chỉ số', 'Diagnostics');
+      case 'Recovery':
+        return t('Phục hồi', 'Recovery');
+      case 'Khác':
+        return t('Khác', 'Other');
+      default:
+        return category?.trim() ? category : t('Chung', 'General');
+    }
+  };
+
   const handleQuickStatusChange = async (item: Equipment, newStatus: Equipment['status']) => {
     if (item.status === newStatus) return;
     try {
@@ -368,7 +389,7 @@ export function ManagerEquipmentPage() {
             style={{ minWidth: 160 }}
           >
             {CATEGORIES.map((cat) => (
-              <option data-i18n-managed key={cat} value={cat}>{t(cat)}</option>
+              <option data-i18n-managed key={cat} value={cat}>{renderCategoryLabel(cat)}</option>
             ))}
           </Select>
         </div>
@@ -485,7 +506,7 @@ export function ManagerEquipmentPage() {
                         )}
                       </td>
                       <td>
-                        <span className="badge badge-secondary">{item.category || 'Chung'}</span>
+                        <span className="badge badge-secondary">{renderCategoryLabel(item.category)}</span>
                       </td>
                       <td>
                         <strong>{item.quantity}</strong> {t(" cái")}</td>
@@ -580,12 +601,12 @@ export function ManagerEquipmentPage() {
                   value={editing.form.category}
                   onChange={(e) => setFormField('category', e.target.value)}
                 >
-                  <option value="Cardio">{t("Cardio (Chạy, Đạp xe, Trượt tuyết)")}</option>
-                  <option value="Strength">{t("Strength (Kháng lực, Giàn khối)")}</option>
-                  <option value="Free Weights">{t("Free Weights (Tạ tay, Đòn gánh)")}</option>
-                  <option value="Diagnostic">{t("Diagnostic (Đo chỉ số InBody)")}</option>
-                  <option value="Recovery">{t("Recovery (Giãn cơ, Phục hồi)")}</option>
-                  <option value="Khác">{t("Khác")}</option>
+                  <option value="Cardio">{t("Máy tập tim mạch (chạy bộ, đạp xe)", "Cardio (treadmill, cycling)")}</option>
+                  <option value="Strength">{t("Kháng lực & giàn khối", "Strength & cable machines")}</option>
+                  <option value="Free Weights">{t("Tạ tự do (tạ tay, đòn tạ)", "Free weights (dumbbells, barbells)")}</option>
+                  <option value="Diagnostic">{t("Thiết bị đo chỉ số cơ thể", "Body composition diagnostics")}</option>
+                  <option value="Recovery">{t("Giãn cơ & phục hồi", "Stretching & recovery")}</option>
+                  <option value="Khác">{t("Khác", "Other")}</option>
                 </Select>
               </div>
             </div>

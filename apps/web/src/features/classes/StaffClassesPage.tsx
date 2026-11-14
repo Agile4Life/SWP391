@@ -1076,9 +1076,22 @@ export function StaffClassesPage() {
                       <strong>{cls.capacity} {t(" học viên")}</strong>
                     </td>
                     <td>
-                      <span className={`badge ${cls.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                        {cls.status === 'ACTIVE' ? t('Đang hoạt động') : cls.status === 'INACTIVE' ? t('Ngừng hoạt động', 'Inactive') : cls.status === 'ARCHIVED' ? t('Lưu trữ', 'Archived') : cls.status}
-                      </span>
+                      {(() => {
+                        const normalizedStatus = (cls.status ?? '').trim().toUpperCase();
+                        return (
+                          <span className={`badge ${normalizedStatus === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
+                            {normalizedStatus === 'ACTIVE'
+                              ? t('Đang hoạt động', 'Active')
+                              : normalizedStatus === 'INACTIVE'
+                                ? t('Ngừng hoạt động', 'Inactive')
+                                : normalizedStatus === 'CANCELLED'
+                                  ? t('Tạm ngưng / Đã hủy', 'Suspended / Cancelled')
+                                  : normalizedStatus === 'ARCHIVED'
+                                    ? t('Lưu trữ', 'Archived')
+                                    : t('Chưa rõ', 'Unknown')}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1379,9 +1392,9 @@ export function StaffClassesPage() {
                   onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
                   disabled={isSubmitting}
                 >
-                  <option value="active">{t("Đang hoạt động (Active)")}</option>
-                  <option value="cancelled">{t("Tạm ngưng / Đã hủy")}</option>
-                  <option value="archived">{t("Lưu trữ (Archived)")}</option>
+                  <option value="active">{t("Đang hoạt động", "Active")}</option>
+                  <option value="cancelled">{t("Tạm ngưng / Đã hủy", "Suspended / Cancelled")}</option>
+                  <option value="archived">{t("Lưu trữ", "Archived")}</option>
                 </Select>
               </div>
             </div>

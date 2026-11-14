@@ -161,3 +161,23 @@ it('keeps non-gym rooms and unassigned equipment available in the unified filter
   await submit();
   expect(equipmentApi.save).toHaveBeenLastCalledWith(2, expect.objectContaining({ roomId: null }));
 });
+
+it('displays pure Vietnamese equipment category labels while keeping backend category values intact', async () => {
+  vi.mocked(equipmentApi.list).mockResolvedValue([
+    { ...equipment, id: 3, name: 'Bộ tạ đơn Hex', category: 'Free Weights' },
+    { ...equipment, id: 4, name: 'Máy đo InBody 770', category: 'Diagnostic' },
+  ]);
+  await render();
+  const tbodyText = host.querySelector('tbody')!.textContent ?? '';
+  expect(tbodyText).toContain('Tạ tự do');
+  expect(tbodyText).toContain('Thiết bị đo chỉ số');
+  expect(tbodyText).not.toContain('Free Weights');
+  expect(tbodyText).not.toContain('Diagnostic');
+
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Lọc theo nhóm máy"]')!.click());
+  const freeWeightOpt = [...host.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent === 'Tạ tự do')!;
+  expect(freeWeightOpt).toBeTruthy();
+  await act(async () => freeWeightOpt.click());
+  expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(host.querySelector('tbody')?.textContent).toContain('Bộ tạ đơn Hex');
+});

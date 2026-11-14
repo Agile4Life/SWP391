@@ -15,7 +15,7 @@ function validateStaffEmail(raw: string, accounts: StaffAccount[] = []): string 
   const clean = raw.trim();
   if (!clean) return 'Vui lòng nhập email liên hệ.';
   if (clean.toLowerCase().endsWith('@gmail.co')) return 'Có vẻ bạn gõ nhầm @gmail.co? Vui lòng sửa thành @gmail.com';
-  if (!isValidEmailAddress(clean)) return 'Email liên hệ không đúng định dạng (vd: mai@sol-wellness.vn).';
+  if (!isValidEmailAddress(clean)) return 'Email liên hệ không đúng định dạng (vd: mai@sol.vn).';
   if (accounts.some(acc => acc.email?.trim().toLowerCase() === clean.toLowerCase())) {
     return 'Email đã tồn tại.';
   }
@@ -135,6 +135,7 @@ export function StaffAccountsPage() {
               required
               maxLength={150}
               autoComplete="email"
+              placeholder="mai.nguyen@sol.vn"
               aria-invalid={!!fieldErrors.email}
               aria-describedby={fieldErrors.email ? 'staff-email-error' : undefined}
               value={form.email}
