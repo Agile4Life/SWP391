@@ -10,6 +10,7 @@ import { loadSurfaceTextures } from '../renderers/surfaceTextures';
 import { useExploreStore } from '../state/exploreStore';
 import { WalkController } from '../walk/WalkController';
 import { CameraRig } from './CameraRig';
+import { CityMetropolis } from './CityMetropolis';
 import { Courts } from './Courts';
 import { Cutaway } from './Cutaway';
 import { Environment } from './Environment';
@@ -45,7 +46,7 @@ const INITIAL_CAMERA_CONFIG = {
   position: [46, 36, 48] as [number, number, number],
   fov: 38,
   near: 0.05,
-  far: 380,
+  far: 1200,
 };
 
 export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasProps) {
@@ -83,7 +84,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
 
     // Scanned PBR surface sets stream in; materials use procedural detail until then.
     if (useExploreStore.getState().tier !== 'low') {
-      loadSurfaceTextures(() => state.invalidate(), state.gl.capabilities?.getMaxAnisotropy?.() ?? 8);
+      loadSurfaceTextures(() => state.invalidate(), Math.min(4, state.gl.capabilities?.getMaxAnisotropy?.() ?? 4));
     }
 
     const domElement = state.gl.domElement;
@@ -133,6 +134,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       onPointerMissed={handleCanvasPointerMissed}
     >
       <Environment />
+      <CityMetropolis />
       <ImageBasedLighting />
       <Lights />
       <CameraRig />

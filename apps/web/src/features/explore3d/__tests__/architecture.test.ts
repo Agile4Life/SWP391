@@ -302,7 +302,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(highLight.keyLight.position).toEqual([-26, 11, 40]);
       expect(highLight.keyLight.intensity).toBeCloseTo(3.4, 3);
       expect(highLight.keyLight.castShadow).toBe(true);
-      expect(highLight.keyLight.shadowMapSize).toEqual([4096, 4096]);
+      expect(highLight.keyLight.shadowMapSize).toEqual([3072, 3072]);
       expect(highLight.keyLight.shadowBias).toBeCloseTo(-0.00012, 6);
       expect(highLight.keyLight.shadowNormalBias).toBeCloseTo(0.02, 4);
       expect(highLight.fillLight.position).toEqual([34, 18, -10]);
@@ -327,5 +327,15 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(gridGeom.getAttribute('position').count).toBeGreaterThan(20);
       gridGeom.dispose();
     });
+  });
+});
+
+describe('metro timetable', () => {
+  it('dwells at the station and stays on the track', async () => {
+    const { metroPosition, LOOP } = await import('../renderers/architecture/metroMotion');
+    const samples = Array.from({ length: 400 }, (_, i) => metroPosition(i * 0.5, 15, 4));
+    expect(Math.min(...samples)).toBeGreaterThanOrEqual(-LOOP / 2 - 1);
+    expect(Math.max(...samples)).toBeLessThanOrEqual(LOOP / 2 + 1);
+    expect(samples.filter(p => Math.abs(p - 4) < 0.01).length).toBeGreaterThan(10);
   });
 });

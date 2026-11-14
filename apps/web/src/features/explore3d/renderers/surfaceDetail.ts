@@ -107,9 +107,17 @@ uniform vec3 uSlTexMean;
 uniform float uSlTexRough;
 vec3 slTw = vec3(0.0, 1.0, 0.0);
 vec2 slUx; vec2 slUy; vec2 slUz;
+vec2 slDxX; vec2 slDyX; vec2 slDxY; vec2 slDyY; vec2 slDxZ; vec2 slDyZ;
 vec3 slArm = vec3(1.0, 1.0, 0.0);
 float slTexK = 0.0;
-vec4 slTri(sampler2D t) { return texture2D(t, slUx) * slTw.x + texture2D(t, slUy) * slTw.y + texture2D(t, slUz) * slTw.z; }
+// Skip projections whose weight is negligible: axis-aligned surfaces (almost everything here) need 1 fetch, not 3.
+vec4 slTri(sampler2D t) {
+  vec4 r = vec4(0.0);
+  if (slTw.x > 0.012) r += textureGrad(t, slUx, slDxX, slDyX) * slTw.x;
+  if (slTw.y > 0.012) r += textureGrad(t, slUy, slDxY, slDyY) * slTw.y;
+  if (slTw.z > 0.012) r += textureGrad(t, slUz, slDxZ, slDyZ) * slTw.z;
+  return r / max(slTw.x * step(0.012, slTw.x) + slTw.y * step(0.012, slTw.y) + slTw.z * step(0.012, slTw.z), 1e-3);
+}
 #endif
 float slH(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
@@ -135,6 +143,7 @@ const FRAG_COLOR = /* glsl */ `
   slTw = slW3 / (slW3.x + slW3.y + slW3.z);
   vec3 slQ = vSlPos * uSlTex.x;
   slUx = slQ.zy; slUy = slQ.xz; slUz = slQ.xy;
+  slDxX = dFdx(slUx); slDyX = dFdy(slUx); slDxY = dFdx(slUy); slDyY = dFdy(slUy); slDxZ = dFdx(slUz); slDyZ = dFdy(slUz);
   slTexK = uSlTexOn;
   if (uSlMicro.w > 0.5) {
     // merged vertex-coloured campus: only the dark, flat ground (roads, parking) is asphalt
@@ -205,9 +214,12 @@ if (slTexK > 0.0) {
   // Whiteout-blended triplanar normal mapping in world space.
   float slNs = uSlTex.z * slTexK * (1.0 - smoothstep(0.3, 0.9, slWetK));
   vec3 slWN = inverseTransformDirection(normal, viewMatrix);
-  vec3 slNx = texture2D(tSlNormal, slUx).xyz * 2.0 - 1.0;
-  vec3 slNy = texture2D(tSlNormal, slUy).xyz * 2.0 - 1.0;
-  vec3 slNz = texture2D(tSlNormal, slUz).xyz * 2.0 - 1.0;
+  vec3 slNx = vec3(0.0, 0.0, 1.0);
+  vec3 slNy = vec3(0.0, 0.0, 1.0);
+  vec3 slNz = vec3(0.0, 0.0, 1.0);
+  if (slTw.x > 0.012) slNx = textureGrad(tSlNormal, slUx, slDxX, slDyX).xyz * 2.0 - 1.0;
+  if (slTw.y > 0.012) slNy = textureGrad(tSlNormal, slUy, slDxY, slDyY).xyz * 2.0 - 1.0;
+  if (slTw.z > 0.012) slNz = textureGrad(tSlNormal, slUz, slDxZ, slDyZ).xyz * 2.0 - 1.0;
   slNx = vec3(slNx.xy * slNs + slWN.zy, abs(slNx.z) * slWN.x);
   slNy = vec3(slNy.xy * slNs + slWN.xz, abs(slNy.z) * slWN.y);
   slNz = vec3(slNz.xy * slNs + slWN.xy, abs(slNz.z) * slWN.z);

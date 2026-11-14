@@ -458,3 +458,14 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(useExploreStore.getState().focusLevel).toBe('L2');
   });
 });
+
+describe('city collision', () => {
+  it('pushes the camera out of a surrounding tower footprint', async () => {
+    const { getCityColliders } = await import('../renderers/architecture/buildCityMetropolis');
+    const { sanitizeCameraPose } = await import('../camera/cameraMath');
+    const c = getCityColliders()[0]!;
+    const { position } = sanitizeCameraPose([c.x, c.h * 0.5, c.z], [c.x, c.h * 0.5, c.z - 60]);
+    const inside = Math.abs(position[0] - c.x) < c.hw && Math.abs(position[2] - c.z) < c.hd;
+    expect(inside).toBe(false);
+  });
+});

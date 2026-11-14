@@ -453,6 +453,23 @@ function addBollardLight(parts: ColoredPart[], x: number, z: number): void {
   pushCylinder(parts, 0.1, 0.1, 0.06, x, 0.91, z, '#1f242d', 8);
 }
 
+export interface FlagpoleAnchor {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly width: number;
+  readonly height: number;
+  readonly variant: 'salmon' | 'charcoal';
+}
+
+/** Exact pole attachment anchors for wind-animated SÖL flags in `CityLife.tsx`. */
+export const CAMPUS_FLAGPOLE_ANCHORS: readonly FlagpoleAnchor[] = [
+  { id: 'campus-flag-0', x: 13.8, y: 6.18, z: 17.2, width: 1.45, height: 0.74, variant: 'charcoal' },
+  { id: 'campus-flag-1', x: 13.8, y: 6.18, z: 19.0, width: 1.45, height: 0.74, variant: 'salmon' },
+  { id: 'campus-flag-2', x: 13.8, y: 6.18, z: 20.8, width: 1.45, height: 0.74, variant: 'charcoal' },
+];
+
 /**
  * Builds the entire exterior SÖL Campus 3D world as a single merged vertex-colored BufferGeometry.
  * Positioned so that from the default overview camera ([46, 36, 48] -> [4, 2, 0]),
@@ -752,13 +769,11 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
     pushBox(parts, 1.72, 0.08, 0.62, bx, 0.46, bz, warmWood);
   }
 
-  // 3 Tall SÖL Flagpoles with Salmon/Charcoal Pennant Banners (x = 13.8, z = 17.2..20.8)
-  for (let f = 0; f < 3; f += 1) {
-    const fz = 17.2 + f * 1.8;
-    pushCylinder(parts, 0.16, 0.22, 0.32, 13.8, 0.16, fz, curbStone, 8);
-    pushCylinder(parts, 0.05, 0.08, 6.8, 13.8, 3.4, fz, '#e2e8f0', 8);
-    pushBox(parts, 1.15, 0.68, 0.05, 14.42, 6.15, fz, f === 1 ? salmon : '#1e293b');
-    pushBox(parts, 0.28, 0.68, 0.06, 14.92, 6.15, fz, salmonBright);
+  // 3 Tall SÖL Flagpoles (x = 13.8, z = 17.2..20.8); cloth pennants animate dynamically in CityLife.tsx
+  for (const anchor of CAMPUS_FLAGPOLE_ANCHORS) {
+    pushCylinder(parts, 0.16, 0.22, 0.32, anchor.x, 0.16, anchor.z, curbStone, 8);
+    pushCylinder(parts, 0.05, 0.08, 6.8, anchor.x, 3.4, anchor.z, '#e2e8f0', 8);
+    pushCylinder(parts, 0.085, 0.085, 0.12, anchor.x, 6.84, anchor.z, salmon, 10);
   }
 
   // =========================================================================

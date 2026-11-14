@@ -91,7 +91,7 @@ function averagePixel(image: CanvasImageSource): [number, number, number] | null
  * repeatedly; does nothing without a DOM (unit tests) so materials keep their
  * procedural detail there.
  */
-export function loadSurfaceTextures(onLoaded: () => void, anisotropy = 8): void {
+export function loadSurfaceTextures(onLoaded: () => void, anisotropy = 4): void {
   if (typeof document === 'undefined') return;
   const loader = new THREE.TextureLoader();
   for (const set of sets.values()) {

@@ -1,3 +1,4 @@
+import { getCityColliders } from '../renderers/architecture/buildCityMetropolis';
 import {
   polygonBounds2D,
   type LevelCode,
@@ -199,6 +200,19 @@ export function sanitizeCameraPose(
         px = clampedTarget[0] + reqHoriz * (1 / Math.SQRT2);
         pz = clampedTarget[2] + reqHoriz * (1 / Math.SQRT2);
       }
+    }
+  }
+
+  // Keep the lens outside surrounding city towers (margin covers near-plane clipping).
+  const margin = 3;
+  for (const c of getCityColliders()) {
+    const dx = px - c.x;
+    const dz = pz - c.z;
+    const ex = c.hw + margin - Math.abs(dx);
+    const ez = c.hd + margin - Math.abs(dz);
+    if (ex > 0 && ez > 0 && py < c.h + margin) {
+      if (ex < ez) px += (dx >= 0 ? 1 : -1) * ex;
+      else pz += (dz >= 0 ? 1 : -1) * ez;
     }
   }
 

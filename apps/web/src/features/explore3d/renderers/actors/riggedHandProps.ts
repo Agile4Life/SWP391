@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
-export type RiggedHandPropKind = 'racket' | 'tablet';
+export type RiggedHandPropKind = 'racket' | 'tablet' | 'dumbbell';
 
 export interface RiggedHandPropSpec {
   kind: RiggedHandPropKind;
   /** Bone the prop is parented to (it follows the clip, swing included). */
-  bone: 'arm-left' | 'arm-right';
+  bone: string;
   /** Hand position and orientation in the bone's local space, in model units (pre-scale). */
   position: readonly [number, number, number];
   rotation: readonly [number, number, number];
@@ -23,6 +23,8 @@ interface SharedParts {
   strings: THREE.BufferGeometry;
   tabletBody: THREE.BufferGeometry;
   tabletScreen: THREE.BufferGeometry;
+  dumbbellBar: THREE.BufferGeometry;
+  dumbbellHead: THREE.BufferGeometry;
   frameMaterial: THREE.MeshStandardMaterial;
   gripMaterial: THREE.MeshStandardMaterial;
   stringMaterial: THREE.MeshStandardMaterial;
@@ -40,6 +42,9 @@ function getSharedParts(): SharedParts {
     strings: new THREE.CircleGeometry(0.095, 16),
     tabletBody: new THREE.BoxGeometry(0.22, 0.015, 0.16),
     tabletScreen: new THREE.PlaneGeometry(0.2, 0.14),
+    // Dumbbell along X: a short bar and a hexagonal head at each end.
+    dumbbellBar: new THREE.CylinderGeometry(0.014, 0.014, 0.14, 8).rotateZ(Math.PI / 2),
+    dumbbellHead: new THREE.CylinderGeometry(0.045, 0.045, 0.05, 6).rotateZ(Math.PI / 2),
     frameMaterial: new THREE.MeshStandardMaterial({ color: FRAME, roughness: 0.4, metalness: 0.3 }),
     gripMaterial: new THREE.MeshStandardMaterial({ color: GRIP, roughness: 0.7 }),
     stringMaterial: new THREE.MeshStandardMaterial({
@@ -91,6 +96,10 @@ export function buildHandProp(spec: RiggedHandPropSpec, modelScale: number): THR
     const headScale: [number, number, number] = [0.85, 1.15, 1];
     group.add(mesh(parts.frame, parts.frameMaterial, [0, -0.34, 0], [0, Math.PI / 2, 0], headScale));
     group.add(mesh(parts.strings, parts.stringMaterial, [0, -0.34, 0], [0, Math.PI / 2, 0], headScale));
+  } else if (spec.kind === 'dumbbell') {
+    group.add(mesh(parts.dumbbellBar, parts.gripMaterial, [0, 0, 0]));
+    group.add(mesh(parts.dumbbellHead, parts.gripMaterial, [-0.085, 0, 0]));
+    group.add(mesh(parts.dumbbellHead, parts.gripMaterial, [0.085, 0, 0]));
   } else {
     group.add(mesh(parts.tabletBody, parts.gripMaterial, [0, 0, 0]));
     group.add(mesh(parts.tabletScreen, parts.screenMaterial, [0, 0.009, 0], [-Math.PI / 2, 0, 0]));

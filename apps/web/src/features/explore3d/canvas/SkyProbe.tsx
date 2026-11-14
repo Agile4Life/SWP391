@@ -131,7 +131,7 @@ export function SkyDome({ theme }: { theme: ExploreTheme }) {
       name="sol-sky-dome"
       geometry={SKY_GEOMETRY}
       material={material}
-      scale={330}
+      scale={1050}
       renderOrder={-1000}
       frustumCulled={false}
       raycast={NOOP_RAYCAST}
