@@ -1255,7 +1255,6 @@ export function MemberPackagesPage() {
                   paymentsState.data.some(payment => payment.subscriptionId === requestResult.subscription.id && blocksMemberCancellation(payment))}>
                 {t("Hủy yêu cầu đăng ký", "Cancel registration request")}
               </button>
-              <button type="button" className="btn-primary" onClick={() => setRequestResult(null)}>{t("Đóng", "Close")}</button>
             </div>
           </div>
         </Modal>

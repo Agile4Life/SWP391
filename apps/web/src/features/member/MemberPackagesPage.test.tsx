@@ -115,6 +115,8 @@ describe('SCRUM-86 packages', () => {
     return [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
   }
 
+  const closeDialog = () => (host.querySelector('dialog button[aria-label="Đóng hộp thoại"]') as HTMLButtonElement | null)?.click();
+
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
   it('renders the requested prices and durations only when returned by the catalog API', async () => {
     api.packages.mockResolvedValue([
@@ -448,7 +450,7 @@ describe('SCRUM-86 packages', () => {
     expect(host.textContent).toContain('Không thể kiểm tra lịch sử gói');
     await act(async () => button('Gia hạn')?.click());
     expect(api.renew).not.toHaveBeenCalled();
-    await act(async () => button('Đóng')?.click());
+    await act(async () => closeDialog());
     await act(async () => button('Thử lại')?.click());
     expect(button('Gia hạn')?.disabled).toBe(false);
   });
@@ -628,7 +630,7 @@ describe('SCRUM-86 packages', () => {
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
     expect(api.create).toHaveBeenCalledTimes(1);
-    await act(async () => button('Đóng')?.click());
+    await act(async () => closeDialog());
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(api.createPayment).not.toHaveBeenCalled();
     expect(api.create).toHaveBeenCalledTimes(1);
