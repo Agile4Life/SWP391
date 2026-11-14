@@ -172,10 +172,6 @@ export function AdminPaymentReconciliationPage() {
   return (
     <div data-i18n-managed className="audit-page recon-page portal-container">
       <PageHeader title={t('Đối soát thanh toán', 'Payment reconciliation')} />
-      <p className="recon-intro">
-        {t('Trang chỉ đọc: tra cứu lượt VNPay, phản hồi IPN và các khoản hệ thống tự hoàn vào Ví. Mọi thay đổi tiền vẫn đi qua luồng thanh toán hiện có.',
-          'Read-only: look up VNPay attempts, IPN callbacks and the amounts the system refunded to wallets automatically. Money still only moves through the existing payment flows.')}
-      </p>
 
       <div className="portal-card audit-filter-bar">
         <div className="audit-filter-group recon-date">
@@ -306,7 +302,7 @@ export function AdminPaymentReconciliationPage() {
               <input type="checkbox" checked={staleOnly} onChange={(e) => { setStaleOnly(e.target.checked); setAttemptPage(0); }} />
               <span>{t('Chỉ lượt treo', 'Stuck only')}</span>
             </label>
-            <button type="submit" className="btn-primary btn-sm">{t('Tìm', 'Search')}</button>
+            <button type="submit" className="btn-primary">{t('Tìm', 'Search')}</button>
           </form>
           <ListCard
             t={t}
@@ -386,7 +382,7 @@ export function AdminPaymentReconciliationPage() {
                 className="portal-input"
                 value={referenceDraft}
                 onChange={(e) => setReferenceDraft(e.target.value)}
-                placeholder="vnp_TxnRef"
+                placeholder={t('Nhập mã tham chiếu giao dịch…', 'Enter transaction reference…')}
                 aria-label={t('Lọc theo mã giao dịch', 'Filter by reference')}
               />
             </div>
@@ -417,7 +413,7 @@ export function AdminPaymentReconciliationPage() {
                 <option value="RETURN">{t('Trang trả về', 'Return page')}</option>
               </Select>
             </div>
-            <button type="submit" className="btn-primary btn-sm">{t('Tìm', 'Search')}</button>
+            <button type="submit" className="btn-primary">{t('Tìm', 'Search')}</button>
           </form>
           <ListCard
             t={t}

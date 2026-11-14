@@ -222,20 +222,26 @@ export function ManagerCoachReviewsPage() {
       )}
 
       {/* Tab Switcher */}
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div className="portal-tabs" role="tablist" aria-label={t("Chế độ xem đánh giá HLV", "Coach evaluation view")}>
         <button
           type="button"
-          className={`filter-chip ${activeTab === 'leaderboard' ? 'is-active' : ''}`}
+          role="tab"
+          aria-selected={activeTab === 'leaderboard'}
+          className={`portal-tab ${activeTab === 'leaderboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('leaderboard')}
         >
-          {t("Bảng xếp hạng huấn luyện viên hàng đầu (")}{reviews.length})
+          <span>{t("Bảng xếp hạng huấn luyện viên hàng đầu", "Top coach leaderboard")}</span>
+          <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{reviews.length}</span>
         </button>
         <button
           type="button"
-          className={`filter-chip ${activeTab === 'member_reviews' ? 'is-active' : ''}`}
+          role="tab"
+          aria-selected={activeTab === 'member_reviews'}
+          className={`portal-tab ${activeTab === 'member_reviews' ? 'active' : ''}`}
           onClick={() => setActiveTab('member_reviews')}
         >
-          {t("Đánh giá từ Hội viên (")}{memberReviews.length})
+          <span>{t("Đánh giá từ Hội viên", "Member reviews")}</span>
+          <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{memberReviews.length}</span>
         </button>
       </div>
 
@@ -358,8 +364,9 @@ export function ManagerCoachReviewsPage() {
                       {t("đánh giá HLV ")}<strong>{mr.coachName}</strong>
                     </span>
                   </div>
-                  <span style={{ color: 'var(--portal-star)', fontWeight: 800, fontSize: 15 }}>
-                    {'⭐'.repeat(mr.rating)} ({mr.rating} {t("sao)")}</span>
+                  <span style={{ color: 'var(--portal-star)', fontWeight: 700, fontSize: 14, fontVariantNumeric: 'tabular-nums' }}>
+                    {'★'.repeat(mr.rating)}{'☆'.repeat(Math.max(0, 5 - mr.rating))} · {t(`${mr.rating}/5 sao`, `${mr.rating}/5 stars`)}
+                  </span>
                 </div>
                 <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--portal-paper, #202020)', lineHeight: 1.5 }}>
                   "{mr.comment || t('Không có nhận xét chi tiết.')}"

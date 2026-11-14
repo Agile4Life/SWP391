@@ -178,8 +178,10 @@ export function ManagerProductsPage() {
         title={sourceText("Sản phẩm & Đơn hàng")}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Link to="/manager/products/new" className="btn-primary">
-              {sourceText("Thêm sản phẩm")}</Link>
+            {activeTab === 'products' && (
+              <Link to="/manager/products/new" className="btn-primary">
+                {sourceText("Thêm sản phẩm")}</Link>
+            )}
             {activeTab !== 'categories' && (
               <RefreshButton
                 label={sourceText("Làm mới dữ liệu")}

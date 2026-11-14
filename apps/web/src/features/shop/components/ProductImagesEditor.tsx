@@ -193,8 +193,10 @@ export function ProductImagesEditor({
           {images.map((img, idx) => (
             <li
               key={img.id}
-              className="portal-card"
               style={{
+                border: '1px solid var(--portal-border)',
+                borderRadius: 12,
+                background: 'var(--portal-raised)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',

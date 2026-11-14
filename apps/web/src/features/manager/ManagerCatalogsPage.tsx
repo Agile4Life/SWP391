@@ -13,10 +13,10 @@ type Tab = 'disciplines' | 'rooms' | 'packages';
 type Form = Record<string, string>;
 
 const ROOM_STATUS_LABEL = { available: 'Đang hoạt động', maintenance: 'Bảo trì', closed: 'Đã đóng' } as const;
-const PACKAGE_TIER_LABEL: Record<string, string> = {
-  SILVER: 'SILVER · Cơ bản',
-  GOLD: 'GOLD · Trung cấp',
-  PLATINUM: 'PLATINUM · VIP Cao cấp',
+const PACKAGE_TIER_LABEL: Record<string, StaffMessage> = {
+  SILVER: staffMessage('Cơ bản (Silver)', 'Silver · Basic'),
+  GOLD: staffMessage('Trung cấp (Gold)', 'Gold · Standard'),
+  PLATINUM: staffMessage('Cao cấp (Platinum)', 'Platinum · VIP'),
 };
 const QUICK_PRICE_PRESETS = [199000, 299000, 549000, 599000, 799000, 1599000, 1990000, 2990000, 5990000];
 const QUICK_DURATION_PRESETS = [
@@ -218,20 +218,13 @@ export function ManagerCatalogsPage() {
         title={t("Danh mục vận hành")}
         actions={
           <div style={{ display: 'flex', gap: 10 }}>
-            {tab === 'packages' && (
-              <button data-i18n-managed
-                type="button"
-                className="btn-primary"
-                onClick={() => openEditor({ id: null, form: emptyForm() })}
-              >
-                {t("+ Tạo gói tập mới")}</button>
-            )}
-            <button
+            <button data-i18n-managed
               type="button"
-              className={tab === 'packages' ? 'btn-secondary' : 'btn-primary'}
+              className="btn-primary"
               onClick={() => openEditor({ id: null, form: emptyForm() })}
             >
-              {t("Thêm mới")}</button>
+              {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
+            </button>
           </div>
         }
       />
@@ -253,7 +246,7 @@ export function ManagerCatalogsPage() {
               setEditing(null);
             }}
           >
-            {t(label)}
+            {label}
           </button>
         ))}
       </div>
@@ -408,16 +401,16 @@ export function ManagerCatalogsPage() {
 
             {tab === 'packages' && (
               <div data-i18n-managed className="portal-form-group">
-                <label className="portal-label" htmlFor="cat-package-tier">{t("Hạng gói tập (Tier)")}</label>
+                <label className="portal-label" htmlFor="cat-package-tier">{t("Hạng gói tập", "Membership tier")}</label>
                 <Select
                   id="cat-package-tier"
                   className="portal-select"
                   value={editing.form.tier || resolvePackageTier({ name: editing.form.name })}
                   onChange={(e) => set('tier', e.target.value)}
                 >
-                  <option value="SILVER">{t("SILVER · Cơ bản (1 lượt sân miễn phí/tháng)")}</option>
-                  <option value="GOLD">{t("GOLD · Trung cấp (2 lượt sân miễn phí/tháng)")}</option>
-                  <option value="PLATINUM">{t("PLATINUM · VIP Cao cấp (Phòng VIP + 3 lượt sân miễn phí/tháng)")}</option>
+                  <option value="SILVER">{t("Silver · Cơ bản (1 lượt sân miễn phí/tháng)", "Silver · Basic (1 free court booking/month)")}</option>
+                  <option value="GOLD">{t("Gold · Trung cấp (2 lượt sân miễn phí/tháng)", "Gold · Standard (2 free court bookings/month)")}</option>
+                  <option value="PLATINUM">{t("Platinum · VIP Cao cấp (Phòng VIP + 3 lượt sân miễn phí/tháng)", "Platinum · VIP (VIP room + 3 free court bookings/month)")}</option>
                 </Select>
               </div>
             )}
@@ -456,7 +449,7 @@ export function ManagerCatalogsPage() {
                 </div>
 
                 <div data-i18n-managed style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{t("Chọn nhanh giá:")}</span>
+                  <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>{t("Chọn nhanh giá:")}</span>
                   {QUICK_PRICE_PRESETS.slice(0, 6).map((preset) => (
                     <button data-i18n-managed
                       key={preset}
@@ -476,7 +469,7 @@ export function ManagerCatalogsPage() {
                 </div>
 
                 <div data-i18n-managed style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{t("Chọn nhanh kỳ hạn:")}</span>
+                  <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>{t("Chọn nhanh kỳ hạn:")}</span>
                   {QUICK_DURATION_PRESETS.map((preset) => (
                     <button data-i18n-managed
                       key={preset.days}
@@ -591,7 +584,7 @@ export function ManagerCatalogsPage() {
               {tab === 'rooms' && t('Chưa có cơ sở phòng tập nào')}
               {tab === 'packages' && t('Chưa có gói hội viên nào')}
             </h3>
-            <p style={{ color: 'var(--color-text-muted)' }}>
+            <p style={{ color: 'var(--portal-muted)' }}>
               {t("Hãy nhấn nút thêm để cấu hình danh mục phục vụ vận hành.")}</p>
             <button
               type="button"
@@ -619,7 +612,7 @@ export function ManagerCatalogsPage() {
                     {disciplines.map((d) => (
                       <tr data-i18n-managed key={d.id}>
                         <td><strong>{d.name}</strong></td>
-                        <td style={{ color: 'var(--color-text-muted)' }}>{d.description || <span className="muted">{t("Không có mô tả")}</span>}</td>
+                        <td style={{ color: 'var(--portal-muted)' }}>{d.description || <span className="muted">{t("Không có mô tả")}</span>}</td>
                         <td className="actions">
                           <button
                             type="button"
@@ -659,9 +652,9 @@ export function ManagerCatalogsPage() {
                         <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
                         <td>
                           {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? (
-                            <span data-i18n-managed className="badge badge-primary" style={{ backgroundColor: 'color-mix(in srgb, var(--color-brand-salmon, #eb725b) 20%, transparent)', color: 'var(--color-brand-salmon, #eb725b)', border: '1px solid color-mix(in srgb, var(--color-brand-salmon, #eb725b) 40%, transparent)' }}>VIP · Platinum</span>
+                            <span data-i18n-managed className="badge badge-info">{t("Cao cấp (Platinum)", "Platinum · VIP")}</span>
                           ) : (
-                            <span data-i18n-managed className="badge badge-secondary">{t("Tiêu chuẩn")}</span>
+                            <span data-i18n-managed className="badge badge-neutral">{t("Tiêu chuẩn")}</span>
                           )}
                         </td>
                         <td>{r.location || <span className="muted">—</span>}</td>
@@ -724,7 +717,7 @@ export function ManagerCatalogsPage() {
                             )}
                           </td>
                           <td>
-                            <span className="badge badge-secondary">
+                            <span className="badge badge-neutral">
                               {t(PACKAGE_TIER_LABEL[tier]) || tier}
                             </span>
                           </td>

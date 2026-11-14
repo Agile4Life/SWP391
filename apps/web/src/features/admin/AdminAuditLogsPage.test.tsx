@@ -125,10 +125,11 @@ describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp 
     expect(host.textContent).toContain('Nhật ký & lấp đầy lớp');
     expect(host.textContent).toContain('Vũ Hoàng Nam');
     expect(host.textContent).toContain('Nguyễn Thu Trang');
-    expect(host.textContent).toContain('UPDATE');
-    expect(host.textContent).toContain('CREATE');
-    expect(host.textContent).toContain('membership_subscriptions');
-    expect(host.textContent).toContain('payments');
+    expect(host.textContent).toContain('Cập nhật');
+    expect(host.textContent).toContain('Tạo mới');
+    expect(host.textContent).toContain('Gói tập');
+    expect(host.textContent).toContain('Thanh toán');
+    expect(host.textContent).not.toContain('membership_subscriptions');
     expect(host.textContent).toContain('Hiển thị trang 1 / 1 (2 bản ghi)');
   });
 
@@ -164,8 +165,8 @@ describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp 
     });
 
     expect(host.textContent).toContain('Chi tiết thay đổi bản ghi #101');
-    expect(host.textContent).toContain('Giá trị cũ (old_value)');
-    expect(host.textContent).toContain('Giá trị mới (new_value)');
+    expect(host.textContent).toContain('Giá trị cũ');
+    expect(host.textContent).toContain('Giá trị mới');
     expect(host.textContent).toContain('pending_payment');
     expect(host.textContent).toContain('active');
   });
@@ -201,7 +202,7 @@ describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp 
     expect(host.querySelector('input[aria-label="Search actor"]')).not.toBeNull();
     await act(async () => { (host.querySelector('button[aria-label="View record diff #101"]') as HTMLButtonElement).click(); });
     expect(host.textContent).toContain('pending_payment');
-    expect(host.textContent).toContain('View diff');
+    expect(host.textContent).toContain('View changes');
     expect(auditApi.getAuditLogs).toHaveBeenCalledTimes(1);
     await act(async () => { (host.querySelectorAll('button[role="tab"]')[1] as HTMLButtonElement).click(); });
     expect(host.textContent).toContain('Average occupancy');

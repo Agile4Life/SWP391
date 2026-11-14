@@ -399,7 +399,7 @@ export function UserManagerPage() {
   const getRoleBadge = (role: SystemRole) => {
     switch (role) {
       case 'ADMIN':
-        return <span data-i18n-managed className="portal-badge">{t("Quản trị hệ thống")}</span>;
+        return <span data-i18n-managed className="badge badge-info">{t("Quản trị hệ thống")}</span>;
       case 'CENTER_MANAGER':
         return <span data-i18n-managed className="badge badge-warning">{t("Quản lý trung tâm")}</span>;
       case 'COACH':
@@ -407,7 +407,7 @@ export function UserManagerPage() {
       case 'RECEPTIONIST':
         return <span data-i18n-managed className="badge badge-neutral">{t("Lễ tân")}</span>;
       case 'MEMBER':
-        return <span data-i18n-managed className="badge">{t("Hội viên")}</span>;
+        return <span data-i18n-managed className="badge badge-neutral">{t("Hội viên")}</span>;
     }
   };
 
@@ -795,24 +795,36 @@ export function UserManagerPage() {
 
                       return (
                         <td data-i18n-managed key={role.id} style={{ textAlign: 'center' }}>
-                          <input data-i18n-managed
-                            type="checkbox"
-                            checked={isChecked}
-                            disabled={isManager}
-                            title={
-                              isManager
-                                ? t('Quyền quản trị hệ thống')
-                                : t('Nhấp để gán hoặc hủy quyền')
-                            }
-                            onChange={() => handleTogglePermission(role.id, perm.id)}
+                          <label
                             style={{
-                              width: '18px',
-                              height: '18px',
-                              accentColor: 'var(--portal-salmon)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: 44,
+                              minHeight: 44,
                               cursor: isManager ? 'not-allowed' : 'pointer',
-                              opacity: isManager ? 0.7 : 1,
                             }}
-                          />
+                          >
+                            <input data-i18n-managed
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={isManager}
+                              aria-label={`${perm.name} — ${role.name}`}
+                              title={
+                                isManager
+                                  ? t('Quyền quản trị hệ thống')
+                                  : t('Nhấp để gán hoặc hủy quyền')
+                              }
+                              onChange={() => handleTogglePermission(role.id, perm.id)}
+                              style={{
+                                width: '18px',
+                                height: '18px',
+                                accentColor: 'var(--portal-salmon)',
+                                cursor: isManager ? 'not-allowed' : 'pointer',
+                                opacity: isManager ? 0.7 : 1,
+                              }}
+                            />
+                          </label>
                         </td>
                       );
                     })}
@@ -827,6 +839,7 @@ export function UserManagerPage() {
       {/* Modal Thêm tài khoản mới */}
       {isModalOpen && (
         <Modal
+          busy={isCreating}
           title={t("Thêm tài khoản")}
           onClose={() => {
             if (!isCreating) {
@@ -948,9 +961,9 @@ export function UserManagerPage() {
                   if (fieldErrors.gender) setFieldErrors((prev) => ({ ...prev, gender: undefined }));
                 }}
               >
-                <option value="male">{t("Nam (Male)")}</option>
-                <option value="female">{t("Nữ (Female)")}</option>
-                <option value="other">{t("Khác (Other)")}</option>
+                <option value="male">{t("Nam", "Male")}</option>
+                <option value="female">{t("Nữ", "Female")}</option>
+                <option value="other">{t("Khác", "Other")}</option>
               </Select>
               {fieldErrors.gender && (
                 <div data-i18n-managed className="form-error">
@@ -1006,6 +1019,7 @@ export function UserManagerPage() {
 
       {editingUser && (
         <Modal
+          busy={isUpdating}
           title={t(`Chỉnh sửa tài khoản — ${editingUser.name}`, `Edit account — ${editingUser.name}`)}
           onClose={() => {
             if (!isUpdating) {
@@ -1082,9 +1096,9 @@ export function UserManagerPage() {
                   setEditFormData({ ...editFormData, gender: e.target.value as UserGender })
                 }
               >
-                <option value="male">{t("Nam (Male)")}</option>
-                <option value="female">{t("Nữ (Female)")}</option>
-                <option value="other">{t("Khác (Other)")}</option>
+                <option value="male">{t("Nam", "Male")}</option>
+                <option value="female">{t("Nữ", "Female")}</option>
+                <option value="other">{t("Khác", "Other")}</option>
               </Select>
             </div>
 

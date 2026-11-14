@@ -144,48 +144,26 @@ export function ManagerInternalRequestsPage() {
         }}
       >
         {/* Status tabs */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="portal-tabs" role="tablist" aria-label={t("Lọc trạng thái đơn nội bộ", "Filter internal request status")} style={{ marginBottom: 0 }}>
           {[
-            { key: 'PENDING', label: t('Chờ duyệt'), count: pendingCount },
-            { key: 'APPROVED', label: t('Đã duyệt') },
-            { key: 'REJECTED', label: t('Từ chối') },
-            { key: 'ALL', label: t('Tất cả') },
+            { key: 'PENDING', label: t('Chờ duyệt', 'Pending'), count: pendingCount },
+            { key: 'APPROVED', label: t('Đã duyệt', 'Approved') },
+            { key: 'REJECTED', label: t('Từ chối', 'Rejected') },
+            { key: 'ALL', label: t('Tất cả', 'All') },
           ].map((tab) => {
             const isActive = statusFilter === tab.key;
             return (
               <button data-i18n-managed
                 key={tab.key}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`portal-tab ${isActive ? 'active' : ''}`}
                 onClick={() => setStatusFilter(tab.key)}
-                style={{
-                  minHeight: 44,
-                  padding: '8px 16px',
-                  borderRadius: 99,
-                  border: isActive ? 'none' : '1px solid transparent',
-                  fontWeight: 700,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  background: isActive ? 'var(--portal-salmon, var(--sol-accent))' : 'transparent',
-                  color: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-muted)',
-                  boxShadow: isActive ? '0 2px 8px color-mix(in srgb, var(--portal-salmon) 25%, transparent)' : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
               >
-                <span>{t(tab.label)}</span>
+                <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span data-i18n-managed
-                    style={{
-                      background: isActive ? 'var(--portal-ink, #202020)' : 'var(--portal-warning)',
-                      color: isActive ? 'var(--portal-salmon, var(--sol-accent))' : 'var(--portal-on-accent)',
-                      fontSize: 12,
-                      fontWeight: 800,
-                      padding: '1px 7px',
-                      borderRadius: 99,
-                      fontVariantNumeric: 'tabular-nums',
-                    }}
-                  >
+                  <span data-i18n-managed className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>
                     {tab.count}
                   </span>
                 )}
@@ -212,27 +190,13 @@ export function ManagerInternalRequestsPage() {
       </div>
 
       {error && (
-        <div data-i18n-managed
-          role="alert"
-          style={{
-            background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--portal-danger) 30%, transparent)',
-            color: 'var(--portal-danger)',
-            padding: '12px 18px',
-            borderRadius: 12,
-            marginBottom: 20,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 14,
-            fontWeight: 600,
-          }}
-        >
+        <div data-i18n-managed className="portal-alert" role="alert" style={{ marginBottom: 20 }}>
           <span>{t(error)}</span>
           <button
             type="button"
+            className="btn-secondary btn-sm"
             onClick={() => setError('')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--portal-danger)' }}
+            aria-label={t('Đóng thông báo lỗi', 'Dismiss error')}
           >
             ✕
           </button>
@@ -452,37 +416,14 @@ export function ManagerInternalRequestsPage() {
                   >
                     <button
                       type="button"
+                      className="btn-danger btn-sm"
                       onClick={() => handleOpenReject(req)}
-                      style={{
-                        minHeight: 40,
-                        padding: '8px 18px',
-                        borderRadius: 10,
-                        border: '1px solid color-mix(in srgb, var(--portal-danger) 45%, transparent)',
-                        background: 'var(--portal-raised)',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: 'var(--portal-danger)',
-                        cursor: 'pointer',
-                        transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
-                      }}
                     >
                       {t("Từ chối đơn")}</button>
                     <button
                       type="button"
+                      className="btn-primary btn-sm"
                       onClick={() => handleOpenApprove(req)}
-                      style={{
-                        minHeight: 40,
-                        padding: '8px 22px',
-                        borderRadius: 10,
-                        border: 'none',
-                        background: 'var(--portal-success, #226442)',
-                        fontSize: 13,
-                        fontWeight: 750,
-                        color: 'var(--portal-on-accent)',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px color-mix(in srgb, var(--portal-success) 20%, transparent)',
-                        transition: 'background-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
-                      }}
                     >
                       {t("Phê duyệt đơn")}</button>
                   </div>
@@ -496,6 +437,7 @@ export function ManagerInternalRequestsPage() {
       {/* Modal Duyệt hoặc Từ chối đơn */}
       {reviewTarget && (
         <Modal
+          busy={submitting}
           title={
             reviewAction === 'APPROVED'
               ? t(`Phê duyệt đơn: ${reviewTarget.title}`, `Approve request: ${reviewTarget.title}`)
@@ -505,18 +447,8 @@ export function ManagerInternalRequestsPage() {
         >
           <form onSubmit={handleReviewSubmit} style={{ display: 'grid', gap: 16 }}>
             {modalError && (
-              <div data-i18n-managed
-                role="alert"
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  background: 'color-mix(in srgb, var(--portal-danger) 10%, transparent)',
-                  color: 'var(--portal-danger)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                {t(modalError)}
+              <div data-i18n-managed className="portal-alert" role="alert">
+                <span>{t(modalError)}</span>
               </div>
             )}
 
@@ -551,7 +483,7 @@ export function ManagerInternalRequestsPage() {
                   : t('Lý do từ chối đơn (bắt buộc):')}
               </label>
               <textarea
-                className="portal-input"
+                className="portal-textarea"
                 rows={4}
                 placeholder={
                   reviewAction === 'APPROVED'
@@ -568,23 +500,14 @@ export function ManagerInternalRequestsPage() {
               <button
                 type="button"
                 className="btn-secondary"
+                disabled={submitting}
                 onClick={() => setReviewTarget(null)}
               >
                 {t("Hủy")}</button>
               <button
                 type="submit"
                 disabled={submitting}
-                style={{
-                  padding: '10px 22px',
-                  borderRadius: 99,
-                  border: 'none',
-                  fontWeight: 750,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  background:
-                    reviewAction === 'APPROVED' ? 'var(--portal-success, #226442)' : 'var(--portal-danger)',
-                  color: 'var(--portal-on-accent)',
-                }}
+                className={reviewAction === 'APPROVED' ? 'btn-primary' : 'btn-danger'}
               >
                 {submitting
                   ? t('Đang xử lý...')

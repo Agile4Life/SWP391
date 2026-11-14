@@ -207,7 +207,7 @@ export function AdminAuditLogsPage() {
           className={`portal-tab audit-tab-btn ${activeTab === 'audit' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          {t("Nhật ký kiểm toán (Audit Trail)")}</button>
+          {t("Nhật ký kiểm toán", "Audit trail")}</button>
         <button
           type="button"
           role="tab"
@@ -219,7 +219,7 @@ export function AdminAuditLogsPage() {
       </div>
 
       {activeTab === 'audit' ? (
-        <section data-i18n-managed aria-label={t("Bảng tra cứu Audit Log")}>
+        <section data-i18n-managed aria-label={t("Bảng tra cứu nhật ký kiểm toán", "Audit log lookup")}>
           {/* Filters Bar */}
           <div className="portal-card audit-filter-bar">
             <div className="audit-filter-group" style={{ flex: 1.2, minWidth: '220px' }}>
@@ -235,7 +235,7 @@ export function AdminAuditLogsPage() {
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '160px' }}>
-              <span className="portal-label filter-label">{t("Hành động (Action)")}</span>
+              <span className="portal-label filter-label">{t("Hành động", "Action")}</span>
               <Select
                 className="portal-select"
                 value={selectedAction}
@@ -246,19 +246,19 @@ export function AdminAuditLogsPage() {
                 aria-label={t("Lọc theo hành động")}
               >
                 <option value="ALL">{t("Tất cả hành động")}</option>
-                <option value="CREATE">{t("Tạo mới (CREATE)")}</option>
-                <option value="UPDATE">{t("Cập nhật (UPDATE)")}</option>
-                <option value="DELETE">{t("Xóa (DELETE)")}</option>
-                <option value="CANCEL">{t("Hủy gói (CANCEL)")}</option>
-                <option value="SCAN">{t("Quét mã (SCAN)")}</option>
-                <option value="USER_CREATE">{t("Tạo người dùng (USER_CREATE)")}</option>
-                <option value="USER_UPDATE">{t("Sửa người dùng (USER_UPDATE)")}</option>
-                <option value="USER_CLEANUP_INACTIVE">{t("Dọn dẹp tự động (USER_CLEANUP)")}</option>
+                <option value="CREATE">{t("Tạo mới", "Create")}</option>
+                <option value="UPDATE">{t("Cập nhật", "Update")}</option>
+                <option value="DELETE">{t("Xóa", "Delete")}</option>
+                <option value="CANCEL">{t("Hủy gói", "Cancel subscription")}</option>
+                <option value="SCAN">{t("Quét mã", "QR scan")}</option>
+                <option value="USER_CREATE">{t("Tạo tài khoản", "Create user")}</option>
+                <option value="USER_UPDATE">{t("Sửa tài khoản", "Update user")}</option>
+                <option value="USER_CLEANUP_INACTIVE">{t("Dọn dẹp tự động", "Auto cleanup")}</option>
               </Select>
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '180px' }}>
-              <span className="portal-label filter-label">{t("Đối tượng (Entity Type)")}</span>
+              <span className="portal-label filter-label">{t("Đối tượng", "Entity")}</span>
               <Select
                 className="portal-select"
                 value={selectedEntityType}
@@ -269,13 +269,13 @@ export function AdminAuditLogsPage() {
                 aria-label={t("Lọc theo đối tượng")}
               >
                 <option value="ALL">{t("Tất cả đối tượng")}</option>
-                <option value="membership_subscriptions">{t("Gói tập (subscriptions)")}</option>
-                <option value="payments">{t("Thanh toán (payments)")}</option>
-                <option value="session_attendance">{t("Điểm danh (attendance)")}</option>
-                <option value="center_checkins">{t("Lượt ra vào (check-ins)")}</option>
-                <option value="cancellation_requests">{t("Yêu cầu hủy (cancellations)")}</option>
-                <option value="users">{t("Tài khoản (users)")}</option>
-                <option value="receptionists">{t("Ca trực lễ tân (receptionists)")}</option>
+                <option value="membership_subscriptions">{t("Gói tập", "Memberships")}</option>
+                <option value="payments">{t("Thanh toán", "Payments")}</option>
+                <option value="session_attendance">{t("Điểm danh", "Attendance")}</option>
+                <option value="center_checkins">{t("Lượt ra vào", "Check-ins")}</option>
+                <option value="cancellation_requests">{t("Yêu cầu hủy", "Cancellations")}</option>
+                <option value="users">{t("Tài khoản", "Accounts")}</option>
+                <option value="receptionists">{t("Ca trực lễ tân", "Reception shifts")}</option>
               </Select>
             </div>
           </div>
@@ -290,7 +290,7 @@ export function AdminAuditLogsPage() {
                 <button type="button" className="btn-secondary btn-sm" onClick={() => setLogsReload((n) => n + 1)}>{t("Thử lại")}</button>
               </div>
             ) : filteredLogs.length === 0 ? (
-              <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
                 <p>{t("Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.")}</p>
               </div>
             ) : (
@@ -308,7 +308,7 @@ export function AdminAuditLogsPage() {
                 <tbody>
                   {filteredLogs.map((log) => (
                     <tr data-i18n-managed key={log.id}>
-                      <td style={{ fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-muted)' }}>
+                      <td style={{ fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-muted)' }}>
                         {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
                       </td>
                       <td>
@@ -321,17 +321,11 @@ export function AdminAuditLogsPage() {
                         <span className={`action-badge ${getActionBadgeClass(log.action)}`}>
                           {getActionLabel(log.action)}
                         </span>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--portal-muted)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-                          {log.action}
-                        </div>
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--portal-paper)' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--portal-paper)' }}>
                           {getEntityLabel(log.entityType)}
-                        </div>
-                        <code style={{ fontSize: '0.75rem', color: 'var(--portal-salmon)' }}>
-                          {log.entityType}
-                        </code>
+                        </span>
                       </td>
                       <td>
                         <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>#{log.entityId}</span>
@@ -343,7 +337,7 @@ export function AdminAuditLogsPage() {
                           onClick={() => setDiffLog(log)}
                           aria-label={t(`Xem diff bản ghi #${log.id}`, `View record diff #${log.id}`)}
                         >
-                          {t("Xem Diff")}</button>
+                          {t("Xem thay đổi", "View changes")}</button>
                       </td>
                     </tr>
                   ))}
@@ -397,7 +391,7 @@ export function AdminAuditLogsPage() {
               </span>
             </div>
             <div className="metric-card occupancy-stat-card">
-              <span className="metric-label stat-card-title">{t("Tổng học viên đã book / Sức chứa")}</span>
+              <span className="metric-label stat-card-title">{t("Tổng học viên đã đặt / Sức chứa", "Booked students / Capacity")}</span>
               <span className="metric-value stat-card-number">
                 {occupancyMetrics.totalEnrolled} / {occupancyMetrics.totalCapacity}
               </span>
@@ -405,13 +399,13 @@ export function AdminAuditLogsPage() {
           </div>}
 
           <div className="occupancy-chart-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--color-text-main)', margin: '0 0 12px' }}>
+            <h3 style={{ fontSize: '1.15rem', color: 'var(--portal-ink)', margin: '0 0 12px' }}>
               {t("Biểu đồ trực quan tỷ lệ lấp đầy theo lớp & bộ môn")}</h3>
 
             {loadingOccupancy ? (
               <LoadingSkeleton label={t("Đang tải biểu đồ công suất lớp học…")} count={4} />
             ) : occupancyError ? null : occupancyList.length === 0 ? (
-              <div data-i18n-managed style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)' }}>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '30px 0', color: 'var(--portal-muted)' }}>
                 <p>{t("Không có dữ liệu lớp học nào.")}</p>
               </div>
             ) : (
@@ -422,12 +416,12 @@ export function AdminAuditLogsPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <span className="discipline-name-bold">{item.className}</span>
                         {item.roomName && (
-                          <span data-i18n-managed className="portal-badge" style={{ fontSize: '0.75rem', background: 'rgba(226, 91, 69, 0.15)', color: 'var(--color-primary, #e25b45)' }}>
+                          <span data-i18n-managed className="badge badge-neutral">
                             {item.roomName}
                           </span>
                         )}
                         {item.disciplineName && (
-                          <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                          <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-muted)' }}>
                             ({item.disciplineName})
                           </span>
                         )}
@@ -457,10 +451,13 @@ export function AdminAuditLogsPage() {
         </section>
       )}
 
-      {/* Modal xem chi tiết thay đổi diff (old_value vs new_value) */}
+      {/* Modal xem chi tiết thay đổi diff */}
       {diffLog && (
         <Modal
-          title={t(`Chi tiết thay đổi bản ghi #${diffLog.id} (${diffLog.action} trên ${diffLog.entityType})`, `Record change details #${diffLog.id} (${diffLog.action} on ${diffLog.entityType})`)}
+          title={t(
+            `Chi tiết thay đổi bản ghi #${diffLog.id} (${getActionLabel(diffLog.action)} · ${getEntityLabel(diffLog.entityType)})`,
+            `Record change details #${diffLog.id} (${getActionLabel(diffLog.action)} · ${getEntityLabel(diffLog.entityType)})`
+          )}
           onClose={() => setDiffLog(null)}
         >
           <div className="diff-modal-container">
@@ -481,7 +478,7 @@ export function AdminAuditLogsPage() {
             <div className="diff-grid-comparison">
               <div className="diff-box is-old">
                 <div className="diff-box-title">
-                  <span>{t("Giá trị cũ (old_value)")}</span>
+                  <span>{t("Giá trị cũ", "Previous value")}</span>
                 </div>
                 <pre className="diff-code-content">
                   {diffLog.oldValue ? formatJsonPretty(diffLog.oldValue) : t('(Không có giá trị cũ - Bản ghi tạo mới)')}
@@ -490,21 +487,12 @@ export function AdminAuditLogsPage() {
 
               <div className="diff-box is-new">
                 <div className="diff-box-title">
-                  <span>{t("Giá trị mới (new_value)")}</span>
+                  <span>{t("Giá trị mới", "Updated value")}</span>
                 </div>
                 <pre className="diff-code-content">
                   {diffLog.newValue ? formatJsonPretty(diffLog.newValue) : t('(Không có giá trị mới - Bản ghi bị xóa)')}
                 </pre>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setDiffLog(null)}
-              >
-                {t("Đóng")}</button>
             </div>
           </div>
         </Modal>

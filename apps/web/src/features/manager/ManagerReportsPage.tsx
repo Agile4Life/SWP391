@@ -5,6 +5,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { centerNowParts, formatCenterDate, formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
@@ -36,6 +37,7 @@ const csvText = (raw: string) => {
 
 export function ManagerReportsPage() {
   const { t } = useStaffI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
   // BR-01: Chỉ CENTER_MANAGER được xem báo cáo doanh thu tài chính
@@ -142,6 +144,15 @@ export function ManagerReportsPage() {
 
   const handleApproveCancellation = async (item: CancellationRequestDto) => {
     if (decidingCancelId !== null || typeof reportsApi.approveCancellationRequest !== 'function') return;
+    const confirmed = await confirm({
+      title: staffMessage('Phê duyệt hủy gói & hoàn tiền?', 'Approve cancellation and refund?'),
+      message: staffMessage(
+        `Hệ thống sẽ hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`} và hoàn ${vnd(Number(item.refundAmount ?? 0))} vào Ví hội viên.`,
+        `This cancels "${item.packageName}" for ${item.memberName || `#${item.memberId}`} and refunds ${vnd(Number(item.refundAmount ?? 0))} to the member wallet.`
+      ),
+      confirmLabel: staffMessage('Phê duyệt & Hoàn tiền', 'Approve & Refund'),
+    });
+    if (!confirmed) return;
     setDecidingCancelId(item.id);
     try {
       await reportsApi.approveCancellationRequest(item.id, undefined, item.refundAmount ?? undefined);
@@ -160,6 +171,16 @@ export function ManagerReportsPage() {
 
   const handleRejectCancellation = async (item: CancellationRequestDto) => {
     if (decidingCancelId !== null || typeof reportsApi.rejectCancellationRequest !== 'function') return;
+    const confirmed = await confirm({
+      title: staffMessage('Từ chối yêu cầu hủy gói?', 'Reject cancellation request?'),
+      message: staffMessage(
+        `Yêu cầu hủy gói "${item.packageName}" của ${item.memberName || `#${item.memberId}`} sẽ bị từ chối và gói tập tiếp tục hiệu lực.`,
+        `The cancellation request for "${item.packageName}" by ${item.memberName || `#${item.memberId}`} will be rejected and the membership remains active.`
+      ),
+      confirmLabel: staffMessage('Từ chối yêu cầu', 'Reject request'),
+      danger: true,
+    });
+    if (!confirmed) return;
     setDecidingCancelId(item.id);
     try {
       await reportsApi.rejectCancellationRequest(item.id);
@@ -215,8 +236,7 @@ export function ManagerReportsPage() {
       csv += t('SÖL FITNESS - BÁO CÁO DOANH THU\n', "SÖL FITNESS - REVENUE REPORT\n");
       csv += t(`Kỳ Báo Cáo: Từ ngày ${appliedRange.startDate} đến ngày ${appliedRange.endDate}\n`, `Report period: From ${appliedRange.startDate} to ${appliedRange.endDate}
 `);
-      csv += t(`Thời gian Xuất: ${new Date().toLocaleString(staffLocale())}\n`, `Exported at: ${new Date().toLocaleString(staffLocale())}
-`);
+      csv += t(`Thời gian Xuất: ${new Date().toLocaleString(staffLocale())}\n`, `Exported at: ${new Date().toLocaleString(staffLocale())}\n`);
       csv += t(`Người xuất: Quản lý trung tâm\n\n`, "Exported by: Center manager\n\n");
 
       csv += t('1. TỔNG QUAN CHỈ SỐ KPI\n', "1. KPI OVERVIEW\n");
@@ -290,7 +310,7 @@ export function ManagerReportsPage() {
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               {t("Không có quyền truy cập")}</h2>
-            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--portal-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               {t("Chỉ Quản lý trung tâm mới xem được báo cáo doanh thu.")}</p>
             <Link to="/portal" className="btn-secondary">
               {t("Về trang chủ Portal")}</Link>
@@ -341,7 +361,7 @@ export function ManagerReportsPage() {
       <div className="portal-card" style={{ marginBottom: '24px' }}>
         <form onSubmit={handleApplyFilter} style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>{t("Từ ngày:")}</span>
+            <span style={{ fontSize: '0.88rem', color: 'var(--portal-muted)', fontWeight: 600 }}>{t("Từ ngày:")}</span>
             <DatePicker
               value={startDate}
               max={endDate || undefined}
@@ -351,7 +371,7 @@ export function ManagerReportsPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>{t("Đến ngày:")}</span>
+            <span style={{ fontSize: '0.88rem', color: 'var(--portal-muted)', fontWeight: 600 }}>{t("Đến ngày:")}</span>
             <DatePicker
               value={endDate}
               min={startDate || undefined}
@@ -402,7 +422,7 @@ export function ManagerReportsPage() {
         {loadingCancellations ? (
           <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
         ) : cancellationRequests.length === 0 ? (
-          <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+          <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
             {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
         ) : (
           <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
@@ -420,13 +440,13 @@ export function ManagerReportsPage() {
                     gap: '14px',
                     padding: '16px 18px',
                     borderRadius: '10px',
-                    border: isPending ? '1px solid var(--color-accent-gold)' : '1px solid var(--color-border-subtle)',
-                    backgroundColor: isPending ? 'var(--color-bg-warm)' : 'var(--color-bg-card)',
+                    border: isPending ? '1px solid var(--portal-salmon)' : '1px solid var(--portal-border)',
+                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-card)',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 260 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
                         {t("Yêu cầu #")}{req.id}
                       </span>
                       <strong>{req.memberName || t(`Hội viên #${req.memberId}`, `Member #${req.memberId}`)}</strong>
@@ -442,7 +462,7 @@ export function ManagerReportsPage() {
                         {req.status === 'PENDING' ? t('CHỜ DUYỆT') : req.status === 'APPROVED' ? t('ĐÃ HOÀN VỀ VÍ') : t('ĐÃ TỪ CHỐI')}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-ink)', marginTop: '6px' }}>
                       {t("Gói tập: ")}<strong>{req.packageName}</strong> {t(" • Số tiền hoàn về Ví:")}{' '}
                       <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
                       {req.requestedByName && <span> {t(" • Trình bởi: ")}{req.requestedByName}</span>}
@@ -452,10 +472,10 @@ export function ManagerReportsPage() {
                         marginTop: '8px',
                         padding: '8px 12px',
                         borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg-card)',
-                        border: '1px solid var(--color-border-subtle)',
+                        backgroundColor: 'var(--portal-card)',
+                        border: '1px solid var(--portal-border)',
                         fontSize: '0.88rem',
-                        color: 'var(--color-text-main)',
+                        color: 'var(--portal-ink)',
                       }}
                     >
                       <strong>{t("Lý do hủy gói:")}</strong> {req.reason}
@@ -495,7 +515,7 @@ export function ManagerReportsPage() {
           <div className="portal-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-danger, #fca5a5)', marginBottom: '12px' }}>{t("LỖI DỮ LIỆU")}</div>
             <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{t("Lỗi khi tải dữ liệu báo cáo")}</h3>
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>{t(error)}</p>
+            <p style={{ color: 'var(--portal-muted)', marginBottom: '16px' }}>{t(error)}</p>
             <button type="button" className="btn-primary" onClick={() => fetchReports(startDate, endDate)}>
               {t("Thử lại")}</button>
           </div>
@@ -569,14 +589,14 @@ export function ManagerReportsPage() {
             </div>
 
             {dailyData.length === 0 || dailyData.every((d) => d.revenue === 0) ? (
-              <div data-i18n-managed style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-muted)' }}>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '60px 0', color: 'var(--portal-muted)' }}>
                 {t("Không có dữ liệu phát sinh doanh thu trong kỳ được chọn.")}</div>
             ) : (
               <div data-i18n-managed>
                 {/* Khu vực tooltip hiển thị khi hover */}
                 <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
                   {hoveredBar && (
-                    <span data-i18n-managed style={{ color: 'var(--color-accent-gold)' }}>
+                    <span data-i18n-managed style={{ color: 'var(--portal-salmon)' }}>
                       {t("Ngày ")}{formatCenterDate(hoveredBar.date)}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} {t(" giao dịch)")}</span>
                   )}
                 </div>
@@ -589,7 +609,7 @@ export function ManagerReportsPage() {
                     gap: dailyData.length > 15 ? '4px' : '8px',
                     height: '210px',
                     paddingBottom: '32px',
-                    borderBottom: '1px solid var(--color-border-subtle)',
+                    borderBottom: '1px solid var(--portal-border)',
                     overflowX: 'auto',
                     overflowY: 'hidden',
                   }}
@@ -619,14 +639,14 @@ export function ManagerReportsPage() {
                             height: `${heightPercent}%`,
                             background: isHovered ? 'var(--portal-hover)' : 'var(--portal-salmon)',
                             borderRadius: '4px 4px 0 0',
-                            transition: 'all 0.2s ease',
+                            transition: 'height 0.2s ease',
                             cursor: 'pointer',
                           }}
                         />
                         <span
                           style={{
                             fontSize: '0.75rem',
-                            color: 'var(--color-text-muted)',
+                            color: 'var(--portal-muted)',
                             marginTop: '8px',
                             transform: 'rotate(-45deg)',
                             whiteSpace: 'nowrap',
@@ -650,7 +670,7 @@ export function ManagerReportsPage() {
             </div>
 
             {summary.packageRevenue.length === 0 ? (
-              <div data-i18n-managed style={{ textAlign: 'center', padding: '60px 0', color: 'var(--color-text-muted)' }}>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '60px 0', color: 'var(--portal-muted)' }}>
                 {t("Chưa có gói tập nào phát sinh doanh thu trong kỳ này.")}</div>
             ) : (
               <div data-i18n-managed style={{ display: 'grid', gap: '16px' }}>
@@ -660,7 +680,7 @@ export function ManagerReportsPage() {
                       <span><strong>{pkg.packageName}</strong> ({pkg.subscriptionCount} {t(" lượt)")}</span>
                       <span><strong>{vnd(pkg.revenue)}</strong> ({pkg.percentage}%)</span>
                     </div>
-                    <div style={{ width: '100%', height: '8px', background: 'var(--color-bg-warm)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: '8px', background: 'var(--portal-raised)', borderRadius: '4px', overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${Math.min(100, pkg.percentage)}%`,
@@ -716,7 +736,7 @@ export function ManagerReportsPage() {
                     transform: 'translateY(-50%)',
                     background: 'transparent',
                     border: 'none',
-                    color: 'var(--color-text-muted)',
+                    color: 'var(--portal-muted)',
                     cursor: 'pointer',
                     fontSize: '14px',
                     padding: '4px',
@@ -732,11 +752,11 @@ export function ManagerReportsPage() {
           </div>
 
           {summary.recentTransactions.length === 0 ? (
-            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
               {t("Chưa có giao dịch thanh toán nào được ghi nhận.")}
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
+            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
               <p style={{ margin: '0 0 8px 0' }}>{t(`Không tìm thấy giao dịch nào khớp với "${txSearchTerm}".`, `No transactions found matching "${txSearchTerm}".`)}</p>
               <button type="button" className="btn-secondary btn-sm" onClick={() => setTxSearchTerm('')}>
                 {t("Xóa tìm kiếm", "Clear search")}
@@ -763,7 +783,7 @@ export function ManagerReportsPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                           <span style={{ fontWeight: 600 }}>{tx.memberName}</span>
                           {(tx.phone || tx.email) && (
-                            <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--portal-muted)' }}>
                               {[tx.phone, tx.email].filter(Boolean).join(' · ')}
                             </span>
                           )}
@@ -772,7 +792,7 @@ export function ManagerReportsPage() {
                       <td>{tx.packageName ?? '—'}</td>
                       <td style={{ fontWeight: 600, color: 'var(--portal-success, #86efac)' }}>{vnd(tx.amount)}</td>
                       <td>
-                        <span className="badge badge-success" style={{ textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                        <span className="badge badge-success">
                           {t(paymentMethods[tx.method]) ?? tx.method}
                         </span>
                       </td>
@@ -781,11 +801,11 @@ export function ManagerReportsPage() {
                           const { date, time } = formatTransactionTime(tx.paidAt);
                           return (
                             <div data-i18n-managed style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: '0.86rem' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--portal-ink)', fontSize: '0.86rem' }}>
                                 {date}
                               </span>
                               {time && (
-                                <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--color-accent-gold)', fontWeight: 500, letterSpacing: '0.02em' }}>
+                                <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', fontWeight: 500, letterSpacing: '0.02em' }}>
                                   {time}
                                 </span>
                               )}
@@ -801,6 +821,7 @@ export function ManagerReportsPage() {
           )}
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }
