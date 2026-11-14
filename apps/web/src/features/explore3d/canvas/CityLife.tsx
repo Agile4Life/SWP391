@@ -227,6 +227,62 @@ function Pedestrians() {
   );
 }
 
+
+const COMMUTERS = 14;
+const PLATFORM_Y = 9.2 + 0.48 + 0.23;
+
+/** Passengers waiting on the elevated metro platform; they sway slightly and shuffle in place. */
+function Commuters() {
+  const bodyRef = useRef<THREE.InstancedMesh>(null);
+  const headRef = useRef<THREE.InstancedMesh>(null);
+  const legRef = useRef<THREE.InstancedMesh>(null);
+  const bodyGeo = useMemo(() => new THREE.CapsuleGeometry(0.21, 0.5, 3, 8), []);
+  const headGeo = useMemo(() => new THREE.SphereGeometry(0.15, 8, 6), []);
+  const legGeo = useMemo(() => new THREE.CapsuleGeometry(0.13, 0.62, 2, 6), []);
+  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.8 }), []);
+  const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c58f6d', roughness: 0.7 }), []);
+  const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#232a36', roughness: 0.85 }), []);
+  useEffect(() => () => { bodyGeo.dispose(); headGeo.dispose(); legGeo.dispose(); bodyMat.dispose(); headMat.dispose(); legMat.dispose(); }, [bodyGeo, headGeo, legGeo, bodyMat, headMat, legMat]);
+  const spots = useMemo(
+    () => Array.from({ length: COMMUTERS }, (_, i) => ({
+      x: -17 + ((i * 2.9) % 42) + (i % 3) * 0.4,
+      z: -56.5 + (i % 2 === 0 ? -3.6 : 3.6) + ((i * 7) % 5) * 0.12,
+    })),
+    [],
+  );
+  useEffect(() => {
+    const mesh = bodyRef.current;
+    if (!mesh) return;
+    const c = new THREE.Color();
+    spots.forEach((_, i) => mesh.setColorAt(i, c.set(CLOTHES[i % CLOTHES.length]!)));
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [spots]);
+  const m = useMemo(() => new THREE.Matrix4(), []);
+  useFrame(({ clock }) => {
+    const b = bodyRef.current;
+    const h = headRef.current;
+    const l = legRef.current;
+    if (!b || !h || !l) return;
+    const t = clock.elapsedTime;
+    spots.forEach((sp, i) => {
+      const sway = Math.sin(t * 0.8 + i * 1.7) * 0.04;
+      b.setMatrixAt(i, m.makeTranslation(sp.x + sway, PLATFORM_Y + 1.15, sp.z));
+      h.setMatrixAt(i, m.makeTranslation(sp.x + sway, PLATFORM_Y + 1.72, sp.z));
+      l.setMatrixAt(i, m.makeTranslation(sp.x, PLATFORM_Y + 0.5, sp.z));
+    });
+    b.instanceMatrix.needsUpdate = true;
+    h.instanceMatrix.needsUpdate = true;
+    l.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <>
+      <instancedMesh ref={bodyRef} args={[bodyGeo, bodyMat, COMMUTERS]} frustumCulled={false} castShadow raycast={NOOP} />
+      <instancedMesh ref={headRef} args={[headGeo, headMat, COMMUTERS]} frustumCulled={false} raycast={NOOP} />
+      <instancedMesh ref={legRef} args={[legGeo, legMat, COMMUTERS]} frustumCulled={false} raycast={NOOP} />
+    </>
+  );
+}
+
 export function CityLife({ city }: { city: CityMetropolisGeometries }) {
   return (
     <>
@@ -234,6 +290,7 @@ export function CityLife({ city }: { city: CityMetropolisGeometries }) {
       <Banners city={city} />
       <Beacons city={city} />
       <Pedestrians />
+      <Commuters />
     </>
   );
 }
