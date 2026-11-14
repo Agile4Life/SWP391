@@ -53,3 +53,4 @@ apps/web/e2e/.results/
 apps/web/e2e/.report/
 apps/web/test-results/
 apps/web/playwright-report/
+docs/CHEAT_SHEET.md
