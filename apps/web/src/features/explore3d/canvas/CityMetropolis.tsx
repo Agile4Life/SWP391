@@ -40,6 +40,22 @@ export function CityMetropolis() {
   );
   useEffect(() => () => opaqueMat.dispose(), [opaqueMat]);
   useEffect(() => () => metalMat.dispose(), [metalMat]);
+  // Translucent so the penthouse stays visible from above through its roof.
+  const roofGlassMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        name: 'sol-gym-roof-glass',
+        vertexColors: true,
+        roughness: 0.1,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+        envMapIntensity: 1.4,
+      }),
+    [],
+  );
+  useEffect(() => () => roofGlassMat.dispose(), [roofGlassMat]);
   const glassMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -64,7 +80,7 @@ export function CityMetropolis() {
       <mesh name="sol-city-metal" geometry={city.metalGeometry} material={metalMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-glass" geometry={city.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
-      <GymCrown theme={theme} glassMat={glassMat} emissiveMat={emissiveMat} opaqueMat={opaqueMat} metalMat={metalMat} />
+      <GymCrown theme={theme} glassMat={roofGlassMat} emissiveMat={emissiveMat} opaqueMat={opaqueMat} metalMat={metalMat} />
       <CityTraffic />
       <CityLife city={city} />
       <CitySky />

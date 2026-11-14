@@ -356,16 +356,16 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushBox(parts, 0.46, 0.44, 1.65, -13.15, 0.22, cz + 1.0, warmWood);
     pushBox(parts, 0.36, 0.3, 0.52, -13.15, 0.56, cz + 0.8, salmon);
   }
-  // 7. Exterior Facade Structural Columns on L1 (0..4.5m local height)
+  // 7. Exterior Facade Structural Columns on L1 (0..5.76m local height, up to the L2 slab)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
-    pushBox(parts, 0.45, 4.5, 0.45, cx, 2.25, -16.15, darkSteel);
+    pushBox(parts, 0.45, 5.76, 0.45, cx, 2.88, -16.15, darkSteel);
   }
   for (const cz of [-15.8, -5.0, 5.0, 15.8]) {
-    pushBox(parts, 0.45, 4.5, 0.45, -22.15, 2.25, cz, darkSteel);
-    pushBox(parts, 0.45, 4.5, 0.45, 22.15, 2.25, cz, darkSteel);
+    pushBox(parts, 0.45, 5.76, 0.45, -22.15, 2.88, cz, darkSteel);
+    pushBox(parts, 0.45, 5.76, 0.45, 22.15, 2.88, cz, darkSteel);
   }
   for (const cx of [-21.8, -12.0, -5.2, 8.8, 15.5, 21.8]) {
-    pushBox(parts, 0.48, 4.5, 0.48, cx, 2.25, 16.15, darkSteel);
+    pushBox(parts, 0.48, 5.76, 0.48, cx, 2.88, 16.15, darkSteel);
   }
 }
 
@@ -441,16 +441,16 @@ function buildL2Details(parts: ColoredPart[]): void {
   pushBox(parts, 3.9, 0.1, 0.56, 2.0, 2.15, 12.3, salmon);
   pushBox(parts, 0.95, 0.48, 0.46, 2.0, 1.35, 10.2, chrome);
 
-  // 5. Exterior Facade Structural Columns & Brise-Soleil Sun Fins on L2 (0..4.5m local height)
+  // 5. Exterior Facade Structural Columns & Brise-Soleil Sun Fins on L2 (0..5.76m local height, up to the L2 slab)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
-    pushBox(parts, 0.45, 4.5, 0.45, cx, 2.25, -16.15, darkSteel);
+    pushBox(parts, 0.45, 5.76, 0.45, cx, 2.88, -16.15, darkSteel);
   }
   for (const cz of [-15.8, -5.0, 5.0, 15.8]) {
-    pushBox(parts, 0.45, 4.5, 0.45, -22.15, 2.25, cz, darkSteel);
-    pushBox(parts, 0.45, 4.5, 0.45, 22.15, 2.25, cz, darkSteel);
+    pushBox(parts, 0.45, 5.76, 0.45, -22.15, 2.88, cz, darkSteel);
+    pushBox(parts, 0.45, 5.76, 0.45, 22.15, 2.88, cz, darkSteel);
   }
   for (const cx of [-21.8, -12.0, -5.2, 8.8, 15.5, 21.8]) {
-    pushBox(parts, 0.48, 4.5, 0.48, cx, 2.25, 16.15, darkSteel);
+    pushBox(parts, 0.48, 5.76, 0.48, cx, 2.88, 16.15, darkSteel);
   }
   for (let fx = -20.0; fx <= 20.0; fx += 2.0) {
     if (fx > -5.5 && fx < 8.5) continue;
