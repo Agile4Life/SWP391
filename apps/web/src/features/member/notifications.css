@@ -24,8 +24,7 @@
 .notification-panel { display: flex; flex-direction: column; min-height: 0; }
 .notification-panel__actions { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px; padding: 8px 16px 12px 20px; color: var(--portal-muted); font-size: 12px; }
 .notification-panel__actions .notification-action { min-height: 44px; padding: 8px; border: 0; color: var(--portal-salmon); font-size: 12px; }
-.notification-panel__scroll { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: none; }
-.notification-panel__scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.notification-panel__scroll { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; }
 .notification-popover .notification-list { border: 0; border-radius: 0; }
 .notification-popover .notification-item { gap: 12px; padding: 16px 20px; }
 .notification-popover .notification-copy { gap: 4px; }

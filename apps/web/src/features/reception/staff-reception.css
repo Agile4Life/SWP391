@@ -13,7 +13,7 @@
 .reception-todo { display: grid; gap: 10px; margin-top: 12px; min-width: 0; }
 .reception-todo__empty { padding: 24px 16px; text-align: center; color: var(--color-text-muted); font-size: 0.9rem; }
 /* Nhãn nhỏ cho biết mục thuộc loại việc nào; chỉ dùng màu trung tính + viền để không lệch bảng màu portal. */
-.reception-todo__tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--color-border-medium); background: var(--color-bg-card); color: var(--color-text-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
+.reception-todo__tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--color-border-medium); background: var(--color-bg-card); color: var(--color-text-muted); font-size: var(--text-xs, 12px); font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
 
 @media (max-width: 767px) {
   .reception-top__search form { flex-wrap: wrap; }

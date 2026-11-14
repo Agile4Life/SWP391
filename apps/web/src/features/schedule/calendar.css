@@ -12,9 +12,9 @@
 /* Thanh công cụ */
 .mcal__toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
 .mcal__nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-.mcal__icon-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--portal-border-strong); border-radius: 50%; background: var(--portal-raised); color: var(--portal-paper); cursor: pointer; }
+.mcal__icon-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--portal-border-strong); border-radius: 50%; background: var(--portal-raised); color: var(--portal-paper); cursor: pointer; }
 .mcal__icon-btn svg, .mcal__next svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.mcal__today-btn { height: 32px; padding: 0 14px; border: 1px solid var(--portal-border-strong); border-radius: 999px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.mcal__today-btn { min-height: 36px; padding: 0 14px; border: 1px solid var(--portal-border-strong); border-radius: 999px; background: var(--portal-raised); color: var(--portal-paper); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .mcal__today-btn:disabled { opacity: .55; cursor: default; }
 .mcal__icon-btn:hover, .mcal__today-btn:hover:not(:disabled) { border-color: var(--portal-salmon); color: var(--portal-salmon); }
 .mcal__range { margin: 0 0 0 6px; font-size: clamp(16px, 1.8vw, 22px); font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); white-space: nowrap; }
@@ -35,7 +35,7 @@
 .mcal__legend-note { color: var(--portal-muted); opacity: .85; }
 
 .mcal__switch { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--portal-raised); }
-.mcal__switch button { min-width: 60px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.mcal__switch button { min-width: 60px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
 .mcal__switch button[aria-pressed='true'] { background: var(--portal-salmon); color: var(--portal-on-accent); }
 
 /* Thanh "Tiếp theo" */
@@ -61,7 +61,7 @@
 .mcal__corner, .mcal__dayhead { position: sticky; top: 0; z-index: 6; background: var(--portal-surface); border-bottom: 1px solid var(--portal-border-strong); }
 .mcal__corner { left: 0; z-index: 7; }
 .mcal__dayhead { display: grid; justify-items: center; align-content: start; gap: 2px; padding: 4px 4px 6px; }
-.mcal__dayname { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--portal-muted); }
+.mcal__dayname { font-size: var(--text-xs, 12px); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--portal-muted); }
 .mcal__daynum { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; font-weight: 800; letter-spacing: -.02em; color: var(--portal-paper); }
 .mcal__dayhead.is-today .mcal__dayname { color: var(--portal-paper); }
 .mcal__dayhead.is-today .mcal__daynum { background: var(--portal-salmon); color: var(--portal-on-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--portal-salmon) 25%, transparent); }
@@ -176,6 +176,10 @@
   .mcal__chip { padding: 2px 4px; font-size: 12px; }
   .mcal__chip span { display: none; }
   .mcal__month-head { font-size: 12px; letter-spacing: 0; }
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  .mcal__icon-btn { width: 44px; height: 44px; }
+  .mcal__today-btn, .mcal__switch button { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mcal__event, .mcal__slot-plus { transition: none; }

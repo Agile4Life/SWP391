@@ -13,8 +13,7 @@
 .tt__swatch--past { background: var(--portal-raised); border-style: dashed; }
 .tt__swatch--cancelled { background: color-mix(in srgb, var(--portal-danger) 22%, var(--portal-surface)); border-color: var(--portal-danger); }
 
-.tt__scroll { isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 300px)); border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-surface); scrollbar-width: none; -ms-overflow-style: none; }
-.tt__scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.tt__scroll { isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 300px)); border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-surface); scrollbar-width: thin; scrollbar-color: var(--portal-border-strong, rgba(148, 163, 184, 0.35)) transparent; }
 .tt__grid { display: grid; grid-template-columns: repeat(var(--tt-days, 7), minmax(100px, 1fr)); grid-template-rows: auto auto; min-width: 700px; }
 .tt__grid.is-single { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 /* Xem một ngày: dải chọn ngày đã ghi thứ/ngày nên bỏ hàng tiêu đề lặp lại */
@@ -22,7 +21,7 @@
 .tt__grid.is-loading { opacity: .55; }
 
 /* Tiêu đề ngày dính khi cuộn trong khung */
-.tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); display: grid; gap: 1px; justify-items: center; padding: 5px 4px; border-left: 1px solid var(--portal-border); font-size: 11px; color: var(--portal-muted); }
+.tt__dayhead { position: sticky; top: 0; z-index: 4; background: var(--portal-raised); border-bottom: 1px solid var(--portal-border-strong); display: grid; gap: 1px; justify-items: center; padding: 5px 4px; border-left: 1px solid var(--portal-border); font-size: var(--text-xs, 12px); color: var(--portal-muted); }
 .tt__dayhead strong { font-size: 14px; color: var(--portal-paper); }
 .tt__dayhead.is-today { background: color-mix(in srgb, var(--portal-salmon) 22%, var(--portal-raised)); color: var(--portal-paper); }
 .tt__dayhead.is-today strong { color: var(--portal-salmon); }

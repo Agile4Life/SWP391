@@ -60,27 +60,57 @@ textarea {
 }
 
 .metric-value,
+.metric-unit,
+.metric-trend,
 .portal-table td,
-.badge {
+.badge,
+.portal-tab-count,
+.days-left,
+time,
+[data-tabular],
+.audit-pagination-bar,
+.shop-card__price,
+.shop-detail__price,
+.shop-checkout-totals {
   font-variant-numeric: tabular-nums;
 }
 
-/* Ẩn thanh cuộn chỉ trên landing toàn màn hình; portal giữ thanh cuộn mảnh để người dùng biết còn nội dung */
+/* Ẩn thanh cuộn ngoài trang; các vùng cuộn dữ liệu (bảng rộng, hộp thoại dài, thông báo) giữ thanh cuộn mảnh 6px */
+html,
+body,
 .sol-page-root,
 .sol-page-root * {
   scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.sol-page-root ::-webkit-scrollbar {
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.sol-page-root::-webkit-scrollbar,
+.sol-page-root *::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
 
-* {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
+:is(.portal-table-wrapper, .portal-dialog__body, .notification-panel__scroll, .tt__scroll, .mcal__scroll) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--portal-border-strong, rgba(148, 163, 184, 0.35)) transparent;
 }
-html, body, * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
-html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important;
+
+:is(.portal-table-wrapper, .portal-dialog__body, .notification-panel__scroll, .tt__scroll, .mcal__scroll)::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+  height: 6px;
+}
+
+:is(.portal-table-wrapper, .portal-dialog__body, .notification-panel__scroll, .tt__scroll, .mcal__scroll)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:is(.portal-table-wrapper, .portal-dialog__body, .notification-panel__scroll, .tt__scroll, .mcal__scroll)::-webkit-scrollbar-thumb {
+  background: var(--portal-border-strong, rgba(148, 163, 184, 0.35));
+  border-radius: 999px;
 }
 
 /* Vòng focus rõ ràng cho người dùng bàn phím */
@@ -98,6 +128,14 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display
   white-space: nowrap;
 }
 
+.portal-field-error {
+  margin: 6px 0 0;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--portal-danger, #ef4444);
+}
+
 .page {
   margin: 34px;
   padding: 32px;
@@ -112,43 +150,6 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.12em;
-}
-
-.login-page {
-  display: grid;
-  min-height: 100vh;
-  place-items: center;
-  background: #13100e;
-}
-.login-card {
-  display: grid;
-  gap: 14px;
-  width: min(400px, calc(100vw - 32px));
-  padding: 34px;
-  border-radius: 14px;
-  background: white;
-}
-.login-card h1 {
-  margin: 0;
-}
-.login-card label {
-  display: grid;
-  gap: 6px;
-  font-weight: 600;
-}
-.login-card input {
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-}
-.login-card button {
-  cursor: pointer;
-  padding: 11px;
-  border: 0;
-  border-radius: 6px;
-  color: white;
-  background: #2563eb;
-  font-weight: 700;
 }
 
 @media (max-width: 720px) {
@@ -313,137 +314,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar { display
 }
 
 /* ==========================================================================
-   FITNESS PULSE MOTION — intro, click impact, cursor, page transitions
+   FITNESS PULSE MOTION — click impact, page transitions
    ========================================================================== */
-
-/* --- Intro curtain (lần đầu vào web mỗi phiên) --- */
-.intro-curtain {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: grid;
-  place-items: center;
-  color: #FAF8F5;
-  background: radial-gradient(ellipse at 50% 42%, #2A231F 0%, #14110F 72%);
-  clip-path: inset(0 0 0 0);
-  transition: clip-path 850ms cubic-bezier(.76, 0, .24, 1);
-}
-
-.intro-curtain.is-leaving {
-  clip-path: inset(0 0 100% 0);
-}
-
-.intro-curtain__inner {
-  display: grid;
-  justify-items: center;
-  gap: 26px;
-  width: min(560px, 86vw);
-  transition: opacity 380ms ease, transform 850ms cubic-bezier(.76, 0, .24, 1);
-}
-
-.intro-curtain.is-leaving .intro-curtain__inner {
-  opacity: 0;
-  transform: translateY(-48px);
-}
-
-.intro-brand {
-  display: flex;
-  margin: 0 -.5em 0 0;
-  font-family: var(--font-serif);
-  font-size: clamp(3.5rem, 10vw, 7rem);
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: .5em;
-  animation: intro-tighten 1.8s var(--ease-luxury) both;
-}
-
-.intro-brand span {
-  display: inline-block;
-  animation: intro-letter 900ms var(--ease-luxury) both;
-  animation-delay: calc(var(--i, 0) * 120ms);
-}
-
-.intro-tagline {
-  font-size: 12px;
-  letter-spacing: .42em;
-  text-transform: uppercase;
-  color: var(--color-accent-sand);
-  animation: fade-up 800ms var(--ease-luxury) 450ms both;
-}
-
-.intro-ecg {
-  width: 100%;
-  height: 64px;
-  overflow: visible;
-}
-
-.intro-ecg path {
-  fill: none;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.intro-ecg__track {
-  stroke: rgba(250, 248, 245, .08);
-}
-
-.intro-ecg__line {
-  stroke: var(--color-accent-gold);
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  filter: drop-shadow(0 0 6px rgba(194, 166, 132, .75));
-  animation: stroke-draw 1.45s cubic-bezier(.65, 0, .35, 1) 250ms forwards;
-}
-
-.intro-meta {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 12px;
-  letter-spacing: .3em;
-  text-transform: uppercase;
-  color: rgba(250, 248, 245, .5);
-  animation: fade-up 800ms var(--ease-luxury) 300ms both;
-}
-
-.intro-count {
-  color: #FAF8F5;
-  font-variant-numeric: tabular-nums;
-}
-
-.intro-skip {
-  position: absolute;
-  right: 40px;
-  bottom: 32px;
-  padding: 10px 18px;
-  border: 1px solid rgba(250, 248, 245, .2);
-  border-radius: 999px;
-  background: none;
-  color: rgba(250, 248, 245, .7);
-  font: 500 0.75rem var(--font-sans);
-  letter-spacing: .28em;
-  cursor: pointer;
-  transition: color var(--dur-fast), border-color var(--dur-fast);
-}
-
-.intro-skip:hover {
-  color: #FFFFFF;
-  border-color: var(--color-accent-gold);
-}
-
-/* Giữ animation của Hero cho tới khi màn che mở */
-.sol-page-root[data-intro="playing"] #hero * {
-  animation-play-state: paused !important;
-}
-
-@keyframes intro-letter {
-  from { opacity: 0; transform: translateY(40%); filter: blur(8px); }
-}
-
-@keyframes intro-tighten {
-  from { letter-spacing: .9em; margin-right: -.9em; }
-}
 
 @keyframes stroke-draw {
   to { stroke-dashoffset: 0; }
@@ -473,90 +345,6 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
 .btn-danger:active,
 .aura-portal-btn:active {
   transform: scale(.97);
-}
-
-/* --- Custom cursor (landing) --- */
-.has-custom-cursor,
-.has-custom-cursor * {
-  cursor: none !important;
-}
-
-.has-custom-cursor input,
-.has-custom-cursor textarea {
-  cursor: text !important;
-}
-
-/* <dialog> nằm ở top layer, che mất con trỏ tuỳ biến → dùng con trỏ gốc bên trong */
-.has-custom-cursor dialog,
-.has-custom-cursor dialog * {
-  cursor: auto !important;
-}
-
-.has-custom-cursor dialog button,
-.has-custom-cursor dialog a,
-.has-custom-cursor dialog select {
-  cursor: pointer !important;
-}
-
-.has-custom-cursor dialog input,
-.has-custom-cursor dialog textarea {
-  cursor: text !important;
-}
-
-.cursor-dot,
-.cursor-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 99999;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 300ms ease;
-  will-change: transform;
-}
-
-.cursor-dot.is-visible,
-.cursor-ring.is-visible {
-  opacity: 1;
-}
-
-.cursor-dot {
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  background: var(--color-accent-gold);
-}
-
-.cursor-ring {
-  width: 36px;
-  height: 36px;
-  margin: -18px 0 0 -18px;
-}
-
-.cursor-ring::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(194, 166, 132, .7);
-  border-radius: 50%;
-  transition: transform 350ms var(--ease-luxury),
-              background-color 350ms ease,
-              border-color 350ms ease;
-}
-
-.cursor-ring.is-hover::after {
-  transform: scale(1.8);
-  border-color: var(--color-accent-gold);
-  background-color: rgba(194, 166, 132, .12);
-}
-
-.cursor-ring.is-down::after {
-  transform: scale(.7);
-}
-
-.cursor-ring.is-hover.is-down::after {
-  transform: scale(1.4);
 }
 
 /* --- Page transitions (View Transitions API) --- */
@@ -812,8 +600,7 @@ dialog.sol-toast::backdrop {
     animation: none !important;
   }
   .status-mark circle,
-  .status-mark path,
-  .intro-ecg__line {
+  .status-mark path {
     stroke-dashoffset: 0 !important;
   }
   .reveal {
@@ -841,3 +628,18 @@ select:focus-visible {
 
 /* DESIGN.md: chữ người dùng đọc tối thiểu 12px; <small> mặc định của trình duyệt (smaller) sẽ co xuống ~10px */
 small { font-size: max(12px, 0.875em); }
+
+/* Tránh iOS / iPadOS Safari tự phóng to màn hình khi chạm ô nhập < 16px */
+@media (max-width: 1024px), (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea,
+  .portal-input,
+  .portal-select,
+  .portal-textarea,
+  .ui-select__trigger,
+  .luxury-datepicker-trigger,
+  .luxury-timepicker-trigger {
+    font-size: 16px;
+  }
+}

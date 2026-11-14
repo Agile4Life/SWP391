@@ -1058,14 +1058,6 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   background: #FFFFFF;
   color: #1A1614;
   box-shadow: 0 30px 70px rgba(26, 22, 20, 0.25);
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.portal-dialog::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
 }
 
 /* `backwards`, không dùng `both`: fill `forwards` giữ transform trên <dialog> sau khi animation kết thúc, khiến
@@ -1081,14 +1073,6 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
 .portal-dialog__body {
   padding: 24px 28px 28px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.portal-dialog__body::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
 }
 
 .portal-dialog__header {

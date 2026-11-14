@@ -396,7 +396,7 @@ body:has(.portal-backdrop) .click-ripple {
 
 .portal-rail-brand small {
   color: var(--portal-muted);
-  font-size: 11px;
+  font-size: var(--text-xs, 12px);
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -851,14 +851,14 @@ html:root .portal-logo.portal-logo--mark {
 .portal-v2 .portal-title {
   margin: 0;
   color: var(--portal-paper);
-  font: 700 clamp(23px, 2.2vw, 32px)/1.3 var(--font-sans);
+  font: 700 var(--text-2xl, clamp(1.5rem, 2.2vw, 1.875rem))/1.3 var(--font-sans);
   letter-spacing: -.045em;
   overflow-wrap: anywhere;
 }
 
 .portal-v2 .portal-subtitle {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--text-base, 14px);
   color: var(--portal-muted);
 }
 
@@ -915,12 +915,12 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 .portal-v2 .portal-card-title {
-  font: 650 17px/1.5 var(--font-sans);
+  font: 650 var(--text-lg, 18px)/1.45 var(--font-sans);
   letter-spacing: -.025em;
 }
 
 .portal-v2 .portal-card-subtitle {
-  font-size: 12px;
+  font-size: var(--text-sm, 13px);
 }
 
 .portal-v2 .portal-card--feature {
@@ -1352,9 +1352,15 @@ html:root .portal-logo.portal-logo--mark {
   box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .18);
 }
 
+.portal-v2 .muted {
+  color: var(--portal-muted);
+  font-size: var(--text-sm, 13px);
+}
+
 .portal-v2 .portal-hint,
 .portal-v2 .portal-table .muted {
   color: var(--portal-muted);
+  font-size: var(--text-xs, 12px);
 }
 
 .portal-v2 .form-row {
@@ -1536,8 +1542,8 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 .portal-v2 .row-card__meta {
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: var(--text-sm, 13px);
+  line-height: 1.6;
   color: var(--portal-muted);
   overflow-wrap: anywhere;
 }
@@ -1590,7 +1596,7 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 .portal-v2 .metric-value {
-  font: 700 30px/1.4 var(--font-sans);
+  font: 700 var(--text-2xl, clamp(1.5rem, 2.2vw, 1.875rem))/1.35 var(--font-sans);
   color: var(--portal-paper);
   background: none;
   -webkit-text-fill-color: currentColor;
@@ -1668,26 +1674,10 @@ html:root .portal-logo.portal-logo--mark {
   background: var(--portal-surface);
   color: var(--portal-paper);
   box-shadow: 0 30px 90px #00000030;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.portal-v2 .portal-dialog::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
 }
 
 .portal-v2 .portal-dialog__body {
   padding: 26px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.portal-v2 .portal-dialog__body::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
 }
 
 .portal-v2 .portal-dialog__close {
@@ -2324,6 +2314,14 @@ html:root .portal-logo.portal-logo--mark {
 
   .portal-v2 .member-column-heading>a {
     min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Màn hình cảm ứng và tablet (<=1024px): cỡ chữ 16px ngăn iOS/iPadOS tự zoom khi chạm ô nhập */
+@media (max-width: 1024px), (pointer: coarse) {
+  .portal-v2 :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), textarea, .portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)) {
+    font-size: 16px;
     min-height: 44px;
   }
 }

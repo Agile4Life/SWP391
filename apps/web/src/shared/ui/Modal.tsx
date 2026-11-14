@@ -36,7 +36,6 @@ export function Modal({ title, onClose, children, busy = false, className, retur
       aria-modal="true"
       aria-busy={busy}
       className={`portal-dialog ${className || ''}`.trim()}
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       aria-labelledby={titleId}
       onKeyDown={event => {
         if (event.key !== 'Tab') return;
@@ -68,7 +67,7 @@ export function Modal({ title, onClose, children, busy = false, className, retur
         if (fromBackdrop && e.target === e.currentTarget && !busy) onClose();
       }}
     >
-      <div className="portal-dialog__body" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="portal-dialog__body">
         <div className="portal-dialog__header">
           <h2 id={titleId} className="portal-card-title">{title}</h2>
           <button type="button" className="portal-dialog__close" aria-label={t('Đóng hộp thoại')} disabled={busy} onClick={onClose}>
