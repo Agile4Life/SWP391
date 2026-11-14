@@ -6,6 +6,7 @@ import { buildCityMetropolis } from '../renderers/architecture/buildCityMetropol
 import { useDocumentTheme, useExploreMaterials } from '../renderers/materials';
 import { useExploreStore } from '../state/exploreStore';
 import { CityLife } from './CityLife';
+import { CitySky } from './CitySky';
 import { CityTraffic } from './CityTraffic';
 
 const NOOP_RAYCAST = () => null;
@@ -47,6 +48,7 @@ export function CityMetropolis() {
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
       <CityTraffic />
       <CityLife city={city} />
+      <CitySky />
       <Flags isLight={theme === 'light'} />
     </group>
   );

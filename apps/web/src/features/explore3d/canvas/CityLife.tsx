@@ -148,6 +148,8 @@ function Pedestrians() {
   const tier = useExploreStore(s => s.tier);
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const headRef = useRef<THREE.InstancedMesh>(null);
+  const legARef = useRef<THREE.InstancedMesh>(null);
+  const legBRef = useRef<THREE.InstancedMesh>(null);
   const count = tier === 'low' ? 15 : 45;
   const walkers = useMemo<Walker[]>(() => {
     const out: Walker[] = [];
@@ -163,11 +165,13 @@ function Pedestrians() {
     }
     return out;
   }, [count]);
-  const bodyGeo = useMemo(() => new THREE.CapsuleGeometry(0.21, 0.85, 3, 8), []);
+  const bodyGeo = useMemo(() => new THREE.CapsuleGeometry(0.21, 0.5, 3, 8), []);
+  const legGeo = useMemo(() => new THREE.CapsuleGeometry(0.075, 0.62, 2, 6), []);
+  const legMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#232a36', roughness: 0.85 }), []);
   const headGeo = useMemo(() => new THREE.SphereGeometry(0.15, 8, 6), []);
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.8 }), []);
   const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c58f6d', roughness: 0.7 }), []);
-  useEffect(() => () => { bodyGeo.dispose(); headGeo.dispose(); bodyMat.dispose(); headMat.dispose(); }, [bodyGeo, headGeo, bodyMat, headMat]);
+  useEffect(() => () => { bodyGeo.dispose(); headGeo.dispose(); bodyMat.dispose(); headMat.dispose(); legGeo.dispose(); legMat.dispose(); }, [bodyGeo, headGeo, bodyMat, headMat, legGeo, legMat]);
   useEffect(() => {
     const mesh = bodyRef.current;
     if (!mesh) return;
@@ -176,10 +180,17 @@ function Pedestrians() {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [walkers]);
   const m = useMemo(() => new THREE.Matrix4(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const v = useMemo(() => new THREE.Vector3(), []);
+  const one = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  const axisX = useMemo(() => new THREE.Vector3(1, 0, 0), []);
+  const axisZ = useMemo(() => new THREE.Vector3(0, 0, 1), []);
   useFrame(({ clock }) => {
     const b = bodyRef.current;
     const h = headRef.current;
-    if (!b || !h) return;
+    const la = legARef.current;
+    const lb = legBRef.current;
+    if (!b || !h || !la || !lb) return;
     const t = clock.elapsedTime;
     walkers.forEach((w, i) => {
       const s = (((w.offset + t * w.speed) % (WALK_SPAN * 2)) + WALK_SPAN * 2) % (WALK_SPAN * 2) - WALK_SPAN;
@@ -187,15 +198,30 @@ function Pedestrians() {
       const bob = Math.abs(Math.sin(t * 5.2 + i)) * 0.05;
       const x = w.axis === 'x' ? along : w.fixed;
       const z = w.axis === 'x' ? w.fixed : along;
-      b.setMatrixAt(i, m.makeTranslation(x, 0.85 + bob, z));
-      h.setMatrixAt(i, m.makeTranslation(x, 1.62 + bob, z));
+      b.setMatrixAt(i, m.makeTranslation(x, 1.15 + bob, z));
+      h.setMatrixAt(i, m.makeTranslation(x, 1.72 + bob, z));
+      // Legs swing about the horizontal axis perpendicular to the walking direction.
+      const swing = Math.sin(t * 5.2 + i) * 0.55 * (w.dir === 1 ? -1 : 1) * (w.axis === 'x' ? 1 : -1);
+      const axis = w.axis === 'x' ? axisZ : axisX;
+      [la, lb].forEach((leg, k) => {
+        q.setFromAxisAngle(axis, k === 0 ? swing : -swing);
+        v.set(0, -0.36, 0).applyQuaternion(q);
+        v.x += x + (w.axis === 'x' ? 0 : (k === 0 ? 0.1 : -0.1));
+        v.y += 0.9 + bob;
+        v.z += z + (w.axis === 'x' ? (k === 0 ? 0.1 : -0.1) : 0);
+        leg.setMatrixAt(i, m.compose(v, q, one));
+      });
     });
+    la.instanceMatrix.needsUpdate = true;
+    lb.instanceMatrix.needsUpdate = true;
     b.instanceMatrix.needsUpdate = true;
     h.instanceMatrix.needsUpdate = true;
   });
   return (
     <>
       <instancedMesh key={`b${count}`} ref={bodyRef} args={[bodyGeo, bodyMat, count]} frustumCulled={false} castShadow raycast={NOOP} />
+      <instancedMesh key={`la${count}`} ref={legARef} args={[legGeo, legMat, count]} frustumCulled={false} raycast={NOOP} />
+      <instancedMesh key={`lb${count}`} ref={legBRef} args={[legGeo, legMat, count]} frustumCulled={false} raycast={NOOP} />
       <instancedMesh key={`h${count}`} ref={headRef} args={[headGeo, headMat, count]} frustumCulled={false} raycast={NOOP} />
     </>
   );
