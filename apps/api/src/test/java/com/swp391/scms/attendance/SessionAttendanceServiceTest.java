@@ -121,7 +121,7 @@ class SessionAttendanceServiceTest {
         att.setRecordedBy(coach);
         when(attendanceRepository.findBySessionIdWithDetails(100L)).thenReturn(List.of(att));
 
-        SessionAttendanceResponse response = service.getSessionAttendanceRoster(100L);
+        SessionAttendanceResponse response = service.getSessionAttendanceRoster(100L, coachPrincipal);
 
         assertNotNull(response);
         assertEquals(100L, response.sessionId());
@@ -134,10 +134,18 @@ class SessionAttendanceServiceTest {
     }
 
     @Test
+    void getSessionAttendanceRoster_otherCoach_isForbidden() {
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        AuthenticatedPrincipal otherCoach = new AuthenticatedPrincipal(11L, "other@test.com", "COACH");
+
+        assertThrows(ForbiddenException.class, () -> service.getSessionAttendanceRoster(100L, otherCoach));
+    }
+
+    @Test
     void getSessionAttendanceRoster_notFound_throwsException() {
         when(sessionRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.getSessionAttendanceRoster(999L));
+        assertThrows(ResourceNotFoundException.class, () -> service.getSessionAttendanceRoster(999L, coachPrincipal));
     }
 
     @Test
@@ -285,7 +293,7 @@ class SessionAttendanceServiceTest {
         when(sessionBookings.findBySessionIdAndStatus(100L, "booked")).thenReturn(List.of(booking, duplicate));
         when(attendanceRepository.findBySessionIdWithDetails(100L)).thenReturn(List.of());
 
-        SessionAttendanceResponse response = service.getSessionAttendanceRoster(100L);
+        SessionAttendanceResponse response = service.getSessionAttendanceRoster(100L, coachPrincipal);
 
         assertEquals(2, response.totalBooked());
         assertEquals(List.of(20L, 21L), response.members().stream().map(m -> m.memberId()).toList());

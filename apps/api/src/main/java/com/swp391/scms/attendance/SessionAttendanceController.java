@@ -46,8 +46,9 @@ public class SessionAttendanceController {
     @Operation(summary = "Get enrolled members and attendance status for a session")
     @GetMapping("/sessions/{id}")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
-    public ApiResponse<SessionAttendanceResponse> getSessionAttendanceRoster(@PathVariable Long id) {
-        return ApiResponse.ok(msg("attendance.roster.success"), service.getSessionAttendanceRoster(id));
+    public ApiResponse<SessionAttendanceResponse> getSessionAttendanceRoster(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("attendance.roster.success"), service.getSessionAttendanceRoster(id, principal));
     }
 
     @Operation(summary = "Batch record attendance for session members")

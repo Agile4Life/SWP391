@@ -126,9 +126,10 @@ public class SessionAttendanceService {
      * Returns list of enrolled students for the session with their attendance records if recorded.
      */
     @Transactional(readOnly = true)
-    public SessionAttendanceResponse getSessionAttendanceRoster(Long sessionId) {
+    public SessionAttendanceResponse getSessionAttendanceRoster(Long sessionId, AuthenticatedPrincipal principal) {
         ClassSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
+        requireAssignedCoach(principal, session.getGymClass() != null ? session.getGymClass().getCoach() : null);
 
         Long classId = session.getGymClass().getId();
         List<RosterEntry> enrollments = rosterFor(session);
@@ -374,14 +375,9 @@ public class SessionAttendanceService {
         return result;
     }
 
-    private Coach resolveRecordingCoach(AuthenticatedPrincipal principal, ClassSession session) {
-        Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
-        if (principal == null) {
-            if (sessionCoach != null) return sessionCoach;
-            throw new ForbiddenException("ATTENDANCE_UNAUTHENTICATED", "error.unauthorized", null, "Unauthenticated");
-        }
-
-        if ("COACH".equalsIgnoreCase(principal.role())
+    /** A coach may only read or record the sessions of classes assigned to them; staff roles are not limited. */
+    private static void requireAssignedCoach(AuthenticatedPrincipal principal, Coach sessionCoach) {
+        if (principal != null && "COACH".equalsIgnoreCase(principal.role())
                 && sessionCoach != null
                 && sessionCoach.getUserId() != null
                 && !sessionCoach.getUserId().equals(principal.id())) {
@@ -389,9 +385,19 @@ public class SessionAttendanceService {
                     "ATTENDANCE_NOT_COACH",
                     "attendance.forbidden.not_coach",
                     null,
-                    "Only the assigned coach or authorized staff may record session attendance"
+                    "Only the assigned coach or authorized staff may access this session"
             );
         }
+    }
+
+    private Coach resolveRecordingCoach(AuthenticatedPrincipal principal, ClassSession session) {
+        Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
+        if (principal == null) {
+            if (sessionCoach != null) return sessionCoach;
+            throw new ForbiddenException("ATTENDANCE_UNAUTHENTICATED", "error.unauthorized", null, "Unauthenticated");
+        }
+
+        requireAssignedCoach(principal, sessionCoach);
 
         Optional<Coach> coachOpt = coachRepository.findById(principal.id());
         if (coachOpt.isPresent()) {

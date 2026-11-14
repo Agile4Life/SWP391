@@ -145,7 +145,16 @@ public class SessionEvaluationService {
     }
 
     @Transactional(readOnly = true)
-    public List<SessionEvaluationDto> getSessionEvaluations(Long sessionId) {
+    public List<SessionEvaluationDto> getSessionEvaluations(Long sessionId, Long currentUserId, String currentRole) {
+        if ("COACH".equalsIgnoreCase(currentRole) && classSessionRepository != null) {
+            // A coach reads only the evaluations of sessions of classes assigned to them.
+            ClassSession session = classSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
+            Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
+            if (sessionCoach == null || !sessionCoach.getUserId().equals(currentUserId)) {
+                throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null, null);
+            }
+        }
         return evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(sessionId)
                 .stream()
                 .map(this::toDto)

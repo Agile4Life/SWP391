@@ -88,8 +88,11 @@ public class SessionEvaluationController {
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @GetMapping("/session/{sessionId}")
     public ResponseEntity<ApiResponse<List<SessionEvaluationDto>>> getSessionEvaluations(
-            @PathVariable Long sessionId) {
-        List<SessionEvaluationDto> list = evaluationService.getSessionEvaluations(sessionId);
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        Long userId = principal != null ? principal.id() : null;
+        String role = principal != null ? principal.role() : null;
+        List<SessionEvaluationDto> list = evaluationService.getSessionEvaluations(sessionId, userId, role);
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.evaluation.list"), list));
     }
 }

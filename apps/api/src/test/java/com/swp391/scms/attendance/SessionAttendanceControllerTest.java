@@ -86,7 +86,7 @@ class SessionAttendanceControllerTest {
                 ))
         );
 
-        when(service.getSessionAttendanceRoster(100L)).thenReturn(response);
+        when(service.getSessionAttendanceRoster(eq(100L), any())).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/attendance/sessions/100"))
                 .andExpect(status().isOk())

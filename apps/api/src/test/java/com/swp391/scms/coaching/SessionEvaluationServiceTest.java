@@ -119,4 +119,29 @@ class SessionEvaluationServiceTest {
         assertEquals(1, list.size());
         assertEquals(new BigDecimal("92.0"), list.get(0).progressScore());
     }
+
+    @Test
+    void getSessionEvaluations_coachOfAnotherClass_isForbidden() {
+        com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setCoach(coach);
+        com.swp391.scms.scheduling.entity.ClassSession session = new com.swp391.scms.scheduling.entity.ClassSession();
+        session.setGymClass(gymClass);
+        when(classSessionRepository.findById(7L)).thenReturn(Optional.of(session));
+
+        org.junit.jupiter.api.Assertions.assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> evaluationService.getSessionEvaluations(7L, 999L, "COACH"));
+        org.mockito.Mockito.verifyNoInteractions(evaluationRepository);
+    }
+
+    @Test
+    void getSessionEvaluations_assignedCoach_readsEvaluations() {
+        com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setCoach(coach);
+        com.swp391.scms.scheduling.entity.ClassSession session = new com.swp391.scms.scheduling.entity.ClassSession();
+        session.setGymClass(gymClass);
+        when(classSessionRepository.findById(7L)).thenReturn(Optional.of(session));
+        when(evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(7L)).thenReturn(java.util.List.of());
+
+        assertEquals(0, evaluationService.getSessionEvaluations(7L, 202L, "COACH").size());
+    }
 }
