@@ -2,11 +2,11 @@ import * as THREE from 'three';
 
 /**
  * Three r187's PCF filter takes 5 Vogel-disk taps. Following the Saltline PCSS
- * notes we widen it to 6 IGN-rotated Vogel taps (each a hardware 2×2 compare,
+ * notes we widen it to 4 IGN-rotated Vogel taps (each a hardware 2×2 compare,
  * ≈48 filtered samples) and fade the shadow out near the shadow-map border so the
  * frustum edge never shows as a hard line. Patched once, before any program compiles.
  */
-export const SOFT_SHADOW_TAPS = 6;
+export const SOFT_SHADOW_TAPS = 4;
 
 const PCF_BLOCK =
   /shadow = \(\s*texture\( shadowMap, vec3\( shadowCoord\.xy \+ vogelDiskSample\( 0, 5, phi \) \* radius, shadowCoord\.z \) \)[\s\S]*?\) \* 0\.2;/;
