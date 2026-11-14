@@ -1128,6 +1128,82 @@ function addSolBeacon(
   beaconAnchors.push([x, 1.4 + shaftH + 13.2, z]);
 }
 
+
+export interface GymCrownGeometries {
+  readonly opaqueGeometry: THREE.BufferGeometry;
+  readonly metalGeometry: THREE.BufferGeometry;
+  readonly glassGeometry: THREE.BufferGeometry;
+  readonly emissiveGeometry: THREE.BufferGeometry;
+}
+
+const gymCrownCache = new Map<ExploreTheme, GymCrownGeometries>();
+
+/**
+ * A stepped sky-lounge crown on the unused west and north edges of the roof slab (y = 12.6),
+ * behind the penthouse as seen from the default camera so it lifts the gym's silhouette
+ * without hiding the Zen studio or the terrace.
+ */
+export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
+  const cached = gymCrownCache.get(theme);
+  if (cached) return cached;
+  const isLight = theme === 'light';
+  const b: CityBuckets = { opaque: [], metal: [], glass: [], emissive: [] };
+  const roofY = 12.6;
+  const stone = isLight ? '#8d867c' : '#2b303a';
+  const steel = isLight ? '#353d4b' : '#1c222c';
+  const glass = isLight ? '#7fa0b5' : '#22394d';
+  const salmon = '#f07654';
+  const warm = isLight ? '#d8c3a8' : '#ffcf94';
+  const hdrLed = isLight ? 1.2 : 4.2;
+  const hdrGlow = isLight ? 0.35 : 2.2;
+
+  // [x0, x1, z0, z1, height] blocks: the west blade is the tallest, the north step is lower.
+  const blocks: ReadonlyArray<readonly [number, number, number, number, number]> = [
+    [-21.6, -17.4, -15.6, 15.6, 7.4],
+    [-17.4, 9.6, -15.6, -12.6, 4.8],
+  ];
+  for (const [x0, x1, z0, z1, h] of blocks) {
+    const w = x1 - x0;
+    const d = z1 - z0;
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    pushBox(b.opaque, w, 0.5, d, cx, roofY + 0.25, cz, stone);
+    pushBox(b.glass, w - 0.3, h - 0.9, d - 0.3, cx, roofY + 0.5 + (h - 0.9) / 2, cz, glass);
+    // Warm interior glow behind the glass at dusk.
+    pushBox(b.emissive, w - 0.9, h * 0.5, d - 0.9, cx, roofY + 0.5 + h * 0.4, cz, warm, 0, 0, 0, hdrGlow);
+    // Roof slab with an overhang and a salmon LED edge.
+    pushBox(b.metal, w + 0.9, 0.34, d + 0.9, cx, roofY + h + 0.17, cz, steel);
+    pushBox(b.emissive, w + 0.95, 0.1, 0.12, cx, roofY + h - 0.05, z1 + 0.42, salmon, 0, 0, 0, hdrLed);
+    pushBox(b.emissive, w + 0.95, 0.1, 0.12, cx, roofY + h - 0.05, z0 - 0.42, salmon, 0, 0, 0, hdrLed);
+    pushBox(b.emissive, 0.12, 0.1, d + 0.95, x1 + 0.42, roofY + h - 0.05, cz, salmon, 0, 0, 0, hdrLed);
+    pushBox(b.emissive, 0.12, 0.1, d + 0.95, x0 - 0.42, roofY + h - 0.05, cz, salmon, 0, 0, 0, hdrLed);
+    // Vertical steel fins every ~3 m on both long faces.
+    const alongZ = d > w;
+    const len = alongZ ? d : w;
+    const count = Math.floor(len / 3);
+    for (let i = 0; i <= count; i += 1) {
+      const t = -len / 2 + (i / count) * len;
+      if (alongZ) {
+        pushBox(b.metal, w + 0.1, h - 0.6, 0.16, cx, roofY + 0.5 + (h - 0.6) / 2, cz + t, steel);
+      } else {
+        pushBox(b.metal, 0.16, h - 0.6, d + 0.1, cx + t, roofY + 0.5 + (h - 0.6) / 2, cz, steel);
+      }
+    }
+  }
+  // Rooftop mast with a SÖL salmon crown ring on the tall blade.
+  pushCylinder(b.metal, 0.08, 0.2, 7, -19.5, roofY + 7.4 + 3.5, 0, steel, 6);
+  pushCylinder(b.emissive, 0.9, 0.9, 0.16, -19.5, roofY + 7.4 + 5.2, 0, salmon, 20, 0, 0, 0, hdrLed);
+
+  const result: GymCrownGeometries = {
+    opaqueGeometry: mergeCityParts(b.opaque),
+    metalGeometry: mergeCityParts(b.metal),
+    glassGeometry: mergeCityParts(b.glass),
+    emissiveGeometry: mergeCityParts(b.emissive),
+  };
+  gymCrownCache.set(theme, result);
+  return result;
+}
+
 /**
  * Generates the entire 360° AAA surrounding metropolis around SÖL Campus as 4
  * batched BufferGeometry buckets (`opaque`, `metal`, `glass`, `emissive`), cached
