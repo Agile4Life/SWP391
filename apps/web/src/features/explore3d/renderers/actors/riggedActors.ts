@@ -6,33 +6,36 @@ import {
   getActorWorldAnchor,
   solveHumanPose,
   type ActorActivityKind,
+  type HumanPoseAngles,
   type LiveActorDefinition,
 } from './liveActorsConfig';
+import { benchPress } from './humanPoses';
+import type { PoseOverride } from './humanRetarget';
 
-export type RiggedBoneName =
-  | 'leg-left'
-  | 'leg-right'
-  | 'torso'
-  | 'arm-left'
-  | 'arm-right'
-  | 'head';
-
-/** Extra Euler rotation (radians, applied on top of the clip) per bone. */
-export type RiggedBoneTweaks = Partial<Record<RiggedBoneName, readonly [number, number, number]>>;
-
+/** Motion-captured clip played by an AnimationMixer. */
 export interface RiggedClipSpec {
-  /** Animation clip name, or a pick per actor (e.g. left/right punches). */
+  /** Animation clip name, or a pick per actor (e.g. jab or cross). */
   clip: string | ((actorId: string) => string);
   /** Multiplies the actor's own speed. */
   timeScale: number;
-  /** Local offset (x right, y up, z forward, in the actor's yaw frame), e.g. to sit on a bike saddle. */
-  offset?: readonly [number, number, number];
+}
+
+/** Skeleton driven every frame from the activity's pose angles (`solveHumanPose`). */
+export interface RiggedPoseSpec {
+  /** Keep the lower foot on the ground by moving the hips; off for seated poses. */
+  groundLock: boolean;
+  /** Hips height in metres when `groundLock` is off (seated on a bike). */
+  hipsHeight?: number;
   /** Prop parented to a hand bone; replaces the procedural prop of the same activity. */
   handProp?: RiggedHandPropSpec;
-  /** Optional procedural tweak layered over the clip each frame. */
-  tweakBones?: (phase: number) => RiggedBoneTweaks;
-  /** Draw a barbell held between the two hand bones (Mixamo characters). */
+  /** Twist of the hand about the forearm (radians), per code-built side (left sits at -X). */
+  forearmRoll?: Partial<Record<'left' | 'right', number>>;
+  /** Draw a barbell held between the two hands. */
   barbellInHands?: boolean;
+  /** Put a dumbbell in each hand. */
+  dumbbellsInHands?: boolean;
+  /** Pose the angles cannot express (lying down); receives the actor's phase. */
+  override?: (phase: number) => PoseOverride;
 }
 
 /** Same phase the procedural solver uses, so both figures stay in step. */
@@ -40,7 +43,7 @@ export function getActorPhase(actor: LiveActorDefinition, timeSec: number): numb
   return timeSec * actor.speed * 3.2 + actor.phaseOffset;
 }
 
-function hashString(value: string): number {
+export function hashString(value: string): number {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
     hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
@@ -48,129 +51,95 @@ function hashString(value: string): number {
   return hash;
 }
 
-/**
- * Hand position and arm direction in the right-arm bone's space (model units). Measured
- * from the skin weights: the Kenney arm runs along the bone's -X axis, hand at about -0.25.
- */
-const HAND_TIP = [-0.22, 0, 0] as const;
-const ALONG_ARM = [0, 0, -Math.PI / 2] as const;
+const pick = (a: string, b: string) => (actorId: string) => (hashString(actorId) % 2 === 0 ? a : b);
 
-const punchClip = (actorId: string) =>
-  hashString(actorId) % 2 === 0 ? 'attack-melee-right' : 'attack-melee-left';
+/** Motion capture from the Universal Animation Library (clip names as in `human-animations.glb`). */
+export const HUMAN_CLIP_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedClipSpec>> = {
+  'treadmill-run': { clip: 'Jog_Fwd_Loop', timeScale: 1 },
+  'walking-patrol': { clip: 'Walk_Loop', timeScale: 1 },
+  'elliptical-stride': { clip: 'Walk_Loop', timeScale: 0.8 },
+  'inbody-scan': { clip: 'Idle_Loop', timeScale: 0.8 },
+  'lounge-chat': { clip: 'Idle_Talking_Loop', timeScale: 0.8 },
+  'boxing-spar': { clip: pick('Punch_Jab', 'Punch_Cross'), timeScale: 1 },
+  'heavy-bag-boxer': { clip: pick('Punch_Cross', 'Punch_Jab'), timeScale: 1 },
+  'swim-freestyle': { clip: 'Swim_Fwd_Loop', timeScale: 1 },
+};
+
+/** Racket in the hand on the code-built figure's right (+X, the rig's left hand). */
+const RACKET = {
+  kind: 'racket',
+  bone: 'hand_l',
+  position: [0, 0.06, 0],
+  // The racket extends along -Y in its own frame; the fingers point along +Y.
+  rotation: [0, 0, Math.PI],
+} as const;
 
 /**
- * Activities drawn with a skinned, animated character instead of the procedural
- * jointed body. Rackets and the coach's tablet are attached to the hand bone; barbell,
- * dumbbells and swimming need knees, elbows or a prone pose and stay procedural.
+ * Activities whose skeleton follows the same pose angles as the code-built figure, so
+ * they move on the same timing and path without needing a captured clip.
  */
-export const RIGGED_ACTIVITY_CLIPS: Partial<Record<ActorActivityKind, RiggedClipSpec>> = {
-  'treadmill-run': { clip: 'walk', timeScale: 1.7 },
-  'walking-patrol': { clip: 'walk', timeScale: 1.0 },
-  'elliptical-stride': { clip: 'walk', timeScale: 0.8 },
-  'upright-bike': {
-    clip: 'drive',
-    timeScale: 1,
-    offset: [0, 0.72, 0],
-    // Pedaling: legs alternate around the seated pose.
-    tweakBones: phase => {
-      const crank = Math.sin(phase * 1.5);
-      return { 'leg-left': [crank * 0.45, 0, 0], 'leg-right': [-crank * 0.45, 0, 0] };
-    },
-  },
-  'boxing-spar': { clip: punchClip, timeScale: 1.2 },
-  'heavy-bag-boxer': { clip: punchClip, timeScale: 1.2 },
-  'yoga-flow': {
-    clip: 'idle',
-    timeScale: 0.6,
-    // Slow overhead reach and release, like the procedural sun-salutation breath.
-    tweakBones: phase => {
-      const breath = 0.5 - 0.5 * Math.cos(phase * 0.55);
-      return { 'arm-left': [0, 0, breath * 2.0], 'arm-right': [0, 0, -breath * 2.0] };
-    },
-  },
-  'inbody-scan': { clip: 'idle', timeScale: 0.8 },
-  'badminton-player': {
-    clip: 'attack-melee-right',
-    timeScale: 0.5,
-    handProp: { kind: 'racket', bone: 'arm-right', position: HAND_TIP, rotation: ALONG_ARM, size: 1.1 },
-  },
-  'tennis-player': {
-    clip: 'attack-melee-right',
-    timeScale: 0.4,
-    handProp: { kind: 'racket', bone: 'arm-right', position: HAND_TIP, rotation: ALONG_ARM, size: 1.3 },
-  },
+export const HUMAN_POSE_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedPoseSpec>> = {
+  'upright-bike': { groundLock: false, hipsHeight: 0.93 },
+  'receptionist-greet': { groundLock: true },
+  'yoga-flow': { groundLock: true },
+  'barbell-squat': { groundLock: true, barbellInHands: true },
+  'bench-press': { groundLock: false, barbellInHands: true, override: benchPress },
+  'dumbbell-curl': { groundLock: true, dumbbellsInHands: true },
+  'badminton-player': { groundLock: true, handProp: { ...RACKET, size: 1.1 } },
+  'tennis-player': { groundLock: true, handProp: { ...RACKET, size: 1.3 } },
   'pt-coach-tablet': {
-    clip: 'holding-both',
-    timeScale: 1,
+    groundLock: true,
+    // Palm up so the tablet rests on the hand; the coach holds it in the left (-X) hand.
+    forearmRoll: { left: Math.PI },
     handProp: {
       kind: 'tablet',
-      bone: 'arm-right',
-      // Past the blunt arm end so the tablet is not buried inside the thick arm mesh.
-      position: [-0.33, 0, 0],
-      rotation: [Math.PI / 2, 0, 0],
+      bone: 'hand_r',
+      position: [0, 0.09, 0.03],
+      // Tilted toward the coach so the screen faces them rather than lying flat.
+      rotation: [Math.PI / 2 + 0.7, 0, 0],
       size: 1.2,
     },
   },
-  'receptionist-greet': { clip: 'interact-right', timeScale: 0.8 },
-  'lounge-chat': { clip: 'emote-yes', timeScale: 0.7 },
 };
 
-const pick = (a: string, b: string) => (actorId: string) => (hashString(actorId) % 2 === 0 ? a : b);
+/** The packed Quaternius files in `public/models/explore3d/humans/` (see `scripts/build-human-assets.py`). */
+export const HUMAN_ASSET_URLS = {
+  male: '/models/explore3d/humans/human-male.glb',
+  female: '/models/explore3d/humans/human-female.glb',
+  animations: '/models/explore3d/humans/human-animations.glb',
+  skinLight: {
+    male: '/models/explore3d/humans/skin-male-light.jpg',
+    female: '/models/explore3d/humans/skin-female-light.jpg',
+  },
+  hair: {
+    'hair-simpleparted': '/models/explore3d/humans/hair-simpleparted.glb',
+    'hair-buzzed': '/models/explore3d/humans/hair-buzzed.glb',
+    'hair-long': '/models/explore3d/humans/hair-long.glb',
+    'hair-buns': '/models/explore3d/humans/hair-buns.glb',
+    'hair-buzzedfemale': '/models/explore3d/humans/hair-buzzedfemale.glb',
+  },
+} as const;
 
-/**
- * Activities drawn with the realistic Mixamo character (one skeleton, clips merged
- * into `mixamo-beta.glb`). These win over RIGGED_ACTIVITY_CLIPS; activities without
- * a Mixamo clip keep the Kenney character until matching clips are added.
- */
-export const MIXAMO_ACTIVITY_CLIPS: Partial<Record<ActorActivityKind, RiggedClipSpec>> = {
-  'boxing-spar': { clip: 'hook', timeScale: 0.55 },
-  'heavy-bag-boxer': { clip: 'hook', timeScale: 0.55 },
-  'barbell-squat': { clip: 'overhead-squat', timeScale: 0.45, barbellInHands: true },
-  'yoga-flow': { clip: pick('push-up', 'bicycle-crunch'), timeScale: 0.4 },
-};
+/** Real-world standing height the characters are scaled to, in metres. */
+export const HUMAN_HEIGHT = 1.76;
 
-export interface MixamoCharacterModel {
-  url: string;
-  author: string;
-  source: string;
-  license: string;
-  /** Standing height in world units (the Mixamo rig is real-world proportioned). */
-  height: number;
-}
+/** Hand bones of the rig. */
+export const HUMAN_HAND_BONES = ['hand_l', 'hand_r'] as const;
 
-export const MIXAMO_CHARACTER_MODEL: MixamoCharacterModel = {
-  url: '/models/explore3d/characters/mixamo-beta.glb',
-  author: 'Adobe Mixamo',
-  source: 'https://www.mixamo.com (Beta; Hook, Overhead Squat, Push Up, Bicycle Crunch)',
-  license: 'Mixamo terms (royalty-free in projects)',
-  height: 1.76,
-};
-
-/** Hand bones of the Mixamo rig after three.js strips the ':' from `mixamorig:`. */
-export const MIXAMO_HAND_BONES = ['mixamorigLeftHand', 'mixamorigRightHand'] as const;
-
-/** Procedural parts that the Mixamo squat replaces with a bar held in the hands. */
+/** Procedural parts that the rigged characters replace with a bar held in the hands. */
 export const PROCEDURAL_BARBELL_PART_NAMES: ReadonlySet<string> = new Set([
   'barbellShaft',
   'barbellPlateLeft',
   'barbellPlateRight',
 ]);
 
-export function getRiggedClipSpec(activity: ActorActivityKind): {
-  spec: RiggedClipSpec;
-  mixamo: boolean;
-} | null {
-  const mixamo = MIXAMO_ACTIVITY_CLIPS[activity];
-  if (mixamo) return { spec: mixamo, mixamo: true };
-  const kenney = RIGGED_ACTIVITY_CLIPS[activity];
-  return kenney ? { spec: kenney, mixamo: false } : null;
-}
-
 /** Procedural hand-held props that the rigged characters replace with bone-attached ones. */
 export const PROCEDURAL_HAND_PROP_NAMES: ReadonlySet<string> = new Set([
   'racketShaft',
   'racketHead',
   'coachTablet',
+  'dumbbellLeft',
+  'dumbbellRight',
 ]);
 
 /** Procedural parts that make up the human body; props are not in this list. */
@@ -189,61 +158,49 @@ export const PROCEDURAL_BODY_PART_NAMES: ReadonlySet<string> = new Set([
   'rightShin',
 ]);
 
-export interface RiggedCharacterModel {
-  url: string;
-  author: string;
-  source: string;
-  license: 'CC0';
+export type RiggedMotion =
+  | { kind: 'clip'; spec: RiggedClipSpec }
+  | { kind: 'pose'; spec: RiggedPoseSpec };
+
+export function getRiggedMotion(activity: ActorActivityKind): RiggedMotion | null {
+  const clip = HUMAN_CLIP_ACTIVITIES[activity];
+  if (clip) return { kind: 'clip', spec: clip };
+  const pose = HUMAN_POSE_ACTIVITIES[activity];
+  return pose ? { kind: 'pose', spec: pose } : null;
 }
 
-const KENNEY_MINI = 'https://kenney.nl/assets/mini-characters';
+export function isRiggedActivity(activity: ActorActivityKind): boolean {
+  return getRiggedMotion(activity) !== null;
+}
 
-export const RIGGED_CHARACTER_MODELS: readonly RiggedCharacterModel[] = [
-  { url: '/models/explore3d/characters/character-male-a.glb', author: 'Kenney', source: KENNEY_MINI, license: 'CC0' },
-  { url: '/models/explore3d/characters/character-female-a.glb', author: 'Kenney', source: KENNEY_MINI, license: 'CC0' },
-  { url: '/models/explore3d/characters/character-male-c.glb', author: 'Kenney', source: KENNEY_MINI, license: 'CC0' },
-  { url: '/models/explore3d/characters/character-female-c.glb', author: 'Kenney', source: KENNEY_MINI, license: 'CC0' },
-];
-
-/** Standing height the loaded characters are scaled to, in world units (procedural humans are ~1.75). */
-export const RIGGED_CHARACTER_HEIGHT = 1.5;
+export interface RiggedPlacement {
+  position: Vec3;
+  yaw: number;
+  pose: HumanPoseAngles;
+}
 
 /**
  * Where a rigged character stands and which way it faces at `timeSec`, following the
- * same path, sway and yaw as the procedural figure it replaces.
+ * same path, sway and yaw as the code-built figure it replaces; also the pose angles.
  */
 export function computeRiggedPlacement(
   def: LiveActorDefinition,
   scene: SceneDoc,
   levelMode: LevelMode,
   timeSec: number,
-): { position: Vec3; yaw: number } {
+): RiggedPlacement {
   const anchor = getActorWorldAnchor(def, scene, levelMode);
   const { pose, worldPos, yaw } = solveHumanPose(def, timeSec, anchor);
   const total = yaw + pose.yawOffset;
   const cos = Math.cos(total);
   const sin = Math.sin(total);
-  const [ox, oy, oz] = getRiggedClipSpec(def.activity)?.spec.offset ?? [0, 0, 0];
-  const lx = pose.rootOffset[0] + ox;
-  const lz = pose.rootOffset[2] + oz;
+  const lx = pose.rootOffset[0];
+  const lz = pose.rootOffset[2];
   return {
-    position: [worldPos[0] + lx * cos + lz * sin, worldPos[1] + oy, worldPos[2] - lx * sin + lz * cos],
-    // Kenney characters face +Z at yaw 0, the same convention as the procedural figures.
+    position: [worldPos[0] + lx * cos + lz * sin, worldPos[1], worldPos[2] - lx * sin + lz * cos],
     yaw: total,
+    pose,
   };
-}
-
-export function isRiggedActivity(activity: ActorActivityKind): boolean {
-  return activity in RIGGED_ACTIVITY_CLIPS || activity in MIXAMO_ACTIVITY_CLIPS;
-}
-
-/** Stable pick so an actor keeps the same look between renders and level changes. */
-export function pickRiggedModelIndex(actorId: string, modelCount: number): number {
-  let hash = 0;
-  for (let i = 0; i < actorId.length; i++) {
-    hash = (hash * 31 + actorId.charCodeAt(i)) >>> 0;
-  }
-  return modelCount > 0 ? hash % modelCount : 0;
 }
 
 // --- Registry of actors currently drawn as rigged characters -------------------

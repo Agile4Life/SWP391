@@ -45,38 +45,6 @@ Mặc định mọi thiết bị trong cảnh 3D được dựng bằng code (`r
 
 Các model nội thất Kenney đã được thay bằng model scan Poly Haven và bản dựng bằng code, nên file license của gói Kenney Furniture Kit không còn trong repo.
 
-## Nhân vật có skeleton
-
-40 trong khoảng 50 người trong cảnh dùng nhân vật rig từ [Kenney Mini Characters](https://kenney.nl/assets/mini-characters) (CC0); các hoạt động còn lại vẫn dùng người dựng bằng code.
-
-| Hoạt động | Clip | Ghi chú |
-| --- | --- | --- |
-| `treadmill-run` | `walk` x1.7 | `sprint` của Kenney nghiêng người quá mạnh |
-| `walking-patrol` | `walk` | đi theo đúng đường đi của bộ giải tư thế |
-| `elliptical-stride` | `walk` x0.8 | |
-| `upright-bike` | `drive` + chân đạp | nâng lên ngang yên xe (`offset`) |
-| `boxing-spar`, `heavy-bag-boxer` | `attack-melee-right` hoặc `-left` | chọn theo actor |
-| `yoga-flow` | `idle` + tay giơ qua đầu | |
-| `inbody-scan`, `receptionist-greet`, `lounge-chat` | `idle`, `interact-right`, `emote-yes` | |
-| `badminton-player`, `tennis-player` | `attack-melee-right` chậm | vợt gắn vào xương `arm-right`, vung theo clip |
-| `pt-coach-tablet` | `holding-both` | tablet gắn vào xương `arm-right` |
-
-Chưa chuyển sang rig (vẫn là người dựng bằng code): `barbell-squat`, `bench-press`, `dumbbell-curl` (cần gập gối và khuỷu, mà bộ xương Kenney chỉ có một khớp cho mỗi tay và chân) và `swim-freestyle` (tư thế nằm sấp, không có clip phù hợp).
-
-Dụng cụ cầm tay: khai báo `handProp` trong `RIGGED_ACTIVITY_CLIPS` (vợt, tablet; dựng ở `renderers/actors/riggedHandProps.ts`, dùng chung geometry và vật liệu). Dụng cụ được gắn vào xương nên đi theo clip. Cánh tay Kenney chạy dọc trục -X của xương `arm-right`, đầu tay ở khoảng x = -0,25 (đo từ skin weight) và cánh tay rất dày nên dụng cụ lớn phải đặt ra ngoài đầu tay. Phần procedural cùng tên (`racketShaft`, `racketHead`, `coachTablet`) bị ẩn khi nhân vật rig đã nạp xong.
-
-- Cấu hình ở `renderers/actors/riggedActors.ts` (`RIGGED_ACTIVITY_CLIPS`: clip, tốc độ, `offset`, `tweakBones`), render ở `canvas/RiggedActors.tsx`.
-- Vị trí, hướng đi, lắc lư lấy từ `solveHumanPose` (`liveActorsConfig.ts`), dùng chung với người dựng bằng code. Nhân vật Kenney quay mặt về +Z khi yaw = 0, cùng quy ước.
-- Thêm hoạt động mới vào rig: khai báo clip trong `RIGGED_ACTIVITY_CLIPS`, chạy `actors.rigged.test.ts` (kiểm tra clip và xương có thật trong từng GLB, và không còn bộ phận procedural nào bị bỏ sót lơ lửng).
-- File: `apps/web/public/models/explore3d/characters/` gồm 4 nhân vật (`character-male-a`, `character-female-a`, `character-male-c`, `character-female-c`), texture dùng chung `Textures/colormap.png` (GLB tham chiếu theo đường dẫn tương đối nên phải giữ nguyên thư mục) và license gốc.
-- Mỗi nhân vật khoảng 800–900 tam giác, 14 khớp, hai `SkinnedMesh` (thân, đầu), không instancing. Với 30 người (trước khi thêm nhóm cầm vợt/tablet): khoảng 105.000 tam giác trong cảnh, 174 draw call, chi phí CPU khoảng 1,2 ms mỗi khung cho đặt vị trí và mixer; chưa đo lại với 40 người.
-- Nhân vật chỉ thay phần thân người dựng bằng code sau khi nạp xong; nạp lỗi, tier `low` hoặc `prefers-reduced-motion` thì giữ người cũ (reduced motion dùng một tư thế đứng yên).
-- Quaternius Universal Base Characters (~13.000 tam giác mỗi người) đã được cân nhắc nhưng quá nặng cho ~55 người trong cảnh.
-
-| Nhân vật | File | Tác giả | Nguồn | License |
-| --- | --- | --- | --- | --- |
-| `character-male-a`, `character-female-a`, `character-male-c`, `character-female-c` | `characters/*.glb` | Kenney | [Mini Characters](https://kenney.nl/assets/mini-characters) | CC0 |
-
 ## Texture bề mặt PBR (Poly Haven, CC0)
 
 Sàn, tường, mặt đường và mặt đất dùng bộ texture scan thật, chiếu triplanar theo toạ độ thế giới nên không cần UV (`renderers/surfaceTextures.ts`, `renderers/surfaceDetail.ts`). File ở `apps/web/public/textures/explore3d/<tên>_{diff,nor,arm}.webp` (1024 px, WebP). Màu vật liệu vẫn lấy từ bảng màu của dự án; texture chỉ thêm chi tiết, normal, AO và độ nhám. Khi chưa tải xong, hoặc ở tier `low`, vật liệu dùng chi tiết procedural.
@@ -95,10 +63,32 @@ Sàn, tường, mặt đường và mặt đất dùng bộ texture scan thật,
 | `tatami_mat` | sàn tatami | [polyhaven.com/a/tatami_mat](https://polyhaven.com/a/tatami_mat) | CC0 |
 | `floor_tiles_06` | gạch lát | [polyhaven.com/a/floor_tiles_06](https://polyhaven.com/a/floor_tiles_06) | CC0 |
 
-## Nhân vật Mixamo (chân thực)
+## Nhân vật (người thật, Quaternius)
 
-`apps/web/public/models/explore3d/characters/mixamo-beta.glb` là nhân vật Beta của Adobe Mixamo, gộp 4 động tác tải từ Mixamo (`hook`, `overhead-squat`, `push-up`, `bicycle-crunch`) vào một khung xương. Dùng theo điều khoản Mixamo (miễn phí bản quyền khi đưa vào dự án; không phân phối lại model như asset rời).
+Mọi người trong cảnh (53 người) là người thật từ hai gói CC0 của Quaternius: [Universal Base Characters](https://quaternius.itch.io/universal-base-characters) (thân người nam và nữ có mặt, mắt, lông mày; kèm kiểu tóc) và [Universal Animation Library](https://quaternius.itch.io/universal-animation-library) (chuyển động chụp sẵn, cùng một bộ xương). Không còn nhân vật hoạt hình: Kenney Mini Characters và nhân vật Mixamo Beta (hình nộm) đã bị gỡ. Người dựng bằng khối trong `liveActorsConfig.ts` chỉ còn là phương án dự phòng khi GLB nạp lỗi; vật thể (`heavy-bag-sway`, `badminton-shuttlecock`, `tennis-ball`, `fountain-plume`) vẫn dựng bằng code vì không có dáng người.
 
-Cách tạo lại: tải mỗi động tác ở dạng FBX (With Skin, 30 fps), nạp bằng `FBXLoader`, xuất một GLB bằng `GLTFExporter` với tất cả clip (đặt tên clip theo động tác), rồi `gltf-transform`: `weld`, `resample`, bỏ UV, `simplify` meshopt tỉ lệ 0,45 (khoảng 22.000 tam giác). Gán động tác cho hoạt động ở `MIXAMO_ACTIVITY_CLIPS` (`renderers/actors/riggedActors.ts`). Hoạt động chưa có clip Mixamo vẫn dùng nhân vật Kenney.
+File ở `apps/web/public/models/explore3d/humans/` (khoảng 7,6 MB), tạo bằng `scripts/build-human-assets.py` từ hai file zip bản Standard (miễn phí) đã giải nén:
 
-Để thay nốt nhân vật Kenney, cần thêm các động tác Mixamo: Walking, Running (In Place), Treadmill/Jogging, Stationary Bike/Sitting, Idle, Talking, Tennis/Badminton swing, Yoga, Bench Press, Bicep Curl, Swimming. Chỉ cần tải "Without Skin" từ động tác thứ hai trở đi, vì cùng khung xương.
+```bash
+python3 scripts/build-human-assets.py "<Universal Base Characters[Standard]>" "<Universal Animation Library[Standard]>"
+```
+
+Script (cần `sips` của macOS) thu nhỏ texture (thân 1024 px, tóc 512 px), dùng normal map chuẩn OpenGL (bản Unity/Godot; bản Unreal bị ngược trục Y làm da trông như vảy), ghép `human-male.glb`, `human-female.glb`, sáu kiểu tóc `hair-*.glb`, hai texture da sáng, và `human-animations.glb` chỉ giữ 19 clip cần dùng. License CC0 nằm cạnh file (`LICENSE-quaternius-*.txt`).
+
+Có hai cách điều khiển chuyển động, khai báo ở `renderers/actors/riggedActors.ts`:
+
+| Cách | Hoạt động | Nguồn chuyển động |
+| --- | --- | --- |
+| Chụp chuyển động (`HUMAN_CLIP_ACTIVITIES`) | `treadmill-run` (`Jog_Fwd_Loop`), `walking-patrol`, `elliptical-stride` (`Walk_Loop`), `inbody-scan` (`Idle_Loop`), `lounge-chat` (`Idle_Talking_Loop`), `boxing-spar`, `heavy-bag-boxer` (`Punch_Jab`/`Punch_Cross`), `swim-freestyle` (`Swim_Fwd_Loop`) | clip trong `human-animations.glb` |
+| Theo góc tư thế (`HUMAN_POSE_ACTIVITIES`) | `upright-bike`, `receptionist-greet`, `yoga-flow`, `barbell-squat`, `bench-press`, `dumbbell-curl`, `badminton-player`, `tennis-player`, `pt-coach-tablet` | `solveHumanPose` qua `renderers/actors/humanRetarget.ts` |
+
+### Chuyển động theo góc tư thế
+
+`solveHumanPose` (`liveActorsConfig.ts`) cho góc vai, khuỷu, hông, gối của từng hoạt động theo thời gian. `applyRetargetPose` đặt mỗi đoạn chi của bộ xương theo đúng hướng đó (xoay ngắn nhất từ tư thế T-pose), nên người dựng bằng code và người thật cùng nhịp, cùng đường đi; thêm xoay hông ngược vai khi bước, gót–mũi bàn chân, thở và đổi trọng tâm theo thời gian. Bên "trái" của người dựng bằng code (x < 0) là bên `_r` của bộ xương. Với tư thế đứng (`groundLock`) hông tự hạ xuống để chân thấp hơn luôn chạm sàn; người đạp xe dùng `hipsHeight` cố định. Xương gốc (`root`) của bộ xương xoay 90° kiểu Blender, nên vị trí hông được tính trong hệ tọa độ của nhân vật rồi mới đổi sang hệ của xương cha. Tư thế nằm (đẩy ngực) không biểu diễn được bằng góc pitch/splay nên dùng `PoseOverride` ở `renderers/actors/humanPoses.ts`: xoay hông nằm ngửa, hướng từng đoạn tay chân ghi trực tiếp. Thêm hoạt động mới: khai báo trong một trong hai bảng, chạy `actors.human.test.ts` (kiểm tra chân chạm sàn, hướng chi, clip có thật, không có số NaN).
+
+### Vẻ ngoài
+
+`renderers/actors/humanAppearance.ts` làm mỗi người khác nhau: giới tính và kiểu tóc theo mã actor, da sáng hoặc tối theo bảng màu (`palette` trong `liveActorsConfig.ts`), chiều cao lệch ±5%, ngón tay hơi cong (`relaxHands`, nắm chặt hơn khi cầm vợt hoặc đeo găng). Tóc là mesh tĩnh gắn vào xương `Head`; thợ bơi đội mũ bơi một màu. Gói Base Characters chỉ có thân mặc nội y, nên quần áo thể thao là một lớp vải bọc theo thân, dùng chung xương với thân (tự dựng vì không tìm được bộ quần áo hiện đại CC0 tương thích; gói [Modular Character Outfits - Fantasy](https://quaternius.itch.io/modular-character-outfits-fantasy) chỉ có đồ trung cổ). Lớp vải được vẽ chi tiết hết mức: áo thun suông xòe dần về gấu hoặc áo ba lỗ hoặc crop top (nữ); quần short xòe có cạp, viền gấu và sọc hông hoặc legging ôm (nữ); viền cổ và viền tay áo, sọc ngang ngực; tất cổ ngắn có viền màu, giày thể thao có đế riêng; băng cổ tay, băng đô; vải có độ đậm nhạt nhẹ từng tam giác và phần mặt dưới tối hơn như nếp gấp, thêm hoa văn dệt kim và nếp vải vẽ trong shader theo vị trí trên thân (nên biến dạng cùng cơ thể, không cần UV). Mỗi người một kiểu theo mã actor (`outfitFor` ở `canvas/riggedInstance.ts`), màu lấy từ bảng màu (`top`, `bottom`, `shoe`, viền theo `accent`). Các tam giác của thân nằm sát ranh giới giữa các loại vải được chia nhỏ (tối đa 2 lần) để viền và gấu sắc nét; đường cắt theo độ cao và độ rộng của thân trong tư thế T-pose (`clothAt`). Thay bằng quần áo thật: thay `dressHuman`.
+
+- Chi phí (đo trên Apple M4, 53 người cùng lúc): dựng xong trong khoảng 0,7 giây; vẽ cả 53 người kèm bóng đổ mất trung bình 4,4 ms mỗi khung (chậm nhất 5,7 ms, đã gồm chuyển động CPU và chờ GPU), 705 lệnh vẽ, khoảng 3 triệu tam giác tính cả lượt vẽ bóng (mỗi người khoảng 7.300 thân, 10.000–15.000 áo quần, vài nghìn tóc, mắt và lông mày; hình học áo quần dùng chung giữa người cùng kiểu đồ). Số này chỉ là nhân vật, chưa gồm cả cảnh; máy yếu chưa đo. Mọi tier đều vẽ nhân vật thật.
+- Muốn thay tư thế theo góc bằng chuyển động chụp (vợt, cuốn tạ, squat…), cần clip tương ứng (thư viện bản Standard không có) rồi chuyển hoạt động sang `HUMAN_CLIP_ACTIVITIES`.

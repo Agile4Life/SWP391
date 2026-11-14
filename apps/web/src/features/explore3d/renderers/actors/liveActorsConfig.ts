@@ -961,6 +961,36 @@ function rotateLocalToWorld(
   ];
 }
 
+/** Lap path of a swimmer: shared by the procedural body and the rigged character. */
+export function solveSwimPath(
+  actor: LiveActorDefinition,
+  timeSec: number,
+  baseAnchor: Vec3,
+): { anchor: Vec3; yaw: number } {
+  const phase = timeSec * actor.speed * 3.2 + actor.phaseOffset;
+  const target = actor.walkTargetPosition ?? [
+    actor.anchorPosition[0] + 18,
+    actor.anchorPosition[1],
+    actor.anchorPosition[2],
+  ];
+  const lapCycle = (timeSec * actor.speed * 0.09 + actor.phaseOffset * 0.15) % 2;
+  const forwardLap = lapCycle < 1;
+  const rawU = forwardLap ? lapCycle : 2 - lapCycle;
+  const smoothU = 0.5 - 0.5 * Math.cos(rawU * Math.PI);
+  const dir = forwardLap ? 1 : -1;
+  return {
+    anchor: [
+      actor.anchorPosition[0] + (target[0] - actor.anchorPosition[0]) * smoothU,
+      baseAnchor[1] + Math.sin(phase) * 0.02,
+      actor.anchorPosition[2] + (target[2] - actor.anchorPosition[2]) * smoothU,
+    ],
+    yaw: Math.atan2(
+      (target[0] - actor.anchorPosition[0]) * dir,
+      (target[2] - actor.anchorPosition[2]) * dir,
+    ),
+  };
+}
+
 export interface HumanPoseSolution {
   pose: HumanPoseAngles;
   /** World position of the actor's anchor (moves for walking patrols). */
@@ -1059,6 +1089,13 @@ export function solveHumanPose(
 
     case 'bench-press': {
       pose.reclinedMode = true;
+      break;
+    }
+
+    case 'swim-freestyle': {
+      const swim = solveSwimPath(actor, timeSec, baseAnchor);
+      actorWorldPos = swim.anchor;
+      actorYaw = swim.yaw;
       break;
     }
 
@@ -1466,24 +1503,7 @@ export function evaluateActorPartsAtTime(
     // SWIMMING FREESTYLE (Prone horizontal aquatic kinematics + splash)
     // -----------------------------------------------------------------------
     if (actor.activity === 'swim-freestyle') {
-      const target = actor.walkTargetPosition ?? [
-        actor.anchorPosition[0] + 18,
-        actor.anchorPosition[1],
-        actor.anchorPosition[2],
-      ];
-      const lapCycle = (timeSec * actor.speed * 0.09 + actor.phaseOffset * 0.15) % 2;
-      const forwardLap = lapCycle < 1;
-      const rawU = forwardLap ? lapCycle : 2 - lapCycle;
-      const smoothU = 0.5 - 0.5 * Math.cos(rawU * Math.PI);
-
-      const curX =
-        actor.anchorPosition[0] + (target[0] - actor.anchorPosition[0]) * smoothU;
-      const curZ =
-        actor.anchorPosition[2] + (target[2] - actor.anchorPosition[2]) * smoothU;
-      const dx = (target[0] - actor.anchorPosition[0]) * (forwardLap ? 1 : -1);
-      const dz = (target[2] - actor.anchorPosition[2]) * (forwardLap ? 1 : -1);
-      const swimYaw = Math.atan2(dx, dz);
-      const swimAnchor: Vec3 = [curX, baseAnchor[1] + Math.sin(phase) * 0.02, curZ];
+      const { anchor: swimAnchor, yaw: swimYaw } = solveSwimPath(actor, timeSec, baseAnchor);
 
       const strokeL = phase;
       const strokeR = phase + Math.PI;
