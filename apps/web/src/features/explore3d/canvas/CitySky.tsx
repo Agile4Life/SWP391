@@ -135,11 +135,121 @@ function Birds() {
   return <instancedMesh ref={ref} args={[geometry, material, BIRDS]} frustumCulled={false} raycast={NOOP} />;
 }
 
+
+const WATER = { x: 6, z: 55.1, w: 80, d: 5.6, y: 0.33 };
+const SPARKLES = 46;
+const DUCKS = 7;
+
+/** Glints and drifting ducks on the south-park canal. */
+function CanalLife() {
+  const sparkRef = useRef<THREE.InstancedMesh>(null);
+  const bodyRef = useRef<THREE.InstancedMesh>(null);
+  const headRef = useRef<THREE.InstancedMesh>(null);
+  const sparkGeo = useMemo(() => new THREE.PlaneGeometry(0.5, 0.12).rotateX(-Math.PI / 2), []);
+  const sparkMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false, transparent: true, opacity: 0.8 }), []);
+  const bodyGeo = useMemo(() => new THREE.SphereGeometry(0.32, 8, 6).scale(1.35, 0.7, 0.9), []);
+  const headGeo = useMemo(() => new THREE.SphereGeometry(0.15, 8, 6), []);
+  const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f1ede2', roughness: 0.7 }), []);
+  const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2f6a4a', roughness: 0.6 }), []);
+  useEffect(() => () => { sparkGeo.dispose(); sparkMat.dispose(); bodyGeo.dispose(); headGeo.dispose(); bodyMat.dispose(); headMat.dispose(); }, [sparkGeo, sparkMat, bodyGeo, bodyMat, headGeo, headMat]);
+  const m = useMemo(() => new THREE.Matrix4(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const p = useMemo(() => new THREE.Vector3(), []);
+  const sc = useMemo(() => new THREE.Vector3(), []);
+  const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const sp = sparkRef.current;
+    const bd = bodyRef.current;
+    const hd = headRef.current;
+    if (!sp || !bd || !hd) return;
+    q.identity();
+    for (let i = 0; i < SPARKLES; i += 1) {
+      const fx = ((i * 0.6180339) % 1) * WATER.w - WATER.w / 2;
+      const fz = ((i * 0.7548776) % 1) * (WATER.d - 0.8) - (WATER.d - 0.8) / 2;
+      const k = Math.max(0, Math.sin(t * 1.6 + i * 2.1));
+      p.set(WATER.x + fx + Math.sin(t * 0.3 + i) * 0.4, WATER.y, WATER.z + fz);
+      sc.setScalar(0.2 + k * 1.1);
+      sp.setMatrixAt(i, m.compose(p, q, sc));
+    }
+    sp.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < DUCKS; i += 1) {
+      const dir = i % 2 === 0 ? 1 : -1;
+      const along = ((((i * 11.3 + t * 0.6 * dir) % WATER.w) + WATER.w) % WATER.w) - WATER.w / 2;
+      const z = WATER.z + ((i % 3) - 1) * 1.3 + Math.sin(t * 0.9 + i) * 0.15;
+      const bob = Math.sin(t * 2 + i) * 0.03;
+      q.setFromAxisAngle(up, dir === 1 ? 0 : Math.PI);
+      sc.setScalar(1);
+      p.set(WATER.x + along, WATER.y + 0.12 + bob, z);
+      bd.setMatrixAt(i, m.compose(p, q, sc));
+      p.set(WATER.x + along + dir * 0.38, WATER.y + 0.42 + bob, z);
+      hd.setMatrixAt(i, m.compose(p, q, sc));
+    }
+    bd.instanceMatrix.needsUpdate = true;
+    hd.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <>
+      <instancedMesh ref={sparkRef} args={[sparkGeo, sparkMat, SPARKLES]} frustumCulled={false} raycast={NOOP} />
+      <instancedMesh ref={bodyRef} args={[bodyGeo, bodyMat, DUCKS]} frustumCulled={false} castShadow raycast={NOOP} />
+      <instancedMesh ref={headRef} args={[headGeo, headMat, DUCKS]} frustumCulled={false} raycast={NOOP} />
+    </>
+  );
+}
+
+const CLOUDS = 16;
+
+/** Slow-drifting cumulus built from a few squashed spheres each; one instanced mesh. */
+function Clouds({ isLight }: { isLight: boolean }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 2), []);
+  const material = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.82, depthWrite: false, fog: false }),
+    [],
+  );
+  useEffect(() => { material.color.set(isLight ? '#f6f3ee' : '#566178'); }, [material, isLight]);
+  useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
+  const puffs = useMemo(() => {
+    const out: { cx: number; cz: number; y: number; ox: number; oz: number; r: number }[] = [];
+    for (let c = 0; c < CLOUDS; c += 1) {
+      const a = (c / CLOUDS) * Math.PI * 2 + (c % 3) * 0.4;
+      const rad = 260 + ((c * 97) % 380);
+      const cx = Math.cos(a) * rad;
+      const cz = Math.sin(a) * rad;
+      const y = 190 + ((c * 31) % 80);
+      for (let k = 0; k < 5; k += 1) {
+        out.push({ cx, cz, y: y + (k % 2) * 4, ox: (k - 2) * 26 + ((c * 7 + k) % 5) * 3, oz: ((k * 13 + c) % 7) * 6 - 18, r: 30 + ((c + k * 5) % 4) * 8 });
+      }
+    }
+    return out;
+  }, []);
+  const m = useMemo(() => new THREE.Matrix4(), []);
+  const q = useMemo(() => new THREE.Quaternion(), []);
+  const p = useMemo(() => new THREE.Vector3(), []);
+  const sc = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ clock }) => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const drift = (clock.elapsedTime * 1.2) % 900;
+    puffs.forEach((pf, i) => {
+      let x = pf.cx + pf.ox + drift;
+      if (x > 560) x -= 1120;
+      p.set(x, pf.y, pf.cz + pf.oz);
+      sc.set(pf.r * 1.5, pf.r * 0.42, pf.r);
+      mesh.setMatrixAt(i, m.compose(p, q, sc));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+  return <instancedMesh ref={ref} args={[geometry, material, puffs.length]} frustumCulled={false} raycast={NOOP} renderOrder={-900} />;
+}
+
 export function CitySky() {
   const isLight = useDocumentTheme() === 'light';
   return (
     <>
       <Metro isLight={isLight} />
+      <CanalLife />
+      <Clouds isLight={isLight} />
       {isLight && <Birds />}
     </>
   );

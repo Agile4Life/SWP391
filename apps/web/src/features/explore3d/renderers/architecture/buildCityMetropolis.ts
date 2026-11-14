@@ -1067,6 +1067,24 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
   return specs;
 }
 
+export interface CityCollider {
+  readonly x: number;
+  readonly z: number;
+  readonly hw: number;
+  readonly hd: number;
+  readonly h: number;
+}
+
+let colliderCache: readonly CityCollider[] | null = null;
+
+/** Footprints of the non-horizon towers; the camera is pushed out of them so it never sits inside a building. */
+export function getCityColliders(): readonly CityCollider[] {
+  colliderCache ??= generateDistrictTowers('high', true)
+    .filter(t => t.ring !== 'horizon')
+    .map(t => ({ x: t.x, z: t.z, hw: t.w / 2, hd: t.d / 2, h: t.h }));
+  return colliderCache;
+}
+
 const metropolisCache = new Map<string, CityMetropolisGeometries>();
 
 /**
