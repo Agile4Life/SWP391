@@ -201,30 +201,36 @@ export function Lights() {
         castShadow={false}
       />
       {/* Warm architectural interior ceiling lights on the active floor */}
-      <pointLight
-        position={[-9, ceilingY, -2]}
-        color="#ffe4d0"
-        intensity={1.55 * interiorBoost}
-        distance={34}
-        decay={2}
-        castShadow={false}
-      />
-      <pointLight
-        position={[2, ceilingY, 4]}
-        color="#fff0e4"
-        intensity={1.4 * interiorBoost}
-        distance={32}
-        decay={2}
-        castShadow={false}
-      />
-      <pointLight
-        position={[13, ceilingY, -1]}
-        color="#ffe4d0"
-        intensity={1.5 * interiorBoost}
-        distance={34}
-        decay={2}
-        castShadow={false}
-      />
+      {/* Every point light is evaluated for every lit pixel in the scene (~3 fps each on an M4) and
+          is barely visible in the whole-campus overview, so they only exist when a floor is in focus. */}
+      {(walkMode || focusLevel !== 'ALL') && (
+        <>
+          <pointLight
+            position={[-9, ceilingY, -2]}
+            color="#ffe4d0"
+            intensity={1.55 * interiorBoost}
+            distance={34}
+            decay={2}
+            castShadow={false}
+          />
+          <pointLight
+            position={[2, ceilingY, 4]}
+            color="#fff0e4"
+            intensity={1.4 * interiorBoost}
+            distance={32}
+            decay={2}
+            castShadow={false}
+          />
+          <pointLight
+            position={[13, ceilingY, -1]}
+            color="#ffe4d0"
+            intensity={1.5 * interiorBoost}
+            distance={34}
+            decay={2}
+            castShadow={false}
+          />
+        </>
+      )}
     </group>
   );
 }
