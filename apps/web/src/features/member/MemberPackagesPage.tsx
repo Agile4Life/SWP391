@@ -8,6 +8,7 @@ import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchas
 import { formatPrice, getPackageDetails, isTrialPackage } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { upgradeQuote } from '../../shared/lib/upgradeQuote';
 import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
@@ -85,6 +86,7 @@ export function MemberPackagesPage() {
   useLanguage();
   const { lang, t } = useI18n();
   const navigate = useNavigate();
+  const [confirm, confirmDialog] = useConfirm();
   const [searchParams] = useSearchParams();
   const selectedId = selectedPackageId(searchParams.toString());
   useEffect(() => clearPurchaseIntent(), []);
@@ -524,6 +526,22 @@ export function MemberPackagesPage() {
       return;
     }
 
+    // One click used to create the request straight away; let the member check plan and amount first.
+    const amount = (upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey())?.amount : null) ?? membershipPackage.price;
+    const actionLabel = upgradeFrom
+      ? { vi: 'Nâng cấp lên', en: 'Upgrade to' }
+      : renewFrom ? { vi: 'Gia hạn', en: 'Renew' } : { vi: 'Đăng ký', en: 'Register' };
+    const confirmed = await confirm({
+      title: { vi: `${actionLabel.vi} ${membershipPackage.name}?`, en: `${actionLabel.en} ${membershipPackage.name}?` },
+      message: {
+        vi: `Số tiền cần thanh toán: ${formatPrice(amount)}. Yêu cầu sẽ chờ bạn thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.`,
+        en: `Amount to pay: ${formatPrice(amount)}. The request waits for your payment by VNPay, SÖL Wallet or at the front desk.`,
+      },
+      confirmLabel: { vi: 'Gửi yêu cầu', en: 'Send request' },
+      cancelLabel: { vi: 'Để sau', en: 'Not now' },
+    });
+    if (!confirmed || requestBusy.current) return;
+
     requestBusy.current = true;
     syncVersion.current += 1;
     setSubmittingPackageId(membershipPackage.id);
@@ -634,6 +652,7 @@ export function MemberPackagesPage() {
 
   return (
     <div data-i18n-managed className="portal-container member-packages" >
+      {confirmDialog}
       {blockedMessage && <Modal returnFocusRef={membershipFocus} title={t("Chưa thể thực hiện", "Action unavailable")} onClose={() => { setBlockedMessage(null); setBlockedKycPackageId(null); }}>
         <div className="package-result package-result--error">
           <p role="alert">{t(blockedMessage)}</p>
@@ -647,7 +666,7 @@ export function MemberPackagesPage() {
                 {t("Xác thực định danh & Thanh toán", "Verify identity & Checkout")}
               </Link>
             )}
-            <button type="button" className={blockedKycPackageId != null ? "btn-secondary" : "btn-primary"} onClick={() => { setBlockedMessage(null); setBlockedKycPackageId(null); }}>{t("Đóng", "Close")}</button>
+            {blockedKycPackageId == null && <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>{t("Đóng", "Close")}</button>}
           </div>
         </div>
       </Modal>}
@@ -1262,7 +1281,6 @@ export function MemberPackagesPage() {
 
       {pendingToCancel && (
         <Modal returnFocusRef={membershipFocus} title={t("Hủy yêu cầu đăng ký?", "Cancel registration request?")} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
-            <div className="meta-label">{t("Xác nhận yêu cầu", "Confirm request")}</div>
 <p className="row-card__meta" style={{ marginTop: 12 }}>
               {t(" Yêu cầu ", "Request")}{pendingToCancel.packageName} {t("sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận. ", "will be cancelled. You can register for another plan after confirmation.")}</p>
             {actionError && <p role="alert" className="portal-alert">{t(actionError)}</p>}

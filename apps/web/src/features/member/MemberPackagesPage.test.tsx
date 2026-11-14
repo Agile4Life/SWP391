@@ -115,6 +115,8 @@ describe('SCRUM-86 packages', () => {
     return [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
   }
 
+  // Purchase buttons now ask for confirmation before the request is created.
+  const confirmRequest = () => [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === 'Gửi yêu cầu')?.click();
   const closeDialog = () => (host.querySelector('dialog button[aria-label="Đóng hộp thoại"]') as HTMLButtonElement | null)?.click();
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
@@ -152,6 +154,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => window.dispatchEvent(new Event('online')));
     api.history.mockResolvedValue([pending]);
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     await act(async () => resolveHistory([]));
     expect(button('Đang chờ xác nhận')?.disabled).toBe(false);
     expect(api.create).toHaveBeenCalledTimes(1);
@@ -216,6 +219,7 @@ describe('SCRUM-86 packages', () => {
   it('shows a clear request success without claiming payment success', async () => {
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     const dialog = host.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain('Đã gửi yêu cầu thành công');
     expect(dialog?.textContent).toContain('Yêu cầu của bạn đang chờ xử lý.');
@@ -303,9 +307,11 @@ describe('SCRUM-86 packages', () => {
     api.renew.mockResolvedValue({ ...renewal, status: 'pending_payment' });
     await render();
     expect(button('Gia hạn')?.disabled).toBe(false);
+    await act(async () => button('Gia hạn')?.click());
+    await act(async () => confirmRequest());
     await act(async () => {
-      button('Gia hạn')?.click();
-      button('Gia hạn')?.click();
+      confirmRequest();
+      confirmRequest();
     });
     expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
     expect(api.create).not.toHaveBeenCalled();
@@ -324,6 +330,7 @@ describe('SCRUM-86 packages', () => {
 
     expect(button('Gia hạn')?.disabled).toBe(false);
     await act(async () => button('Gia hạn')?.click());
+    await act(async () => confirmRequest());
     expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
   });
   it('allows an active subscription to upgrade to a higher package and blocks lower packages', async () => {
@@ -355,6 +362,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => {
       button('Nâng cấp gói')?.click();
     });
+    await act(async () => confirmRequest());
 
     expect(api.upgrade).toHaveBeenCalledExactlyOnceWith(1, 6);
     expect(api.create).not.toHaveBeenCalled();
@@ -426,8 +434,18 @@ describe('SCRUM-86 packages', () => {
     await render();
     expect(button('Đăng ký lần đầu')?.disabled).toBe(false);
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     expect(api.create).toHaveBeenCalledExactlyOnceWith(5);
     expect(api.renew).not.toHaveBeenCalled();
+  });
+
+  it('asks for confirmation with the amount and creates nothing when the member declines', async () => {
+    await render();
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    expect(host.querySelector('dialog')?.textContent).toContain('Số tiền cần thanh toán');
+    await act(async () => button('Để sau')?.click());
+    expect(api.create).not.toHaveBeenCalled();
+    expect(button('Gửi yêu cầu')).toBeUndefined();
   });
 
   it('blocks renewal while history loads and restores the successor state when it arrives', async () => {
@@ -437,6 +455,7 @@ describe('SCRUM-86 packages', () => {
     await render();
     expect(button('Gia hạn')?.disabled).toBe(true);
     await act(async () => button('Gia hạn')?.click());
+    await act(async () => confirmRequest());
     expect(api.renew).not.toHaveBeenCalled();
     await act(async () => resolveHistory([active, renewal]));
     expect(button('Gia hạn')?.disabled).toBe(false);
@@ -449,6 +468,7 @@ describe('SCRUM-86 packages', () => {
     expect(button('Gia hạn')?.disabled).toBe(false);
     expect(host.textContent).toContain('Không thể kiểm tra lịch sử gói');
     await act(async () => button('Gia hạn')?.click());
+    await act(async () => confirmRequest());
     expect(api.renew).not.toHaveBeenCalled();
     await act(async () => closeDialog());
     await act(async () => button('Thử lại')?.click());
@@ -563,6 +583,7 @@ describe('SCRUM-86 packages', () => {
   it('shows POS payment instructions in the purchase modal without a transfer confirmation button', async () => {
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     const dialog = host.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain('Essential');
     expect(dialog?.textContent).toContain('500.000');
@@ -629,6 +650,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValueOnce([]).mockResolvedValue([pending]);
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     expect(api.create).toHaveBeenCalledTimes(1);
     await act(async () => closeDialog());
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
@@ -641,6 +663,7 @@ describe('SCRUM-86 packages', () => {
     api.cancelPending.mockRejectedValue(new Error('Yêu cầu đã được thanh toán, không thể hủy.'));
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     await act(async () => button('Hủy yêu cầu đăng ký')?.click());
     await act(async () => button('Xác nhận hủy')?.click());
     const dialogs = host.querySelectorAll('[role="dialog"], dialog');
@@ -656,6 +679,7 @@ describe('SCRUM-86 packages', () => {
     await render();
     expect(button('Gia hạn')?.disabled).toBe(false);
     await act(async () => button('Gia hạn')?.click());
+    await act(async () => confirmRequest());
     expect(api.renew).toHaveBeenCalledWith(21);
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -868,6 +892,7 @@ describe('SCRUM-86 packages', () => {
     );
     await render();
     await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => confirmRequest());
     const kycLink = host.querySelector<HTMLAnchorElement>('dialog a.btn-primary');
     expect(kycLink).not.toBeNull();
     expect(kycLink?.getAttribute('href')).toBe('/member/packages/checkout?packageId=5');
@@ -915,6 +940,7 @@ describe('SCRUM-86 packages', () => {
     expect(upgradeButtons.length).toBeGreaterThanOrEqual(2);
 
     await act(async () => upgradeButtons[0].click());
+    await act(async () => confirmRequest());
     expect(host.textContent).not.toContain('Chờ đồng bộ trạng thái mới nhất.');
     expect(api.upgrade).toHaveBeenCalledWith(99, membershipPackage.id);
   });
