@@ -43,15 +43,15 @@ export function CoachHealthMetricsPage() {
       {!hasAccess ? (
         <div className="portal-card" role="alert"><p>{t("Truy cập bị từ chối (403 Forbidden)")}</p></div>
       ) : loading ? (
-        <LoadingSkeleton label={t("Đang tải học viên và thông tin giáo án…")} variant="profile" />
+        <LoadingSkeleton label={t("Đang tải hồ sơ sức khỏe hội viên…", "Loading member health profile…")} variant="profile" />
       ) : error ? (
-        <div className="portal-card" role="alert">
+        <div className="portal-alert" role="alert">
           <p>{t(error)}</p>
           <button type="button" className="btn-secondary" onClick={() => setAttempt((value) => value + 1)}>{t("Thử lại")}</button>
         </div>
       ) : !member ? (
         <div className="portal-card" role="status">
-          <p><strong>{t("Chưa có học viên để soạn giáo án.")}</strong></p>
+          <p><strong>{t("Chưa có học viên để ghi nhận chỉ số sức khỏe.", "No students available for health metrics.")}</strong></p>
           <p>{t("Học viên lấy từ các lớp đã có hội viên ghi danh.")}</p>
         </div>
       ) : (

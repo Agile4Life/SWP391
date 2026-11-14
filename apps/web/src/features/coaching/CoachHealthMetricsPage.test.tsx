@@ -52,7 +52,7 @@ it('records measurements for the selected member on its own tab', async () => {
 it('shows an empty state when the coach has no members and a retry when the roster fails', async () => {
   vi.mocked(aiApi.getCoachMembers).mockResolvedValueOnce([]);
   await act(async () => root.render(<CoachHealthMetricsPage />));
-  expect(host.textContent).toContain('Chưa có học viên để soạn giáo án');
+  expect(host.textContent).toContain('Chưa có học viên để ghi nhận chỉ số sức khỏe');
   expect(host.querySelector('#coach-metric-weight')).toBeNull();
 
   vi.mocked(aiApi.getCoachMembers).mockRejectedValueOnce(new Error('offline'));

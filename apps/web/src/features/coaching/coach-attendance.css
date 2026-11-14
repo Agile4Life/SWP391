@@ -245,8 +245,22 @@
   color: var(--portal-muted);
 }
 
+.radio-status-label {
+  position: relative;
+}
+
 .radio-status-label input[type="radio"] {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.radio-status-label:has(input:focus-visible) {
+  outline: 2px solid var(--portal-salmon);
+  outline-offset: 2px;
 }
 
 .radio-status-label:hover {
@@ -616,37 +630,19 @@
    MODAL CHỈNH SỬA GIỮA MÀN HÌNH (Không chuyển tab & Không tràn mép)
    ========================================================================= */
 .coach-attendance-page dialog.portal-dialog {
-  width: min(580px, calc(100vw - 32px)) !important;
-  max-width: 580px !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
-  margin: auto !important;
+  width: min(580px, calc(100vw - 32px));
+  max-width: 580px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  margin: auto;
 }
 
 .coach-attendance-page dialog.portal-dialog .portal-dialog__body {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: hidden !important;
-  padding: 22px 24px 24px !important;
-}
-
-dialog.portal-dialog .portal-dialog__header {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: flex-start !important;
-  gap: 14px !important;
-  margin-bottom: 16px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-dialog.portal-dialog .portal-card-title {
-  font-size: 1.15rem !important;
-  line-height: 1.35 !important;
-  word-break: break-word !important;
-  margin: 0 !important;
-  flex: 1 1 auto !important;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  padding: 22px 24px 24px;
 }
 
 .modal-edit-container {
@@ -739,6 +735,12 @@ dialog.portal-dialog .portal-card-title {
 /* =========================================================================
    THÔNG BÁO NỔI BẬT CHÍNH GIỮA MÀN HÌNH (Đồng bộ tại styles.css)
    ========================================================================= */
+@media (max-width: 1024px) {
+  .portal-v2 .eval-comment-textarea {
+    font-size: 16px;
+  }
+}
+
 @keyframes center-pop-in {
   0% {
     transform: translateY(10px) scale(0.94);

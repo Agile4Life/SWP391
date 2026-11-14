@@ -1,6 +1,8 @@
 import { staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from './staffI18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Select } from '../../shared/ui/Select';
@@ -187,29 +189,12 @@ export function StaffInternalRequestsPage() {
       )}
 
       {loading ? (
-        <div data-i18n-managed className="portal-card" role="status" aria-busy="true" style={{ padding: 32, textAlign: 'center' }}>
-          <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
-            <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
-            <div className="portal-skeleton" style={{ height: 56, borderRadius: 12 }} />
-          </div>
-          <p style={{ margin: 0, color: 'var(--portal-muted)' }}>{t("Đang tải danh sách đơn từ...")}</p>
-        </div>
+        <LoadingSkeleton label={t("Đang tải danh sách đơn từ...", "Loading requests...")} count={3} />
       ) : filteredRequests.length === 0 ? (
-        <div data-i18n-managed
-          className="portal-card"
-          style={{
-            padding: '48px 32px',
-            textAlign: 'center',
-            background: 'var(--portal-surface)',
-            borderRadius: 16,
-            border: '1px dashed var(--portal-border-strong, var(--portal-border))',
-          }}
-        >
-          <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
-            {t("Không có đơn từ nào trong danh sách")}</p>
-          <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-            {t("Chưa có đơn từ nào.")}</span>
-        </div>
+        <EmptyState
+          icon="file"
+          title={t("Không có đơn từ nào trong danh sách", "No requests in this list")}
+        />
       ) : (
         <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
           {filteredRequests.map((req) => {
@@ -224,9 +209,6 @@ export function StaffInternalRequestsPage() {
                 style={{
                   padding: 24,
                   borderRadius: 16,
-                  border: '1px solid var(--portal-border)',
-                  background: 'var(--portal-surface)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
                   display: 'grid',
                   gap: 14,
                 }}
@@ -285,35 +267,37 @@ export function StaffInternalRequestsPage() {
                 </div>
 
                 {/* Scope details (dates, target shift) */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 18,
-                    background: 'var(--portal-raised)',
-                    padding: '10px 16px',
-                    borderRadius: 10,
-                    fontSize: 13,
-                    color: 'var(--portal-paper)',
-                  }}
-                >
-                  {req.startDate && (
-                    <div data-i18n-managed>
-                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Thời gian:")}</strong>{' '}
-                      {formatCenterDate(req.startDate)}
-                      {req.endDate && req.endDate !== req.startDate ? t(` đến ${formatCenterDate(req.endDate)}`, ` to ${formatCenterDate(req.endDate)}`) : ''}
-                      {req.replacementUserFullName ? t(` · Thay thế: ${req.replacementUserFullName}`, ` · Substitute: ${req.replacementUserFullName}`) : ''}
+                {(req.startDate || req.targetShift) && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 18,
+                      background: 'var(--portal-raised)',
+                      padding: '10px 16px',
+                      borderRadius: 10,
+                      fontSize: 13,
+                      color: 'var(--portal-paper)',
+                    }}
+                  >
+                    {req.startDate && (
+                      <div data-i18n-managed>
+                        <strong style={{ color: 'var(--portal-muted)' }}>{t("Thời gian:")}</strong>{' '}
+                        {formatCenterDate(req.startDate)}
+                        {req.endDate && req.endDate !== req.startDate ? t(` đến ${formatCenterDate(req.endDate)}`, ` to ${formatCenterDate(req.endDate)}`) : ''}
+                        {req.replacementUserFullName ? t(` · Thay thế: ${req.replacementUserFullName}`, ` · Substitute: ${req.replacementUserFullName}`) : ''}
 
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {req.targetShift && (
-                    <div data-i18n-managed>
-                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Ca / Buổi liên quan:")}</strong>{' '}
-                      {req.targetShift}
-                    </div>
-                  )}
-                </div>
+                    {req.targetShift && (
+                      <div data-i18n-managed>
+                        <strong style={{ color: 'var(--portal-muted)' }}>{t("Ca / Buổi liên quan:")}</strong>{' '}
+                        {req.targetShift}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Manager review result */}
                 {req.reviewedAt && (
@@ -347,20 +331,10 @@ export function StaffInternalRequestsPage() {
                   <div data-i18n-managed style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
                     <button
                       type="button"
+                      className="btn-secondary btn-sm"
+                      style={{ color: 'var(--portal-danger)' }}
                       disabled={cancellingId === req.id}
                       onClick={() => handleCancelRequest(req.id)}
-                      style={{
-                        minHeight: 44,
-                        padding: '6px 14px',
-                        borderRadius: 10,
-                        border: '1px solid color-mix(in srgb, var(--portal-danger) 40%, transparent)',
-                        background: 'var(--portal-raised)',
-                        fontSize: 12,
-                        fontWeight: 650,
-                        color: 'var(--portal-danger)',
-                        cursor: 'pointer',
-                        transition: 'background-color 180ms ease, border-color 180ms ease, color 180ms ease',
-                      }}
                     >
                       {cancellingId === req.id ? t('Đang hủy...') : t('Hủy đơn từ này')}
                     </button>
@@ -377,17 +351,7 @@ export function StaffInternalRequestsPage() {
         <Modal title={t("Tạo đơn từ & đề xuất mới")} onClose={() => setShowCreateModal(false)} busy={submitting}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'grid', gap: 16 }}>
             {formError && (
-              <div data-i18n-managed
-                role="alert"
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: 8,
-                  background: 'color-mix(in srgb, var(--portal-danger) 10%, transparent)',
-                  color: 'var(--portal-danger)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
+              <div data-i18n-managed className="portal-alert" role="alert">
                 {t(formError)}
               </div>
             )}
@@ -401,10 +365,10 @@ export function StaffInternalRequestsPage() {
                 onChange={(e) => setCreateType(e.target.value as RequestType)}
                 style={{ width: '100%' }}
               >
-                <option value="LEAVE">{t("Xin nghỉ phép (Leave)")}</option>
-                <option value="SHIFT_EXCHANGE">{t("Đổi ca trực / làm việc (Shift Exchange)")}</option>
-                <option value="SCHEDULE_CHANGE">{t("Đổi lịch dạy / đứng lớp")}</option>
-                <option value="OTHER">{t("Đề xuất công việc / khác (Other)")}</option>
+                <option value="LEAVE">{t("Xin nghỉ phép", "Leave request")}</option>
+                <option value="SHIFT_EXCHANGE">{t("Đổi ca làm việc", "Shift exchange")}</option>
+                <option value="SCHEDULE_CHANGE">{t("Đổi lịch đứng lớp", "Class schedule change")}</option>
+                <option value="OTHER">{t("Đề xuất công việc khác", "Other request")}</option>
               </Select>
             </div>
 
@@ -422,7 +386,7 @@ export function StaffInternalRequestsPage() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-2" style={{ gap: 12 }}>
               <div>
                 <label htmlFor="internal-request-start" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                   {createType === 'LEAVE' ? t('Ngày bắt đầu nghỉ:') : t('Ngày áp dụng:')}
@@ -468,12 +432,11 @@ export function StaffInternalRequestsPage() {
                 {t("Lý do & Nội dung chi tiết:")}</label>
               <textarea
                 id="internal-request-reason"
-                className="portal-input"
+                className="portal-textarea"
                 rows={4}
                 placeholder={t("Nêu rõ lý do, kế hoạch bàn giao hoặc người hỗ trợ thay thế...")}
                 value={createReason}
                 onChange={(e) => setCreateReason(e.target.value)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, resize: 'vertical' }}
               />
             </div>
 
@@ -486,17 +449,8 @@ export function StaffInternalRequestsPage() {
                 {t("Hủy")}</button>
               <button
                 type="submit"
+                className="btn-primary"
                 disabled={submitting}
-                style={{
-                  padding: '10px 24px',
-                  borderRadius: 99,
-                  border: 'none',
-                  fontWeight: 750,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  background: 'var(--portal-salmon, var(--sol-accent))',
-                  color: 'var(--portal-on-accent)',
-                }}
               >
                 {submitting ? t('Đang gửi đơn...') : t('Gửi đơn tới Quản Lý')}
               </button>

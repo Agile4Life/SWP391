@@ -217,7 +217,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(modalItems.length).toBeGreaterThan(0);
 
     // Save in modal
-    const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-modal-save') as HTMLButtonElement;
+    const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement;
     expect(modalSaveBtn).not.toBeNull();
 
     vi.useFakeTimers();
@@ -262,7 +262,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(host.querySelector('.modal-eval-student-item')).not.toBeNull();
 
     // Save modal
-    const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-modal-save') as HTMLButtonElement;
+    const modalSaveBtn = host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement;
     vi.useFakeTimers();
     await act(async () => {
       modalSaveBtn.click();
@@ -282,7 +282,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { root.render(pageAt(LIST)); });
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
-    await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
     expect(localStorage.getItem(coachHistoryStorageKey('attendance'))).toBe(original);
     expect(notify).toHaveBeenCalledWith('Không thể lưu cập nhật. Vui lòng thử lại.', 'error', { translation: { vi: 'Không thể lưu cập nhật. Vui lòng thử lại.', en: 'Unable to save changes. Please try again.' } });
@@ -303,7 +303,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     await act(async () => { root.render(pageAt(LIST)); });
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
-    await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
     expect(localStorage.getItem(coachHistoryStorageKey('evaluation'))).toBe(original);
     expect(notify).toHaveBeenCalledWith('Không thể lưu cập nhật. Vui lòng thử lại.', 'error', { translation: { vi: 'Không thể lưu cập nhật. Vui lòng thử lại.', en: 'Unable to save changes. Please try again.' } });
@@ -314,7 +314,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     vi.mocked(attendanceApi.getSessionStudents).mockResolvedValueOnce(mockStudents.map(student => ({ ...student, status: 'absent' })));
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
-    await act(async () => { (host.querySelector('.btn-modal-save') as HTMLButtonElement).click(); });
+    await act(async () => { (host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement).click(); });
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101, status: 'absent', progressScore: 85 })]), true);
   });
 

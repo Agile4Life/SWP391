@@ -114,7 +114,7 @@ export function HoldManagementPage() {
           </button>
         ))}
       </div>
-      {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong></div>}
+      {error && <div className="portal-alert" role="alert">{t(error)}</div>}
       {loading ? <LoadingSkeleton label={t('Đang tải danh sách bảo lưu', 'Loading holds')} /> : items.length === 0 ? (
         <div className="portal-card" role="status">{t('Không có yêu cầu bảo lưu nào.', 'No hold requests.')}</div>
       ) : (
@@ -123,7 +123,7 @@ export function HoldManagementPage() {
             <li key={item.id} className="portal-card stack" data-testid={`hold-${item.id}`}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <strong>{item.memberName ?? '—'} {item.membershipCode ? `(${item.membershipCode})` : ''}</strong>
-                <span>{item.holdStatus ? filterLabel[item.holdStatus] ?? item.holdStatus : '—'}</span>
+                <span className={`badge ${item.holdStatus === 'PENDING' ? 'badge-warning' : item.holdStatus === 'APPROVED' ? 'badge-success' : item.holdStatus === 'REJECTED' ? 'badge-danger' : 'badge-neutral'}`}>{item.holdStatus ? filterLabel[item.holdStatus] ?? item.holdStatus : '—'}</span>
               </div>
               <div>{item.packageName} · {t('hiệu lực', 'valid')} {formatCenterDate(item.startDate)} – {formatCenterDate(item.endDate)}</div>
               {item.holdStartDate && item.holdEndDate && (

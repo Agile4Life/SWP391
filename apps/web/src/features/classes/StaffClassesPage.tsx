@@ -1362,10 +1362,10 @@ export function StaffClassesPage() {
                   onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
                   disabled={isSubmitting}
                 >
-                  <option value="all">{t("Mọi cấp độ (All levels)")}</option>
-                  <option value="beginner">{t("Người mới bắt đầu (Beginner)")}</option>
-                  <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
-                  <option value="advanced">{t("Nâng cao (Advanced)")}</option>
+                  <option value="all">{t("Mọi cấp độ", "All levels")}</option>
+                  <option value="beginner">{t("Người mới bắt đầu", "Beginner")}</option>
+                  <option value="intermediate">{t("Trung cấp", "Intermediate")}</option>
+                  <option value="advanced">{t("Nâng cao", "Advanced")}</option>
                 </Select>
               </div>
 
@@ -2032,10 +2032,10 @@ export function StaffClassesPage() {
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                     disabled={isSubmitting}
                   >
-                    <option value="all">{t("Mọi cấp độ (All levels)")}</option>
-                    <option value="beginner">{t("Người mới bắt đầu (Beginner)")}</option>
-                    <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
-                    <option value="advanced">{t("Nâng cao (Advanced)")}</option>
+                    <option value="all">{t("Mọi cấp độ", "All levels")}</option>
+                    <option value="beginner">{t("Người mới bắt đầu", "Beginner")}</option>
+                    <option value="intermediate">{t("Trung cấp", "Intermediate")}</option>
+                    <option value="advanced">{t("Nâng cao", "Advanced")}</option>
                   </Select>
                 </div>
               </div>

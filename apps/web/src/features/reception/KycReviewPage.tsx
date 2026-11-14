@@ -79,7 +79,7 @@ export function KycReviewPage() {
     <div data-i18n-managed className="portal-container kyc-review">
       <PageHeader title={t('Duyệt hồ sơ định danh', 'Identity review')}
         actions={<RefreshButton label={t('Làm mới danh sách hồ sơ', 'Refresh submissions')} disabled={loading} onClick={() => void load()} />} />
-      {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong></div>}
+      {error && <div className="portal-alert" role="alert">{t(error)}</div>}
       {loading ? <LoadingSkeleton label={t('Đang tải hồ sơ chờ duyệt', 'Loading submissions')} /> : items.length === 0 ? (
         <div className="portal-card" role="status">{t('Không có hồ sơ nào chờ duyệt.', 'No submissions are waiting for review.')}</div>
       ) : (
@@ -113,7 +113,7 @@ export function KycReviewPage() {
               {rejecting === item.memberId ? (
                 <div className="portal-form-group">
                   <label className="portal-label" htmlFor={`kyc-reason-${item.memberId}`}>{t('Lý do từ chối *', 'Reason for rejection *')}</label>
-                  <textarea id={`kyc-reason-${item.memberId}`} className="portal-input" rows={2} maxLength={255} value={reason}
+                  <textarea id={`kyc-reason-${item.memberId}`} className="portal-textarea" rows={2} maxLength={255} value={reason}
                     onChange={(event) => setReason(event.target.value)} style={{ width: '100%' }} />
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
                     <button type="button" className="btn-secondary" onClick={() => { setRejecting(null); setReason(''); }}>{t('Hủy', 'Cancel')}</button>

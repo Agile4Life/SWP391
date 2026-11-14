@@ -111,6 +111,7 @@ export function StaffReceptionPage() {
   const [trialRejectReason, setTrialRejectReason] = useState('');
   const [isSubmittingTrialReject, setIsSubmittingTrialReject] = useState(false);
   const [trialRejectError, setTrialRejectError] = useState<StaffMessage | null>(null);
+  const [todoFilter, setTodoFilter] = useState<'all' | 'plan' | 'pt' | 'trial' | 'hold'>('all');
 
   useEffect(() => {
     setReceiptImage(null);
@@ -463,7 +464,7 @@ export function StaffReceptionPage() {
             </div>
             <h2 className="portal-state__title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
               {t("Không có quyền truy cập")}</h2>
-            <p style={{ color: 'var(--color-text-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
+            <p style={{ color: 'var(--portal-muted)', maxWidth: '480px', margin: '0 auto 20px auto' }}>
               {t("Chỉ Lễ tân và Quản lý trung tâm mới truy cập được quầy này.")}</p>
             <Link to="/portal" className="btn-secondary">
               {t("Về trang chủ Portal")}</Link>
@@ -606,8 +607,8 @@ export function StaffReceptionPage() {
 
             {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
             {searchResults.length > 1 && (
-              <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)' }}>
-                <div style={{ fontSize: '0.86rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
+              <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--portal-border)' }}>
+                <div style={{ fontSize: '0.86rem', color: 'var(--portal-muted)', marginBottom: '8px' }}>
                   {t("Tìm thấy ")}{searchResults.length} {t(" hội viên. Chọn hội viên để kiểm tra yêu cầu:")}</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {searchResults.map((m) => (
@@ -637,8 +638,32 @@ export function StaffReceptionPage() {
               <RefreshButton label={t("Làm mới danh sách")} onClick={() => void reloadTodo()} disabled={loadingTodo} />
             </div>
 
+            {todoCount > 0 && (
+              <div className="filter-chips" style={{ marginBottom: 12 }} role="group" aria-label={t('Lọc danh sách cần xử lý', 'Filter pending queue')}>
+                {[
+                  { key: 'all' as const, label: t('Tất cả', 'All'), count: todoCount },
+                  { key: 'plan' as const, label: t('Gói tập', 'Packages'), count: pendingList.length },
+                  { key: 'pt' as const, label: t('Buổi PT', 'PT sessions'), count: unpaidPt.length },
+                  { key: 'trial' as const, label: t('Trải nghiệm', 'Trials'), count: trialList.length },
+                  { key: 'hold' as const, label: t('Bảo lưu', 'Holds'), count: holdList.length },
+                ]
+                  .filter((tab) => tab.key === 'all' || tab.count > 0)
+                  .map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={`filter-chip${todoFilter === tab.key ? ' is-active' : ''}`}
+                      aria-pressed={todoFilter === tab.key}
+                      onClick={() => setTodoFilter(tab.key)}
+                    >
+                      {tab.label} ({tab.count})
+                    </button>
+                  ))}
+              </div>
+            )}
+
             <div className="reception-todo">
-              {loadingPending ? (
+              {(todoFilter === 'all' || todoFilter === 'plan') && (loadingPending ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
                     {[1, 2].map((idx) => (
@@ -651,8 +676,8 @@ export function StaffReceptionPage() {
                           alignItems: 'center',
                           padding: '14px 18px',
                           borderRadius: '10px',
-                          border: '1px solid var(--color-border-medium)',
-                          backgroundColor: 'var(--color-bg-card)',
+                          border: '1px solid var(--portal-border-strong)',
+                          backgroundColor: 'var(--portal-surface)',
                         }}
                       >
                         <div style={{ flex: 1 }}>
@@ -689,10 +714,10 @@ export function StaffReceptionPage() {
                             gap: '12px',
                             padding: '14px 18px',
                             borderRadius: '10px',
-                            border: isSelected ? '2px solid var(--color-accent-gold)' : '1px solid var(--color-border-medium)',
-                            backgroundColor: isSelected ? 'var(--color-bg-warm)' : 'var(--color-bg-card)',
+                            border: isSelected ? '2px solid var(--portal-salmon)' : '1px solid var(--portal-border-strong)',
+                            backgroundColor: isSelected ? 'var(--portal-raised)' : 'var(--portal-surface)',
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease',
+                            transition: 'border-color 0.15s ease, background-color 0.15s ease',
                           }}
                         >
                           <div>
@@ -702,25 +727,25 @@ export function StaffReceptionPage() {
                                 style={{
                                   fontVariantNumeric: 'tabular-nums',
                                   fontWeight: 700,
-                                  color: 'var(--color-accent-gold)',
+                                  color: 'var(--portal-salmon)',
                                   fontSize: '0.92rem',
                                 }}
                               >
                                 {t("Yêu cầu #")}{item.id}
                               </span>
                               <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                                 ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
                               </span>
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '4px' }}>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '4px' }}>
                               {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
                             </div>
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-main)' }}>
+                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--portal-paper)' }}>
                                 {vnd(item.packagePrice)}
                               </div>
                               <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
@@ -753,9 +778,9 @@ export function StaffReceptionPage() {
                       );
                     })}
                   </>
-                )}
+                ))}
 
-              {loadingPt ? (
+              {(todoFilter === 'all' || todoFilter === 'pt') && (loadingPt ? (
                   <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
                 ) : ptError ? (
                   <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
@@ -777,20 +802,20 @@ export function StaffReceptionPage() {
                             gap: '14px',
                             padding: '16px 18px',
                             borderRadius: '10px',
-                            border: '1px solid var(--color-border-medium)',
-                            backgroundColor: 'var(--color-bg-warm)',
+                            border: '1px solid var(--portal-border-strong)',
+                            backgroundColor: 'var(--portal-raised)',
                           }}
                         >
                           <div style={{ flex: 1, minWidth: 240 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span className="reception-todo__tag reception-todo__tag--pt">{t("Buổi PT")}</span>
-                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--color-accent-gold)', fontSize: '0.92rem' }}>
+                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
                                 PT #{item.id}
                               </span>
                               <strong>{item.memberName}</strong>
                               {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
                               {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
                               <strong>{vnd(item.hourlyRate)}</strong>
                             </div>
@@ -817,9 +842,9 @@ export function StaffReceptionPage() {
                       );
                     })}
                   </>
-                )}
+                ))}
 
-              {loadingTrials ? (
+              {(todoFilter === 'all' || todoFilter === 'trial') && (loadingTrials ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách đơn đăng ký trải nghiệm...")}</span>
                     <div
@@ -827,8 +852,8 @@ export function StaffReceptionPage() {
                       style={{
                         padding: '14px 18px',
                         borderRadius: '10px',
-                        border: '1px solid var(--color-border-medium)',
-                        backgroundColor: 'var(--color-bg-card)',
+                        border: '1px solid var(--portal-border-strong)',
+                        backgroundColor: 'var(--portal-surface)',
                       }}
                     >
                       <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
@@ -850,8 +875,8 @@ export function StaffReceptionPage() {
                             gap: '14px',
                             padding: '16px 18px',
                             borderRadius: '10px',
-                            border: '1px solid var(--color-border-medium)',
-                            backgroundColor: 'var(--color-bg-warm)',
+                            border: '1px solid var(--portal-border-strong)',
+                            backgroundColor: 'var(--portal-raised)',
                           }}
                         >
                           <div style={{ flex: 1, minWidth: 260 }}>
@@ -868,7 +893,7 @@ export function StaffReceptionPage() {
                                 {t("Đơn thử #")}{item.id}
                               </span>
                               <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                                 ({item.membershipCode || t('Hội viên mới')})
                               </span>
                               <span
@@ -885,10 +910,10 @@ export function StaffReceptionPage() {
                               </span>
                             </div>
 
-                            <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--color-text-muted)', display: 'grid', gap: '4px' }}>
+                            <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--portal-muted)', display: 'grid', gap: '4px' }}>
                               <div>
                                 <strong>{t("Tên trên giấy tờ:")}</strong>{' '}
-                                <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{item.documentFullName}</span>
+                                <span style={{ color: 'var(--portal-paper)', fontWeight: 600 }}>{item.documentFullName}</span>
                                 {item.memberName !== item.documentFullName && (
                                   <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
                                     {t("(Đồng bộ họ tên: \"")}{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
@@ -936,9 +961,9 @@ export function StaffReceptionPage() {
                       );
                     })}
                   </>
-                )}
+                ))}
 
-              {loadingHolds ? (
+              {(todoFilter === 'all' || todoFilter === 'hold') && (loadingHolds ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách yêu cầu bảo lưu...")}</span>
                     <div
@@ -946,8 +971,8 @@ export function StaffReceptionPage() {
                       style={{
                         padding: '14px 18px',
                         borderRadius: '10px',
-                        border: '1px solid var(--color-border-medium)',
-                        backgroundColor: 'var(--color-bg-card)',
+                        border: '1px solid var(--portal-border-strong)',
+                        backgroundColor: 'var(--portal-surface)',
                       }}
                     >
                       <div className="portal-skeleton-line" style={{ width: '45%', height: 18, marginBottom: 8 }} />
@@ -968,8 +993,8 @@ export function StaffReceptionPage() {
                             gap: '14px',
                             padding: '16px 18px',
                             borderRadius: '10px',
-                            border: '1px solid var(--color-border-medium)',
-                            backgroundColor: 'var(--color-bg-warm)',
+                            border: '1px solid var(--portal-border-strong)',
+                            backgroundColor: 'var(--portal-raised)',
                           }}
                         >
                           <div style={{ flex: 1, minWidth: 260 }}>
@@ -979,19 +1004,19 @@ export function StaffReceptionPage() {
                                 style={{
                                   fontVariantNumeric: 'tabular-nums',
                                   fontWeight: 700,
-                                  color: 'var(--color-accent-gold)',
+                                  color: 'var(--portal-salmon)',
                                   fontSize: '0.92rem',
                                 }}
                               >
                                 {t("Bảo lưu #")}{item.id}
                               </span>
                               <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                                 ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
                               </span>
                               <span className="badge badge-warning">{t("CHỜ DUYỆT BẢO LƯU")}</span>
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--color-text-main)', marginTop: '6px' }}>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
                               {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
                             </div>
                             <div
@@ -999,10 +1024,10 @@ export function StaffReceptionPage() {
                                 marginTop: '8px',
                                 padding: '8px 12px',
                                 borderRadius: '8px',
-                                backgroundColor: 'var(--color-bg-card)',
-                                border: '1px solid var(--color-border-subtle)',
+                                backgroundColor: 'var(--portal-surface)',
+                                border: '1px solid var(--portal-border)',
                                 fontSize: '0.88rem',
-                                color: 'var(--color-text-main)',
+                                color: 'var(--portal-paper)',
                               }}
                             >
                               <strong>{t("Lý do hội viên nhập:")}</strong> {item.holdReason}
@@ -1018,10 +1043,23 @@ export function StaffReceptionPage() {
                       );
                     })}
                   </>
-                )}
+                ))}
 
               {!loadingTodo && !ptError && todoCount === 0 && (
                 <div data-i18n-managed className="reception-todo__empty">{t("Không có việc nào cần xử lý.")}</div>
+              )}
+              {!loadingTodo && todoCount > 0 && todoFilter !== 'all' && (
+                (todoFilter === 'plan' && pendingList.length === 0)
+                || (todoFilter === 'pt' && unpaidPt.length === 0 && !ptError)
+                || (todoFilter === 'trial' && trialList.length === 0)
+                || (todoFilter === 'hold' && holdList.length === 0)
+              ) && (
+                <div data-i18n-managed className="reception-todo__empty">
+                  {t('Không có mục nào trong nhóm đã chọn.', 'No items in the selected category.')}{' '}
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setTodoFilter('all')}>
+                    {t('Xem tất cả', 'Show all')}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1067,8 +1105,8 @@ export function StaffReceptionPage() {
 
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
-                  <span>{t("Số CCCD (Bảo mật)")}</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-main)' }}>
+                  <span>{t('Số CCCD', 'Identity card number')}</span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)' }}>
                     {selectedMember.citizenId ? maskCitizenId(selectedMember.citizenId) : t('Chưa cập nhật')}
                   </span>
                 </div>
@@ -1086,7 +1124,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>{t("Thời hạn gói")}</span>
-                  <span style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--portal-salmon)', fontWeight: 600 }}>
                     {selectedPending
                       ? t(`${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} ngày)`, `${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} days)`)
                       : activeCandidate
@@ -1127,8 +1165,8 @@ export function StaffReceptionPage() {
               </div>
 
               {!selectedPending && (activeCandidate || selectedMember.status?.toUpperCase() === 'ACTIVE') && (
-                <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                  <span style={{ fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+                <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--portal-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <span style={{ fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
                     {t("Hủy gói & hoàn tiền về Ví (Quản lý duyệt):")}</span>
                   <button
                     type="button"
@@ -1144,10 +1182,10 @@ export function StaffReceptionPage() {
             /* BR-01: Trạng thái trống rõ ràng */
             <div data-i18n-managed className="portal-empty" style={{ padding: '40px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--portal-salmon)', marginBottom: '10px' }}>{t("TRA CỨU")}</div>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: 'var(--color-text-main)' }}>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: 'var(--portal-paper)' }}>
                 {hasSearched ? t('Không tìm thấy hội viên') : t('Chưa chọn hội viên')}
               </h3>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', margin: 0 }}>
+              <p style={{ color: 'var(--portal-muted)', fontSize: '0.88rem', margin: 0 }}>
                 {hasSearched
                   ? t(`Không có kết quả nào khớp với từ khóa "${searchQuery}". Vui lòng kiểm tra lại SĐT, Mã hội viên hoặc CCCD.`, `No results match "${searchQuery}". Please check the phone number, membership code or identity card.`)
                   : t('Chọn một yêu cầu hoặc tra cứu hội viên.')}
@@ -1191,7 +1229,7 @@ export function StaffReceptionPage() {
                 </Select>
               )}
               {!selectedPending && !loadingOffers && selectedMember && hasRunningPaidPeriod && (
-                <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+                <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
                   {t('Hội viên còn gói đang hiệu lực nên chỉ gia hạn được; không thể mua thêm gói mới song song.', 'This member still has a running membership, so it can only be renewed; a second new package cannot be bought alongside it.')}
                 </p>
               )}
@@ -1216,8 +1254,8 @@ export function StaffReceptionPage() {
                   style={{
                     fontWeight: 700,
                     fontSize: '1rem',
-                    color: 'var(--color-accent-gold)',
-                    backgroundColor: 'var(--color-bg-warm)',
+                    color: 'var(--portal-salmon)',
+                    backgroundColor: 'var(--portal-raised)',
                     cursor: 'not-allowed',
                   }}
                 />
@@ -1282,7 +1320,7 @@ export function StaffReceptionPage() {
           busy={isSubmittingTopup}
         >
           <form onSubmit={(e) => void handleSubmitCounterTopup(e)} style={{ display: 'grid', gap: '14px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
               {t('Hội viên: ', 'Member: ')}
               <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
               <br />
@@ -1392,7 +1430,7 @@ export function StaffReceptionPage() {
           busy={isSubmittingCancel}
         >
           <form onSubmit={(e) => void handleSubmitCancellationRequest(e)} style={{ display: 'grid', gap: '14px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
               {t("Hội viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
               {activeCandidate && (
                 <>
@@ -1471,19 +1509,19 @@ export function StaffReceptionPage() {
           <div style={{ display: 'grid', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.9rem' }}>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Hội viên")}</span>
+                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Hội viên")}</span>
                 <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ')})
               </div>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
+                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
                 <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)')}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
+                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
                 <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{inspectingTrial.documentNumberMasked}</strong>
               </div>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Họ và tên trên giấy tờ")}</span>
+                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Họ và tên trên giấy tờ")}</span>
                 <strong style={{ color: 'var(--portal-salmon)' }}>{inspectingTrial.documentFullName}</strong>
               </div>
             </div>
@@ -1495,19 +1533,21 @@ export function StaffReceptionPage() {
                 background: 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)',
                 border: '1px solid var(--portal-border)',
                 fontSize: '0.85rem',
-                color: 'var(--color-text-main)',
+                color: 'var(--portal-paper)',
               }}
             >
-              ℹ️ <strong>{t("Lưu ý nghiệp vụ:")}</strong> {t(" Khi Lễ tân bấm ")}<strong>{t("Duyệt & Kích hoạt")}</strong>{t(", hệ thống sẽ tự động đồng bộ họ tên tài khoản thành ")}<strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> {t(" và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.")}</div>
+              <strong>{t("Lưu ý nghiệp vụ:")}</strong> {t(" Khi Lễ tân bấm ")}<strong>{t("Duyệt & Kích hoạt")}</strong>{t(", hệ thống sẽ tự động đồng bộ họ tên tài khoản thành ")}<strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> {t(" và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.")}</div>
 
             {/* Ảnh mặt trước & mặt sau */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '4px' }}>
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
-                  {t("Ảnh mặt trước (")}{inspectingTrial.documentType})
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--portal-muted)' }}>
+                  {t('Ảnh mặt trước (', 'Front photo (')}
+                  {inspectingTrial.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Identity card')}
+                  {')'}
                 </div>
                 {inspectingTrial.frontImageUrl ? (
-                  <div data-i18n-managed style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                  <div data-i18n-managed style={{ border: '1px solid var(--portal-border-strong)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
                     <img data-i18n-managed
                       src={inspectingTrial.frontImageUrl}
                       alt={t("Mặt trước giấy tờ")}
@@ -1515,17 +1555,17 @@ export function StaffReceptionPage() {
                     />
                   </div>
                 ) : (
-                  <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                  <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--portal-surface)', borderRadius: '8px', border: '1px dashed var(--portal-border-strong)', color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                     {t("Chưa có ảnh mặt trước")}</div>
                 )}
               </div>
 
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-muted)' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--portal-muted)' }}>
                   {t("Ảnh mặt sau (")}{inspectingTrial.documentType === 'PASSPORT' ? t('Trang thị thực (tùy chọn)') : t('Mặt sau CCCD')})
                 </div>
                 {inspectingTrial.backImageUrl ? (
-                  <div data-i18n-managed style={{ border: '1px solid var(--color-border-medium)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
+                  <div data-i18n-managed style={{ border: '1px solid var(--portal-border-strong)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
                     <img data-i18n-managed
                       src={inspectingTrial.backImageUrl}
                       alt={t("Mặt sau giấy tờ")}
@@ -1533,13 +1573,13 @@ export function StaffReceptionPage() {
                     />
                   </div>
                 ) : (
-                  <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--color-bg-card)', borderRadius: '8px', border: '1px dashed var(--color-border-medium)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                  <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--portal-surface)', borderRadius: '8px', border: '1px dashed var(--portal-border-strong)', color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                     {t("Chưa có ảnh mặt sau")}</div>
                 )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--color-border-medium)', paddingTop: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--portal-border-strong)', paddingTop: '14px' }}>
               <button
                 type="button"
                 className="btn-secondary"
@@ -1576,7 +1616,7 @@ export function StaffReceptionPage() {
           busy={isSubmittingTrialReject}
         >
           <form onSubmit={(e) => void handleSubmitRejectTrial(e)} style={{ display: 'grid', gap: '14px' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
               {t("Nhập lý do từ chối để hội viên nộp lại giấy tờ.")}</p>
 
             <div className="portal-form-group" style={{ margin: 0 }}>

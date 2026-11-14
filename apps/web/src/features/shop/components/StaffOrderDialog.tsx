@@ -169,8 +169,14 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         </div>
 
         <div
-          className="portal-card"
-          style={{ display: 'grid', gap: 6, padding: '12px 14px' }}
+          style={{
+            display: 'grid',
+            gap: 6,
+            padding: '12px 14px',
+            borderRadius: 12,
+            border: '1px solid var(--portal-border)',
+            background: 'var(--portal-raised)',
+          }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span className="muted">{sourceText("Tạm tính")}</span>
@@ -197,7 +203,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
         </div>
 
         {order.fulfillment === 'delivery' && order.shipping ? (
-          <div className="portal-card" style={{ padding: '12px 14px' }}>
+          <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid var(--portal-border)', background: 'var(--portal-raised)' }}>
             <h3 className="portal-card-title" style={{ marginBottom: 6 }}>
               {sourceText("Địa chỉ giao hàng")}</h3>
             <p style={{ margin: 0 }}>
@@ -219,7 +225,7 @@ export function StaffOrderDialog({ order, onClose, onUpdated }: StaffOrderDialog
             )}
           </div>
         ) : (
-          <div className="portal-card" style={{ padding: '12px 14px' }}>
+          <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid var(--portal-border)', background: 'var(--portal-raised)' }}>
             <h3 className="portal-card-title" style={{ marginBottom: 6 }}>
               {sourceText("Nhận tại quầy SÖL")}</h3>
             <p style={{ margin: 0 }}>

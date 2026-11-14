@@ -415,26 +415,26 @@
    MODAL: ENROLLED STUDENTS LIST & HEALTH NOTES (Rộng rãi & dễ đọc)
    ========================================================================== */
 dialog.portal-dialog.coach-students-modal-dialog {
-  width: min(980px, calc(100vw - 40px)) !important;
-  max-width: 980px !important;
-  max-height: min(88vh, 880px) !important;
-  box-sizing: border-box !important;
-  border-radius: 18px !important;
-  margin: auto !important;
-  overflow: hidden !important;
-  border: 1px solid var(--portal-border) !important;
-  background: var(--portal-surface) !important;
+  width: min(980px, calc(100vw - 40px));
+  max-width: 980px;
+  max-height: min(88vh, 880px);
+  box-sizing: border-box;
+  border-radius: 18px;
+  margin: auto;
+  overflow: hidden;
+  border: 1px solid var(--portal-border);
+  background: var(--portal-surface);
 }
 
 dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  padding: 24px 28px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  max-height: min(88vh, 880px) !important;
-  overflow: hidden !important;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  max-height: min(88vh, 880px);
+  overflow: hidden;
 }
 
 .students-modal-body {
@@ -473,14 +473,12 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   overflow-y: auto;
   padding-right: 8px;
   margin-top: 4px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
   scrollbar-color: var(--portal-salmon) var(--portal-raised);
 }
 
 .students-list-wrap::-webkit-scrollbar {
-  display: none;
-  width: 0;
+  width: 6px;
 }
 
 .students-list-wrap::-webkit-scrollbar-track {
@@ -834,10 +832,22 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 .status-pill {
-  padding: 4px 12px;
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: #dc2626;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.status-pill.is-present {
+  background: rgba(34, 197, 94, 0.14);
+  color: light-dark(#226442, #4ade80);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.status-pill.is-absent {
+  background: rgba(220, 38, 38, 0.14);
+  color: light-dark(#b91c1c, #fca5a5);
+  border: 1px solid rgba(220, 38, 38, 0.35);
 }
 
 .roster-health-box .roster-detail-label {

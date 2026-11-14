@@ -140,9 +140,7 @@ export function CoachTrainingPlanPage() {
   // AI Modal States
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiSelectedMemberId, setAiSelectedMemberId] = useState<number | null>(null);
-  const [aiCoachPrompt, setAiCoachPrompt] = useState(
-    'Ví dụ: tối đa 3-4 buổi/tuần, chú ý tiền sử xương khớp'
-  );
+  const [aiCoachPrompt, setAiCoachPrompt] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiResult, setAiResult] = useState<AiWorkoutPlanResult | null>(null);
   const [appliedRecommendationId, setAppliedRecommendationId] = useState<number | undefined>();
@@ -941,7 +939,7 @@ export function CoachTrainingPlanPage() {
                 className="ai-prompt-textarea"
                 value={aiCoachPrompt}
                 onChange={(e) => setAiCoachPrompt(e.target.value)}
-                placeholder={t("Ví dụ: 4 buổi/tuần, tăng cơ ngực và mông, tránh tạ đè nén khớp gối")}
+                placeholder={t("Ví dụ: tối đa 3–4 buổi/tuần, chú ý tiền sử xương khớp", "Example: max 3–4 sessions/week, note joint history")}
                 disabled={isGeneratingAi}
               />
             </div>

@@ -230,7 +230,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     expect(host.textContent).toContain('Lê Hoàng Long');
     expect(host.textContent).toContain('Trần Thị Thu Thảo');
     expect(host.textContent).toContain('Mục tiêu thể lực');
-    expect(host.textContent).toContain('Lưu ý sức khỏe & Chấn thương');
+    expect(host.textContent).toContain('Lưu ý sức khỏe & chấn thương');
 
     // Ensure emojis are not present in the students tab
     expect(host.textContent).not.toContain('📧');
@@ -255,8 +255,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     });
 
     expect(coachingApi.getSessionStudents).toHaveBeenCalled();
-    expect(host.textContent).toContain('Mục tiêu thể lực (fitness_goal)');
-    expect(host.textContent).toContain('Lưu ý sức khỏe & Chấn thương (health_notes)');
+    expect(host.textContent).toContain('Mục tiêu thể lực:');
+    expect(host.textContent).toContain('Lưu ý sức khỏe & chấn thương:');
     expect(host.textContent).toContain('Lê Hoàng Long');
     expect(host.textContent).toContain('thoát vị đĩa đệm');
 

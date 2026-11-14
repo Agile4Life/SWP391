@@ -137,7 +137,7 @@ export function PtAttendancePage() {
         </div>
         <p className="form-hint">{t('Tối đa 62 ngày mỗi lần xem.', 'Up to 62 days at a time.')}</p>
       </div>
-      {invalidRange && <div className="portal-card" role="alert">{t('Ngày bắt đầu phải trước ngày kết thúc.', 'The start date must be before the end date.')}</div>}
+      {invalidRange && <div className="portal-alert" role="alert">{t('Ngày bắt đầu phải trước ngày kết thúc.', 'The start date must be before the end date.')}</div>}
       <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ marginTop: 16 }}>
         {FILTERS.map((value) => (
           <button key={value} type="button" role="tab" aria-selected={filter === value}
@@ -146,7 +146,7 @@ export function PtAttendancePage() {
           </button>
         ))}
       </div>
-      {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong> <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null || loading} onClick={() => void load()}>{t('Thử lại', 'Retry')}</button></div>}
+      {error && <div className="portal-alert" role="alert"><strong>{t(error)}</strong> <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null || loading} onClick={() => void load()}>{t('Thử lại', 'Retry')}</button></div>}
       {busyId !== null && <p role="status">{t('Đang cập nhật điểm danh…', 'Updating attendance…')}</p>}
       {loading && rows.length === 0 ? <LoadingSkeleton label={t('Đang tải điểm danh', 'Loading attendance')} /> : visible.length === 0 ? (
         <div className="portal-card" role="status">{t('Không có buổi PT nào trong khoảng này.', 'No 1:1 sessions in this range.')}</div>

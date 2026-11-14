@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Select } from '../../shared/ui/Select';
 import { sourceMessage, useI18n } from '../../shared/i18n';
 import { getCurrentUser } from '../../shared/api/client';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
@@ -99,7 +100,7 @@ export function CounterRequestsPanel({ queue }: { queue: CounterQueue }) {
         {t('Yêu cầu gói tập và buổi PT 1:1 đang chờ thu tiền tại quầy. Danh sách tự cập nhật mỗi 30 giây; nút làm mới ở đầu trang tải lại ngay.', 'Membership requests and 1:1 sessions waiting to be paid at the counter. The list refreshes every 30 seconds; the refresh button at the top reloads it now.')}
       </p>
 
-      {error && <div className="portal-card" role="alert"><strong>{t(error)}</strong></div>}
+      {error && <div className="portal-alert" role="alert">{t(error)}</div>}
 
       <div className="portal-card">
         <h2 className="portal-card-title">{t(`Gói tập chờ thu tiền (${pending.length})`, `Memberships awaiting payment (${pending.length})`)}</h2>
@@ -108,7 +109,7 @@ export function CounterRequestsPanel({ queue }: { queue: CounterQueue }) {
         ) : (
           <ul className="stack" style={{ listStyle: 'none', padding: 0, margin: 0 }} aria-label={t('Yêu cầu gói tập chờ thu tiền', 'Membership requests awaiting payment')}>
             {pending.map((item) => (
-              <li key={item.id} data-testid={`counter-request-${item.id}`} className="portal-card" style={{ display: 'grid', gap: 10 }}>
+              <li key={item.id} data-testid={`counter-request-${item.id}`} style={{ display: 'grid', gap: 10, padding: '12px 14px', borderRadius: 12, border: '1px solid var(--portal-border)', background: 'var(--portal-raised)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div>
                     <strong>{item.memberName}</strong>{item.membershipCode ? <span className="badge badge-neutral" style={{ marginLeft: 8 }}>{item.membershipCode}</span> : null}
@@ -121,10 +122,10 @@ export function CounterRequestsPanel({ queue }: { queue: CounterQueue }) {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   <label className="shop-sr-only" htmlFor={`counter-method-${item.id}`}>{t('Hình thức thu tiền', 'Payment method')}</label>
-                  <select id={`counter-method-${item.id}`} className="portal-select counter-method-select" style={{ width: 'auto' }} value={methodOf(item.id)} disabled={busyKey !== null}
+                  <Select id={`counter-method-${item.id}`} className="portal-select counter-method-select" style={{ width: 'auto' }} value={methodOf(item.id)} disabled={busyKey !== null}
                     onChange={(event) => setMethods((current) => ({ ...current, [item.id]: event.target.value as CounterMethod }))}>
                     {METHODS.map((method) => <option key={method.value} value={method.value}>{t(method.vi, method.en)}</option>)}
-                  </select>
+                  </Select>
                   <button type="button" className="btn-primary btn-sm" disabled={busyKey !== null} onClick={() => void collect(item)}>
                     {busyKey === `sub-${item.id}` ? t('Đang xử lý…', 'Processing…') : t('Xác nhận thu tiền', 'Confirm payment')}
                   </button>
@@ -143,7 +144,7 @@ export function CounterRequestsPanel({ queue }: { queue: CounterQueue }) {
         ) : (
           <ul className="stack" style={{ listStyle: 'none', padding: 0, margin: 0 }} aria-label={t('Buổi PT chờ thu tiền', '1:1 sessions awaiting payment')}>
             {unpaidPt.map((item) => (
-              <li key={item.id} data-testid={`counter-pt-${item.id}`} className="portal-card" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <li key={item.id} data-testid={`counter-pt-${item.id}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '12px 14px', borderRadius: 12, border: '1px solid var(--portal-border)', background: 'var(--portal-raised)' }}>
                 <div>
                   <strong>{item.memberName}</strong>
                   <div className="muted">PT #{item.id} · {t('HLV', 'Coach')} {item.coachName} · {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · <strong>{formatVnd(item.hourlyRate)}</strong></div>

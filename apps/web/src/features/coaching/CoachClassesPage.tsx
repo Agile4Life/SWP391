@@ -544,9 +544,9 @@ export function CoachClassesPage() {
               onChange={(e) => setAllStudentsLevelFilter(e.target.value)}
             >
               <option value="all">{t("Tất cả trình độ")}</option>
-              <option value="beginner">{t("Cơ bản (Beginner)")}</option>
-              <option value="intermediate">{t("Trung cấp (Intermediate)")}</option>
-              <option value="advanced">{t("Nâng cao (Advanced)")}</option>
+              <option value="beginner">{t("Cơ bản", "Beginner")}</option>
+              <option value="intermediate">{t("Trung cấp", "Intermediate")}</option>
+              <option value="advanced">{t("Nâng cao", "Advanced")}</option>
             </Select>
           </div>
 
@@ -586,7 +586,7 @@ export function CoachClassesPage() {
                         {st.phone && <span>{t("SĐT: ")}{st.phone}</span>}
                         {st.emergencyContactName && (
                           <span data-i18n-managed className="emergency-tag">
-                            {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
+                            {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || '—'})
                           </span>
                         )}
                       </div>
@@ -595,12 +595,12 @@ export function CoachClassesPage() {
 
                   <div className="student-details-grid">
                     <div className="student-detail-box goal-box">
-                      <span className="box-title">{t("Mục tiêu thể lực (fitness_goal):")}</span>
+                      <span className="box-title">{t("Mục tiêu thể lực:", "Fitness goal:")}</span>
                       <p className="box-content">{st.fitnessGoal || t('Chưa cập nhật')}</p>
                     </div>
 
                     <div className="student-detail-box health-box">
-                      <span className="box-title">{t("Lưu ý sức khỏe & Chấn thương (health_notes):")}</span>
+                      <span className="box-title">{t("Lưu ý sức khỏe & chấn thương:", "Health & injury notes:")}</span>
                       <p className="box-content warning-text">
                         {st.healthNotes || t('Sức khỏe bình thường, không có ghi chú chấn thương.')}
                       </p>
@@ -1276,7 +1276,7 @@ export function CoachClassesPage() {
                           {st.phone && <span>{t("SĐT: ")}{st.phone}</span>}
                           {st.emergencyContactName && (
                             <span data-i18n-managed className="emergency-tag">
-                              {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || 'N/A'})
+                              {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || '—'})
                             </span>
                           )}
                         </div>
@@ -1285,12 +1285,12 @@ export function CoachClassesPage() {
 
                     <div className="student-details-grid">
                       <div className="student-detail-box goal-box">
-                        <span className="box-title">{t("Mục tiêu thể lực (fitness_goal):")}</span>
+                        <span className="box-title">{t("Mục tiêu thể lực:", "Fitness goal:")}</span>
                         <p className="box-content">{st.fitnessGoal || t('Chưa cập nhật')}</p>
                       </div>
 
                       <div className="student-detail-box health-box">
-                        <span className="box-title">{t("Lưu ý sức khỏe & Chấn thương (health_notes):")}</span>
+                        <span className="box-title">{t("Lưu ý sức khỏe & chấn thương:", "Health & injury notes:")}</span>
                         <p className="box-content warning-text">
                           {st.healthNotes || t('Chưa cập nhật')}
                         </p>
@@ -1310,7 +1310,7 @@ export function CoachClassesPage() {
                   : t(`Hiển thị ${filteredStudents.length} / ${students.length} học viên`, `Showing ${filteredStudents.length} / ${students.length} members`)}
               </span>
               <div style={{ display: 'flex', gap: 10 }}>
-                {activeSession.status === 'scheduled' && (
+                {activeSession.status === 'scheduled' ? (
                   <button data-i18n-managed
                     type="button"
                     className="btn-secondary"
@@ -1323,9 +1323,10 @@ export function CoachClassesPage() {
                     data-testid="cancel-coach-session-btn"
                   >
                     {t("Hủy buổi dạy")}</button>
+                ) : (
+                  <button type="button" className="btn-secondary" onClick={handleCloseModal}>
+                    {t("Đóng")}</button>
                 )}
-                <button type="button" className="btn-secondary" onClick={handleCloseModal}>
-                  {t("Đóng")}</button>
               </div>
             </div>
           </div>

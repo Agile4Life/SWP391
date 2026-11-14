@@ -371,6 +371,10 @@
 .plan-review__day span { color: var(--portal-muted); overflow-wrap: anywhere; }
 .plan-review__total { margin: 8px 0 0; font-size: 0.86rem; color: var(--portal-muted); }
 
+@media (max-width: 1024px) {
+  .portal-v2 .ai-prompt-textarea { font-size: 16px; }
+}
+
 @media (max-width: 767px) {
   .plan-step { flex-basis: calc(50% - 5px); }
   .plan-review__day { grid-template-columns: minmax(0, 1fr); gap: 2px; }

@@ -1006,7 +1006,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                             {formatTimeRange(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
-                          <span>{t("Ngày: ")}{record.sessionDate}</span>
+                          <span>{t("Ngày: ")}{formatCenterDate(record.sessionDate)}</span>
                         </div>
                       </div>
                       <span className="history-saved-badge">{t("Đã lưu: ")}{record.savedAt}</span>
@@ -1083,7 +1083,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                             {formatTimeRange(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
-                          <span>{t("Ngày: ")}{record.sessionDate}</span>
+                          <span>{t("Ngày: ")}{formatCenterDate(record.sessionDate)}</span>
                         </div>
                       </div>
                       <span className="history-saved-badge">{t("Đã đánh giá: ")}{record.savedAt}</span>
@@ -1135,7 +1135,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             <div className="modal-record-meta-bar">
               <span>{t("Phòng: ")}<strong>{editingAttendanceRecord.roomName}</strong></span>
               <span>{t("Giờ: ")}<strong>{formatTimeRange(editingAttendanceRecord.startTime, editingAttendanceRecord.endTime)}</strong></span>
-              <span>{t("Ngày: ")}<strong>{editingAttendanceRecord.sessionDate}</strong></span>
+              <span>{t("Ngày: ")}<strong>{formatCenterDate(editingAttendanceRecord.sessionDate)}</strong></span>
             </div>
 
             <div className="modal-students-edit-list">
@@ -1190,18 +1190,18 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             <div className="modal-footer-actions">
               <button
                 type="button"
-                className="btn-modal-cancel"
+                className="btn-secondary"
                 disabled={saving}
                 onClick={() => setEditingAttendanceRecord(null)}
               >
                 {t("Hủy bỏ")}</button>
               <button
                 type="button"
-                className="btn-modal-save"
+                className="btn-primary"
                 disabled={saving}
                 onClick={handleSaveModalAttendance}
               >
-                {t("Lưu cập nhật")}</button>
+                {saving ? t('Đang lưu...') : t("Lưu cập nhật")}</button>
             </div>
           </div>
         </Modal>
@@ -1220,7 +1220,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             <div className="modal-record-meta-bar">
               <span>{t("Phòng: ")}<strong>{editingEvalRecord.roomName}</strong></span>
               <span>{t("Giờ: ")}<strong>{formatTimeRange(editingEvalRecord.startTime, editingEvalRecord.endTime)}</strong></span>
-              <span>{t("Ngày: ")}<strong>{editingEvalRecord.sessionDate}</strong></span>
+              <span>{t("Ngày: ")}<strong>{formatCenterDate(editingEvalRecord.sessionDate)}</strong></span>
             </div>
 
             <div className="modal-students-edit-list">
@@ -1278,18 +1278,18 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             <div className="modal-footer-actions">
               <button
                 type="button"
-                className="btn-modal-cancel"
+                className="btn-secondary"
                 disabled={saving}
                 onClick={() => setEditingEvalRecord(null)}
               >
                 {t("Hủy bỏ")}</button>
               <button
                 type="button"
-                className="btn-modal-save"
+                className="btn-primary"
                 disabled={saving}
                 onClick={handleSaveModalEval}
               >
-                {t("Lưu cập nhật")}</button>
+                {saving ? t('Đang lưu...') : t("Lưu cập nhật")}</button>
             </div>
           </div>
         </Modal>

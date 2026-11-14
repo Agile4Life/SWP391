@@ -45,8 +45,10 @@ describe('CounterRequestsPanel (manager)', () => {
   it('collects a membership payment with the chosen method, shows the invoice and refreshes the queue', async () => {
     mocks.processPayment.mockResolvedValue({ id: 5, memberId: 7, amount: 299000, method: 'pos', status: 'success', paidAt: '2026-11-12T10:00:00', invoiceNumber: 'INV-1' });
     await render(queue());
-    const method = host.querySelector<HTMLSelectElement>('#counter-method-31')!;
-    await act(async () => { method.value = 'pos'; method.dispatchEvent(new Event('change', { bubbles: true })); });
+    const methodTrigger = host.querySelector<HTMLButtonElement>('#counter-method-31')!;
+    await act(async () => { methodTrigger.click(); });
+    const posOption = [...host.querySelectorAll<HTMLElement>('[role="option"]')].find((option) => option.textContent?.includes('POS'))!;
+    await act(async () => { posOption.click(); });
     await act(async () => button('Xác nhận thu tiền').click());
     expect(mocks.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 7, subscriptionId: 31, packageId: 3, amount: 299000, method: 'pos' }));
     expect(host.querySelector('[data-testid="invoice"]')?.textContent).toContain('Nguyễn Văn An');
