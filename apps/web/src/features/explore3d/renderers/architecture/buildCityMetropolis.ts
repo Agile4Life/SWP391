@@ -543,12 +543,58 @@ function addSkyscraper(
     emitted += 1;
   }
 
+  // Shopfront signs along the podium so the ground floor reads as a lived-in street.
+  const signPalette = ['#f07654', '#4fd1c5', '#f6c453', '#8ea7ff', '#ff5d8f'] as const;
+  const signHdr = isLight ? 0.75 : 3.1;
+  const signY = retailH + 1.05;
+  for (const face of [0, 1, 2, 3]) {
+    if (rand() > 0.8) continue;
+    const alongX = face % 2 === 0;
+    const sign = signPalette[Math.floor(rand() * signPalette.length)]!;
+    const len = Math.min(6.5, (alongX ? w : d) * (0.22 + rand() * 0.18));
+    const off = (rand() - 0.5) * ((alongX ? w : d) - len - 2);
+    const sgn = face < 2 ? 1 : -1;
+    if (alongX) {
+      pushBox(buckets.emissive, len, 0.8, 0.14, x + off, signY, z + sgn * (d * 0.5 + 0.2), sign, 0, 0, 0, signHdr);
+      pushBox(buckets.metal, len + 0.3, 0.1, 1.1, x + off, retailH + 0.2, z + sgn * (d * 0.5 + 0.55), mullionTone);
+    } else {
+      pushBox(buckets.emissive, 0.14, 0.8, len, x + sgn * (w * 0.5 + 0.2), signY, z + off, sign, 0, 0, 0, signHdr);
+      pushBox(buckets.metal, 1.1, 0.1, len + 0.3, x + sgn * (w * 0.5 + 0.55), retailH + 0.2, z + off, mullionTone);
+    }
+  }
+
+  // Balconies with glass rails and split-system condensers on mid-rise residential faces.
+  if (detailLevel === 'full') {
+    const acTone = isLight ? '#d9dde2' : '#69717d';
+    const balconyCount = spec.style === 'residential-terrace' ? stories1 : Math.floor(stories1 / 3);
+    for (let sIdx = 1; sIdx < balconyCount; sIdx += 1) {
+      const by = y1Start + 0.6 + sIdx * (spec.style === 'residential-terrace' ? storyH : storyH * 3);
+      const bw = sw1 * (0.18 + rand() * 0.12);
+      const bx = x + (rand() - 0.5) * (sw1 - bw) * 0.8;
+      const sideSgn = rand() > 0.5 ? 1 : -1;
+      pushBox(buckets.opaque, bw, 0.18, 1.5, bx, by, z + sideSgn * (sd1 * 0.5 + 0.7), facadeTone);
+      pushBox(buckets.glass, bw, 0.95, 0.06, bx, by + 0.55, z + sideSgn * (sd1 * 0.5 + 1.43), glassTone);
+      if (rand() > 0.4) {
+        pushBox(buckets.opaque, 0.75, 0.52, 0.42, bx + bw * 0.3, by + 0.35, z + sideSgn * (sd1 * 0.5 + 0.3), acTone);
+      }
+    }
+  }
+
   // Rooftop mechanical penthouse, cooling louvered units, helipad / spire + beacon
   pushBox(buckets.opaque, sw2 + 0.65, 1.15, sd2 + 0.65, x, h + 0.55, z, darkSlate);
   const pentW = sw2 * 0.56;
   const pentD = sd2 * 0.56;
   const pentH = Math.min(4.6, 2.2 + h * 0.02);
   pushBox(buckets.metal, pentW, pentH, pentD, x - sw2 * 0.1, h + 1.1 + pentH * 0.5, z, mullionTone);
+  // Rooftop condensers and a water tank break up the skyline silhouette.
+  const roofTone = isLight ? '#9aa1aa' : '#4a525e';
+  for (let r = 0; r < 3; r += 1) {
+    pushBox(
+      buckets.metal, 1.9, 0.9, 1.4,
+      x + (rand() - 0.5) * sw2 * 0.7, h + 1.65, z + (rand() - 0.5) * sd2 * 0.7, roofTone,
+    );
+  }
+  pushCylinder(buckets.opaque, 1.1, 1.1, 2.2, x + sw2 * 0.28, h + 2.2, z - sd2 * 0.25, isLight ? '#7b6a58' : '#3a3530', 10);
   // Illuminated architectural crown strip on prestige towers
   if (spec.style === 'diagrid-crown' || h >= 72) {
     const crownColor = isLight ? '#b89476' : '#f4cbb4';
