@@ -4,7 +4,12 @@ import * as THREE from 'three';
 import { CAMPUS_FLAGPOLE_ANCHORS } from '../renderers/architecture/buildCampusGeometry';
 import { buildCityMetropolis, buildGymCrown } from '../renderers/architecture/buildCityMetropolis';
 import { useDocumentTheme, type ExploreTheme } from '../renderers/materials';
-import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
+import {
+  SURFACE_DETAIL_PRESETS,
+  applyCityGlazingShader,
+  applySurfaceDetail,
+  createFoliageMaterialBundle,
+} from '../renderers/surfaceDetail';
 import { useExploreStore } from '../state/exploreStore';
 import { CityLife } from './CityLife';
 import { CitySky } from './CitySky';
@@ -21,12 +26,12 @@ export function CityMetropolis() {
   const city = useMemo(() => buildCityMetropolis(theme, tier), [theme, tier]);
   const visible = levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'L1' || focusLevel === 'OUT';
 
-  // Scanned-concrete grain, grime and wet streets break up the flat vertex colours.
+  // Scanned-concrete / asphalt grain & surface roughness from per-vertex `surf`.
   const opaqueMat = useMemo(
     () =>
       applySurfaceDetail(
-        new THREE.MeshStandardMaterial({ name: 'sol-city-opaque', vertexColors: true, roughness: 0.66, envMapIntensity: 1.2 }),
-        { ...SURFACE_DETAIL_PRESETS.wall, texture: undefined, bump: 0, wet: 0.85, wetDarkOnly: true, grime: 0.5 },
+        new THREE.MeshStandardMaterial({ name: 'sol-city-opaque', vertexColors: true, roughness: 0.78, envMapIntensity: 1.05 }),
+        SURFACE_DETAIL_PRESETS.cityOpaque,
       ),
     [],
   );
@@ -34,7 +39,8 @@ export function CityMetropolis() {
     () =>
       applySurfaceDetail(
         new THREE.MeshStandardMaterial({ name: 'sol-city-metal', vertexColors: true, roughness: 0.38, metalness: 0.65, envMapIntensity: 1.5 }),
-        SURFACE_DETAIL_PRESETS.metal,
+        // Relief at 80 cycles/m is sub-pixel from the locked camera distance, so skip it.
+        { ...SURFACE_DETAIL_PRESETS.metal, bump: 0, albedo: 0, roughness: 0 },
       ),
     [],
   );
@@ -58,14 +64,29 @@ export function CityMetropolis() {
   useEffect(() => () => roofGlassMat.dispose(), [roofGlassMat]);
   const glassMat = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        name: 'sol-city-glass',
-        vertexColors: true,
-        roughness: 0.12,
-        metalness: 0.7,
-        envMapIntensity: 1.4,
-      }),
-    [],
+      applyCityGlazingShader(
+        new THREE.MeshStandardMaterial({
+          name: 'sol-city-glass',
+          vertexColors: true,
+          roughness: 0.16,
+          metalness: 0.62,
+          envMapIntensity: 1.15,
+        }),
+        theme === 'light',
+      ),
+    [theme],
+  );
+  const cityFoliageBundle = useMemo(
+    () => createFoliageMaterialBundle('sol-city-foliage', theme === 'light'),
+    [theme],
+  );
+  useEffect(
+    () => () => {
+      cityFoliageBundle.material.dispose();
+      cityFoliageBundle.depthMaterial.dispose();
+      cityFoliageBundle.texture.dispose();
+    },
+    [cityFoliageBundle],
   );
   const emissiveMat = useMemo(
     () => new THREE.MeshBasicMaterial({ name: 'sol-city-emissive', vertexColors: true, toneMapped: false }),
@@ -74,12 +95,18 @@ export function CityMetropolis() {
   useEffect(() => () => glassMat.dispose(), [glassMat]);
   useEffect(() => () => emissiveMat.dispose(), [emissiveMat]);
 
+  useFrame(({ clock }) => {
+    if (!visible) return;
+    cityFoliageBundle.setTime(clock.elapsedTime);
+  });
+
   return (
     <group name="sol-city-metropolis" visible={visible}>
       <mesh name="sol-city-opaque" geometry={city.opaqueGeometry} material={opaqueMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-metal" geometry={city.metalGeometry} material={metalMat} receiveShadow raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-glass" geometry={city.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
+      <mesh name="sol-city-foliage" geometry={city.foliageGeometry} material={cityFoliageBundle.material} receiveShadow raycast={NOOP_RAYCAST} />
       <GymCrown theme={theme} glassMat={roofGlassMat} emissiveMat={emissiveMat} opaqueMat={opaqueMat} metalMat={metalMat} />
       <CityTraffic />
       <CityLife city={city} />
@@ -99,7 +126,7 @@ function Flags({ isLight }: { isLight: boolean }) {
         const mat = new THREE.MeshStandardMaterial({
           color: a.variant === 'salmon' ? (isLight ? '#d9826a' : '#e8a090') : '#1e293b',
           side: THREE.DoubleSide,
-          roughness: 0.7,
+          roughness: 0.82,
         });
         const base = Float32Array.from(geom.getAttribute('position').array);
         return { a, geom, mat, base };
@@ -119,14 +146,22 @@ function Flags({ isLight }: { isLight: boolean }) {
     const t = clock.elapsedTime;
     for (const f of flags) {
       const pos = f.geom.getAttribute('position') as THREE.BufferAttribute;
+      const norm = f.geom.getAttribute('normal') as THREE.BufferAttribute;
+      const invW = 1 / f.a.width;
       for (let i = 0; i < pos.count; i += 1) {
         const x = f.base[i * 3]!;
-        const k = x / f.a.width;
-        pos.setZ(i, Math.sin(x * 5 - t * 4 + f.a.z) * 0.1 * k);
+        const k = x * invW;
+        const phase = x * 5 - t * 4 + f.a.z;
+        const sinP = Math.sin(phase);
+        const cosP = Math.cos(phase);
+        pos.setZ(i, sinP * 0.1 * k);
         pos.setY(i, f.base[i * 3 + 1]! + Math.sin(x * 3 - t * 3) * 0.03 * k);
+        const dzdx = 0.1 * invW * (sinP + x * 5 * cosP);
+        const invLen = 1 / Math.hypot(dzdx, 1);
+        norm.setXYZ(i, -dzdx * invLen, 0, invLen);
       }
       pos.needsUpdate = true;
-      f.geom.computeVertexNormals();
+      norm.needsUpdate = true;
     }
     invalidate();
   });

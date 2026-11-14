@@ -117,9 +117,15 @@ function LevelGroup({
   const groupRef = useRef<THREE.Group | null>(null);
   const invalidate = useThree(s => s.invalidate);
 
-  const targetY = computeLevelTargetY(level, levelMode);
-  const visible = isLevelVisibleInMode(level, levelMode, focusLevel);
-  const dimmed = isLevelDimmedInMode(level, levelMode, focusLevel);
+  const effectiveLevelMode: LevelMode = walkMode ? 'stacked' : levelMode;
+  const targetY = computeLevelTargetY(level, effectiveLevelMode);
+  const hideBuriedB1 =
+    !walkMode &&
+    effectiveLevelMode === 'stacked' &&
+    focusLevel === 'ALL' &&
+    level.code === 'B1';
+  const visible = !hideBuriedB1 && isLevelVisibleInMode(level, effectiveLevelMode, focusLevel);
+  const dimmed = walkMode ? false : isLevelDimmedInMode(level, effectiveLevelMode, focusLevel);
 
   useEffect(() => {
     invalidate();
@@ -167,10 +173,6 @@ function LevelGroup({
     }
   };
 
-  const slabTransform = useMemo(
-    () => getGeometryBoundsTransform(built.slabGeometry),
-    [built.slabGeometry],
-  );
   const hasInteriorOpaque =
     (built.interiorOpaqueGeometry.getAttribute('position')?.count ?? 0) > 0;
   const hasGlassWalls =
@@ -185,11 +187,9 @@ function LevelGroup({
       position={[0, level.elevation, 0]}
       visible={visible}
     >
-      {/* 1. Structural Slab Base (uses shared unit box to save GPU geometries) */}
+      {/* 1. Structural Slab Base (renders built.slabGeometry preserving stairwell cutouts) */}
       <mesh
-        geometry={SHARED_UNIT_BOX}
-        position={slabTransform.center}
-        scale={slabTransform.size}
+        geometry={built.slabGeometry}
         material={materials.slabBase}
         receiveShadow
         raycast={NOOP_RAYCAST}
@@ -207,13 +207,10 @@ function LevelGroup({
       {/* 3. Zone Floors & Borders */}
       {built.zoneFloorGeometries.map(zf => {
         const isHighlighted = selectedId === zf.zoneId || hoveredId === zf.zoneId;
-        const zfBounds = getGeometryBoundsTransform(zf.geometry);
         return (
           <group key={zf.zoneId} name={zf.zoneId}>
             <mesh
-              geometry={SHARED_UNIT_BOX}
-              position={zfBounds.center}
-              scale={zfBounds.size}
+              geometry={zf.geometry}
               material={materials.getFloorMaterial(zf.floorMaterial)}
               receiveShadow
               onClick={handleZoneClick(zf.zoneId)}

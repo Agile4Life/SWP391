@@ -86,11 +86,14 @@ export function LiveActivityActors({
   const meshRef = useRef<THREE.InstancedMesh | null>(null);
   const colorsWrittenRef = useRef(false);
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const invalidate = useThree(s => s.invalidate);
   // Actors drawn as skinned characters are hidden here once their model has loaded.
   const riggedActorIds = useRiggedActorIds();
   const { reducedMotion, shouldAnimate } = useActorMotion(benchEnabled);
+
+  const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
   const actorDefs = useMemo(() => buildLiveActorDefinitions(scene), [scene]);
   const totalInstances = useMemo(() => getTotalActorInstanceCount(actorDefs), [actorDefs]);
@@ -125,14 +128,14 @@ export function LiveActivityActors({
 
       const parts = evaluateActorPartsAtTime(actorDefs, timeSec, {
         scene,
-        levelMode,
+        levelMode: effectiveLevelMode,
         focusLevel,
       });
       const writeColors = !colorsWrittenRef.current;
       applyPartsToInstancedMesh(mesh, parts, writeColors, riggedActorIds);
       colorsWrittenRef.current = true;
     },
-    [actorDefs, totalInstances, scene, levelMode, focusLevel, riggedActorIds],
+    [actorDefs, totalInstances, scene, effectiveLevelMode, focusLevel, riggedActorIds],
   );
 
   // Apply initial / static pose immediately whenever definitions or level visibility changes

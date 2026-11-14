@@ -97,6 +97,7 @@ export interface RetargetOptions {
 }
 
 export interface RetargetRig {
+  root: THREE.Object3D;
   bones: Map<DrivenBone, RigBone>;
   hips: THREE.Object3D;
   /** Hips position at rest in the character's frame (+Y up), model units. */
@@ -112,9 +113,9 @@ const X = new THREE.Vector3(1, 0, 0);
 const Y = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
 
-function worldOf(object: THREE.Object3D): THREE.Quaternion {
+function worldOf(object: THREE.Object3D, root?: THREE.Object3D): THREE.Quaternion {
   const result = new THREE.Quaternion();
-  for (let node: THREE.Object3D | null = object; node; node = node.parent) {
+  for (let node: THREE.Object3D | null = object; node && node !== root; node = node.parent) {
     result.premultiply(node.quaternion);
   }
   return result;
@@ -129,7 +130,7 @@ export function createRetargetRig(model: THREE.Object3D, modelScale: number): Re
     bones.set(name, {
       object,
       restLocal: object.quaternion.clone(),
-      restWorld: worldOf(object),
+      restWorld: worldOf(object, model),
     });
   }
   for (const [name, next] of Object.entries(NEXT) as [DrivenBone, DrivenBone][]) {
@@ -137,8 +138,9 @@ export function createRetargetRig(model: THREE.Object3D, modelScale: number): Re
     bone.childDir = bones.get(next)!.object.position.clone().normalize();
   }
   const hips = bones.get('Hips')!.object;
-  const hipsParent = hips.parent ? worldOf(hips.parent) : new THREE.Quaternion();
+  const hipsParent = hips.parent ? worldOf(hips.parent, model) : new THREE.Quaternion();
   const rig: RetargetRig = {
+    root: model,
     bones,
     hips,
     hipsRestModel: hips.position.clone().applyQuaternion(hipsParent),
@@ -162,7 +164,7 @@ function lowestAnkleRel(rig: RetargetRig, worlds: Map<THREE.Object3D, THREE.Quat
     const position = new THREE.Vector3();
     for (let i = path.length - 1; i >= 0; i--) {
       const node = path[i]!;
-      const parentWorld = node.parent ? (worlds.get(node.parent) ?? worldOf(node.parent)) : new THREE.Quaternion();
+      const parentWorld = node.parent ? (worlds.get(node.parent) ?? worldOf(node.parent, rig.root)) : new THREE.Quaternion();
       position.add(node.position.clone().applyQuaternion(parentWorld));
     }
     lowest = Math.min(lowest, position.y);
@@ -173,7 +175,7 @@ function lowestAnkleRel(rig: RetargetRig, worlds: Map<THREE.Object3D, THREE.Quat
 const quat = new THREE.Quaternion();
 const delta = new THREE.Quaternion();
 
-/** Writes the bone rotations (and hips height) for `pose`. */
+/** Writes the bone rotations (and hips height) for `pose` in the character's own frame (`rig.root`). */
 export function applyRetargetPose(
   rig: RetargetRig,
   pose: HumanPoseAngles,
@@ -183,11 +185,12 @@ export function applyRetargetPose(
   override?: PoseOverride,
 ): void {
   const worlds = new Map<THREE.Object3D, THREE.Quaternion>();
+  worlds.set(rig.root, new THREE.Quaternion());
   const worldOfBone = (object: THREE.Object3D): THREE.Quaternion => {
     const known = worlds.get(object);
     if (known) return known;
-    // Not driven yet (an undriven ancestor): rest rotation on top of its parent.
-    const parent = object.parent ? worldOfBone(object.parent) : new THREE.Quaternion();
+    // Not driven yet (an undriven ancestor inside `rig.root`): rest rotation on top of its parent.
+    const parent = object.parent && object.parent !== rig.root ? worldOfBone(object.parent) : new THREE.Quaternion();
     const result = parent.clone().multiply(object.quaternion);
     worlds.set(object, result);
     return result;
@@ -240,18 +243,41 @@ export function applyRetargetPose(
   rotate('Neck', (extra?.Neck ?? new THREE.Quaternion()).clone().multiply(axis(X, headExtra * 0.5)).multiply(axis(Y, (pose.headYaw + look) * 0.4)));
   rotate('Head', (extra?.Head ?? new THREE.Quaternion()).clone().multiply(axis(X, headExtra * 0.5)).multiply(axis(Y, (pose.headYaw + look) * 0.6)));
 
-  rotate('LeftShoulder', new THREE.Quaternion());
-  rotate('RightShoulder', new THREE.Quaternion());
-
   // The code-built figure's left side sits at -X, the rig's Right side.
   const arms = [
-    { side: 'Right', shoulderPitch: pose.leftShoulderPitch, shoulderSplay: pose.leftShoulderSplay, elbowPitch: pose.leftElbowPitch, elbowSplay: pose.leftElbowSplay, roll: forearmRoll?.left },
-    { side: 'Left', shoulderPitch: pose.rightShoulderPitch, shoulderSplay: pose.rightShoulderSplay, elbowPitch: pose.rightElbowPitch, elbowSplay: pose.rightElbowSplay, roll: forearmRoll?.right },
+    {
+      side: 'Right',
+      clavicleSign: -1,
+      shoulderPitch: pose.leftShoulderPitch,
+      shoulderSplay: pose.leftShoulderSplay,
+      elbowPitch: pose.leftElbowPitch,
+      elbowSplay: pose.leftElbowSplay,
+      roll: forearmRoll?.left,
+    },
+    {
+      side: 'Left',
+      clavicleSign: 1,
+      shoulderPitch: pose.rightShoulderPitch,
+      shoulderSplay: pose.rightShoulderSplay,
+      elbowPitch: pose.rightElbowPitch,
+      elbowSplay: pose.rightElbowSplay,
+      roll: forearmRoll?.right,
+    },
   ] as const;
   for (const arm of arms) {
     const upper = `${arm.side}Arm` as AimBone;
     const fore = `${arm.side}ForeArm` as AimBone;
-    aim(upper, override?.aims?.[upper] ?? limbDirection(arm.shoulderPitch, arm.shoulderSplay));
+    const upperDirection = override?.aims?.[upper] ?? limbDirection(arm.shoulderPitch, arm.shoulderSplay);
+    if (override) {
+      rotate(`${arm.side}Shoulder` as DrivenBone, new THREE.Quaternion());
+    } else {
+      // Natural ~24% scapulohumeral rhythm: clavicles elevate as arms rise above horizontal and protract on forward reaches.
+      const elev = THREE.MathUtils.clamp((upperDirection.y + 0.35) * 0.24, -0.04, 0.32);
+      const protract = THREE.MathUtils.clamp(upperDirection.z * 0.1, -0.08, 0.12);
+      const clavTurn = axis(Z, arm.clavicleSign * elev).multiply(axis(Y, -arm.clavicleSign * protract));
+      rotate(`${arm.side}Shoulder` as DrivenBone, clavTurn);
+    }
+    aim(upper, upperDirection);
     const forearmDirection = override?.aims?.[fore] ?? limbDirection(arm.elbowPitch, arm.elbowSplay);
     aim(fore, forearmDirection);
     rotate(`${arm.side}Hand`, axis(forearmDirection.clone().normalize(), arm.roll ?? 0));

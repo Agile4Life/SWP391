@@ -30,6 +30,8 @@ export interface PracticalLightsProps {
   /** Vertical offset of the ground campus (exploded / basement views). */
   offsetY: number;
   visible: boolean;
+  /** Skips outdoor per-pixel pointLights while indoor WalkView is active. */
+  walkMode?: boolean;
 }
 
 /**
@@ -37,7 +39,7 @@ export interface PracticalLightsProps {
  * real point lights that pool warm light under street lamps and cool white
  * light over the tennis courts. Emissive bulbs are one instanced draw call.
  */
-export function PracticalLights({ tier, offsetY, visible }: PracticalLightsProps) {
+export function PracticalLights({ tier, offsetY, visible, walkMode = false }: PracticalLightsProps) {
   const bulbsRef = useRef<THREE.InstancedMesh>(null);
   const material = useMemo(
     () => new THREE.MeshBasicMaterial({ name: 'sol-practical-bulbs', toneMapped: false }),
@@ -67,10 +69,12 @@ export function PracticalLights({ tier, offsetY, visible }: PracticalLightsProps
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, []);
 
-  // Real lights are the expensive part: every other lamp on high, fewer on medium, none on low.
-  const lampStep = tier === 'high' ? 2 : 3;
-  const litLamps = tier === 'low' ? [] : LAMP_BULBS.filter((_, i) => i % lampStep === 0);
-  const litFloods = tier === 'low' ? [] : tier === 'high' ? [FLOOD_TOWERS[0], FLOOD_TOWERS[2]] : [FLOOD_TOWERS[3]];
+  // Real lights are evaluated per fragment across the scene: budget 2 lights on Dark HIGH (1 entrance + 1 flood)
+  // while all 15 HDR-emissive bulb quads continue to bloom at 1 instanced draw call.
+  const litLamps = tier === 'low' ? [] : [LAMP_BULBS[3]!];
+  const litFloods: ReadonlyArray<readonly [number, number]> =
+    tier === 'low' ? [] : [[34.5, 0]];
+  const showRealLights = visible && !walkMode;
 
   return (
     <group name="sol-practical-lights" position={[0, offsetY, 0]} visible={visible}>
@@ -80,25 +84,25 @@ export function PracticalLights({ tier, offsetY, visible }: PracticalLightsProps
         frustumCulled={false}
         raycast={NOOP_RAYCAST}
       />
-      {visible &&
+      {showRealLights &&
         litLamps.map(b => (
           <pointLight
             key={`lamp-${b.x}-${b.z}`}
             position={[b.x, b.y - 0.35, b.z]}
             color="#ffb46e"
-            intensity={95}
-            distance={22}
+            intensity={135}
+            distance={32}
             decay={2}
           />
         ))}
-      {visible &&
+      {showRealLights &&
         litFloods.map(([x, z]) => (
           <pointLight
             key={`flood-${x}-${z}`}
-            position={[x + 2.2, FLOOD_HEIGHT - 0.4, z]}
+            position={[x, FLOOD_HEIGHT - 0.4, z]}
             color="#dfeaff"
-            intensity={260}
-            distance={46}
+            intensity={320}
+            distance={44}
             decay={2}
           />
         ))}

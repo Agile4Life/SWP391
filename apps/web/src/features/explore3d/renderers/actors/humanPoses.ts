@@ -18,39 +18,35 @@ const dir = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).norm
 const tilt = (x: number) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), x);
 
 /**
- * Bench press on an incline bench (about 21°): pelvis at the seat/backrest join, the spine
- * bending up the backrest, knees bent with the feet on the floor, forearms vertical while
- * the upper arms flare out and come back in. The bar is drawn between the hands.
- * `phase` is the actor's phase; the bar rises and falls once per 2π.
+ * Bench press on SÖL's adjustable incline bench (26.4° backrest, seat top at y = 0.50 m):
+ * pelvis sits flush in the seat crease, spine reclines up the padded backrest, knees bend
+ * with sneakers planted flat on the floor, and forearms drive the bar vertically over the upper chest.
  */
 export function benchPress(phase: number): PoseOverride {
-  const rise = 0.5 - 0.5 * Math.cos(phase); // 0 = bar on the chest, 1 = arms locked out
-  // Wide grip: at the chest the elbows flare and the forearms are vertical; at lockout
-  // the whole arm leans out so the hands stay the same distance apart.
-  const flare = lerp(1.75, 0.45, rise);
-  // Absolute lean of the forearm from vertical: none at the chest, as much as the arm at lockout.
-  const forearm = 0.45 * rise;
+  const rise = 0.5 - 0.5 * Math.cos(phase); // 0 = bar near upper chest, 1 = controlled lockout
+  const flare = lerp(1.68, 0.44, rise);
+  const forearm = 0.44 * rise;
   // After the supine turn the character's left (+X at rest) lies toward -X.
-  const arm = (side: -1 | 1) => dir(side * Math.sin(flare), Math.cos(flare), -0.2);
-  const fore = (side: -1 | 1) => dir(side * Math.sin(forearm), Math.cos(forearm), -0.12);
+  const arm = (side: -1 | 1) => dir(side * Math.sin(flare), Math.cos(flare), -0.18);
+  const fore = (side: -1 | 1) => dir(side * Math.sin(forearm), Math.cos(forearm), -0.1);
   return {
-    hipsPosition: [0, 0.14, -0.12],
+    hipsPosition: [0, 0.07, -0.22],
     rotations: {
       Hips: SUPINE,
-      Spine: tilt(-0.16),
-      Spine1: tilt(-0.12),
-      Spine2: tilt(-0.08),
+      Spine: tilt(-0.2),
+      Spine1: tilt(-0.15),
+      Spine2: tilt(-0.11),
     },
     aims: {
       LeftArm: arm(-1),
       LeftForeArm: fore(-1),
       RightArm: arm(1),
       RightForeArm: fore(1),
-      // Thighs out and slightly down, shins down to the floor.
-      LeftUpLeg: dir(-0.3, -0.15, -1),
-      LeftLeg: dir(-0.15, -1, -0.05),
-      RightUpLeg: dir(0.3, -0.15, -1),
-      RightLeg: dir(0.15, -1, -0.05),
+      // Thighs splayed out over the seat pad and shins planted cleanly down to the gym floor.
+      LeftUpLeg: dir(-0.32, -0.13, -0.94),
+      LeftLeg: dir(-0.1, -0.97, -0.22),
+      RightUpLeg: dir(0.32, -0.13, -0.94),
+      RightLeg: dir(0.1, -0.97, -0.22),
     },
     footTurn: FEET_AWAY,
   };

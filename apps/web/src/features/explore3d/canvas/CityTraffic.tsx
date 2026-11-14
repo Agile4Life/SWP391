@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
 import { useExploreStore } from '../state/exploreStore';
 
 interface Lane {
@@ -24,38 +25,123 @@ const LANES: readonly Lane[] = [
   { axis: 'NS', fixed: 68.8, dir: 1, speed: 9, cars: 10 },
   { axis: 'NS', fixed: 72.2, dir: -1, speed: 9, cars: 10 },
 ];
-const BODY_COLORS = ['#f4f4f2', '#c8372d', '#25395c', '#1b1d22', '#9aa1a9', '#d9a03a', '#3f6b4e', '#e8e3d6'];
+const BODY_COLORS = ['#e8e6e1', '#262b34', '#4b5563', '#8d95a0', '#1d2d44', '#6e2c26', '#36493d', '#c5bfb4'];
+
+interface CarPart {
+  readonly geom: THREE.BufferGeometry;
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+  readonly roughness: number;
+  readonly metalness: number;
+}
 
 function buildCarGeometry(): THREE.BufferGeometry {
-  const parts: THREE.BufferGeometry[] = [];
-  const add = (w: number, h: number, d: number, x: number, y: number, z: number, c: number) => {
-    const g = new THREE.BoxGeometry(w, h, d).toNonIndexed();
-    g.translate(x, y, z);
-    const col = new Float32Array(g.getAttribute('position').count * 3).fill(c);
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    parts.push(g);
+  const parts: CarPart[] = [];
+  const push = (geom: THREE.BufferGeometry, r: number, g: number, b: number, roughness: number, metalness: number) => {
+    const nonIdx = geom.index ? geom.toNonIndexed() : geom;
+    if (nonIdx !== geom) geom.dispose();
+    parts.push({ geom: nonIdx, r, g, b, roughness, metalness });
   };
-  add(4.2, 0.6, 1.8, 0, 0.55, 0, 1);
-  add(1.9, 0.5, 1.55, -0.2, 1.08, 0, 0.1);
-  add(1.2, 0.08, 1.5, -0.2, 1.36, 0, 1);
-  add(0.1, 0.22, 1.5, 2.1, 0.48, 0, 0.9);
-  for (const wx of [-1.3, 1.3]) for (const wz of [-0.82, 0.82]) add(0.7, 0.7, 0.24, wx, 0.35, wz, 0.02);
-  const total = parts.reduce((n, g) => n + g.getAttribute('position').count, 0);
+
+  // Lower body shell facing +X (bevelled sedan silhouette)
+  const bodyShape = new THREE.Shape();
+  bodyShape.moveTo(-2.02, 0.25);
+  bodyShape.lineTo(2.02, 0.25);
+  bodyShape.lineTo(2.06, 0.42);
+  bodyShape.lineTo(2.02, 0.64);
+  bodyShape.lineTo(0.88, 0.78);
+  bodyShape.lineTo(-1.32, 0.80);
+  bodyShape.lineTo(-2.02, 0.76);
+  bodyShape.lineTo(-2.04, 0.34);
+  bodyShape.closePath();
+  const bodyGeom = new THREE.ExtrudeGeometry(bodyShape, {
+    depth: 1.64,
+    bevelEnabled: true,
+    bevelThickness: 0.05,
+    bevelSize: 0.04,
+    bevelSegments: 2,
+    curveSegments: 4,
+  });
+  bodyGeom.translate(0, 0, -0.82);
+  push(bodyGeom, 1, 1, 1, 0.26, 0.42);
+
+  // Raked tinted greenhouse cabin
+  const cabinShape = new THREE.Shape();
+  cabinShape.moveTo(-1.28, 0.78);
+  cabinShape.lineTo(0.86, 0.78);
+  cabinShape.lineTo(0.30, 1.31);
+  cabinShape.lineTo(-0.84, 1.32);
+  cabinShape.closePath();
+  const cabinGeom = new THREE.ExtrudeGeometry(cabinShape, {
+    depth: 1.36,
+    bevelEnabled: true,
+    bevelThickness: 0.04,
+    bevelSize: 0.03,
+    bevelSegments: 2,
+    curveSegments: 4,
+  });
+  cabinGeom.translate(0, 0, -0.68);
+  push(cabinGeom, 0.11, 0.13, 0.16, 0.10, 0.65);
+
+  // Body-colored roof cap
+  const roofGeom = new THREE.BoxGeometry(1.12, 0.04, 1.34);
+  roofGeom.translate(-0.26, 1.355, 0);
+  push(roofGeom, 0.98, 0.98, 0.98, 0.26, 0.42);
+
+  // Matte lower trim, front grille & rear diffuser
+  const grilleGeom = new THREE.BoxGeometry(0.14, 0.22, 1.44);
+  grilleGeom.translate(2.05, 0.40, 0);
+  push(grilleGeom, 0.08, 0.08, 0.09, 0.78, 0.12);
+
+  const diffuserGeom = new THREE.BoxGeometry(0.12, 0.18, 1.50);
+  diffuserGeom.translate(-2.04, 0.31, 0);
+  push(diffuserGeom, 0.08, 0.08, 0.09, 0.78, 0.12);
+
+  const rockerGeom = new THREE.BoxGeometry(2.1, 0.11, 1.74);
+  rockerGeom.translate(0, 0.24, 0);
+  push(rockerGeom, 0.08, 0.08, 0.09, 0.80, 0.10);
+
+  // 4 cylindrical rubber tyres & alloy hubs
+  for (const wx of [-1.32, 1.32]) {
+    for (const wz of [-0.82, 0.82]) {
+      const tyre = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14).rotateX(Math.PI / 2);
+      tyre.translate(wx, 0.34, wz);
+      push(tyre, 0.05, 0.05, 0.06, 0.88, 0.04);
+
+      const hub = new THREE.CylinderGeometry(0.20, 0.20, 0.26, 12).rotateX(Math.PI / 2);
+      hub.translate(wx, 0.34, wz);
+      push(hub, 0.75, 0.78, 0.82, 0.30, 0.80);
+    }
+  }
+
+  const total = parts.reduce((n, p) => n + p.geom.getAttribute('position').count, 0);
   const pos = new Float32Array(total * 3);
   const nor = new Float32Array(total * 3);
   const col = new Float32Array(total * 3);
+  const surf = new Float32Array(total * 2);
   let o = 0;
-  for (const g of parts) {
-    pos.set(g.getAttribute('position').array, o * 3);
-    nor.set(g.getAttribute('normal').array, o * 3);
-    col.set(g.getAttribute('color').array, o * 3);
-    o += g.getAttribute('position').count;
-    g.dispose();
+  for (const { geom, r, g, b, roughness, metalness } of parts) {
+    const count = geom.getAttribute('position').count;
+    pos.set(geom.getAttribute('position').array, o * 3);
+    nor.set(geom.getAttribute('normal').array, o * 3);
+    for (let i = 0; i < count; i += 1) {
+      const c3 = (o + i) * 3;
+      const s2 = (o + i) * 2;
+      col[c3] = r;
+      col[c3 + 1] = g;
+      col[c3 + 2] = b;
+      surf[s2] = roughness;
+      surf[s2 + 1] = metalness;
+    }
+    o += count;
+    geom.dispose();
   }
   const out = new THREE.BufferGeometry();
   out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  out.setAttribute('surf', new THREE.BufferAttribute(surf, 2));
   return out;
 }
 
@@ -102,7 +188,11 @@ export function CityTraffic() {
   }, [scale]);
   const geometry = useMemo(() => buildCarGeometry(), []);
   const material = useMemo(
-    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.45, envMapIntensity: 1.2 }),
+    () =>
+      applySurfaceDetail(
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.2, envMapIntensity: 1.15 }),
+        SURFACE_DETAIL_PRESETS.vehicle,
+      ),
     [],
   );
   const lightsGeo = useMemo(() => buildLightsGeometry(), []);

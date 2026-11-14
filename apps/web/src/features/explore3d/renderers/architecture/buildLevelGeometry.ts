@@ -173,7 +173,17 @@ export function mergeBufferGeometries(
   return merged;
 }
 
-function createPolygonShape(polygon: Vec2[]): THREE.Shape {
+export const STAIRWELL_OPENING_BOUNDS = {
+  minX: 8.65,
+  maxX: 12.35,
+  minZ: 9.35,
+  maxZ: 13.55,
+} as const;
+
+function createPolygonShape(
+  polygon: Vec2[],
+  holeBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
+): THREE.Shape {
   const shape = new THREE.Shape();
   for (let i = 0; i < polygon.length; i++) {
     const [x, z] = polygon[i];
@@ -184,11 +194,27 @@ function createPolygonShape(polygon: Vec2[]): THREE.Shape {
     }
   }
   shape.closePath();
+
+  if (holeBounds) {
+    const hole = new THREE.Path();
+    // Counter-clockwise hole in (X, -Z) plane opposite to CW outer polygon
+    hole.moveTo(holeBounds.minX, -holeBounds.minZ);
+    hole.lineTo(holeBounds.minX, -holeBounds.maxZ);
+    hole.lineTo(holeBounds.maxX, -holeBounds.maxZ);
+    hole.lineTo(holeBounds.maxX, -holeBounds.minZ);
+    hole.closePath();
+    shape.holes.push(hole);
+  }
+
   return shape;
 }
 
-function buildSlabGeometry(polygon: Vec2[], thickness: number): THREE.BufferGeometry {
-  const shape = createPolygonShape(polygon);
+function buildSlabGeometry(
+  polygon: Vec2[],
+  thickness: number,
+  holeBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
+): THREE.BufferGeometry {
+  const shape = createPolygonShape(polygon, holeBounds);
   const raw = new THREE.ExtrudeGeometry(shape, {
     depth: thickness,
     bevelEnabled: false,
@@ -227,8 +253,19 @@ function buildPerimeterStripGeometry(
   return merged;
 }
 
-function buildZoneFloorGeometry(zone: ZoneNode): ZoneFloorBuiltGeometry {
-  const shape = createPolygonShape(zone.polygon);
+function buildZoneFloorGeometry(
+  zone: ZoneNode,
+  holeBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
+): ZoneFloorBuiltGeometry {
+  const bounds = polygonBounds2D(zone.polygon);
+  const overlapsHole =
+    holeBounds &&
+    bounds.minX <= holeBounds.maxX &&
+    bounds.maxX >= holeBounds.minX &&
+    bounds.minZ <= holeBounds.maxZ &&
+    bounds.maxZ >= holeBounds.minZ;
+
+  const shape = createPolygonShape(zone.polygon, overlapsHole ? holeBounds : undefined);
   const rawFloor = new THREE.ShapeGeometry(shape, 1);
   rawFloor.rotateX(-Math.PI / 2);
   rawFloor.translate(0, ZONE_FLOOR_Y, 0);
@@ -242,7 +279,6 @@ function buildZoneFloorGeometry(zone: ZoneNode): ZoneFloorBuiltGeometry {
     ZONE_BORDER_Y,
   );
 
-  const bounds = polygonBounds2D(zone.polygon);
   const center: [number, number, number] = [
     (bounds.minX + bounds.maxX) * 0.5,
     ZONE_FLOOR_Y,
@@ -453,20 +489,113 @@ export function buildSegmentedWallGeometry(
   return merged;
 }
 
-function buildOpeningGlassPanes(wall: WallNode): THREE.BufferGeometry[] {
-  const panes: THREE.BufferGeometry[] = [];
+interface OpeningBuiltGeometries {
+  opaqueFrames: THREE.BufferGeometry[];
+  glassPanes: THREE.BufferGeometry[];
+}
+
+function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometries {
+  const opaqueFrames: THREE.BufferGeometry[] = [];
+  const glassPanes: THREE.BufferGeometry[] = [];
+
+  const dx = wall.end[0] - wall.start[0];
+  const dz = wall.end[1] - wall.start[1];
+  const wallLen = Math.hypot(dx, dz);
+  if (wallLen <= 1e-4) return { opaqueFrames, glassPanes };
+
+  const wallAngle = Math.atan2(-dz, dx);
+  const unitX = dx / wallLen;
+  const unitZ = dz / wallLen;
+
   for (const op of wall.openings) {
-    if (op.kind !== 'glass-door' && op.kind !== 'window') continue;
-    const u0 = op.offset;
-    const u1 = op.offset + op.width;
-    const y0 = op.sillHeight;
-    const y1 = Math.min(wall.height, op.sillHeight + op.height);
-    const pane = buildBoxForWallRange(wall, u0, u1, y0, y1, wall.thickness * 0.35);
-    if (pane) {
-      panes.push(pane);
+    const isDoor =
+      op.kind === 'door' ||
+      op.kind === 'double-door' ||
+      op.kind === 'glass-door' ||
+      op.kind === 'arch';
+
+    if (isDoor) {
+      // 1. Left and right door jambs
+      const jambWidth = 0.06;
+      const leftJamb = buildBoxForWallRange(
+        wall,
+        op.offset,
+        op.offset + jambWidth,
+        0,
+        op.height,
+        wall.thickness + 0.02,
+      );
+      if (leftJamb) opaqueFrames.push(leftJamb);
+
+      const rightJamb = buildBoxForWallRange(
+        wall,
+        op.offset + op.width - jambWidth,
+        op.offset + op.width,
+        0,
+        op.height,
+        wall.thickness + 0.02,
+      );
+      if (rightJamb) opaqueFrames.push(rightJamb);
+
+      // 2. Transom header bar
+      const transom = buildBoxForWallRange(
+        wall,
+        op.offset,
+        op.offset + op.width,
+        op.height - 0.06,
+        op.height,
+        wall.thickness + 0.02,
+      );
+      if (transom) opaqueFrames.push(transom);
+
+      // 3. Subtle 85°-open door leaf tucked outside walk path (only for doors, not arch)
+      if (op.kind !== 'arch') {
+        const leafW = Math.min(
+          0.92,
+          (op.width - jambWidth * 2) * (op.kind === 'double-door' ? 0.48 : 0.95),
+        );
+        const leafH = Math.max(0.2, op.height - 0.08);
+        const leafThick = 0.04;
+
+        // Pivot on left jamb, swing open ~85° inwards
+        const hingeU = op.offset + jambWidth;
+        const hx = wall.start[0] + unitX * hingeU;
+        const hz = wall.start[1] + unitZ * hingeU;
+        const swingAngle = wallAngle + 1.48; // ~85° open
+
+        const leafMidX = hx + Math.cos(-swingAngle) * (leafW * 0.5);
+        const leafMidZ = hz - Math.sin(-swingAngle) * (leafW * 0.5);
+        const leafMidY = leafH * 0.5;
+
+        const leafBox = new THREE.BoxGeometry(leafW, leafH, leafThick);
+        leafBox.rotateY(swingAngle);
+        leafBox.translate(leafMidX, leafMidY, leafMidZ);
+
+        if (op.kind === 'glass-door') {
+          glassPanes.push(leafBox);
+        } else {
+          opaqueFrames.push(leafBox);
+        }
+      }
+    } else if (op.kind === 'window') {
+      // Window frame perimeter + full glass pane
+      const y0 = op.sillHeight;
+      const y1 = Math.min(wall.height, op.sillHeight + op.height);
+      const pane = buildBoxForWallRange(
+        wall,
+        op.offset,
+        op.offset + op.width,
+        y0,
+        y1,
+        wall.thickness * 0.35,
+      );
+      if (pane) {
+        glassPanes.push(pane);
+      }
     }
   }
-  return panes;
+
+  return { opaqueFrames, glassPanes };
 }
 
 export function buildLevelGeometry(
@@ -483,7 +612,15 @@ export function buildLevelGeometry(
     throw new Error(`Level "${levelIdOrCode}" not found in SceneDoc`);
   }
 
-  const slabGeometry = buildSlabGeometry(level.slabPolygon, level.slabThickness);
+  const hasStairwellHole =
+    level.code === 'L1' || level.code === 'L2' || level.code === 'RF';
+  const holeBounds = hasStairwellHole ? STAIRWELL_OPENING_BOUNDS : undefined;
+
+  const slabGeometry = buildSlabGeometry(
+    level.slabPolygon,
+    level.slabThickness,
+    holeBounds,
+  );
   const slabEdgeGeometry = buildPerimeterStripGeometry(
     level.slabPolygon,
     SLAB_EDGE_THICKNESS,
@@ -492,7 +629,7 @@ export function buildLevelGeometry(
   );
 
   const zones = zonesOfLevel(doc, level.id);
-  const zoneFloorGeometries = zones.map(buildZoneFloorGeometry);
+  const zoneFloorGeometries = zones.map(z => buildZoneFloorGeometry(z, holeBounds));
 
   const walls = wallsOfLevel(doc, level.id);
   const exteriorWallsByNormal: ExteriorWallBuiltRecord[] = [];
@@ -500,6 +637,10 @@ export function buildLevelGeometry(
   const glassParts: THREE.BufferGeometry[] = [];
 
   for (const wall of walls) {
+    const details = buildOpeningArchitecturalDetails(wall);
+    glassParts.push(...details.glassPanes);
+    interiorOpaqueParts.push(...details.opaqueFrames);
+
     if (wall.exterior) {
       const normal = computeExteriorWallNormal(wall, level.slabPolygon);
       const center: [number, number] = [
@@ -519,15 +660,10 @@ export function buildLevelGeometry(
         fullGeometry,
         lowCutGeometry,
       });
-
-      const openingPanes = buildOpeningGlassPanes(wall);
-      glassParts.push(...openingPanes);
     } else if (wall.material === 'glass') {
       glassParts.push(buildSegmentedWallGeometry(wall, wall.height));
-      glassParts.push(...buildOpeningGlassPanes(wall));
     } else {
       interiorOpaqueParts.push(buildSegmentedWallGeometry(wall, wall.height));
-      glassParts.push(...buildOpeningGlassPanes(wall));
     }
   }
 

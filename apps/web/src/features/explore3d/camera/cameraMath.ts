@@ -2,6 +2,7 @@ import { getCityColliders } from '../renderers/architecture/buildCityMetropolis'
 import {
   polygonBounds2D,
   type LevelCode,
+  type LevelNode,
   type SceneDoc,
   type Vec2,
   type Vec3,
@@ -32,11 +33,43 @@ export const OVERVIEW_VIEWPOINT: Viewpoint = {
 
 export const OVERVIEW_CAMERA = OVERVIEW_VIEWPOINT;
 
+const OVERVIEW_TARGET: Vec3 = [4, 12, 0];
+const OVERVIEW_DIRECTION: Vec3 = [42, 34, 48];
+/** Metres of the scene the locked overview shows across the frame at the target. */
+const OVERVIEW_VISIBLE_WIDTH_M = 135;
+
+/**
+ * The locked hero shot: same bearing and tilt as `OVERVIEW_VIEWPOINT`, pulled back so the whole
+ * campus and the skyline behind it stay in frame at this canvas aspect (width / height). The
+ * camera can't be zoomed by hand, so the distance has to follow the window, not the other way round.
+ */
+export function getOverviewViewpoint(aspect: number): Viewpoint {
+  const safeAspect = Number.isFinite(aspect) && aspect > 0.2 ? aspect : 1.6;
+  const halfFov = (OVERVIEW_VIEWPOINT.fov! * Math.PI) / 360;
+  const distance = Math.min(
+    150,
+    Math.max(80, OVERVIEW_VISIBLE_WIDTH_M / (2 * Math.tan(halfFov) * safeAspect)),
+  );
+  const len = Math.hypot(...OVERVIEW_DIRECTION);
+  return {
+    ...OVERVIEW_VIEWPOINT,
+    position: [
+      OVERVIEW_TARGET[0] + (OVERVIEW_DIRECTION[0] / len) * distance,
+      OVERVIEW_TARGET[1] + (OVERVIEW_DIRECTION[1] / len) * distance,
+      OVERVIEW_TARGET[2] + (OVERVIEW_DIRECTION[2] / len) * distance,
+    ],
+    target: OVERVIEW_TARGET,
+  };
+}
+
 export const CAMERA_LIMITS = {
   minDistance: 0.65,
   maxDistance: 165,
-  minPolarAngle: 0.08,
-  maxPolarAngle: Math.PI / 2 - 0.03,
+  // Orbit view is locked to one cinematic tilt (28° above the horizon, the overview's own angle):
+  // vertical drags do nothing, only walk mode frees the camera. It also keeps clear of the
+  // near-top-down range, where figures below the vertical vanishing point are drawn head-down.
+  minPolarAngle: 1.08,
+  maxPolarAngle: 1.08,
   boundaryMin: [-54, -8, -42] as Vec3,
   boundaryMax: [68, 36, 42] as Vec3,
 } as const;
@@ -410,39 +443,81 @@ export function resolveWalkCollision2D(
   const totalDx = to[0] - from[0];
   const totalDz = to[1] - from[1];
   const totalDist = Math.hypot(totalDx, totalDz);
+  if (totalDist <= 1e-5) return [from[0], from[1]];
+
   const maxSubstepM = 0.16;
   const steps = Math.max(1, Math.min(48, Math.ceil(totalDist / maxSubstepM)));
 
   let curr: Vec2 = [from[0], from[1]];
 
   for (let stepIdx = 1; stepIdx <= steps; stepIdx++) {
-    const t = stepIdx / steps;
-    let candidate: Vec2 = [from[0] + totalDx * t, from[1] + totalDz * t];
+    const t0 = (stepIdx - 1) / steps;
+    const t1 = stepIdx / steps;
+    const stepDx = totalDx * (t1 - t0);
+    const stepDz = totalDz * (t1 - t0);
 
-    // 1. Direct segment sweep: if sub-step crosses a wall centerline, project onto wall face to slide
-    for (const seg of solidSegments) {
-      const minClearance = colliderRadius + seg.thickness * 0.5;
-      if (segmentsIntersect2D(curr, candidate, seg.a, seg.b)) {
-        const cpFrom = closestPointOnSegment2D(curr, seg.a, seg.b);
-        let nx = curr[0] - cpFrom[0];
-        let nz = curr[1] - cpFrom[1];
-        const nLen = Math.hypot(nx, nz);
-        if (nLen > 1e-5) {
-          nx /= nLen;
-          nz /= nLen;
-          const cpTo = closestPointOnSegment2D(candidate, seg.a, seg.b);
-          candidate = [
-            cpTo[0] + nx * (minClearance + 0.015),
-            cpTo[1] + nz * (minClearance + 0.015),
-          ];
-        } else {
-          candidate = [curr[0], curr[1]];
+    let candidate: Vec2 = [curr[0] + stepDx, curr[1] + stepDz];
+    let disp: Vec2 = [stepDx, stepDz];
+
+    // Multi-pass tangent sliding: if hitting a wall, slide along the wall tangent (-nz, nx)
+    for (let pass = 0; pass < 3; pass++) {
+      let collidedSeg: SolidWallSegment2D | null = null;
+      let minClearance = colliderRadius;
+
+      for (const seg of solidSegments) {
+        const segClearance = colliderRadius + seg.thickness * 0.5;
+        if (segmentsIntersect2D(curr, candidate, seg.a, seg.b)) {
+          collidedSeg = seg;
+          minClearance = segClearance;
+          break;
+        }
+        const cp = closestPointOnSegment2D(candidate, seg.a, seg.b);
+        const dist = Math.hypot(candidate[0] - cp[0], candidate[1] - cp[1]);
+        if (dist < segClearance - 1e-4) {
+          collidedSeg = seg;
+          minClearance = segClearance;
+          break;
         }
       }
+
+      if (!collidedSeg) break;
+
+      // Contact point & normal pointing from segment to curr
+      const cp = closestPointOnSegment2D(curr, collidedSeg.a, collidedSeg.b);
+      let nx = curr[0] - cp[0];
+      let nz = curr[1] - cp[1];
+      let nLen = Math.hypot(nx, nz);
+      if (nLen < 1e-4) {
+        // Fallback to segment perpendicular
+        const segDx = collidedSeg.b[0] - collidedSeg.a[0];
+        const segDz = collidedSeg.b[1] - collidedSeg.a[1];
+        nx = -segDz;
+        nz = segDx;
+        nLen = Math.hypot(nx, nz);
+      }
+      if (nLen > 1e-5) {
+        nx /= nLen;
+        nz /= nLen;
+      } else {
+        nx = 0;
+        nz = 1;
+      }
+
+      // Tangent vector
+      const tx = -nz;
+      const tz = nx;
+
+      // Project remaining displacement onto tangent
+      const dot = disp[0] * tx + disp[1] * tz;
+      disp = [tx * dot, tz * dot];
+
+      // Depenetrate curr slightly outside wall boundary
+      const safeX = cp[0] + nx * (minClearance + 0.002);
+      const safeZ = cp[1] + nz * (minClearance + 0.002);
+      candidate = [safeX + disp[0], safeZ + disp[1]];
     }
 
-    // 2. Multi-pass capsule depenetration (handles 90° wall corners & equipment obstacles)
-    let blockedInPass = false;
+    // Depenetrate against all segments and obstacle boxes
     for (let iter = 0; iter < 4; iter++) {
       for (const seg of solidSegments) {
         const minClearance = colliderRadius + seg.thickness * 0.5;
@@ -450,18 +525,13 @@ export function resolveWalkCollision2D(
         const dx = candidate[0] - cp[0];
         const dz = candidate[1] - cp[1];
         const dist = Math.hypot(dx, dz);
-
         if (dist < minClearance) {
           if (dist > 1e-5) {
             const push = (minClearance - dist + 1e-3) / dist;
             candidate = [candidate[0] + dx * push, candidate[1] + dz * push];
-          } else {
-            blockedInPass = true;
-            break;
           }
         }
       }
-      if (blockedInPass) break;
 
       if (obstacles.length > 0) {
         const eqRadius = colliderRadius * 0.72;
@@ -471,27 +541,32 @@ export function resolveWalkCollision2D(
       }
     }
 
-    if (blockedInPass) {
-      break;
-    }
-
-    // 3. Hard topological safety guard: never allow any sub-step to cross a solid wall or violate clearance
-    let crossedAnyWall = false;
+    // Final safety guard: ensure candidate never intersects any wall segment
+    let crossed = false;
     for (const seg of solidSegments) {
       if (segmentsIntersect2D(curr, candidate, seg.a, seg.b)) {
-        crossedAnyWall = true;
-        break;
-      }
-      const minClearance = colliderRadius + seg.thickness * 0.5;
-      const cp = closestPointOnSegment2D(candidate, seg.a, seg.b);
-      if (Math.hypot(candidate[0] - cp[0], candidate[1] - cp[1]) < minClearance - 2e-3) {
-        crossedAnyWall = true;
+        crossed = true;
         break;
       }
     }
 
-    if (crossedAnyWall) {
-      break;
+    if (crossed) {
+      // Single axis fallback: try X-only, then Z-only
+      const tryX: Vec2 = [curr[0] + disp[0], curr[1]];
+      const tryZ: Vec2 = [curr[0], curr[1] + disp[1]];
+      let xCrossed = false;
+      let zCrossed = false;
+      for (const seg of solidSegments) {
+        if (!xCrossed && segmentsIntersect2D(curr, tryX, seg.a, seg.b)) xCrossed = true;
+        if (!zCrossed && segmentsIntersect2D(curr, tryZ, seg.a, seg.b)) zCrossed = true;
+      }
+      if (!xCrossed) {
+        candidate = tryX;
+      } else if (!zCrossed) {
+        candidate = tryZ;
+      } else {
+        break;
+      }
     }
 
     curr = candidate;
@@ -798,7 +873,26 @@ export function computeStairElevationOffset(
     if (Math.abs(x - sx) <= halfW && Math.abs(z - sz) <= halfD) {
       const rawProgress = (sz + d * 0.5 - z) / Math.max(0.5, d);
       const progress = Math.max(0, Math.min(1, rawProgress));
-      const elevationOffset = Number((progress * 2.15).toFixed(3));
+
+      // Compute exact floor-to-floor vertical rise between stacked levels
+      let span = 4.5;
+      const currentLvl = getLevelByCode(doc, levelCode);
+      if (currentLvl) {
+        const idx = VERTICAL_STAIR_FLOORS.indexOf(levelCode);
+        if (idx !== -1 && idx < VERTICAL_STAIR_FLOORS.length - 1) {
+          const nextLvl = getLevelByCode(doc, VERTICAL_STAIR_FLOORS[idx + 1]!);
+          if (nextLvl) {
+            span = Math.max(2.5, nextLvl.elevation - currentLvl.elevation);
+          }
+        } else if (idx > 0) {
+          const prevLvl = getLevelByCode(doc, VERTICAL_STAIR_FLOORS[idx - 1]!);
+          if (prevLvl) {
+            span = Math.max(2.5, currentLvl.elevation - prevLvl.elevation);
+          }
+        }
+      }
+
+      const elevationOffset = Number((progress * span).toFixed(3));
       return {
         onStairs: true,
         progress: Number(progress.toFixed(3)),
@@ -1108,11 +1202,23 @@ export function stepWalkPose(
   let targetXZ: Vec2 = [fromXZ[0] + moveX, fromXZ[1] + moveZ];
 
   if (slabBounds) {
-    const margin = 0.52;
-    targetXZ = [
-      Math.min(slabBounds.maxX - margin, Math.max(slabBounds.minX + margin, targetXZ[0])),
-      Math.min(slabBounds.maxZ - margin, Math.max(slabBounds.minZ + margin, targetXZ[1])),
-    ];
+    if (pose.levelCode === 'L1') {
+      // L1 connects seamlessly to outdoor plaza through main entry and east doors
+      const plazaMinX = -45;
+      const plazaMaxX = 58;
+      const plazaMinZ = -30;
+      const plazaMaxZ = 30;
+      targetXZ = [
+        Math.min(plazaMaxX, Math.max(plazaMinX, targetXZ[0])),
+        Math.min(plazaMaxZ, Math.max(plazaMinZ, targetXZ[1])),
+      ];
+    } else {
+      const margin = 0.52;
+      targetXZ = [
+        Math.min(slabBounds.maxX - margin, Math.max(slabBounds.minX + margin, targetXZ[0])),
+        Math.min(slabBounds.maxZ - margin, Math.max(slabBounds.minZ + margin, targetXZ[1])),
+      ];
+    }
   }
 
   const resolvedXZ = resolveWalkCollision2D(
@@ -1123,6 +1229,9 @@ export function stepWalkPose(
     obstacles,
   );
 
+  let finalX = resolvedXZ[0];
+  const finalZ = resolvedXZ[1];
+
   const levelNode = getLevelByCode(doc, pose.levelCode);
   const baseEyeY = levelNode
     ? levelNode.elevation + WALK_EYE_HEIGHT_M
@@ -1130,16 +1239,235 @@ export function stepWalkPose(
   const stairState = computeStairElevationOffset(
     doc,
     pose.levelCode,
-    resolvedXZ[0],
-    resolvedXZ[1],
+    finalX,
+    finalZ,
   );
+
+  // Hard Lateral Balustrade Guard: clamp lateral X firmly within clear inner balustrade width while on flight
+  if (stairState.onStairs && stairState.progress > 0.06 && stairState.progress < 0.94) {
+    const stairItem = stairState.stairItemId ? getNode(doc, stairState.stairItemId) : null;
+    const stairX = stairItem?.type === 'item' ? stairItem.position[0] : 10.5;
+    finalX = Math.min(stairX + 1.15, Math.max(stairX - 1.15, finalX));
+  }
+
   const nextY = Number((baseEyeY + stairState.elevationOffset).toFixed(3));
 
   return {
     levelCode: pose.levelCode,
-    position: [resolvedXZ[0], nextY, resolvedXZ[1]],
+    position: [finalX, nextY, finalZ],
     yaw: nextYaw,
     pitch: nextPitch,
   };
 }
+
+export interface ContinuousStairFlightState {
+  onStairs: boolean;
+  flightFrom: LevelCode | null;
+  flightTo: LevelCode | null;
+  progress: number;
+  surfaceFootY: number;
+  midpointLevel: LevelCode | null;
+  collisionLevel: LevelCode | null;
+  stairX: number;
+}
+
+/**
+ * Resolves which physical 3D stair flight (`B1->L1`, `L1->L2`, or `L2->RF`) the walker is on
+ * using BOTH `(x, z)` stairwell footprint and actual 3D elevation proximity (`currentFootY`).
+ *
+ * Because all 4 floors share vertically stacked shafts at `(10.5, 11.5)`, matching against
+ * `currentFootY` prevents double-floor teleports (`L1 -> L2 -> RF`) at landings and enables
+ * smooth bidirectional ascending/descending across all levels.
+ */
+export function resolveContinuousStairFlight(
+  doc: SceneDoc,
+  x: number,
+  z: number,
+  currentFootY: number,
+): ContinuousStairFlightState {
+  let bestMatch: ContinuousStairFlightState | null = null;
+  let bestDy = Infinity;
+
+  for (let i = 0; i < VERTICAL_STAIR_FLOORS.length - 1; i++) {
+    const fromCode = VERTICAL_STAIR_FLOORS[i]!;
+    const toCode = VERTICAL_STAIR_FLOORS[i + 1]!;
+    const fromLvl = getLevelByCode(doc, fromCode);
+    const toLvl = getLevelByCode(doc, toCode);
+    if (!fromLvl || !toLvl) continue;
+
+    for (const item of itemsOfLevel(doc, fromCode)) {
+      if (item.kind !== 'stair-core') continue;
+      const [sx, , sz] = item.position;
+      const [w, , d] = item.dimensions;
+      const halfW = Math.min(1.75, w * 0.5);
+      const halfD = d * 0.5 + 0.35;
+      if (Math.abs(x - sx) > halfW || Math.abs(z - sz) > halfD) continue;
+
+      const rawProgress = (sz + d * 0.5 - z) / Math.max(0.5, d);
+      const progress = Math.max(0, Math.min(1, rawProgress));
+      const surfaceFootY =
+        fromLvl.elevation + progress * (toLvl.elevation - fromLvl.elevation);
+      const dy = Math.abs(surfaceFootY - currentFootY);
+
+      if (dy <= 1.85 && dy < bestDy) {
+        bestDy = dy;
+        const midY = (fromLvl.elevation + toLvl.elevation) * 0.5;
+        const isUpperHalf = surfaceFootY >= midY;
+        const collisionLevel =
+          progress <= 0.15
+            ? fromCode
+            : progress >= 0.85
+              ? toCode
+              : isUpperHalf
+                ? toCode
+                : fromCode;
+        bestMatch = {
+          onStairs: true,
+          flightFrom: fromCode,
+          flightTo: toCode,
+          progress: Number(progress.toFixed(4)),
+          surfaceFootY: Number(surfaceFootY.toFixed(4)),
+          midpointLevel: isUpperHalf ? toCode : fromCode,
+          collisionLevel,
+          stairX: sx,
+        };
+      }
+    }
+  }
+
+  return (
+    bestMatch ?? {
+      onStairs: false,
+      flightFrom: null,
+      flightTo: null,
+      progress: 0,
+      surfaceFootY: currentFootY,
+      midpointLevel: null,
+      collisionLevel: null,
+      stairX: 10.5,
+    }
+  );
+}
+
+/**
+ * Finds the structural indoor floor level (`B1`, `L1`, `L2`, or `RF`) whose slab elevation
+ * matches the walker's current vertical foot position.
+ */
+export function resolveHorizontalLevelAtElevation(
+  doc: SceneDoc,
+  footY: number,
+): LevelNode {
+  let bestLevel = getLevelByCode(doc, 'L1')!;
+  let bestDy = Infinity;
+  for (const code of VERTICAL_STAIR_FLOORS) {
+    const lvl = getLevelByCode(doc, code);
+    if (!lvl) continue;
+    const dy = Math.abs(lvl.elevation - footY);
+    if (dy < bestDy) {
+      bestDy = dy;
+      bestLevel = lvl;
+    }
+  }
+  return bestLevel;
+}
+
+/**
+ * Continuous 3D movement solver for live WalkView:
+ * - Zero-stick tangent-sliding wall + equipment collision
+ * - Seamless indoor/outdoor L1 courtyard + tennis arena transition
+ * - Elevation-locked stair flight ascending/descending with hard lateral balustrade clamp
+ */
+export function stepContinuousWalkPose3D(
+  doc: SceneDoc,
+  pose: WalkPose,
+  dispX: number,
+  dispZ: number,
+  nextYaw: number,
+  nextPitch: number,
+): { pose: WalkPose; targetEyeY: number; stairState: ContinuousStairFlightState } {
+  const safePitch = clampWalkPitch(nextPitch);
+  const prevFootY = pose.position[1] - WALK_EYE_HEIGHT_M;
+  let posX = pose.position[0];
+  let posZ = pose.position[2];
+
+  const preStair = resolveContinuousStairFlight(doc, posX, posZ, prevFootY);
+  const nearestLvl = resolveHorizontalLevelAtElevation(doc, prevFootY);
+  const collisionCode: LevelCode =
+    preStair.onStairs && preStair.collisionLevel
+      ? preStair.collisionLevel
+      : nearestLvl.code;
+
+  if (Math.hypot(dispX, dispZ) > 1e-6) {
+    const fromXZ: Vec2 = [posX, posZ];
+    let destXZ: Vec2 = [posX + dispX, posZ + dispZ];
+
+    const collisionLevelNode = getLevelByCode(doc, collisionCode);
+    let walls = wallsOfLevel(doc, collisionCode);
+    let obstacles = getWalkObstaclesForLevel(doc, collisionCode);
+
+    // Ground floor seamlessly bridges indoor L1 and outdoor plaza / tennis fences
+    if (collisionCode === 'L1') {
+      walls = [...walls, ...wallsOfLevel(doc, 'OUT')];
+      obstacles = [...obstacles, ...getWalkObstaclesForLevel(doc, 'OUT')];
+    }
+
+    if (collisionLevelNode) {
+      const bounds = polygonBounds2D(collisionLevelNode.slabPolygon);
+      if (collisionCode === 'L1') {
+        destXZ = [
+          Math.min(52, Math.max(-44, destXZ[0])),
+          Math.min(28, Math.max(-26, destXZ[1])),
+        ];
+      } else {
+        destXZ = [
+          Math.min(bounds.maxX - 0.52, Math.max(bounds.minX + 0.52, destXZ[0])),
+          Math.min(bounds.maxZ - 0.52, Math.max(bounds.minZ + 0.52, destXZ[1])),
+        ];
+      }
+    }
+
+    const resolvedXZ = resolveWalkCollision2D(
+      fromXZ,
+      destXZ,
+      walls,
+      WALK_COLLIDER_RADIUS_M,
+      obstacles,
+    );
+    posX = resolvedXZ[0];
+    posZ = resolvedXZ[1];
+  }
+
+  const stairState = resolveContinuousStairFlight(doc, posX, posZ, prevFootY);
+  let targetFootY: number;
+  let nextLevelCode: LevelCode;
+
+  if (stairState.onStairs) {
+    if (stairState.progress > 0.06 && stairState.progress < 0.94) {
+      posX = Math.min(stairState.stairX + 1.15, Math.max(stairState.stairX - 1.15, posX));
+    }
+    targetFootY = stairState.surfaceFootY;
+    nextLevelCode = stairState.midpointLevel ?? nearestLvl.code;
+  } else {
+    const settledLvl = resolveHorizontalLevelAtElevation(doc, prevFootY);
+    targetFootY = settledLvl.elevation;
+    if (settledLvl.code === 'L1' && posX > 22.5 && Math.abs(posZ) <= 17.5) {
+      nextLevelCode = 'OUT';
+    } else {
+      nextLevelCode = settledLvl.code;
+    }
+  }
+
+  const targetEyeY = Number((targetFootY + WALK_EYE_HEIGHT_M).toFixed(4));
+  return {
+    pose: {
+      levelCode: nextLevelCode,
+      position: [posX, targetEyeY, posZ],
+      yaw: nextYaw,
+      pitch: safePitch,
+    },
+    targetEyeY,
+    stairState,
+  };
+}
+
 

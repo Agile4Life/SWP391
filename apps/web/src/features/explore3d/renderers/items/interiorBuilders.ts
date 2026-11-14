@@ -424,48 +424,70 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   };
 
   const buildStairCore = (): Geo => {
-    const parts: Geo[] = [
-      // spine wall and stone half-landing
-      box(0.2, 3.6, 2.8, panel, [0, 1.8, -0.2]),
-      rbox(3.52, 0.18, 1.24, 0.015, stone, [0, 1.9, -1.46]),
-    ];
-    const flight = (x: number, y0: number, z0: number, dz: number, color: string) => {
-      const steps = 10;
-      const rise = 1.62 / (steps - 1);
-      const going = (dz * 2.45) / (steps - 1);
-      for (let i = 0; i < steps; i++) {
-        const y = y0 + i * rise;
-        const z = z0 + i * going;
-        parts.push(rbox(1.46, 0.05, 0.3, 0.012, color, [x, y, z]));
-        parts.push(box(1.46, 0.012, 0.03, rubber, [x, y + 0.02, z - Math.sign(dz) * 0.13]));
+    const parts: Geo[] = [];
+    const clearWidth = 2.88;
+    const stairZ0 = 1.95;
+    const stairZ1 = -1.95;
+    const stairY0 = 0.08;
+    const stairY1 = 3.72;
+    const steps = 18;
+
+    const rise = (stairY1 - stairY0) / (steps - 1);
+    const going = (stairZ1 - stairZ0) / (steps - 1);
+
+    // Continuous wide architectural steps (zero center spine wall - unobstructed 2.88m path)
+    for (let i = 0; i < steps; i++) {
+      const y = stairY0 + i * rise;
+      const z = stairZ0 + i * going;
+      // Hardwood / terrazzo step tread
+      parts.push(rbox(clearWidth, 0.065, 0.28, 0.012, P.wood, [0, y, z]));
+      // Contrasting safety tactile nosing strip
+      parts.push(box(clearWidth, 0.012, 0.035, rubber, [0, y + 0.033, z + 0.12]));
+    }
+
+    // Top arrival landing tread connecting flush to upper floor level
+    parts.push(rbox(clearWidth, 0.08, 0.42, 0.015, stone, [0, stairY1, stairZ1]));
+
+    // Steel stringer beams and underside soffit
+    const slope = Math.atan2(stairY1 - stairY0, Math.abs(stairZ1 - stairZ0));
+    const spanLen = Math.hypot(stairY1 - stairY0, stairZ1 - stairZ0) + 0.28;
+    const midY = (stairY0 + stairY1) * 0.5;
+    const midZ = (stairZ0 + stairZ1) * 0.5;
+
+    // Structural underside soffit
+    parts.push(box(clearWidth, 0.035, spanLen, panel, [0, midY - 0.22, midZ], [-slope, 0, 0]));
+
+    // Heavy steel side stringers along lateral boundaries
+    for (const sx of [-clearWidth * 0.5 - 0.03, clearWidth * 0.5 + 0.03]) {
+      parts.push(box(0.06, 0.32, spanLen, steel, [sx, midY - 0.12, midZ], [-slope, 0, 0]));
+    }
+
+    // Left and right transparent architectural glass & brushed-steel balustrades
+    for (const sx of [-clearWidth * 0.5 - 0.07, clearWidth * 0.5 + 0.07]) {
+      // Tempered safety glass balustrade panel
+      parts.push(box(0.018, 0.92, spanLen, '#c8d4e0', [sx, midY + 0.46, midZ], [-slope, 0, 0]));
+
+      // Sturdy vertical steel baluster posts
+      for (let i = 0; i < steps; i += 3) {
+        const py = stairY0 + i * rise;
+        const pz = stairZ0 + i * going;
+        parts.push(cyl(0.016, 0.016, 0.96, steel, [sx, py + 0.48, pz], undefined, 8));
       }
-      // steel stringers under the treads
-      const slope = Math.atan2(1.62, 2.45) * -Math.sign(dz);
-      const len = Math.hypot(1.62, 2.45) + 0.3;
-      for (const sx of [-0.68, 0.68]) {
-        parts.push(box(0.03, 0.2, len, steel, [x + sx, y0 + 0.81 - 0.12, z0 + dz * 1.225], [slope, 0, 0]));
-      }
-      // steel balustrade: posts, a mid rail and a round handrail
-      const outer = x + Math.sign(x) * 0.76;
-      for (let i = 0; i < steps; i += 2) {
-        parts.push(cyl(0.012, 0.012, 0.98, steel, [outer, y0 + i * rise + 0.49, z0 + i * going], undefined, 8));
-      }
-      for (const lift of [0.5, 0.98]) {
-        parts.push(
-          ...tube(
-            [
-              [outer, y0 + lift, z0],
-              [outer, y0 + 1.62 + lift, z0 + dz * 2.45],
-            ],
-            lift > 0.9 ? 0.022 : 0.01,
-            lift > 0.9 ? chrome : steel,
-            10,
-          ),
-        );
-      }
-    };
-    flight(-0.92, 0.18, 1.75, -1, P.wood);
-    flight(0.92, 2.08, -0.7, 1, P.wood);
+
+      // Brushed stainless steel ergonomic round handrail
+      parts.push(
+        ...tube(
+          [
+            [sx, stairY0 + 0.96, stairZ0 + 0.15],
+            [sx, stairY1 + 0.96, stairZ1 - 0.15],
+          ],
+          0.024,
+          chrome,
+          10,
+        ),
+      );
+    }
+
     return fit(parts, dims['stair-core']);
   };
 

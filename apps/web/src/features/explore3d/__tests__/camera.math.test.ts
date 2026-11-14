@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CAMERA_LIMITS,
   OVERVIEW_VIEWPOINT,
+  getOverviewViewpoint,
   WALK_COLLIDER_RADIUS_M,
   WALK_EYE_HEIGHT_M,
   WALK_MAX_PITCH_RAD,
@@ -18,11 +19,14 @@ import {
   needsTwoHopFlight,
   poseToViewpoint,
   prefersReducedMotion,
+  resolveContinuousStairFlight,
   resolveWalkCollision2D,
   rotateWalkPose,
   sanitizeCameraPose,
   segmentsIntersect2D,
+  stepContinuousWalkPose3D,
   stepWalkPose,
+  type WalkPose,
 } from '../camera/cameraMath';
 import {
   allHotspots,
@@ -136,8 +140,12 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
   it('expands CAMERA_LIMITS to support ultra-close inspection (0.65m) and full-campus zoom-out (165m)', () => {
     expect(CAMERA_LIMITS.minDistance).toBe(0.65);
     expect(CAMERA_LIMITS.maxDistance).toBe(165);
-    expect(CAMERA_LIMITS.minPolarAngle).toBeCloseTo(0.08, 4);
-    expect(CAMERA_LIMITS.maxPolarAngle).toBeCloseTo(Math.PI / 2 - 0.03, 4);
+    // Orbit tilt is locked (min === max) and matches the overview's own angle.
+    expect(CAMERA_LIMITS.minPolarAngle).toBe(CAMERA_LIMITS.maxPolarAngle);
+    const [px, py, pz] = OVERVIEW_VIEWPOINT.position;
+    const [tx, ty, tz] = OVERVIEW_VIEWPOINT.target;
+    const overviewPolar = Math.acos((py - ty) / Math.hypot(px - tx, py - ty, pz - tz));
+    expect(CAMERA_LIMITS.minPolarAngle).toBeCloseTo(overviewPolar, 1);
     expect(CAMERA_LIMITS.boundaryMin).toEqual([-54, -8, -42]);
     expect(CAMERA_LIMITS.boundaryMax).toEqual([68, 36, 42]);
   });
@@ -457,6 +465,84 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     useExploreStore.getState().selectNode('item-rf-stairs');
     expect(useExploreStore.getState().focusLevel).toBe('L2');
   });
+
+  it('slides cleanly along angled walls, climbs continuously B1->L1->L2->RF without double-floor teleports, and clamps lateral stair edges', () => {
+    const l1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'L1');
+    const l1Obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, 'L1');
+
+    // Diagonal approach into gym-south glass wall must slide smoothly along +X without sticking
+    const startWallTest: [number, number] = [-10, 2.75];
+    const diagonalTarget: [number, number] = [-8.5, 1.5];
+    const slid = resolveWalkCollision2D(
+      startWallTest,
+      diagonalTarget,
+      l1Walls,
+      WALK_COLLIDER_RADIUS_M,
+      l1Obstacles,
+    );
+    expect(slid[0]).toBeGreaterThan(startWallTest[0] + 0.8);
+    expect(slid[1]).toBeGreaterThanOrEqual(2.4);
+
+    // Continuous climb B1 (-4.5) -> L1 (0.0) without overshooting into L2
+    let pose: WalkPose = {
+      levelCode: 'B1',
+      position: [10.5, -4.5 + WALK_EYE_HEIGHT_M, 14.2],
+      yaw: 0,
+      pitch: 0,
+    };
+    for (let i = 0; i < 24; i++) {
+      const res = stepContinuousWalkPose3D(SOL_CENTER_SCENE, pose, 0, -0.22, 0, 0);
+      pose = res.pose;
+    }
+    expect(pose.levelCode).toBe('L1');
+    expect(pose.position[2]).toBeLessThan(9.3);
+    expect(pose.position[1]).toBeCloseTo(WALK_EYE_HEIGHT_M, 2);
+
+    // Walk onto L1->L2 stairs from South (z = 14.2) and climb continuously to L2 (y = 5.76) without jumping to RF
+    pose = {
+      levelCode: 'L1',
+      position: [10.5, WALK_EYE_HEIGHT_M, 14.2],
+      yaw: 0,
+      pitch: 0,
+    };
+    let midFlightChecked = false;
+    for (let i = 0; i < 24; i++) {
+      // Inject strong +X lateral strafe to test hard balustrade clamp mid-flight
+      const res = stepContinuousWalkPose3D(SOL_CENTER_SCENE, pose, 0.35, -0.22, 0, 0);
+      pose = res.pose;
+      if (res.stairState.onStairs && res.stairState.progress > 0.15 && res.stairState.progress < 0.85) {
+        midFlightChecked = true;
+        expect(Math.abs(pose.position[0] - 10.5)).toBeLessThanOrEqual(1.1501);
+      }
+    }
+    expect(midFlightChecked).toBe(true);
+    expect(pose.levelCode).toBe('L2');
+    expect(pose.position[2]).toBeLessThan(9.3);
+    expect(pose.position[1]).toBeCloseTo(5.76 + WALK_EYE_HEIGHT_M, 2);
+
+    // Enter L2->RF stairs at South foot (z = 14.2, footY = 5.76) -> climbs continuously to RF (11.26)
+    pose = {
+      levelCode: 'L2',
+      position: [10.5, 5.76 + WALK_EYE_HEIGHT_M, 14.2],
+      yaw: 0,
+      pitch: 0,
+    };
+    for (let i = 0; i < 24; i++) {
+      pose = stepContinuousWalkPose3D(SOL_CENTER_SCENE, pose, 0, -0.22, 0, 0).pose;
+    }
+    expect(pose.levelCode).toBe('RF');
+    expect(pose.position[1]).toBeCloseTo(11.26 + WALK_EYE_HEIGHT_M, 2);
+
+    // Descend RF -> L2 from North landing (z = 9.0 -> z = 14.2) smoothly without falling through to L1
+    for (let i = 0; i < 24; i++) {
+      pose = stepContinuousWalkPose3D(SOL_CENTER_SCENE, pose, 0, 0.22, Math.PI, 0).pose;
+    }
+    expect(pose.levelCode).toBe('L2');
+    expect(pose.position[1]).toBeCloseTo(5.76 + WALK_EYE_HEIGHT_M, 2);
+    expect(
+      resolveContinuousStairFlight(SOL_CENTER_SCENE, 10.5, 11.5, 5.76 * 0.5).flightFrom,
+    ).toBe('L1');
+  });
 });
 
 describe('city collision', () => {
@@ -467,5 +553,31 @@ describe('city collision', () => {
     const { position } = sanitizeCameraPose([c.x, c.h * 0.5, c.z], [c.x, c.h * 0.5, c.z - 60]);
     const inside = Math.abs(position[0] - c.x) < c.hw && Math.abs(position[2] - c.z) < c.hd;
     expect(inside).toBe(false);
+  });
+});
+
+describe('Locked overview framing', () => {
+  it('keeps the locked tilt, stays within zoom limits and survives pose sanitising at laptop aspects', () => {
+    for (const aspect of [0.8, 1.2, 1.6, 1.8, 2.4]) {
+      const vp = getOverviewViewpoint(aspect);
+      const [px, py, pz] = vp.position;
+      const [tx, ty, tz] = vp.target;
+      const dist = Math.hypot(px - tx, py - ty, pz - tz);
+      expect(Math.acos((py - ty) / dist)).toBeCloseTo(CAMERA_LIMITS.minPolarAngle, 1);
+      expect(dist).toBeGreaterThanOrEqual(80);
+      expect(dist).toBeLessThanOrEqual(150);
+      const sane = sanitizeCameraPose(vp.position, vp.target);
+      expect(sane.position[0]).toBeCloseTo(px, 1);
+      expect(sane.position[1]).toBeCloseTo(py, 1);
+      expect(sane.position[2]).toBeCloseTo(pz, 1);
+    }
+  });
+
+  it('pulls back further on narrower canvases', () => {
+    const d = (a: number) => {
+      const v = getOverviewViewpoint(a);
+      return Math.hypot(v.position[0] - v.target[0], v.position[1] - v.target[1], v.position[2] - v.target[2]);
+    };
+    expect(d(1.2)).toBeGreaterThan(d(1.8));
   });
 });

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { context as r3fContext, useThree } from '@react-three/fiber';
+import { context as r3fContext, useFrame, useThree } from '@react-three/fiber';
 import {
   useCallback,
   useContext,
@@ -14,20 +14,17 @@ import type * as THREE from 'three';
 import { useI18n } from '../../../shared/i18n';
 import {
   WALK_COLLIDER_RADIUS_M,
-  WALK_EYE_HEIGHT_M,
   WALK_FOV_DEG,
+  WALK_SPEED_MPS,
   computeInitialWalkPose,
-  computeStairElevationOffset,
-  evaluateStairOrElevatorPortal,
   getWalkObstaclesForLevel,
-  poseToViewpoint,
   resolveWalkCollision2D,
   rotateWalkPose,
-  stepWalkPose,
+  stepContinuousWalkPose3D,
   type WalkPose,
 } from '../camera/cameraMath';
-import { polygonBounds2D, type LevelCode, type Vec2 } from '../scene/schema';
-import { getLevelByCode, wallsOfLevel } from '../scene/selectors';
+import type { LevelCode, Vec2 } from '../scene/schema';
+import { wallsOfLevel } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore } from '../state/exploreStore';
 
@@ -70,12 +67,198 @@ function isTypingElement(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+function WalkFrameLoop({
+  poseRef,
+  headlampRef,
+  keysRef,
+  targetLookRef,
+  velocityRef,
+}: {
+  poseRef: MutableRefObject<WalkPose | null>;
+  headlampRef: MutableRefObject<THREE.PointLight | null>;
+  keysRef: MutableRefObject<Set<string>>;
+  targetLookRef: MutableRefObject<{ targetYaw: number; targetPitch: number }>;
+  velocityRef: MutableRefObject<{ vx: number; vz: number }>;
+}) {
+  useFrame((state, delta) => {
+    const currentPose = poseRef.current;
+    if (!currentPose) return;
+
+    const dt = Math.min(delta, 0.1);
+    if (dt <= 0) return;
+
+    const keys = keysRef.current;
+    const isSearching = useExploreStore.getState().searchOpen;
+
+    // 1. Process continuous keyboard turn / pitch
+    let turnInput = 0;
+    let pitchInput = 0;
+    if (!isSearching) {
+      turnInput =
+        (keys.has('arrowright') || keys.has('e') ? 1 : 0) -
+        (keys.has('arrowleft') || keys.has('q') ? 1 : 0);
+      pitchInput =
+        (keys.has('r') || keys.has('pageup') ? 1 : 0) -
+        (keys.has('f') || keys.has('pagedown') ? 1 : 0);
+    }
+
+    if (turnInput !== 0) {
+      targetLookRef.current.targetYaw += turnInput * 2.2 * dt;
+    }
+    if (pitchInput !== 0) {
+      targetLookRef.current.targetPitch += pitchInput * 1.4 * dt;
+      targetLookRef.current.targetPitch = Math.max(
+        -0.75,
+        Math.min(0.75, targetLookRef.current.targetPitch),
+      );
+    }
+
+    // Exponential yaw & pitch damping
+    const lookDamp = 1 - Math.exp(-dt * 24);
+    const smoothedYaw =
+      currentPose.yaw +
+      (targetLookRef.current.targetYaw - currentPose.yaw) * lookDamp;
+    const currentPitch = currentPose.pitch ?? 0;
+    const smoothedPitch =
+      currentPitch +
+      (targetLookRef.current.targetPitch - currentPitch) * lookDamp;
+
+    // 2. Process continuous translation inputs & exponential velocity damping
+    let forwardInput = 0;
+    let strafeInput = 0;
+    if (!isSearching) {
+      forwardInput =
+        (keys.has('w') || keys.has('arrowup') ? 1 : 0) -
+        (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
+      strafeInput =
+        (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
+    }
+
+    const sprint = keys.has('shift') ? 1.55 : 1.0;
+    const targetSpeed = WALK_SPEED_MPS * sprint;
+
+    let desiredVx = 0;
+    let desiredVz = 0;
+    if (forwardInput !== 0 || strafeInput !== 0) {
+      const moveX = Math.sin(smoothedYaw) * forwardInput + Math.cos(smoothedYaw) * strafeInput;
+      const moveZ = -Math.cos(smoothedYaw) * forwardInput + Math.sin(smoothedYaw) * strafeInput;
+      const moveLen = Math.hypot(moveX, moveZ);
+      if (moveLen > 1e-4) {
+        desiredVx = (moveX / moveLen) * targetSpeed;
+        desiredVz = (moveZ / moveLen) * targetSpeed;
+      }
+    }
+
+    const accelDamp = 1 - Math.exp(-dt * 15);
+    velocityRef.current.vx += (desiredVx - velocityRef.current.vx) * accelDamp;
+    velocityRef.current.vz += (desiredVz - velocityRef.current.vz) * accelDamp;
+
+    if (
+      forwardInput === 0 &&
+      strafeInput === 0 &&
+      Math.hypot(velocityRef.current.vx, velocityRef.current.vz) < 0.02
+    ) {
+      velocityRef.current.vx = 0;
+      velocityRef.current.vz = 0;
+    }
+
+    const dispX = velocityRef.current.vx * dt;
+    const dispZ = velocityRef.current.vz * dt;
+
+    // 3. Unified continuous 3D walk + zero-stick wall slide + elevation-locked stair solver
+    const stepped = stepContinuousWalkPose3D(
+      SOL_CENTER_SCENE,
+      currentPose,
+      dispX,
+      dispZ,
+      smoothedYaw,
+      smoothedPitch,
+    );
+
+    const posX = stepped.pose.position[0];
+    const posZ = stepped.pose.position[2];
+    const targetY = stepped.targetEyeY;
+
+    // Vertical spring damping (~40ms response) for silky-smooth tread climbing without jitter
+    const vDamp = 1 - Math.exp(-dt * 24);
+    const posY = currentPose.position[1] + (targetY - currentPose.position[1]) * vDamp;
+
+    if (stepped.pose.levelCode !== currentPose.levelCode) {
+      // Synchronize floor pill in store without resetting camera pose or losing momentum
+      useExploreStore.getState().syncWalkLevel(stepped.pose.levelCode);
+    }
+
+    const candidatePose: WalkPose = {
+      levelCode: stepped.pose.levelCode,
+      position: [posX, posY, posZ],
+      yaw: smoothedYaw,
+      pitch: smoothedPitch,
+    };
+
+    // 5. Commit updated pose to ref
+    poseRef.current = candidatePose;
+
+    // 6. Update Three.js camera & headlamp directly at 60+ FPS
+    const cam = state.camera;
+    cam.position.set(posX, posY, posZ);
+
+    const cosP = Math.cos(smoothedPitch);
+    const sinP = Math.sin(smoothedPitch);
+    const lookDist = 5.0;
+    cam.lookAt(
+      posX + Math.sin(smoothedYaw) * cosP * lookDist,
+      posY + sinP * lookDist,
+      posZ - Math.cos(smoothedYaw) * cosP * lookDist,
+    );
+
+    if (
+      'fov' in cam &&
+      typeof (cam as THREE.PerspectiveCamera).updateProjectionMatrix === 'function'
+    ) {
+      const persp = cam as THREE.PerspectiveCamera;
+      if (Math.abs(persp.fov - WALK_FOV_DEG) > 0.1) {
+        persp.fov = WALK_FOV_DEG;
+        persp.updateProjectionMatrix();
+      }
+    }
+
+    if (headlampRef.current) {
+      headlampRef.current.position.set(posX, posY + 0.35, posZ);
+    }
+
+    // Keep invalidating while moving or damping
+    const isMoving =
+      Math.hypot(velocityRef.current.vx, velocityRef.current.vz) > 0.001 ||
+      forwardInput !== 0 ||
+      strafeInput !== 0 ||
+      turnInput !== 0 ||
+      pitchInput !== 0 ||
+      Math.abs(targetLookRef.current.targetYaw - smoothedYaw) > 0.001 ||
+      Math.abs(targetLookRef.current.targetPitch - smoothedPitch) > 0.001 ||
+      Math.abs(targetY - posY) > 0.005;
+
+    if (isMoving) {
+      state.invalidate();
+    }
+  });
+
+  return null;
+}
+
 function WalkSceneOverlay({
   children,
   headlampRef,
+  poseRef,
+  keysRef,
+  targetLookRef,
+  velocityRef,
 }: {
   children: ReactNode;
   headlampRef: MutableRefObject<THREE.PointLight | null>;
+  poseRef: MutableRefObject<WalkPose | null>;
+  keysRef: MutableRefObject<Set<string>>;
+  targetLookRef: MutableRefObject<{ targetYaw: number; targetPitch: number }>;
+  velocityRef: MutableRefObject<{ vx: number; vz: number }>;
 }) {
   const gl = useThree(s => s.gl);
   const rootRef = useRef<Root | null>(null);
@@ -102,16 +285,25 @@ function WalkSceneOverlay({
   });
 
   return (
-    <pointLight
-      ref={headlampRef}
-      name="sol-walk-headlamp"
-      position={[0, 2.0, 12]}
-      color="#fff4ea"
-      intensity={1.35}
-      distance={16}
-      decay={1.35}
-      castShadow={false}
-    />
+    <>
+      <WalkFrameLoop
+        poseRef={poseRef}
+        headlampRef={headlampRef}
+        keysRef={keysRef}
+        targetLookRef={targetLookRef}
+        velocityRef={velocityRef}
+      />
+      <pointLight
+        ref={headlampRef}
+        name="sol-walk-headlamp"
+        position={[0, 2.0, 12]}
+        color="#fff4ea"
+        intensity={1.35}
+        distance={16}
+        decay={1.35}
+        castShadow={false}
+      />
+    </>
   );
 }
 
@@ -138,7 +330,6 @@ export function WalkController() {
   const selectedId = useExploreStore(state => state.selectedId);
   const setWalkMode = useExploreStore(state => state.setWalkMode);
   const setFocusLevel = useExploreStore(state => state.setFocusLevel);
-  const flyToViewpoint = useExploreStore(state => state.flyToViewpoint);
 
   const activeWalkLevel: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
   const canGoDownFloor = activeWalkLevel !== 'B1';
@@ -166,8 +357,12 @@ export function WalkController() {
   const poseRef = useRef<WalkPose | null>(null);
   const headlampRef = useRef<THREE.PointLight | null>(null);
   const pressedKeysRef = useRef<Set<string>>(new Set());
-  const rafRef = useRef<number | null>(null);
-  const lastTickMsRef = useRef<number>(0);
+  const targetLookRef = useRef<{ targetYaw: number; targetPitch: number }>({
+    targetYaw: 0,
+    targetPitch: 0,
+  });
+  const velocityRef = useRef<{ vx: number; vz: number }>({ vx: 0, vz: 0 });
+  const pointerLockedRef = useRef<boolean>(false);
   const pointerDragRef = useRef<{
     x: number;
     y: number;
@@ -176,19 +371,30 @@ export function WalkController() {
     moved: boolean;
   } | null>(null);
 
+  const prevFocusLevelRef = useRef<LevelCode | 'ALL'>(focusLevel);
+  const prevSelectedIdRef = useRef<string | null>(selectedId);
+
   const commitWalkPose = useCallback(
     (nextPose: WalkPose) => {
       poseRef.current = nextPose;
-      const vp = poseToViewpoint(nextPose);
-      flyToViewpoint(vp);
+      targetLookRef.current.targetYaw = nextPose.yaw;
+      targetLookRef.current.targetPitch = nextPose.pitch ?? 0;
+      velocityRef.current = { vx: 0, vz: 0 };
 
       const state = r3fStore?.getState();
       if (state?.camera) {
-        state.camera.position.set(vp.position[0], vp.position[1], vp.position[2]);
-        state.camera.lookAt(vp.target[0], vp.target[1], vp.target[2]);
+        state.camera.position.set(nextPose.position[0], nextPose.position[1], nextPose.position[2]);
+        const cosP = Math.cos(nextPose.pitch ?? 0);
+        const sinP = Math.sin(nextPose.pitch ?? 0);
+        const lookDist = 5.0;
+        state.camera.lookAt(
+          nextPose.position[0] + Math.sin(nextPose.yaw) * cosP * lookDist,
+          nextPose.position[1] + sinP * lookDist,
+          nextPose.position[2] - Math.cos(nextPose.yaw) * cosP * lookDist,
+        );
         if (
           'fov' in state.camera &&
-          typeof state.camera.updateProjectionMatrix === 'function'
+          typeof (state.camera as THREE.PerspectiveCamera).updateProjectionMatrix === 'function'
         ) {
           const persp = state.camera as THREE.PerspectiveCamera;
           if (Math.abs(persp.fov - WALK_FOV_DEG) > 0.1) {
@@ -198,15 +404,15 @@ export function WalkController() {
         }
         if (headlampRef.current) {
           headlampRef.current.position.set(
-            vp.position[0],
-            vp.position[1] + 0.35,
-            vp.position[2],
+            nextPose.position[0],
+            nextPose.position[1] + 0.35,
+            nextPose.position[2],
           );
         }
         state.invalidate();
       }
     },
-    [flyToViewpoint, r3fStore],
+    [r3fStore],
   );
 
   const nudgePoseByInput = useCallback(
@@ -215,11 +421,14 @@ export function WalkController() {
       if (!currentPose) return;
 
       if (turnDeg !== 0 || pitchDeg !== 0) {
-        const rotated = rotateWalkPose(
-          currentPose,
-          (turnDeg * Math.PI) / 180,
-          (pitchDeg * Math.PI) / 180,
+        const radYaw = (turnDeg * Math.PI) / 180;
+        const radPitch = (pitchDeg * Math.PI) / 180;
+        targetLookRef.current.targetYaw += radYaw;
+        targetLookRef.current.targetPitch = Math.max(
+          -0.75,
+          Math.min(0.75, targetLookRef.current.targetPitch + radPitch),
         );
+        const rotated = rotateWalkPose(currentPose, radYaw, radPitch);
         if (forward === 0 && strafe === 0) {
           commitWalkPose(rotated);
           return;
@@ -228,52 +437,63 @@ export function WalkController() {
       }
 
       const activePose = poseRef.current ?? currentPose;
-      const levelNode = getLevelByCode(SOL_CENTER_SCENE, activePose.levelCode);
-      const walls = wallsOfLevel(SOL_CENTER_SCENE, activePose.levelCode);
-      const obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, activePose.levelCode);
-      const bounds = levelNode
-        ? polygonBounds2D(levelNode.slabPolygon)
-        : undefined;
+      const moveX =
+        Math.sin(activePose.yaw) * forward + Math.cos(activePose.yaw) * strafe;
+      const moveZ =
+        -Math.cos(activePose.yaw) * forward + Math.sin(activePose.yaw) * strafe;
+      const moveLen = Math.hypot(moveX, moveZ);
+      const stepMeters = WALK_SPEED_MPS * 0.28;
+      const dispX = moveLen > 1e-4 ? (moveX / moveLen) * stepMeters : 0;
+      const dispZ = moveLen > 1e-4 ? (moveZ / moveLen) * stepMeters : 0;
 
-      const nextPose = stepWalkPose(
-        activePose,
-        { forward, strafe, turn: 0, pitchDelta: 0 },
-        0.1,
-        walls,
-        bounds,
-        obstacles,
-      );
-      const portalLevel = evaluateStairOrElevatorPortal(
+      const stepped = stepContinuousWalkPose3D(
         SOL_CENTER_SCENE,
         activePose,
-        nextPose,
+        dispX,
+        dispZ,
+        activePose.yaw,
+        activePose.pitch ?? 0,
       );
-      if (portalLevel && portalLevel !== activePose.levelCode) {
-        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
-        if (SOL_CENTER_SCENE.nodes[stairId]) {
-          useExploreStore.getState().selectNode(stairId);
-        } else {
-          switchWalkFloor(portalLevel);
-        }
-        return;
+      if (stepped.pose.levelCode !== activePose.levelCode) {
+        useExploreStore.getState().syncWalkLevel(stepped.pose.levelCode);
       }
-      commitWalkPose(nextPose);
+      commitWalkPose(stepped.pose);
     },
-    [commitWalkPose, switchWalkFloor],
+    [commitWalkPose],
   );
 
-  // Initialize walk pose when entering walkMode or switching level
+  // Initialize walk pose when entering walkMode or switching level externally
   useEffect(() => {
     if (!walkMode) {
       poseRef.current = null;
       pressedKeysRef.current.clear();
       pointerDragRef.current = null;
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
+      velocityRef.current = { vx: 0, vz: 0 };
+      if (document.pointerLockElement) {
+        try {
+          document.exitPointerLock?.();
+        } catch {
+          // ignore
+        }
       }
       return;
     }
+
+    const activeLevel: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
+
+    // If this effect was triggered by an internal portal transition:
+    // If poseRef is already on activeLevel and selectedId has not changed, do NOT reinitialize!
+    if (
+      poseRef.current &&
+      poseRef.current.levelCode === activeLevel &&
+      selectedId === prevSelectedIdRef.current
+    ) {
+      prevFocusLevelRef.current = focusLevel;
+      return;
+    }
+
+    prevFocusLevelRef.current = focusLevel;
+    prevSelectedIdRef.current = selectedId;
 
     const rawInitialPose = computeInitialWalkPose(
       SOL_CENTER_SCENE,
@@ -296,83 +516,9 @@ export function WalkController() {
     commitWalkPose(initialPose);
   }, [walkMode, focusLevel, selectedId, commitWalkPose]);
 
-  // Keyboard WASD + Arrows + Q/E/R/F, pointer drag 360° look, wheel step, and floor click
+  // Keyboard controls, pointer lock / drag 360° look, wheel step, and floor teleport click
   useEffect(() => {
     if (!walkMode) return;
-
-    const applyStep = (dtSec: number) => {
-      if (useExploreStore.getState().searchOpen) {
-        pressedKeysRef.current.clear();
-        return;
-      }
-      const currentPose = poseRef.current;
-      if (!currentPose) return;
-
-      const keys = pressedKeysRef.current;
-      const sprintMultiplier = keys.has('shift') ? 1.55 : 1;
-      const forward =
-        (keys.has('w') || keys.has('arrowup') ? 1 : 0) -
-        (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
-      const strafe = (keys.has('d') ? 1 : 0) - (keys.has('a') ? 1 : 0);
-      const turn =
-        (keys.has('arrowright') || keys.has('e') ? 1 : 0) -
-        (keys.has('arrowleft') || keys.has('q') ? 1 : 0);
-      const pitchDelta =
-        (keys.has('r') || keys.has('pageup') ? 1 : 0) -
-        (keys.has('f') || keys.has('pagedown') ? 1 : 0);
-
-      if (forward === 0 && strafe === 0 && turn === 0 && pitchDelta === 0) return;
-
-      const levelNode = getLevelByCode(SOL_CENTER_SCENE, currentPose.levelCode);
-      const walls = wallsOfLevel(SOL_CENTER_SCENE, currentPose.levelCode);
-      const obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, currentPose.levelCode);
-      const bounds = levelNode
-        ? polygonBounds2D(levelNode.slabPolygon)
-        : undefined;
-
-      const nextPose = stepWalkPose(
-        currentPose,
-        { forward, strafe, turn, pitchDelta },
-        dtSec * sprintMultiplier,
-        walls,
-        bounds,
-        obstacles,
-      );
-      const portalLevel = evaluateStairOrElevatorPortal(
-        SOL_CENTER_SCENE,
-        currentPose,
-        nextPose,
-      );
-      if (portalLevel && portalLevel !== currentPose.levelCode) {
-        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
-        if (SOL_CENTER_SCENE.nodes[stairId]) {
-          useExploreStore.getState().selectNode(stairId);
-        } else {
-          switchWalkFloor(portalLevel);
-        }
-        return;
-      }
-      commitWalkPose(nextPose);
-    };
-
-    const tickLoop = (nowMs: number) => {
-      if (pressedKeysRef.current.size === 0) {
-        rafRef.current = null;
-        return;
-      }
-      const dtSec =
-        lastTickMsRef.current > 0 ? (nowMs - lastTickMsRef.current) / 1000 : 1 / 60;
-      lastTickMsRef.current = nowMs;
-      applyStep(dtSec);
-      rafRef.current = window.requestAnimationFrame(tickLoop);
-    };
-
-    const startLoopIfNeeded = () => {
-      if (rafRef.current === null && pressedKeysRef.current.size > 0) {
-        lastTickMsRef.current = performance.now();
-        rafRef.current = window.requestAnimationFrame(tickLoop);
-      }
-    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
@@ -385,6 +531,14 @@ export function WalkController() {
 
       if (event.key === 'Escape') {
         event.preventDefault();
+        if (document.pointerLockElement) {
+          try {
+            document.exitPointerLock?.();
+          } catch {
+            // ignore
+          }
+          return;
+        }
         setWalkMode(false);
         return;
       }
@@ -427,18 +581,15 @@ export function WalkController() {
         key === 'arrowright'
       ) {
         event.preventDefault();
-        const wasEmpty = pressedKeysRef.current.size === 0;
         pressedKeysRef.current.add(key);
-        if (wasEmpty) {
-          applyStep(1 / 25);
-        }
-        startLoopIfNeeded();
+        r3fStore?.getState()?.invalidate();
       }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       pressedKeysRef.current.delete(key);
+      r3fStore?.getState()?.invalidate();
     };
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -451,8 +602,8 @@ export function WalkController() {
         pointerDragRef.current = {
           x: event.clientX,
           y: event.clientY,
-          startYaw: currentPose.yaw,
-          startPitch: currentPose.pitch ?? 0,
+          startYaw: targetLookRef.current.targetYaw,
+          startPitch: targetLookRef.current.targetPitch,
           moved: false,
         };
       }
@@ -460,8 +611,7 @@ export function WalkController() {
 
     const handlePointerMove = (event: PointerEvent) => {
       const drag = pointerDragRef.current;
-      const currentPose = poseRef.current;
-      if (!drag || !currentPose) return;
+      if (!drag) return;
 
       const dx = event.clientX - drag.x;
       const dy = event.clientY - drag.y;
@@ -475,94 +625,50 @@ export function WalkController() {
       const deltaYaw = (dx / viewportW) * Math.PI * 1.65;
       const deltaPitch = -(dy / viewportH) * Math.PI * 0.9;
 
-      const rotated = rotateWalkPose(
-        {
-          ...currentPose,
-          yaw: drag.startYaw,
-          pitch: drag.startPitch,
-        },
-        deltaYaw,
-        deltaPitch,
+      targetLookRef.current.targetYaw = drag.startYaw + deltaYaw;
+      targetLookRef.current.targetPitch = Math.max(
+        -0.75,
+        Math.min(0.75, drag.startPitch + deltaPitch),
       );
-      commitWalkPose(rotated);
+      r3fStore?.getState()?.invalidate();
     };
 
     const handlePointerUp = (event: PointerEvent) => {
       const drag = pointerDragRef.current;
       pointerDragRef.current = null;
-      if (!drag || drag.moved) return;
+      if (!drag) return;
 
-      const dist = Math.hypot(event.clientX - drag.x, event.clientY - drag.y);
-      if (dist > 6) return;
-
-      const currentPose = poseRef.current;
-      if (!currentPose) return;
-
-      const viewportW = Math.max(1, window.innerWidth);
-      const normalizedX = (event.clientX / viewportW - 0.5) * 2;
-      const yawOffset = normalizedX * (Math.PI / 5);
-      const targetYaw = currentPose.yaw + yawOffset;
-      const strideMeters = 2.6;
-
-      const levelNode = getLevelByCode(SOL_CENTER_SCENE, currentPose.levelCode);
-      const walls = wallsOfLevel(SOL_CENTER_SCENE, currentPose.levelCode);
-      const obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, currentPose.levelCode);
-      const bounds = levelNode
-        ? polygonBounds2D(levelNode.slabPolygon)
-        : undefined;
-
-      const fromXZ: Vec2 = [currentPose.position[0], currentPose.position[2]];
-      let destXZ: Vec2 = [
-        fromXZ[0] + Math.sin(targetYaw) * strideMeters,
-        fromXZ[1] - Math.cos(targetYaw) * strideMeters,
-      ];
-      if (bounds) {
-        destXZ = [
-          Math.min(bounds.maxX - 0.52, Math.max(bounds.minX + 0.52, destXZ[0])),
-          Math.min(bounds.maxZ - 0.52, Math.max(bounds.minZ + 0.52, destXZ[1])),
-        ];
-      }
-      const resolvedXZ = resolveWalkCollision2D(
-        fromXZ,
-        destXZ,
-        walls,
-        WALK_COLLIDER_RADIUS_M,
-        obstacles,
-      );
-      const baseEyeY = levelNode
-        ? levelNode.elevation + WALK_EYE_HEIGHT_M
-        : currentPose.position[1];
-      const stairState = computeStairElevationOffset(
-        SOL_CENTER_SCENE,
-        currentPose.levelCode,
-        resolvedXZ[0],
-        resolvedXZ[1],
-      );
-      const nextPose: WalkPose = {
-        levelCode: currentPose.levelCode,
-        position: [
-          resolvedXZ[0],
-          Number((baseEyeY + stairState.elevationOffset).toFixed(3)),
-          resolvedXZ[1],
-        ],
-        yaw: targetYaw,
-        pitch: currentPose.pitch ?? 0,
-      };
-      const portalLevel = evaluateStairOrElevatorPortal(
-        SOL_CENTER_SCENE,
-        currentPose,
-        nextPose,
-      );
-      if (portalLevel && portalLevel !== currentPose.levelCode) {
-        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
-        if (SOL_CENTER_SCENE.nodes[stairId]) {
-          useExploreStore.getState().selectNode(stairId);
-        } else {
-          switchWalkFloor(portalLevel);
+      if (!drag.moved) {
+        const canvas = event.target as HTMLElement;
+        if (
+          canvas &&
+          canvas.tagName === 'CANVAS' &&
+          document.pointerLockElement !== canvas &&
+          typeof canvas.requestPointerLock === 'function'
+        ) {
+          try {
+            void canvas.requestPointerLock();
+          } catch {
+            // ignore
+          }
         }
-        return;
       }
-      commitWalkPose(nextPose);
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (document.pointerLockElement) {
+        const sens = 0.0022;
+        targetLookRef.current.targetYaw += event.movementX * sens;
+        targetLookRef.current.targetPitch = Math.max(
+          -0.75,
+          Math.min(0.75, targetLookRef.current.targetPitch - event.movementY * sens),
+        );
+        r3fStore?.getState()?.invalidate();
+      }
+    };
+
+    const handlePointerLockChange = () => {
+      pointerLockedRef.current = document.pointerLockElement !== null;
     };
 
     const handleWheel = (event: WheelEvent) => {
@@ -574,64 +680,21 @@ export function WalkController() {
       event.preventDefault();
       const direction = event.deltaY < 0 ? 1 : -1;
       const stepMeters = 1.05 * direction;
+      const dispX = Math.sin(currentPose.yaw) * stepMeters;
+      const dispZ = -Math.cos(currentPose.yaw) * stepMeters;
 
-      const levelNode = getLevelByCode(SOL_CENTER_SCENE, currentPose.levelCode);
-      const walls = wallsOfLevel(SOL_CENTER_SCENE, currentPose.levelCode);
-      const obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, currentPose.levelCode);
-      const bounds = levelNode
-        ? polygonBounds2D(levelNode.slabPolygon)
-        : undefined;
-
-      const fromXZ: Vec2 = [currentPose.position[0], currentPose.position[2]];
-      let destXZ: Vec2 = [
-        fromXZ[0] + Math.sin(currentPose.yaw) * stepMeters,
-        fromXZ[1] - Math.cos(currentPose.yaw) * stepMeters,
-      ];
-      if (bounds) {
-        destXZ = [
-          Math.min(bounds.maxX - 0.52, Math.max(bounds.minX + 0.52, destXZ[0])),
-          Math.min(bounds.maxZ - 0.52, Math.max(bounds.minZ + 0.52, destXZ[1])),
-        ];
-      }
-      const resolvedXZ = resolveWalkCollision2D(
-        fromXZ,
-        destXZ,
-        walls,
-        WALK_COLLIDER_RADIUS_M,
-        obstacles,
-      );
-      const baseEyeY = levelNode
-        ? levelNode.elevation + WALK_EYE_HEIGHT_M
-        : currentPose.position[1];
-      const stairState = computeStairElevationOffset(
-        SOL_CENTER_SCENE,
-        currentPose.levelCode,
-        resolvedXZ[0],
-        resolvedXZ[1],
-      );
-      const nextPose: WalkPose = {
-        ...currentPose,
-        position: [
-          resolvedXZ[0],
-          Number((baseEyeY + stairState.elevationOffset).toFixed(3)),
-          resolvedXZ[1],
-        ],
-      };
-      const portalLevel = evaluateStairOrElevatorPortal(
+      const stepped = stepContinuousWalkPose3D(
         SOL_CENTER_SCENE,
         currentPose,
-        nextPose,
+        dispX,
+        dispZ,
+        currentPose.yaw,
+        currentPose.pitch ?? 0,
       );
-      if (portalLevel && portalLevel !== currentPose.levelCode) {
-        const stairId = `item-${portalLevel.toLowerCase()}-stairs`;
-        if (SOL_CENTER_SCENE.nodes[stairId]) {
-          useExploreStore.getState().selectNode(stairId);
-        } else {
-          switchWalkFloor(portalLevel);
-        }
-        return;
+      if (stepped.pose.levelCode !== currentPose.levelCode) {
+        useExploreStore.getState().syncWalkLevel(stepped.pose.levelCode);
       }
-      commitWalkPose(nextPose);
+      commitWalkPose(stepped.pose);
     };
 
     const handleFloorTeleportEvent = (event: Event) => {
@@ -671,6 +734,8 @@ export function WalkController() {
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
     window.addEventListener('pointerup', handlePointerUp, { passive: true });
     window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
     window.addEventListener('scms:explore3d-floor-click', handleFloorTeleportEvent);
 
     return () => {
@@ -680,13 +745,11 @@ export function WalkController() {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
       window.removeEventListener('scms:explore3d-floor-click', handleFloorTeleportEvent);
-      if (rafRef.current !== null) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
     };
-  }, [walkMode, setWalkMode, commitWalkPose, stepWalkFloor, switchWalkFloor]);
+  }, [walkMode, setWalkMode, commitWalkPose, stepWalkFloor, switchWalkFloor, r3fStore]);
 
   if (!walkMode) {
     return null;
@@ -871,7 +934,13 @@ export function WalkController() {
   const hasR3fStore = Boolean(r3fStore as unknown);
   if (hasR3fStore) {
     return (
-      <WalkSceneOverlay headlampRef={headlampRef}>
+      <WalkSceneOverlay
+        headlampRef={headlampRef}
+        poseRef={poseRef}
+        keysRef={pressedKeysRef}
+        targetLookRef={targetLookRef}
+        velocityRef={velocityRef}
+      >
         {hudContent}
       </WalkSceneOverlay>
     );

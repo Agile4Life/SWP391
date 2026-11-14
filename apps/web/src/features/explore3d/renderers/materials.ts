@@ -81,7 +81,7 @@ export const DARK_PALETTE: ExploreThemePalette = {
   slab: {
     base: '#242428',
     edge: '#ce9180',
-    plaza: '#1e1e22',
+    plaza: '#1e2026',
     grid: '#2f2f35',
     walkway: '#ce9180',
     zoneBorder: '#4a4850',
@@ -131,7 +131,7 @@ export const LIGHT_PALETTE: ExploreThemePalette = {
   slab: {
     base: '#f5f2ed',
     edge: '#c47c6a',
-    plaza: '#e2dcd2',
+    plaza: '#dcd5ca',
     grid: '#cfc7bc',
     walkway: '#c47c6a',
     zoneBorder: '#c9c1b6',
@@ -358,7 +358,7 @@ export class MaterialRegistry {
     this.plazaGround = new THREE.MeshStandardMaterial({
       name: 'plaza-ground',
       color: p.slab.plaza,
-      roughness: 0.9,
+      roughness: 0.85,
       metalness: 0.0,
       envMapIntensity: 1.1,
     });
@@ -367,7 +367,7 @@ export class MaterialRegistry {
       name: 'plaza-grid',
       color: p.slab.grid,
       transparent: true,
-      opacity: 0.56,
+      opacity: 0.11,
     });
 
     this.plazaWalkway = new THREE.MeshStandardMaterial({
@@ -491,9 +491,9 @@ export class MaterialRegistry {
     applySurfaceDetail(this.walls['wood-slat'], SD.wood);
     applySurfaceDetail(this.walls['accent-salmon'], SD.item);
     applySurfaceDetail(this.slabBase, SD.plaster);
-    applySurfaceDetail(this.plazaGround, SD.ground);
+    applySurfaceDetail(this.plazaGround, SD.plaza);
     applySurfaceDetail(this.plazaWalkway, SD.walkway);
-    applySurfaceDetail(this.vertexColored, SD.campus);
+    applySurfaceDetail(this.vertexColored, { ...SD.campus, vertexSurface: false });
     applySurfaceDetail(this.items.base, SD.item);
     applySurfaceDetail(this.items.upholstery, SD.item);
     applySurfaceDetail(this.items.equipmentFrame, SD.metal);

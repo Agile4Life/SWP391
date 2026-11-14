@@ -10,6 +10,8 @@ const SLOW_WINDOW_THRESHOLD_MS = 30;
 const FAST_WINDOW_THRESHOLD_MS = 20;
 const DOWNGRADE_CONSECUTIVE_WINDOWS = 4;
 const UPGRADE_CONSECUTIVE_WINDOWS = 2;
+/** After a downgrade, stay put: flipping tiers back and forth recompiles shaders and reallocates shadow maps. */
+export const UPGRADE_COOLDOWN_MS = 20_000;
 
 export function getPerformanceConfig(tier: QualityTier): {
   tier: QualityTier;
@@ -64,6 +66,7 @@ export function PerformanceGovernor() {
   const windowDeltaMsRef = useRef<number>(0);
   const consecutiveSlowWindowsRef = useRef<number>(0);
   const consecutiveFastWindowsRef = useRef<number>(0);
+  const lastDowngradeMsRef = useRef<number>(-Infinity);
 
   useEffect(() => {
     setDpr?.(config.dpr);
@@ -88,13 +91,17 @@ export function PerformanceGovernor() {
             const currentTier = useExploreStore.getState().tier;
             const next = getNextLowerTier(currentTier);
             if (next) {
+              lastDowngradeMsRef.current = performance.now();
               useExploreStore.getState().setQualityTier(next.tier, next.dpr);
             }
           }
         } else if (avgDeltaMs <= FAST_WINDOW_THRESHOLD_MS) {
           consecutiveFastWindowsRef.current += 1;
           consecutiveSlowWindowsRef.current = 0;
-          if (consecutiveFastWindowsRef.current >= UPGRADE_CONSECUTIVE_WINDOWS) {
+          if (
+            consecutiveFastWindowsRef.current >= UPGRADE_CONSECUTIVE_WINDOWS &&
+            performance.now() - lastDowngradeMsRef.current > UPGRADE_COOLDOWN_MS
+          ) {
             consecutiveFastWindowsRef.current = 0;
             const currentTier = useExploreStore.getState().tier;
             const next = getNextHigherTier(currentTier);

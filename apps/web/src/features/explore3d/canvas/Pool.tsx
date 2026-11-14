@@ -211,10 +211,13 @@ function usePrefersReducedMotion(): boolean {
 
 export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const selectNode = useExploreStore(s => s.selectNode);
   const setHoveredId = useExploreStore(s => s.setHoveredId);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
   const levelB1 = useMemo(() => getLevelByCode(scene, 'B1'), [scene]);
   const waterTexRef = useRef<THREE.Texture | null>(null);
@@ -363,7 +366,14 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
     };
   }, [resources]);
 
-  const isB1Visible = levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'B1';
+  const hideBuriedB1 =
+    !walkMode && effectiveLevelMode === 'stacked' && focusLevel === 'ALL';
+  const hideFarWalkB1 =
+    walkMode && focusLevel !== 'B1' && focusLevel !== 'L1' && focusLevel !== 'ALL';
+  const isB1Visible =
+    !hideBuriedB1 &&
+    !hideFarWalkB1 &&
+    (effectiveLevelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'B1');
   const canAnimate =
     isB1Visible && !prefersReducedMotion && (focusLevel === 'B1' || focusLevel === 'ALL');
 
@@ -380,7 +390,7 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
     return null;
   }
 
-  const b1WorldY = levelB1 ? getLevelWorldY(levelB1, levelMode) : -4.5;
+  const b1WorldY = levelB1 ? getLevelWorldY(levelB1, effectiveLevelMode) : -4.5;
   const { centerX, centerZ, width, depth } = OASIS_POOL_DIMENSIONS;
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {

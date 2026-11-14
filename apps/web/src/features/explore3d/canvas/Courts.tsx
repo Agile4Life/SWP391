@@ -322,12 +322,15 @@ function CourtSurfaceMesh({
 
 export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const selectedId = useExploreStore(s => s.selectedId);
   const hoveredId = useExploreStore(s => s.hoveredId);
   const tier = useExploreStore(s => s.tier);
   const selectNode = useExploreStore(s => s.selectNode);
   const setHoveredId = useExploreStore(s => s.setHoveredId);
+
+  const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
   const levelL1 = useMemo(() => getLevelByCode(scene, 'L1'), [scene]);
   const levelOut = useMemo(() => getLevelByCode(scene, 'OUT'), [scene]);
@@ -380,11 +383,11 @@ export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
     };
   }, [resources]);
 
-  const showL1 = levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'L1';
-  const showOut = levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'OUT';
+  const showL1 = effectiveLevelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'L1';
+  const showOut = effectiveLevelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'OUT';
 
-  const l1WorldY = levelL1 ? getLevelWorldY(levelL1, levelMode) : 0;
-  const outWorldY = levelOut ? getLevelWorldY(levelOut, levelMode) : 0;
+  const l1WorldY = levelL1 ? getLevelWorldY(levelL1, effectiveLevelMode) : 0;
+  const outWorldY = levelOut ? getLevelWorldY(levelOut, effectiveLevelMode) : 0;
   const receiveShadow = tier !== 'low';
 
   const handleSelect = (id: string, fit = false) => {

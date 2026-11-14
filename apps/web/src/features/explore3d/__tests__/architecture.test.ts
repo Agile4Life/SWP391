@@ -11,11 +11,14 @@ import {
   CUTAWAY_WALL_HEIGHT,
   mergeBufferGeometries,
   splitWallIntoSegments,
+  STAIRWELL_OPENING_BOUNDS,
 } from '../renderers/architecture/buildLevelGeometry';
 import {
   buildCampusGeometry,
+  buildCampusSceneGeometries,
   buildCampusSignageGeometry,
 } from '../renderers/architecture/buildCampusGeometry';
+import { buildCityMetropolisGeometries } from '../renderers/architecture/buildCityMetropolis';
 import { buildLevelInteriorDetailsGeometry } from '../renderers/architecture/buildInteriorDetails';
 import {
   collectSceneExteriorWallDescriptors,
@@ -118,6 +121,31 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(campusDark.getAttribute('position').count).toBeGreaterThan(1000);
       expect(campusDark.getAttribute('color')).toBeDefined();
       campusDark.dispose();
+
+      const campusScene = buildCampusSceneGeometries('light');
+      for (const geom of [campusScene.opaque, campusScene.glass, campusScene.water, campusScene.vehicles]) {
+        const pos = geom.getAttribute('position');
+        const norm = geom.getAttribute('normal');
+        expect(pos).toBeDefined();
+        expect(norm).toBeDefined();
+        expect(pos.count).toBeGreaterThan(0);
+        expect(geom.getAttribute('color')).toBeDefined();
+        expect(geom.getIndex()).toBeDefined();
+        for (let i = 0; i < pos.count; i += 1) {
+          expect(Number.isFinite(pos.getX(i))).toBe(true);
+          expect(Number.isFinite(pos.getY(i))).toBe(true);
+          expect(Number.isFinite(pos.getZ(i))).toBe(true);
+          expect(Number.isFinite(norm.getX(i))).toBe(true);
+          expect(Number.isFinite(norm.getY(i))).toBe(true);
+          expect(Number.isFinite(norm.getZ(i))).toBe(true);
+        }
+      }
+      expect(campusScene.opaque.getAttribute('surf')).toBeDefined();
+      expect(campusScene.vehicles.getAttribute('surf')).toBeDefined();
+      campusScene.opaque.dispose();
+      campusScene.glass.dispose();
+      campusScene.water.dispose();
+      campusScene.vehicles.dispose();
 
       const signageGeom = buildCampusSignageGeometry();
       assertValidBufferGeometry(signageGeom);
@@ -327,6 +355,44 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(gridGeom.getAttribute('position').count).toBeGreaterThan(20);
       gridGeom.dispose();
     });
+  });
+});
+
+describe('Phase 2 foliage buckets & structural stairwell cutouts', () => {
+  it('populates finite alpha-tested foliage buckets in both Campus and CityMetropolis builders', () => {
+    const campus = buildCampusSceneGeometries('light');
+    expect(campus.foliage).toBeDefined();
+    assertValidBufferGeometry(campus.foliage);
+    expect(campus.foliage.getAttribute('windWeight')).toBeDefined();
+    expect(campus.foliage.getAttribute('color')).toBeDefined();
+    expect(campus.opaque.getAttribute('surf')).toBeDefined();
+    expect(campus.vehicles.getAttribute('surf')).toBeDefined();
+
+    const city = buildCityMetropolisGeometries('dark', 'high');
+    expect(city.foliageGeometry).toBeDefined();
+    assertValidBufferGeometry(city.foliageGeometry);
+    expect(city.foliageGeometry.getAttribute('windWeight')).toBeDefined();
+  });
+
+  it('punches stairwell cutouts in L1, L2, RF slabs while keeping B1 solid', () => {
+    const stairCenter = new THREE.Vector3(
+      (STAIRWELL_OPENING_BOUNDS.minX + STAIRWELL_OPENING_BOUNDS.maxX) * 0.5,
+      5,
+      (STAIRWELL_OPENING_BOUNDS.minZ + STAIRWELL_OPENING_BOUNDS.maxZ) * 0.5,
+    );
+    const downRay = new THREE.Raycaster(stairCenter, new THREE.Vector3(0, -1, 0));
+
+    for (const cutId of ['lvl-l1', 'lvl-l2', 'lvl-rf'] as const) {
+      const built = buildLevelGeometry(SOL_CENTER_SCENE, cutId);
+      const slabMesh = new THREE.Mesh(built.slabGeometry);
+      slabMesh.updateMatrixWorld(true);
+      expect(downRay.intersectObject(slabMesh, false)).toHaveLength(0);
+    }
+
+    const b1Built = buildLevelGeometry(SOL_CENTER_SCENE, 'lvl-b1');
+    const b1SlabMesh = new THREE.Mesh(b1Built.slabGeometry);
+    b1SlabMesh.updateMatrixWorld(true);
+    expect(downRay.intersectObject(b1SlabMesh, false).length).toBeGreaterThan(0);
   });
 });
 

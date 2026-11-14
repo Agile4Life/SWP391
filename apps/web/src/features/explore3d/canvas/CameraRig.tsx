@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import {
   CAMERA_LIMITS,
-  OVERVIEW_VIEWPOINT,
+  getOverviewViewpoint,
   clampTargetToBounds,
   computeBestViewpoint,
   computeFitViewpoint,
@@ -40,8 +40,6 @@ const _restTarget = new THREE.Vector3();
 const _currPosition = new THREE.Vector3();
 const _currTarget = new THREE.Vector3();
 
-const DEG15_RAD = (15 * Math.PI) / 180;
-
 function isTypingElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -59,6 +57,14 @@ export function CameraRig() {
   const isSanitizingRef = useRef<boolean>(false);
 
   const invalidate = useThree(state => state.invalidate);
+  const canvasWidth = useThree(state => state.size.width);
+  const canvasHeight = useThree(state => state.size.height);
+  // Quantised so a drag-resize does not re-fly the camera on every pixel.
+  const aspect = Math.round((canvasWidth / Math.max(1, canvasHeight)) * 10) / 10;
+  const aspectRef = useRef(aspect);
+  useEffect(() => {
+    aspectRef.current = aspect;
+  }, [aspect]);
   const cameraCommand = useExploreStore(state => state.cameraCommand);
   const levelMode = useExploreStore(state => state.levelMode);
   const walkMode = useExploreStore(state => state.walkMode);
@@ -178,10 +184,32 @@ export function CameraRig() {
   useEffect(() => {
     const wasWalking = prevWalkModeRef.current;
     prevWalkModeRef.current = walkMode;
-    if (!wasWalking || walkMode) return;
 
     const controls = controlsRef.current;
     if (!controls) return;
+
+    if (walkMode) {
+      controls.enabled = false;
+      controls.stop();
+      return;
+    }
+
+    if (!wasWalking) return;
+
+    // Cleanly sync controls to current camera position before transitioning back to isometric
+    const ctrlCam = (controls as unknown as { camera?: THREE.Camera }).camera;
+    if (ctrlCam) {
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(ctrlCam.quaternion);
+      void controls.setLookAt(
+        ctrlCam.position.x,
+        ctrlCam.position.y,
+        ctrlCam.position.z,
+        ctrlCam.position.x + fwd.x * 5,
+        ctrlCam.position.y + fwd.y * 5,
+        ctrlCam.position.z + fwd.z * 5,
+        false,
+      );
+    }
 
     const { selectedId, focusLevel, levelMode: currLevelMode } = useExploreStore.getState();
     const fallbackNodeId =
@@ -189,9 +217,18 @@ export function CameraRig() {
       (focusLevel !== 'ALL' ? `lvl-${focusLevel.toLowerCase()}` : null);
     const vp = fallbackNodeId
       ? computeBestViewpoint(SOL_CENTER_SCENE, fallbackNodeId, currLevelMode)
-      : OVERVIEW_VIEWPOINT;
+      : getOverviewViewpoint(aspectRef.current);
     void applyViewpoint(controls, vp, lastLevelRef.current, lastLevelRef.current);
   }, [applyViewpoint, walkMode]);
+
+  // The overview distance follows the canvas aspect, so re-frame it when the window is resized.
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls || !initializedRef.current || useExploreStore.getState().walkMode) return;
+    const { focusLevel, selectedId } = useExploreStore.getState();
+    if (focusLevel !== 'ALL' || selectedId) return;
+    void applyViewpoint(controls, getOverviewViewpoint(aspect), 'ALL', 'ALL', true);
+  }, [applyViewpoint, aspect]);
 
   // Configure boundary and initial camera pose on mount
   useEffect(() => {
@@ -210,9 +247,10 @@ export function CameraRig() {
     if (currentCmd) return;
 
     const saved = loadExploreSessionView();
+    const overview = getOverviewViewpoint(aspectRef.current);
     const sanitized = sanitizeCameraPose(
-      saved ? saved.position : OVERVIEW_VIEWPOINT.position,
-      saved ? saved.target : OVERVIEW_VIEWPOINT.target,
+      saved ? saved.position : overview.position,
+      saved ? saved.target : overview.target,
     );
 
     void controls.setLookAt(
@@ -243,7 +281,7 @@ export function CameraRig() {
 
     if (cameraCommand.kind === 'overview') {
       lastLevelRef.current = 'ALL';
-      void applyViewpoint(controls, OVERVIEW_VIEWPOINT, prevLevel, 'ALL');
+      void applyViewpoint(controls, getOverviewViewpoint(aspectRef.current), prevLevel, 'ALL');
       return;
     }
 
@@ -272,6 +310,7 @@ export function CameraRig() {
     }
 
     if (cameraCommand.kind === 'viewpoint' && cameraCommand.viewpoint) {
+      if (walkMode) return;
       const isEyeStep = cameraCommand.viewpoint.kind === 'eye' && walkMode;
       void applyViewpoint(
         controls,
@@ -331,8 +370,6 @@ export function CameraRig() {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
       const state = useExploreStore.getState();
-      const controls = controlsRef.current;
-      const enableTransition = !prefersReducedMotion();
 
       if (event.key === 'Escape') {
         if (state.searchOpen) {
@@ -355,80 +392,6 @@ export function CameraRig() {
 
       // In walk mode, WalkController owns WASD / Arrow movement
       if (state.walkMode) return;
-
-      if (event.shiftKey && event.key === 'ArrowLeft') {
-        event.preventDefault();
-        if (controls) {
-          void controls.rotate(-DEG15_RAD, 0, enableTransition);
-          invalidate();
-        }
-        return;
-      }
-
-      if (event.shiftKey && event.key === 'ArrowRight') {
-        event.preventDefault();
-        if (controls) {
-          void controls.rotate(DEG15_RAD, 0, enableTransition);
-          invalidate();
-        }
-        return;
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        if (controls) {
-          void controls.truck(0, -2.5, enableTransition);
-          invalidate();
-        } else {
-          state.nudgeCamera(0, -2.5);
-        }
-        return;
-      }
-
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        if (controls) {
-          void controls.truck(0, 2.5, enableTransition);
-          invalidate();
-        } else {
-          state.nudgeCamera(0, 2.5);
-        }
-        return;
-      }
-
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        if (controls) {
-          void controls.truck(-2.5, 0, enableTransition);
-          invalidate();
-        } else {
-          state.nudgeCamera(-2.5, 0);
-        }
-        return;
-      }
-
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        if (controls) {
-          void controls.truck(2.5, 0, enableTransition);
-          invalidate();
-        } else {
-          state.nudgeCamera(2.5, 0);
-        }
-        return;
-      }
-
-      if (event.key === '+' || event.key === '=') {
-        event.preventDefault();
-        zoomByDirection('in');
-        return;
-      }
-
-      if (event.key === '-' || event.key === '_') {
-        event.preventDefault();
-        zoomByDirection('out');
-        return;
-      }
 
       if (event.key === '0') {
         event.preventDefault();
@@ -460,21 +423,11 @@ export function CameraRig() {
       }
     };
 
-    const handleCustomZoom = (event: Event) => {
-      const customEvent = event as CustomEvent<{ direction?: 'in' | 'out' }>;
-      const direction = customEvent.detail?.direction;
-      if (direction === 'in' || direction === 'out') {
-        zoomByDirection(direction);
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('explore3d:zoom', handleCustomZoom);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('explore3d:zoom', handleCustomZoom);
-    };
-  }, [invalidate, zoomByDirection]);
+      };
+  }, []);
 
   const handleControlStart = useCallback(() => {
     const state = useExploreStore.getState();
@@ -619,8 +572,9 @@ export function CameraRig() {
     <CameraControls
       ref={controlsRef}
       makeDefault
-      enabled={!walkMode}
-      dollyToCursor={!walkMode}
+      // The camera is locked: it only moves when a level, node or viewpoint is chosen (programmatic
+      // flights still run while disabled). In walkMode, WalkController directly owns the camera.
+      enabled={!walkMode && false}
       dollySpeed={1.15}
       truckSpeed={1.8}
       infinityDolly={false}
@@ -628,8 +582,8 @@ export function CameraRig() {
       draggingSmoothTime={0.12}
       minDistance={walkMode ? 0.1 : CAMERA_LIMITS.minDistance}
       maxDistance={CAMERA_LIMITS.maxDistance}
-      minPolarAngle={CAMERA_LIMITS.minPolarAngle}
-      maxPolarAngle={CAMERA_LIMITS.maxPolarAngle}
+      minPolarAngle={walkMode ? 0 : CAMERA_LIMITS.minPolarAngle}
+      maxPolarAngle={walkMode ? Math.PI : CAMERA_LIMITS.maxPolarAngle}
       onControlStart={handleControlStart}
       onControl={handleInvalidate}
       onUpdate={handleInvalidate}

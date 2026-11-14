@@ -47,6 +47,7 @@ export interface ExploreState {
 
   // Actions
   selectNode: (id: string | null, options?: { fit?: boolean; syncLevel?: boolean }) => void;
+  syncWalkLevel: (level: LevelCode) => void;
   setHoveredId: (id: string | null) => void;
   setFocusLevel: (level: LevelCode | 'ALL') => void;
   setLevelMode: (mode: LevelMode) => void;
@@ -174,6 +175,11 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
         nodeId: id,
       },
     });
+  },
+
+  syncWalkLevel: level => {
+    if (get().focusLevel === level) return;
+    set({ focusLevel: level });
   },
 
   setHoveredId: id => {

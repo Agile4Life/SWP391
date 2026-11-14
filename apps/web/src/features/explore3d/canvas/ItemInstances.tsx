@@ -6,6 +6,7 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
 import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
 import { ItemGlbLoader } from './ItemGlbLoader';
+import { isWalkFloorAdjacent } from './riggedInstance';
 import {
   computeItemInstanceMatrix,
   getItemGeometry,
@@ -37,6 +38,32 @@ const DEDICATED_SURFACE_KINDS = new Set<ItemKind>([
   'swim-lane',
 ]);
 
+function isBatchItemVisible(
+  entry: GroupedItemEntry,
+  kind: ItemKind,
+  levelMode: LevelMode,
+  walkMode: boolean,
+  focusLevel: LevelCode | 'ALL',
+  resolved: ResolvedItemBindingState | undefined,
+): boolean {
+  if (levelMode === 'stacked' && entry.item.id === 'item-rf-stairs') {
+    return false;
+  }
+  if (!walkMode && levelMode === 'stacked' && focusLevel === 'ALL' && entry.level?.code === 'B1') {
+    return false;
+  }
+  if (
+    walkMode &&
+    kind !== 'stair-core' &&
+    kind !== 'elevator-core' &&
+    entry.level &&
+    !isWalkFloorAdjacent(entry.level.code, focusLevel)
+  ) {
+    return false;
+  }
+  return isItemInstanceVisible(entry, levelMode, focusLevel, resolved);
+}
+
 interface KindInstancedBatchProps {
   kind: ItemKind;
   entries: GroupedItemEntry[];
@@ -45,6 +72,7 @@ interface KindInstancedBatchProps {
   castShadow: boolean;
   receiveShadow: boolean;
   levelMode: LevelMode;
+  walkMode: boolean;
   focusLevel: LevelCode | 'ALL';
   selectedId: string | null;
   hoveredId: string | null;
@@ -62,6 +90,7 @@ function KindInstancedBatch({
   castShadow,
   receiveShadow,
   levelMode,
+  walkMode,
   focusLevel,
   selectedId,
   hoveredId,
@@ -84,12 +113,12 @@ function KindInstancedBatch({
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
-      if (isItemInstanceVisible(entry, levelMode, focusLevel, resolved)) {
+      if (isBatchItemVisible(entry, kind, levelMode, walkMode, focusLevel, resolved)) {
         return true;
       }
     }
     return false;
-  }, [entries, levelMode, focusLevel, resolvedItems]);
+  }, [entries, kind, levelMode, walkMode, focusLevel, resolvedItems]);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -99,7 +128,7 @@ function KindInstancedBatch({
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
-      const visible = isItemInstanceVisible(entry, levelMode, focusLevel, resolved);
+      const visible = isBatchItemVisible(entry, kind, levelMode, walkMode, focusLevel, resolved);
       if (visible) {
         visibleCount += 1;
       }
@@ -127,8 +156,10 @@ function KindInstancedBatch({
     invalidate();
   }, [
     entries,
+    kind,
     geometry,
     levelMode,
+    walkMode,
     focusLevel,
     selectedId,
     hoveredId,
@@ -142,7 +173,7 @@ function KindInstancedBatch({
     const entry = entries[e.instanceId];
     if (!entry) return;
     const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
-    if (!isItemInstanceVisible(entry, levelMode, focusLevel, resolved)) return;
+    if (!isBatchItemVisible(entry, kind, levelMode, walkMode, focusLevel, resolved)) return;
     onSelect(entry.item.id, false);
   };
 
@@ -152,7 +183,7 @@ function KindInstancedBatch({
     const entry = entries[e.instanceId];
     if (!entry) return;
     const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
-    if (!isItemInstanceVisible(entry, levelMode, focusLevel, resolved)) return;
+    if (!isBatchItemVisible(entry, kind, levelMode, walkMode, focusLevel, resolved)) return;
     onSelect(entry.item.id, true);
   };
 
@@ -162,7 +193,7 @@ function KindInstancedBatch({
     const entry = entries[e.instanceId];
     if (!entry) return;
     const resolved = lookupResolvedItem(resolvedItems, entry.item.id);
-    if (!isItemInstanceVisible(entry, levelMode, focusLevel, resolved)) return;
+    if (!isBatchItemVisible(entry, kind, levelMode, walkMode, focusLevel, resolved)) return;
     onHover(entry.item.id);
   };
 
@@ -178,7 +209,12 @@ function KindInstancedBatch({
       key={ownMaterials ? 'textured' : 'flat'}
       args={[geometry, ownMaterials ?? material, entries.length]}
       visible={hasVisibleItems}
-      castShadow={castShadow || Boolean(ownMaterials)}
+      castShadow={
+        !walkMode &&
+        (castShadow || Boolean(ownMaterials)) &&
+        (levelMode !== 'stacked' ||
+          entries.some(e => e.level?.code === 'OUT' || e.level?.code === 'RF'))
+      }
       receiveShadow={receiveShadow}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
@@ -193,12 +229,15 @@ export function ItemInstances({
   resolvedItems,
 }: ItemInstancesProps) {
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const selectedId = useExploreStore(s => s.selectedId);
   const hoveredId = useExploreStore(s => s.hoveredId);
   const tier = useExploreStore(s => s.tier);
   const selectNode = useExploreStore(s => s.selectNode);
   const setHoveredId = useExploreStore(s => s.setHoveredId);
+
+  const effectiveLevelMode: LevelMode = walkMode ? 'stacked' : levelMode;
 
   const grouped = useMemo(() => groupItemsByKind(scene), [scene]);
   const geometryRevision = useSyncExternalStore(
@@ -252,7 +291,8 @@ export function ItemInstances({
             material={sharedMaterial}
             castShadow={tier !== 'low'}
             receiveShadow={receiveShadow}
-            levelMode={levelMode}
+            levelMode={effectiveLevelMode}
+            walkMode={walkMode}
             focusLevel={focusLevel}
             selectedId={selectedId}
             hoveredId={hoveredId}

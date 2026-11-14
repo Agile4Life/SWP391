@@ -19,6 +19,98 @@ export const CAMPUS_BOUNDS: CampusBounds = {
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
+  readonly roughness?: number;
+  readonly metalness?: number;
+}
+
+export interface FoliageCard {
+  readonly positions: readonly [
+    number, number, number,
+    number, number, number,
+    number, number, number,
+    number, number, number,
+  ];
+  readonly normals: readonly [
+    number, number, number,
+    number, number, number,
+    number, number, number,
+    number, number, number,
+  ];
+  readonly colors: readonly [
+    number, number, number,
+    number, number, number,
+    number, number, number,
+    number, number, number,
+  ];
+  readonly uvs: readonly [
+    number, number,
+    number, number,
+    number, number,
+    number, number,
+  ];
+  readonly windWeights: readonly [number, number, number, number];
+}
+
+export function mergeFoliageCards(cards: readonly FoliageCard[]): THREE.BufferGeometry {
+  if (cards.length === 0) {
+    const fallback = new THREE.BufferGeometry();
+    fallback.setAttribute('position', new THREE.BufferAttribute(new Float32Array(12), 3));
+    fallback.setAttribute('normal', new THREE.BufferAttribute(new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]), 3));
+    fallback.setAttribute('color', new THREE.BufferAttribute(new Float32Array([0.2, 0.4, 0.2, 0.2, 0.4, 0.2, 0.2, 0.4, 0.2, 0.2, 0.4, 0.2]), 3));
+    fallback.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]), 2));
+    fallback.setAttribute('windWeight', new THREE.BufferAttribute(new Float32Array(4), 1));
+    fallback.setIndex(new THREE.BufferAttribute(new Uint32Array([0, 1, 2, 0, 2, 3]), 1));
+    return fallback;
+  }
+  const totalVertices = cards.length * 4;
+  const totalIndices = cards.length * 6;
+
+  const positions = new Float32Array(totalVertices * 3);
+  const normals = new Float32Array(totalVertices * 3);
+  const colors = new Float32Array(totalVertices * 3);
+  const uvs = new Float32Array(totalVertices * 2);
+  const windWeights = new Float32Array(totalVertices);
+  const indices = new Uint32Array(totalIndices);
+
+  for (let c = 0; c < cards.length; c += 1) {
+    const card = cards[c]!;
+    const vBase = c * 4;
+    const pBase = vBase * 3;
+    const uBase = vBase * 2;
+    const iBase = c * 6;
+
+    positions.set(card.positions, pBase);
+    normals.set(card.normals, pBase);
+    colors.set(card.colors, pBase);
+    uvs.set(card.uvs, uBase);
+    windWeights.set(card.windWeights, vBase);
+
+    indices[iBase] = vBase;
+    indices[iBase + 1] = vBase + 1;
+    indices[iBase + 2] = vBase + 2;
+    indices[iBase + 3] = vBase;
+    indices[iBase + 4] = vBase + 2;
+    indices[iBase + 5] = vBase + 3;
+  }
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geom.setAttribute('windWeight', new THREE.BufferAttribute(windWeights, 1));
+  geom.setIndex(new THREE.BufferAttribute(indices, 1));
+  geom.computeBoundingBox();
+  geom.computeBoundingSphere();
+  return geom;
+}
+
+export interface CampusSceneGeometries {
+  readonly opaque: THREE.BufferGeometry;
+  readonly glass: THREE.BufferGeometry;
+  readonly water: THREE.BufferGeometry;
+  readonly vehicles: THREE.BufferGeometry;
+  readonly foliage: THREE.BufferGeometry;
 }
 
 function pushBox(
@@ -33,6 +125,8 @@ function pushBox(
   rx = 0,
   ry = 0,
   rz = 0,
+  roughness = 0.78,
+  metalness = 0,
 ): void {
   const geom = new THREE.BoxGeometry(w, h, d);
   if (rx !== 0 || ry !== 0 || rz !== 0) {
@@ -47,7 +141,7 @@ function pushBox(
   } else {
     geom.translate(x, y, z);
   }
-  parts.push({ geometry: geom, color });
+  parts.push({ geometry: geom, color, roughness, metalness });
 }
 
 function pushCylinder(
@@ -63,6 +157,8 @@ function pushCylinder(
   rx = 0,
   ry = 0,
   rz = 0,
+  roughness = 0.78,
+  metalness = 0,
 ): void {
   const geom = new THREE.CylinderGeometry(rTop, rBottom, h, radialSegments);
   if (rx !== 0 || ry !== 0 || rz !== 0) {
@@ -77,10 +173,20 @@ function pushCylinder(
   } else {
     geom.translate(x, y, z);
   }
-  parts.push({ geometry: geom, color });
+  parts.push({ geometry: geom, color, roughness, metalness });
 }
 
 function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
+  if (parts.length === 0) {
+    const fallback = new THREE.BoxGeometry(0.01, 0.01, 0.01);
+    const count = fallback.getAttribute('position').count;
+    fallback.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3).fill(1), 3));
+    const surf = new Float32Array(count * 2);
+    for (let i = 0; i < count; i += 1) surf[i * 2] = 0.78;
+    fallback.setAttribute('surf', new THREE.BufferAttribute(surf, 2));
+    return fallback;
+  }
+
   let totalVertices = 0;
   let totalIndices = 0;
 
@@ -94,20 +200,23 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   const positions = new Float32Array(totalVertices * 3);
   const normals = new Float32Array(totalVertices * 3);
   const colors = new Float32Array(totalVertices * 3);
+  const surfs = new Float32Array(totalVertices * 2);
   const indices = new Uint32Array(totalIndices);
 
   const tmpColor = new THREE.Color();
   let vOffset = 0;
   let iOffset = 0;
 
-  for (const { geometry, color } of parts) {
+  for (const { geometry, color, roughness = 0.78, metalness = 0 } of parts) {
     tmpColor.set(color);
     const pos = geometry.getAttribute('position');
     const norm = geometry.getAttribute('normal');
+    const colAttr = geometry.getAttribute('color');
     const idx = geometry.getIndex();
 
     for (let i = 0; i < pos.count; i += 1) {
       const base = (vOffset + i) * 3;
+      const base2 = (vOffset + i) * 2;
       positions[base] = pos.getX(i);
       positions[base + 1] = pos.getY(i);
       positions[base + 2] = pos.getZ(i);
@@ -120,9 +229,18 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
         normals[base + 1] = 1;
       }
 
-      colors[base] = tmpColor.r;
-      colors[base + 1] = tmpColor.g;
-      colors[base + 2] = tmpColor.b;
+      if (colAttr) {
+        colors[base] = colAttr.getX(i);
+        colors[base + 1] = colAttr.getY(i);
+        colors[base + 2] = colAttr.getZ(i);
+      } else {
+        colors[base] = tmpColor.r;
+        colors[base + 1] = tmpColor.g;
+        colors[base + 2] = tmpColor.b;
+      }
+
+      surfs[base2] = roughness;
+      surfs[base2 + 1] = metalness;
     }
 
     if (idx) {
@@ -145,6 +263,7 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   merged.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  merged.setAttribute('surf', new THREE.BufferAttribute(surfs, 2));
   merged.setIndex(new THREE.BufferAttribute(indices, 1));
   merged.computeBoundingBox();
   merged.computeBoundingSphere();
@@ -171,6 +290,8 @@ const CAR_PAINT: Readonly<Record<string, string>> = {
  * raked screens, roof) rather than stacked boxes, with separate glazing, wheels
  * with rims, lamps and mirrors.
  */
+const METALLIC_CAR_PAINTS = new Set(['#c4c7ca', '#8b8e92', '#6b7178']);
+
 function addCar3D(
   parts: ColoredPart[],
   cx: number,
@@ -180,6 +301,8 @@ function addCar3D(
   variant: 'sedan' | 'suv' | 'coupe' = 'sedan',
 ): void {
   const paint = CAR_PAINT[bodyColor] ?? bodyColor;
+  const paintRoughness = METALLIC_CAR_PAINTS.has(paint) ? 0.2 : 0.14;
+  const paintMetalness = METALLIC_CAR_PAINTS.has(paint) ? 0.88 : 0.0;
   const W = variant === 'suv' ? 1.9 : variant === 'coupe' ? 1.86 : 1.82;
   const L = variant === 'suv' ? 4.55 : variant === 'coupe' ? 4.35 : 4.6;
   const y0 = variant === 'suv' ? 0.3 : 0.2;
@@ -192,10 +315,10 @@ function addCar3D(
   const rTop = variant === 'suv' ? -h + 0.55 : variant === 'coupe' ? -0.75 : -0.95;
   const rBase = variant === 'suv' ? -h + 0.22 : variant === 'coupe' ? -h + 0.55 : -h + 0.75;
 
-  const place = (geometry: THREE.BufferGeometry, color: string) => {
+  const place = (geometry: THREE.BufferGeometry, color: string, roughness = 0.78, metalness = 0) => {
     geometry.rotateY(ry);
     geometry.translate(cx, 0, cz);
-    parts.push({ geometry, color });
+    parts.push({ geometry, color, roughness, metalness });
   };
   /** Extrude a side profile (points in car z / y) across the car width. */
   const extrude = (pts: ReadonlyArray<readonly [number, number]>, width: number, bevel: number) => {
@@ -236,9 +359,11 @@ function addCar3D(
       0.09,
     ),
     paint,
+    paintRoughness,
+    paintMetalness,
   );
   // side glazing (slightly proud of the doors) and screens (between the pillars)
-  const glass = '#0c1116';
+  const glass = '#0c131a';
   place(
     extrude(
       [
@@ -251,6 +376,8 @@ function addCar3D(
       0,
     ),
     glass,
+    0.05,
+    0.85,
   );
   place(
     extrude(
@@ -264,34 +391,46 @@ function addCar3D(
       0,
     ),
     glass,
+    0.05,
+    0.85,
   );
 
-  const boxAt = (w: number, hh: number, d: number, x: number, y: number, z: number, color: string) => {
+  const boxAt = (
+    w: number,
+    hh: number,
+    d: number,
+    x: number,
+    y: number,
+    z: number,
+    color: string,
+    roughness = 0.78,
+    metalness = 0,
+  ) => {
     const g = new THREE.BoxGeometry(w, hh, d);
     g.translate(x, y, z);
-    place(g, color);
+    place(g, color, roughness, metalness);
   };
   // contact shadow plate, bumpers' dark lower trim, grille
-  boxAt(W * 0.9, 0.05, L * 0.9, 0, y0 - 0.06, 0, '#07090c');
-  boxAt(W * 0.7, 0.12, 0.05, 0, y0 + 0.22, h - 0.015, '#111418');
-  // lamps
+  boxAt(W * 0.9, 0.05, L * 0.9, 0, y0 - 0.06, 0, '#07090c', 0.92, 0);
+  boxAt(W * 0.7, 0.12, 0.05, 0, y0 + 0.22, h - 0.015, '#14181e', 0.82, 0);
+  // lamps & side mirrors
   for (const side of [-1, 1]) {
-    boxAt(0.36, 0.1, 0.06, side * (W / 2 - 0.3), belt - 0.2, h - 0.03, '#f1efe4');
-    boxAt(0.4, 0.09, 0.05, side * (W / 2 - 0.3), belt - 0.16, -h + 0.02, '#6d1212');
-    boxAt(0.1, 0.07, 0.16, side * (W / 2 + 0.05), belt + 0.06, fBase - 0.12, paint);
+    boxAt(0.36, 0.1, 0.06, side * (W / 2 - 0.3), belt - 0.2, h - 0.03, '#f1efe4', 0.12, 0);
+    boxAt(0.4, 0.09, 0.05, side * (W / 2 - 0.3), belt - 0.16, -h + 0.02, '#6d1212', 0.14, 0);
+    boxAt(0.1, 0.07, 0.16, side * (W / 2 + 0.05), belt + 0.06, fBase - 0.12, paint, paintRoughness, paintMetalness);
   }
-  // wheels: tyre + rim
+  // wheels: matte rubber tyre + brushed alloy rim
   const r = variant === 'suv' ? 0.37 : 0.33;
   for (const side of [-1, 1]) {
     for (const wz of [L * 0.31, -L * 0.3]) {
-      const tyre = new THREE.CylinderGeometry(r, r, 0.24, 20);
+      const tyre = new THREE.CylinderGeometry(r, r, 0.24, 18);
       tyre.rotateZ(Math.PI / 2);
       tyre.translate(side * (W / 2 - 0.13), r, wz);
-      place(tyre, '#0b0c0e');
-      const rim = new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.05, 16);
+      place(tyre, '#111317', 0.9, 0);
+      const rim = new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.05, 14);
       rim.rotateZ(Math.PI / 2);
       rim.translate(side * (W / 2 - 0.005), r, wz);
-      place(rim, '#aeb2b6');
+      place(rim, '#b4b9bf', 0.2, 0.92);
     }
   }
 }
@@ -308,14 +447,36 @@ function addMotorbike3D(
   const tx = (lx: number, lz: number) => mx + lx * cos + lz * sin;
   const tz = (lx: number, lz: number) => mz - lx * sin + lz * cos;
 
-  pushBox(parts, 0.14, 0.42, 0.42, tx(0, -0.56), 0.21, tz(0, -0.56), '#141820', 0, ry, 0);
-  pushBox(parts, 0.14, 0.42, 0.42, tx(0, 0.58), 0.21, tz(0, 0.58), '#141820', 0, ry, 0);
-  pushBox(parts, 0.42, 0.36, 1.18, tx(0, -0.1), 0.42, tz(0, -0.1), bodyColor, 0, ry, 0);
-  pushBox(parts, 0.38, 0.14, 0.72, tx(0, -0.22), 0.66, tz(0, -0.22), '#1e222b', 0, ry, 0);
-  pushBox(parts, 0.4, 0.68, 0.24, tx(0, 0.42), 0.58, tz(0, 0.42), bodyColor, -0.2, ry, 0);
-  pushBox(parts, 0.68, 0.08, 0.1, tx(0, 0.38), 0.95, tz(0, 0.38), '#cbd5e1', 0, ry, 0);
-  pushBox(parts, 0.2, 0.14, 0.14, tx(0, 0.46), 0.96, tz(0, 0.46), '#fef3c7', 0, ry, 0);
-  pushBox(parts, 0.18, 0.1, 0.08, tx(0, -0.7), 0.58, tz(0, -0.7), '#ef4444', 0, ry, 0);
+  const wheel = (lz: number) => {
+    const tyre = new THREE.CylinderGeometry(0.21, 0.21, 0.11, 12);
+    tyre.rotateZ(Math.PI / 2);
+    tyre.rotateY(ry);
+    tyre.translate(tx(0, lz), 0.21, tz(0, lz));
+    parts.push({ geometry: tyre, color: '#121417', roughness: 0.9, metalness: 0 });
+
+    const rim = new THREE.CylinderGeometry(0.125, 0.125, 0.12, 10);
+    rim.rotateZ(Math.PI / 2);
+    rim.rotateY(ry);
+    rim.translate(tx(0, lz), 0.21, tz(0, lz));
+    parts.push({ geometry: rim, color: '#b8bec6', roughness: 0.22, metalness: 0.92 });
+  };
+
+  wheel(-0.52);
+  wheel(0.54);
+  // Step-through floorboard, contoured rear cowl & tapered tail
+  pushBox(parts, 0.34, 0.07, 0.56, tx(0, 0.02), 0.23, tz(0, 0.02), '#1b1f26', 0, ry, 0, 0.88, 0);
+  pushBox(parts, 0.4, 0.32, 0.82, tx(0, -0.28), 0.44, tz(0, -0.28), bodyColor, 0, ry, 0, 0.22, 0);
+  pushBox(parts, 0.3, 0.2, 0.3, tx(0, -0.66), 0.48, tz(0, -0.66), bodyColor, -0.12, ry, 0, 0.22, 0);
+  pushBox(parts, 0.35, 0.11, 0.68, tx(0, -0.26), 0.64, tz(0, -0.26), '#191c22', 0, ry, 0, 0.86, 0);
+  // Raked front leg shield & fender
+  pushBox(parts, 0.36, 0.62, 0.18, tx(0, 0.38), 0.56, tz(0, 0.38), bodyColor, -0.22, ry, 0, 0.22, 0);
+  pushBox(parts, 0.16, 0.1, 0.28, tx(0, 0.54), 0.4, tz(0, 0.54), bodyColor, 0.18, ry, 0, 0.22, 0);
+  // Steering head cowl, handlebars, rear grab rail & lamps
+  pushBox(parts, 0.26, 0.14, 0.2, tx(0, 0.36), 0.92, tz(0, 0.36), bodyColor, 0, ry, 0, 0.22, 0);
+  pushBox(parts, 0.62, 0.045, 0.05, tx(0, 0.32), 0.94, tz(0, 0.32), '#cfd5dd', 0, ry, 0, 0.2, 0.92);
+  pushBox(parts, 0.28, 0.04, 0.16, tx(0, -0.68), 0.66, tz(0, -0.68), '#c4cad2', 0, ry, 0, 0.22, 0.9);
+  pushBox(parts, 0.14, 0.1, 0.06, tx(0, 0.46), 0.91, tz(0, 0.46), '#f2ece0', 0, ry, 0, 0.12, 0);
+  pushBox(parts, 0.14, 0.07, 0.06, tx(0, -0.78), 0.57, tz(0, -0.78), '#7a1919', 0, ry, 0, 0.18, 0);
 }
 
 function seededRandom(seed: number): () => number {
@@ -327,85 +488,244 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-const FOLIAGE_TONES = ['#2f4a2b', '#3a5a33', '#476a3a', '#547843', '#33502f'] as const;
+function addFoliageCard(
+  target: FoliageCard[],
+  cx: number,
+  cy: number,
+  cz: number,
+  w: number,
+  h: number,
+  rotY: number,
+  tiltX: number,
+  crownCenter: readonly [number, number, number],
+  sunColor: THREE.Color,
+  shadeColor: THREE.Color,
+  aoFactor: number,
+): void {
+  const cosY = Math.cos(rotY);
+  const sinY = Math.sin(rotY);
+  const cosT = Math.cos(tiltX);
+  const sinT = Math.sin(tiltX);
 
-/** Lumpy, irregular foliage mass: a sphere displaced by a few low-frequency lobes. */
-function foliageBlob(rand: () => number, radius: number): THREE.BufferGeometry {
-  const geom = new THREE.SphereGeometry(radius, 12, 9);
-  const pos = geom.getAttribute('position');
-  const p1 = rand() * 6.28;
-  const p2 = rand() * 6.28;
-  const p3 = rand() * 6.28;
-  for (let i = 0; i < pos.count; i += 1) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const n =
-      Math.sin((x / radius) * 3.1 + p1) * Math.cos((z / radius) * 2.7 + p2) * 0.16 +
-      Math.sin((y / radius) * 4.3 + p3) * 0.1 +
-      Math.sin((x + z) / radius * 6.5 + p2) * 0.05;
-    const k = 1 + n;
-    pos.setXYZ(i, x * k, y * k * 0.86, z * k);
+  const halfW = w * 0.5;
+  const localPts: [number, number, number][] = [
+    [-halfW, 0, 0],
+    [halfW, 0, 0],
+    [halfW, h, 0],
+    [-halfW, h, 0],
+  ];
+
+  const pos: number[] = [];
+  const norm: number[] = [];
+  const col: number[] = [];
+  const uvs: [number, number, number, number, number, number, number, number] = [
+    0, 0,
+    1, 0,
+    1, 1,
+    0, 1,
+  ];
+  const weights: [number, number, number, number] = [0.22, 0.22, 1.0, 1.0];
+
+  const tmpCol = new THREE.Color();
+  for (let i = 0; i < 4; i += 1) {
+    const [lx, ly, lz] = localPts[i]!;
+    const ty = ly * cosT - lz * sinT;
+    const tz = ly * sinT + lz * cosT;
+    const tx = lx * cosY + tz * sinY;
+    const fz = -lx * sinY + tz * cosY;
+
+    const wx = cx + tx;
+    const wy = cy + ty;
+    const wz = cz + fz;
+    pos.push(wx, wy, wz);
+
+    const rdx = wx - crownCenter[0];
+    const rdy = (wy - crownCenter[1]) * 1.25 + 0.35;
+    const rdz = wz - crownCenter[2];
+    const rlen = Math.hypot(rdx, rdy, rdz) || 1;
+
+    const fnx = sinT * sinY;
+    const fny = cosT;
+    const fnz = sinT * cosY;
+
+    const nx = fnx * 0.35 + (rdx / rlen) * 0.65;
+    const ny = fny * 0.35 + (rdy / rlen) * 0.65;
+    const nz = fnz * 0.35 + (rdz / rlen) * 0.65;
+    const nlen = Math.hypot(nx, ny, nz) || 1;
+    norm.push(nx / nlen, ny / nlen, nz / nlen);
+
+    if (i < 2) {
+      tmpCol.copy(shadeColor).multiplyScalar(aoFactor * 0.78);
+    } else {
+      tmpCol.copy(sunColor).multiplyScalar(aoFactor);
+    }
+    col.push(tmpCol.r, tmpCol.g, tmpCol.b);
   }
-  geom.computeVertexNormals();
-  return geom;
+
+  target.push({
+    positions: pos as unknown as FoliageCard['positions'],
+    normals: norm as unknown as FoliageCard['normals'],
+    colors: col as unknown as FoliageCard['colors'],
+    uvs,
+    windWeights: weights,
+  });
 }
 
 /**
- * Organic broadleaf tree: tapered leaning trunk, a few limbs, and a crown of
- * overlapping irregular foliage masses in natural, slightly varied greens.
- * Deterministic per position so the campus never changes between renders.
+ * Organic branched broadleaf tree: bevelled granite planter + dark mulched soil,
+ * multi-fork tapered leaning bark trunk & limbs, and an airy canopy of crossed & layered
+ * alpha-tested fronds that cast dappled wind-swaying leaf shadows.
  */
 function addCampusTree(
   parts: ColoredPart[],
+  foliageParts: FoliageCard[],
   x: number,
   z: number,
   scale = 1,
   withPlanter = true,
+  isLight = true,
 ): void {
   const rand = seededRandom(Math.round(x * 131 + z * 977));
+  const curbColor = isLight ? '#7d7870' : '#353a44';
+  const mulchColor = '#18120d';
+
   if (withPlanter) {
-    pushBox(parts, 1.9 * scale, 0.34, 1.9 * scale, x, 0.17, z, '#4a4d52');
-    pushBox(parts, 1.6 * scale, 0.36, 1.6 * scale, x, 0.19, z, '#2a2118');
+    pushBox(parts, 2.05 * scale, 0.34, 2.05 * scale, x, 0.17, z, curbColor, 0, 0, 0, 0.84, 0);
+    pushBox(parts, 1.72 * scale, 0.38, 1.72 * scale, x, 0.19, z, mulchColor, 0, 0, 0, 0.98, 0);
+    pushCylinder(parts, 0.34 * scale, 0.38 * scale, 0.08, x, 0.39, z, '#8c949e', 12, 0, 0, 0, 0.28, 0.88);
+  } else {
+    pushCylinder(parts, 0.95 * scale, 1.05 * scale, 0.14, x, 0.07, z, curbColor, 14, 0, 0, 0, 0.84, 0);
+    pushCylinder(parts, 0.86 * scale, 0.86 * scale, 0.16, x, 0.08, z, mulchColor, 14, 0, 0, 0, 0.98, 0);
   }
-  const trunkH = (2.3 + rand() * 0.5) * scale;
-  const leanX = (rand() - 0.5) * 0.12;
-  const leanZ = (rand() - 0.5) * 0.12;
-  pushCylinder(parts, 0.11 * scale, 0.2 * scale, trunkH, x, trunkH * 0.5, z, '#4a392b', 9, leanZ, 0, -leanX);
-  const topX = x + leanX * trunkH * 0.5;
-  const topZ = z + leanZ * trunkH * 0.5;
-  for (let i = 0; i < 3; i += 1) {
-    const ang = rand() * Math.PI * 2;
-    const len = (0.9 + rand() * 0.5) * scale;
-    const tilt = 0.7 + rand() * 0.35;
+
+  const trunkH = (2.4 + rand() * 0.45) * scale;
+  const leanX = (rand() - 0.5) * 0.14;
+  const leanZ = (rand() - 0.5) * 0.14;
+  const barkColor = '#3b2e22';
+  const branchColor = '#47372a';
+
+  pushCylinder(parts, 0.2 * scale, 0.28 * scale, 0.48 * scale, x, 0.24, z, barkColor, 9, 0, 0, 0, 0.95, 0);
+  pushCylinder(
+    parts,
+    0.11 * scale,
+    0.2 * scale,
+    trunkH,
+    x + leanX * 0.5,
+    trunkH * 0.5 + 0.15,
+    z + leanZ * 0.5,
+    barkColor,
+    9,
+    leanZ,
+    0,
+    -leanX,
+    0.94,
+    0,
+  );
+
+  const topX = x + leanX * trunkH * 0.75;
+  const topY = trunkH + 0.15;
+  const topZ = z + leanZ * trunkH * 0.75;
+
+  const canopyNodes: [number, number, number][] = [];
+  for (let i = 0; i < 4; i += 1) {
+    const ang = (i / 4) * Math.PI * 2 + rand() * 0.5;
+    const limbLen = (1.1 + rand() * 0.4) * scale;
+    const tilt = 0.65 + rand() * 0.3;
+    const limbEnd: [number, number, number] = [
+      topX + Math.cos(ang) * Math.sin(tilt) * limbLen,
+      topY + Math.cos(tilt) * limbLen,
+      topZ + Math.sin(ang) * Math.sin(tilt) * limbLen,
+    ];
     pushCylinder(
       parts,
-      0.04 * scale,
-      0.08 * scale,
-      len,
-      topX + Math.cos(ang) * Math.sin(tilt) * len * 0.5,
-      trunkH + Math.cos(tilt) * len * 0.5 - 0.15 * scale,
-      topZ + Math.sin(ang) * Math.sin(tilt) * len * 0.5,
-      '#44352a',
-      6,
+      0.045 * scale,
+      0.085 * scale,
+      limbLen,
+      topX + Math.cos(ang) * Math.sin(tilt) * limbLen * 0.5,
+      topY + Math.cos(tilt) * limbLen * 0.5 - 0.05,
+      topZ + Math.sin(ang) * Math.sin(tilt) * limbLen * 0.5,
+      branchColor,
+      7,
       Math.sin(ang) * tilt,
       0,
       -Math.cos(ang) * tilt,
+      0.94,
+      0,
     );
+    canopyNodes.push(limbEnd);
+
+    for (let j = 0; j < 2; j += 1) {
+      const subAng = ang + (j === 0 ? 0.65 : -0.65) + rand() * 0.25;
+      const subLen = (0.75 + rand() * 0.35) * scale;
+      const subTilt = 0.55 + rand() * 0.3;
+      const subEnd: [number, number, number] = [
+        limbEnd[0] + Math.cos(subAng) * Math.sin(subTilt) * subLen,
+        limbEnd[1] + Math.cos(subTilt) * subLen,
+        limbEnd[2] + Math.sin(subAng) * Math.sin(subTilt) * subLen,
+      ];
+      pushCylinder(
+        parts,
+        0.025 * scale,
+        0.045 * scale,
+        subLen,
+        limbEnd[0] + Math.cos(subAng) * Math.sin(subTilt) * subLen * 0.5,
+        limbEnd[1] + Math.cos(subTilt) * subLen * 0.5,
+        limbEnd[2] + Math.sin(subAng) * Math.sin(subTilt) * subLen * 0.5,
+        branchColor,
+        6,
+        Math.sin(subAng) * subTilt,
+        0,
+        -Math.cos(subAng) * subTilt,
+        0.94,
+        0,
+      );
+      canopyNodes.push(subEnd);
+    }
   }
-  const crownY = trunkH + 0.95 * scale;
-  const blobs = 9;
-  for (let i = 0; i < blobs; i += 1) {
-    const ring = i === 0 ? 0 : 0.55 + rand() * 0.55;
-    const ang = (i / (blobs - 1)) * Math.PI * 2 + rand() * 0.6;
-    const radius = (i === 0 ? 1.05 : 0.6 + rand() * 0.35) * scale;
-    const geom = foliageBlob(rand, radius);
-    geom.translate(
-      topX + Math.cos(ang) * ring * scale,
-      crownY + (i === 0 ? 0.35 : (rand() - 0.45) * 0.9) * scale,
-      topZ + Math.sin(ang) * ring * scale,
-    );
-    parts.push({ geometry: geom, color: FOLIAGE_TONES[Math.floor(rand() * FOLIAGE_TONES.length)] });
+
+  canopyNodes.push([topX, topY + 0.85 * scale, topZ]);
+  canopyNodes.push([topX + 0.3 * scale, topY + 1.25 * scale, topZ - 0.2 * scale]);
+
+  const sunC = new THREE.Color(isLight ? '#567a3a' : '#2d4624');
+  const shadeC = new THREE.Color(isLight ? '#1c2e1a' : '#111e10');
+  const crownCenter: [number, number, number] = [topX, topY + 0.9 * scale, topZ];
+
+  for (let n = 0; n < canopyNodes.length; n += 1) {
+    const [nx, ny, nz] = canopyNodes[n]!;
+    const cardSize = (1.4 + rand() * 0.45) * scale;
+    const ao = 0.65 + 0.35 * Math.min(1.0, (ny - (topY - 0.5)) / (1.8 * scale));
+
+    for (let c = 0; c < 3; c += 1) {
+      const rotY = (c / 3) * Math.PI + rand() * 0.4;
+      const tiltX = (rand() - 0.3) * 0.4;
+      addFoliageCard(foliageParts, nx, ny, nz, cardSize, cardSize, rotY, tiltX, crownCenter, sunC, shadeC, ao);
+    }
+  }
+
+  if (withPlanter) {
+    for (let s = 0; s < 4; s += 1) {
+      const sa = (s / 4) * Math.PI * 2 + rand() * 0.5;
+      const sr = (0.5 + rand() * 0.15) * scale;
+      const sx = x + Math.cos(sa) * sr;
+      const sz = z + Math.sin(sa) * sr;
+      const sy = 0.38;
+      for (let c = 0; c < 2; c += 1) {
+        addFoliageCard(
+          foliageParts,
+          sx,
+          sy,
+          sz,
+          0.65 * scale,
+          0.55 * scale,
+          c * Math.PI * 0.5 + sa,
+          0.15,
+          [sx, sy + 0.2, sz],
+          sunC,
+          shadeC,
+          0.72,
+        );
+      }
+    }
   }
 }
 
@@ -434,23 +754,23 @@ function addStreetLamp(
   armDirZ: number,
   height = 5.2,
 ): void {
-  pushCylinder(parts, 0.16, 0.22, 0.36, x, 0.18, z, '#2c3340', 8);
-  pushCylinder(parts, 0.07, 0.1, height, x, height * 0.5, z, '#3f4756', 8);
+  pushCylinder(parts, 0.16, 0.22, 0.36, x, 0.18, z, '#2c3340', 8, 0, 0, 0, 0.36, 0.88);
+  pushCylinder(parts, 0.07, 0.1, height, x, height * 0.5, z, '#3f4756', 8, 0, 0, 0, 0.32, 0.88);
   const armLen = 1.15;
   const ax = x + armDirX * (armLen * 0.5);
   const az = z + armDirZ * (armLen * 0.5);
   const armW = Math.abs(armDirX) > 0.5 ? armLen : 0.12;
   const armD = Math.abs(armDirZ) > 0.5 ? armLen : 0.12;
-  pushBox(parts, armW, 0.1, armD, ax, height - 0.05, az, '#4b5563');
+  pushBox(parts, armW, 0.1, armD, ax, height - 0.05, az, '#4b5563', 0, 0, 0, 0.32, 0.88);
   const lx = x + armDirX * (armLen * 0.88);
   const lz = z + armDirZ * (armLen * 0.88);
-  pushBox(parts, 0.36, 0.08, 0.36, lx, height - 0.12, lz, '#fde68a');
+  pushBox(parts, 0.36, 0.08, 0.36, lx, height - 0.12, lz, '#f5e4b8', 0, 0, 0, 0.2, 0);
 }
 
 function addBollardLight(parts: ColoredPart[], x: number, z: number): void {
-  pushCylinder(parts, 0.09, 0.1, 0.72, x, 0.36, z, '#2b313d', 8);
-  pushCylinder(parts, 0.095, 0.095, 0.16, x, 0.8, z, '#f6b399', 8);
-  pushCylinder(parts, 0.1, 0.1, 0.06, x, 0.91, z, '#1f242d', 8);
+  pushCylinder(parts, 0.09, 0.1, 0.72, x, 0.36, z, '#2b313d', 8, 0, 0, 0, 0.36, 0.88);
+  pushCylinder(parts, 0.095, 0.095, 0.16, x, 0.8, z, '#f2c4ad', 8, 0, 0, 0, 0.18, 0);
+  pushCylinder(parts, 0.1, 0.1, 0.06, x, 0.91, z, '#1f242d', 8, 0, 0, 0, 0.34, 0.88);
 }
 
 export interface FlagpoleAnchor {
@@ -477,55 +797,66 @@ export const CAMPUS_FLAGPOLE_ANCHORS: readonly FlagpoleAnchor[] = [
  * Solar Car & EV Parking Court, Covered Motorbike & Bicycle Pavilion, and Reflection Fountain
  * are all 100% visible in the central foreground without being covered by the left LevelSwitcher HUD.
  */
-function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles: ColoredPart[] } {
+function buildCampusParts(theme: ExploreTheme): {
+  parts: ColoredPart[];
+  glassParts: ColoredPart[];
+  waterParts: ColoredPart[];
+  vehicles: ColoredPart[];
+  foliageParts: FoliageCard[];
+} {
   const parts: ColoredPart[] = [];
+  const glassParts: ColoredPart[] = [];
+  const waterParts: ColoredPart[] = [];
   const vehicles: ColoredPart[] = [];
+  const foliageParts: FoliageCard[] = [];
   const isLight = theme === 'light';
 
   const roadColor = isLight ? '#384150' : '#161b24';
   const parkingAsphalt = isLight ? '#434d5e' : '#1b212c';
   const walkwayStone = isLight ? '#d8d2c7' : '#252b37';
-  const curbStone = isLight ? '#b8b1a6' : '#3a4252';
-  const lineWhite = isLight ? '#f8fafc' : '#cbd5e1';
-  const lineAmber = '#f59e0b';
-  const salmon = '#f07654';
-  const salmonBright = '#ff8b6b';
+  const curbStone = isLight ? '#b4ada2' : '#3a4252';
+  const lineWhite = isLight ? '#ebeae4' : '#b8c3d1';
+  const lineAmber = '#d98f22';
+  const evGreen = '#2e7d5b';
+  const salmon = '#ce826d';
   const darkSteel = '#1f2531';
   const midSteel = '#333c4d';
   const warmWood = '#8c5838';
+  const archGlass = isLight ? '#9ec0d4' : '#5885a3';
+  const canalTint = isLight ? '#1c4e63' : '#0f2836';
 
   // =========================================================================
   // 1. FRONT BOULEVARD ROAD, CURBS, LANE MARKINGS & ZEBRA CROSSWALK
   // =========================================================================
-  pushBox(parts, 92, 0.05, 5.6, 6, 0.01, 26.6, roadColor);
-  pushBox(parts, 92, 0.12, 0.28, 6, 0.06, 23.75, curbStone);
-  pushBox(parts, 92, 0.12, 0.28, 6, 0.06, 29.45, curbStone);
+  pushBox(parts, 92, 0.05, 5.6, 6, 0.01, 26.6, roadColor, 0, 0, 0, 0.82, 0);
+  pushBox(parts, 92, 0.12, 0.28, 6, 0.06, 23.75, curbStone, 0, 0, 0, 0.86, 0);
+  pushBox(parts, 92, 0.12, 0.28, 6, 0.06, 29.45, curbStone, 0, 0, 0, 0.86, 0);
 
   // Dashed center lane dividers along the boulevard (gap at Main Gate x = 2..14)
   for (let x = -36; x <= 48; x += 4.2) {
     if (x >= 1.5 && x <= 14.5) continue;
-    pushBox(parts, 2.1, 0.06, 0.14, x, 0.04, 26.6, lineAmber);
+    pushBox(parts, 2.1, 0.06, 0.14, x, 0.04, 26.6, lineAmber, 0, 0, 0, 0.78, 0);
   }
 
   // Main Entrance Driveway & Porte-Cochère Drop-Off Loop (x = 1.5..14.0, z = 16.0..24.0)
-  pushBox(parts, 12.6, 0.055, 8.2, 7.8, 0.02, 20.1, parkingAsphalt);
+  pushBox(parts, 12.6, 0.055, 8.2, 7.8, 0.02, 20.1, parkingAsphalt, 0, 0, 0, 0.82, 0);
   // Central landscaped island separating Entry (East x=10.6) & Exit (West x=5.0) lanes
-  pushBox(parts, 1.35, 0.16, 4.6, 7.8, 0.08, 22.1, curbStone);
-  pushBox(parts, 0.95, 0.22, 4.1, 7.8, 0.11, 22.1, '#2d5a3c');
+  pushBox(parts, 1.35, 0.16, 4.6, 7.8, 0.08, 22.1, curbStone, 0, 0, 0, 0.86, 0);
+  pushBox(parts, 0.95, 0.22, 4.1, 7.8, 0.11, 22.1, isLight ? '#2e4e34' : '#192b1d', 0, 0, 0, 0.94, 0);
 
   // VIP Pedestrian Promenade connecting Porte-Cochère to L1 Main Lobby doors (x = -1.5..6.5, z = 15.8..20.2)
-  pushBox(parts, 8.4, 0.07, 4.4, 2.5, 0.035, 17.8, walkwayStone);
-  pushBox(parts, 0.22, 0.08, 4.4, -1.55, 0.042, 17.8, salmon);
-  pushBox(parts, 0.22, 0.08, 4.4, 6.55, 0.042, 17.8, salmon);
+  pushBox(parts, 8.4, 0.07, 4.4, 2.5, 0.035, 17.8, walkwayStone, 0, 0, 0, 0.86, 0);
+  pushBox(parts, 0.22, 0.08, 4.4, -1.55, 0.042, 17.8, salmon, 0, 0, 0, 0.56, 0);
+  pushBox(parts, 0.22, 0.08, 4.4, 6.55, 0.042, 17.8, salmon, 0, 0, 0, 0.56, 0);
 
   // Pedestrian Zebra Crosswalk across the Main Gate throat (x = 3.2..12.4, z = 24.45)
   for (let x = 3.4; x <= 12.2; x += 0.88) {
-    pushBox(parts, 0.48, 0.065, 1.85, x, 0.04, 24.45, lineWhite);
+    pushBox(parts, 0.48, 0.065, 1.85, x, 0.04, 24.45, lineWhite, 0, 0, 0, 0.78, 0);
   }
 
   // Directional lane arrows on Entry (+X lane at x=10.5) and Exit (-X lane at x=5.1)
-  pushBox(parts, 0.32, 0.065, 1.4, 10.5, 0.04, 22.2, lineWhite);
-  pushBox(parts, 0.32, 0.065, 1.4, 5.1, 0.04, 22.2, lineWhite);
+  pushBox(parts, 0.32, 0.065, 1.4, 10.5, 0.04, 22.2, lineWhite, 0, 0, 0, 0.78, 0);
+  pushBox(parts, 0.32, 0.065, 1.4, 5.1, 0.04, 22.2, lineWhite, 0, 0, 0, 0.78, 0);
 
   // =========================================================================
   // 2. MAIN ENTRANCE GATE ("CỔNG CHÀO SÖL"), GUARD BOOTH & BOOM BARRIERS
@@ -534,27 +865,33 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
   const gateX = 7.8;
   const gateZ = 23.2;
   // West (x = 1.9) & East (x = 13.7) monumental stone/charcoal gate piers
-  pushBox(parts, 1.35, 4.8, 1.15, gateX - 5.9, 2.4, gateZ, darkSteel);
-  pushBox(parts, 1.35, 4.8, 1.15, gateX + 5.9, 2.4, gateZ, darkSteel);
-  pushBox(parts, 0.18, 4.2, 1.22, gateX - 5.9, 2.3, gateZ, salmon);
-  pushBox(parts, 0.18, 4.2, 1.22, gateX + 5.9, 2.3, gateZ, salmon);
-  pushBox(parts, 1.65, 0.42, 1.45, gateX - 5.9, 0.21, gateZ, curbStone);
-  pushBox(parts, 1.65, 0.42, 1.45, gateX + 5.9, 0.21, gateZ, curbStone);
+  pushBox(parts, 1.35, 4.8, 1.15, gateX - 5.9, 2.4, gateZ, darkSteel, 0, 0, 0, 0.4, 0.85);
+  pushBox(parts, 1.35, 4.8, 1.15, gateX + 5.9, 2.4, gateZ, darkSteel, 0, 0, 0, 0.4, 0.85);
+  pushBox(parts, 0.18, 4.2, 1.22, gateX - 5.9, 2.3, gateZ, salmon, 0, 0, 0, 0.46, 0);
+  pushBox(parts, 0.18, 4.2, 1.22, gateX + 5.9, 2.3, gateZ, salmon, 0, 0, 0, 0.46, 0);
+  pushBox(parts, 1.65, 0.42, 1.45, gateX - 5.9, 0.21, gateZ, curbStone, 0, 0, 0, 0.86, 0);
+  pushBox(parts, 1.65, 0.42, 1.45, gateX + 5.9, 0.21, gateZ, curbStone, 0, 0, 0, 0.86, 0);
 
   // Overhead Gate Archway Span (spanning x = 1.0 .. 14.6 at y = 4.35 .. 5.25)
-  pushBox(parts, 13.8, 0.92, 1.35, gateX, 4.72, gateZ, darkSteel);
-  pushBox(parts, 12.2, 0.08, 1.1, gateX, 4.24, gateZ, warmWood);
-  pushBox(parts, 14.1, 0.16, 1.5, gateX, 5.24, gateZ, salmon);
+  pushBox(parts, 13.8, 0.92, 1.35, gateX, 4.72, gateZ, darkSteel, 0, 0, 0, 0.4, 0.86);
+  pushBox(parts, 12.2, 0.08, 1.1, gateX, 4.24, gateZ, warmWood, 0, 0, 0, 0.64, 0);
+  pushBox(parts, 14.1, 0.16, 1.5, gateX, 5.24, gateZ, salmon, 0, 0, 0, 0.46, 0);
 
-  // Security Guard Booth on the central island (x = 7.8, z = 22.0)
-  pushBox(parts, 1.18, 2.35, 1.75, gateX, 1.25, 22.0, midSteel);
-  pushBox(parts, 1.24, 0.95, 1.45, gateX, 1.58, 22.0, '#38bdf8');
-  pushBox(parts, 1.48, 0.18, 2.05, gateX, 2.48, 22.0, darkSteel);
-  pushBox(parts, 1.52, 0.07, 2.1, gateX, 2.58, 22.0, salmon);
+  // Security Guard Booth on the central island (x = 7.8, z = 22.0): steel mullions, recessed interior, translucent glass
+  pushBox(parts, 1.18, 1.05, 1.75, gateX, 0.58, 22.0, midSteel, 0, 0, 0, 0.42, 0.85);
+  pushBox(parts, 0.86, 1.15, 1.15, gateX, 1.68, 22.0, '#141922', 0, 0, 0, 0.85, 0);
+  for (const cx of [-0.52, 0.52]) {
+    for (const cz of [-0.76, 0.76]) {
+      pushBox(parts, 0.1, 1.15, 0.1, gateX + cx, 1.7, 22.0 + cz, darkSteel, 0, 0, 0, 0.36, 0.86);
+    }
+  }
+  pushBox(glassParts, 1.2, 0.94, 1.46, gateX, 1.62, 22.0, archGlass, 0, 0, 0, 0.05, 0.7);
+  pushBox(parts, 1.48, 0.18, 2.05, gateX, 2.48, 22.0, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 1.52, 0.07, 2.1, gateX, 2.58, 22.0, salmon, 0, 0, 0, 0.46, 0);
 
   // Automated Boom Barrier #1 (West Exit Lane at x = 3.05, z = 22.1 — closed horizontal bar)
-  pushBox(parts, 0.38, 1.08, 0.38, gateX - 4.75, 0.56, 22.1, salmon);
-  pushBox(parts, 0.42, 0.14, 0.42, gateX - 4.75, 1.12, 22.1, darkSteel);
+  pushBox(parts, 0.38, 1.08, 0.38, gateX - 4.75, 0.56, 22.1, salmon, 0, 0, 0, 0.44, 0);
+  pushBox(parts, 0.42, 0.14, 0.42, gateX - 4.75, 1.12, 22.1, darkSteel, 0, 0, 0, 0.38, 0.86);
   for (let seg = 0; seg < 6; seg += 1) {
     pushBox(
       parts,
@@ -564,17 +901,22 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
       gateX - 4.3 + seg * 0.52,
       0.96,
       22.1,
-      seg % 2 === 0 ? '#f8fafc' : '#ef4444',
+      seg % 2 === 0 ? '#e8e8e3' : '#b8322b',
+      0,
+      0,
+      0,
+      0.42,
+      0,
     );
   }
 
   // Automated Boom Barrier #2 (East Entry Lane at x = 12.55, z = 22.1 — raised 38° welcoming car!)
-  pushBox(parts, 0.38, 1.08, 0.38, gateX + 4.75, 0.56, 22.1, salmon);
-  pushBox(parts, 0.42, 0.14, 0.42, gateX + 4.75, 1.12, 22.1, darkSteel);
-  pushBox(parts, 3.1, 0.09, 0.09, gateX + 3.45, 1.88, 22.1, '#f8fafc', 0, 0, -0.62);
+  pushBox(parts, 0.38, 1.08, 0.38, gateX + 4.75, 0.56, 22.1, salmon, 0, 0, 0, 0.44, 0);
+  pushBox(parts, 0.42, 0.14, 0.42, gateX + 4.75, 1.12, 22.1, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 3.1, 0.09, 0.09, gateX + 3.45, 1.88, 22.1, '#e8e8e3', 0, 0, -0.62, 0.42, 0);
   // RFID Card Reader Pedestal
-  pushBox(parts, 0.22, 1.15, 0.22, gateX + 1.05, 0.58, 23.1, darkSteel);
-  pushBox(parts, 0.24, 0.22, 0.08, gateX + 1.05, 1.06, 23.15, '#34d399');
+  pushBox(parts, 0.22, 1.15, 0.22, gateX + 1.05, 0.58, 23.1, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 0.24, 0.22, 0.08, gateX + 1.05, 1.06, 23.15, '#2b8a6b', 0, 0, 0, 0.25, 0);
 
   // Arriving white sports coupe entering through the East Gate lane (x = 10.45, z = 21.1)
   addCar3D(vehicles, gateX + 2.65, 21.1, Math.PI, '#f8fafc', 'coupe');
@@ -582,63 +924,69 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
   // =========================================================================
   // 3. ROADSIDE MONUMENT TOTEM PYLON SIGN (x = 14.8, z = 23.8)
   // =========================================================================
-  pushBox(parts, 3.1, 0.36, 1.1, 14.8, 0.18, 23.8, curbStone);
-  pushBox(parts, 2.75, 3.6, 0.52, 14.8, 1.98, 23.8, darkSteel);
-  pushBox(parts, 2.85, 0.18, 0.62, 14.8, 3.84, 23.8, salmon);
-  pushBox(parts, 0.16, 3.6, 0.58, 13.4, 1.98, 23.8, salmon);
-  pushBox(parts, 0.16, 3.6, 0.58, 16.2, 1.98, 23.8, salmon);
+  pushBox(parts, 3.1, 0.36, 1.1, 14.8, 0.18, 23.8, curbStone, 0, 0, 0, 0.86, 0);
+  pushBox(parts, 2.75, 3.6, 0.52, 14.8, 1.98, 23.8, darkSteel, 0, 0, 0, 0.4, 0.86);
+  pushBox(parts, 2.85, 0.18, 0.62, 14.8, 3.84, 23.8, salmon, 0, 0, 0, 0.46, 0);
+  pushBox(parts, 0.16, 3.6, 0.58, 13.4, 1.98, 23.8, salmon, 0, 0, 0, 0.46, 0);
+  pushBox(parts, 0.16, 3.6, 0.58, 16.2, 1.98, 23.8, salmon, 0, 0, 0, 0.46, 0);
 
   // =========================================================================
   // 4. L1 PORTE-COCHÈRE MAIN LOBBY CANOPY (x = -1.5 .. +11.5, z = 15.8 .. 19.4)
   // =========================================================================
-  pushBox(parts, 13.2, 0.38, 3.7, 5.0, 3.88, 17.65, darkSteel);
-  pushBox(parts, 12.4, 0.08, 3.3, 5.0, 3.66, 17.65, warmWood);
-  pushBox(parts, 13.35, 0.14, 3.82, 5.0, 4.1, 17.65, salmon);
+  pushBox(parts, 13.2, 0.38, 3.7, 5.0, 3.88, 17.65, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 12.4, 0.08, 3.3, 5.0, 3.66, 17.65, warmWood, 0, 0, 0, 0.64, 0);
+  pushBox(parts, 13.35, 0.14, 3.82, 5.0, 4.1, 17.65, salmon, 0, 0, 0, 0.46, 0);
   for (const colX of [-0.6, 10.6]) {
-    pushBox(parts, 0.32, 3.8, 0.32, colX, 1.85, 19.0, midSteel, 0.14, 0, 0);
-    pushBox(parts, 0.32, 3.8, 0.32, colX, 1.85, 18.1, midSteel, -0.14, 0, 0);
-    pushBox(parts, 0.65, 0.28, 1.35, colX, 0.14, 18.55, curbStone);
+    pushBox(parts, 0.32, 3.8, 0.32, colX, 1.85, 19.0, midSteel, 0.14, 0, 0, 0.36, 0.86);
+    pushBox(parts, 0.32, 3.8, 0.32, colX, 1.85, 18.1, midSteel, -0.14, 0, 0, 0.36, 0.86);
+    pushBox(parts, 0.65, 0.28, 1.35, colX, 0.14, 18.55, curbStone, 0, 0, 0, 0.86, 0);
   }
-  pushBox(parts, 5.6, 3.2, 0.75, 2.5, 1.6, 16.25, '#38bdf8');
-  pushBox(parts, 5.8, 0.18, 0.88, 2.5, 3.25, 16.25, salmon);
+  // Storefront Vestibule Portal: dark recessed interior, stone threshold, anodized mullions & translucent glazing
+  pushBox(parts, 5.6, 0.08, 0.9, 2.5, 0.04, 16.25, walkwayStone, 0, 0, 0, 0.85, 0);
+  pushBox(parts, 4.9, 2.95, 0.22, 2.5, 1.52, 15.95, '#151920', 0, 0, 0, 0.82, 0);
+  for (const mullX of [-0.24, 1.12, 2.5, 3.88, 5.24]) {
+    pushBox(parts, 0.12, 3.16, 0.22, mullX, 1.58, 16.36, darkSteel, 0, 0, 0, 0.34, 0.88);
+  }
+  pushBox(parts, 5.6, 0.14, 0.26, 2.5, 2.35, 16.36, darkSteel, 0, 0, 0, 0.34, 0.88);
+  pushBox(glassParts, 5.42, 3.04, 0.08, 2.5, 1.56, 16.36, archGlass, 0, 0, 0, 0.04, 0.72);
+  pushBox(parts, 5.8, 0.18, 0.88, 2.5, 3.25, 16.25, salmon, 0, 0, 0, 0.46, 0);
 
   // =========================================================================
   // 5. EXECUTIVE CAR PARKING LOT ("BÃI ĐỖ XE Ô TÔ") + SOLAR CARPORTS + EV CHARGERS
   //    5A. Primary Front-East Car & EV Parking Court (x = 16.2 .. 30.8, z = 16.8 .. 23.2)
-  //        Front-and-center in the default overview camera!
   // =========================================================================
-  pushBox(parts, 14.8, 0.055, 6.4, 23.5, 0.022, 20.0, parkingAsphalt);
-  pushBox(parts, 14.8, 0.12, 0.24, 23.5, 0.06, 16.75, curbStone);
+  pushBox(parts, 14.8, 0.055, 6.4, 23.5, 0.022, 20.0, parkingAsphalt, 0, 0, 0, 0.82, 0);
+  pushBox(parts, 14.8, 0.12, 0.24, 23.5, 0.06, 16.75, curbStone, 0, 0, 0, 0.86, 0);
 
   const eastCarStallXs = [18.0, 20.8, 23.6, 26.4, 29.2];
   for (let i = 0; i <= eastCarStallXs.length; i += 1) {
     const lineX = 16.6 + i * 2.8;
-    pushBox(parts, 0.12, 0.06, 4.8, lineX, 0.038, 19.35, lineWhite);
+    pushBox(parts, 0.12, 0.06, 4.8, lineX, 0.038, 19.35, lineWhite, 0, 0, 0, 0.78, 0);
   }
   for (let i = 0; i < eastCarStallXs.length; i += 1) {
     const sx = eastCarStallXs[i]!;
-    pushBox(parts, 1.85, 0.12, 0.22, sx, 0.06, 17.3, i < 3 ? '#10b981' : lineAmber);
+    pushBox(parts, 1.85, 0.12, 0.22, sx, 0.06, 17.3, i < 3 ? evGreen : lineAmber, 0, 0, 0, 0.78, 0);
     if (i < 3) {
-      pushBox(parts, 1.1, 0.058, 0.7, sx, 0.036, 20.85, '#10b981');
+      pushBox(parts, 1.1, 0.058, 0.7, sx, 0.036, 20.85, evGreen, 0, 0, 0, 0.78, 0);
     }
   }
 
-  // Architectural Setback Solar Carport Canopy (z = 16.7 .. 19.0) so all 4 3D cars & EV badges are 100% visible!
-  pushBox(parts, 14.4, 0.18, 2.35, 23.6, 3.15, 17.85, darkSteel, 0.08, 0, 0);
+  // Architectural Setback Solar Carport Canopy (z = 16.7 .. 19.0)
+  pushBox(parts, 14.4, 0.18, 2.35, 23.6, 3.15, 17.85, darkSteel, 0.08, 0, 0, 0.38, 0.86);
   for (let i = 0; i < 5; i += 1) {
-    pushBox(parts, 2.65, 0.06, 2.1, 18.0 + i * 2.8, 3.26, 17.85, '#1d3557', 0.08, 0, 0);
+    pushBox(parts, 2.65, 0.06, 2.1, 18.0 + i * 2.8, 3.26, 17.85, '#182b44', 0.08, 0, 0, 0.16, 0.86);
   }
-  pushBox(parts, 14.5, 0.12, 0.16, 23.6, 3.04, 19.05, salmon);
+  pushBox(parts, 14.5, 0.12, 0.16, 23.6, 3.04, 19.05, salmon, 0, 0, 0, 0.46, 0);
   for (const colX of [17.0, 21.4, 25.8, 30.2]) {
-    pushBox(parts, 0.26, 3.1, 0.26, colX, 1.55, 16.95, midSteel);
+    pushBox(parts, 0.26, 3.1, 0.26, colX, 1.55, 16.95, midSteel, 0, 0, 0, 0.36, 0.86);
   }
 
   // 4 EV Fast-Charging Supercharger Pedestals along z = 16.9
   for (const evX of [18.0, 20.8, 23.6, 26.4]) {
-    pushBox(parts, 0.46, 1.48, 0.32, evX, 0.74, 16.88, '#f8fafc');
-    pushBox(parts, 0.34, 0.55, 0.36, evX, 0.95, 16.88, '#111827');
-    pushBox(parts, 0.08, 1.25, 0.35, evX - 0.19, 0.78, 16.88, '#10b981');
-    pushBox(parts, 0.48, 0.1, 0.36, evX, 1.45, 16.88, salmon);
+    pushBox(parts, 0.46, 1.48, 0.32, evX, 0.74, 16.88, '#e8e8e3', 0, 0, 0, 0.32, 0);
+    pushBox(parts, 0.34, 0.55, 0.36, evX, 0.95, 16.88, '#141820', 0, 0, 0, 0.25, 0);
+    pushBox(parts, 0.08, 1.25, 0.35, evX - 0.19, 0.78, 16.88, evGreen, 0, 0, 0, 0.35, 0);
+    pushBox(parts, 0.48, 0.1, 0.36, evX, 1.45, 16.88, salmon, 0, 0, 0, 0.46, 0);
   }
 
   // 4 Detailed 3D Cars in Front-East Car & EV Parking Court (1 stall left open to show EV badge & lines!)
@@ -650,28 +998,28 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
   // =========================================================================
   //    5B. Front-West & West Wing Car Parking Court (x = -23.5 .. -5.2, z = 16.8 .. 23.2 & x = -36..-25)
   // =========================================================================
-  pushBox(parts, 18.2, 0.05, 6.4, -14.4, 0.02, 20.0, parkingAsphalt);
-  pushBox(parts, 18.2, 0.12, 0.24, -14.4, 0.06, 16.75, curbStone);
+  pushBox(parts, 18.2, 0.05, 6.4, -14.4, 0.02, 20.0, parkingAsphalt, 0, 0, 0, 0.82, 0);
+  pushBox(parts, 18.2, 0.12, 0.24, -14.4, 0.06, 16.75, curbStone, 0, 0, 0, 0.86, 0);
   const westStallXs = [-21.2, -18.4, -15.6, -12.8, -10.0, -7.2];
   for (let i = 0; i <= westStallXs.length; i += 1) {
-    pushBox(parts, 0.12, 0.06, 4.8, -22.6 + i * 2.8, 0.038, 19.35, lineWhite);
+    pushBox(parts, 0.12, 0.06, 4.8, -22.6 + i * 2.8, 0.038, 19.35, lineWhite, 0, 0, 0, 0.78, 0);
   }
-  pushBox(parts, 17.2, 0.18, 2.35, -14.2, 3.15, 17.85, darkSteel, 0.08, 0, 0);
+  pushBox(parts, 17.2, 0.18, 2.35, -14.2, 3.15, 17.85, darkSteel, 0.08, 0, 0, 0.38, 0.86);
   for (let i = 0; i < 6; i += 1) {
-    pushBox(parts, 2.65, 0.06, 2.1, westStallXs[i]!, 3.26, 17.85, '#1d3557', 0.08, 0, 0);
+    pushBox(parts, 2.65, 0.06, 2.1, westStallXs[i]!, 3.26, 17.85, '#182b44', 0.08, 0, 0, 0.16, 0.86);
   }
-  pushBox(parts, 17.3, 0.12, 0.16, -14.2, 3.04, 19.05, salmon);
+  pushBox(parts, 17.3, 0.12, 0.16, -14.2, 3.04, 19.05, salmon, 0, 0, 0, 0.46, 0);
   addCar3D(vehicles, -21.2, 20.1, Math.PI, '#e2e8f0', 'suv');
   addCar3D(vehicles, -18.4, 20.1, Math.PI, '#3b82f6', 'sedan');
   addCar3D(vehicles, -15.6, 20.1, Math.PI, '#f59e0b', 'coupe');
   addCar3D(vehicles, -10.0, 20.1, Math.PI, '#94a3b8', 'suv');
 
   // West Wing Perpendicular Car Parking (x = -36.5 .. -24.8, z = -12.0 .. +15.0)
-  pushBox(parts, 11.8, 0.05, 28.0, -30.6, 0.018, 2.0, parkingAsphalt);
-  pushBox(parts, 5.2, 0.18, 21.0, -33.6, 3.15, 1.5, darkSteel, 0, 0, -0.08);
+  pushBox(parts, 11.8, 0.05, 28.0, -30.6, 0.018, 2.0, parkingAsphalt, 0, 0, 0, 0.82, 0);
+  pushBox(parts, 5.2, 0.18, 21.0, -33.6, 3.15, 1.5, darkSteel, 0, 0, -0.08, 0.38, 0.86);
   for (let i = 0; i < 7; i += 1) {
-    pushBox(parts, 4.8, 0.06, 2.75, -33.6, 3.26, -7.5 + i * 3.0, '#1d3557', 0, 0, -0.08);
-    pushBox(parts, 4.6, 0.06, 0.12, -33.5, 0.038, -9.0 + i * 3.0, lineWhite);
+    pushBox(parts, 4.8, 0.06, 2.75, -33.6, 3.26, -7.5 + i * 3.0, '#182b44', 0, 0, -0.08, 0.16, 0.86);
+    pushBox(parts, 4.6, 0.06, 0.12, -33.5, 0.038, -9.0 + i * 3.0, lineWhite, 0, 0, 0, 0.78, 0);
   }
   addCar3D(vehicles, -33.4, -7.5, Math.PI / 2, '#f8fafc', 'suv');
   addCar3D(vehicles, -33.4, -4.5, Math.PI / 2, '#ef4444', 'coupe');
@@ -683,37 +1031,33 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
   //    Located at South-East Plaza (x = 31.4 .. 43.4, z = 17.0 .. 23.0) — 100% visible!
   // =========================================================================
   const motoCenterX = 37.4;
-  pushBox(parts, 12.2, 0.055, 5.8, motoCenterX, 0.024, 20.1, parkingAsphalt);
-  pushBox(parts, 12.4, 0.12, 0.22, motoCenterX, 0.06, 17.15, curbStone);
+  pushBox(parts, 12.2, 0.055, 5.8, motoCenterX, 0.024, 20.1, parkingAsphalt, 0, 0, 0, 0.82, 0);
+  pushBox(parts, 12.4, 0.12, 0.22, motoCenterX, 0.06, 17.15, curbStone, 0, 0, 0, 0.86, 0);
 
   for (let i = 0; i <= 10; i += 1) {
     const bx = 32.4 + i * 1.0;
-    pushBox(parts, 0.07, 0.06, 2.1, bx, 0.038, 18.55, lineWhite);
-    pushBox(parts, 0.07, 0.06, 2.1, bx, 0.038, 21.45, lineWhite);
+    pushBox(parts, 0.07, 0.06, 2.1, bx, 0.038, 18.55, lineWhite, 0, 0, 0, 0.78, 0);
+    pushBox(parts, 0.07, 0.06, 2.1, bx, 0.038, 21.45, lineWhite, 0, 0, 0, 0.78, 0);
   }
 
-  // Translucent Blue-Gray Polycarbonate & Steel Shelter Canopy over North Motorbike Row
-  pushBox(parts, 11.4, 0.14, 2.35, motoCenterX, 2.82, 18.3, darkSteel, 0.06, 0, 0);
-  pushBox(parts, 11.0, 0.06, 2.1, motoCenterX, 2.91, 18.3, '#38bdf8', 0.06, 0, 0);
-  pushBox(parts, 11.5, 0.1, 0.14, motoCenterX, 2.74, 19.5, salmon);
+  // Translucent Smoked Polycarbonate & Steel Shelter Canopy over North Motorbike Row
+  pushBox(parts, 11.4, 0.12, 2.35, motoCenterX, 2.8, 18.3, darkSteel, 0.06, 0, 0, 0.36, 0.86);
+  pushBox(glassParts, 11.0, 0.05, 2.1, motoCenterX, 2.89, 18.3, isLight ? '#7ea3ba' : '#35536a', 0.06, 0, 0, 0.08, 0.7);
+  pushBox(parts, 11.5, 0.1, 0.14, motoCenterX, 2.74, 19.5, salmon, 0, 0, 0, 0.46, 0);
   for (const colX of [32.2, 35.7, 39.2, 42.6]) {
-    pushBox(parts, 0.2, 2.75, 0.2, colX, 1.38, 17.35, midSteel);
-    pushBox(parts, 0.2, 2.65, 0.2, colX, 1.32, 19.4, midSteel);
+    pushBox(parts, 0.2, 2.75, 0.2, colX, 1.38, 17.35, midSteel, 0, 0, 0, 0.36, 0.86);
+    pushBox(parts, 0.2, 2.65, 0.2, colX, 1.32, 19.4, midSteel, 0, 0, 0, 0.36, 0.86);
   }
 
   const motoColors = [
-    '#f8fafc',
-    '#ef4444',
-    '#3b82f6',
-    '#10b981',
-    '#f59e0b',
-    '#e2e8f0',
-    '#f07654',
-    '#38bdf8',
-    '#a855f7',
-    '#94a3b8',
-    '#fb7185',
-    '#facc15',
+    '#e6e4de',
+    '#23272f',
+    '#aeb4bc',
+    '#22334a',
+    '#642023',
+    '#425246',
+    '#6d727a',
+    '#9c5a49',
   ];
   for (let i = 0; i < 8; i += 1) {
     addMotorbike3D(parts, 32.9 + i * 1.0, 18.55, 0, motoColors[i % motoColors.length]!);
@@ -724,39 +1068,51 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
       32.9 + i * 1.0,
       21.45,
       Math.PI,
-      motoColors[(i + 4) % motoColors.length]!,
+      motoColors[(i + 3) % motoColors.length]!,
     );
   }
 
   // Dedicated Bicycle Parking Rack on the East side of the shelter (x = 40.2 .. 42.4, z = 21.45)
-  pushBox(parts, 2.4, 0.08, 0.9, 41.3, 0.05, 21.45, midSteel);
+  pushBox(parts, 2.4, 0.08, 0.9, 41.3, 0.05, 21.45, midSteel, 0, 0, 0, 0.38, 0.86);
+  const bikeFrames = ['#2b323d', '#9ea5ae', '#3d5245', '#8f4f3f', '#22334a'];
   for (let b = 0; b < 5; b += 1) {
     const bx = 40.4 + b * 0.45;
-    pushBox(parts, 0.05, 0.55, 0.55, bx, 0.3, 21.45, '#cbd5e1');
-    pushBox(parts, 0.06, 0.46, 0.46, bx + 0.1, 0.25, 21.1, '#111827');
-    pushBox(parts, 0.06, 0.46, 0.46, bx + 0.1, 0.25, 21.8, '#111827');
-    pushBox(
-      parts,
-      0.07,
-      0.34,
-      0.68,
-      bx + 0.1,
-      0.48,
-      21.45,
-      b % 2 === 0 ? salmonBright : '#38bdf8',
-    );
+    // Galvanised wheel loop rack
+    pushBox(parts, 0.04, 0.5, 0.5, bx, 0.28, 21.45, '#b8bec6', 0, 0, 0, 0.24, 0.9);
+    // Cylindrical front & rear rubber tyres
+    for (const wz of [21.1, 21.8]) {
+      pushCylinder(parts, 0.26, 0.26, 0.04, bx + 0.1, 0.26, wz, '#161920', 12, 0, 0, Math.PI / 2, 0.88, 0);
+      pushCylinder(parts, 0.18, 0.18, 0.045, bx + 0.1, 0.26, wz, '#b4bac2', 10, 0, 0, Math.PI / 2, 0.22, 0.9);
+    }
+    // Tubular top bar, seat stay & handlebars
+    pushBox(parts, 0.045, 0.045, 0.62, bx + 0.1, 0.56, 21.45, bikeFrames[b]!, -0.1, 0, 0, 0.28, 0.85);
+    pushBox(parts, 0.04, 0.44, 0.04, bx + 0.1, 0.42, 21.25, bikeFrames[b]!, 0.25, 0, 0, 0.28, 0.85);
+    pushBox(parts, 0.34, 0.035, 0.035, bx + 0.1, 0.66, 21.74, '#cfd5dd', 0, 0, 0, 0.2, 0.92);
   }
 
   // =========================================================================
   // 7. REFLECTION WATER FOUNTAIN, PLAZA BENCHES & SÖL FLAGPOLES
   // =========================================================================
   // Tiered Architectural Water Fountain at Central Forecourt (x = 0.2, z = 20.8)
-  pushBox(parts, 3.2, 0.42, 3.2, 0.2, 0.21, 20.8, curbStone);
-  pushBox(parts, 2.75, 0.38, 2.75, 0.2, 0.26, 20.8, '#0ea5e9');
-  pushBox(parts, 1.55, 0.65, 1.55, 0.2, 0.52, 20.8, darkSteel);
-  pushBox(parts, 1.25, 0.72, 1.25, 0.2, 0.58, 20.8, '#38bdf8');
-  pushCylinder(parts, 0.28, 0.38, 1.35, 0.2, 1.15, 20.8, salmon, 10);
-  pushCylinder(parts, 0.18, 0.48, 0.65, 0.2, 1.95, 20.8, '#bae6fd', 10);
+  pushBox(parts, 3.2, 0.38, 3.2, 0.2, 0.19, 20.8, curbStone, 0, 0, 0, 0.84, 0);
+  pushBox(parts, 2.82, 0.14, 2.82, 0.2, 0.33, 20.8, '#111d24', 0, 0, 0, 0.16, 0);
+  pushBox(parts, 1.56, 0.58, 1.56, 0.2, 0.55, 20.8, darkSteel, 0, 0, 0, 0.52, 0);
+  pushBox(parts, 1.28, 0.12, 1.28, 0.2, 0.82, 20.8, '#111d24', 0, 0, 0, 0.16, 0);
+  pushCylinder(parts, 0.24, 0.34, 1.28, 0.2, 1.2, 20.8, '#b86e58', 12, 0, 0, 0, 0.32, 0.78);
+  pushCylinder(parts, 0.42, 0.16, 0.14, 0.2, 1.82, 20.8, darkSteel, 12, 0, 0, 0, 0.34, 0.86);
+  // Real translucent animated water basins + spout cascade (zero bright cyan plastic blocks!)
+  pushBox(waterParts, 2.78, 0.02, 2.78, 0.2, 0.405, 20.8, canalTint, 0, 0, 0, 0.05, 0.08);
+  pushBox(waterParts, 1.24, 0.02, 1.24, 0.2, 0.895, 20.8, canalTint, 0, 0, 0, 0.05, 0.08);
+  pushCylinder(waterParts, 0.27, 0.31, 0.62, 0.2, 1.5, 20.8, '#2c6a82', 12, 0, 0, 0, 0.06, 0.08);
+  // Crisp bronze coping rim, water overflow weir & brass spray nozzle jets
+  pushBox(parts, 3.34, 0.06, 3.34, 0.2, 0.39, 20.8, '#9d6852', 0, 0, 0, 0.32, 0.84);
+  pushBox(parts, 1.68, 0.05, 1.68, 0.2, 0.85, 20.8, '#9d6852', 0, 0, 0, 0.32, 0.84);
+  for (let n = 0; n < 8; n += 1) {
+    const na = (n / 8) * Math.PI * 2;
+    const nx = 0.2 + Math.cos(na) * 0.95;
+    const nz = 20.8 + Math.sin(na) * 0.95;
+    pushCylinder(parts, 0.03, 0.045, 0.09, nx, 0.44, nz, '#d4a055', 8, 0, 0, 0, 0.22, 0.92);
+  }
 
   // 4 Timber-and-Stone Plaza Benches flanking the promenade
   for (const [bx, bz] of [
@@ -765,44 +1121,41 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
     [-2.4, 20.2],
     [14.8, 18.2],
   ] as const) {
-    pushBox(parts, 1.65, 0.44, 0.56, bx, 0.22, bz, curbStone);
-    pushBox(parts, 1.72, 0.08, 0.62, bx, 0.46, bz, warmWood);
+    pushBox(parts, 1.65, 0.44, 0.56, bx, 0.22, bz, curbStone, 0, 0, 0, 0.86, 0);
+    pushBox(parts, 1.72, 0.08, 0.62, bx, 0.46, bz, warmWood, 0, 0, 0, 0.64, 0);
   }
 
   // 3 Tall SÖL Flagpoles (x = 13.8, z = 17.2..20.8); cloth pennants animate dynamically in CityLife.tsx
   for (const anchor of CAMPUS_FLAGPOLE_ANCHORS) {
-    pushCylinder(parts, 0.16, 0.22, 0.32, anchor.x, 0.16, anchor.z, curbStone, 8);
-    pushCylinder(parts, 0.05, 0.08, 6.8, anchor.x, 3.4, anchor.z, '#e2e8f0', 8);
-    pushCylinder(parts, 0.085, 0.085, 0.12, anchor.x, 6.84, anchor.z, salmon, 10);
+    pushCylinder(parts, 0.16, 0.22, 0.32, anchor.x, 0.16, anchor.z, curbStone, 8, 0, 0, 0, 0.86, 0);
+    pushCylinder(parts, 0.05, 0.08, 6.8, anchor.x, 3.4, anchor.z, '#d0d6de', 8, 0, 0, 0, 0.2, 0.92);
+    pushCylinder(parts, 0.085, 0.085, 0.12, anchor.x, 6.84, anchor.z, salmon, 10, 0, 0, 0, 0.42, 0);
   }
 
   // =========================================================================
   // 8. GROUND-LEVEL SIGNBOARD FRAMES (Parking & Tennis Arena)
   // =========================================================================
-  // Front-East Car & EV Parking Signboard Frame on Canopy Header (x = 23.6, z = 19.02)
-  pushBox(parts, 5.5, 1.0, 0.22, 23.6, 3.62, 19.02, darkSteel);
-  pushBox(parts, 5.65, 0.1, 0.28, 23.6, 4.15, 19.02, salmon);
+  pushBox(parts, 5.5, 1.0, 0.22, 23.6, 3.62, 19.02, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 5.65, 0.1, 0.28, 23.6, 4.15, 19.02, salmon, 0, 0, 0, 0.46, 0);
 
-  // Front-West Car Parking Signboard Frame on Canopy Header (x = -14.2, z = 19.02)
-  pushBox(parts, 5.5, 1.0, 0.22, -14.2, 3.62, 19.02, darkSteel);
-  pushBox(parts, 5.65, 0.1, 0.28, -14.2, 4.15, 19.02, salmon);
+  pushBox(parts, 5.5, 1.0, 0.22, -14.2, 3.62, 19.02, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 5.65, 0.1, 0.28, -14.2, 4.15, 19.02, salmon, 0, 0, 0, 0.46, 0);
 
-  // Covered Motorbike & Bicycle Shelter Signboard Frame on Canopy Header (x = 37.4, z = 19.45)
-  pushBox(parts, 5.1, 0.96, 0.22, motoCenterX, 3.38, 19.45, darkSteel);
-  pushBox(parts, 5.25, 0.1, 0.28, motoCenterX, 3.88, 19.45, salmon);
+  pushBox(parts, 5.1, 0.96, 0.22, motoCenterX, 3.38, 19.45, darkSteel, 0, 0, 0, 0.38, 0.86);
+  pushBox(parts, 5.25, 0.1, 0.28, motoCenterX, 3.88, 19.45, salmon, 0, 0, 0, 0.46, 0);
 
   // =========================================================================
   // 9. PERIMETER ARCHITECTURAL FENCE, HEDGES, STREETLAMPS, BOLLARDS & TREES
   // =========================================================================
   for (let x = -36; x <= 48; x += 4.0) {
     if (x >= 1.2 && x <= 14.4) continue; // opening for Main Gate at x = 7.8
-    pushBox(parts, 0.42, 1.45, 0.42, x, 0.72, 23.5, curbStone);
-    pushBox(parts, 0.48, 0.1, 0.48, x, 1.48, 23.5, salmon);
+    pushBox(parts, 0.42, 1.45, 0.42, x, 0.72, 23.5, curbStone, 0, 0, 0, 0.86, 0);
+    pushBox(parts, 0.48, 0.1, 0.48, x, 1.48, 23.5, salmon, 0, 0, 0, 0.46, 0);
     if (x + 4.0 <= 48 && !(x < 1.2 && x + 4.0 >= 1.2)) {
-      pushBox(parts, 3.6, 0.42, 0.28, x + 2.0, 0.21, 23.5, curbStone);
-      pushBox(parts, 3.5, 0.52, 0.55, x + 2.0, 0.58, 23.15, '#2b5438');
-      pushBox(parts, 3.6, 0.07, 0.08, x + 2.0, 1.05, 23.5, midSteel);
-      pushBox(parts, 3.6, 0.07, 0.08, x + 2.0, 1.32, 23.5, midSteel);
+      pushBox(parts, 3.6, 0.42, 0.28, x + 2.0, 0.21, 23.5, curbStone, 0, 0, 0, 0.86, 0);
+      pushBox(parts, 3.5, 0.52, 0.55, x + 2.0, 0.58, 23.15, isLight ? '#2c4c30' : '#182b1a', 0, 0, 0, 0.94, 0);
+      pushBox(parts, 3.6, 0.07, 0.08, x + 2.0, 1.05, 23.5, midSteel, 0, 0, 0, 0.34, 0.88);
+      pushBox(parts, 3.6, 0.07, 0.08, x + 2.0, 1.32, 23.5, midSteel, 0, 0, 0, 0.34, 0.88);
     }
   }
 
@@ -849,26 +1202,53 @@ function buildCampusParts(theme: ExploreTheme): { parts: ColoredPart[]; vehicles
     [20.0, -17.8, 1.1, true],
   ];
   for (const [tx, tz, scale, planter] of campusTrees) {
-    addCampusTree(parts, tx, tz, scale, planter);
+    addCampusTree(parts, foliageParts, tx, tz, scale, planter, isLight);
   }
 
-  return { parts, vehicles };
+  // Linear brushed stainless-steel slot drainage channels along plaza interfaces
+  const drainGrate = '#8e96a0';
+  pushBox(parts, 12.0, 0.05, 0.16, 2.0, 0.02, 16.05, drainGrate, 0, 0, 0, 0.28, 0.9);
+  pushBox(parts, 88.0, 0.05, 0.14, 6.0, 0.02, 23.65, drainGrate, 0, 0, 0, 0.28, 0.9);
+
+  // Subtle dark architectural plinth contact reveal along building ground interface
+  const plinthDark = '#14171d';
+  pushBox(parts, 44.5, 0.08, 0.08, 0.0, 0.04, 16.04, plinthDark, 0, 0, 0, 0.88, 0.15);
+  pushBox(parts, 44.5, 0.08, 0.08, 0.0, 0.04, -16.04, plinthDark, 0, 0, 0, 0.88, 0.15);
+  pushBox(parts, 0.08, 0.08, 32.0, -22.04, 0.04, 0.0, plinthDark, 0, 0, 0, 0.88, 0.15);
+  pushBox(parts, 0.08, 0.08, 32.0, 22.04, 0.04, 0.0, plinthDark, 0, 0, 0, 0.88, 0.15);
+
+  return { parts, glassParts, waterParts, vehicles, foliageParts };
 }
 
 function disposeParts(parts: readonly ColoredPart[]): void {
   for (const part of parts) part.geometry.dispose();
 }
 
+export function buildCampusSceneGeometries(theme: ExploreTheme): CampusSceneGeometries {
+  const { parts, glassParts, waterParts, vehicles, foliageParts } = buildCampusParts(theme);
+  return {
+    opaque: mergeColoredParts(parts),
+    glass: mergeColoredParts(glassParts),
+    water: mergeColoredParts(waterParts),
+    vehicles: mergeColoredParts(vehicles),
+    foliage: mergeFoliageCards(foliageParts),
+  };
+}
+
 export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
-  const { parts, vehicles } = buildCampusParts(theme);
+  const { parts, glassParts, waterParts, vehicles } = buildCampusParts(theme);
+  disposeParts(glassParts);
+  disposeParts(waterParts);
   disposeParts(vehicles);
   return mergeColoredParts(parts);
 }
 
 /** Parked cars as their own geometry so they can use a clear-coated car-paint material. */
 export function buildCampusVehiclesGeometry(theme: ExploreTheme): THREE.BufferGeometry {
-  const { parts, vehicles } = buildCampusParts(theme);
+  const { parts, glassParts, waterParts, vehicles } = buildCampusParts(theme);
   disposeParts(parts);
+  disposeParts(glassParts);
+  disposeParts(waterParts);
   return mergeColoredParts(vehicles);
 }
 

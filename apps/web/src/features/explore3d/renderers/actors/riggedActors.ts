@@ -18,6 +18,10 @@ export interface RiggedClipSpec {
   clip: string | ((actorId: string) => string);
   /** Multiplies the actor's own speed. */
   timeScale: number;
+  /** Optional combo sequence crossfaded across beats (e.g. jab-cross boxing combinations). */
+  comboClips?: readonly string[];
+  /** Equip padded boxing gloves on both hands. */
+  glovesInHands?: boolean;
 }
 
 /** Skeleton driven every frame from the activity's pose angles (`solveHumanPose`). */
@@ -28,8 +32,10 @@ export interface RiggedPoseSpec {
   hipsHeight?: number;
   /** Prop parented to a hand bone; replaces the procedural prop of the same activity. */
   handProp?: RiggedHandPropSpec;
-  /** Twist of the hand about the forearm (radians), per code-built side (left sits at -X). */
-  forearmRoll?: Partial<Record<'left' | 'right', number>>;
+  /** Twist of the hand about the forearm (radians), static or per-phase (e.g. supinating curls). */
+  forearmRoll?:
+    | Partial<Record<'left' | 'right', number>>
+    | ((phase: number) => Partial<Record<'left' | 'right', number>>);
   /** Draw a barbell held between the two hands. */
   barbellInHands?: boolean;
   /** Put a dumbbell in each hand. */
@@ -57,21 +63,32 @@ const pick = (a: string, b: string) => (actorId: string) => (hashString(actorId)
 export const HUMAN_CLIP_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedClipSpec>> = {
   'treadmill-run': { clip: 'Jog_Fwd_Loop', timeScale: 1 },
   'walking-patrol': { clip: 'Walk_Loop', timeScale: 1 },
-  'elliptical-stride': { clip: 'Walk_Loop', timeScale: 0.8 },
-  'inbody-scan': { clip: 'Idle_Loop', timeScale: 0.8 },
-  'lounge-chat': { clip: 'Idle_Talking_Loop', timeScale: 0.8 },
-  'boxing-spar': { clip: pick('Punch_Jab', 'Punch_Cross'), timeScale: 1 },
-  'heavy-bag-boxer': { clip: pick('Punch_Cross', 'Punch_Jab'), timeScale: 1 },
+  'lounge-chat': {
+    clip: id => (id.endsWith('member-1') ? 'Sitting_Talking_Loop' : 'Idle_Talking_Loop'),
+    timeScale: 0.85,
+  },
+  'boxing-spar': {
+    clip: pick('Punch_Jab', 'Punch_Cross'),
+    comboClips: ['Punch_Jab', 'Punch_Cross', 'Punch_Jab'],
+    glovesInHands: true,
+    timeScale: 1,
+  },
+  'heavy-bag-boxer': {
+    clip: pick('Punch_Cross', 'Punch_Jab'),
+    comboClips: ['Punch_Cross', 'Punch_Jab', 'Punch_Cross'],
+    glovesInHands: true,
+    timeScale: 1,
+  },
   'swim-freestyle': { clip: 'Swim_Fwd_Loop', timeScale: 1 },
 };
 
-/** Racket in the hand on the code-built figure's right (+X, the rig's left hand). */
+/** Racket in the hand on the code-built figure's right (+X, the rig's left hand `hand_l`). */
 const RACKET = {
   kind: 'racket',
   bone: 'hand_l',
-  position: [0, 0.06, 0],
-  // The racket extends along -Y in its own frame; the fingers point along +Y.
-  rotation: [0, 0, Math.PI],
+  position: [0.032, 0.08, 0.02],
+  // Shaft emerges out the thumb/index grip axis (+Z of `hand_l`) cocked 20° distally (+Y), face parallel to palm (+X).
+  rotation: [-Math.PI / 2 - 0.35, 0, 0],
 } as const;
 
 /**
@@ -80,24 +97,32 @@ const RACKET = {
  */
 export const HUMAN_POSE_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedPoseSpec>> = {
   'upright-bike': { groundLock: false, hipsHeight: 0.93 },
+  'elliptical-stride': { groundLock: true },
+  'inbody-scan': { groundLock: true },
   'receptionist-greet': { groundLock: true },
   'yoga-flow': { groundLock: true },
   'barbell-squat': { groundLock: true, barbellInHands: true },
   'bench-press': { groundLock: false, barbellInHands: true, override: benchPress },
-  'dumbbell-curl': { groundLock: true, dumbbellsInHands: true },
-  'badminton-player': { groundLock: true, handProp: { ...RACKET, size: 1.1 } },
-  'tennis-player': { groundLock: true, handProp: { ...RACKET, size: 1.3 } },
+  'dumbbell-curl': {
+    groundLock: true,
+    dumbbellsInHands: true,
+    forearmRoll: phase => ({
+      left: (0.5 - 0.5 * Math.cos(phase * 1.2)) * 1.45,
+      right: -(0.5 - 0.5 * Math.cos(phase * 1.2 + Math.PI)) * 1.45,
+    }),
+  },
+  'badminton-player': { groundLock: true, handProp: { ...RACKET, size: 1.08 } },
+  'tennis-player': { groundLock: true, handProp: { ...RACKET, size: 1.26 } },
   'pt-coach-tablet': {
     groundLock: true,
-    // Palm up so the tablet rests on the hand; the coach holds it in the left (-X) hand.
+    // Palm up so the tablet rests flat on `hand_r` (-X palm normal flipped upward) tilted toward the coach.
     forearmRoll: { left: Math.PI },
     handProp: {
       kind: 'tablet',
       bone: 'hand_r',
-      position: [0, 0.09, 0.03],
-      // Tilted toward the coach so the screen faces them rather than lying flat.
-      rotation: [Math.PI / 2 + 0.7, 0, 0],
-      size: 1.2,
+      position: [-0.03, 0.095, 0.01],
+      rotation: [0, 0, Math.PI / 2 - 0.25],
+      size: 1.15,
     },
   },
 };
@@ -114,6 +139,7 @@ export const HUMAN_ASSET_URLS = {
   hair: {
     'hair-simpleparted': '/models/explore3d/humans/hair-simpleparted.glb',
     'hair-buzzed': '/models/explore3d/humans/hair-buzzed.glb',
+    'hair-beard': '/models/explore3d/humans/hair-beard.glb',
     'hair-long': '/models/explore3d/humans/hair-long.glb',
     'hair-buns': '/models/explore3d/humans/hair-buns.glb',
     'hair-buzzedfemale': '/models/explore3d/humans/hair-buzzedfemale.glb',
@@ -191,6 +217,10 @@ export function computeRiggedPlacement(
 ): RiggedPlacement {
   const anchor = getActorWorldAnchor(def, scene, levelMode);
   const { pose, worldPos, yaw } = solveHumanPose(def, timeSec, anchor);
+  // Mocap clips already carry root/pelvis weight shift and footwork; adding procedural offsets causes foot-skate.
+  if (def.activity in HUMAN_CLIP_ACTIVITIES) {
+    return { position: worldPos, yaw, pose };
+  }
   const total = yaw + pose.yawOffset;
   const cos = Math.cos(total);
   const sin = Math.sin(total);

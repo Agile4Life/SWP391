@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ExploreCanvas } from './canvas/ExploreCanvas';
 import { WebGLGate } from './canvas/WebGLGate';
-import { DetailPanel } from './components/DetailPanel';
 import { ExploreBreadcrumb } from './components/ExploreBreadcrumb';
 import { ExploreSearchModal } from './components/ExploreSearchModal';
 import { ExploreToolbar } from './components/ExploreToolbar';
@@ -66,7 +65,7 @@ export function ExplorePage() {
   }, [searchParams]);
 
   const activeZone = zoneOf(SOL_CENTER_SCENE, selectedId);
-  const { snapshot, bindings, loading, error, refresh } = useLiveCenterData(
+  const { bindings } = useLiveCenterData(
     activeZone?.id ?? null,
   );
 
@@ -92,14 +91,6 @@ export function ExplorePage() {
         <GuidedTour />
         <ExploreToolbar />
       </div>
-
-      <DetailPanel
-        bindings={bindings}
-        snapshot={snapshot}
-        loading={loading}
-        error={error}
-        onRefresh={() => void refresh()}
-      />
 
       <ExploreSearchModal />
     </div>

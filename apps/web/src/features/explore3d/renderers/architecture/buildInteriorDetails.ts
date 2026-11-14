@@ -367,6 +367,36 @@ function buildL1Details(parts: ColoredPart[]): void {
   for (const cx of [-21.8, -12.0, -5.2, 8.8, 15.5, 21.8]) {
     pushBox(parts, 0.48, 5.76, 0.48, cx, 2.88, 16.15, darkSteel);
   }
+
+  // Ceiling coffers for L1 belong on the underside of L2 so Solo/Cutaway views never float panels.
+}
+
+function appendCeilingCoffers(
+  parts: ColoredPart[],
+  opts: {
+    xMin: number;
+    xMax: number;
+    xStep: number;
+    zMin: number;
+    zMax: number;
+    zStep: number;
+    frameW: number;
+    frameD: number;
+    ledW: number;
+    ledD: number;
+    frameColor: string;
+    ledColor: string;
+  },
+): void {
+  const halfW = opts.frameW * 0.5 + 0.1;
+  const halfD = opts.frameD * 0.5 + 0.1;
+  for (let cx = opts.xMin; cx <= opts.xMax; cx += opts.xStep) {
+    for (let cz = opts.zMin; cz <= opts.zMax; cz += opts.zStep) {
+      if (cx + halfW >= 8.65 && cx - halfW <= 12.35 && cz + halfD >= 9.35 && cz - halfD <= 13.55) continue;
+      pushBox(parts, opts.frameW, 0.08, opts.frameD, cx, -0.32, cz, opts.frameColor);
+      pushBox(parts, opts.ledW, 0.03, opts.ledD, cx, -0.365, cz, opts.ledColor);
+    }
+  }
 }
 
 function buildL2Details(parts: ColoredPart[]): void {
@@ -460,6 +490,22 @@ function buildL2Details(parts: ColoredPart[]): void {
     pushBox(parts, 0.34, 4.2, 0.08, 22.18, 2.25, fz, warmWood);
     pushBox(parts, 0.34, 4.2, 0.08, -22.18, 2.25, fz, warmWood);
   }
+
+  // 6. Architectural Recessed Ceiling Coffers & LED Light Troffers for L1 mounted under L2 slab (-0.28m)
+  appendCeilingCoffers(parts, {
+    xMin: -16.0,
+    xMax: 16.0,
+    xStep: 8.0,
+    zMin: -10.0,
+    zMax: 10.0,
+    zStep: 6.5,
+    frameW: 3.2,
+    frameD: 2.2,
+    ledW: 2.8,
+    ledD: 1.8,
+    frameColor: '#1c1f26',
+    ledColor: '#fefae0',
+  });
 }
 
 function buildRFDetails(parts: ColoredPart[]): void {
@@ -538,6 +584,39 @@ function buildRFDetails(parts: ColoredPart[]): void {
     pushBox(parts, 0.26, 1.45, 0.26, 21.85, 0.72, sz, '#313949');
     pushBox(parts, 0.35, 0.1, 0.75, 22.3, 3.12, sz, '#fef08a');
   }
+
+  // 8. Modern Architectural Glass & Steel Stairwell Headhouse Canopy (x = 10.5, z = 11.5)
+  // Corner steel structural posts rising from roof to canopy
+  for (const px of [8.65, 12.35]) {
+    for (const pz of [9.35, 13.35]) {
+      pushBox(parts, 0.12, 2.65, 0.12, px, 1.32, pz, darkSteel);
+    }
+  }
+  // Cantilevered modern canopy roof with salmon edge fascia
+  pushBox(parts, 4.2, 0.12, 4.6, 10.5, 2.68, 11.35, darkSteel);
+  pushBox(parts, 4.3, 0.06, 4.7, 10.5, 2.74, 11.35, salmon);
+  // Recessed warm LED ceiling downlight under canopy
+  pushBox(parts, 2.2, 0.03, 2.6, 10.5, 2.61, 11.35, '#fef08a');
+  // Glass shelter panels along West, East, and South (North exit at z = 9.35 is open onto terrace)
+  pushBox(parts, 0.04, 2.5, 3.8, 8.65, 1.25, 11.35, '#94a3b8');
+  pushBox(parts, 0.04, 2.5, 3.8, 12.35, 1.25, 11.35, '#94a3b8');
+  pushBox(parts, 3.6, 2.5, 0.04, 10.5, 1.25, 13.35, '#94a3b8');
+
+  // 9. Architectural Recessed Ceiling Coffers & Warm LED Panels for L2 mounted under RF slab (-0.28m)
+  appendCeilingCoffers(parts, {
+    xMin: -14.0,
+    xMax: 14.0,
+    xStep: 7.0,
+    zMin: -8.0,
+    zMax: 8.0,
+    zStep: 5.5,
+    frameW: 2.8,
+    frameD: 1.8,
+    ledW: 2.4,
+    ledD: 1.4,
+    frameColor: '#1b1d22',
+    ledColor: '#fef08a',
+  });
 }
 
 function buildOUTDetails(parts: ColoredPart[]): void {

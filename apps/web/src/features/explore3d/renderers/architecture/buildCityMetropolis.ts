@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { QualityTier } from '../../state/exploreStore';
 import type { ExploreTheme } from '../materials';
+import { mergeFoliageCards, type FoliageCard } from './buildCampusGeometry';
 
 export type TrafficAxis = 'EW' | 'NS';
 
@@ -25,6 +26,7 @@ export interface CityMetropolisGeometries {
   readonly metalGeometry: THREE.BufferGeometry;
   readonly glassGeometry: THREE.BufferGeometry;
   readonly emissiveGeometry: THREE.BufferGeometry;
+  readonly foliageGeometry: THREE.BufferGeometry;
   readonly beaconAnchors: ReadonlyArray<readonly [number, number, number]>;
   readonly trafficSignalAnchors: ReadonlyArray<TrafficSignalAnchor>;
   readonly boulevardBannerAnchors: ReadonlyArray<BoulevardBannerAnchor>;
@@ -34,6 +36,8 @@ interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
   readonly hdrScale?: number;
+  readonly roughness?: number;
+  readonly metalness?: number;
 }
 
 interface CityBuckets {
@@ -41,6 +45,7 @@ interface CityBuckets {
   metal: ColoredPart[];
   glass: ColoredPart[];
   emissive: ColoredPart[];
+  foliage: FoliageCard[];
 }
 
 function seededRandom(seed: number): () => number {
@@ -89,10 +94,12 @@ function pushBox(
   ry = 0,
   rz = 0,
   hdrScale = 1,
+  roughness = 0.78,
+  metalness = 0,
 ): void {
   if (w <= 0 || h <= 0 || d <= 0) return;
   const geom = transformGeom(new THREE.BoxGeometry(w, h, d), x, y, z, rx, ry, rz);
-  target.push({ geometry: geom, color, hdrScale });
+  target.push({ geometry: geom, color, hdrScale, roughness, metalness });
 }
 
 function pushCylinder(
@@ -109,6 +116,8 @@ function pushCylinder(
   ry = 0,
   rz = 0,
   hdrScale = 1,
+  roughness = 0.78,
+  metalness = 0,
 ): void {
   if (h <= 0) return;
   const geom = transformGeom(
@@ -120,15 +129,17 @@ function pushCylinder(
     ry,
     rz,
   );
-  target.push({ geometry: geom, color, hdrScale });
+  target.push({ geometry: geom, color, hdrScale, roughness, metalness });
 }
 
 function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const fallback = new THREE.BoxGeometry(0.01, 0.01, 0.01);
-    const pos = fallback.getAttribute('position');
-    const colors = new Float32Array(pos.count * 3).fill(1);
-    fallback.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const count = fallback.getAttribute('position').count;
+    fallback.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3).fill(1), 3));
+    const surf = new Float32Array(count * 2);
+    for (let i = 0; i < count; i += 1) surf[i * 2] = 0.78;
+    fallback.setAttribute('surf', new THREE.BufferAttribute(surf, 2));
     return fallback;
   }
 
@@ -146,13 +157,14 @@ function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   const normals = new Float32Array(totalVertices * 3);
   const uvs = new Float32Array(totalVertices * 2);
   const colors = new Float32Array(totalVertices * 3);
+  const surfs = new Float32Array(totalVertices * 2);
   const indices = new Uint32Array(totalIndices);
 
   const tmpColor = new THREE.Color();
   let vOffset = 0;
   let iOffset = 0;
 
-  for (const { geometry, color, hdrScale = 1 } of parts) {
+  for (const { geometry, color, hdrScale = 1, roughness = 0.78, metalness = 0 } of parts) {
     tmpColor.set(color);
     const r = tmpColor.r * hdrScale;
     const g = tmpColor.g * hdrScale;
@@ -161,6 +173,7 @@ function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
     const pos = geometry.getAttribute('position');
     const norm = geometry.getAttribute('normal');
     const uvAttr = geometry.getAttribute('uv');
+    const colAttr = geometry.getAttribute('color');
     const idx = geometry.getIndex();
 
     for (let i = 0; i < pos.count; i += 1) {
@@ -190,9 +203,18 @@ function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
         uvs[base2 + 1] = (py + pz) * 0.05;
       }
 
-      colors[base3] = r;
-      colors[base3 + 1] = g;
-      colors[base3 + 2] = b;
+      if (colAttr) {
+        colors[base3] = colAttr.getX(i) * hdrScale;
+        colors[base3 + 1] = colAttr.getY(i) * hdrScale;
+        colors[base3 + 2] = colAttr.getZ(i) * hdrScale;
+      } else {
+        colors[base3] = r;
+        colors[base3 + 1] = g;
+        colors[base3 + 2] = b;
+      }
+
+      surfs[base2] = roughness;
+      surfs[base2 + 1] = metalness;
     }
 
     if (idx) {
@@ -216,36 +238,98 @@ function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   merged.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   merged.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  merged.setAttribute('surf', new THREE.BufferAttribute(surfs, 2));
   merged.setIndex(new THREE.BufferAttribute(indices, 1));
   merged.computeBoundingBox();
   merged.computeBoundingSphere();
   return merged;
 }
 
-const FOLIAGE_TONES_DAY = ['#2d4d2c', '#3b5e34', '#496e3d', '#345531'] as const;
-const FOLIAGE_TONES_DUSK = ['#1e3120', '#273c26', '#2e452a', '#213522'] as const;
+function addCityFoliageCard(
+  target: FoliageCard[],
+  cx: number,
+  cy: number,
+  cz: number,
+  w: number,
+  h: number,
+  rotY: number,
+  tiltX: number,
+  crownCenter: readonly [number, number, number],
+  sunColor: THREE.Color,
+  shadeColor: THREE.Color,
+  aoFactor: number,
+): void {
+  const cosY = Math.cos(rotY);
+  const sinY = Math.sin(rotY);
+  const cosT = Math.cos(tiltX);
+  const sinT = Math.sin(tiltX);
 
-function foliageBlob(rand: () => number, radius: number, segments = 8): THREE.BufferGeometry {
-  const geom = new THREE.SphereGeometry(radius, segments, 6);
-  const pos = geom.getAttribute('position');
-  const p1 = rand() * 6.28;
-  const p2 = rand() * 6.28;
-  for (let i = 0; i < pos.count; i += 1) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    const n =
-      Math.sin((x / radius) * 3.1 + p1) * Math.cos((z / radius) * 2.7 + p2) * 0.16 +
-      Math.sin((y / radius) * 4.1 + p1) * 0.08;
-    const k = 1 + n;
-    pos.setXYZ(i, x * k, y * k * 0.84, z * k);
+  const halfW = w * 0.5;
+  const localPts: [number, number, number][] = [
+    [-halfW, 0, 0],
+    [halfW, 0, 0],
+    [halfW, h, 0],
+    [-halfW, h, 0],
+  ];
+
+  const pos: number[] = [];
+  const norm: number[] = [];
+  const col: number[] = [];
+  const uvs: [number, number, number, number, number, number, number, number] = [
+    0, 0,
+    1, 0,
+    1, 1,
+    0, 1,
+  ];
+  const weights: [number, number, number, number] = [0.2, 0.2, 1.0, 1.0];
+
+  const tmpCol = new THREE.Color();
+  for (let i = 0; i < 4; i += 1) {
+    const [lx, ly, lz] = localPts[i]!;
+    const ty = ly * cosT - lz * sinT;
+    const tz = ly * sinT + lz * cosT;
+    const tx = lx * cosY + tz * sinY;
+    const fz = -lx * sinY + tz * cosY;
+
+    const wx = cx + tx;
+    const wy = cy + ty;
+    const wz = cz + fz;
+    pos.push(wx, wy, wz);
+
+    const rdx = wx - crownCenter[0];
+    const rdy = (wy - crownCenter[1]) * 1.25 + 0.35;
+    const rdz = wz - crownCenter[2];
+    const rlen = Math.hypot(rdx, rdy, rdz) || 1;
+
+    const fnx = sinT * sinY;
+    const fny = cosT;
+    const fnz = sinT * cosY;
+
+    const nx = fnx * 0.35 + (rdx / rlen) * 0.65;
+    const ny = fny * 0.35 + (rdy / rlen) * 0.65;
+    const nz = fnz * 0.35 + (rdz / rlen) * 0.65;
+    const nlen = Math.hypot(nx, ny, nz) || 1;
+    norm.push(nx / nlen, ny / nlen, nz / nlen);
+
+    if (i < 2) {
+      tmpCol.copy(shadeColor).multiplyScalar(aoFactor * 0.78);
+    } else {
+      tmpCol.copy(sunColor).multiplyScalar(aoFactor);
+    }
+    col.push(tmpCol.r, tmpCol.g, tmpCol.b);
   }
-  geom.computeVertexNormals();
-  return geom;
+
+  target.push({
+    positions: pos as unknown as FoliageCard['positions'],
+    normals: norm as unknown as FoliageCard['normals'],
+    colors: col as unknown as FoliageCard['colors'],
+    uvs,
+    windWeights: weights,
+  });
 }
 
 function addCityTree(
-  opaque: ColoredPart[],
+  buckets: CityBuckets,
   x: number,
   z: number,
   scale: number,
@@ -253,26 +337,114 @@ function addCityTree(
   withPlanter = true,
 ): void {
   const rand = seededRandom(Math.round(x * 137 + z * 919));
+  const curbColor = isLight ? '#8a857e' : '#323844';
+  const mulchColor = '#211a14';
+
   if (withPlanter) {
-    pushBox(opaque, 1.8 * scale, 0.28, 1.8 * scale, x, 0.14, z, isLight ? '#8a857e' : '#323844');
-    pushBox(opaque, 1.45 * scale, 0.3, 1.45 * scale, x, 0.16, z, '#231c15');
+    pushBox(buckets.opaque, 1.85 * scale, 0.3, 1.85 * scale, x, 0.15, z, curbColor, 0, 0, 0, 1, 0.86, 0);
+    pushBox(buckets.opaque, 1.5 * scale, 0.34, 1.5 * scale, x, 0.18, z, mulchColor, 0, 0, 0, 1, 0.96, 0);
+  } else {
+    pushCylinder(buckets.opaque, 0.88 * scale, 0.95 * scale, 0.14, x, 0.07, z, curbColor, 12, 0, 0, 0, 1, 0.86, 0);
+    pushCylinder(buckets.opaque, 0.8 * scale, 0.8 * scale, 0.16, x, 0.08, z, mulchColor, 12, 0, 0, 0, 1, 0.96, 0);
   }
-  const trunkH = (2.2 + rand() * 0.65) * scale;
-  pushCylinder(opaque, 0.1 * scale, 0.18 * scale, trunkH, x, trunkH * 0.5, z, '#453629', 6);
-  const tones = isLight ? FOLIAGE_TONES_DAY : FOLIAGE_TONES_DUSK;
-  const crownY = trunkH + 0.75 * scale;
-  const blobCount = 4;
-  for (let i = 0; i < blobCount; i += 1) {
-    const ang = (i / (blobCount - 1)) * Math.PI * 2 + rand() * 0.5;
-    const dist = i === 0 ? 0 : (0.55 + rand() * 0.3) * scale;
-    const r = (i === 0 ? 1.05 : 0.72 + rand() * 0.25) * scale;
-    const geom = foliageBlob(rand, r, 7);
-    geom.translate(
-      x + Math.cos(ang) * dist,
-      crownY + (i === 0 ? 0.35 : (rand() - 0.5) * 0.45) * scale,
-      z + Math.sin(ang) * dist,
+
+  const trunkH = (2.3 + rand() * 0.5) * scale;
+  const leanX = (rand() - 0.5) * 0.12;
+  const leanZ = (rand() - 0.5) * 0.12;
+  const barkColor = '#423326';
+  const branchColor = '#4d3d2e';
+
+  pushCylinder(buckets.opaque, 0.18 * scale, 0.25 * scale, 0.45 * scale, x, 0.22, z, barkColor, 8, 0, 0, 0, 1, 0.94, 0);
+  pushCylinder(
+    buckets.opaque,
+    0.1 * scale,
+    0.18 * scale,
+    trunkH,
+    x + leanX * 0.5,
+    trunkH * 0.5 + 0.12,
+    z + leanZ * 0.5,
+    barkColor,
+    8,
+    leanZ,
+    0,
+    -leanX,
+    1,
+    0.94,
+    0,
+  );
+
+  const topX = x + leanX * trunkH * 0.75;
+  const topY = trunkH + 0.12;
+  const topZ = z + leanZ * trunkH * 0.75;
+
+  const canopyNodes: [number, number, number][] = [];
+  for (let i = 0; i < 3; i += 1) {
+    const ang = (i / 3) * Math.PI * 2 + rand() * 0.6;
+    const limbLen = (1.0 + rand() * 0.4) * scale;
+    const tilt = 0.68 + rand() * 0.28;
+    const limbEnd: [number, number, number] = [
+      topX + Math.cos(ang) * Math.sin(tilt) * limbLen,
+      topY + Math.cos(tilt) * limbLen,
+      topZ + Math.sin(ang) * Math.sin(tilt) * limbLen,
+    ];
+    pushCylinder(
+      buckets.opaque,
+      0.04 * scale,
+      0.08 * scale,
+      limbLen,
+      topX + Math.cos(ang) * Math.sin(tilt) * limbLen * 0.5,
+      topY + Math.cos(tilt) * limbLen * 0.5,
+      topZ + Math.sin(ang) * Math.sin(tilt) * limbLen * 0.5,
+      branchColor,
+      6,
+      Math.sin(ang) * tilt,
+      0,
+      -Math.cos(ang) * tilt,
+      1,
+      0.94,
+      0,
     );
-    opaque.push({ geometry: geom, color: tones[Math.floor(rand() * tones.length)]! });
+    canopyNodes.push(limbEnd);
+  }
+  canopyNodes.push([topX, topY + 0.8 * scale, topZ]);
+
+  const sunC = new THREE.Color(isLight ? '#567a3a' : '#2d4624');
+  const shadeC = new THREE.Color(isLight ? '#1c2e1a' : '#111e10');
+  const crownCenter: [number, number, number] = [topX, topY + 0.8 * scale, topZ];
+
+  for (let n = 0; n < canopyNodes.length; n += 1) {
+    const [nx, ny, nz] = canopyNodes[n]!;
+    const cardSize = (1.5 + rand() * 0.4) * scale;
+    const ao = 0.68 + 0.32 * Math.min(1.0, (ny - (topY - 0.4)) / (1.6 * scale));
+    for (let c = 0; c < 3; c += 1) {
+      const rotY = (c / 3) * Math.PI + rand() * 0.4;
+      const tiltX = (rand() - 0.3) * 0.35;
+      addCityFoliageCard(buckets.foliage, nx, ny, nz, cardSize, cardSize, rotY, tiltX, crownCenter, sunC, shadeC, ao);
+    }
+  }
+
+  if (withPlanter) {
+    for (let s = 0; s < 3; s += 1) {
+      const sa = (s / 3) * Math.PI * 2 + rand() * 0.6;
+      const sr = (0.45 + rand() * 0.12) * scale;
+      const sx = x + Math.cos(sa) * sr;
+      const sz = z + Math.sin(sa) * sr;
+      const sy = 0.35;
+      addCityFoliageCard(
+        buckets.foliage,
+        sx,
+        sy,
+        sz,
+        0.6 * scale,
+        0.5 * scale,
+        sa,
+        0.15,
+        [sx, sy + 0.2, sz],
+        sunC,
+        shadeC,
+        0.72,
+      );
+    }
   }
 }
 
@@ -690,10 +862,9 @@ function addRoadNetworkAndSouthPark(
   const asphalt = isLight ? '#384150' : '#161b24';
   const sidewalk = isLight ? '#ccc5ba' : '#252b37';
   const curb = isLight ? '#aca59a' : '#384050';
-  const grass = isLight ? '#48623d' : '#1e2c20';
+  const grass = isLight ? '#415938' : '#1c291e';
   const stripeWhite = isLight ? '#f1f5f9' : '#b8c4d4';
   const stripeAmber = '#e89d20';
-  const water = isLight ? '#355f78' : '#132838';
   const timber = '#7c4e32';
   const steel = isLight ? '#323a48' : '#1e2430';
   const gridSpan = tier === 'low' ? 460 : 840;
@@ -703,22 +874,22 @@ function addRoadNetworkAndSouthPark(
   // =========================================================================
   const westWingW = gridSpan * 0.5 - 40.02;
   const westCenterX = -40.02 - westWingW * 0.5;
-  pushBox(buckets.opaque, westWingW, 0.06, 5.6, westCenterX, 0.005, 26.6, asphalt);
-  pushBox(buckets.opaque, westWingW, 0.12, 0.28, westCenterX, 0.06, 23.75, curb);
-  pushBox(buckets.opaque, westWingW, 0.12, 0.28, westCenterX, 0.06, 29.45, curb);
+  pushBox(buckets.opaque, westWingW, 0.06, 5.6, westCenterX, 0.005, 26.6, asphalt, 0, 0, 0, 1, 0.82, 0);
+  pushBox(buckets.opaque, westWingW, 0.12, 0.28, westCenterX, 0.06, 23.75, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, westWingW, 0.12, 0.28, westCenterX, 0.06, 29.45, curb, 0, 0, 0, 1, 0.86, 0);
 
   const eastWingW = gridSpan * 0.5 - 52.02;
   const eastCenterX = 52.02 + eastWingW * 0.5;
-  pushBox(buckets.opaque, eastWingW, 0.06, 5.6, eastCenterX, 0.005, 26.6, asphalt);
-  pushBox(buckets.opaque, eastWingW, 0.12, 0.28, eastCenterX, 0.06, 23.75, curb);
-  pushBox(buckets.opaque, eastWingW, 0.12, 0.28, eastCenterX, 0.06, 29.45, curb);
+  pushBox(buckets.opaque, eastWingW, 0.06, 5.6, eastCenterX, 0.005, 26.6, asphalt, 0, 0, 0, 1, 0.82, 0);
+  pushBox(buckets.opaque, eastWingW, 0.12, 0.28, eastCenterX, 0.06, 23.75, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, eastWingW, 0.12, 0.28, eastCenterX, 0.06, 29.45, curb, 0, 0, 0, 1, 0.86, 0);
 
   // Full Southbound Carriageway (+X Eastbound RHT, z = 32.15..38.75) across entire boulevard
-  pushBox(buckets.opaque, gridSpan, 0.06, 6.6, 0, 0.005, 35.45, asphalt);
-  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, 32.1, curb);
-  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, 38.8, curb);
+  pushBox(buckets.opaque, gridSpan, 0.06, 6.6, 0, 0.005, 35.45, asphalt, 0, 0, 0, 1, 0.82, 0);
+  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, 32.1, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, 38.8, curb, 0, 0, 0, 1, 0.86, 0);
   // Bus Lay-by pocket (x = 16..34, z = 38.8..40.5)
-  pushBox(buckets.opaque, 18, 0.06, 1.8, 25, 0.005, 39.7, asphalt);
+  pushBox(buckets.opaque, 18, 0.06, 1.8, 25, 0.005, 39.7, asphalt, 0, 0, 0, 1, 0.82, 0);
 
   // Landscaped Central Median Segments (broken cleanly at intersections x = -255, -152, -60.5, +70.5, +162, +265)
   const medianIntervals: ReadonlyArray<readonly [number, number]> = [
@@ -734,8 +905,8 @@ function addRoadNetworkAndSouthPark(
     if (Math.abs(x0) > gridSpan * 0.5 && Math.abs(x1) > gridSpan * 0.5) continue;
     const len = x1 - x0;
     const cx = (x0 + x1) * 0.5;
-    pushBox(buckets.opaque, len, 0.18, 2.35, cx, 0.09, 30.8, curb);
-    pushBox(buckets.opaque, len - 0.8, 0.24, 1.75, cx, 0.12, 30.8, grass);
+    pushBox(buckets.opaque, len, 0.18, 2.35, cx, 0.09, 30.8, curb, 0, 0, 0, 1, 0.86, 0);
+    pushBox(buckets.opaque, len - 0.8, 0.24, 1.75, cx, 0.12, 30.8, grass, 0, 0, 0, 1, 0.93, 0);
   }
 
   // Median Double-Arm Streetlamps + Trees + Boulevard Banners
@@ -757,7 +928,7 @@ function addRoadNetworkAndSouthPark(
       });
     }
     if (Math.abs(x) <= 130 && Math.abs(x - 8) > 12) {
-      addCityTree(buckets.opaque, x + 10.5, 30.8, 0.82, isLight, false);
+      addCityTree(buckets, x + 10.5, 30.8, 0.82, isLight, false);
     }
   }
 
@@ -770,43 +941,43 @@ function addRoadNetworkAndSouthPark(
       Math.abs(x - 162) < 7.5;
     if (inInter) continue;
     if (x < -40 || x > 52) {
-      pushBox(buckets.opaque, 2.2, 0.04, 0.12, x, 0.036, 26.6, stripeWhite);
+      pushBox(buckets.opaque, 2.2, 0.04, 0.12, x, 0.036, 26.6, stripeWhite, 0, 0, 0, 1, 0.58, 0);
     }
-    pushBox(buckets.opaque, 2.2, 0.04, 0.12, x, 0.036, 35.45, stripeWhite);
+    pushBox(buckets.opaque, 2.2, 0.04, 0.12, x, 0.036, 35.45, stripeWhite, 0, 0, 0, 1, 0.58, 0);
   }
 
   // =========================================================================
   // 2. NORTH BOULEVARD (z = -48.5..-38.5) & WEST / EAST CROSS AVENUES
   // =========================================================================
-  pushBox(buckets.opaque, gridSpan, 0.06, 10.0, 0, 0.005, -43.5, asphalt);
-  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, -38.45, curb);
-  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, -48.55, curb);
+  pushBox(buckets.opaque, gridSpan, 0.06, 10.0, 0, 0.005, -43.5, asphalt, 0, 0, 0, 1, 0.82, 0);
+  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, -38.45, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, -48.55, curb, 0, 0, 0, 1, 0.86, 0);
   // Amber center divider along North Boulevard
   for (const [x0, x1] of medianIntervals) {
     if (Math.abs(x0) > gridSpan * 0.5 && Math.abs(x1) > gridSpan * 0.5) continue;
-    pushBox(buckets.opaque, x1 - x0, 0.05, 0.16, (x0 + x1) * 0.5, 0.036, -43.5, stripeAmber);
+    pushBox(buckets.opaque, x1 - x0, 0.05, 0.16, (x0 + x1) * 0.5, 0.036, -43.5, stripeAmber, 0, 0, 0, 1, 0.58, 0);
   }
 
   // North-South Avenues (West x=-60.5, East x=+70.5, Outer -152, +162, -255, +265)
   const nsAvenues = tier === 'low' ? [-152, -60.5, 70.5, 162] : [-255, -152, -60.5, 70.5, 162, 265];
   for (const ax of nsAvenues) {
-    pushBox(buckets.opaque, 12.0, 0.06, gridSpan, ax, 0.006, 0, asphalt);
-    pushBox(buckets.opaque, 0.16, 0.04, gridSpan, ax, 0.038, 0, stripeAmber);
+    pushBox(buckets.opaque, 12.0, 0.06, gridSpan, ax, 0.006, 0, asphalt, 0, 0, 0, 1, 0.82, 0);
+    pushBox(buckets.opaque, 0.16, 0.04, gridSpan, ax, 0.038, 0, stripeAmber, 0, 0, 0, 1, 0.58, 0);
     // Dashed lane dividers on each carriageway
     for (let z = -190; z <= 190; z += 5.5) {
       if (Math.abs(z - 31) < 9 || Math.abs(z + 43.5) < 9 || Math.abs(z - 74) < 9 || Math.abs(z + 132) < 9) {
         continue;
       }
-      pushBox(buckets.opaque, 0.12, 0.04, 2.2, ax - 3.0, 0.036, z, stripeWhite);
-      pushBox(buckets.opaque, 0.12, 0.04, 2.2, ax + 3.0, 0.036, z, stripeWhite);
+      pushBox(buckets.opaque, 0.12, 0.04, 2.2, ax - 3.0, 0.036, z, stripeWhite, 0, 0, 0, 1, 0.58, 0);
+      pushBox(buckets.opaque, 0.12, 0.04, 2.2, ax + 3.0, 0.036, z, stripeWhite, 0, 0, 0, 1, 0.58, 0);
     }
   }
 
   // Outer East-West Grid Arterials (z = -235, -132, +74, +168)
   const ewArterials = tier === 'low' ? [-132, 74] : [-235, -132, 74, 168];
   for (const az of ewArterials) {
-    pushBox(buckets.opaque, gridSpan, 0.06, 11.0, 0, 0.005, az, asphalt);
-    pushBox(buckets.opaque, gridSpan, 0.04, 0.16, 0, 0.036, az, stripeAmber);
+    pushBox(buckets.opaque, gridSpan, 0.06, 11.0, 0, 0.005, az, asphalt, 0, 0, 0, 1, 0.82, 0);
+    pushBox(buckets.opaque, gridSpan, 0.04, 0.16, 0, 0.036, az, stripeAmber, 0, 0, 0, 1, 0.58, 0);
   }
 
   // Signalized Intersections & Crosswalks around SÖL Campus Corners
@@ -820,13 +991,13 @@ function addRoadNetworkAndSouthPark(
     // 4-leg Zebra Crosswalks
     for (let i = -2; i <= 2; i += 1) {
       const zOff = i * 1.15;
-      pushBox(buckets.opaque, 2.2, 0.04, 0.52, inter.x - 8.2, 0.04, inter.z + zOff, stripeWhite);
-      pushBox(buckets.opaque, 2.2, 0.04, 0.52, inter.x + 8.2, 0.04, inter.z + zOff, stripeWhite);
+      pushBox(buckets.opaque, 2.2, 0.04, 0.52, inter.x - 8.2, 0.04, inter.z + zOff, stripeWhite, 0, 0, 0, 1, 0.58, 0);
+      pushBox(buckets.opaque, 2.2, 0.04, 0.52, inter.x + 8.2, 0.04, inter.z + zOff, stripeWhite, 0, 0, 0, 1, 0.58, 0);
     }
     for (let i = -3; i <= 3; i += 1) {
       const xOff = i * 1.15;
-      pushBox(buckets.opaque, 0.52, 0.04, 2.2, inter.x + xOff, 0.04, inter.z - 8.6, stripeWhite);
-      pushBox(buckets.opaque, 0.52, 0.04, 2.2, inter.x + xOff, 0.04, inter.z + 8.6, stripeWhite);
+      pushBox(buckets.opaque, 0.52, 0.04, 2.2, inter.x + xOff, 0.04, inter.z - 8.6, stripeWhite, 0, 0, 0, 1, 0.58, 0);
+      pushBox(buckets.opaque, 0.52, 0.04, 2.2, inter.x + xOff, 0.04, inter.z + 8.6, stripeWhite, 0, 0, 0, 1, 0.58, 0);
     }
     // EW Traffic Signal (controls East-West lanes)
     addSignalGantry(buckets, signalAnchors, `${inter.id}-ew`, inter.id, 'EW', inter.x - 7.5, inter.z + 8.6, 0, isLight);
@@ -835,20 +1006,20 @@ function addRoadNetworkAndSouthPark(
   }
 
   // Sidewalks Framing West (-54.4..-45.05) and East (+58.05..+64.4) Edges of Campus
-  pushBox(buckets.opaque, 9.3, 0.14, 62.2, -49.75, 0.03, -7.4, sidewalk);
-  pushBox(buckets.opaque, 6.3, 0.14, 62.2, 61.25, 0.03, -7.4, sidewalk);
+  pushBox(buckets.opaque, 9.3, 0.14, 62.2, -49.75, 0.03, -7.4, sidewalk, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, 6.3, 0.14, 62.2, 61.25, 0.03, -7.4, sidewalk, 0, 0, 0, 1, 0.86, 0);
   // North Rear Service Promenade (z = -38.4..-30.05)
-  pushBox(buckets.opaque, 103, 0.14, 8.3, 6.5, 0.03, -34.25, sidewalk);
+  pushBox(buckets.opaque, 103, 0.14, 8.3, 6.5, 0.03, -34.25, sidewalk, 0, 0, 0, 1, 0.86, 0);
 
   // Avenue Trees flanking West, East & North Promenades
   for (let z = -26; z <= 22; z += 12) {
-    addCityTree(buckets.opaque, -51.8, z, 0.95, isLight);
-    addCityTree(buckets.opaque, 61.8, z, 0.95, isLight);
+    addCityTree(buckets, -51.8, z, 0.95, isLight);
+    addCityTree(buckets, 61.8, z, 0.95, isLight);
     addBoulevardStreetLamp(buckets, -53.2, z + 6, 0, false, isLight);
     addBoulevardStreetLamp(buckets, 63.4, z + 6, Math.PI, false, isLight);
   }
   for (let x = -38; x <= 48; x += 14) {
-    addCityTree(buckets.opaque, x, -34.5, 0.92, isLight);
+    addCityTree(buckets, x, -34.5, 0.92, isLight);
   }
 
   // =========================================================================
@@ -856,19 +1027,22 @@ function addRoadNetworkAndSouthPark(
   //    Strictly low-rise (max H <= 5.2m) to keep Hero Camera sightline [46,36,48] 100% open!
   // =========================================================================
   // Esplanade Granite Sidewalk
-  pushBox(buckets.opaque, 118, 0.16, 8.2, 5, 0.04, 43.0, sidewalk);
+  pushBox(buckets.opaque, 118, 0.16, 8.2, 5, 0.04, 43.0, sidewalk, 0, 0, 0, 1, 0.86, 0);
   // Park Lawns Flanking the Canal
-  pushBox(buckets.opaque, 118, 0.12, 21.0, 5, 0.02, 57.6, grass);
+  pushBox(buckets.opaque, 118, 0.12, 21.0, 5, 0.02, 57.6, grass, 0, 0, 0, 1, 0.93, 0);
   // Park Jogging Track Loop (running cleanly parallel to South Boulevard)
-  pushBox(buckets.opaque, 112, 0.08, 2.2, 5, 0.05, 48.2, isLight ? '#8f5f52' : '#4a3531');
-  pushBox(buckets.opaque, 112, 0.08, 2.2, 5, 0.05, 64.8, isLight ? '#8f5f52' : '#4a3531');
+  pushBox(buckets.opaque, 112, 0.08, 2.2, 5, 0.05, 48.2, isLight ? '#8f5f52' : '#4a3531', 0, 0, 0, 1, 0.88, 0);
+  pushBox(buckets.opaque, 112, 0.08, 2.2, 5, 0.05, 64.8, isLight ? '#8f5f52' : '#4a3531', 0, 0, 0, 1, 0.88, 0);
 
-  // Reflecting Urban Canal (x = -34..+46, z = 51.6..58.6)
-  pushBox(buckets.opaque, 82, 0.36, 7.6, 6, 0.12, 55.1, curb);
-  pushBox(buckets.glass, 80.2, 0.24, 6.0, 6, 0.18, 55.1, water);
+  // Reflecting Urban Canal (x = -35..+47, z = 51.3..58.9) — recessed stone coping + dark bed (water mesh in CitySky)
+  pushBox(buckets.opaque, 82, 0.36, 0.8, 6, 0.12, 51.7, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, 82, 0.36, 0.8, 6, 0.12, 58.5, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, 0.9, 0.36, 6.0, -34.55, 0.12, 55.1, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, 0.9, 0.36, 6.0, 46.55, 0.12, 55.1, curb, 0, 0, 0, 1, 0.86, 0);
+  pushBox(buckets.opaque, 80.2, 0.06, 6.0, 6, 0.12, 55.1, isLight ? '#132630' : '#09131a', 0, 0, 0, 1, 0.9, 0);
   // Arched Timber-Steel Footbridge across the Canal at x = 6.5 (aligned with Main Gate!)
   pushBox(buckets.metal, 4.4, 0.32, 8.4, 6.5, 0.62, 55.1, steel);
-  pushBox(buckets.opaque, 3.8, 0.14, 8.2, 6.5, 0.78, 55.1, timber);
+  pushBox(buckets.opaque, 3.8, 0.14, 8.2, 6.5, 0.78, 55.1, timber, 0, 0, 0, 1, 0.66, 0);
   for (const bx of [4.6, 8.4]) {
     pushBox(buckets.metal, 0.12, 0.92, 8.2, bx, 1.24, 55.1, steel);
   }
@@ -877,20 +1051,20 @@ function addRoadNetworkAndSouthPark(
   pushBox(buckets.metal, 9.2, 0.14, 2.4, 24.5, 2.95, 40.9, steel);
   pushBox(buckets.glass, 9.0, 0.06, 2.2, 24.5, 3.04, 40.9, isLight ? '#8bb0c6' : '#2a4156');
   pushBox(buckets.glass, 8.6, 2.45, 0.08, 24.5, 1.5, 42.0, isLight ? '#8bb0c6' : '#2a4156');
-  pushBox(buckets.opaque, 4.8, 0.42, 0.6, 24.5, 0.46, 41.3, timber);
+  pushBox(buckets.opaque, 4.8, 0.42, 0.6, 24.5, 0.46, 41.3, timber, 0, 0, 0, 1, 0.66, 0);
   // Backlit Digital Transit Route Totem (blooms softly at dusk)
   pushBox(buckets.metal, 1.25, 2.65, 0.36, 19.6, 1.48, 41.2, steel);
   pushBox(buckets.emissive, 0.92, 1.85, 0.42, 19.6, 1.55, 41.2, isLight ? '#d8e6f0' : '#ffcf9e', 0, 0, 0, isLight ? 0.9 : 2.8);
 
   // Metro South Underpass Glass Entrance Pavilion (x = 44.5, z = 43.2, height 3.8m)
-  pushBox(buckets.opaque, 6.8, 0.95, 5.2, 44.5, 0.48, 43.2, curb);
+  pushBox(buckets.opaque, 6.8, 0.95, 5.2, 44.5, 0.48, 43.2, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.metal, 6.6, 3.2, 4.8, 44.5, 2.1, 43.2, steel);
   pushBox(buckets.glass, 6.2, 2.75, 4.4, 44.5, 2.0, 43.2, isLight ? '#86abc2' : '#263c52');
   pushBox(buckets.emissive, 5.8, 0.24, 0.25, 44.5, 3.35, 40.76, '#f07654', 0, 0, 0, isLight ? 1.0 : 3.1);
 
   // Esplanade Park Café Kiosk & Timber Patio (x = -20, z = 43.6, height 3.4m)
-  pushBox(buckets.opaque, 12.0, 0.18, 6.8, -20, 0.14, 44.0, timber);
-  pushBox(buckets.opaque, 5.6, 3.2, 3.6, -22, 1.8, 43.2, isLight ? '#383d46' : '#1b2029');
+  pushBox(buckets.opaque, 12.0, 0.18, 6.8, -20, 0.14, 44.0, timber, 0, 0, 0, 1, 0.68, 0);
+  pushBox(buckets.opaque, 5.6, 3.2, 3.6, -22, 1.8, 43.2, isLight ? '#383d46' : '#1b2029', 0, 0, 0, 1, 0.78, 0);
   pushBox(buckets.metal, 6.6, 0.2, 4.8, -22, 3.45, 43.4, steel);
   pushBox(buckets.emissive, 4.8, 2.1, 3.2, -22, 1.4, 43.2, isLight ? '#4a5568' : '#ffd59a', 0, 0, 0, isLight ? 0.7 : 2.6);
   // Café patio tables & architectural umbrellas
@@ -901,8 +1075,8 @@ function addRoadNetworkAndSouthPark(
     [-25.6, 44.8],
   ] as const) {
     pushCylinder(buckets.metal, 0.04, 0.05, 2.4, tx, 1.35, tz, steel, 6);
-    pushCylinder(buckets.opaque, 0.15, 1.15, 0.36, tx, 2.55, tz, '#d8c8b6', 8);
-    pushCylinder(buckets.opaque, 0.48, 0.48, 0.08, tx, 0.92, tz, timber, 8);
+    pushCylinder(buckets.opaque, 0.15, 1.15, 0.36, tx, 2.55, tz, '#d8c8b6', 8, 0, 0, 0, 1, 0.88, 0);
+    pushCylinder(buckets.opaque, 0.48, 0.48, 0.08, tx, 0.92, tz, timber, 8, 0, 0, 0, 1, 0.66, 0);
   }
 
   // Linear Park Trees & Benches
@@ -922,7 +1096,7 @@ function addRoadNetworkAndSouthPark(
     [48, 60.5, 1.05],
   ];
   for (const [tx, tz, sc] of parkTrees) {
-    addCityTree(buckets.opaque, tx, tz, sc, isLight, Math.abs(tz - 41.2) < 1);
+    addCityTree(buckets, tx, tz, sc, isLight, Math.abs(tz - 41.2) < 1);
   }
 }
 
@@ -1150,7 +1324,7 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   const cached = gymCrownCache.get(theme);
   if (cached) return cached;
   const isLight = theme === 'light';
-  const b: CityBuckets = { opaque: [], metal: [], glass: [], emissive: [] };
+  const b: CityBuckets = { opaque: [], metal: [], glass: [], emissive: [], foliage: [] };
   const base = GYM_ROOF_Y;
   const lift = 0.95;
   const roofY = base + lift;
@@ -1224,6 +1398,7 @@ export function buildCityMetropolis(
     metal: [],
     glass: [],
     emissive: [],
+    foliage: [],
   };
   const beaconAnchors: Array<readonly [number, number, number]> = [];
   const trafficSignalAnchors: TrafficSignalAnchor[] = [];
@@ -1251,6 +1426,7 @@ export function buildCityMetropolis(
     metalGeometry: mergeCityParts(buckets.metal),
     glassGeometry: mergeCityParts(buckets.glass),
     emissiveGeometry: mergeCityParts(buckets.emissive),
+    foliageGeometry: mergeFoliageCards(buckets.foliage),
     beaconAnchors,
     trafficSignalAnchors,
     boulevardBannerAnchors,
@@ -1259,3 +1435,5 @@ export function buildCityMetropolis(
   metropolisCache.set(cacheKey, result);
   return result;
 }
+
+export const buildCityMetropolisGeometries = buildCityMetropolis;

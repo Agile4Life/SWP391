@@ -13,6 +13,7 @@ import {
   type HairStyleName,
   type HumanAssets,
   type OutfitVariant,
+  type WearMode,
 } from '../renderers/actors/humanAppearance';
 import {
   applyRetargetPose,
@@ -33,6 +34,26 @@ import type { LevelCode, SceneDoc } from '../scene/schema';
 import type { LevelMode } from '../state/exploreStore';
 
 const NOOP_RAYCAST = () => null;
+const CLIP_PELVIS_REST_Z = 0.9167;
+
+const WALK_FLOOR_INDEX: Record<LevelCode, number> = {
+  B1: 0,
+  L1: 1,
+  OUT: 1,
+  L2: 2,
+  RF: 3,
+};
+
+/** Culls far non-adjacent floor props/actors during WalkView while keeping stairs & campus visible. */
+export function isWalkFloorAdjacent(
+  targetCode: LevelCode,
+  focusLevel: LevelCode | 'ALL',
+): boolean {
+  if (focusLevel === 'ALL') return true;
+  if (focusLevel === 'B1') return targetCode === 'B1' || targetCode === 'L1';
+  if (targetCode === 'OUT') return true;
+  return Math.abs(WALK_FLOOR_INDEX[targetCode] - WALK_FLOOR_INDEX[focusLevel]) <= 1;
+}
 
 interface HeldBarbell {
   bar: THREE.Object3D;
@@ -40,12 +61,23 @@ interface HeldBarbell {
   right: THREE.Object3D;
 }
 
+interface ComboState {
+  actions: THREE.AnimationAction[];
+  activeIndex: number;
+  elapsed: number;
+  interval: number;
+}
+
 export interface RiggedInstance {
   def: LiveActorDefinition;
   motion: RiggedMotion;
   holder: THREE.Group;
+  /** Meshes cached once at creation so per-frame sun shadow toggling avoids tree traversal. */
+  shadowMeshes: THREE.Mesh[];
   /** Clip playback (motion capture or generated clips). */
   mixer?: THREE.AnimationMixer;
+  action?: THREE.AnimationAction;
+  combo?: ComboState;
   /** Pose-driven skeleton. */
   rig?: RetargetRig;
   barbell?: HeldBarbell;
@@ -64,13 +96,62 @@ export function configureSkinTexture(texture: THREE.Texture): THREE.Texture {
   return texture;
 }
 
+const retargetedClips = new Map<string, THREE.AnimationClip>();
+
+/**
+ * Strips neutral-mannequin limb translation/scale tracks from UAL clips so female and male
+ * skeletons preserve 100% of their anatomical bone proportions, while scaling root/pelvis
+ * translation to match the character's true leg length.
+ */
+export function prepareCharacterClip(
+  clip: THREE.AnimationClip,
+  model: THREE.Object3D,
+  gender: Gender,
+): THREE.AnimationClip {
+  const key = `${gender}|${clip.uuid}|${clip.name}`;
+  const cached = retargetedClips.get(key);
+  if (cached) return cached;
+
+  const pelvis = model.getObjectByName('pelvis');
+  const pelvisScale = pelvis && pelvis.position.z > 0.1 ? pelvis.position.z / CLIP_PELVIS_REST_Z : 1;
+
+  const tracks: THREE.KeyframeTrack[] = [];
+  for (const track of clip.tracks) {
+    if (track.name.endsWith('.scale')) continue;
+    if (track.name.endsWith('.position')) {
+      const boneName = track.name.slice(0, -'.position'.length);
+      if (boneName !== 'pelvis' && boneName !== 'root') continue;
+      const scaledValues = Float32Array.from(track.values, v => v * pelvisScale);
+      tracks.push(new THREE.VectorKeyframeTrack(track.name, Float32Array.from(track.times), scaledValues));
+      continue;
+    }
+    tracks.push(track);
+  }
+
+  const adapted = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+  retargetedClips.set(key, adapted);
+  return adapted;
+}
+
+function wearForActor(def: LiveActorDefinition): WearMode {
+  if (def.activity === 'swim-freestyle') return 'swim';
+  if (def.activity === 'yoga-flow' || def.activity === 'inbody-scan') return 'barefoot';
+  if (
+    def.activity === 'pt-coach-tablet' ||
+    def.activity === 'receptionist-greet' ||
+    def.id === 'actor-b1-pool-coach'
+  ) {
+    return 'staff';
+  }
+  return 'athletic';
+}
+
 /** The cut and details of an actor's sportswear, stable per actor. */
 function outfitFor(id: string, gender: Gender): OutfitVariant {
   const bits = hashString(`${id}:outfit`);
   const bit = (n: number) => ((bits >>> n) & 1) === 1;
   return {
     sleeves: !bit(0),
-    // Cropped tops and leggings are for the women's wear; the men get tees and shorts.
     crop: gender === 'female' && bit(1) && bit(2),
     leggings: gender === 'female' && bit(3),
     stripe: bit(4),
@@ -135,24 +216,32 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
   const motion = getRiggedMotion(def.activity);
   if (!motion) return null;
 
-  let clip: THREE.AnimationClip | undefined;
+  let rawClip: THREE.AnimationClip | undefined;
   if (motion.kind === 'clip') {
     const clipName = typeof motion.spec.clip === 'function' ? motion.spec.clip(def.id) : motion.spec.clip;
-    clip = assets.clips.find(a => a.name === clipName);
-    if (!clip) return null;
+    rawClip = assets.clips.find(a => a.name === clipName);
+    if (!rawClip) return null;
   }
 
   const hash = hashString(def.id);
   const gender: Gender = hash % 2 === 0 ? 'male' : 'female';
   const model = cloneSkinned(assets.humans.characters[gender]) as THREE.Object3D;
   const isBoxer = def.activity === 'boxing-spar' || def.activity === 'heavy-bag-boxer';
-  const racketHand = motion.kind === 'pose' && motion.spec.handProp?.kind === 'racket';
+  const closedGrip =
+    isBoxer ||
+    def.activity === 'upright-bike' ||
+    def.activity === 'elliptical-stride' ||
+    def.activity === 'inbody-scan' ||
+    (motion.kind === 'pose' &&
+      (motion.spec.handProp?.kind === 'racket' ||
+        Boolean(motion.spec.dumbbellsInHands) ||
+        Boolean(motion.spec.barbellInHands)));
   const swimmer = def.activity === 'swim-freestyle';
-  // Everyone is a little different in height, stable per actor.
+  const wear = wearForActor(def);
   const scale = baseScale(assets.humans.characters[gender]) * (0.95 + (hash % 11) * 0.01);
 
   // All of this happens while the clone is still in its rest pose and unscaled.
-  relaxHands(model, isBoxer || racketHand ? 2 : 1);
+  relaxHands(model, closedGrip ? 2 : 1);
   const rig = motion.kind === 'pose' ? createRetargetRig(model, scale) : null;
   if (motion.kind === 'pose' && !rig) return null;
   const styles = HAIR_STYLES[gender];
@@ -167,9 +256,12 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
     hairStyle,
     outfit: outfitFor(def.id, gender),
     swimCap: swimmer,
+    wear,
+    beard: gender === 'male' && !swimmer && (hash >>> 9) % 3 === 0,
   });
 
   model.scale.setScalar(scale);
+  const shadowMeshes: THREE.Mesh[] = [];
   model.traverse(object => {
     object.frustumCulled = false;
     object.raycast = NOOP_RAYCAST;
@@ -177,6 +269,7 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
     if (mesh.isMesh) {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      shadowMeshes.push(mesh);
     }
   });
 
@@ -184,25 +277,82 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
   holder.name = `rigged-${def.id}`;
   holder.add(model);
 
-  const instance: RiggedInstance = { def, motion, holder };
+  const instance: RiggedInstance = { def, motion, holder, shadowMeshes };
 
-  if (motion.kind === 'clip' && clip) {
+  if (motion.kind === 'clip' && rawClip) {
     const mixer = new THREE.AnimationMixer(model);
+    const clip = prepareCharacterClip(rawClip, model, gender);
+    const baseTimeScale = Math.max(0.2, def.speed * motion.spec.timeScale);
     const action = mixer.clipAction(clip);
-    action.timeScale = Math.max(0.2, def.speed * motion.spec.timeScale);
+    action.timeScale = baseTimeScale;
     action.play();
     action.time = (def.phaseOffset / (Math.PI * 2)) * clip.duration;
     instance.mixer = mixer;
+    instance.action = action;
 
+    if (motion.spec.comboClips && motion.spec.comboClips.length > 1) {
+      const uniqueClips = Array.from(new Set(motion.spec.comboClips))
+        .map(name => assets.clips.find(a => a.name === name))
+        .filter((c): c is THREE.AnimationClip => Boolean(c))
+        .map(c => prepareCharacterClip(c, model, gender));
+      if (uniqueClips.length > 1) {
+        const actions = uniqueClips.map(c => {
+          const act = mixer.clipAction(c);
+          act.timeScale = baseTimeScale;
+          return act;
+        });
+        const startIdx = Math.max(
+          0,
+          uniqueClips.findIndex(c => c.name === clip.name),
+        );
+        if (!uniqueClips.some(c => c.name === clip.name)) {
+          action.stop();
+        }
+        for (let i = 0; i < actions.length; i++) {
+          if (i === startIdx) {
+            actions[i]!.play();
+            actions[i]!.time = (def.phaseOffset / (Math.PI * 2)) * uniqueClips[i]!.duration;
+          } else {
+            actions[i]!.stop();
+          }
+        }
+        instance.action = actions[startIdx];
+        instance.combo = {
+          actions,
+          activeIndex: startIdx,
+          elapsed: (hash % 7) * 0.19,
+          interval: 1.55 + (hash % 5) * 0.18,
+        };
+      }
+    }
+
+    if (motion.spec.glovesInHands) {
+      for (const handName of HUMAN_HAND_BONES) {
+        const palmOffset = handName === 'hand_l' ? 0.016 : -0.016;
+        const glove = buildHandProp(
+          {
+            kind: 'boxing-glove',
+            bone: handName,
+            position: [palmOffset, 0.085, 0.005],
+            rotation: [0, 0, 0],
+            size: 1.0,
+            color: def.palette.accent,
+          },
+          scale,
+        );
+        model.getObjectByName(handName)?.add(glove);
+      }
+    }
   } else if (motion.kind === 'pose' && rig) {
     instance.rig = rig;
     const { handProp, dumbbellsInHands, barbellInHands } = motion.spec;
     if (handProp) model.getObjectByName(handProp.bone)?.add(buildHandProp(handProp, scale));
     if (dumbbellsInHands) {
       for (const handName of HUMAN_HAND_BONES) {
-        // The grip axis runs along the hand bone's X; the palm centre is ~4 cm out along Y.
+        // Palm normal is +X on `hand_l` and -X on `hand_r`; grip bar runs along local Z across fingers.
+        const palmX = handName === 'hand_l' ? 0.032 : -0.032;
         const dumbbell = buildHandProp(
-          { kind: 'dumbbell', bone: handName, position: [0, 0.05, 0], rotation: [0, 0, 0], size: 1 },
+          { kind: 'dumbbell', bone: handName, position: [palmX, 0.075, 0.004], rotation: [0, 0, 0], size: 1 },
           scale,
         );
         model.getObjectByName(handName)?.add(dumbbell);
@@ -214,6 +364,10 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
       if (left && right) {
         const bar = buildHeldBarbell();
         holder.add(bar);
+        bar.traverse(obj => {
+          const mesh = obj as THREE.Mesh;
+          if (mesh.isMesh) shadowMeshes.push(mesh);
+        });
         instance.barbell = { bar, left, right };
       }
     }
@@ -222,16 +376,29 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
 }
 
 export function placeInstance(
-  { def, holder }: RiggedInstance,
+  { def, holder, shadowMeshes }: RiggedInstance,
   scene: SceneDoc,
   levelMode: LevelMode,
   focusLevel: LevelCode | 'ALL',
   timeSec: number,
+  walkMode = false,
 ): HumanPoseAngles {
   const placement = computeRiggedPlacement(def, scene, levelMode, timeSec);
   holder.position.set(placement.position[0], placement.position[1], placement.position[2]);
   holder.rotation.set(0, placement.yaw, 0);
-  holder.visible = isActorLevelVisible(def.level, levelMode, focusLevel);
+  const hiddenUnderground =
+    !walkMode && levelMode === 'stacked' && focusLevel === 'ALL' && def.level === 'B1';
+  const visible =
+    !hiddenUnderground &&
+    isActorLevelVisible(def.level, levelMode, focusLevel) &&
+    (!walkMode || isWalkFloorAdjacent(def.level, focusLevel));
+  holder.visible = visible;
+  const castsSunShadow =
+    visible && !walkMode && (levelMode !== 'stacked' || def.level === 'OUT' || def.level === 'RF');
+  for (let i = 0; i < shadowMeshes.length; i++) {
+    const mesh = shadowMeshes[i]!;
+    if (mesh.castShadow !== castsSunShadow) mesh.castShadow = castsSunShadow;
+  }
   return placement.pose;
 }
 
@@ -242,12 +409,34 @@ export function stepInstance(
   pose: HumanPoseAngles,
   timeSec: number,
 ): void {
-  const { motion, mixer, rig } = instance;
+  const { def, motion, mixer, action, combo, rig } = instance;
   if (motion.kind === 'clip') {
-    mixer?.update(deltaSec);
+    if (!mixer) return;
+    if (def.activity === 'walking-patrol' && action) {
+      const walkCycle = (timeSec * def.speed * 0.14 + def.phaseOffset * 0.2) % 2;
+      const rawU = walkCycle < 1 ? walkCycle : 2 - walkCycle;
+      // Match stride cadence to instantaneous cosine-eased patrol speed so feet never moonwalk at endpoints.
+      const speedFactor = Math.max(0.32, Math.sin(rawU * Math.PI) * 1.15);
+      action.timeScale = Math.max(0.25, def.speed * motion.spec.timeScale * speedFactor);
+    }
+    if (combo && deltaSec > 0) {
+      combo.elapsed += deltaSec;
+      if (combo.elapsed >= combo.interval) {
+        combo.elapsed = 0;
+        const prev = combo.actions[combo.activeIndex]!;
+        combo.activeIndex = (combo.activeIndex + 1) % combo.actions.length;
+        const next = combo.actions[combo.activeIndex]!;
+        next.reset().play();
+        prev.crossFadeTo(next, 0.16, false);
+        instance.action = next;
+      }
+    }
+    mixer.update(deltaSec);
   } else if (rig) {
-    const override = motion.spec.override?.(getActorPhase(instance.def, timeSec));
-    applyRetargetPose(rig, pose, motion.spec, motion.spec.forearmRoll, timeSec, override);
+    const phase = getActorPhase(def, timeSec);
+    const override = motion.spec.override?.(phase);
+    const roll = typeof motion.spec.forearmRoll === 'function' ? motion.spec.forearmRoll(phase) : motion.spec.forearmRoll;
+    applyRetargetPose(rig, pose, motion.spec, roll, timeSec, override);
   }
   if (instance.barbell) updateHeldBarbell(instance.holder, instance.barbell);
 }
@@ -258,6 +447,9 @@ export function disposeInstance(instance: RiggedInstance): void {
   mixer?.stopAllAction();
   const root = holder.children[0];
   if (mixer && root) mixer.uncacheRoot(root);
+  instance.mixer = undefined;
+  instance.action = undefined;
+  instance.combo = undefined;
   barbell?.bar.traverse(object => {
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh) return;

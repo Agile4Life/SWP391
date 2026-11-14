@@ -1,11 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import {
-  buildCampusGeometry,
+  buildCampusSceneGeometries,
   buildCampusSignageGeometry,
-  buildCampusVehiclesGeometry,
   createCampusSignageTexture,
 } from '../renderers/architecture/buildCampusGeometry';
 import {
@@ -14,7 +13,12 @@ import {
   useExploreMaterials,
 } from '../renderers/materials';
 import { useExploreStore } from '../state/exploreStore';
-import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
+import {
+  SURFACE_DETAIL_PRESETS,
+  applySurfaceDetail,
+  createFoliageMaterialBundle,
+  createWaterSurfaceMaterial,
+} from '../renderers/surfaceDetail';
 import { getAtmosphere } from './atmosphere';
 import { PracticalLights } from './PracticalLights';
 import { SkyDome } from './SkyProbe';
@@ -64,6 +68,7 @@ export function Environment() {
   const materials = useExploreMaterials(theme);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const tier = useExploreStore(s => s.tier);
   const practicals = getAtmosphere(theme).practicals;
   const invalidate = useThree(s => s.invalidate);
@@ -75,23 +80,80 @@ export function Environment() {
         ? -4.82
         : PLAZA_BOUNDS.y;
 
-  const campusGeometry = useMemo(() => buildCampusGeometry(theme), [theme]);
-  const vehiclesGeometry = useMemo(() => buildCampusVehiclesGeometry(theme), [theme]);
-  // Clear-coated metallic paint; glass, tyres and lamps share it via vertex colours.
-  const vehicleMaterial = useMemo(
+  const campusScene = useMemo(() => buildCampusSceneGeometries(theme), [theme]);
+  const campusMaterial = useMemo(
     () =>
-      new THREE.MeshPhysicalMaterial({
-        name: 'sol-campus-vehicles',
+      applySurfaceDetail(
+        new THREE.MeshStandardMaterial({
+          name: 'sol-campus-architecture',
+          vertexColors: true,
+          roughness: 0.78,
+          metalness: 0.0,
+          envMapIntensity: 1.25,
+        }),
+        SURFACE_DETAIL_PRESETS.campus,
+      ),
+    [],
+  );
+  const campusGlassMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        name: 'sol-campus-glass',
         vertexColors: true,
-        roughness: 0.34,
-        metalness: 0.4,
-        clearcoat: 1,
-        clearcoatRoughness: 0.06,
-        envMapIntensity: 1.25,
+        roughness: 0.04,
+        metalness: 0.72,
+        transparent: true,
+        opacity: 0.36,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        envMapIntensity: 1.75,
       }),
     [],
   );
-  useEffect(() => () => vehiclesGeometry.dispose(), [vehiclesGeometry]);
+  const campusWaterBundle = useMemo(
+    () => createWaterSurfaceMaterial('sol-campus-water', theme === 'light'),
+    [theme],
+  );
+  const foliageBundle = useMemo(
+    () => createFoliageMaterialBundle('sol-campus-foliage', theme === 'light'),
+    [theme],
+  );
+  // Uses per-vertex `surf` so metallic body paint & rims gleam while rubber tyres stay matte.
+  const vehicleMaterial = useMemo(
+    () =>
+      applySurfaceDetail(
+        new THREE.MeshStandardMaterial({
+          name: 'sol-campus-vehicles',
+          vertexColors: true,
+          roughness: 0.22,
+          metalness: 0.0,
+          envMapIntensity: 1.4,
+        }),
+        SURFACE_DETAIL_PRESETS.vehicle,
+      ),
+    [],
+  );
+  useEffect(
+    () => () => {
+      campusScene.opaque.dispose();
+      campusScene.glass.dispose();
+      campusScene.water.dispose();
+      campusScene.vehicles.dispose();
+      campusScene.foliage.dispose();
+    },
+    [campusScene],
+  );
+  useEffect(() => () => campusMaterial.dispose(), [campusMaterial]);
+  useEffect(() => () => campusGlassMaterial.dispose(), [campusGlassMaterial]);
+  useEffect(() => () => campusWaterBundle.material.dispose(), [campusWaterBundle]);
+  useEffect(
+    () => () => {
+      foliageBundle.material.dispose();
+      foliageBundle.depthMaterial.dispose();
+      foliageBundle.texture.dispose();
+    },
+    [foliageBundle],
+  );
   useEffect(() => () => vehicleMaterial.dispose(), [vehicleMaterial]);
   const castShadows = tier !== 'low';
   const showRooftopSigns =
@@ -102,6 +164,13 @@ export function Environment() {
     focusLevel === 'L1' ||
     focusLevel === 'OUT';
   const rooftopOffsetY = levelMode === 'exploded' ? 12.0 : 0;
+
+  useFrame(({ clock }) => {
+    if (!showGroundCampus) return;
+    const t = clock.elapsedTime;
+    campusWaterBundle.setTime(t);
+    foliageBundle.setTime(t);
+  });
 
   const signageGeometry = useMemo(
     () => buildCampusSignageGeometry(rooftopOffsetY, showRooftopSigns),
@@ -124,12 +193,6 @@ export function Environment() {
   useEffect(() => {
     invalidate();
   }, [theme, plazaY, levelMode, focusLevel, practicals, tier, invalidate]);
-
-  useEffect(() => {
-    return () => {
-      campusGeometry.dispose();
-    };
-  }, [campusGeometry]);
 
   useEffect(() => {
     return () => {
@@ -183,6 +246,7 @@ export function Environment() {
         tier={tier}
         offsetY={plazaY - PLAZA_BOUNDS.y}
         visible={practicals && showGroundCampus}
+        walkMode={walkMode}
       />
 
       <group name="sol-plaza-environment">
@@ -218,16 +282,41 @@ export function Environment() {
         <mesh
           name="sol-campus-architecture"
           visible={showGroundCampus}
-          geometry={campusGeometry}
-          material={materials.vertexColored}
+          geometry={campusScene.opaque}
+          material={campusMaterial}
           castShadow={castShadows}
+          receiveShadow
+          raycast={NOOP_RAYCAST}
+        />
+        <mesh
+          name="sol-campus-foliage"
+          visible={showGroundCampus}
+          geometry={campusScene.foliage}
+          material={foliageBundle.material}
+          customDepthMaterial={foliageBundle.depthMaterial}
+          castShadow={castShadows}
+          receiveShadow
+          raycast={NOOP_RAYCAST}
+        />
+        <mesh
+          name="sol-campus-glass"
+          visible={showGroundCampus}
+          geometry={campusScene.glass}
+          material={campusGlassMaterial}
+          raycast={NOOP_RAYCAST}
+        />
+        <mesh
+          name="sol-campus-water"
+          visible={showGroundCampus}
+          geometry={campusScene.water}
+          material={campusWaterBundle.material}
           receiveShadow
           raycast={NOOP_RAYCAST}
         />
         <mesh
           name="sol-campus-vehicles"
           visible={showGroundCampus}
-          geometry={vehiclesGeometry}
+          geometry={campusScene.vehicles}
           material={vehicleMaterial}
           castShadow={castShadows}
           receiveShadow

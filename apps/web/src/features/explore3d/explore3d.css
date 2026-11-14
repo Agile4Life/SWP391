@@ -63,7 +63,7 @@ body:has(.explore3d-page),
   position: relative;
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 356px;
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   margin-top: 56px;
   height: calc(100dvh - 92px);
@@ -1216,7 +1216,7 @@ html[data-theme='light'] .explore3d-page .explore3d-floorplan-canvas-wrap {
 
   .explore3d-page {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 54%) minmax(0, 46%);
+    grid-template-rows: minmax(0, 1fr);
     margin-top: 0;
     height: 100%;
     max-height: 100%;

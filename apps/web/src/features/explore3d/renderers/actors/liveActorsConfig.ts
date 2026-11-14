@@ -395,7 +395,7 @@ export function buildLiveActorDefinitions(
       id,
       `actor-l1-cyclist-${idx + 1}`,
       'upright-bike',
-      [0, 0.1, 0.22],
+      [0, 0.08, 0.32],
       Math.PI,
       idx * 1.4,
       1.05,
@@ -408,7 +408,7 @@ export function buildLiveActorDefinitions(
       id,
       `actor-l1-smith-lifter-${idx + 1}`,
       'barbell-squat',
-      [0, 0.05, 0.02],
+      [0, 0.05, 0.16],
       Math.PI,
       idx * 1.6,
       0.85,
@@ -421,7 +421,7 @@ export function buildLiveActorDefinitions(
       id,
       `actor-l1-squat-lifter-${idx + 1}`,
       'barbell-squat',
-      [0, 0.065, -0.04],
+      [0, 0.055, -0.16],
       Math.PI,
       idx * 1.8 + 0.5,
       0.82,
@@ -599,7 +599,7 @@ export function buildLiveActorDefinitions(
     'item-l2-vip-inbody-1',
     'actor-l2-inbody-member',
     'inbody-scan',
-    [0, 0.095, 0.14],
+    [0, 0.078, 0.16],
     Math.PI,
     0.2,
     0.7,
@@ -647,8 +647,8 @@ export function buildLiveActorDefinitions(
       zoneId: 'zone-l2-lounge',
       itemId: 'item-l2-sofa-2',
       activity: 'lounge-chat',
-      anchorPosition: [-8.6, 0, 8.9],
-      rotationY: Math.PI / 4,
+      anchorPosition: [-9.0, 0, 10.78],
+      rotationY: 0,
       phaseOffset: 0.3,
       speed: 0.75,
       palette: nextPalette(),
@@ -1033,57 +1033,85 @@ export function solveHumanPose(
 
     case 'upright-bike': {
       const crank = phase * 1.5;
-      const lSin = Math.sin(crank);
-      const rSin = Math.sin(crank + Math.PI);
-      pose.rootOffset = [0, -0.06 + Math.sin(crank * 2) * 0.015, 0];
-      pose.torsoPitch = 0.42;
-      pose.headPitch = -0.22;
-      pose.leftShoulderPitch = 0.85;
-      pose.leftElbowPitch = 1.1;
-      pose.rightShoulderPitch = 0.85;
-      pose.rightElbowPitch = 1.1;
-      pose.leftHipPitch = 0.75 + lSin * 0.42;
-      pose.leftKneePitch = -0.35 - (1 - lSin) * 0.35;
-      pose.rightHipPitch = 0.75 + rSin * 0.42;
-      pose.rightKneePitch = -0.35 - (1 - rSin) * 0.35;
+      const solvePedalIk = (angle: number) => {
+        const ty = 0.28 + 0.16 * Math.sin(angle);
+        const tz = 0.28 + 0.16 * Math.cos(angle);
+        const dy = ty - 0.89;
+        const dz = tz;
+        const limbLen = 0.41;
+        const dist = Math.min(limbLen * 1.98, Math.max(0.24, Math.hypot(dy, dz)));
+        const basePitch = Math.atan2(dz, -dy);
+        const alpha = Math.acos(Math.min(1, Math.max(-1, dist / (2 * limbLen))));
+        return { hipPitch: basePitch + alpha, kneePitch: basePitch - alpha };
+      };
+      const leftLeg = solvePedalIk(crank);
+      const rightLeg = solvePedalIk(crank + Math.PI);
+      pose.rootOffset = [0, -0.04 + Math.sin(crank * 2) * 0.01, 0];
+      pose.torsoPitch = 0.44;
+      pose.torsoRoll = Math.sin(crank) * 0.035;
+      pose.headPitch = -0.24;
+      pose.leftShoulderPitch = 0.82;
+      pose.leftShoulderSplay = -0.1;
+      pose.leftElbowPitch = 1.18;
+      pose.leftElbowSplay = -0.06;
+      pose.rightShoulderPitch = 0.82;
+      pose.rightShoulderSplay = 0.1;
+      pose.rightElbowPitch = 1.18;
+      pose.rightElbowSplay = 0.06;
+      pose.leftHipPitch = leftLeg.hipPitch;
+      pose.leftHipSplay = -0.06;
+      pose.leftKneePitch = leftLeg.kneePitch;
+      pose.rightHipPitch = rightLeg.hipPitch;
+      pose.rightHipSplay = 0.06;
+      pose.rightKneePitch = rightLeg.kneePitch;
       break;
     }
 
     case 'elliptical-stride': {
       const s = Math.sin(phase * 1.3);
-      pose.rootOffset = [0, Math.abs(s) * 0.035, 0];
+      pose.rootOffset = [0, Math.abs(s) * 0.03, 0];
       pose.torsoPitch = 0.08;
-      pose.leftShoulderPitch = 0.55 - s * 0.52;
-      pose.leftElbowPitch = 1.05 - s * 0.35;
-      pose.rightShoulderPitch = 0.55 + s * 0.52;
-      pose.rightElbowPitch = 1.05 + s * 0.35;
-      pose.leftHipPitch = s * 0.48;
-      pose.leftKneePitch = s * 0.25 - 0.2;
-      pose.rightHipPitch = -s * 0.48;
-      pose.rightKneePitch = -s * 0.25 - 0.2;
+      pose.torsoRoll = s * 0.035;
+      // Contralateral dual-action stride handles: elevated hands grip the upper rubber bars (`y ~ 1.24 m`).
+      pose.leftShoulderPitch = 0.86 - s * 0.3;
+      pose.leftShoulderSplay = -0.24;
+      pose.leftElbowPitch = 1.86 - s * 0.22;
+      pose.leftElbowSplay = -0.12;
+      pose.rightShoulderPitch = 0.86 + s * 0.3;
+      pose.rightShoulderSplay = 0.24;
+      pose.rightElbowPitch = 1.86 + s * 0.22;
+      pose.rightElbowSplay = 0.12;
+      pose.leftHipPitch = s * 0.44 + 0.08;
+      pose.leftHipSplay = -0.08;
+      pose.leftKneePitch = s * 0.24 - 0.18;
+      pose.rightHipPitch = -s * 0.44 + 0.08;
+      pose.rightHipSplay = 0.08;
+      pose.rightKneePitch = -s * 0.24 - 0.18;
       break;
     }
 
     case 'barbell-squat': {
       const squatFactor = 0.5 - 0.5 * Math.cos(phase * 0.9);
       const depth = squatFactor * 0.34;
-      pose.rootOffset = [0, -depth, -squatFactor * 0.08];
-      pose.torsoPitch = squatFactor * 0.28;
-      pose.headPitch = -squatFactor * 0.18;
-      pose.leftShoulderPitch = -0.15;
+      const lean = squatFactor * 0.3;
+      pose.rootOffset = [0, -depth, -squatFactor * 0.06];
+      pose.torsoPitch = lean;
+      pose.headPitch = -lean * 0.65;
+      // High-bar trap shelf: elbows tucked down & back, forearms angled up onto the upper traps behind the neck.
+      pose.leftShoulderPitch = -0.66 + lean * 0.88;
       pose.leftShoulderSplay = -0.78;
-      pose.leftElbowPitch = 1.45;
-      pose.leftElbowSplay = -0.45;
-      pose.rightShoulderPitch = -0.15;
+      pose.leftElbowPitch = 3.28 - lean * 0.88;
+      pose.leftElbowSplay = -0.42;
+      pose.rightShoulderPitch = -0.66 + lean * 0.88;
       pose.rightShoulderSplay = 0.78;
-      pose.rightElbowPitch = 1.45;
-      pose.rightElbowSplay = 0.45;
-      pose.leftHipPitch = squatFactor * 1.05;
-      pose.leftHipSplay = -0.12;
-      pose.leftKneePitch = -squatFactor * 0.85;
-      pose.rightHipPitch = squatFactor * 1.05;
-      pose.rightHipSplay = 0.12;
-      pose.rightKneePitch = -squatFactor * 0.85;
+      pose.rightElbowPitch = 3.28 - lean * 0.88;
+      pose.rightElbowSplay = 0.42;
+      pose.leftHipPitch = squatFactor * 1.08;
+      pose.leftHipSplay = -0.15;
+      pose.leftKneePitch = -squatFactor * 0.88;
+      pose.rightHipPitch = squatFactor * 1.08;
+      pose.rightHipSplay = 0.15;
+      pose.rightKneePitch = -squatFactor * 0.88;
       break;
     }
 
@@ -1102,17 +1130,21 @@ export function solveHumanPose(
     case 'dumbbell-curl': {
       const lCurl = 0.5 - 0.5 * Math.cos(phase * 1.2);
       const rCurl = 0.5 - 0.5 * Math.cos(phase * 1.2 + Math.PI);
-      pose.rootOffset = [0, Math.sin(phase * 2.4) * 0.015, 0];
-      pose.leftShoulderPitch = 0.12 + lCurl * 0.25;
+      pose.rootOffset = [0, Math.sin(phase * 2.4) * 0.01, 0];
+      pose.torsoRoll = (rCurl - lCurl) * 0.03;
+      // Upper arms pinned strictly to the lats while forearms curl and supinate cleanly.
+      pose.leftShoulderPitch = 0.06 + lCurl * 0.14;
       pose.leftShoulderSplay = -0.14;
-      pose.leftElbowPitch = 0.35 + lCurl * 1.85;
-      pose.rightShoulderPitch = 0.12 + rCurl * 0.25;
+      pose.leftElbowPitch = 0.28 + lCurl * 2.02;
+      pose.rightShoulderPitch = 0.06 + rCurl * 0.14;
       pose.rightShoulderSplay = 0.14;
-      pose.rightElbowPitch = 0.35 + rCurl * 1.85;
-      pose.leftHipPitch = 0.08;
-      pose.leftKneePitch = -0.08;
-      pose.rightHipPitch = 0.08;
-      pose.rightKneePitch = -0.08;
+      pose.rightElbowPitch = 0.28 + rCurl * 2.02;
+      pose.leftHipPitch = 0.06;
+      pose.leftHipSplay = -0.07;
+      pose.leftKneePitch = -0.06;
+      pose.rightHipPitch = 0.06;
+      pose.rightHipSplay = 0.07;
+      pose.rightKneePitch = -0.06;
       break;
     }
 
@@ -1141,74 +1173,92 @@ export function solveHumanPose(
 
     case 'badminton-player': {
       const cycle = (timeSec * actor.speed * 0.72 + actor.phaseOffset / Math.PI) % 2;
-      const activeSide = cycle < 1;
-      const swing = activeSide ? Math.sin(cycle * Math.PI) : 0;
-      const swayX = Math.sin(phase * 0.7) * 0.55;
-      const lungeZ = swing * 0.32;
-      pose.rootOffset = [swayX, Math.abs(Math.sin(phase * 1.4)) * 0.04 - swing * 0.08, lungeZ];
-      pose.torsoPitch = 0.16 + swing * 0.18;
-      pose.leftShoulderPitch = 0.45 + swing * 0.35;
+      // Shuttlecock arrives/departs at `cycle === 0` (`d === 0`): coil before 0, peak impact at 0, follow-through after 0.
+      const d = cycle > 1 ? cycle - 2 : cycle;
+      const w = 0.42;
+      const swing = Math.abs(d) < w ? Math.sin(((d + w) / (2 * w)) * Math.PI) : 0;
+      const coil = d > -w && d < 0 ? Math.sin((-d / w) * Math.PI) : 0;
+      const swayX = Math.sin(phase * 0.7) * 0.48;
+      const lungeZ = swing * 0.3 - coil * 0.1;
+      pose.rootOffset = [swayX, Math.abs(Math.sin(phase * 1.4)) * 0.03 - swing * 0.07, lungeZ];
+      pose.torsoPitch = 0.14 + swing * 0.18 - coil * 0.08;
+      pose.yawOffset = -coil * 0.32 + swing * 0.24;
+      pose.leftShoulderPitch = 0.48 + swing * 0.42;
       pose.leftShoulderSplay = -0.25;
-      pose.leftElbowPitch = 1.15;
-      pose.rightShoulderPitch = 0.55 + swing * 1.95;
-      pose.rightShoulderSplay = 0.22;
-      pose.rightElbowPitch = 1.25 + swing * 1.35;
-      pose.leftHipPitch = -0.15 - swing * 0.25;
-      pose.leftKneePitch = -0.25;
-      pose.rightHipPitch = 0.25 + swing * 0.45;
+      pose.leftElbowPitch = 1.18 + coil * 0.25;
+      pose.rightShoulderPitch = 0.55 - coil * 0.2 + swing * 1.98;
+      pose.rightShoulderSplay = 0.24 + coil * 0.16;
+      pose.rightElbowPitch = 1.22 + swing * 1.38;
+      pose.leftHipPitch = -0.14 - swing * 0.24;
+      pose.leftHipSplay = -0.1;
+      pose.leftKneePitch = -0.24;
+      pose.rightHipPitch = 0.24 + swing * 0.46;
+      pose.rightHipSplay = 0.1;
       pose.rightKneePitch = -0.2;
       break;
     }
 
     case 'tennis-player': {
       const cycle = (timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 2;
-      const activeSide = cycle < 1;
-      const swing = activeSide ? Math.sin(cycle * Math.PI) : 0;
-      const baselineX = Math.sin(phase * 0.55) * 1.25;
-      pose.rootOffset = [baselineX, Math.abs(Math.sin(phase * 1.3)) * 0.035, swing * 0.22];
-      pose.torsoPitch = 0.14;
-      pose.yawOffset = -0.25 + swing * 0.85;
-      pose.leftShoulderPitch = 0.45;
-      pose.leftShoulderSplay = -0.28;
-      pose.leftElbowPitch = 1.1;
-      pose.rightShoulderPitch = 0.35 + swing * 1.15;
-      pose.rightShoulderSplay = 0.45 - swing * 0.3;
-      pose.rightElbowPitch = 0.95 + swing * 0.75;
-      pose.leftHipPitch = 0.22;
-      pose.leftHipSplay = -0.14;
+      // Ball bounces & strikes baseline at `cycle === 0` (`d === 0`): unit-turn backswing -> baseline drive -> follow-through.
+      const d = cycle > 1 ? cycle - 2 : cycle;
+      const w = 0.42;
+      const swing = Math.abs(d) < w ? Math.sin(((d + w) / (2 * w)) * Math.PI) : 0;
+      const coil = d > -w && d < 0 ? Math.sin((-d / w) * Math.PI) : 0;
+      const baselineX = Math.sin(phase * 0.55) * 1.15;
+      pose.rootOffset = [baselineX, Math.abs(Math.sin(phase * 1.3)) * 0.03, swing * 0.24 - coil * 0.08];
+      pose.torsoPitch = 0.15 + swing * 0.08;
+      pose.yawOffset = -0.18 - coil * 0.42 + swing * 0.88;
+      pose.leftShoulderPitch = 0.48 + coil * 0.22;
+      pose.leftShoulderSplay = -0.26;
+      pose.leftElbowPitch = 1.15;
+      pose.rightShoulderPitch = 0.34 - coil * 0.45 + swing * 1.25;
+      pose.rightShoulderSplay = 0.42 + coil * 0.18 - swing * 0.28;
+      pose.rightElbowPitch = 0.92 - coil * 0.25 + swing * 0.85;
+      pose.leftHipPitch = 0.22 + swing * 0.18;
+      pose.leftHipSplay = -0.15;
       pose.leftKneePitch = -0.22;
-      pose.rightHipPitch = -0.12 + swing * 0.3;
-      pose.rightHipSplay = 0.14;
+      pose.rightHipPitch = -0.12 + swing * 0.28;
+      pose.rightHipSplay = 0.15;
       pose.rightKneePitch = -0.22;
       break;
     }
 
     case 'yoga-flow': {
       const breath = 0.5 - 0.5 * Math.cos(phase * 0.55);
-      pose.rootOffset = [0, -breath * 0.04, 0];
-      pose.torsoPitch = (1 - breath) * 0.18;
+      const chairDip = Math.max(0, Math.sin(phase * 0.275)) * 0.18;
+      pose.rootOffset = [0, -breath * 0.03 - chairDip * 0.18, 0];
+      pose.torsoPitch = (1 - breath) * 0.14 + chairDip * 0.22;
       pose.headPitch = -breath * 0.22;
-      pose.leftShoulderPitch = 0.25 + breath * 2.55;
-      pose.leftShoulderSplay = -0.18 - Math.sin(breath * Math.PI) * 0.55;
-      pose.leftElbowPitch = 0.45 + breath * 2.45;
+      pose.leftShoulderPitch = 0.22 + breath * 2.6;
+      pose.leftShoulderSplay = -0.16 - Math.sin(breath * Math.PI) * 0.56;
+      pose.leftElbowPitch = 0.42 + breath * 2.48;
       pose.leftElbowSplay = -0.1;
-      pose.rightShoulderPitch = 0.25 + breath * 2.55;
-      pose.rightShoulderSplay = 0.18 + Math.sin(breath * Math.PI) * 0.55;
-      pose.rightElbowPitch = 0.45 + breath * 2.45;
+      pose.rightShoulderPitch = 0.22 + breath * 2.6;
+      pose.rightShoulderSplay = 0.16 + Math.sin(breath * Math.PI) * 0.56;
+      pose.rightElbowPitch = 0.42 + breath * 2.48;
       pose.rightElbowSplay = 0.1;
+      pose.leftHipPitch = chairDip * 0.85;
+      pose.leftKneePitch = -chairDip * 0.72;
+      pose.rightHipPitch = chairDip * 0.85;
+      pose.rightKneePitch = -chairDip * 0.72;
       break;
     }
 
     case 'inbody-scan': {
-      pose.rootOffset = [0, Math.sin(phase * 0.6) * 0.008, 0];
+      // Clinical InBody 770 posture: straight abducted arms gripping side thumb electrodes, bare feet on chrome plates.
+      pose.rootOffset = [0, Math.sin(phase * 0.6) * 0.004, 0];
+      pose.headPitch = 0.12 + Math.sin(phase * 0.4) * 0.03;
       pose.leftShoulderPitch = 0.48;
-      pose.leftShoulderSplay = -0.36;
-      pose.leftElbowPitch = 0.62;
-      pose.leftElbowSplay = -0.25;
+      pose.leftShoulderSplay = -0.34;
+      pose.leftElbowPitch = 0.58;
+      pose.leftElbowSplay = -0.28;
       pose.rightShoulderPitch = 0.48;
-      pose.rightShoulderSplay = 0.36;
-      pose.rightElbowPitch = 0.62;
-      pose.rightElbowSplay = 0.25;
+      pose.rightShoulderSplay = 0.34;
+      pose.rightElbowPitch = 0.58;
+      pose.rightElbowSplay = 0.28;
+      pose.leftHipSplay = -0.09;
+      pose.rightHipSplay = 0.09;
       break;
     }
 
@@ -1261,9 +1311,24 @@ export function solveHumanPose(
         actor.anchorPosition[0] + (target[0] - actor.anchorPosition[0]) * smoothU;
       const wz =
         actor.anchorPosition[2] + (target[2] - actor.anchorPosition[2]) * smoothU;
-      const dx = (target[0] - actor.anchorPosition[0]) * (forward ? 1 : -1);
-      const dz = (target[2] - actor.anchorPosition[2]) * (forward ? 1 : -1);
-      actorYaw = Math.atan2(dx, dz);
+      const baseYaw = Math.atan2(
+        target[0] - actor.anchorPosition[0],
+        target[2] - actor.anchorPosition[2],
+      );
+      const turnWindow = 0.1;
+      const easeTurn = (x: number) => {
+        const c = Math.min(1, Math.max(0, x));
+        return c * c * (3 - 2 * c);
+      };
+      let turnOffset = forward ? 0 : Math.PI;
+      if (Math.abs(walkCycle - 1) < turnWindow) {
+        turnOffset = easeTurn((walkCycle - (1 - turnWindow)) / (2 * turnWindow)) * Math.PI;
+      } else if (walkCycle > 2 - turnWindow) {
+        turnOffset = Math.PI + easeTurn((walkCycle - (2 - turnWindow)) / (2 * turnWindow)) * Math.PI;
+      } else if (walkCycle < turnWindow) {
+        turnOffset = Math.PI + easeTurn((walkCycle + turnWindow) / (2 * turnWindow)) * Math.PI;
+      }
+      actorYaw = baseYaw + turnOffset;
       actorWorldPos = [wx, baseAnchor[1], wz];
 
       const stride = Math.sin(phase * 1.25);

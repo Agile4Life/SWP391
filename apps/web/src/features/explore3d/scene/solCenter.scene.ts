@@ -247,7 +247,7 @@ const zoneB1Core: ZoneNode = register({
     en: 'Vertical circulation core connecting B1 Oasis with L1 Main Lobby and L2 VIP Sanctuary.',
   },
   category: 'circulation',
-  polygon: rectPolygon(8, 4, 20, 14),
+  polygon: rectPolygon(8, 4, 20, 15),
   floorMaterial: 'concrete-polished',
   viewpoints: [
     {
@@ -255,15 +255,15 @@ const zoneB1Core: ZoneNode = register({
       label: { vi: 'Sảnh thang B1', en: 'B1 Core View' },
       kind: 'hero',
       position: [22, B1_Y + 7.5, 19],
-      target: [14, B1_Y + 1.2, 9],
+      target: [13.5, B1_Y + 1.2, 11.5],
       fov: 38,
     },
     {
       id: 'vp-zone-b1-core-eye',
       label: { vi: 'Đứng trước Thang bộ & Thang máy B1', en: 'B1 Stair & Elevator Eye View' },
       kind: 'eye',
-      position: [14.5, B1_Y + 1.65, 13.2],
-      target: [14.5, B1_Y + 1.5, 9.0],
+      position: [13.5, B1_Y + 1.65, 14.5],
+      target: [13.5, B1_Y + 1.4, 11.5],
       fov: 50,
     },
   ],
@@ -316,7 +316,7 @@ const zoneL1Lobby: ZoneNode = register({
     en: 'Member welcome desk, package consultation, member card issuance, billing and live support.',
   },
   category: 'reception',
-  polygon: rectPolygon(-6, 6, 10, 15),
+  polygon: rectPolygon(-6, 6, 8, 15),
   floorMaterial: 'tile-stone',
   accentColor: '#ce9180',
   viewpoints: [
@@ -324,16 +324,16 @@ const zoneL1Lobby: ZoneNode = register({
       id: 'vp-zone-l1-lobby-hero',
       label: { vi: 'Quầy Lễ tân SÖL', en: 'SÖL Reception View' },
       kind: 'hero',
-      position: [2, L1_Y + 7.5, 22],
-      target: [2, L1_Y + 1.2, 10.5],
+      position: [1, L1_Y + 7.5, 20],
+      target: [1, L1_Y + 1.2, 10.5],
       fov: 38,
     },
     {
       id: 'vp-zone-l1-lobby-eye',
       label: { vi: 'Góc nhìn Hội viên vào Sảnh', en: 'Lobby Entrance Eye View' },
       kind: 'eye',
-      position: [2, L1_Y + 1.65, 14.2],
-      target: [2, L1_Y + 1.4, 8.5],
+      position: [1, L1_Y + 1.65, 14.0],
+      target: [1, L1_Y + 1.4, 8.5],
       fov: 50,
     },
   ],
@@ -386,7 +386,7 @@ const zoneL1Shop: ZoneNode = register({
     en: 'Curated Whey Protein, BCAA, Creatine and Pre-workout shelves with transparent Nutrition Facts.',
   },
   category: 'retail',
-  polygon: rectPolygon(10, 6, 20, 15),
+  polygon: rectPolygon(8, -4, 20, 6),
   floorMaterial: 'hardwood',
   accentColor: '#ce9180',
   viewpoints: [
@@ -394,16 +394,16 @@ const zoneL1Shop: ZoneNode = register({
       id: 'vp-zone-l1-shop-hero',
       label: { vi: 'Kệ Thực phẩm bổ sung', en: 'Supplement Shop View' },
       kind: 'hero',
-      position: [22, L1_Y + 7.2, 20],
-      target: [15, L1_Y + 1.3, 10.5],
+      position: [22, L1_Y + 7.2, 8],
+      target: [14, L1_Y + 1.3, 1.0],
       fov: 38,
     },
     {
       id: 'vp-zone-l1-shop-eye',
       label: { vi: 'Đứng trước Kệ Thực phẩm bổ sung', en: 'Supplement Shelf Eye View' },
       kind: 'eye',
-      position: [11.5, L1_Y + 1.65, 12.2],
-      target: [15.5, L1_Y + 1.3, 9.2],
+      position: [10.5, L1_Y + 1.65, 4.5],
+      target: [14.0, L1_Y + 1.3, 1.0],
       fov: 50,
     },
   ],
@@ -540,23 +540,23 @@ const zoneL1Core: ZoneNode = register({
     en: 'Vertical core connecting to L2 VIP Platinum Sanctuary, Rooftop Zen Garden and B1 Oasis.',
   },
   category: 'circulation',
-  polygon: rectPolygon(6, -4, 20, 6),
+  polygon: rectPolygon(8, 6, 20, 15),
   floorMaterial: 'concrete-polished',
   viewpoints: [
     {
       id: 'vp-zone-l1-core-hero',
       label: { vi: 'Sảnh thang Tầng 1', en: 'L1 Core View' },
       kind: 'hero',
-      position: [24, L1_Y + 7.5, 8],
-      target: [13, L1_Y + 1.2, 1],
+      position: [24, L1_Y + 7.5, 18],
+      target: [13.5, L1_Y + 1.2, 11.5],
       fov: 38,
     },
     {
       id: 'vp-zone-l1-core-eye',
       label: { vi: 'Đứng trước Thang bộ & Thang máy L1', en: 'L1 Stair & Elevator Eye View' },
       kind: 'eye',
-      position: [13.2, L1_Y + 1.65, 4.8],
-      target: [13.2, L1_Y + 1.5, 1.0],
+      position: [13.5, L1_Y + 1.65, 14.5],
+      target: [13.5, L1_Y + 1.5, 11.5],
       fov: 50,
     },
   ],
@@ -788,7 +788,7 @@ const zoneRfZen: ZoneNode = register({
     en: 'Penthouse tatami yoga & mindfulness studio wrapped in panoramic glass (capacity 18).',
   },
   category: 'studio',
-  polygon: rectPolygon(-16, -12, 10, 8),
+  polygon: rectPolygon(-16, -12, 8, 8),
   floorMaterial: 'tatami',
   accentColor: '#ce9180',
   liveBinding: {
@@ -828,7 +828,7 @@ const zoneRfTerrace: ZoneNode = register({
     en: 'Landscaped sky deck surrounding the Penthouse for breathwork, stretching and celebrating your workout streak.',
   },
   category: 'lounge',
-  polygon: rectPolygon(10, -14, 20, 14),
+  polygon: rectPolygon(8, -14, 20, 14),
   floorMaterial: 'hardwood',
   viewpoints: [
     {
@@ -836,15 +836,15 @@ const zoneRfTerrace: ZoneNode = register({
       label: { vi: 'Vườn Thiền Sân Thượng', en: 'Rooftop Terrace View' },
       kind: 'hero',
       position: [26, RF_Y + 7.5, 18],
-      target: [15, RF_Y + 1.0, 0],
+      target: [14, RF_Y + 1.0, 6],
       fov: 38,
     },
     {
       id: 'vp-zone-rf-terrace-eye',
       label: { vi: 'Đứng trên Sân Thượng Ngắm Cảnh', en: 'Rooftop Sky Deck Eye View' },
       kind: 'eye',
-      position: [12.2, RF_Y + 1.65, 5.2],
-      target: [15.5, RF_Y + 1.2, -3.5],
+      position: [13.5, RF_Y + 1.65, 14.2],
+      target: [13.5, RF_Y + 1.4, 10.0],
       fov: 50,
     },
   ],
@@ -974,6 +974,20 @@ addWall(levelB1, 'thermal-div', [8, -14], [8, 14], {
   material: 'wood-slat',
   openings: [{ id: 'op-b1-core-arch', kind: 'arch', offset: 20, width: 2.4, height: 2.5, sillHeight: 0 }],
 });
+addWall(levelB1, 'locker-vestibule', [-6, 4], [-6, 14], {
+  material: 'concrete',
+  openings: [{ id: 'op-b1-locker-door', kind: 'door', offset: 4, width: 2.2, height: 2.4, sillHeight: 0 }],
+});
+addWall(levelB1, 'stair-west', [8.7, 9.4], [8.7, 13.6], {
+  material: 'concrete',
+});
+addWall(levelB1, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
+  material: 'concrete',
+});
+addWall(levelB1, 'stair-north', [8.7, 9.4], [12.3, 9.4], {
+  material: 'concrete',
+  height: 3.6,
+});
 
 // L1 Walls
 addWall(levelL1, 'north', [-22, -16], [22, -16], {
@@ -1004,13 +1018,39 @@ addWall(levelL1, 'gym-south', [-20, 2], [4, 2], {
   material: 'glass',
   openings: [{ id: 'op-l1-gym-entry', kind: 'glass-door', offset: 16, width: 3.0, height: 2.6, sillHeight: 0 }],
 });
-addWall(levelL1, 'boxing-west', [4, -14], [4, -4], {
-  material: 'accent-salmon',
-  openings: [{ id: 'op-l1-boxing-arch', kind: 'arch', offset: 3, width: 3.2, height: 2.8, sillHeight: 0 }],
+addWall(levelL1, 'gym-east', [4, -14], [4, 2], {
+  material: 'glass',
+  openings: [
+    { id: 'op-l1-gym-boxing-door', kind: 'glass-door', offset: 4, width: 2.8, height: 2.6, sillHeight: 0 },
+    { id: 'op-l1-gym-corridor-door', kind: 'glass-door', offset: 13, width: 2.6, height: 2.6, sillHeight: 0 },
+  ],
+});
+addWall(levelL1, 'boxing-south', [4, -4], [20, -4], {
+  material: 'glass',
+  openings: [{ id: 'op-l1-boxing-south-door', kind: 'glass-door', offset: 8, width: 2.6, height: 2.6, sillHeight: 0 }],
+});
+addWall(levelL1, 'shop-west', [8, -4], [8, 6], {
+  material: 'glass',
+  openings: [{ id: 'op-l1-shop-west-door', kind: 'glass-door', offset: 4, width: 2.4, height: 2.6, sillHeight: 0 }],
+});
+addWall(levelL1, 'shop-south', [8, 6], [20, 6], {
+  material: 'glass',
+  openings: [{ id: 'op-l1-shop-south-door', kind: 'glass-door', offset: 5, width: 2.6, height: 2.6, sillHeight: 0 }],
 });
 addWall(levelL1, 'lobby-west', [-6, 2], [-6, 15], {
   material: 'glass',
   openings: [{ id: 'op-l1-badminton-door', kind: 'glass-door', offset: 5, width: 2.8, height: 2.6, sillHeight: 0 }],
+});
+addWall(levelL1, 'gate-east', [6, 2], [6, 6], {
+  material: 'concrete',
+});
+addWall(levelL1, 'stair-west', [8.7, 9.4], [8.7, 13.6], {
+  material: 'glass',
+  height: 1.15,
+});
+addWall(levelL1, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
+  material: 'glass',
+  height: 1.15,
 });
 
 // L2 Walls
@@ -1035,23 +1075,47 @@ addWall(levelL2, 'vip-south', [-20, 6], [6, 6], {
   material: 'wood-slat',
   openings: [{ id: 'op-l2-lounge-arch', kind: 'arch', offset: 10, width: 4.0, height: 2.8, sillHeight: 0 }],
 });
+addWall(levelL2, 'inbody-south', [6, -2], [20, -2], {
+  material: 'glass',
+  openings: [{ id: 'op-l2-inbody-pt-door', kind: 'glass-door', offset: 5, width: 2.6, height: 2.5, sillHeight: 0 }],
+});
+addWall(levelL2, 'stair-west', [8.7, 9.4], [8.7, 13.6], {
+  material: 'glass',
+  height: 1.15,
+});
+addWall(levelL2, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
+  material: 'glass',
+  height: 1.15,
+});
 
 // RF Walls (Penthouse glass pavilion + low parapet around roof)
 addWall(levelRF, 'parapet-n', [-22, -16], [22, -16], { exterior: true, height: 1.1 });
 addWall(levelRF, 'parapet-s', [-22, 16], [22, 16], { exterior: true, height: 1.1 });
 addWall(levelRF, 'parapet-w', [-22, -16], [-22, 16], { exterior: true, height: 1.1 });
 addWall(levelRF, 'parapet-e', [22, -16], [22, 16], { exterior: true, height: 1.1 });
-addWall(levelRF, 'zen-n', [-16, -12], [10, -12], { material: 'glass', height: 3.4 });
-addWall(levelRF, 'zen-s', [-16, 8], [10, 8], {
+addWall(levelRF, 'zen-n', [-16, -12], [8, -12], { material: 'glass', height: 3.4 });
+addWall(levelRF, 'zen-s', [-16, 8], [8, 8], {
   material: 'glass',
   height: 3.4,
   openings: [{ id: 'op-rf-zen-door', kind: 'glass-door', offset: 10, width: 4.0, height: 2.6, sillHeight: 0 }],
 });
 addWall(levelRF, 'zen-w', [-16, -12], [-16, 8], { material: 'wood-slat', height: 3.4 });
-addWall(levelRF, 'zen-e', [10, -12], [10, 8], {
+addWall(levelRF, 'zen-e', [8, -12], [8, 8], {
   material: 'glass',
   height: 3.4,
   openings: [{ id: 'op-rf-terrace-door', kind: 'glass-door', offset: 7, width: 3.6, height: 2.6, sillHeight: 0 }],
+});
+addWall(levelRF, 'stair-west', [8.7, 9.4], [8.7, 13.6], {
+  material: 'glass',
+  height: 1.15,
+});
+addWall(levelRF, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
+  material: 'glass',
+  height: 1.15,
+});
+addWall(levelRF, 'stair-south', [8.7, 13.6], [12.3, 13.6], {
+  material: 'glass',
+  height: 1.15,
 });
 
 // OUT Fence Perimeter
@@ -1152,17 +1216,17 @@ addItem(zoneB1Core, {
   id: 'item-b1-stairs',
   kind: 'stair-core',
   name: { vi: 'Cầu thang bộ B1–L1', en: 'Stair Core B1–L1' },
-  position: [12, 0, 9],
+  position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 3.8, 4.2],
+  dimensions: [3.6, 4.5, 4.2],
 });
 addItem(zoneB1Core, {
   id: 'item-b1-elevator',
   kind: 'elevator-core',
   name: { vi: 'Thang máy Kính trung tâm B1', en: 'Panoramic Elevator Core B1' },
-  position: [17, 0, 9],
+  position: [16.2, 0, 11.5],
   rotationY: 0,
-  dimensions: [2.6, 3.8, 2.6],
+  dimensions: [2.6, 4.5, 2.6],
 });
 
 // --- L1 Lobby, Gate, Shop & Core Items ---
@@ -1218,7 +1282,7 @@ for (let i = 0; i < 3; i++) {
       vi: `Kệ Thực phẩm bổ sung SÖL 0${i + 1}`,
       en: `SÖL Supplement Display Shelf 0${i + 1}`,
     },
-    position: [12.2 + i * 2.8, 0, 9.2],
+    position: [11.5 + i * 3.0, 0, 0.8],
     rotationY: 0,
     dimensions: [2.0, 2.1, 0.8],
   });
@@ -1227,7 +1291,7 @@ addItem(zoneL1Shop, {
   id: 'item-l1-nutrition-board',
   kind: 'nutrition-board',
   name: { vi: 'Bảng Thành phần Dinh dưỡng (Nutrition Facts)', en: 'Nutrition Facts Signature Board' },
-  position: [15.0, 0, 13.0],
+  position: [14.5, 0, -2.5],
   rotationY: Math.PI,
   dimensions: [2.4, 1.9, 0.5],
 });
@@ -1406,17 +1470,17 @@ addItem(zoneL1Core, {
   id: 'item-l1-stairs',
   kind: 'stair-core',
   name: { vi: 'Cầu thang bộ L1–L2', en: 'Stair Core L1–L2' },
-  position: [10.5, 0, 1.0],
+  position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 5.2, 4.2],
+  dimensions: [3.6, 5.76, 4.2],
 });
 addItem(zoneL1Core, {
   id: 'item-l1-elevator',
   kind: 'elevator-core',
   name: { vi: 'Thang máy Kính trung tâm L1', en: 'Panoramic Elevator Core L1' },
-  position: [16.0, 0, 1.0],
+  position: [16.2, 0, 11.5],
   rotationY: 0,
-  dimensions: [2.6, 5.2, 2.6],
+  dimensions: [2.6, 5.76, 2.6],
 });
 
 // --- L2 VIP Gym Equipment (Matches CatalogSeeder exact codes & quantities) ---
@@ -1541,15 +1605,15 @@ addItem(zoneL2PtStudio, {
   name: { vi: 'Cầu thang bộ L1–L2–RF', en: 'Stair Core L1–L2–RF' },
   position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 4.9, 4.2],
+  dimensions: [3.6, 5.5, 4.2],
 });
 addItem(zoneL2PtStudio, {
   id: 'item-l2-elevator',
   kind: 'elevator-core',
   name: { vi: 'Thang máy Kính trung tâm L2', en: 'Panoramic Elevator Core L2' },
-  position: [16.0, 0, 11.5],
+  position: [16.2, 0, 11.5],
   rotationY: 0,
-  dimensions: [2.6, 4.9, 2.6],
+  dimensions: [2.6, 5.5, 2.6],
 });
 
 // --- L2 Lounge ---
@@ -1619,17 +1683,17 @@ addItem(zoneRfTerrace, {
   id: 'item-rf-stairs',
   kind: 'stair-core',
   name: { vi: 'Cầu thang bộ L2–RF (Tầng thượng)', en: 'Stair Core L2–RF (Rooftop)' },
-  position: [12.5, 0, 11.5],
+  position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.4, 3.7, 4.0],
+  dimensions: [3.6, 3.8, 4.2],
 });
 addItem(zoneRfTerrace, {
   id: 'item-rf-elevator',
   kind: 'elevator-core',
   name: { vi: 'Thang máy Kính Tầng thượng RF', en: 'Rooftop Panoramic Elevator RF' },
-  position: [17.2, 0, 11.5],
+  position: [16.2, 0, 11.5],
   rotationY: 0,
-  dimensions: [2.4, 3.7, 2.4],
+  dimensions: [2.6, 3.8, 2.6],
 });
 
 // --- OUT Tennis Courts 01 & 02 ---
@@ -1879,7 +1943,7 @@ addHotspot(zoneL1Gate, {
 // 10. /member/orders & /member/products — Supplement Shop
 addHotspot(zoneL1Shop, {
   id: 'hs-l1-shop',
-  localPosition: [15.0, 2.4, 9.2],
+  localPosition: [14.5, 2.4, 0.8],
   title: { vi: 'Cửa hàng Thực phẩm bổ sung & Đơn hàng', en: 'Supplement Shop & Member Orders' },
   subtitle: {
     vi: 'Đặt mua Whey, BCAA, Creatine nhận tại quầy SÖL hoặc giao tận nơi.',
@@ -1968,7 +2032,7 @@ addHotspot(zoneL1Badminton, {
 // 14. L1 Core -> Focus L2
 addHotspot(zoneL1Core, {
   id: 'hs-l1-core',
-  localPosition: [13.5, 2.4, 1.0],
+  localPosition: [13.5, 2.4, 11.5],
   title: { vi: 'Thang máy lên Tầng 2 VIP & Tầng thượng', en: 'Elevator to L2 VIP & Rooftop' },
   subtitle: {
     vi: 'Di chuyển nhanh lên Phòng Gym VIP Platinum (Tầng 2) hoặc Zen Garden (Tầng thượng).',
@@ -2052,7 +2116,7 @@ addHotspot(zoneB1Locker, {
 // 18. B1 Core -> Focus L1
 addHotspot(zoneB1Core, {
   id: 'hs-b1-core',
-  localPosition: [14.0, 2.2, 9.0],
+  localPosition: [13.5, 2.2, 11.5],
   title: { vi: 'Lên Sảnh chính Tầng 1', en: 'Return to L1 Main Lobby' },
   subtitle: {
     vi: 'Di chuyển từ Tầng hầm Oasis lên Quầy Lễ tân và Khu Gym Tầng 1.',

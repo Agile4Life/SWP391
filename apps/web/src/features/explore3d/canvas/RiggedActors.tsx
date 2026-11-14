@@ -6,6 +6,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useState,
   type ReactNode,
 } from 'react';
 import * as THREE from 'three';
@@ -26,6 +27,7 @@ import {
   configureSkinTexture,
   createRiggedInstance,
   disposeInstance,
+  isWalkFloorAdjacent,
   placeInstance,
   stepInstance,
   type RiggedInstance,
@@ -72,9 +74,12 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
     HUMAN_ASSET_URLS.skinLight.female,
   ]);
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const invalidate = useThree(s => s.invalidate);
   const { shouldAnimate } = useActorMotion(benchEnabled);
+
+  const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
   const assets = useMemo(() => {
     const humans: HumanAssets = {
@@ -86,50 +91,68 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gltfs, skinTextures]);
 
-  const instances = useMemo<RiggedInstance[]>(() => {
+  const [instances, setInstances] = useState<RiggedInstance[]>([]);
+
+  useEffect(() => {
     const view = useExploreStore.getState();
-    const result: RiggedInstance[] = [];
+    const effMode = view.walkMode ? 'stacked' : view.levelMode;
+    const created: RiggedInstance[] = [];
     for (const def of buildLiveActorDefinitions(scene)) {
       if (!isRiggedActivity(def.activity)) continue;
       const instance = createRiggedInstance(def, assets);
       if (!instance) continue;
       // Poses the character once so reduced-motion / low-power states show a sensible frame.
-      const pose = placeInstance(instance, scene, view.levelMode, view.focusLevel, STATIC_POSE_TIME_SEC);
+      const pose = placeInstance(
+        instance,
+        scene,
+        effMode,
+        view.focusLevel,
+        STATIC_POSE_TIME_SEC,
+        view.walkMode,
+      );
       stepInstance(instance, 0, pose, STATIC_POSE_TIME_SEC);
-      result.push(instance);
+      created.push(instance);
     }
-    return result;
-  }, [scene, assets]);
+    setInstances(created);
+    setRiggedActorIds(created.map(instance => instance.def.id));
+    invalidate();
+    return () => {
+      setRiggedActorIds([]);
+      setInstances([]);
+      for (const instance of created) disposeInstance(instance);
+    };
+  }, [scene, assets, invalidate]);
 
   // Keep each character on its level, even as the stack explodes or collapses.
   useLayoutEffect(() => {
     for (const instance of instances) {
-      placeInstance(instance, scene, levelMode, focusLevel, STATIC_POSE_TIME_SEC);
+      placeInstance(
+        instance,
+        scene,
+        effectiveLevelMode,
+        focusLevel,
+        STATIC_POSE_TIME_SEC,
+        walkMode,
+      );
     }
     invalidate();
-  }, [instances, scene, levelMode, focusLevel, invalidate]);
-
-  // Only now are these actors safe to hide from the procedural instanced mesh.
-  useEffect(() => {
-    setRiggedActorIds(instances.map(instance => instance.def.id));
-    return () => {
-      setRiggedActorIds([]);
-    };
-  }, [instances]);
-
-  useEffect(() => {
-    return () => {
-      for (const instance of instances) disposeInstance(instance);
-    };
-  }, [instances]);
+  }, [instances, scene, effectiveLevelMode, walkMode, focusLevel, invalidate]);
 
   useFrame(({ clock }, delta) => {
     if (!shouldAnimate || instances.length === 0) return;
     const step = Math.min(delta, MAX_STEP_SEC);
     const timeSec = STATIC_POSE_TIME_SEC + clock.getElapsedTime();
     for (const instance of instances) {
+      if (walkMode && !isWalkFloorAdjacent(instance.def.level, focusLevel)) continue;
       if (!instance.holder.visible) continue;
-      const pose = placeInstance(instance, scene, levelMode, focusLevel, timeSec);
+      const pose = placeInstance(
+        instance,
+        scene,
+        effectiveLevelMode,
+        focusLevel,
+        timeSec,
+        walkMode,
+      );
       stepInstance(instance, step, pose, timeSec);
     }
     invalidate();

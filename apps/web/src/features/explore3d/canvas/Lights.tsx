@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   getExploreThemePalette,
@@ -130,6 +131,7 @@ export function Lights() {
   const walkMode = useExploreStore(s => s.walkMode);
   const invalidate = useThree(s => s.invalidate);
   const gl = useThree(s => s.gl);
+  const lightRef = useRef<THREE.DirectionalLight>(null);
 
   const cfg = getLightingBudgetConfig(theme, tier);
   const activeLevelCode: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
@@ -143,17 +145,78 @@ export function Lights() {
   const sunScale = SUN_DISTANCE / Math.hypot(sx, sy, sz);
   const sunPosition: [number, number, number] = [sx * sunScale, sy * sunScale, sz * sunScale];
 
+  const lightDir = useRef(new THREE.Vector3());
+  const lightRight = useRef(new THREE.Vector3());
+  const lightUp = useRef(new THREE.Vector3());
+  const targetPos = useRef(new THREE.Vector3());
+  const snappedPos = useRef(new THREE.Vector3());
+  const yUp = useRef(new THREE.Vector3(0, 1, 0));
+
   useEffect(() => {
     invalidate();
   }, [theme, tier, focusLevel, walkMode, invalidate]);
 
   // The sun is fixed, so the shadow map only has to follow moving casters (people, cars):
-  // refreshing it every other frame (30 Hz at 60 fps) removes about a third of the frame cost.
+  // refreshing it every third frame (20 Hz at 60 fps) preserves crisp shadows while cutting shadow-pass cost.
   const shadowFrame = useRef(0);
-  useFrame(({ gl }) => {
+  useFrame(({ camera, gl }) => {
     gl.shadowMap.autoUpdate = false;
     shadowFrame.current += 1;
-    gl.shadowMap.needsUpdate = shadowFrame.current % 2 === 1;
+    gl.shadowMap.needsUpdate = shadowFrame.current % 3 === 1;
+
+    const light = lightRef.current;
+    if (!light) return;
+
+    if (walkMode) {
+      const halfExtent = 22.0;
+      const mapWidth = light.shadow.mapSize.x || 2048;
+      const texelSize = (2 * halfExtent) / mapWidth;
+
+      lightDir.current.set(sx, sy, sz).normalize();
+      lightRight.current.crossVectors(yUp.current, lightDir.current).normalize();
+      lightUp.current.crossVectors(lightDir.current, lightRight.current).normalize();
+
+      targetPos.current.set(camera.position.x, 0, camera.position.z);
+      const u = targetPos.current.dot(lightRight.current);
+      const v = targetPos.current.dot(lightUp.current);
+      const uSnapped = Math.round(u / texelSize) * texelSize;
+      const vSnapped = Math.round(v / texelSize) * texelSize;
+
+      snappedPos.current
+        .copy(lightRight.current)
+        .multiplyScalar(uSnapped)
+        .addScaledVector(lightUp.current, vSnapped)
+        .addScaledVector(lightDir.current, targetPos.current.dot(lightDir.current));
+
+      light.target.position.copy(snappedPos.current);
+      light.target.updateMatrixWorld();
+      light.position.copy(snappedPos.current).addScaledVector(lightDir.current, SUN_DISTANCE);
+
+      const cam = light.shadow.camera;
+      if (cam.left !== -halfExtent || cam.right !== halfExtent) {
+        cam.left = -halfExtent;
+        cam.right = halfExtent;
+        cam.top = halfExtent;
+        cam.bottom = -halfExtent;
+        cam.near = 1;
+        cam.far = SUN_DISTANCE + 45;
+        cam.updateProjectionMatrix();
+      }
+    } else {
+      const cam = light.shadow.camera;
+      if (cam.left !== cfg.keyLight.shadowBounds.left) {
+        light.target.position.set(0, 0, 0);
+        light.target.updateMatrixWorld();
+        light.position.set(sunPosition[0], sunPosition[1], sunPosition[2]);
+        cam.left = cfg.keyLight.shadowBounds.left;
+        cam.right = cfg.keyLight.shadowBounds.right;
+        cam.top = cfg.keyLight.shadowBounds.top;
+        cam.bottom = cfg.keyLight.shadowBounds.bottom;
+        cam.near = cfg.keyLight.shadowBounds.near;
+        cam.far = cfg.keyLight.shadowBounds.far;
+        cam.updateProjectionMatrix();
+      }
+    }
   });
   useEffect(
     () => () => {
@@ -173,6 +236,7 @@ export function Lights() {
         ]}
       />
       <directionalLight
+        ref={lightRef}
         position={sunPosition}
         color={cfg.keyLight.color}
         intensity={cfg.keyLight.intensity}
@@ -205,24 +269,14 @@ export function Lights() {
           is barely visible in the whole-campus overview, so they only exist when a floor is in focus;
           two placed at the old trio's centres of mass keep the same warmth. */}
       {(walkMode || focusLevel !== 'ALL') && (
-        <>
-          <pointLight
-            position={[-4.5, ceilingY, 1]}
-            color="#ffe9d8"
-            intensity={2.9 * interiorBoost}
-            distance={40}
-            decay={2}
-            castShadow={false}
-          />
-          <pointLight
-            position={[13, ceilingY, -1]}
-            color="#ffe4d0"
-            intensity={1.7 * interiorBoost}
-            distance={36}
-            decay={2}
-            castShadow={false}
-          />
-        </>
+        <pointLight
+          position={[2.5, ceilingY, 0]}
+          color="#ffe7d4"
+          intensity={3.6 * interiorBoost}
+          distance={42}
+          decay={2}
+          castShadow={false}
+        />
       )}
     </group>
   );
