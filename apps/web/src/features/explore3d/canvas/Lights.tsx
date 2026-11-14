@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useEffect } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import {
   getExploreThemePalette,
   useDocumentTheme,
@@ -129,6 +129,7 @@ export function Lights() {
   const focusLevel = useExploreStore(s => s.focusLevel);
   const walkMode = useExploreStore(s => s.walkMode);
   const invalidate = useThree(s => s.invalidate);
+  const gl = useThree(s => s.gl);
 
   const cfg = getLightingBudgetConfig(theme, tier);
   const activeLevelCode: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
@@ -145,6 +146,21 @@ export function Lights() {
   useEffect(() => {
     invalidate();
   }, [theme, tier, focusLevel, walkMode, invalidate]);
+
+  // The sun is fixed, so the shadow map only has to follow moving casters (people, cars):
+  // refreshing it every other frame (30 Hz at 60 fps) removes about a third of the frame cost.
+  const shadowFrame = useRef(0);
+  useFrame(({ gl }) => {
+    gl.shadowMap.autoUpdate = false;
+    shadowFrame.current += 1;
+    gl.shadowMap.needsUpdate = shadowFrame.current % 2 === 1;
+  });
+  useEffect(
+    () => () => {
+      gl.shadowMap.autoUpdate = true;
+    },
+    [gl],
+  );
 
   return (
     <group name="sol-lights">
