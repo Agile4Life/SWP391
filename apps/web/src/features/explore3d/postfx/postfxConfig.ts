@@ -61,7 +61,7 @@ export function getPostFxConfig(tier: QualityTier, theme: ExploreTheme): PostFxC
     // MSAA on the half-float HDR target costs more than every other pass combined (measured on M4:
     // 4x = 21 fps, 0 = 43 fps); FXAA + sharpen carry edge quality so the 60 fps budget holds.
     msaa: 0,
-    pixelBudget: high ? 1_800_000 : tier === 'medium' ? 1_400_000 : 1_300_000,
+    pixelBudget: high ? 1_700_000 : tier === 'medium' ? 1_300_000 : 1_100_000,
     ao: {
       enabled: !low,
       taps: high ? 10 : 8,
