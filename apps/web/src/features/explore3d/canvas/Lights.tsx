@@ -13,8 +13,8 @@ import { useExploreStore, type QualityTier } from '../state/exploreStore';
 const LEVEL_ELEVATION_BY_CODE: Record<LevelCode, number> = {
   B1: -4.5,
   L1: 0.0,
-  L2: 4.5,
-  RF: 9.0,
+  L2: 5.76,
+  RF: 11.26,
   OUT: 0.0,
 };
 

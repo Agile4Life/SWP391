@@ -246,8 +246,8 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       const rf = levels.find(l => l.code === 'RF')!;
       const out = levels.find(l => l.code === 'OUT')!;
 
-      expect(computeLevelTargetY(l2, 'stacked')).toBeCloseTo(4.5, 4);
-      expect(computeLevelTargetY(l2, 'exploded')).toBeCloseTo(10.5, 4);
+      expect(computeLevelTargetY(l2, 'stacked')).toBeCloseTo(5.76, 4);
+      expect(computeLevelTargetY(l2, 'exploded')).toBeCloseTo(11.76, 4);
 
       // In solo mode focused on L1, B1 and L1 and OUT remain visible while L2 and RF are hidden
       expect(isLevelVisibleInMode(b1, 'solo', 'L1')).toBe(true);

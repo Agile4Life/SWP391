@@ -1138,61 +1138,62 @@ export interface GymCrownGeometries {
 
 const gymCrownCache = new Map<ExploreTheme, GymCrownGeometries>();
 
+/** Top of the penthouse walls: RF elevation 11.26 m + RF height 3.9 m. */
+const GYM_ROOF_Y = 15.16;
+
 /**
- * A stepped sky-lounge crown on the unused west and north edges of the roof slab (y = 12.6),
- * behind the penthouse as seen from the default camera so it lifts the gym's silhouette
- * without hiding the Zen studio or the terrace.
+ * The gym's weather roof: a glazed steel canopy that floats just above the penthouse walls on
+ * slender columns, so the building reads as one tall covered volume (~1.3x the old height)
+ * while the translucent panels still let the cutaway interior show from above.
  */
 export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   const cached = gymCrownCache.get(theme);
   if (cached) return cached;
   const isLight = theme === 'light';
   const b: CityBuckets = { opaque: [], metal: [], glass: [], emissive: [] };
-  const roofY = 12.6;
-  const stone = isLight ? '#8d867c' : '#2b303a';
+  const base = GYM_ROOF_Y;
+  const lift = 0.95;
+  const roofY = base + lift;
   const steel = isLight ? '#353d4b' : '#1c222c';
-  const glass = isLight ? '#7fa0b5' : '#22394d';
+  const glass = isLight ? '#9fc0d4' : '#3b5a72';
   const salmon = '#f07654';
-  const warm = isLight ? '#d8c3a8' : '#ffcf94';
   const hdrLed = isLight ? 1.2 : 4.2;
-  const hdrGlow = isLight ? 0.35 : 2.2;
+  const x0 = -23.2;
+  const x1 = 23.2;
+  const z0 = -17.2;
+  const z1 = 17.2;
+  const w = x1 - x0;
+  const d = z1 - z0;
 
-  // [x0, x1, z0, z1, height] blocks: the west blade is the tallest, the north step is lower.
-  const blocks: ReadonlyArray<readonly [number, number, number, number, number]> = [
-    [-21.6, -17.4, -15.6, 15.6, 7.4],
-    [-17.4, 9.6, -15.6, -12.6, 4.8],
-  ];
-  for (const [x0, x1, z0, z1, h] of blocks) {
-    const w = x1 - x0;
-    const d = z1 - z0;
-    const cx = (x0 + x1) / 2;
-    const cz = (z0 + z1) / 2;
-    pushBox(b.opaque, w, 0.5, d, cx, roofY + 0.25, cz, stone);
-    pushBox(b.glass, w - 0.3, h - 0.9, d - 0.3, cx, roofY + 0.5 + (h - 0.9) / 2, cz, glass);
-    // Warm interior glow behind the glass at dusk.
-    pushBox(b.emissive, w - 0.9, h * 0.5, d - 0.9, cx, roofY + 0.5 + h * 0.4, cz, warm, 0, 0, 0, hdrGlow);
-    // Roof slab with an overhang and a salmon LED edge.
-    pushBox(b.metal, w + 0.9, 0.34, d + 0.9, cx, roofY + h + 0.17, cz, steel);
-    pushBox(b.emissive, w + 0.95, 0.1, 0.12, cx, roofY + h - 0.05, z1 + 0.42, salmon, 0, 0, 0, hdrLed);
-    pushBox(b.emissive, w + 0.95, 0.1, 0.12, cx, roofY + h - 0.05, z0 - 0.42, salmon, 0, 0, 0, hdrLed);
-    pushBox(b.emissive, 0.12, 0.1, d + 0.95, x1 + 0.42, roofY + h - 0.05, cz, salmon, 0, 0, 0, hdrLed);
-    pushBox(b.emissive, 0.12, 0.1, d + 0.95, x0 - 0.42, roofY + h - 0.05, cz, salmon, 0, 0, 0, hdrLed);
-    // Vertical steel fins every ~3 m on both long faces.
-    const alongZ = d > w;
-    const len = alongZ ? d : w;
-    const count = Math.floor(len / 3);
-    for (let i = 0; i <= count; i += 1) {
-      const t = -len / 2 + (i / count) * len;
-      if (alongZ) {
-        pushBox(b.metal, w + 0.1, h - 0.6, 0.16, cx, roofY + 0.5 + (h - 0.6) / 2, cz + t, steel);
-      } else {
-        pushBox(b.metal, 0.16, h - 0.6, d + 0.1, cx + t, roofY + 0.5 + (h - 0.6) / 2, cz, steel);
-      }
-    }
+  // Glass roof deck with a steel grid of beams (every ~5.8 m along X, ~5.7 m along Z).
+  pushBox(b.glass, w, 0.12, d, 0, roofY, 0, glass);
+  const nx = 8;
+  const nz = 6;
+  for (let i = 0; i <= nx; i += 1) {
+    pushBox(b.metal, 0.24, 0.34, d + 0.2, x0 + (i / nx) * w, roofY + 0.06, 0, steel);
   }
-  // Rooftop mast with a SÖL salmon crown ring on the tall blade.
-  pushCylinder(b.metal, 0.08, 0.2, 7, -19.5, roofY + 7.4 + 3.5, 0, steel, 6);
-  pushCylinder(b.emissive, 0.9, 0.9, 0.16, -19.5, roofY + 7.4 + 5.2, 0, salmon, 20, 0, 0, 0, hdrLed);
+  for (let j = 0; j <= nz; j += 1) {
+    pushBox(b.metal, w + 0.2, 0.3, 0.22, 0, roofY + 0.04, z0 + (j / nz) * d, steel);
+  }
+  // Deep fascia with a salmon LED line all round.
+  pushBox(b.metal, w + 0.6, 0.55, 0.3, 0, roofY + 0.1, z0 - 0.15, steel);
+  pushBox(b.metal, w + 0.6, 0.55, 0.3, 0, roofY + 0.1, z1 + 0.15, steel);
+  pushBox(b.metal, 0.3, 0.55, d + 0.6, x0 - 0.15, roofY + 0.1, 0, steel);
+  pushBox(b.metal, 0.3, 0.55, d + 0.6, x1 + 0.15, roofY + 0.1, 0, steel);
+  pushBox(b.emissive, w + 0.7, 0.09, 0.1, 0, roofY - 0.2, z0 - 0.33, salmon, 0, 0, 0, hdrLed);
+  pushBox(b.emissive, w + 0.7, 0.09, 0.1, 0, roofY - 0.2, z1 + 0.33, salmon, 0, 0, 0, hdrLed);
+  pushBox(b.emissive, 0.1, 0.09, d + 0.7, x0 - 0.33, roofY - 0.2, 0, salmon, 0, 0, 0, hdrLed);
+  pushBox(b.emissive, 0.1, 0.09, d + 0.7, x1 + 0.33, roofY - 0.2, 0, salmon, 0, 0, 0, hdrLed);
+  // Columns carry the roof from the penthouse parapet; they stand in the wall line.
+  const colXs = [x0 + 0.4, x0 + w * 0.25, 0, x0 + w * 0.75, x1 - 0.4];
+  const colZs = [z0 + 0.4, z1 - 0.4];
+  for (const cx of colXs) {
+    for (const cz of colZs) pushBox(b.metal, 0.36, lift + 0.1, 0.36, cx, base + lift / 2, cz, steel);
+  }
+  for (const cz of [-5.2, 5.2]) {
+    pushBox(b.metal, 0.36, lift + 0.1, 0.36, x0 + 0.4, base + lift / 2, cz, steel);
+    pushBox(b.metal, 0.36, lift + 0.1, 0.36, x1 - 0.4, base + lift / 2, cz, steel);
+  }
 
   const result: GymCrownGeometries = {
     opaqueGeometry: mergeCityParts(b.opaque),

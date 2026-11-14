@@ -289,7 +289,7 @@ const levelL1: LevelNode = register({
   },
   elevation: L1_Y,
   explodedOffset: 0.0,
-  height: 4.2,
+  height: 5.46,
   slabThickness: 0.28,
   slabPolygon: rectPolygon(-22, -16, 22, 16),
   children: [],
@@ -564,10 +564,10 @@ const zoneL1Core: ZoneNode = register({
 });
 
 // ============================================================================
-// LEVEL L2 — Tầng 2 · Khu VIP Platinum & Tư vấn Thể chất (elevation = 4.5m)
+// LEVEL L2 — Tầng 2 · Khu VIP Platinum & Tư vấn Thể chất (elevation = 5.76m)
 // ============================================================================
 
-const L2_Y = 4.5;
+const L2_Y = 5.76;
 
 const levelL2: LevelNode = register({
   id: 'lvl-l2',
@@ -582,7 +582,7 @@ const levelL2: LevelNode = register({
   },
   elevation: L2_Y,
   explodedOffset: 6.0,
-  height: 4.0,
+  height: 5.2,
   slabThickness: 0.28,
   slabPolygon: rectPolygon(-22, -16, 22, 16),
   children: [],
@@ -743,10 +743,10 @@ const zoneL2Lounge: ZoneNode = register({
 });
 
 // ============================================================================
-// LEVEL RF — Tầng thượng Penthouse · Zen Garden Studio (elevation = 9.0m)
+// LEVEL RF — Tầng thượng Penthouse · Zen Garden Studio (elevation = 11.26m)
 // ============================================================================
 
-const RF_Y = 9.0;
+const RF_Y = 11.26;
 
 const levelRF: LevelNode = register({
   id: 'lvl-rf',
@@ -761,7 +761,7 @@ const levelRF: LevelNode = register({
   },
   elevation: RF_Y,
   explodedOffset: 12.0,
-  height: 3.6,
+  height: 3.9,
   slabThickness: 0.28,
   slabPolygon: rectPolygon(-22, -16, 22, 16),
   children: [],
@@ -1408,7 +1408,7 @@ addItem(zoneL1Core, {
   name: { vi: 'Cầu thang bộ L1–L2', en: 'Stair Core L1–L2' },
   position: [10.5, 0, 1.0],
   rotationY: 0,
-  dimensions: [3.6, 3.8, 4.2],
+  dimensions: [3.6, 5.2, 4.2],
 });
 addItem(zoneL1Core, {
   id: 'item-l1-elevator',
@@ -1416,7 +1416,7 @@ addItem(zoneL1Core, {
   name: { vi: 'Thang máy Kính trung tâm L1', en: 'Panoramic Elevator Core L1' },
   position: [16.0, 0, 1.0],
   rotationY: 0,
-  dimensions: [2.6, 3.8, 2.6],
+  dimensions: [2.6, 5.2, 2.6],
 });
 
 // --- L2 VIP Gym Equipment (Matches CatalogSeeder exact codes & quantities) ---
@@ -1541,7 +1541,7 @@ addItem(zoneL2PtStudio, {
   name: { vi: 'Cầu thang bộ L1–L2–RF', en: 'Stair Core L1–L2–RF' },
   position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 3.8, 4.2],
+  dimensions: [3.6, 4.9, 4.2],
 });
 addItem(zoneL2PtStudio, {
   id: 'item-l2-elevator',
@@ -1549,7 +1549,7 @@ addItem(zoneL2PtStudio, {
   name: { vi: 'Thang máy Kính trung tâm L2', en: 'Panoramic Elevator Core L2' },
   position: [16.0, 0, 11.5],
   rotationY: 0,
-  dimensions: [2.6, 3.8, 2.6],
+  dimensions: [2.6, 4.9, 2.6],
 });
 
 // --- L2 Lounge ---
@@ -1621,7 +1621,7 @@ addItem(zoneRfTerrace, {
   name: { vi: 'Cầu thang bộ L2–RF (Tầng thượng)', en: 'Stair Core L2–RF (Rooftop)' },
   position: [12.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.4, 3.4, 4.0],
+  dimensions: [3.4, 3.7, 4.0],
 });
 addItem(zoneRfTerrace, {
   id: 'item-rf-elevator',
@@ -1629,7 +1629,7 @@ addItem(zoneRfTerrace, {
   name: { vi: 'Thang máy Kính Tầng thượng RF', en: 'Rooftop Panoramic Elevator RF' },
   position: [17.2, 0, 11.5],
   rotationY: 0,
-  dimensions: [2.4, 3.4, 2.4],
+  dimensions: [2.4, 3.7, 2.4],
 });
 
 // --- OUT Tennis Courts 01 & 02 ---
