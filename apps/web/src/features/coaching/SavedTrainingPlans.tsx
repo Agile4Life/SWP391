@@ -243,7 +243,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
           </form>
         </Modal>
       )}
-      {resultPlan && <Modal title={t('Kết quả · ') + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} planId={resultPlan.id} /></Modal>}
+      {resultPlan && <Modal title={t('Kết quả · ') + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} plan={resultPlan} planId={resultPlan.id} /></Modal>}
       {confirmDialog}
     </section>
   );
