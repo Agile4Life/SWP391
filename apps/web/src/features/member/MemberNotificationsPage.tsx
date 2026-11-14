@@ -1,4 +1,3 @@
-import { memberText } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { useI18n } from '../../shared/i18n';
@@ -13,16 +12,16 @@ import { markNoticesRead, usePortalNotices } from '../../shared/lib/portalNotice
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { localizeTitle, localizeMessage } from './notificationLocalizer';
 
-const category: Record<string, { label: string }> = {
-  schedule_change: { label: 'Lịch học' },
-  class_reminder: { label: 'Nhắc lịch học' },
-  booking: { label: 'Đăng ký lớp' },
-  waitlist: { label: 'Hàng chờ' },
-  payment: { label: 'Thanh toán' },
-  order: { label: 'Đơn hàng' },
-  package_expiry: { label: 'Hạn gói tập' },
-  support_reply: { label: 'Hỗ trợ' },
-  system: { label: 'Hệ thống' },
+const category: Record<string, { label: string; en: string }> = {
+  schedule_change: { label: 'Lịch học', en: 'Schedule' },
+  class_reminder: { label: 'Nhắc lịch học', en: 'Class reminder' },
+  booking: { label: 'Đăng ký lớp', en: 'Class booking' },
+  waitlist: { label: 'Hàng chờ', en: 'Waitlist' },
+  payment: { label: 'Thanh toán', en: 'Payment' },
+  order: { label: 'Đơn hàng', en: 'Order' },
+  package_expiry: { label: 'Hạn gói tập', en: 'Membership expiry' },
+  support_reply: { label: 'Hỗ trợ', en: 'Support' },
+  system: { label: 'Hệ thống', en: 'System' },
 };
 
 function errorMessage(error: unknown): string | Error {
@@ -120,10 +119,13 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     {loading ? <LoadingSkeleton label={t("Đang tải thông báo…", "Loading notifications…")} count={5} /> : !data?.content.length && !error && notices.length === 0 ?
       <div className="portal-empty"><h3>{t("Chưa có thông báo", "No notifications yet")}</h3><p>{t("Thông báo mới sẽ xuất hiện tại đây.", "New notifications will appear here.")}</p></div> :
       <div className="notification-list" aria-label={t("Danh sách thông báo", "Notifications list")}>
-        {data?.content.map((item) => <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
-          <span className="notification-copy"><small className="notification-category">{t(category[item.type?.toLowerCase()]?.label ?? memberText("Hệ thống"))}</small><strong>{lang === 'vi' ? localizeTitle(item.title) : item.title}</strong><span>{lang === 'vi' ? localizeMessage(item.message) : item.message}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
+        {data?.content.map((item) => {
+          const cat = category[item.type?.toLowerCase()] ?? category.system;
+          return <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
+          <span className="notification-copy"><small className="notification-category">{t(cat.label, cat.en)}</small><strong>{lang === 'vi' ? localizeTitle(item.title) : item.title}</strong><span>{lang === 'vi' ? localizeMessage(item.message) : item.message}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
           {!item.isRead && <span className="notification-dot" aria-label={t("Chưa đọc", "Unread")} />}
-        </button>)}
+        </button>;
+        })}
       </div>}
     </div>
     {!loading && data && data.totalPages > 1 && <nav className="notification-pages" aria-label={t("Phân trang thông báo", "Notification pagination")}>

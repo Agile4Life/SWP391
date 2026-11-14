@@ -21,6 +21,7 @@ import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
 import { PwaStatus } from '../pwa/PwaStatus';
 import { NotificationsPopover } from '../member/NotificationsPopover';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 
 // Only members see the AI assistant; its WebGL shaders stay out of every other role's first load.
 
@@ -563,7 +564,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         </button>
       </nav>
 
-      {location.pathname !== '/member/check-in' && location.pathname !== '/staff/check-in' && location.pathname !== '/staff/check-out' && location.pathname !== '/messages' && <ChatWidget />}
+      {location.pathname !== '/member/check-in' && location.pathname !== '/staff/check-in' && location.pathname !== '/staff/check-out' && location.pathname !== '/messages' && !location.pathname.startsWith('/member/explore') && <ChatWidget />}
       {canReceiveNotifications && dialog === 'notifications' && <NotificationsPopover onClose={closeNotifications} triggerRef={notificationTrigger} />}
       {dialog === 'wallet' && (
         <Modal title={t('Ví điện tử SÖL', 'SÖL Digital Wallet')} onClose={() => setDialog(null)}>
@@ -583,7 +584,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
             <div>
               <div className="portal-label">{t('Số dư khả dụng', 'Available balance')}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--portal-salmon, var(--sol-accent))', fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
-                {walletBalance.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
+                {formatPrice(walletBalance)}
               </div>
             </div>
             <button type="button" className="btn-secondary btn-sm" onClick={refreshWallet} disabled={walletLoading}>
@@ -608,13 +609,13 @@ function PortalShellContent({ user }: { user: UserSession }) {
                   <button
                     key={amt}
                     type="button"
-                    className={Number(topupAmount) === amt ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                    className={`filter-chip${Number(topupAmount) === amt ? ' is-active' : ''}`}
                     onClick={() => {
                       setTopupError(null);
                       setTopupAmount(String(amt));
                     }}
                   >
-                    +{amt.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
+                    +{formatPrice(amt)}
                   </button>
                 ))}
               </div>
@@ -688,16 +689,13 @@ function PortalShellContent({ user }: { user: UserSession }) {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {credit ? '+' : '-'}{absAmount.toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN')} đ
+                      {credit ? '+' : '-'}{formatPrice(absAmount)}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-          <div className="form-actions" style={{ marginTop: 20, justifyContent: 'flex-end' }}>
-            <button type="button" className="btn-primary" onClick={() => setDialog(null)}>{t('Đóng', 'Close')}</button>
-          </div>
         </Modal>
       )}
       {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? t('Điều hướng', 'Navigation') : t('Tìm màn hình', 'Find Screen')} onClose={() => setDialog(null)} returnFocusRef={dialog === 'menu' ? moreRef : undefined}>

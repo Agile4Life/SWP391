@@ -366,48 +366,45 @@
 }
 
 .chat-widget .direct-chat__inbox-heading {
-  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px 4px;
   border: 0;
-  height: 0;
-  overflow: visible;
 }
 
 .chat-widget #chat-inbox-title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
+  margin: 0;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--chat-glass-muted, #a8a8a8);
 }
 
-/* Nút tròn [✎] nổi ở góc dưới phải của danh sách hội thoại giống Instagram */
+/* Nút [✎] gắn gọn trong đầu danh sách hội thoại, không đè lên mục ghim */
 .chat-widget .direct-chat__compose-fab {
-  position: fixed;
-  right: 40px;
-  bottom: 40px;
-  z-index: 5;
-  width: 48px;
-  height: 48px;
-  min-height: 48px;
+  position: static;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   padding: 0;
   border-radius: 50%;
-  background: #2b2e36;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #f5f5f5;
+  background: var(--sol-accent);
+  border: 1px solid transparent;
+  color: #212328;
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   transition: transform 140ms ease, background-color 140ms ease;
 }
 
 .chat-widget .direct-chat__compose-fab:hover {
-  background: #353944;
+  background: #e0aa9b;
   text-decoration: none;
-  transform: scale(1.04);
+  transform: none;
 }
 
 .chat-widget .direct-chat__compose-fab-label {
@@ -555,15 +552,6 @@
   .portal-v2 .chat-widget__panel {
     height: min(640px, calc(100dvh - 82px - 24px - env(safe-area-inset-bottom) - env(safe-area-inset-top, 0px)));
   }
-
-  .chat-widget .direct-chat__compose-fab {
-    right: 28px;
-    bottom: calc(28px + env(safe-area-inset-bottom));
-  }
-
-  .portal-v2 .chat-widget .direct-chat__compose-fab {
-    bottom: calc(98px + env(safe-area-inset-bottom));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -656,41 +644,8 @@
   .chat-widget__trigger { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
-/* Canvas WebGL liquid-glass (dashersw/liquid-glass-js): shader khúc xạ ảnh chụp thật
-   của trang phía sau. Khi chưa chụp xong / không có WebGL, canvas ẩn và kính CSS ở trên
-   làm dự phòng. Nằm dưới nội dung, không chặn thao tác. */
-.chat-widget__panel > .chat-widget__glass.glass-container {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  padding: 0;
-  gap: 0;
-  display: block;
-  border-radius: inherit;
-  pointer-events: none;
-}
-.chat-widget__glass canvas { opacity: 0; box-shadow: none; transition: none; }
-.chat-widget__glass.is-ready:not([data-glass-stale]) canvas { opacity: 1; filter: blur(3px); }
-
-/* Đã có khúc xạ thật: bỏ blur CSS, chỉ giữ lớp phủ tối mỏng để chữ trắng luôn đọc được. */
-.chat-widget__panel:has(> .chat-widget__glass.is-ready:not([data-glass-stale])) {
-  background: transparent;
-  --chat-glass-veil: linear-gradient(160deg, rgba(26, 25, 25, 0.24) 0%, rgba(16, 15, 15, 0.34) 100%);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-}
-
-/* Chữ phụ xám #a8a8a8 chìm khi nền khúc xạ sáng: nâng lên trắng bán trong suốt trên kính. */
-.chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
-  .direct-chat__person-sub, .direct-chat__preview, .direct-chat__dot, .direct-chat__person time,
-  .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
-  .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro) {
-  color: rgba(245, 245, 245, 0.86);
-}
-.chat-widget__panel .direct-chat .direct-chat__input::placeholder { color: rgba(245, 245, 245, 0.62); }
-
-/* Nút pill "Tin nhắn": cùng lớp kính WebGL khi panel đóng; kính CSS ở trên làm dự phòng. */
+/* Pure CSS glass layers inside widget panels (backdrop-filter). */
+.chat-widget__panel > .chat-widget__glass.glass-container,
 .chat-widget__trigger > .chat-widget__trigger-glass.glass-container {
   position: absolute;
   inset: 0;
@@ -702,16 +657,16 @@
   overflow: hidden;
   pointer-events: none;
 }
-.chat-widget__trigger-glass canvas { opacity: 0; box-shadow: none; transition: none; }
-.chat-widget__trigger-glass.is-ready:not([data-glass-stale]) canvas { opacity: 1; filter: blur(2px); }
 .chat-widget__trigger > :not(.chat-widget__trigger-glass) { position: relative; z-index: 1; }
-.chat-widget__trigger:has(> .chat-widget__trigger-glass.is-ready:not([data-glass-stale])) {
-  background: transparent;
-  --chat-glass-veil: linear-gradient(160deg, rgba(28, 27, 27, 0.16) 0%, rgba(16, 15, 15, 0.26) 100%);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+
+/* Chữ phụ xám #a8a8a8 chìm khi nền khúc xạ sáng: nâng lên trắng bán trong suốt trên kính. */
+.chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
+  .direct-chat__person-sub, .direct-chat__preview, .direct-chat__dot, .direct-chat__person time,
+  .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
+  .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro) {
+  color: rgba(245, 245, 245, 0.86);
 }
+.chat-widget__panel .direct-chat .direct-chat__input::placeholder { color: rgba(245, 245, 245, 0.62); }
 
 /* Kéo nút chat / panel (qua thanh tiêu đề) tới bất kỳ đâu trên màn hình. */
 .chat-widget__trigger,
@@ -863,17 +818,6 @@
 @media (prefers-reduced-transparency: reduce) {
   :root[data-theme='light'] .chat-widget__panel,
   :root[data-theme='light'] .chat-widget__trigger { background: #faf8f6; }
-}
-
-/* Lớp phủ màu nằm TRÊN canvas WebGL (nền của chính nút/panel bị canvas che mất). */
-.chat-widget__glass::after,
-.chat-widget__trigger-glass::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--chat-glass-veil, transparent);
-  pointer-events: none;
 }
 
 /* Keep the message controls consistent with SÖL while preserving the glass panel. */

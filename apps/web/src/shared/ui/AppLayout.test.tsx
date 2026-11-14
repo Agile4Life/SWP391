@@ -158,8 +158,8 @@ describe('portal navigation', () => {
     expect(host.querySelector('dialog')?.textContent).toContain('Ví điện tử SÖL');
     expect(host.querySelector('dialog')?.textContent).toContain('Hoàn tiền gói Silver');
 
-    // Close wallet modal and navigate to profile via dropdown
-    const closeBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Đóng')!;
+    // Close wallet modal via header dialog close button and navigate to profile via dropdown
+    const closeBtn = host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!;
     await act(async () => closeBtn.click());
     await act(async () => avatarBtn!.click());
     const profileLink = host.querySelector<HTMLAnchorElement>('[data-testid="avatar-menu-profile"]')!;

@@ -658,19 +658,6 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-benefit-end-btn svg { width: 16px; height: 16px; display: block; flex-shrink: 0; }
 .fit-benefit-end-btn:hover { background: #2b211e; transform: translateY(-2px); }
 
-.fit-site .liquid-glass-chat-trigger { z-index: 10; right: 18px; bottom: 18px; }
-.fit-site .liquid-glass-chat-trigger .glass-button { background: #8b6559 !important; border-color: #d8a18e !important; box-shadow: 0 5px 20px #0003 !important; width: 48px !important; height: 48px !important; }
-.fit-site .liquid-glass-chat-trigger .glass-button-content { color: #fff7f0 !important; text-shadow: none !important; }
-.fit-site .liquid-glass-chat-trigger canvas { opacity: .1; }
-.fit-site .liquid-glass-beacon { display: none; }
-.fit-site .liquid-glass-chat-window { z-index: 11; right: 18px; bottom: 80px; }
-.fit-site .liquid-glass-chat-container { background: #252525 !important; border-color: rgb(var(--sol-accent-rgb) / .5) !important; }
-.fit-site .liquid-glass-chat-header, .fit-site .liquid-glass-chat-body { background: #252525 !important; }
-.fit-site .liquid-glass-bot-name { font-family: var(--fit-font); font-size: 12px; }
-.fit-site .liquid-glass-avatar { background: #333; }
-.fit-site .user-bubble { background: var(--fit-salmon) !important; }
-.fit-site .bot-bubble { background: #323232 !important; border-color: #ffffff20 !important; }
-
 @media (min-width: 1600px) { .fit-hero-title { font-size: 48px; } }
 @media (max-width: 1100px) {
   .fit-menu { display: inline-flex; }

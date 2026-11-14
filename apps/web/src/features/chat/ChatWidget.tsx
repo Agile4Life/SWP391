@@ -7,7 +7,6 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
 import { LiquidGlassContainer } from '../../shared/liquid-glass/LiquidGlassContainer';
-import { glassEngine } from '../../shared/liquid-glass/LiquidGlassEngine';
 import { useDraggableWidget } from './useDraggableWidget';
 import { useI18n } from '../../shared/i18n';
 import './chat-widget.css';
@@ -55,11 +54,10 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
   const [peers, setPeers] = useState<ChatContact[]>([]);
   const trigger = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const rerenderGlass = useCallback(() => glassEngine.requestAllRender(), []);
   const {
     widgetRef, panelRef: panel, widgetStyle, panelStyle, dragging,
     onTriggerPointerDown, onPanelPointerDown, consumeDragClick,
-  } = useDraggableWidget({ open, expanded, onMove: rerenderGlass });
+  } = useDraggableWidget({ open, expanded });
   useCloseWhenOtherPanelOpens('chat', () => setOpen(false));
 
   useEffect(() => {
