@@ -3,6 +3,7 @@ import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { Select } from '../../shared/ui/Select';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as profileApi from './profileApi';
 import { getProfile, updateProfile, uploadAvatar, type Profile } from './profileApi';
 import { getCurrentUser, setCurrentUser } from '../../shared/api/client';
@@ -365,6 +366,85 @@ export function MemberProfilePage() {
               </div>
             </div>
           </div>
+
+          {isMember && (() => {
+            const kycVerified = Boolean(profile.identityVerified) || profile.kycStatus === 'APPROVED';
+            const kycStatusKey = kycVerified
+              ? 'APPROVED'
+              : profile.kycStatus === 'PENDING'
+              ? 'PENDING'
+              : profile.kycStatus === 'REJECTED'
+              ? 'REJECTED'
+              : 'UNVERIFIED';
+            const docLabel = profile.documentType === 'PASSPORT'
+              ? memberText('Hộ chiếu', 'Passport')
+              : memberText('Căn cước công dân', 'Identity card');
+            const maskedDoc = profile.citizenId
+              ? `${docLabel} • ${profile.citizenId.length > 4 ? `•••• ${profile.citizenId.slice(-4)}` : profile.citizenId}`
+              : null;
+
+            return (
+              <div
+                data-testid="member-kyc-status"
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 14,
+                  padding: '14px 20px',
+                  marginBottom: 22,
+                  borderRadius: 16,
+                  background: 'var(--portal-raised)',
+                  border: '1px solid var(--portal-border)',
+                }}
+              >
+                <div style={{ minWidth: 0, flex: '1 1 240px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>
+                      {memberText('Định danh hội viên', 'Identity verification')}
+                    </span>
+                    {kycStatusKey === 'APPROVED' && (
+                      <span className="badge badge-success">{memberText('Đã xác minh', 'Verified')}</span>
+                    )}
+                    {kycStatusKey === 'PENDING' && (
+                      <span className="badge badge-warning">{memberText('Đang chờ lễ tân duyệt', 'Awaiting review')}</span>
+                    )}
+                    {kycStatusKey === 'REJECTED' && (
+                      <span className="badge badge-danger">{memberText('Cần bổ sung lại', 'Resubmission required')}</span>
+                    )}
+                    {kycStatusKey === 'UNVERIFIED' && (
+                      <span className="badge badge-outline">{memberText('Chưa xác minh', 'Not verified')}</span>
+                    )}
+                  </div>
+                  <p className="row-card__meta" style={{ margin: '6px 0 0', fontSize: 13 }}>
+                    {kycStatusKey === 'APPROVED'
+                      ? maskedDoc
+                        ? `${maskedDoc} — ${memberText('Hồ sơ định danh đã được duyệt.', 'Your identity document has been approved.')}`
+                        : memberText('Hồ sơ định danh đã được duyệt.', 'Your identity document has been approved.')
+                      : kycStatusKey === 'PENDING'
+                      ? memberText(
+                          'Lễ tân đang kiểm tra giấy tờ định danh của bạn.',
+                          'Front-desk staff are reviewing your identity document.',
+                        )
+                      : kycStatusKey === 'REJECTED'
+                      ? `${memberText('Hồ sơ trước bị từ chối', 'Previous submission was declined')}${profile.kycRejectReason ? `: ${profile.kycRejectReason}` : ''}.`
+                      : memberText(
+                          'Cần xác minh CCCD hoặc Hộ chiếu trước khi đăng ký gói tập đầu tiên.',
+                          'Verify your identity card or passport before registering your first membership.',
+                        )}
+                  </p>
+                </div>
+                {(kycStatusKey === 'UNVERIFIED' || kycStatusKey === 'REJECTED') && (
+                  <Link to="/member/packages/checkout" className="btn-secondary btn-sm" style={{ flexShrink: 0 }}>
+                    {kycStatusKey === 'REJECTED'
+                      ? memberText('Gửi lại hồ sơ', 'Resubmit documents')
+                      : memberText('Xác minh ngay', 'Verify now')}
+                  </Link>
+                )}
+              </div>
+            );
+          })()}
 
           <form onSubmit={handleSave}>
             <div className="grid-2">

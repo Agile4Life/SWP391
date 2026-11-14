@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { ApiError } from '../../shared/api/client';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberCalendar } from './components/MemberCalendar';
@@ -89,7 +90,26 @@ function parseCourseSchedule(
     }
   }
 
-  const totalSessions = durationWeeks * Math.max(daysPerWeek, 1);
+  const JS_DAY_TO_ENUM = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+  let totalSessions = durationWeeks * Math.max(daysPerWeek, 1);
+  if (!daysUnknown && cls?.startDate && cls?.endDate) {
+    const [sy, sm, sd] = cls.startDate.split('-').map(Number);
+    const [ey, em, ed] = cls.endDate.split('-').map(Number);
+    const cursor = new Date(sy, (sm || 1) - 1, sd || 1);
+    const endDt = new Date(ey, (em || 1) - 1, ed || 1);
+    if (!isNaN(cursor.getTime()) && !isNaN(endDt.getTime()) && endDt >= cursor) {
+      const daySpan = Math.round((endDt.getTime() - cursor.getTime()) / 86400000);
+      if (daySpan <= 400) {
+        const daySet = new Set(recurringDaysArr);
+        let exactCount = 0;
+        while (cursor <= endDt) {
+          if (daySet.has(JS_DAY_TO_ENUM[cursor.getDay()])) exactCount += 1;
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        if (exactCount > 0) totalSessions = exactCount;
+      }
+    }
+  }
 
   const DAY_LABELS: Record<string, string> = {
     MONDAY: memberText('Thứ 2', 'Mon'),
@@ -343,6 +363,7 @@ function tabFromQuery(value: string | null): ClassesTab {
 export function MemberClassesPage() {
   const { lang } = useLanguage();
   const text = (vi: string, en: string) => lang === 'en' ? en : vi;
+  const [confirm, confirmDialog] = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab');
   const [tab, setTab] = useState<ClassesTab>(() => tabFromQuery(rawTab));
@@ -509,6 +530,33 @@ export function MemberClassesPage() {
     }
   }
 
+  async function handleCardEnrollCourse(courseItem: GymClassDto, sched: CourseScheduleInfo, totalCourseSessions: number) {
+    if (busyRef.current) return;
+    const quotaNoteVi = quota?.unlimited
+      ? `Quyền lợi gói ${quota.tier?.toUpperCase() || 'hiện tại'}: miễn phí không giới hạn.`
+      : `Dùng 1 lượt khóa học miễn phí trong gói (còn ${quota?.remainingCredits ?? 0}/${quota?.totalCredits ?? 0} lượt).`;
+    const quotaNoteEn = quota?.unlimited
+      ? `${quota.tier?.toUpperCase() || 'Current'} plan benefit: unlimited free courses.`
+      : `Uses 1 free course credit from your plan (${quota?.remainingCredits ?? 0}/${quota?.totalCredits ?? 0} remaining).`;
+    const dateRangeVi = sched.endDateFormatted
+      ? `${sched.startDateFormatted} – ${sched.endDateFormatted}`
+      : `từ ${sched.startDateFormatted}`;
+    const dateRangeEn = sched.endDateFormatted
+      ? `${sched.startDateFormatted} – ${sched.endDateFormatted}`
+      : `from ${sched.startDateFormatted}`;
+    const confirmed = await confirm({
+      title: { vi: `Đăng ký khóa "${courseItem.name}"?`, en: `Enroll in "${courseItem.name}"?` },
+      message: {
+        vi: `Lịch học: ${sched.daysText} (${sched.timeRange}), ${dateRangeVi} (${totalCourseSessions} buổi trọn gói). ${quotaNoteVi}`,
+        en: `Schedule: ${sched.daysText} (${sched.timeRange}), ${dateRangeEn} (${totalCourseSessions} sessions). ${quotaNoteEn}`,
+      },
+      confirmLabel: { vi: 'Xác nhận đăng ký', en: 'Confirm enrollment' },
+      cancelLabel: { vi: 'Để sau', en: 'Not now' },
+    });
+    if (!confirmed) return;
+    await handleEnrollCourse(courseItem.id, courseItem.name);
+  }
+
   async function handleConfirmCourseCheckout() {
     if (!courseCheckoutTarget || isCheckingOut) return;
     setIsCheckingOut(true);
@@ -567,6 +615,7 @@ export function MemberClassesPage() {
 
   return (
     <div data-i18n-managed className="portal-container member-classes">
+      {confirmDialog}
       <div data-i18n-managed><PageHeader
         title={text("Lịch học & đặt chỗ", 'Classes & bookings')}
       /></div>
@@ -737,6 +786,7 @@ export function MemberClassesPage() {
               visibleCourses.map((c) => {
                 const sched = parseCourseSchedule(c);
                 const myEnrollment = activeEnrollments.find((e) => e.classId === c.id);
+                const totalCourseSessions = myEnrollment?.totalSessions ?? sched.totalSessions;
                 const isEnrolled = !!myEnrollment;
                 const started = courseStarted(c);
                 const isBusy = busyKey === `course-${c.id}` || (myEnrollment ? busyKey === `enroll-${myEnrollment.id}` : false);
@@ -766,7 +816,7 @@ export function MemberClassesPage() {
                       <h3 className="row-card__title" style={{ fontSize: '1.2rem', marginBottom: 6 }}>{c.name}</h3>
                       <div className="row-card__meta row-card__meta--inline" style={{ marginBottom: 6 }}>
                         <span><strong>{memberText("Lịch học: ", "Schedule: ")}</strong>{sched.daysText} ({sched.timeRange})</span>
-                        <span><strong>{memberText("Tổng số: ", "Total: ")}</strong>{memberText(`${sched.totalSessions} buổi trọn gói`, `${sched.totalSessions} sessions`)}</span>
+                        <span><strong>{memberText("Tổng số: ", "Total: ")}</strong>{memberText(`${totalCourseSessions} buổi trọn gói`, `${totalCourseSessions} sessions`)}</span>
                       </div>
                       <div className="row-card__meta row-card__meta--inline" style={{ marginBottom: 6 }}>
                         <span>{memberText("Khai giảng: ", "Starts: ")}<strong>{sched.startDateFormatted}</strong></span>
@@ -837,7 +887,7 @@ export function MemberClassesPage() {
                             className="btn-primary btn-sm"
                             data-testid={`enroll-course-${c.id}`}
                             disabled={isBusy}
-                            onClick={() => void handleEnrollCourse(c.id, c.name)}
+                            onClick={() => void handleCardEnrollCourse(c, sched, totalCourseSessions)}
                           >
                             {isBusy ? memberText("Đang đăng ký...", "Enrolling...") : memberText("Đăng ký trọn gói", "Enroll full course")}
                           </button>

@@ -241,6 +241,7 @@ export function MemberCardPage() {
     };
   }, []);
 
+  const frozen = history.find((item) => item.status === 'frozen');
   const expired = history
     .filter((item) => validDate(item.startDate) && validDate(item.endDate) &&
       (item.status === 'expired' || (item.status === 'active' && cardStatus(item.status, item.endDate) === 'expired')))
@@ -269,7 +270,37 @@ export function MemberCardPage() {
           <button type="button" className="btn-secondary" onClick={() => void loadCard()}>{memberText("Thử lại")}</button>
         </div>
       )}
-      {!loading && !error && !subscription && pending && (
+      {!loading && !error && !subscription && frozen && (
+        <EmptyState
+          icon="card"
+          title={memberText(
+            `Gói tập đang tạm bảo lưu: ${frozen.packageName}`,
+            `Membership is paused: ${frozen.packageName}`,
+          )}
+          description={
+            validDate(frozen.endDate)
+              ? memberText(
+                  `Thời hạn gói hiện đến ${displayDate(frozen.endDate)}. Mã QR check-in tạm khóa trong thời gian bảo lưu — bạn có thể mở lại gói tập bất cứ lúc nào.`,
+                  `Current period runs through ${displayDate(frozen.endDate)}. Your check-in QR code is paused during the hold — you can resume your membership anytime.`,
+                )
+              : memberText(
+                  'Mã QR check-in tạm khóa trong thời gian bảo lưu — bạn có thể mở lại gói tập bất cứ lúc nào.',
+                  'Your check-in QR code is paused during the hold — you can resume your membership anytime.',
+                )
+          }
+          actions={
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Link className="btn-primary" to="/member/packages">
+                {memberText('Quản lý / Mở lại gói tập', 'Manage / Resume membership')}
+              </Link>
+              <Link className="btn-secondary" to="/member/hold">
+                {memberText('Xem chi tiết bảo lưu', 'View hold details')}
+              </Link>
+            </div>
+          }
+        />
+      )}
+      {!loading && !error && !subscription && !frozen && pending && (
         <div className="portal-card" style={{ maxWidth: 620 }}>
           <div className="meta-label">{memberText("Trạng thái thẻ")}</div>
           <h3 className="portal-card-title" style={{ marginTop: 8 }}>{memberText("Đang chờ thanh toán: ")}{pending.packageName}</h3>
@@ -281,13 +312,13 @@ export function MemberCardPage() {
           </div>
         </div>
       )}
-      {!loading && !error && !subscription && expired && profile && (
+      {!loading && !error && !subscription && !frozen && expired && profile && (
         <>
           <MemberCard profile={profile} subscription={{ ...expired, status: 'expired', qrCode: null }} />
           <p style={{ marginTop: 14 }}>{memberText("Gói tập đã hết hạn. ")}<Link to="/member/packages">{memberText("Xem gói tập để gia hạn")}</Link></p>
         </>
       )}
-      {!loading && !error && !subscription && history.length > 0 && !expired && !pending && (
+      {!loading && !error && !subscription && history.length > 0 && !frozen && !expired && !pending && (
         <EmptyState icon="card" title={memberText("Bạn không còn gói tập hiệu lực")}
           description={memberText("Đăng ký gói mới để dùng lại thẻ hội viên và mã QR check-in.")}
           actions={<Link className="btn-primary" to="/member/packages">{memberText("Xem gói tập")}</Link>} />

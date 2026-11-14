@@ -18,6 +18,13 @@ vi.mock('./trialApi', () => ({
   trialApi: trialApiMock,
 }));
 
+const profileApiMock = vi.hoisted(() => ({
+  getProfile: vi.fn(),
+}));
+vi.mock('./profileApi', () => ({
+  getProfile: profileApiMock.getProfile,
+}));
+
 const realtime = vi.hoisted(() => ({ subscribe: vi.fn(), changed: () => {}, cleanup: vi.fn() }));
 vi.mock('./membershipRealtime', () => ({ subscribeMembershipChanges: realtime.subscribe }));
 
@@ -90,6 +97,7 @@ describe('SCRUM-86 packages', () => {
     realtime.cleanup.mockClear();
     trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
     trialApiMock.claim.mockResolvedValue({ id: 1, memberId: 1, cccd: '001200001234', fullName: 'Nguyen Van A', grantedDays: 3, tier: 'GOLD', claimedAt: '2026-10-16T10:00:00' });
+    profileApiMock.getProfile.mockReset().mockResolvedValue(null);
     api.packages.mockResolvedValue([membershipPackage]);
     api.current.mockResolvedValue(null);
     api.history.mockResolvedValue([]);
@@ -958,6 +966,45 @@ describe('SCRUM-86 packages', () => {
     api.payments.mockResolvedValue([{ ...payment, method: 'online_wallet', status: 'pending', vnpayPending: true }]);
     await render();
     expect(host.textContent).toContain('VNPay đang chờ xác nhận giao dịch');
+  });
+
+  it('shows first-time KYC notice and skips payment confirm modal when unverified profile clicks register', async () => {
+    profileApiMock.getProfile.mockResolvedValue({
+      userId: 10,
+      fullName: 'Lan',
+      identityVerified: false,
+      kycStatus: null,
+    });
+    await render();
+    expect(host.querySelector('[data-testid="first-time-kyc-notice"]')?.textContent).toContain('Chưa xác minh');
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    expect(api.create).not.toHaveBeenCalled();
+    expect(button('Gửi yêu cầu')).toBeUndefined();
+  });
+
+  it('includes prorated deduction breakdown in upgrade confirmation dialog', async () => {
+    const futureEnd = new Date(Date.now() + 45 * 86400000).toLocaleDateString('en-CA');
+    const pastStart = new Date(Date.now() - 45 * 86400000).toLocaleDateString('en-CA');
+    const currentSub = {
+      ...pending,
+      id: 21,
+      packageId: membershipPackage.id,
+      packageName: membershipPackage.name,
+      startDate: pastStart,
+      endDate: futureEnd,
+      status: 'active',
+      remainingValue: 250000,
+    };
+    api.packages.mockResolvedValue([membershipPackage, higherPackage]);
+    api.current.mockResolvedValue(currentSub);
+    api.history.mockResolvedValue([currentSub]);
+    await render();
+
+    await act(async () => button('Nâng cấp gói')?.click());
+    const dialogText = host.querySelector('dialog')?.textContent ?? '';
+    expect(dialogText).toContain('giá gói mới');
+    expect(dialogText).toContain('đã trừ');
+    expect(dialogText).toContain(formatPrice(higherPackage.price));
   });
 
 });

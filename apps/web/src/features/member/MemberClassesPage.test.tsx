@@ -203,7 +203,10 @@ describe('MemberClassesPage', () => {
     mocks.enroll.mockReturnValue(new Promise((done) => { finish = done; }));
     await render();
     const enroll = host.querySelector<HTMLButtonElement>('[data-testid="enroll-course-3"]')!;
-    await act(async () => { enroll.click(); enroll.click(); });
+    await act(async () => { enroll.click(); });
+    expect(mocks.enroll).not.toHaveBeenCalled();
+    expect(host.querySelector('dialog')?.textContent).toContain('Đăng ký khóa "Yoga Flow"?');
+    await clickText('Xác nhận đăng ký');
     expect(mocks.enroll).toHaveBeenCalledExactlyOnceWith(3);
     expect(enroll.disabled).toBe(true);
     await act(async () => finish({ id: 41 }));
@@ -214,12 +217,22 @@ describe('MemberClassesPage', () => {
     expect(mocks.cancelEnrollment).toHaveBeenCalledWith(41);
   });
 
+  it('counts exact inclusive recurring sessions so card total matches enrolled session progress', async () => {
+    mocks.quota.mockResolvedValue(silverQuota);
+    mocks.classes.mockResolvedValue([
+      { ...course, id: 12, startDate: '2099-11-02', endDate: '2099-11-30', recurringDays: 'MONDAY,WEDNESDAY,FRIDAY' },
+    ]);
+    await render();
+    expect(host.textContent).toContain('13 buổi trọn gói');
+  });
+
   it('reports a rejected enrollment as a centred toast instead of an inline banner', async () => {
     mocks.quota.mockResolvedValue(silverQuota);
     mocks.classes.mockResolvedValue([course]);
     mocks.enroll.mockRejectedValue(new ApiError('Hội viên đã có chỗ trong lớp học này.', 400));
     await render();
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="enroll-course-3"]')!.click());
+    await clickText('Xác nhận đăng ký');
     expect(document.querySelector('dialog.sol-toast--error')?.textContent).toContain('Hội viên đã có chỗ trong lớp học này.');
     expect(host.textContent).not.toContain('Hội viên đã có chỗ trong lớp học này.');
   });

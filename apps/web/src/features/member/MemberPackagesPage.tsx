@@ -35,6 +35,7 @@ import {
 import { localizableError } from '../../shared/lib/errorMessage';
 import { cancelVnpayTarget } from '../payments/vnpaySession';
 import { trialApi, type TrialStatus } from './trialApi';
+import { getProfile, type Profile } from './profileApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
 type LoadState<T> =
@@ -124,6 +125,7 @@ export function MemberPackagesPage() {
 
   // Bảo lưu gói tập modal state
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
+  const [kycProfile, setKycProfile] = useState<Profile | null>(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
   const [trialDocType, setTrialDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
   const [trialDocumentNumber, setTrialDocumentNumber] = useState('');
@@ -143,9 +145,19 @@ export function MemberPackagesPage() {
     }
   }, []);
 
+  const loadKycProfile = useCallback(async () => {
+    try {
+      const res = await getProfile();
+      if (res && typeof res === 'object') setKycProfile(res);
+    } catch {
+      // Ignore background profile check failure
+    }
+  }, []);
+
   useEffect(() => {
     void loadTrialStatus();
-  }, [loadTrialStatus]);
+    void loadKycProfile();
+  }, [loadTrialStatus, loadKycProfile]);
 
   const handleTrialImageUpload = (file: File, target: 'front' | 'back') => {
     if (file.size > 5 * 1024 * 1024) {
@@ -429,6 +441,7 @@ export function MemberPackagesPage() {
         setPaymentsState({ status: 'success', data: payments });
         setCancellationsState({ status: 'success', data: cancellations });
         void loadTrialStatus();
+        void loadKycProfile();
         createdSubscriptions.current = [];
         setSyncError(false);
         setReturnSyncing(false);
@@ -483,7 +496,7 @@ export function MemberPackagesPage() {
       window.removeEventListener('vnpay-attempt-released', onRefresh);
       document.removeEventListener('visibilitychange', onRefresh);
     };
-  }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId, loadTrialStatus]);
+  }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId, loadTrialStatus, loadKycProfile]);
 
   useEffect(() => {
     if (syncError) {
@@ -530,17 +543,40 @@ export function MemberPackagesPage() {
       return;
     }
 
+    const hasPriorConfirmed = historyState.data.some(
+      (item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen',
+    );
+    const requiresFirstTimeKyc = Boolean(
+      !upgradeFrom &&
+      !renewFrom &&
+      kycProfile &&
+      kycProfile.identityVerified === false &&
+      !current &&
+      !hasPriorConfirmed,
+    );
+    if (requiresFirstTimeKyc) {
+      navigate(`/member/packages/checkout?packageId=${membershipPackage.id}`);
+      return;
+    }
+
     // One click used to create the request straight away; let the member check plan and amount first.
-    const amount = (upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey())?.amount : null) ?? membershipPackage.price;
+    const quote = upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey()) : null;
+    const amount = quote?.amount ?? membershipPackage.price;
     const actionLabel = upgradeFrom
       ? { vi: 'Nâng cấp lên', en: 'Upgrade to' }
       : renewFrom ? { vi: 'Gia hạn', en: 'Renew' } : { vi: 'Đăng ký', en: 'Register' };
+    const confirmMessage = upgradeFrom && quote && quote.credit > 0
+      ? {
+          vi: `Số tiền cần thanh toán: ${formatPrice(amount)} (giá gói mới ${formatPrice(membershipPackage.price)}, đã trừ ${formatPrice(quote.credit)} từ ${quote.remainingDays}/${quote.totalDays} ngày còn lại của gói hiện tại). Yêu cầu sẽ chờ bạn thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.`,
+          en: `Amount to pay: ${formatPrice(amount)} (new plan ${formatPrice(membershipPackage.price)}, less ${formatPrice(quote.credit)} credit for ${quote.remainingDays}/${quote.totalDays} unused days on your current plan). The request waits for your payment by VNPay, SÖL Wallet or at the front desk.`,
+        }
+      : {
+          vi: `Số tiền cần thanh toán: ${formatPrice(amount)}. Yêu cầu sẽ chờ bạn thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.`,
+          en: `Amount to pay: ${formatPrice(amount)}. The request waits for your payment by VNPay, SÖL Wallet or at the front desk.`,
+        };
     const confirmed = await confirm({
       title: { vi: `${actionLabel.vi} ${membershipPackage.name}?`, en: `${actionLabel.en} ${membershipPackage.name}?` },
-      message: {
-        vi: `Số tiền cần thanh toán: ${formatPrice(amount)}. Yêu cầu sẽ chờ bạn thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.`,
-        en: `Amount to pay: ${formatPrice(amount)}. The request waits for your payment by VNPay, SÖL Wallet or at the front desk.`,
-      },
+      message: confirmMessage,
       confirmLabel: { vi: 'Gửi yêu cầu', en: 'Send request' },
       cancelLabel: { vi: 'Để sau', en: 'Not now' },
     });
@@ -652,6 +688,16 @@ export function MemberPackagesPage() {
     current ||
     (historyState.status === 'success' && historyState.data.length > 0) ||
     trialStatus?.alreadyClaimed
+  );
+  const hasPriorConfirmedSubscription = historyState.status === 'success' && historyState.data.some(
+    (item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen',
+  );
+  const showFirstTimeKycNotice = Boolean(
+    kycProfile &&
+    kycProfile.identityVerified === false &&
+    !current &&
+    !pending &&
+    !hasPriorConfirmedSubscription,
   );
 
   return (
@@ -785,6 +831,48 @@ export function MemberPackagesPage() {
               }}
             >
               {t(" Nộp lại đơn ", "Resubmit application")}</button>
+          </div>
+        </section>
+      )}
+
+      {showFirstTimeKycNotice && (
+        <section
+          data-testid="first-time-kyc-notice"
+          className="portal-card"
+          style={{
+            marginBottom: 16,
+            padding: '14px 20px',
+            background: 'var(--portal-raised)',
+            border: '1px solid var(--portal-border)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{t('Định danh gói tập đầu tiên', 'First-time membership verification')}</span>
+                <span className={`badge ${kycProfile?.kycStatus === 'PENDING' ? 'badge-warning' : kycProfile?.kycStatus === 'REJECTED' ? 'badge-danger' : 'badge-outline'}`}>
+                  {kycProfile?.kycStatus === 'PENDING'
+                    ? t('Đang chờ lễ tân duyệt', 'Awaiting review')
+                    : kycProfile?.kycStatus === 'REJECTED'
+                    ? t('Cần bổ sung lại', 'Resubmission required')
+                    : t('Chưa xác minh', 'Not verified')}
+                </span>
+              </div>
+              <p className="row-card__meta" style={{ margin: '6px 0 0' }}>
+                {kycProfile?.kycStatus === 'PENDING'
+                  ? t('Hồ sơ CCCD / Hộ chiếu đang chờ lễ tân duyệt. Bạn có thể chọn gói bên dưới để theo dõi kết quả xác minh.', 'Your identity card / passport is awaiting front-desk review. Select a plan below to check your verification status.')
+                  : kycProfile?.kycStatus === 'REJECTED'
+                  ? t('Hồ sơ trước cần bổ sung lại. Chọn gói bên dưới hoặc gửi lại giấy tờ để tiếp tục đăng ký.', 'Your previous submission needs to be updated. Select a plan below or resubmit your documents.')
+                  : t('Khi bấm đăng ký gói lần đầu, hệ thống sẽ chuyển sang bước xác minh CCCD / Hộ chiếu trước khi thanh toán.', 'When registering your first plan, you will verify your identity card / passport first before payment.')}
+              </p>
+            </div>
+            <Link to="/member/packages/checkout" className="btn-secondary btn-sm">
+              {kycProfile?.kycStatus === 'PENDING'
+                ? t('Xem trạng thái duyệt', 'Check review status')
+                : kycProfile?.kycStatus === 'REJECTED'
+                ? t('Gửi lại hồ sơ', 'Resubmit documents')
+                : t('Xác minh trước', 'Verify in advance')}
+            </Link>
           </div>
         </section>
       )}

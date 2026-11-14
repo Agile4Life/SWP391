@@ -311,6 +311,19 @@ describe('MemberCardPage', () => {
     expect(host.textContent).toContain('Sao chép mã QR động');
     expect(vi.mocked(QRCode.toDataURL)).toHaveBeenCalledWith('DYN:1:1:1234567890:abcd', expect.anything());
   });
+
+  it('shows paused membership state instead of no-active-membership message when subscription is frozen', async () => {
+    vi.mocked(getMySubscription).mockResolvedValue(null);
+    vi.mocked(getMembershipHistory).mockResolvedValue([
+      { ...subscription, id: 7, status: 'frozen', endDate: '2026-11-20', qrCode: null } as never,
+      { ...subscription, id: 2, status: 'expired', endDate: '2026-06-01', qrCode: null } as never,
+    ]);
+    await renderPage();
+    expect(host.textContent).toContain('Gói tập đang tạm bảo lưu: SÖL Gold');
+    expect(host.textContent).toContain('20/11/2026');
+    expect(host.textContent).not.toContain('Bạn không còn gói tập hiệu lực');
+    expect(host.textContent).not.toContain('Gói tập đã hết hạn.');
+  });
 });
 
 it('switches the mounted card, accessibility labels, and local load error without translating member data', async () => {

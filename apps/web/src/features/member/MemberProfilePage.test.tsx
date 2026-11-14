@@ -372,4 +372,23 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
 
     expect(mockApi.changePassword).toHaveBeenCalledWith('OldPass123', 'NewPass456');
   });
+
+  it('displays member KYC verification status inside the single profile card', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' })
+    );
+    mockApi.getProfile.mockResolvedValue({ ...sampleProfile, identityVerified: false, kycStatus: null });
+    await renderPage();
+
+    expect(host.querySelectorAll('.portal-card')).toHaveLength(1);
+    const kycBox = host.querySelector('[data-testid="member-kyc-status"]');
+    expect(kycBox).not.toBeNull();
+    expect(kycBox?.textContent).toContain('Chưa xác minh');
+    expect(kycBox?.querySelector('a')?.getAttribute('href')).toBe('/member/packages/checkout');
+
+    await act(async () => setLanguage('en'));
+    expect(kycBox?.textContent).toContain('Identity verification');
+    expect(kycBox?.textContent).toContain('Not verified');
+  });
 });
