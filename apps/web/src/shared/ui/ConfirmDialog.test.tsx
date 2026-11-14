@@ -39,18 +39,26 @@ it('resolves false when cancelled', async () => {
   await expect(result).resolves.toBe(false);
 });
 
-it('shows a centered modal notice described by its message and closes it with Escape or the Close button', () => {
+it('shows a non-blocking live notice described by its message without stealing focus and closes it with Escape or Close button', () => {
+  const input = document.createElement('input');
+  document.body.append(input);
+  input.focus();
+
   toast('Đã lưu.', 'success');
   const el = document.querySelector('dialog.sol-toast')!;
-  expect(el.getAttribute('role')).toBe('dialog');
-  expect(el.getAttribute('aria-modal')).toBe('true');
+  expect(el.getAttribute('role')).toBe('status');
+  expect(el.getAttribute('aria-live')).toBe('polite');
+  expect(el.hasAttribute('aria-modal')).toBe(false);
+  expect(document.activeElement).toBe(input);
   expect(document.getElementById(el.getAttribute('aria-describedby')!)?.textContent).toBe('Đã lưu.');
-  el.dispatchEvent(new Event('cancel', { cancelable: true }));
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   expect(document.querySelector('.sol-toast')).toBeNull();
 
   toast('Không lưu được.', 'error');
   const error = document.querySelector('dialog.sol-toast')!;
-  expect(error.getAttribute('role')).toBe('alertdialog');
+  expect(error.getAttribute('role')).toBe('alert');
+  expect(error.getAttribute('aria-live')).toBe('assertive');
   error.querySelector<HTMLButtonElement>('.sol-toast__close')!.click();
   expect(document.querySelector('.sol-toast')).toBeNull();
+  input.remove();
 });

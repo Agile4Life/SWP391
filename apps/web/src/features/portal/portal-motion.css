@@ -14,29 +14,31 @@
   }
 
   .portal-v2 .portal-reveal-ready.is-visible {
-    animation: portal-reveal 460ms var(--portal-motion-ease) var(--portal-reveal-delay, 0ms) backwards;
+    --portal-reveal-shift: 6px;
+    animation: portal-reveal 200ms var(--portal-motion-ease) var(--portal-reveal-delay, 0ms) backwards;
   }
 
   .portal-v2 .portal-reveal-ready[data-reveal-direction='up'] {
-    --portal-reveal-shift: -14px;
+    --portal-reveal-shift: -6px;
   }
 
   .portal-v2 :is(.portal-header, .portal-tabs, [data-reveal='soft']).portal-reveal-ready {
-    --portal-reveal-shift: 8px;
+    --portal-reveal-shift: 4px;
   }
 
   .portal-v2 :is(.portal-header, .portal-tabs, [data-reveal='soft']).portal-reveal-ready[data-reveal-direction='up'] {
-    --portal-reveal-shift: -8px;
+    --portal-reveal-shift: -4px;
   }
 
-  /* Phần nhỏ bên trong khối (tiêu đề, dòng thông tin, nhãn, nút…): nối tiếp sau khối cha, lệch 45ms. */
+  /* Phần nhỏ bên trong khối (tiêu đề, dòng thông tin, nhãn, nút…): xuất hiện gọn, tránh lệch nhịp kéo dài. */
   .portal-v2 .portal-reveal-ready.is-visible [data-reveal-part] {
-    animation: portal-part-in 420ms var(--portal-motion-ease)
-      calc(var(--portal-reveal-delay, 0ms) + 90ms + var(--portal-part, 0) * 45ms) backwards;
+    --portal-part-shift: 4px;
+    animation: portal-part-in 160ms var(--portal-motion-ease)
+      calc(var(--portal-reveal-delay, 0ms) + 16ms + min(var(--portal-part, 0), 3) * 14ms) backwards;
   }
 
   .portal-v2 .portal-reveal-ready[data-reveal-direction='up'] [data-reveal-part] {
-    --portal-part-shift: -8px;
+    --portal-part-shift: -4px;
   }
 
   /* Hàng bảng hiện lệch nhịp khi bảng vừa có dữ liệu; chỉ opacity để không ảnh hưởng layout bảng. */

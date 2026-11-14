@@ -8,12 +8,10 @@
   to { --sol-button-glow-angle: 360deg; }
 }
 
-/* Keep the light on the edge: the masked center never washes over a label. */
+/* Keep the light on the edge: static subtle rim at rest in Portal; animate orbit on hover/focus or public hero CTAs. */
 @media (prefers-reduced-motion: no-preference) {
   :where(:root:not([data-theme='light'])) :where(
     .portal-v2 .btn-primary,
-    .portal-v2 .btn-danger,
-    .portal-v2 .filter-chip.is-active,
     .fit-auth .luxury-login-submit-btn,
     .fit-auth .btn-primary,
     .fit-site .fit-round-arrow:not(:where(.fit-plan-featured *))
@@ -42,21 +40,23 @@
       mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
-      opacity: .65;
-      /* Constant rotation avoids a visible speed change at the loop boundary. */
-      animation: sol-button-glow-orbit 7.2s linear infinite;
+      opacity: .35;
       transition: opacity 200ms cubic-bezier(.22, 1, .36, 1);
     }
 
-    &:is(:hover, :focus-visible)::after { opacity: 1; }
+    &:is(:hover, :focus-visible)::after {
+      opacity: 1;
+      animation: sol-button-glow-orbit 4s linear infinite;
+    }
   }
 
-  :root:not([data-theme='light']) .portal-v2 .btn-danger {
-    --sol-button-glow-tone: var(--portal-danger);
+  :where(:root:not([data-theme='light'])) .fit-site .fit-round-arrow:not(:where(.fit-plan-featured *))::after {
+    opacity: .65;
+    animation: sol-button-glow-orbit 7.2s linear infinite;
   }
 
   :root:not([data-theme='light']) :is(
-    .portal-v2 :is(.btn-primary, .btn-danger, .filter-chip.is-active),
+    .portal-v2 :is(.btn-primary, .btn-danger),
     .fit-auth :is(.luxury-login-submit-btn, .btn-primary)
   ):not(:disabled):not([aria-disabled='true']):active {
     transform: translateY(0) scale(.98);

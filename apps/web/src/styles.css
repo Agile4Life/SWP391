@@ -431,51 +431,44 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
 }
 
 /* ==========================================================================
-   THÔNG BÁO GIỮA MÀN HÌNH — .sol-toast (<dialog> showModal: hộp vuông ở tâm, nền mờ)
+   THÔNG BÁO NỔI GÓC TRÊN PHẢI — .sol-toast (<dialog> không chặn trang, không cướp focus)
    ========================================================================== */
 dialog.sol-toast {
   position: fixed;
-  inset: 0;
-  margin: auto;
-  width: min(340px, calc(100vw - 32px));
+  inset: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) auto auto;
+  margin: 0;
+  z-index: 9999;
+  width: min(400px, calc(100vw - 32px));
   max-width: none;
   height: fit-content;
-  max-height: calc(100dvh - 32px);
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   overflow: visible;
+  pointer-events: auto;
 }
-
-dialog.sol-toast::backdrop {
-  background: rgba(12, 11, 10, 0.58);
-  backdrop-filter: blur(6px) saturate(140%);
-  -webkit-backdrop-filter: blur(6px) saturate(140%);
-}
-
-:root[data-theme='light'] dialog.sol-toast::backdrop { background: rgba(28, 25, 23, 0.38); }
 
 .sol-toast__card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 16px;
-  padding: 32px 28px 24px;
-  border-radius: 22px;
-  text-align: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  text-align: left;
   background: var(--portal-surface, #262524);
   color: var(--portal-paper, #FAF9F6);
   border: 1px solid var(--portal-border-strong, rgba(255, 255, 255, 0.16));
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
-  animation: toast-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+  animation: toast-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 :root[data-theme='light'] .sol-toast__card {
   background: #FFFFFF;
   color: #202020;
   border-color: #E4E2DE;
-  box-shadow: 0 30px 90px rgba(28, 25, 23, 0.22);
+  box-shadow: 0 18px 44px rgba(28, 25, 23, 0.14);
 }
 
 .sol-toast__icon {
@@ -483,8 +476,8 @@ dialog.sol-toast::backdrop {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 64px;
-  height: 64px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   color: var(--portal-success, #22C55E);
   background: color-mix(in srgb, var(--portal-success, #22C55E) 16%, transparent);
@@ -501,35 +494,46 @@ dialog.sol-toast::backdrop {
 :root[data-theme='light'] .sol-toast--error .sol-toast__icon { color: #B91C1C; }
 
 .sol-toast__message {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 1rem;
+  font-size: var(--text-base, 0.875rem);
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.45;
   color: inherit;
   overflow-wrap: anywhere;
 }
 
 .sol-toast__close {
-  min-width: 120px;
-  min-height: 44px;
-  margin-top: 4px;
-  padding: 10px 28px;
-  border: 0;
-  border-radius: 9999px;
-  background: var(--sol-accent);
-  color: var(--sol-on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--portal-muted, #9a948e);
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
-  transition: background-color 160ms ease, transform 160ms ease;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
-.sol-toast__close:hover { background: var(--sol-accent-hover); }
-.sol-toast__close:active { transform: scale(0.98); }
-.sol-toast__close:focus-visible { outline: 2px solid var(--sol-accent-text); outline-offset: 3px; }
+.sol-toast__close:hover {
+  background: var(--portal-raised, rgba(255, 255, 255, 0.08));
+  color: var(--portal-paper, #FAF9F6);
+}
+:root[data-theme='light'] .sol-toast__close:hover {
+  background: #eeefec;
+  color: #202020;
+}
+.sol-toast__close:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 2px; }
 
 .portal-dialog::backdrop,
 .portal-v2 .portal-dialog::backdrop {
