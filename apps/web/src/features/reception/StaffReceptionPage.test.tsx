@@ -7,7 +7,7 @@ import { getCurrentUser } from '../../shared/api/client';
 import { checkinApi } from './checkinApi';
 
 const api = vi.hoisted(() => ({
-  lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), getPendingHoldRequests: vi.fn(),
+  lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), cancelPendingSubscription: vi.fn(), getPendingHoldRequests: vi.fn(),
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
   getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
@@ -299,4 +299,26 @@ it('offers only renewal, not a second new package, while the member still has a 
   expect(values).toContain('renew:5');
   expect(values.some((value) => value.startsWith('buy:'))).toBe(false);
   expect(host.querySelector('[data-testid="reception-renew-only-hint"]')).not.toBeNull();
+});
+
+it('asks confirmation before cancelling a pending membership request at the desk', async () => {
+  const pendingItem = {
+    id: 77, memberId: 10, membershipCode: 'MB-10', memberName: 'An',
+    memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30,
+    packagePrice: 200000, startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01',
+  };
+  api.getPendingSubscriptions.mockResolvedValueOnce([pendingItem]).mockResolvedValue([]);
+  api.cancelPendingSubscription.mockResolvedValue(undefined);
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Hủy yêu cầu')!;
+  expect(cancelBtn.style.whiteSpace).toBe('nowrap');
+
+  await act(async () => cancelBtn.click());
+  expect(api.cancelPendingSubscription).not.toHaveBeenCalled();
+
+  const dialogConfirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Hủy yêu cầu')!;
+  expect(dialogConfirmBtn).toBeDefined();
+  await act(async () => dialogConfirmBtn.click());
+  expect(api.cancelPendingSubscription).toHaveBeenCalledWith(77);
 });

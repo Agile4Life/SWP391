@@ -24,7 +24,7 @@ describe('KycReviewPage', () => {
   async function render() { await act(async () => root.render(<KycReviewPage />)); }
   const button = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent === label)!;
 
-  it('shows the readable number and both photos and approves a submission', async () => {
+  it('shows the readable number and both photos and confirms before approving a submission', async () => {
     mocks.list.mockResolvedValue([submission]);
     mocks.approve.mockResolvedValue(null);
     await render();
@@ -32,6 +32,12 @@ describe('KycReviewPage', () => {
     expect(card.textContent).toContain('012345678901');
     expect(card.querySelectorAll('img')).toHaveLength(2);
     await act(async () => button('Duyệt').click());
+    expect(mocks.approve).not.toHaveBeenCalled();
+    expect(host.querySelector('dialog')?.textContent).toContain('012345678901');
+    await act(async () => button('Kiểm tra lại').click());
+    expect(mocks.approve).not.toHaveBeenCalled();
+    await act(async () => button('Duyệt').click());
+    await act(async () => button('Xác nhận duyệt').click());
     expect(mocks.approve).toHaveBeenCalledWith(10);
     expect(mocks.list).toHaveBeenCalledTimes(2);
   });

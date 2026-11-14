@@ -352,9 +352,20 @@
 
 .plan-step-nav {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
+}
+
+.plan-review .form-actions {
+  justify-content: flex-start;
+}
+
+@media (max-width: 767px) {
+  .plan-step-nav {
+    justify-content: space-between;
+  }
 }
 
 .plan-review__days { display: grid; gap: 8px; margin: 16px 0 8px; }

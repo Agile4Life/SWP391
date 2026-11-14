@@ -1,6 +1,7 @@
 import { memberText } from '../member/memberI18n';
+import { useI18n } from '../../shared/i18n';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
   TIMETABLE_HOURS,
   addDays,
@@ -98,6 +99,7 @@ export function WeeklyTimetable({
   emptyLabel = 'Tuần này chưa có buổi học nào', onSlotClick, slotActionLabel = 'tạo lịch', legend, legendNote, toolbar, label,
 }: WeeklyTimetableProps) {
   useLanguage();
+  const { t } = useI18n();
   const now = useNow();
   const today = todayISO(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -137,17 +139,47 @@ export function WeeklyTimetable({
 
   // Mở tuần: cuộn khung tới 1 giờ trước khối đang chọn, nếu không có thì trước buổi học đầu tiên của tuần.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [hasMoreBelow, setHasMoreBelow] = useState(false);
+
+  const syncScrollCue = useCallback(() => {
+    const box = scrollRef.current;
+    if (!box) {
+      setHasMoreBelow(false);
+      return;
+    }
+    setHasMoreBelow(box.scrollTop + box.clientHeight < box.scrollHeight - 8);
+  }, []);
+
   useEffect(() => {
     const box = scrollRef.current;
-    if (!box || loading || box.scrollHeight <= box.clientHeight) return;
-    const inWeek = events.filter((event) => days.includes(event.date) && isWithinRange(event));
-    const selected = inWeek.find((event) => event.id === selectedId);
-    const starts = (selected ? [selected] : inWeek).map((event) => toMinutes(event.startTime));
-    const target = starts.length > 0 ? Math.min(...starts) : firstHour * 60;
-    box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * HOUR_PX);
+    if (!box || loading) {
+      syncScrollCue();
+      return;
+    }
+    if (box.scrollHeight > box.clientHeight) {
+      const inWeek = events.filter((event) => days.includes(event.date) && isWithinRange(event));
+      const selected = inWeek.find((event) => event.id === selectedId);
+      const starts = (selected ? [selected] : inWeek).map((event) => toMinutes(event.startTime));
+      const target = starts.length > 0 ? Math.min(...starts) : firstHour * 60;
+      box.scrollTop = Math.max(0, ((target - 60 - firstHour * 60) / 60) * HOUR_PX);
+    }
+    syncScrollCue();
     // Chỉ cuộn khi đổi tuần, vừa tải xong hoặc đổi khung giờ; không cuộn lại khi dữ liệu đặt chỗ làm mới.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, loading, fullDay]);
+  }, [weekStart, loading, fullDay, syncScrollCue]);
+
+  useEffect(() => {
+    syncScrollCue();
+    const box = scrollRef.current;
+    if (!box) return;
+    window.addEventListener('resize', syncScrollCue);
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(syncScrollCue) : null;
+    observer?.observe(box);
+    return () => {
+      window.removeEventListener('resize', syncScrollCue);
+      observer?.disconnect();
+    };
+  }, [hours.length, visibleDays.length, syncScrollCue]);
 
   const firstKey = slotKey(visibleDays[0], firstHour);
   const activeKey = rovingKey && visibleDays.some((day) => rovingKey.startsWith(`${day}|`)) ? rovingKey : firstKey;
@@ -250,7 +282,8 @@ export function WeeklyTimetable({
 
       {loading && <span className="sr-only" role="status">{memberText("Đang tải thời khóa biểu...")}</span>}
 
-      <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading} ref={scrollRef}>
+      <div className={`mcal__frame${hasMoreBelow ? ' has-more-below' : ''}`}>
+        <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading} ref={scrollRef} onScroll={syncScrollCue}>
         <div
           className={`mcal__week${narrow ? ' is-single' : ''}`}
           style={{ '--mcal-hour': `${HOUR_PX}px`, '--mcal-rows': hours.length, '--mcal-days': visibleDays.length } as CSSProperties}
@@ -359,6 +392,12 @@ export function WeeklyTimetable({
           <p className="mcal__empty" role="status">
             {emptyText}.{onSlotClick ? memberText(" Bấm vào một ô giờ để tạo lịch.") : ''}
           </p>
+        )}
+        </div>
+        {hasMoreBelow && !loading && (
+          <div className="mcal__scroll-cue" data-testid="timetable-scroll-cue" aria-hidden="true">
+            <span>{t('↓ Cuộn xem thêm khung giờ', '↓ Scroll for later hours')}</span>
+          </div>
         )}
       </div>
 

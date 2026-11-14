@@ -826,6 +826,12 @@ html:root .portal-logo.portal-logo--mark {
   padding: 10px 24px 32px;
 }
 
+@media (min-width: 768px) {
+  .portal-backdrop:has(> .chat-widget) .portal-v2 .portal-container {
+    padding-bottom: 84px;
+  }
+}
+
 .portal-v2 .portal-header {
   align-items: center;
   margin-bottom: 30px;

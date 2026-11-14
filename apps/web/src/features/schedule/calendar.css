@@ -48,7 +48,27 @@
 .mcal__next-count { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--portal-salmon); }
 
 /* Lưới tuần */
-.mcal__scroll { position: relative; isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 320px)); scrollbar-width: thin; scrollbar-color: var(--portal-salmon) transparent; }
+.mcal__frame { position: relative; min-width: 0; }
+.mcal__scroll {
+  position: relative; isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 320px));
+  scrollbar-width: thin; scrollbar-color: var(--portal-salmon) transparent;
+  background:
+    linear-gradient(to bottom, var(--portal-surface) 30%, transparent) top / 100% 28px no-repeat local,
+    linear-gradient(to top, var(--portal-surface) 30%, transparent) bottom / 100% 28px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, color-mix(in srgb, var(--portal-ink) 50%, transparent), transparent) top / 100% 12px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, var(--portal-ink) 60%, transparent), transparent) bottom / 100% 14px no-repeat scroll;
+}
+.mcal__scroll-cue {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  display: flex; justify-content: center; align-items: flex-end;
+  height: 44px; padding-bottom: 6px; pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--portal-surface) 94%, transparent) 18%, transparent);
+}
+.mcal__scroll-cue span {
+  padding: 3px 11px; border: 1px solid var(--portal-border-strong); border-radius: 999px;
+  background: var(--portal-raised); color: var(--portal-muted);
+  font-size: 12px; font-weight: 700; letter-spacing: .01em;
+}
 .mcal__scroll.is-loading .mcal__week, .mcal__month.is-loading { opacity: .55; }
 .mcal__week {
   display: grid; min-width: 760px;

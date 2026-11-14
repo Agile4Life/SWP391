@@ -1,4 +1,5 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { sourceMessage } from '../../shared/i18n';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { CoachHealthMetrics } from '../coaching/CoachHealthMetrics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,6 +9,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PaymentInvoice } from './PaymentInvoice';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
@@ -27,10 +29,9 @@ import {
 } from './receptionApi';
 import { Link } from 'react-router-dom';
 
-const vnd = formatPrice;
-
 export function StaffReceptionPage() {
   const { t } = useStaffI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
   // BR-01: Chỉ RECEPTIONIST / STAFF và CENTER_MANAGER / MANAGER được truy cập
@@ -171,8 +172,8 @@ export function StaffReceptionPage() {
       setIsTopupModalOpen(false);
       notify(
         staffMessage(
-          `Đã cộng +${vnd(parsed)} vào Ví SÖL của hội viên ${selectedMember.fullName}. Số dư mới: ${vnd(newBalance)}.`,
-          `Credited +${vnd(parsed)} to ${selectedMember.fullName}'s SÖL Wallet. New balance: ${vnd(newBalance)}.`
+          `Đã cộng +${formatPrice(parsed)} vào Ví SÖL của hội viên ${selectedMember.fullName}. Số dư mới: ${formatPrice(newBalance)}.`,
+          `Credited +${formatPrice(parsed)} to ${selectedMember.fullName}'s SÖL Wallet. New balance: ${formatPrice(newBalance)}.`
         ),
         'success',
         { record: true }
@@ -373,6 +374,17 @@ export function StaffReceptionPage() {
 
   const handleCancelPendingItem = async (item: PendingSubscriptionItem) => {
     if (cancellingPendingId !== null || isSubmittingPayment) return;
+    const ok = await confirm({
+      title: sourceMessage('Hủy yêu cầu gói tập?', 'Cancel this membership request?'),
+      message: sourceMessage(
+        `Yêu cầu #${item.id} (${item.packageName}) của ${item.memberName} sẽ bị hủy, hội viên cần đăng ký lại.`,
+        `Request #${item.id} (${item.packageName}) from ${item.memberName} will be cancelled and the member has to apply again.`,
+      ),
+      confirmLabel: sourceMessage('Hủy yêu cầu', 'Cancel request'),
+      cancelLabel: sourceMessage('Giữ yêu cầu', 'Keep request'),
+      danger: true,
+    });
+    if (!ok) return;
     setCancellingPendingId(item.id);
     try {
       await receptionApi.cancelPendingSubscription(item.id);
@@ -392,7 +404,7 @@ export function StaffReceptionPage() {
     setProcessingPtId(item.id);
     try {
       await receptionApi.confirmCoachBookingPayment(item.id, method);
-      notify(staffMessage(`Đã thu ${vnd(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, `Collected ${vnd(item.hourlyRate)} PT sessions for ${item.memberName} (${formatCenterDate(item.bookingDate)}).`), 'success', { record: true });
+      notify(staffMessage(`Đã thu ${formatPrice(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, `Collected ${formatPrice(item.hourlyRate)} PT sessions for ${item.memberName} (${formatCenterDate(item.bookingDate)}).`), 'success', { record: true });
       await loadUnpaidPt();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Xác nhận thu tiền buổi PT thất bại.');
@@ -720,8 +732,8 @@ export function StaffReceptionPage() {
                             transition: 'border-color 0.15s ease, background-color 0.15s ease',
                           }}
                         >
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span className="reception-todo__tag reception-todo__tag--plan">{t("Gói tập")}</span>
                               <span
                                 style={{
@@ -743,17 +755,18 @@ export function StaffReceptionPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--portal-paper)' }}>
-                                {vnd(item.packagePrice)}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flexShrink: 0 }}>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
+                                {formatPrice(item.packagePrice)}
                               </div>
-                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                 {t("CHỜ THANH TOÁN")}</span>
                             </div>
                             <button
                               type="button"
                               className={isSelected ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSelectPendingItem(item);
@@ -764,7 +777,7 @@ export function StaffReceptionPage() {
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)', whiteSpace: 'nowrap', flexShrink: 0 }}
                               disabled={cancellingPendingId !== null || isSubmittingPayment}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -817,7 +830,7 @@ export function StaffReceptionPage() {
                             </div>
                             <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
                               {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
-                              <strong>{vnd(item.hourlyRate)}</strong>
+                              <strong>{formatPrice(item.hourlyRate)}</strong>
                             </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -1137,7 +1150,7 @@ export function StaffReceptionPage() {
                   <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <strong data-testid="member-wallet-balance" style={{ color: 'var(--portal-salmon, #fb923c)', fontSize: '0.96rem' }}>
-                      {memberWalletBalance != null ? vnd(memberWalletBalance) : t('Đang tải…', 'Loading…')}
+                      {memberWalletBalance != null ? formatPrice(memberWalletBalance) : t('Đang tải…', 'Loading…')}
                     </strong>
                     <button
                       type="button"
@@ -1223,7 +1236,7 @@ export function StaffReceptionPage() {
                     ))}
                   {!hasRunningPaidPeriod && packages.map((pkg) => (
                     <option data-i18n-managed key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
-                      {t("Mua mới: ")}{pkg.name} — {vnd(pkg.price)}
+                      {t("Mua mới: ")}{pkg.name} — {formatPrice(pkg.price)}
                     </option>
                   ))}
                 </Select>
@@ -1248,7 +1261,7 @@ export function StaffReceptionPage() {
                   id="pos-amount"
                   type="text"
                   className="portal-input"
-                  value={vnd(currentPrice)}
+                  value={formatPrice(currentPrice)}
                   disabled
                   readOnly
                   style={{
@@ -1326,7 +1339,7 @@ export function StaffReceptionPage() {
               <br />
               {t('Số dư hiện tại: ', 'Current balance: ')}
               <strong style={{ color: 'var(--portal-salmon, #fb923c)' }}>
-                {vnd(memberWalletBalance ?? 0)}
+                {formatPrice(memberWalletBalance ?? 0)}
               </strong>
             </div>
 
@@ -1343,7 +1356,7 @@ export function StaffReceptionPage() {
                     disabled={isSubmittingTopup}
                     onClick={() => setTopupAmount(String(preset))}
                   >
-                    +{vnd(preset)}
+                    +{formatPrice(preset)}
                   </button>
                 ))}
               </div>
@@ -1674,6 +1687,7 @@ export function StaffReceptionPage() {
           onClose={() => setCompletedPayment(null)}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '../../shared/i18n';
+import { sourceMessage, useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { notify } from '../../shared/lib/portalNotices';
@@ -14,6 +15,7 @@ const AUTO_REFRESH_MS = 30_000;
 /** Receptionists and managers compare the declared number with the document photos, then approve or reject. */
 export function KycReviewPage() {
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [items, setItems] = useState<KycSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error | null>(null);
@@ -75,6 +77,25 @@ export function KycReviewPage() {
     }
   }
 
+  async function confirmApprove(item: KycSubmission) {
+    if (busyId !== null) return;
+    const docLabelVi = item.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD';
+    const docLabelEn = item.documentType === 'PASSPORT' ? 'Passport' : 'Identity card';
+    const docSummaryVi = item.citizenId ? `${docLabelVi}: ${item.citizenId}` : `${docLabelVi} — chưa khai số`;
+    const docSummaryEn = item.citizenId ? `${docLabelEn}: ${item.citizenId}` : `${docLabelEn} — no number declared`;
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận duyệt hồ sơ định danh?', 'Approve identity submission?'),
+      message: sourceMessage(
+        `Xác nhận đã đối chiếu ảnh giấy tờ hợp lệ của ${item.fullName ?? 'hội viên'} (${docSummaryVi})?`,
+        `Confirm you verified the document photos for ${item.fullName ?? 'this member'} (${docSummaryEn})?`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận duyệt', 'Confirm approval'),
+      cancelLabel: sourceMessage('Kiểm tra lại', 'Review again'),
+    });
+    if (!ok) return;
+    await decide(item, true);
+  }
+
   return (
     <div data-i18n-managed className="portal-container kyc-review">
       <PageHeader title={t('Duyệt hồ sơ định danh', 'Identity review')}
@@ -123,13 +144,14 @@ export function KycReviewPage() {
               ) : (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => { setRejecting(item.memberId); setReason(''); }}>{t('Từ chối', 'Reject')}</button>
-                  <button type="button" className="btn-primary" disabled={busyId !== null} onClick={() => void decide(item, true)}>{t('Duyệt', 'Approve')}</button>
+                  <button type="button" className="btn-primary" disabled={busyId !== null} onClick={() => void confirmApprove(item)}>{t('Duyệt', 'Approve')}</button>
                 </div>
               )}
             </li>
           ))}
         </ul>
       )}
+      {confirmDialog}
     </div>
   );
 }

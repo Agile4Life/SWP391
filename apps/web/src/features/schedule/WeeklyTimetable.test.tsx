@@ -140,4 +140,23 @@ describe('WeeklyTimetable', () => {
     await render({ events: [event, { ...event, id: '8', date: '2099-01-09', title: 'Boxing' }], selectedId: '8' });
     expect(host.querySelector('.mcal__col')!.getAttribute('aria-label')).toContain('09/01');
   });
+
+  it('shows a bottom scroll cue while later hours remain below the fold and hides it at the bottom', async () => {
+    await render({ events: [event, { ...event, id: '9', startTime: '19:00:00', endTime: '20:00:00' }] });
+    const scrollBox = host.querySelector<HTMLDivElement>('.mcal__scroll')!;
+    Object.defineProperty(scrollBox, 'clientHeight', { value: 520, configurable: true });
+    Object.defineProperty(scrollBox, 'scrollHeight', { value: 960, configurable: true });
+    scrollBox.scrollTop = 0;
+
+    await act(async () => {
+      scrollBox.dispatchEvent(new Event('scroll'));
+    });
+    expect(host.querySelector('[data-testid="timetable-scroll-cue"]')).not.toBeNull();
+
+    scrollBox.scrollTop = 440;
+    await act(async () => {
+      scrollBox.dispatchEvent(new Event('scroll'));
+    });
+    expect(host.querySelector('[data-testid="timetable-scroll-cue"]')).toBeNull();
+  });
 });
