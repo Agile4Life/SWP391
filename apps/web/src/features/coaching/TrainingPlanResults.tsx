@@ -185,7 +185,7 @@ export function TrainingPlanResults({ planId, plan }: TrainingPlanResultsProps) 
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                           {item.sets != null && item.reps != null && (
                             <span className="exercise-spec-pill">
-                              <strong>{item.sets}</strong> {t("hiệp", "sets")} × <strong>{item.reps}</strong> {t("lần", "reps")}
+                              <strong>{item.sets}</strong> {t("hiệp", "sets")} {'×'} <strong>{item.reps}</strong> {t("lần", "reps")}
                             </span>
                           )}
                           {item.durationMinutes != null && (
