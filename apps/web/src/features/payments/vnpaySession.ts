@@ -48,7 +48,7 @@ export function releaseAbandonedVnpay(): Promise<boolean> {
     hasToken = Boolean(window.localStorage.getItem(TOKEN_STORAGE_KEY));
     if (stored) window.localStorage.removeItem(ACTIVE_VNPAY_KEY);
   } catch {
-    stored = null;
+    // Storage unavailable: with no stored reference or token the check below returns false.
   }
   if (!stored || !hasToken) return Promise.resolve(false);
   const reference = stored;
