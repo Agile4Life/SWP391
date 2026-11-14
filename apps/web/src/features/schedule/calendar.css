@@ -35,7 +35,7 @@
 .mcal__legend-note { color: var(--portal-muted); opacity: .85; }
 
 .mcal__switch { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--portal-raised); }
-.mcal__switch button { min-width: 60px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.mcal__switch button { min-width: 60px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--portal-muted); font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .01em; cursor: pointer; }
 .mcal__switch button[aria-pressed='true'] { background: var(--portal-salmon); color: var(--portal-on-accent); }
 
 /* Thanh "Tiếp theo" */

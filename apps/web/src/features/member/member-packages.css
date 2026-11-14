@@ -23,7 +23,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 .member-packages .portal-dialog:has(.package-result--error) {
-  border-color: rgba(239, 68, 68, 0.38);
+  border-color: color-mix(in srgb, var(--portal-danger) 38%, transparent);
 }
 .member-packages .portal-dialog:has(.package-result) .portal-dialog__body {
   position: relative;
@@ -49,10 +49,10 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #22C55E;
+  color: var(--portal-success);
 }
 .member-packages .portal-dialog:has(.package-result--error) .portal-dialog__header .meta-label {
-  color: #EF4444;
+  color: var(--portal-danger);
 }
 .member-packages .portal-dialog:has(.package-result) .portal-dialog__close {
   position: absolute;
@@ -76,18 +76,18 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(34, 197, 94, 0.16);
-  color: #22C55E;
-  border: 1px solid rgba(34, 197, 94, 0.34);
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.18);
+  background: color-mix(in srgb, var(--portal-success) 16%, transparent);
+  color: var(--portal-success);
+  border: 1px solid color-mix(in srgb, var(--portal-success) 34%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--portal-success) 18%, transparent);
   font-size: 24px;
   font-weight: 700;
 }
 .package-result__icon--error {
-  background: rgba(239, 68, 68, 0.16);
-  color: #EF4444;
-  border-color: rgba(239, 68, 68, 0.34);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.18);
+  background: color-mix(in srgb, var(--portal-danger) 16%, transparent);
+  color: var(--portal-danger);
+  border-color: color-mix(in srgb, var(--portal-danger) 34%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--portal-danger) 18%, transparent);
 }
 .package-result__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; margin-top: 6px; }
 @media (max-width: 600px) {

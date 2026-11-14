@@ -106,7 +106,7 @@ it('charges the slot price and sends the payment method once the plan quota is u
   await render();
   await click('Trống');
   expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Còn 0 lượt đặt sân miễn phí');
-  await click('Đặt sân & Thanh toán sau qua VNPay');
+  await click('Đặt sân & thanh toán sau');
   expect(courtsApi.book).toHaveBeenCalledWith({ roomId: 5, date: expect.any(String), startTime: '09:00', paymentMethod: 'vnpay' });
 });
 

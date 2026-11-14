@@ -85,8 +85,8 @@ export function CourtBookingFeature() {
     </div>
     <div id="court-panel" role="tabpanel" aria-labelledby={view === 'booking' ? 'court-tab-booking' : 'court-tab-rules'}>
     {view === 'rules' ? (quota?.packageName ? <CourtPolicyCard quota={quota} /> : <div className="portal-card portal-state">{memberText("Chưa có quy định đặt sân. Cần có gói tập đang hoạt động.", "No court booking rules yet. An active membership is required.")}</div>) : <>
-    <div className="portal-tabs" aria-label={memberText("Bộ môn có sân")}>
-      {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`portal-tab ${item.name === discipline ? 'active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
+    <div className="filter-chips" role="group" aria-label={memberText("Bộ môn có sân")}>
+      {COURT_DISCIPLINES.map(item => <button key={item.id} type="button" className={`filter-chip ${item.name === discipline ? 'is-active' : ''}`} aria-pressed={item.name === discipline} onClick={() => setParams({ discipline: item.name }, { replace: true })}>{item.name}</button>)}
     </div>
     <div className="court-filters"><label className="portal-form-group" htmlFor="court-date"><span className="portal-label">{memberText("Ngày đặt")}</span><DatePicker id="court-date" min={today} max={quota ? addDays(today, quota.advanceDays) : undefined} value={date} onChange={event => setDate(event.target.value)} /></label></div>
     <section data-i18n-managed aria-labelledby="court-grid-title">
@@ -94,7 +94,7 @@ export function CourtBookingFeature() {
         <h2 id="court-grid-title" className="portal-card-title" tabIndex={-1} ref={gridHeading}>{memberText("Khung giờ theo sân")}</h2>
         <RefreshButton variant="bare" label={memberText("Làm mới lịch sân")} disabled={loading || busy} onClick={reload} className={loading ? 'is-loading' : ''} />
       </div>
-      {!validDate ? <p role="alert">{memberText("Chọn ngày từ hôm nay trở đi.")}</p> : loading ? <LoadingSkeleton label={memberText("Đang tải sân")} variant="cards" count={2} /> : error ? <CourtLoadError message={memberRenderMessage(error)} retry={reload} /> : !rows.length ? <div className="portal-card portal-state">{memberText("Chưa có sân cho bộ môn này")}</div> : <div className="court-grid">
+      {!validDate ? <p className="form-error" role="alert">{memberText("Chọn ngày từ hôm nay trở đi.")}</p> : loading ? <LoadingSkeleton label={memberText("Đang tải sân")} variant="cards" count={2} /> : error ? <CourtLoadError message={memberRenderMessage(error)} retry={reload} /> : !rows.length ? <div className="portal-card portal-state">{memberText("Chưa có sân cho bộ môn này")}</div> : <div className="court-grid">
         {rows.map(({ court, slots }) => <article className="portal-card court-card" key={court.id}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <h3 className="portal-card-title" style={{ margin: 0 }}>{court.name}</h3>
@@ -126,7 +126,7 @@ export function CourtBookingFeature() {
       {actionError && <div className="portal-alert" role="alert"><p style={{ margin: 0 }}>{memberRenderMessage(actionError)}</p>{needsMembership && <div style={{ marginTop: 8 }}><Link to="/member/packages" className="btn-secondary btn-sm">{memberText("Xem / Đăng ký gói tập")}</Link></div>}</div>}
       <div className="court-modal-actions">
         <button type="button" className="btn-secondary" disabled={busy} onClick={() => setSelection(null)}>{memberText("Quay lại")}</button>
-        <button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? memberText("Đang đặt…") : covered ? memberText("Xác nhận đặt") : memberText("Đặt sân & Thanh toán sau qua VNPay / Ví SÖL")}</button>
+        <button type="button" className="btn-primary" disabled={busy || conflict} onClick={() => void book()}>{busy ? memberText("Đang đặt…") : covered ? memberText("Xác nhận đặt") : memberText("Đặt sân & thanh toán sau", "Book & pay later")}</button>
       </div>
     </Modal>}
   </div>;

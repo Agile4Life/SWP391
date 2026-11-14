@@ -90,6 +90,81 @@ function formatVnd(amount: number): string {
   return formatPrice(Math.round(amount));
 }
 
+const ITEM_KIND_LABELS: Record<string, [string, string]> = {
+  treadmill: ['Máy chạy bộ', 'Treadmill'],
+  'upright-bike': ['Xe đạp đứng', 'Upright bike'],
+  elliptical: ['Máy trượt toàn thân', 'Elliptical'],
+  'smith-machine': ['Khung gánh Smith', 'Smith machine'],
+  'lat-pulldown': ['Máy kéo xô', 'Lat pulldown'],
+  'squat-rack': ['Khung squat', 'Squat rack'],
+  'dumbbell-rack': ['Kệ tạ đơn', 'Dumbbell rack'],
+  'adjustable-bench': ['Ghế tập đa năng', 'Adjustable bench'],
+  'kinesis-station': ['Trạm cáp đa năng', 'Cable station'],
+  'inbody-analyzer': ['Máy đo InBody', 'InBody analyzer'],
+  'boxing-ring': ['Võ đài Boxing', 'Boxing ring'],
+  'heavy-bag': ['Bao cát nặng', 'Heavy bag'],
+  'speed-bag': ['Bao đấm phản xạ', 'Speed bag'],
+  'badminton-court': ['Sân cầu lông', 'Badminton court'],
+  'tennis-court': ['Sân tennis', 'Tennis court'],
+  'swim-lane': ['Làn bơi', 'Swim lane'],
+  'starting-block': ['Bục xuất phát', 'Starting block'],
+  'yoga-mat': ['Thảm Yoga', 'Yoga mat'],
+  'meditation-bolster': ['Gối thiền', 'Meditation bolster'],
+  'reception-desk': ['Quầy lễ tân', 'Reception desk'],
+  'qr-turnstile': ['Cổng quét QR', 'QR turnstile'],
+  'kiosk-checkin': ['Kiosk tự check-in', 'Check-in kiosk'],
+  'card-printer': ['Máy in thẻ', 'Card printer'],
+  'supplement-shelf': ['Kệ thực phẩm bổ sung', 'Supplement shelf'],
+  'nutrition-board': ['Bảng dinh dưỡng', 'Nutrition board'],
+  'trophy-totem': ['Cúp thành tích', 'Trophy totem'],
+  'coach-podium': ['Bục HLV', 'Coach podium'],
+  'consultation-pod': ['Góc tư vấn', 'Consultation pod'],
+  'locker-bank': ['Tủ locker', 'Locker bank'],
+  'sauna-bench': ['Phòng xông hơi', 'Sauna'],
+  'jacuzzi-tub': ['Bể sục Jacuzzi', 'Jacuzzi'],
+  'lounge-sofa': ['Khu nghỉ ngơi', 'Lounge'],
+  'juice-bar': ['Quầy đồ uống', 'Juice bar'],
+  'stair-core': ['Cầu thang bộ', 'Stairs'],
+  'elevator-core': ['Thang máy', 'Elevator'],
+  'planter-tree': ['Cây xanh', 'Planter'],
+};
+
+function formatItemKind(kind: string, t: (vi: string, en: string) => string): string {
+  const pair = ITEM_KIND_LABELS[kind];
+  return pair ? t(pair[0], pair[1]) : kind.replace(/-/g, ' ');
+}
+
+function formatTierLabel(tier: string, t: (vi: string, en: string) => string): string {
+  switch (tier.trim().toUpperCase()) {
+    case 'SILVER':
+      return t('Hạng Bạc', 'Silver');
+    case 'GOLD':
+      return t('Hạng Vàng', 'Gold');
+    case 'PLATINUM':
+      return t('Hạng Bạch kim', 'Platinum');
+    default:
+      return tier;
+  }
+}
+
+function formatMembershipStatusLabel(status: string, t: (vi: string, en: string) => string): string {
+  switch (status.trim().toLowerCase()) {
+    case 'active':
+      return t('Đang hoạt động', 'Active');
+    case 'paused':
+    case 'on_hold':
+      return t('Đang bảo lưu', 'Paused');
+    case 'expired':
+      return t('Đã hết hạn', 'Expired');
+    case 'pending':
+      return t('Chờ kích hoạt', 'Pending');
+    case 'cancelled':
+      return t('Đã hủy', 'Cancelled');
+    default:
+      return status;
+  }
+}
+
 export function DetailPanel({
   bindings,
   loading = false,
@@ -521,7 +596,7 @@ export function DetailPanel({
     return (
       <div className="explore3d-detail-section" data-testid={`detail-item-${item.id}`}>
         <div className="explore3d-detail-badges">
-          <span className="explore3d-chip">{item.kind}</span>
+          <span className="explore3d-chip">{formatItemKind(item.kind, t)}</span>
           {lvl && <span className="explore3d-chip">{lvl.code}</span>}
           {iBinding && (
             <span
@@ -685,8 +760,8 @@ export function DetailPanel({
           <div className="explore3d-live-card" data-testid="detail-live-membership">
             <div className="explore3d-live-card__title">{bindings.membership.packageName}</div>
             <div className="explore3d-live-card__meta">
-              <span className="explore3d-chip">{bindings.membership.tier}</span>
-              <span>{bindings.membership.status}</span>
+              <span className="explore3d-chip">{formatTierLabel(bindings.membership.tier, t)}</span>
+              <span>{formatMembershipStatusLabel(bindings.membership.status, t)}</span>
               {bindings.membership.remainingDays != null && (
                 <span>
                   · {bindings.membership.remainingDays} {t('ngày còn lại', 'days remaining')}

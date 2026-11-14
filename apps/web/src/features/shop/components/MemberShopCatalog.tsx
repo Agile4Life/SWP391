@@ -120,7 +120,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
     if (!canBuy || !selectedVariant) return;
     addToCart(selectedVariant.id, qty);
     setActiveSlug(null);
-    navigate('/checkout');
+    navigate('/member/checkout');
   };
 
   return (
@@ -279,7 +279,7 @@ export function MemberShopCatalog({ onOpenCart }: { onOpenCart: () => void }) {
             <button type="button" className="btn-secondary" onClick={onOpenCart}>
               {sourceText("Xem giỏ hàng (")}{cartCount})
             </button>
-            <Link to="/checkout" className="btn-primary">
+            <Link to="/member/checkout" className="btn-primary">
               {sourceText("Thanh toán ngay")}</Link>
           </div>
         </div>

@@ -388,6 +388,7 @@ export function MemberCalendar({ onBookingChange }: MemberCalendarProps) {
           <ul className="mcal__legend" aria-label={text("Chú thích", "Legend")}>
             <li><i className="mcal__dot mcal__dot--court" aria-hidden="true" />{labels.court}</li>
             <li><i className="mcal__dot mcal__dot--class" aria-hidden="true" />{labels.class}</li>
+            <li><i className="mcal__dot mcal__dot--pt" aria-hidden="true" />{labels.pt}</li>
           </ul>
           <div className="mcal__switch" role="group" aria-label={text("Chế độ xem", "View")}>
             <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>{text("Tuần", "Week")}</button>

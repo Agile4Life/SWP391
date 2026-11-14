@@ -244,7 +244,7 @@ export function MemberCheckoutPage() {
             {error ? t(error) : t("Không tìm thấy thông tin gói tập.", "Membership details not found.")}
           </p>
           <Link to="/member/packages" className="btn-primary">
-            {t(" Quay lại danh mục gói tập ", "Back to membership catalog")}</Link>
+            {t("Quay lại danh mục gói tập", "Back to membership catalog")}</Link>
         </div>
       </div>
     );
@@ -305,7 +305,7 @@ export function MemberCheckoutPage() {
 
               <form onSubmit={handleKycSubmit} className="stack" style={{ gap: 14 }}>
                 <div>
-                  <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>{t("Loại giấy tờ định danh:", "Identity document type:")}</label>
+                  <label className="portal-label" style={{ display: 'block', marginBottom: 6 }}>{t("Loại giấy tờ định danh:", "Identity document type:")}</label>
                   <div style={{ display: 'flex', gap: 16 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.95rem' }}>
                       <input
@@ -332,8 +332,8 @@ export function MemberCheckoutPage() {
 
                 {kycDocType === 'PASSPORT' && (
                   <div>
-                    <label htmlFor="checkout-nationality" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                      {t(" Quốc tịch (Nationality) ", "Nationality")}<span className="required-mark" aria-hidden="true">*</span>
+                    <label htmlFor="checkout-nationality" className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
+                      {t("Quốc tịch", "Nationality")}<span className="required-mark" aria-hidden="true">*</span>
                     </label>
                     <input
                       id="checkout-nationality"
@@ -348,7 +348,7 @@ export function MemberCheckoutPage() {
                 )}
 
                 <div>
-                  <label htmlFor="checkout-doc-number" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                  <label htmlFor="checkout-doc-number" className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
                     {kycDocType === 'CCCD' ? t("Số Căn cước công dân (12 chữ số)", "Identity card number (12 digits)") : t("Số Hộ chiếu", "Passport number")} <span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
@@ -364,8 +364,8 @@ export function MemberCheckoutPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="checkout-fullname" className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                    {t(" Họ và tên đầy đủ (trên CCCD / Hộ chiếu) ", "Full name (on identity card / passport)")}<span className="required-mark" aria-hidden="true">*</span>
+                  <label htmlFor="checkout-fullname" className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
+                    {t("Họ và tên đầy đủ (trên CCCD / Hộ chiếu)", "Full name (on identity card / passport)")}<span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
                     id="checkout-fullname"
@@ -377,12 +377,12 @@ export function MemberCheckoutPage() {
                     required
                   />
                   <span className="form-hint">
-                    {t(" Họ tên tài khoản sẽ được đồng bộ theo tên này. ", "Your account name will match this name.")}</span>
+                    {t("Họ tên tài khoản sẽ được đồng bộ theo tên này.", "Your account name will match this name.")}</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: kycDocType === 'CCCD' ? '1fr 1fr' : '1fr', gap: 12 }}>
                   <div>
-                    <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
+                    <label className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
                       {kycDocType === 'PASSPORT' ? t("Ảnh mặt trước Hộ chiếu", "Front of passport") : t("Ảnh mặt trước CCCD", "Front of identity card")} <span className="required-mark" aria-hidden="true">*</span>
                     </label>
                     {kycFrontImage ? (
@@ -397,8 +397,8 @@ export function MemberCheckoutPage() {
 
                   {kycDocType === 'CCCD' && (
                     <div>
-                      <label className="filter-label" style={{ display: 'block', marginBottom: 6 }}>
-                        {t(" Ảnh mặt sau CCCD ", "Back of identity card")}<span className="required-mark" aria-hidden="true">*</span>
+                      <label className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
+                        {t("Ảnh mặt sau CCCD", "Back of identity card")}<span className="required-mark" aria-hidden="true">*</span>
                       </label>
                       {kycBackImage ? (
                         <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -485,9 +485,9 @@ export function MemberCheckoutPage() {
             <Link
               to="/member/packages"
               className="btn-secondary"
-              style={{ width: '100%', textAlign: 'center', display: 'block' }}
+              style={{ width: '100%', justifyContent: 'center', display: 'inline-flex' }}
             >
-              {t(" Chọn gói tập khác ", "Choose another membership")}</Link>
+              {t("Chọn gói tập khác", "Choose another membership")}</Link>
           </div>
         </div>
       </div>

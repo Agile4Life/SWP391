@@ -1,6 +1,6 @@
 import { getIntlLocale } from '../../../shared/i18n';
 import { useSourceLanguage, sourceText, sourceToast as toast } from '../shopI18n';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { addToCart } from '../cart';
 import { FORM_LABELS, formatVnd, pricePerServingLabel } from '../shopFormat';
 import type { ProductSummaryDto } from '../shopTypes';
@@ -19,7 +19,8 @@ export function ProductCard({
 }) {
   useSourceLanguage();
   const num = new Intl.NumberFormat(getIntlLocale(), { maximumFractionDigits: 2 });
-  const detailPath = `/products/${product.slug}`;
+  const inPortal = useLocation().pathname.startsWith('/member');
+  const detailPath = `${inPortal ? '/member/products' : '/products'}/${product.slug}`;
   const priceText = formatVnd(product.minPrice);
   const ppsText = pricePerServingLabel(product.pricePerServing);
   const needsVariantChoice =

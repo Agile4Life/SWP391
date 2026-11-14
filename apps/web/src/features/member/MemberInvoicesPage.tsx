@@ -39,6 +39,19 @@ function ServiceCell({ payment }: { payment: Payment }) {
 }
 
 
+function paymentStatusBadgeClass(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'success':
+      return 'badge-success';
+    case 'pending':
+      return 'badge-warning';
+    case 'failed':
+      return 'badge-danger';
+    default:
+      return 'badge-neutral';
+  }
+}
+
 export function MemberInvoicesPage() {
   useLanguage();
   const [pending, setPending] = useState<Payment[]>([]);
@@ -126,7 +139,7 @@ export function MemberInvoicesPage() {
             <table className="portal-table member-invoices__table">
               <thead><tr><th scope="col">{memberText("Mã giao dịch")}</th><th scope="col">{memberText("Dịch vụ")}</th><th scope="col">{memberText("Ngày giờ thanh toán")}</th><th scope="col">{memberText("Số tiền")}</th><th scope="col">{memberText("Trạng thái")}</th><th scope="col"><span className="sr-only">{memberText("Chi tiết")}</span></th></tr></thead>
               <tbody>{payments.map((payment) => <tr key={payment.id}>
-                <td>#{payment.id}</td><td><ServiceCell payment={payment} /></td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td><td>{memberRenderMessage(STATUS_LABELS[payment.status.toLowerCase()] ?? memberMessage(payment.status, payment.status))}</td>
+                <td>#{payment.id}</td><td><ServiceCell payment={payment} /></td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td><td><span className={`badge ${paymentStatusBadgeClass(payment.status)}`}>{memberRenderMessage(STATUS_LABELS[payment.status.toLowerCase()] ?? memberMessage(payment.status, payment.status))}</span></td>
                 <td><button type="button" className="btn-secondary btn-sm member-invoices__detail" onClick={() => setSelected(payment)} aria-label={memberText(`Xem hóa đơn giao dịch #${payment.id}`, `View invoice for transaction #${payment.id}`)}>{memberText("Xem hóa đơn ")}<span aria-hidden="true">↗</span></button></td>
               </tr>)}</tbody>
             </table>

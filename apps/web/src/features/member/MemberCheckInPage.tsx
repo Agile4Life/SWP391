@@ -88,9 +88,9 @@ export function MemberCheckInPage() {
           <p>{granted ? `${result.memberName || memberText("Hội viên")} · ${result.gate || memberText("Cổng trung tâm")}` : result.denialReason || memberText("Vui lòng kiểm tra gói tập hoặc liên hệ lễ tân.")}</p>
           {granted ? <p>{checkedOut && result?.checkOutTime ? memberText(`Giờ ra: ${formatCenterDateTime(result.checkOutTime)}`, `Check-out time: ${formatCenterDateTime(result.checkOutTime)}`) : memberText(`Giờ vào: ${formatCenterDateTime(result.checkInTime)}`, `Check-in time: ${formatCenterDateTime(result.checkInTime)}`)}</p> : <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}><Link className="btn-primary btn-sm" to="/member/packages">{memberText("Xem gói tập")}</Link><Link className="btn-secondary btn-sm" to="/member/card">{memberText("Kiểm tra thẻ hội viên")}</Link></div>}
         </div>}
-        <div role="group" aria-label={memberText("Chế độ quét")} style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button type="button" className={mode === 'in' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'} aria-pressed={mode === 'in'} onClick={() => { setMode('in'); setResult(null); setError(''); }}>Check-in</button>
-          <button type="button" className={mode === 'out' ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'} aria-pressed={mode === 'out'} onClick={() => { setMode('out'); setResult(null); setError(''); }}>Check-out</button>
+        <div className="portal-switch" role="group" aria-label={memberText("Chế độ quét")} style={{ marginBottom: 12 }}>
+          <button type="button" aria-pressed={mode === 'in'} onClick={() => { setMode('in'); setResult(null); setError(''); }}>Check-in</button>
+          <button type="button" aria-pressed={mode === 'out'} onClick={() => { setMode('out'); setResult(null); setError(''); }}>Check-out</button>
         </div>
         <QrCameraScanner onScan={(code) => void scan(code)} disabled={pending || !online} />
       </div>
@@ -102,8 +102,8 @@ export function MemberCheckInPage() {
         </section>
         <section data-i18n-managed className="portal-card" aria-label={memberText("Lịch sử ra vào")}>
           <h2 className="portal-card-title">{memberText("Lịch sử ra vào")}</h2>
-          <div role="group" aria-label={memberText("Khoảng thời gian")} style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            {RANGES.map((range) => <button key={range.days} type="button" className={days === range.days ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'} aria-pressed={days === range.days} onClick={() => setDays(range.days)}>{memberText(range.label)}</button>)}
+          <div className="filter-chips" role="group" aria-label={memberText("Khoảng thời gian")} style={{ marginBottom: 10 }}>
+            {RANGES.map((range) => <button key={range.days} type="button" className={`filter-chip ${days === range.days ? 'is-active' : ''}`} aria-pressed={days === range.days} onClick={() => setDays(range.days)}>{memberText(range.label)}</button>)}
           </div>
           {loading ? <LoadingSkeleton label={memberText("Đang tải lịch sử…")} count={3} /> : historyError ? <><p role="alert">{memberRenderMessage(historyError)}</p><button className="btn-secondary" onClick={() => void loadHistory()}>{memberText("Thử lại")}</button></> : history.length === 0 ? <p className="qr-checkin-hint">{memberText("Chưa có lượt ra vào trong khoảng này.")}</p> : <div className="stack">{history.slice(0, days === 1 ? 5 : 20).map((visit) => <div key={visit.id} className="qr-checkin-result">
             <strong>{visit.status.toUpperCase() === 'GRANTED' ? visit.checkOutTime ? memberText("Đã ra về") : memberText("Đã vào trung tâm") : memberText("Check-in bị từ chối")}</strong>

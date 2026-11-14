@@ -347,13 +347,16 @@
   background: var(--portal-salmon);
 }
 
-@media (max-width: 767px) {
-  .portal-v2 .shop-region-selects {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 1024px) {
   .portal-v2 :is(.shop-input, .shop-select, .shop-textarea, .shop-stepper__input) {
     font-size: 16px;
     min-height: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  .portal-v2 .shop-region-selects {
+    grid-template-columns: 1fr;
   }
 }
 

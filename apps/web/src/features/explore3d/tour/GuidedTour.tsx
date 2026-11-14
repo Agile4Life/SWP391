@@ -204,16 +204,29 @@ export function GuidedTour() {
                 aria-label={`${idx + 1}. ${lang === 'en' ? step.title.en : step.title.vi}`}
                 onClick={() => setTourStep(idx)}
                 style={{
-                  width: active ? '18px' : '7px',
-                  height: '7px',
-                  borderRadius: '999px',
+                  minWidth: '24px',
+                  minHeight: '24px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   border: 'none',
                   padding: 0,
                   cursor: 'pointer',
-                  background: active ? 'var(--explore-accent)' : 'var(--explore-border)',
-                  transition: 'width 160ms ease, background 160ms ease',
+                  background: 'transparent',
                 }}
-              />
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: 'block',
+                    width: active ? '18px' : '7px',
+                    height: '7px',
+                    borderRadius: '999px',
+                    background: active ? 'var(--explore-accent)' : 'var(--explore-border)',
+                    transition: 'width 160ms ease, background 160ms ease',
+                  }}
+                />
+              </button>
             );
           })}
         </div>

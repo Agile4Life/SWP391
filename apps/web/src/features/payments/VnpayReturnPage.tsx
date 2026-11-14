@@ -66,7 +66,9 @@ export function VnpayReturnPage() {
         <Link className="btn-primary" to={isAllowedDestination(data.destination) ? data.destination : '/member/invoices'}>{t("Về khoản thanh toán", "Back to payment")}</Link>
       </>}
       {valid && (error || data?.status === 'pending') && <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>{t("Kiểm tra lại", "Check again")}</button>}
-      <Link className="btn-secondary" to="/member/invoices">{t("Giao dịch & hóa đơn", "Transactions & invoices")}</Link>
+      {(!valid || error || data?.status === 'pending' || (data && isAllowedDestination(data.destination) && data.destination !== '/member/invoices')) && (
+        <Link className="btn-secondary" to="/member/invoices">{t("Giao dịch & hóa đơn", "Transactions & invoices")}</Link>
+      )}
     </section>
   </div>;
 }

@@ -1,6 +1,6 @@
 import { useSourceLanguage, sourceFormat, sourceText, sourceError } from '../shopI18n';
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser } from '../../../shared/api/client';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../../shared/ui/Modal';
@@ -38,6 +38,9 @@ export function CartDrawer({
   useSourceLanguage();
   const lines = useCart();
   const navigate = useNavigate();
+  const inPortal = useLocation().pathname.startsWith('/member');
+  const productsPath = inPortal ? '/member/products' : '/products';
+  const checkoutPath = inPortal ? '/member/checkout' : '/checkout';
   const [quote, setQuote] = useState<QuoteDto | null>(null);
   const [loading, setLoading] = useState(lines.length > 0);
   const [error, setError] = useState<string | Error>('');
@@ -106,7 +109,7 @@ export function CartDrawer({
     if (!quote?.valid || lines.length === 0) return;
     const user = getCurrentUser();
     onClose();
-    navigate(user ? '/checkout' : '/login?returnTo=%2Fcheckout');
+    navigate(user ? checkoutPath : '/login?returnTo=%2Fcheckout');
   };
 
   return (
@@ -120,7 +123,7 @@ export function CartDrawer({
         {lines.length === 0 ? (
           <div className="shop-drawer__empty" role="status">
             <p>{sourceText("Giỏ hàng đang trống.")}</p>
-            <Link to="/products" className="fit-pill" onClick={onClose}>
+            <Link to={productsPath} className="fit-pill" onClick={onClose}>
               <span>{sourceText("Xem sản phẩm")}</span>
               <RoundArrow />
             </Link>
@@ -171,7 +174,7 @@ export function CartDrawer({
                       <div className="shop-drawer__item-body">
                         <div className="shop-drawer__item-top">
                           <Link
-                            to={`/products/${line.slug}`}
+                            to={`${productsPath}/${line.slug}`}
                             className="shop-drawer__item-name"
                             onClick={onClose}
                           >
@@ -226,7 +229,7 @@ export function CartDrawer({
                   <span>{sourceText("Thanh toán")}</span>
                   <RoundArrow />
                 </button>
-                <Link to="/products" className="shop-drawer__continue" onClick={onClose}>
+                <Link to={productsPath} className="shop-drawer__continue" onClick={onClose}>
                   {sourceText("Tiếp tục xem sản phẩm")}</Link>
               </div>
             </div>

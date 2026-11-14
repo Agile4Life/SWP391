@@ -90,13 +90,13 @@ function parseCourseSchedule(
   const totalSessions = durationWeeks * Math.max(daysPerWeek, 1);
 
   const DAY_LABELS: Record<string, string> = {
-    MONDAY: 'Thứ 2',
-    TUESDAY: 'Thứ 3',
-    WEDNESDAY: 'Thứ 4',
-    THURSDAY: 'Thứ 5',
-    FRIDAY: 'Thứ 6',
-    SATURDAY: 'Thứ 7',
-    SUNDAY: 'Chủ Nhật',
+    MONDAY: memberText('Thứ 2', 'Mon'),
+    TUESDAY: memberText('Thứ 3', 'Tue'),
+    WEDNESDAY: memberText('Thứ 4', 'Wed'),
+    THURSDAY: memberText('Thứ 5', 'Thu'),
+    FRIDAY: memberText('Thứ 6', 'Fri'),
+    SATURDAY: memberText('Thứ 7', 'Sat'),
+    SUNDAY: memberText('Chủ nhật', 'Sun'),
   };
 
   const daysText = daysUnknown
@@ -134,13 +134,13 @@ function parseCourseSchedule(
 function levelLabel(level?: string | null): string {
   switch (level?.toLowerCase()) {
     case 'beginner':
-      return 'Người mới bắt đầu';
+      return memberText('Người mới bắt đầu', 'Beginner');
     case 'intermediate':
-      return 'Trung cấp';
+      return memberText('Trung cấp', 'Intermediate');
     case 'advanced':
-      return 'Nâng cao';
+      return memberText('Nâng cao', 'Advanced');
     default:
-      return 'Mọi cấp độ (All levels)';
+      return memberText('Mọi cấp độ', 'All levels');
   }
 }
 
@@ -194,7 +194,7 @@ function MemberCourseDetailModal({
             </span>
             {isEnrolled && <span className="badge badge-success">{memberText("Đã đăng ký", "Enrolled")}</span>}
           </div>
-          <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', color: 'var(--color-salmon, #eb7e6b)' }}>
+          <h3 style={{ margin: '0 0 6px 0', fontSize: '1.3rem', color: 'var(--portal-salmon)' }}>
             {course.name}
           </h3>
         </div>
@@ -203,7 +203,7 @@ function MemberCourseDetailModal({
         <div
           style={{
             padding: '12px 16px',
-            background: 'var(--color-bg-warm, #242424)',
+            background: 'var(--portal-raised)',
             borderRadius: 8,
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -258,7 +258,7 @@ function MemberCourseDetailModal({
         {course.description && (
           <div>
             <div className="meta-label" style={{ marginBottom: 4 }}>{memberText("MÔ TẢ KHÓA HỌC & LƯU Ý", "COURSE DESCRIPTION & NOTES")}</div>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--portal-muted)', lineHeight: 1.5 }}>
               {course.description}
             </p>
           </div>
@@ -268,12 +268,12 @@ function MemberCourseDetailModal({
         <div
           style={{
             padding: '14px 16px',
-            border: '1px solid var(--color-salmon, #eb7e6b)',
+            border: '1px solid var(--portal-salmon)',
             borderRadius: 8,
-            backgroundColor: 'color-mix(in srgb, var(--color-salmon, #eb7e6b) 6%, transparent)',
+            backgroundColor: 'var(--portal-tint)',
           }}
         >
-          <div className="meta-label" style={{ color: 'var(--color-salmon, #eb7e6b)', marginBottom: 6 }}>
+          <div className="meta-label" style={{ color: 'var(--portal-salmon)', marginBottom: 6 }}>
             {memberText("QUYỀN LỢI GÓI TẬP CỦA BẠN", "YOUR MEMBERSHIP BENEFITS")}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -281,7 +281,7 @@ function MemberCourseDetailModal({
               <div style={{ fontSize: '1rem', fontWeight: 700 }}>
                 {subscription?.packageName || (quota?.tier ? `${memberText("Gói ", "Plan ")}${quota.tier.toUpperCase()}` : memberText("Chưa có gói tập", "No active plan"))}
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--portal-muted)', marginTop: 2 }}>
                 {quota?.unlimited
                   ? memberText("Platinum: không giới hạn khóa học định kỳ.", "Platinum: unlimited recurring courses.")
                   : quota && quota.remainingCredits > 0
@@ -292,8 +292,8 @@ function MemberCourseDetailModal({
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div className="meta-label">{memberText("CHI PHÍ ĐĂNG KÝ", "TUITION FEE")}</div>
-              <strong style={{ fontSize: '1.15rem', color: hasQuota ? '#4ade80' : 'var(--color-salmon, #eb7e6b)' }}>
+              <div className="meta-label">{memberText("Chi phí đăng ký", "Tuition fee")}</div>
+              <strong style={{ fontSize: '1.15rem', color: hasQuota ? 'var(--portal-success)' : 'var(--portal-salmon)' }}>
                 {hasQuota ? memberText("0 đ (Miễn phí theo gói)", "Free with plan") : `${formatPrice(discountedPrice(priceNum, quota?.discountPercent))}${quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''}`}
               </strong>
             </div>
@@ -302,13 +302,6 @@ function MemberCourseDetailModal({
 
         {/* Modal footer actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={onClose}
-          >
-            {text("Đóng", "Close")}
-          </button>
           {isEnrolled ? (
             <button
               type="button"
@@ -592,8 +585,8 @@ export function MemberClassesPage() {
           style={{
             padding: '14px 18px',
             marginBottom: 18,
-            backgroundColor: 'var(--color-bg-warm, #1e1e1e)',
-            border: '1px solid var(--color-salmon, #eb7e6b)',
+            backgroundColor: 'var(--portal-raised)',
+            border: '1px solid var(--portal-salmon)',
             borderRadius: 8,
             display: 'flex',
             justifyContent: 'space-between',
@@ -607,13 +600,13 @@ export function MemberClassesPage() {
               <span className="badge badge-info" style={{ fontWeight: 700 }}>
                 {quota.tier ? memberText(`GÓI ${quota.tier.toUpperCase()}`, `${quota.tier.toUpperCase()} PLAN`) : memberText('GÓI HỘI VIÊN', 'MEMBER PLAN')}
               </span>
-              <strong style={{ fontSize: '0.96rem', color: 'var(--color-salmon, #eb7e6b)' }}>
+              <strong style={{ fontSize: '0.96rem', color: 'var(--portal-salmon)' }}>
                 {quota.unlimited
                   ? memberText("Đăng ký khóa học: Không giới hạn", "Course Enrollment: Unlimited")
                   : memberText(`Hạn mức: Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí`, `Quota: ${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses left`)}
               </strong>
             </div>
-            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
               {quota.unlimited
                 ? memberText("Khóa fitness định kỳ miễn phí không giới hạn.", "Unlimited free recurring fitness courses.")
                 : quota.remainingCredits > 0
@@ -781,28 +774,28 @@ export function MemberClassesPage() {
                         <span>{memberText("HLV: ", "Coach: ")}<strong>{c.coachName}</strong></span>
                       </div>
                       {c.description && (
-                        <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>
+                        <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: 'var(--portal-muted)' }}>
                           {c.description}
                         </p>
                       )}
-                      <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--color-bg-warm, rgba(255,255,255,0.04))', borderRadius: 6, fontSize: '0.86rem' }}>
+                      <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--portal-raised)', borderRadius: 6, fontSize: '0.86rem' }}>
                         {quota?.unlimited ? (
-                          <span style={{ color: 'var(--color-salmon, #eb7e6b)' }}>
-                            ✓ <strong>{memberText("Gói ", "Plan ")}{quota.tier?.toUpperCase()}:</strong> {memberText("Miễn phí toàn bộ khóa học không giới hạn.", "Unlimited free courses.")}
+                          <span style={{ color: 'var(--portal-salmon)' }}>
+                            <strong>{memberText("Gói ", "Plan ")}{quota.tier?.toUpperCase()}:</strong> {memberText("Miễn phí toàn bộ khóa học không giới hạn.", "Unlimited free courses.")}
                           </span>
                         ) : quota && quota.remainingCredits > 0 ? (
-                          <span style={{ color: 'var(--color-salmon, #eb7e6b)' }}>
-                            ✓ <strong>{memberText("Quyền lợi gói tập: ", "Plan benefit: ")}</strong>{memberText(`Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí.`, `${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses remaining.`)}
+                          <span style={{ color: 'var(--portal-salmon)' }}>
+                            <strong>{memberText("Quyền lợi gói tập: ", "Plan benefit: ")}</strong>{memberText(`Còn ${quota.remainingCredits}/${quota.totalCredits ?? 0} khóa học miễn phí.`, `${quota.remainingCredits}/${quota.totalCredits ?? 0} free courses remaining.`)}
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--color-text-muted)' }}>
-                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--color-salmon, #eb7e6b)' }}>{formatPrice(discountedPrice(priceNum, quota?.discountPercent))}</strong>{quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''} {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
+                          <span style={{ color: 'var(--portal-muted)' }}>
+                            {memberText("Học phí ngoài gói: ", "Course tuition: ")}<strong style={{ color: 'var(--portal-salmon)' }}>{formatPrice(discountedPrice(priceNum, quota?.discountPercent))}</strong>{quota?.discountPercent ? ` (−${quota.discountPercent}%)` : ''} {memberText("(Áp dụng khi hết lượt gói hoặc mua lẻ)", "(Applies when quota exhausted or purchased standalone)")}
                           </span>
                         )}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', gap: 10, minWidth: 200 }}>
-                      <div className="meta-label">{memberText("SỨC CHỨA KHÓA HỌC", "COURSE CAPACITY")}</div>
+                      <div className="meta-label">{memberText("Sức chứa khóa học", "Course capacity")}</div>
                       <strong>{c.capacity} {memberText("học viên tối đa", "students max")}</strong>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', marginTop: 4 }}>
                         <button
@@ -913,7 +906,7 @@ export function MemberClassesPage() {
               <h3 style={{ margin: '0 0 6px 0', fontSize: '1.15rem' }}>{courseCheckoutTarget.className}</h3>
               <p className="row-card__meta" style={{ margin: 0 }}>
                 {text("Học phí khóa học trọn gói:", "Full course tuition fee:")}{' '}
-                <strong style={{ color: 'var(--color-salmon, #eb7e6b)', fontSize: '1.1rem' }}>
+                <strong style={{ color: 'var(--portal-salmon)', fontSize: '1.1rem' }}>
                   {formatPrice(discountedPrice(courseCheckoutTarget.price, quota?.discountPercent))}
                 </strong>
               </p>
@@ -922,7 +915,7 @@ export function MemberClassesPage() {
             <div className="portal-form-group">
               <label className="portal-label">{text("Phương thức thanh toán", "Payment method")}</label>
               <div style={{ display: 'grid', gap: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--portal-border)' }}>
                   <input
                     type="radio"
                     name="coursePaymentMethod"
@@ -932,10 +925,10 @@ export function MemberClassesPage() {
                   />
                   <div>
                     <strong>{text("Ví điện tử SÖL", "SÖL Member Wallet")}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Thanh toán trừ số dư ví tức thì", "Instant wallet debit")}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>{text("Thanh toán trừ số dư ví tức thì", "Instant wallet debit")}</div>
                   </div>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--portal-border)' }}>
                   <input
                     type="radio"
                     name="coursePaymentMethod"
@@ -945,10 +938,10 @@ export function MemberClassesPage() {
                   />
                   <div>
                     <strong>{text("Cổng thanh toán VNPay (Thẻ ATM / QR)", "VNPay Gateway (ATM / QR)")}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Chuyển sang trang thanh toán bảo mật VNPay", "Redirect to VNPay portal")}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>{text("Chuyển sang trang thanh toán bảo mật VNPay", "Redirect to VNPay portal")}</div>
                   </div>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--color-border-subtle)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--portal-border)' }}>
                   <input
                     type="radio"
                     name="coursePaymentMethod"
@@ -958,7 +951,7 @@ export function MemberClassesPage() {
                   />
                   <div>
                     <strong>{text("Tiền mặt tại quầy lễ tân", "Cash at reception")}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{text("Giữ chỗ trước và nộp tiền tại quầy trước khai giảng", "Hold seat and pay at counter")}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>{text("Giữ chỗ trước và nộp tiền tại quầy trước khai giảng", "Hold seat and pay at counter")}</div>
                   </div>
                 </label>
               </div>

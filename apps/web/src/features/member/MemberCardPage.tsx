@@ -187,7 +187,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
               }
             }}
           >
-            {dynamicQr ? memberText("Sao chép Dynamic QR") : memberText("Sao chép mã QR Check-in")}
+            {dynamicQr ? memberText("Sao chép mã QR động", "Copy dynamic QR") : memberText("Sao chép mã QR Check-in")}
           </button>
         )}
       </div>

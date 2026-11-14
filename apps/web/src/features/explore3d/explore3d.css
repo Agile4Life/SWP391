@@ -225,7 +225,7 @@ html[data-theme='light'] .explore3d-page {
 }
 
 html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
-  color: #8f4e3c;
+  color: var(--sol-accent-text, var(--explore-accent));
   background: rgb(var(--sol-accent-rgb) / .2);
 }
 
@@ -735,8 +735,7 @@ html[data-theme='light'] .explore3d-page .explore3d-status-pill.is-closed {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   color: var(--explore-ink-muted);
 }
 
@@ -934,7 +933,7 @@ html[data-theme='light'] .explore3d-page .explore3d-status-pill.is-closed {
 }
 
 html[data-theme='light'] .explore3d-page .explore3d-directory-level-btn {
-  color: #8f4e3c;
+  color: var(--sol-accent-text, var(--explore-accent));
   background: rgb(var(--sol-accent-rgb) / .16);
 }
 
@@ -1121,6 +1120,12 @@ html[data-theme='light'] .explore3d-page .explore3d-floorplan-canvas-wrap {
   background: var(--explore-input-bg);
   color: var(--explore-ink);
   font-size: 0.9rem;
+}
+
+@media (max-width: 1024px) {
+  .explore3d-search-input {
+    font-size: 16px;
+  }
 }
 
 .explore3d-search-close {

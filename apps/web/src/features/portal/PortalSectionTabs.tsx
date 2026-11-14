@@ -14,7 +14,13 @@ interface PortalSectionTabsProps {
  * nên deep link, nút Back và quyền truy cập giữ nguyên; chỉ hiện ở đúng các màn thuộc nhóm.
  */
 export function PortalSectionTabs({ label, tabs, pathname, lang }: PortalSectionTabsProps) {
-  if (!tabs.some(tab => pathname === tab.to || pathname.startsWith(`${tab.to}/`))) return null;
+  const activeInGroup = tabs.some(
+    tab =>
+      pathname === tab.to ||
+      pathname.startsWith(`${tab.to}/`) ||
+      (tab.to === '/member/products' && pathname === '/member/checkout'),
+  );
+  if (!activeInGroup) return null;
   return (
     <nav className="portal-section-tabs" aria-label={label}>
       {tabs.map(tab => (

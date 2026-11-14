@@ -1368,32 +1368,10 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 300;
 }
 
-/* Thẻ hội viên: vệt sáng vàng quét qua khi hover, giống nút login ở landing */
+/* Thẻ hội viên */
 .pass-card {
   position: relative;
   overflow: hidden;
-  transition: transform 0.5s var(--ease-luxury), box-shadow 0.5s var(--ease-luxury);
-}
-
-.pass-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -80%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(194, 166, 132, 0.16), transparent);
-  transform: skewX(-20deg);
-  transition: left 1s var(--ease-luxury);
-  pointer-events: none;
-}
-
-.pass-card:hover {
-  transform: translateY(-4px);
-}
-
-.pass-card:hover::after {
-  left: 140%;
 }
 
 /* Nhóm nút phân đoạn (điểm danh Có mặt / Trễ / Vắng) */

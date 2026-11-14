@@ -101,7 +101,12 @@ export function portalNavRoutes(item: Pick<PortalNavItem, 'to' | 'tabs'>): strin
 
 /** Mục sidebar đang chọn khi đường dẫn nằm ở một tab con hoặc route con (vd. /member/orders/:id). */
 export function isPortalNavActive(item: Pick<PortalNavItem, 'to' | 'tabs'>, pathname: string): boolean {
-  if (item.to === '/member/products' && (pathname === '/member/orders' || pathname.startsWith('/member/orders/'))) {
+  if (
+    item.to === '/member/products' &&
+    (pathname === '/member/orders' ||
+      pathname.startsWith('/member/orders/') ||
+      pathname === '/member/checkout')
+  ) {
     return true;
   }
   return portalNavRoutes(item).some(route => pathname === route || pathname.startsWith(`${route}/`));

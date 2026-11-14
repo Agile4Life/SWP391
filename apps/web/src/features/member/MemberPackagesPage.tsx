@@ -738,7 +738,7 @@ export function MemberPackagesPage() {
                 borderRadius: 99,
               }}
             >
-              {t(" CHỜ LỄ TÂN PHÊ DUYỆT TẠI QUẦY ", "AWAITING APPROVAL AT RECEPTION")}</span>
+              {t("Chờ lễ tân phê duyệt tại quầy", "Awaiting approval at reception")}</span>
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
               {t(" Đã nộp: ", "Submitted:")}{(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : t("Gần đây", "Recently")}
             </span>
@@ -791,15 +791,15 @@ export function MemberPackagesPage() {
           className="portal-card"
           style={{
             marginBottom: 20,
-            background: 'linear-gradient(135deg, rgba(226, 91, 69, 0.12) 0%, rgba(217, 119, 6, 0.15) 100%)',
-            border: '1px solid rgba(226, 91, 69, 0.3)',
+            background: 'linear-gradient(135deg, color-mix(in srgb, var(--portal-salmon) 12%, transparent) 0%, color-mix(in srgb, var(--portal-warning) 14%, transparent) 100%)',
+            border: '1px solid color-mix(in srgb, var(--portal-salmon) 30%, transparent)',
             borderRadius: '12px',
             padding: '20px',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <div>
-              <div className="meta-label" style={{ color: 'var(--color-primary, #e25b45)' }}>
+              <div className="meta-label" style={{ color: 'var(--portal-salmon)' }}>
                 {t(" Đặc quyền Hội viên mới ", "New member benefit")}</div>
               <h2 className="portal-card-title" style={{ marginTop: 6, fontSize: '1.25rem' }}>
                 {t(" Gói Trải Nghiệm 3 Ngày miễn phí (Kèm 01 buổi tập HLV 1:1) ", "Free 3-day trial (includes one personal training session)")}</h2>
@@ -866,7 +866,7 @@ export function MemberPackagesPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div className="meta-label">
               {t(" Gói tập đang bảo lưu ", "Paused membership")}</div>
-            <span className="badge badge-info">{t("ĐANG BẢO LƯU", "PAUSED")}</span>
+            <span className="badge badge-info">{t("Đang bảo lưu", "Paused")}</span>
           </div>
           <h2 className="portal-card-title" style={{ marginTop: 10 }}>
             {frozenSubscription.packageName}
@@ -900,7 +900,7 @@ export function MemberPackagesPage() {
           ref={membershipFocus}
           tabIndex={-1}
           className="portal-card package-pending"
-          style={{ marginBottom: 16, border: '1px solid var(--color-border-medium)', background: 'var(--color-bg-warm)' }}
+          style={{ marginBottom: 16, border: '1px solid var(--portal-border)', background: 'var(--portal-raised)' }}
         >
           <div className="package-pending__head">
             <div>
@@ -1313,14 +1313,14 @@ export function MemberPackagesPage() {
               <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
                 <button
                   type="button"
-                  className={`btn-secondary btn-sm ${trialDocType === 'CCCD' ? 'btn-primary' : ''}`}
+                  className={`btn-sm ${trialDocType === 'CCCD' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => { setTrialDocType('CCCD'); setTrialError(''); }}
                   style={{ flex: 1 }}
                 >
                   {t(" Căn cước công dân (Việt Nam) ", "Identity card (Vietnam)")}</button>
                 <button
                   type="button"
-                  className={`btn-secondary btn-sm ${trialDocType === 'PASSPORT' ? 'btn-primary' : ''}`}
+                  className={`btn-sm ${trialDocType === 'PASSPORT' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => { setTrialDocType('PASSPORT'); setTrialError(''); }}
                   style={{ flex: 1 }}
                 >

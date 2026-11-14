@@ -1,6 +1,6 @@
 import { useSourceLanguage, sourceText, sourceError, sourceNotify as notify, sourceFormatPair } from './shopI18n';
-import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError, getCurrentUser, homePath } from '../../shared/api/client';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PublicLayout, RoundArrow } from '../landing/components/PublicLayout';
@@ -71,6 +71,9 @@ export function CheckoutPage() {
   useSourceLanguage();
   const user = getCurrentUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const inPortal = location.pathname.startsWith('/member');
+  const productsBase = inPortal ? '/member/products' : '/products';
   const cartLines = useCart();
 
   const placedOrderId = useRef<number | null>(null);
@@ -178,43 +181,50 @@ export function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.role, cartLines, fulfillment]);
 
+  const wrapCheckout = (content: ReactNode) =>
+    inPortal ? (
+      <div className="portal-container fit-shop-page" ref={formRootRef}>
+        {content}
+        {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} returnFocusRef={cartFocusRef} />}
+      </div>
+    ) : (
+      <PublicLayout>
+        <main id="public-main" className="fit-shop-page" ref={formRootRef}>
+          {content}
+        </main>
+        {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} returnFocusRef={cartFocusRef} />}
+      </PublicLayout>
+    );
+
   if (!user) {
     return <Navigate to="/login?returnTo=%2Fcheckout" replace />;
   }
 
   if (user.role !== 'MEMBER') {
-    return (
-      <PublicLayout>
-        <main id="public-main" className="fit-shop-page">
-          <section className="fit-section shop-page">
-            <div className="fit-catalog-state" role="status">
-              <h1>{sourceText("Mua hàng dành cho tài khoản hội viên.")}</h1>
-              <Link to={homePath(user.role)} className="fit-pill">
-                <span>{sourceText("Về portal")}</span>
-                <RoundArrow />
-              </Link>
-            </div>
-          </section>
-        </main>
-      </PublicLayout>
+    return wrapCheckout(
+      <section className={inPortal ? 'shop-page' : 'fit-section shop-page'}>
+        <div className="fit-catalog-state" role="status">
+          <h1>{sourceText("Mua hàng dành cho tài khoản hội viên.")}</h1>
+          <Link to={homePath(user.role)} className="fit-pill">
+            <span>{sourceText("Về portal")}</span>
+            <RoundArrow />
+          </Link>
+        </div>
+      </section>,
     );
   }
 
   if (cartLines.length === 0 && !hasPlacedOrder) {
-    return (
-      <PublicLayout>
-        <main id="public-main" className="fit-shop-page">
-          <section className="fit-section shop-page">
-            <div className="fit-catalog-state" role="status">
-              <h1>{sourceText("Giỏ hàng đang trống.")}</h1>
-              <Link to="/products" className="fit-pill">
-                <span>{sourceText("Xem sản phẩm")}</span>
-                <RoundArrow />
-              </Link>
-            </div>
-          </section>
-        </main>
-      </PublicLayout>
+    return wrapCheckout(
+      <section className={inPortal ? 'shop-page' : 'fit-section shop-page'}>
+        <div className="fit-catalog-state" role="status">
+          <h1>{sourceText("Giỏ hàng đang trống.")}</h1>
+          <Link to={productsBase} className="fit-pill">
+            <span>{sourceText("Xem sản phẩm")}</span>
+            <RoundArrow />
+          </Link>
+        </div>
+      </section>,
     );
   }
 
@@ -339,10 +349,8 @@ export function CheckoutPage() {
   const holdMinutes = config?.paymentWindowMinutes ?? 30;
   const pickupAddress = config?.pickupAddress ?? '120 Hai Bà Trưng, Phường Sài Gòn, TP.HCM';
 
-  return (
-    <PublicLayout>
-      <main id="public-main" className="fit-shop-page" ref={formRootRef}>
-        <section className="fit-section shop-page" aria-labelledby="checkout-title">
+  return wrapCheckout(
+    <section className={inPortal ? 'shop-page' : 'fit-section shop-page'} aria-labelledby="checkout-title">
           <span className="fit-kicker">{sourceText("THANH TOÁN")}</span>
           <h1 id="checkout-title" className="shop-catalog__title">
             {sourceText("Hoàn tất đơn hàng")}<span className="fit-title-dot">.</span>
@@ -522,9 +530,6 @@ export function CheckoutPage() {
               </aside>
             </div>
           )}
-        </section>
-      </main>
-      {cartOpen && <CartDrawer onClose={() => setCartOpen(false)} returnFocusRef={cartFocusRef} />}
-    </PublicLayout>
+        </section>,
   );
 }

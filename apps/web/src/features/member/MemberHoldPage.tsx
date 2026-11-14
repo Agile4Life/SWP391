@@ -225,7 +225,7 @@ export function MemberHoldPage() {
                   <button type="button" className="btn-secondary" disabled={busy} onClick={() => void onWithdraw()}>
                     {status === 'PENDING' ? t('Rút đơn', 'Withdraw request') : t('Hủy bảo lưu chưa bắt đầu', 'Cancel the hold before it starts')}
                   </button>
-                  {status === 'APPROVED' && <small style={{ display: 'block' }}>{t('Các lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
+                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
                 </div>
               )}
               {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}</p>}

@@ -146,7 +146,7 @@ export function MemberOrdersPage({
         <MemberShopCatalog onOpenCart={openCart} />
       ) : (
         <section className="stack" aria-label={sourceText("Danh sách đơn hàng")}>
-          <div className="portal-tabs shop-tabs" aria-label={sourceText("Lọc trạng thái đơn hàng")}>
+          <div className="filter-chips" role="group" aria-label={sourceText("Lọc trạng thái đơn hàng")}>
             {STATUS_FILTERS.map(filter => {
               const active = statusGroup === filter.id;
               return (
@@ -154,7 +154,7 @@ export function MemberOrdersPage({
                   key={filter.id || 'all'}
                   type="button"
                   aria-pressed={active}
-                  className={`portal-tab ${active ? 'active' : ''}`}
+                  className={`filter-chip ${active ? 'is-active' : ''}`}
                   onClick={() => {
                     setStatusGroup(filter.id);
                     setPage(0);
@@ -181,8 +181,9 @@ export function MemberOrdersPage({
           ) : !data?.content.length ? (
             <div className="portal-card portal-state stack" style={{ alignItems: 'flex-start' }}>
               <p style={{ margin: 0 }}>{sourceText("Chưa có đơn hàng nào trong mục này.")}</p>
-              <Link to="/products" className="btn-secondary">
-                {sourceText("Xem sản phẩm")}</Link>
+              <button type="button" className="btn-secondary" onClick={() => switchTab('shop')}>
+                {sourceText("Xem sản phẩm")}
+              </button>
             </div>
           ) : (
             <>

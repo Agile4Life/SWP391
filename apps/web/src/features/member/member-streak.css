@@ -6,7 +6,7 @@
 .member-streak__count { color: var(--portal-salmon); font-size: 34px; font-weight: 750; line-height: 1.2; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
 .member-streak__stats span { color: var(--portal-muted); font-size: 12px; }
 .member-streak__record { display: grid; gap: 2px; text-align: right; }
-.member-streak__record strong { color: var(--portal-paper); font-size: 12px; font-weight: 650; }
+.member-streak__record strong { color: var(--portal-paper); font-size: 16px; font-weight: 650; }
 .member-streak__grid { display: block; width: 100%; max-width: 440px; height: auto; margin: 16px auto 12px; overflow: hidden; }
 .member-streak__day { fill: color-mix(in srgb, var(--portal-muted) 12%, var(--portal-surface)); }
 .member-streak__day.is-active { fill: color-mix(in srgb, var(--portal-salmon) 70%, var(--portal-surface)); }

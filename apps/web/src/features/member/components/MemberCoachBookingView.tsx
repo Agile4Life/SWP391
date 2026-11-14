@@ -724,6 +724,7 @@ export function MemberCoachBookingView({
               <button
                 key={slot.startTime}
                 type="button"
+                className="member-slot-btn"
                 onClick={() => {
                   setSelectedSlot(slot);
                   handleOpenBookingModal(slot);
@@ -736,7 +737,7 @@ export function MemberCoachBookingView({
                   fontWeight: isSelected ? 750 : 600,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
-                  transition: 'all 160ms ease',
+                  transition: 'transform 160ms ease, border-color 160ms ease, background-color 160ms ease',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -748,20 +749,6 @@ export function MemberCoachBookingView({
                   boxShadow: isSelected
                     ? '0 4px 12px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
                     : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--portal-salmon) 50%, transparent)';
-                    e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface))';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.borderColor = 'var(--portal-border)';
-                    e.currentTarget.style.background = 'var(--portal-surface)';
-                  }
                 }}
                 title={memberText(`Còn trống: ${slotRange} (Nhấn để đặt lịch)`, `Available: ${slotRange} (Click to book)`)}
               >
@@ -882,19 +869,7 @@ export function MemberCoachBookingView({
                         boxShadow: isSelected
                           ? '0 6px 16px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
                           : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
-                        transition: 'all 180ms ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--portal-salmon) 50%, transparent)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.transform = 'none';
-                          e.currentTarget.style.borderColor = 'var(--portal-border)';
-                        }
+                        transition: 'transform 180ms ease, border-color 180ms ease',
                       }}
                     >
                       <span
@@ -1320,21 +1295,22 @@ export function MemberCoachBookingView({
             </label>
 
             {/* Review modal is for already completed sessions; no active package alert needed here */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+            <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
               <button
                 type="button"
                 className="btn-secondary"
                 disabled={reviewSubmitting}
                 onClick={() => setReviewTargetBooking(null)}
               >
-                {memberText("Đóng")}</button>
+                {memberText("Hủy", "Cancel")}
+              </button>
               <button
                 type="button"
                 className="btn-primary"
                 disabled={reviewSubmitting}
                 onClick={() => void handleConfirmReview()}
               >
-                {reviewSubmitting ? memberText("Đang gửi…") : memberText("Gửi đánh giá")}
+                {reviewSubmitting ? memberText("Đang gửi…", "Sending…") : memberText("Gửi đánh giá", "Submit review")}
               </button>
             </div>
           </div>
@@ -1493,10 +1469,20 @@ export function MemberCoachBookingView({
                   {memberText("Phương thức thanh toán")}</h4>
               </div>
 
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div role="radiogroup" aria-label={memberText("Phương thức thanh toán", "Payment method")} style={{ display: 'grid', gap: 10 }}>
                 {/* Option 1: Gói tập */}
                 <div
+                  role="radio"
+                  aria-checked={paymentMethod === 'package_quota'}
+                  aria-disabled={!hasRemainingQuota}
+                  tabIndex={hasRemainingQuota ? 0 : -1}
                   onClick={() => hasRemainingQuota && setPaymentMethod('package_quota')}
+                  onKeyDown={(e) => {
+                    if (hasRemainingQuota && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      setPaymentMethod('package_quota');
+                    }
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -1511,7 +1497,7 @@ export function MemberCoachBookingView({
                       : 'var(--portal-surface)',
                     cursor: hasRemainingQuota ? 'pointer' : 'not-allowed',
                     opacity: hasRemainingQuota ? 1 : 0.7,
-                    transition: 'all 160ms ease',
+                    transition: 'border-color 160ms ease, background-color 160ms ease',
                   }}
                 >
                   <div
@@ -1586,7 +1572,16 @@ export function MemberCoachBookingView({
 
                 {/* Option 2: Trả phí theo giờ */}
                 <div
+                  role="radio"
+                  aria-checked={paymentMethod === 'hourly_pay'}
+                  tabIndex={0}
                   onClick={() => setPaymentMethod('hourly_pay')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setPaymentMethod('hourly_pay');
+                    }
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -1600,7 +1595,7 @@ export function MemberCoachBookingView({
                       ? 'color-mix(in srgb, var(--portal-salmon) 8%, var(--portal-surface))'
                       : 'var(--portal-surface)',
                     cursor: 'pointer',
-                    transition: 'all 160ms ease',
+                    transition: 'border-color 160ms ease, background-color 160ms ease',
                   }}
                 >
                   <div
@@ -1675,8 +1670,9 @@ export function MemberCoachBookingView({
                 }}
               >
                 <textarea
+                  className="portal-textarea"
                   rows={3}
-                  placeholder={memberText("Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ...")}
+                  placeholder={memberText("Ví dụ: Muốn tập trung cơ bụng và lưng, từng đau khớp gối nhẹ...", "Example: Focus on core and back, mild previous knee pain...")}
                   value={notes}
                   maxLength={200}
                   onChange={(e) => setNotes(e.target.value)}
@@ -1687,7 +1683,6 @@ export function MemberCoachBookingView({
                     outline: 'none',
                     resize: 'none',
                     fontFamily: 'inherit',
-                    fontSize: 14,
                     color: 'var(--portal-paper)',
                     lineHeight: 1.5,
                   }}
@@ -1724,76 +1719,26 @@ export function MemberCoachBookingView({
             )}
 
             {/* Footer Action Buttons */}
-            <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
+            <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
               <button
                 type="button"
+                className="btn-secondary"
                 disabled={submitting}
                 onClick={() => setModalSlot(null)}
-                style={{
-                  flex: 1,
-                  height: 48,
-                  borderRadius: 9999,
-                  border: '1.5px solid var(--portal-salmon)',
-                  background: 'transparent',
-                  color: 'var(--portal-paper)',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'all 160ms ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
               >
-                {memberText("Đóng")}</button>
+                {memberText("Hủy", "Cancel")}
+              </button>
               <button
                 type="button"
+                className="btn-primary"
                 disabled={submitting}
                 onClick={() => void handleConfirmBooking()}
-                style={{
-                  flex: 1.4,
-                  height: 48,
-                  borderRadius: 9999,
-                  border: 'none',
-                  background: 'linear-gradient(155deg, var(--portal-salmon) 0%, var(--portal-salmon) 100%)',
-                  color: 'var(--portal-on-accent)',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: submitting ? 'wait' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  fontFamily: 'inherit',
-                  boxShadow: '0 4px 14px color-mix(in srgb, var(--portal-salmon) 32%, transparent)',
-                  transition: 'all 160ms ease',
-                  opacity: submitting ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!submitting) {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 6px 18px color-mix(in srgb, var(--portal-salmon) 40%, transparent)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!submitting) {
-                    e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.boxShadow = '0 4px 14px color-mix(in srgb, var(--portal-salmon) 32%, transparent)';
-                  }
-                }}
               >
                 <span>
                   {submitting
-                    ? memberText("Đang xử lý…")
-                    : memberText("Xác nhận & Đặt lịch")}
+                    ? memberText("Đang xử lý…", "Processing…")
+                    : memberText("Xác nhận & Đặt lịch", "Confirm booking")}
                 </span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
               </button>
             </div>
           </div>

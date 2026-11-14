@@ -1,6 +1,6 @@
 import { useSourceLanguage, sourceText, sourceFormat, sourceToast as toast } from './shopI18n';
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { ApiError } from '../../shared/api/client';
 import { PublicLayout, RoundArrow } from '../landing/components/PublicLayout';
@@ -20,6 +20,10 @@ export function ProductDetailPage() {
   useSourceLanguage();
   const { slug } = useParams<{ slug?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const inPortal = location.pathname.startsWith('/member');
+  const productsBase = inPortal ? '/member/products' : '/products';
+  const checkoutPath = inPortal ? '/member/checkout' : '/checkout';
   const [product, setProduct] = useState<ProductDetailDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -95,28 +99,37 @@ export function ProductDetailPage() {
   const handleBuyNow = () => {
     if (!canBuy || !selectedVariant) return;
     addToCart(selectedVariant.id, effectiveQty);
-    navigate('/checkout');
+    navigate(checkoutPath);
   };
 
   const activeImage = product?.images?.[activeImageIdx] ?? product?.images?.[0] ?? null;
   const ppsLabel = selectedVariant ? pricePerServingLabel(selectedVariant.pricePerServing) : '';
 
-  return (
-    <PublicLayout>
-      <main id="public-main" className="fit-shop-page">
-        <section className="fit-section shop-detail" aria-labelledby="product-detail-title">
+  const renderPage = (content: ReactNode) =>
+    inPortal ? (
+      <div className="portal-container fit-shop-page">{content}</div>
+    ) : (
+      <PublicLayout>
+        <main id="public-main" className="fit-shop-page">
+          {content}
+        </main>
+      </PublicLayout>
+    );
+
+  return renderPage(
+    <section className={inPortal ? 'shop-detail' : 'fit-section shop-detail'} aria-labelledby="product-detail-title">
           {loading ? (
             <LoadingSkeleton label={sourceText("Đang tải chi tiết sản phẩm…")} variant="cards" count={2} />
           ) : error ? (
             <div className="fit-catalog-state" role="alert">
               <h1 id="product-detail-title">{sourceText("Không tải được chi tiết sản phẩm.")}</h1>
               <button type="button" className="fit-pill" onClick={() => setRetryTick(t => t + 1)}>{sourceText("Thử lại")}</button>
-              <Link to="/products" className="fit-text-link">{sourceText("Xem tất cả sản phẩm")}</Link>
+              <Link to={productsBase} className="fit-text-link">{sourceText("Xem tất cả sản phẩm")}</Link>
             </div>
           ) : notFound || !product ? (
             <div className="fit-catalog-state shop-detail__empty" role="status">
               <h1 id="product-detail-title">{sourceText("Sản phẩm này không còn bán.")}</h1>
-              <Link to="/products" className="fit-pill">
+              <Link to={productsBase} className="fit-pill">
                 <span>{sourceText("Xem tất cả sản phẩm")}</span>
                 <RoundArrow />
               </Link>
@@ -124,10 +137,10 @@ export function ProductDetailPage() {
           ) : (
             <>
               <nav className="shop-detail__breadcrumb" aria-label={sourceText("Đường dẫn sản phẩm")}>
-                <Link to="/products" className="fit-text-link">
+                <Link to={productsBase} className="fit-text-link">
                   {sourceText("← Sản phẩm")}</Link>
                 <span aria-hidden="true">/</span>
-                <Link to={`/products?category=${encodeURIComponent(product.categorySlug)}`} className="fit-text-link">
+                <Link to={`${productsBase}?category=${encodeURIComponent(product.categorySlug)}`} className="fit-text-link">
                   {product.categoryName}
                 </Link>
               </nav>
@@ -279,8 +292,6 @@ export function ProductDetailPage() {
               )}
             </>
           )}
-        </section>
-      </main>
-    </PublicLayout>
+        </section>,
   );
 }

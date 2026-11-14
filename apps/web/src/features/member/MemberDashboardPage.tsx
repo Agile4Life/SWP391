@@ -228,7 +228,7 @@ export function MemberDashboardPage() {
                         style={{
                           width: `${membershipProgress(membership, today)}%`,
                           height: '100%',
-                          background: 'var(--color-accent-gold)',
+                          background: 'var(--portal-salmon)',
                         }}
                       />
                     </div>
@@ -326,10 +326,12 @@ export function MemberDashboardPage() {
                           {item.className}
                         </h3>
                         <div className="row-card__meta">
-                          {validDate(item.sessionDate) && <span>{formatDate(item.sessionDate!)} · </span>}
-                          {item.startTime && item.endTime && <span>{item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} · </span>}
-                          {item.roomName && <span>{item.roomName} · </span>}
-                          {memberText("Đã đặt chỗ")}</div>
+                          {[
+                            validDate(item.sessionDate) ? formatDate(item.sessionDate!) : '',
+                            item.startTime && item.endTime ? `${item.startTime.slice(0, 5)}–${item.endTime.slice(0, 5)}` : '',
+                            item.roomName ?? '',
+                          ].filter(Boolean).join(' · ')}
+                        </div>
                       </div>
                     </div>
                   ))}

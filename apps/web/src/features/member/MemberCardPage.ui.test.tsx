@@ -308,7 +308,7 @@ describe('MemberCardPage', () => {
       generatedAt: '2026-10-21T02:00:00Z',
     });
     await renderPage();
-    expect(host.textContent).toContain('Dynamic QR');
+    expect(host.textContent).toContain('Sao chép mã QR động');
     expect(vi.mocked(QRCode.toDataURL)).toHaveBeenCalledWith('DYN:1:1:1234567890:abcd', expect.anything());
   });
 });

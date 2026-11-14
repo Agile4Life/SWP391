@@ -307,8 +307,8 @@ export function MemberProfilePage() {
               padding: '16px 20px',
               marginBottom: 22,
               borderRadius: 16,
-              background: 'var(--portal-raised, #303030)',
-              border: '1px solid var(--portal-border, #ffffff1a)',
+              background: 'var(--portal-raised)',
+              border: '1px solid var(--portal-border)',
             }}
           >
             <div
@@ -543,9 +543,9 @@ export function MemberProfilePage() {
                       value={profile.fitnessLevel ?? 'beginner'}
                       onChange={(e) => patch({ fitnessLevel: e.target.value })}
                     >
-                      <option value="beginner">{memberText("Beginner (Mới bắt đầu)")}</option>
-                      <option value="intermediate">{memberText("Intermediate (Trung cấp)")}</option>
-                      <option value="advanced">{memberText("Advanced (Nâng cao / Chuyên nghiệp)")}</option>
+                      <option value="beginner">{memberText("Mới bắt đầu", "Beginner")}</option>
+                      <option value="intermediate">{memberText("Trung cấp", "Intermediate")}</option>
+                      <option value="advanced">{memberText("Nâng cao / Chuyên nghiệp", "Advanced / Pro")}</option>
                     </Select>
                   </div>
                   <div className="portal-form-group">
@@ -618,13 +618,13 @@ export function MemberProfilePage() {
             style={{
               marginTop: 24,
               paddingTop: 20,
-              borderTop: '1px solid var(--portal-border, #ffffff1a)',
+              borderTop: '1px solid var(--portal-border)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{memberText('Bảo mật tài khoản')}</div>
-                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                <div style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
                   {memberText('Cập nhật mật khẩu định kỳ và nhận thông báo bảo mật qua email')}
                 </div>
               </div>
