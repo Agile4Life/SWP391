@@ -577,7 +577,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                     background: 'none',
                     border: 'none',
                     fontSize: '0.75rem',
-                    color: 'var(--color-text-muted)',
+                    color: 'var(--fit-muted)',
                     cursor: 'pointer',
                     padding: 0,
                   }}
@@ -611,7 +611,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                     background: 'none',
                     border: 'none',
                     fontSize: '0.78rem',
-                    color: 'var(--color-accent-gold)',
+                    color: 'var(--fit-salmon, var(--sol-accent))',
                     cursor: 'pointer',
                     padding: 0,
                     fontWeight: 600,
@@ -674,7 +674,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>{sourceText("Đang xác thực Google và gửi mã OTP...")}</p>}
           <p style={{ marginTop: '20px', fontSize: '0.85rem', textAlign: 'center' }}>
             {sourceText("Chưa có tài khoản?")}{' '}
-            <Link to={purchaseAuthPath('/register', search)} viewTransition style={{ color: 'var(--color-accent-gold)', fontWeight: 600 }}>
+            <Link to={purchaseAuthPath('/register', search)} viewTransition style={{ color: 'var(--fit-salmon, var(--sol-accent))', fontWeight: 600 }}>
               {sourceText("Đăng ký hội viên")}</Link>
           </p>
         </>
@@ -711,7 +711,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--color-text-muted)',
+                color: 'var(--fit-muted)',
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -767,7 +767,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--color-accent-gold)',
+                color: 'var(--fit-salmon, var(--sol-accent))',
                 cursor: countdown > 0 || isLoading ? 'not-allowed' : 'pointer',
                 padding: 0,
                 fontWeight: 600,
@@ -785,7 +785,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--color-text-muted)',
+                color: 'var(--fit-muted)',
                 cursor: 'pointer',
                 padding: 0,
               }}
@@ -822,18 +822,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           </div>
 
           {debugOtpCode && (
-            <div
-              style={{
-                background: '#FFF3E0',
-                border: '1px solid #FFE0B2',
-                borderRadius: '6px',
-                padding: '8px 12px',
-                marginBottom: '16px',
-                fontSize: '0.84rem',
-                color: '#E65100',
-                textAlign: 'center',
-              }}
-            >
+            <div className="fit-debug-otp" style={{ textAlign: 'center' }}>
               ⚙️ <strong>{sourceText("Chế độ Test (Không cần mở mail):")}</strong> {sourceText(" Đã tự động điền mã xác nhận ")}<strong>{debugOtpCode}</strong>
             </div>
           )}
@@ -888,7 +877,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--color-accent-gold)',
+                color: 'var(--fit-salmon, var(--sol-accent))',
                 cursor: countdown > 0 || isLoading || success ? 'not-allowed' : 'pointer',
                 opacity: countdown > 0 || isLoading || success ? 0.6 : 1,
                 padding: 0,
@@ -906,7 +895,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 background: 'none',
                 border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--color-text-muted)',
+                color: 'var(--fit-muted)',
                 cursor: isLoading || success ? 'not-allowed' : 'pointer',
                 opacity: isLoading || success ? 0.6 : 1,
                 padding: 0,

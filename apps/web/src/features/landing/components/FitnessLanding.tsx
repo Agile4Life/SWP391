@@ -42,7 +42,7 @@ const MUSCLE_CLOSE_DELAY_MS = 600;
 const muscleGroups = [
   {
     id: 'chest',
-    get name() { return sourceText('Cơ Ngực (Pectorals)'); },
+    get name() { return sourceText({ vi: 'Cơ Ngực', en: 'Chest (Pectorals)' }); },
     get zone() { return sourceText('UPPER & MID CHEST'); },
     get goal() { return sourceText('Tăng độ dày & đường nét khung ngực'); },
     get tip() { return sourceText('Hạ tạ có kiểm soát 2–3 giây và khép bả vai để giảm tải khớp vai trước.'); },
@@ -61,7 +61,7 @@ const muscleGroups = [
   },
   {
     id: 'shoulders',
-    get name() { return sourceText('Cơ Vai & Cầu Vai (Deltoids & Traps)'); },
+    get name() { return sourceText({ vi: 'Cơ Vai & Cầu Vai', en: 'Shoulders & Traps' }); },
     get zone() { return sourceText('DELTOIDS & TRAPS'); },
     get goal() { return sourceText('Mở rộng khung vai & ổn định khớp bả vai'); },
     get tip() { return sourceText('Đẩy tạ trong mặt phẳng xương bả vai (góc 30°) để bảo vệ khớp xoay vai.'); },
@@ -81,7 +81,7 @@ const muscleGroups = [
   },
   {
     id: 'arms',
-    get name() { return sourceText('Bắp Tay Trước & Tay Sau (Biceps & Triceps)'); },
+    get name() { return sourceText({ vi: 'Bắp Tay Trước & Tay Sau', en: 'Biceps & Triceps' }); },
     get zone() { return sourceText('BICEPS & TRICEPS'); },
     get goal() { return sourceText('Phát triển lực kéo – đẩy đối xứng'); },
     get tip() { return sourceText('Cố định khuỷu tay sát thân người khi cuộn tạ hoặc kéo cáp.'); },
@@ -101,7 +101,7 @@ const muscleGroups = [
   },
   {
     id: 'core',
-    get name() { return sourceText('Cơ Bụng & Liên Sườn (Core & Obliques)'); },
+    get name() { return sourceText({ vi: 'Cơ Bụng & Liên Sườn', en: 'Core & Obliques' }); },
     zone: 'ABS & OBLIQUES',
     get goal() { return sourceText('Siết cơ trọng tâm & truyền lực xoay'); },
     get tip() { return sourceText('Thở ra nén chặt thành bụng, tránh võng thắt lưng.'); },
@@ -120,7 +120,7 @@ const muscleGroups = [
   },
   {
     id: 'forearms',
-    get name() { return sourceText('Cẳng Tay & Lực Nắm (Forearms & Grip)'); },
+    get name() { return sourceText({ vi: 'Cẳng Tay & Lực Nắm', en: 'Forearms & Grip' }); },
     get zone() { return sourceText('FOREARMS & GRIP'); },
     get goal() { return sourceText('Tăng lực cầm tạ & ổn định cổ tay khi cầm vợt'); },
     get tip() { return sourceText('Giữ cổ tay thẳng trục với cẳng tay trong mọi bài kéo và đánh bóng.'); },
@@ -140,7 +140,7 @@ const muscleGroups = [
   },
   {
     id: 'legs',
-    get name() { return sourceText('Cơ Đùi & Bắp Chân (Quads & Calves)'); },
+    get name() { return sourceText({ vi: 'Cơ Đùi & Bắp Chân', en: 'Quads & Calves' }); },
     get zone() { return sourceText('QUADS & CALVES'); },
     get goal() { return sourceText('Sức mạnh thân dưới & tốc độ bứt tốc trên sân'); },
     get tip() { return sourceText('Mở hướng đầu gối theo mũi chân và kiểm soát nhịp gập hông – gối.'); },
@@ -208,14 +208,13 @@ const journeySteps = [
 ];
 const memberBenefits = [
   {
-    tag: 'Bộ môn',
+    get tag() { return sourceText({ vi: 'Bộ môn', en: 'Disciplines' }); },
     idx: '01',
     get title() { return sourceText('Đặt lịch tập trên Portal'); },
     get description() { return sourceText('Xem lịch lớp theo bộ môn và đặt chỗ khi gói còn hiệu lực.'); },
     perks: [
       'Gym · Bơi lội · Boxing · Tennis · Cầu lông · Yoga',
-      'Thấy ngay khung giờ còn chỗ',
-      'See open time slots at a glance',
+      { vi: 'Thấy ngay khung giờ còn chỗ', en: 'See open time slots at a glance' },
     ],
   },
   {
@@ -224,21 +223,18 @@ const memberBenefits = [
     get title() { return sourceText('Lớp nhóm theo gói tập'); },
     get description() { return sourceText('Xem huấn luyện viên, giờ học và chỗ trống. Số lượt đặt tùy gói tập.'); },
     perks: [
-      'Lịch lớp sáng, chiều, tối mỗi ngày',
-      'Morning, afternoon and evening classes daily',
-      'Điểm danh bằng mã QR',
-      'Check in with your QR code',
+      { vi: 'Lịch lớp sáng, chiều, tối mỗi ngày', en: 'Morning, afternoon and evening classes daily' },
+      { vi: 'Điểm danh bằng mã QR', en: 'Check in with your QR code' },
     ],
   },
   {
-    tag: 'HLV',
+    get tag() { return sourceText({ vi: 'HLV', en: 'Coach' }); },
     idx: '03',
     get title() { return sourceText('HLV theo dõi từng buổi tập'); },
     get description() { return sourceText('HLV ghi lại mức tạ, số lần tập và tiến độ sau mỗi buổi.'); },
     perks: [
       'HLV có chứng chỉ đúng từng bộ môn',
-      'Xem kết quả từng buổi trên Portal',
-      'See each session’s results in the portal',
+      { vi: 'Xem kết quả từng buổi trên Portal', en: 'See each session’s results in the portal' },
     ],
   },
   {
@@ -247,12 +243,11 @@ const memberBenefits = [
     get title() { return sourceText('Kế hoạch tuần cho riêng bạn'); },
     get description() { return sourceText('Gợi ý lịch tuần theo BMI và mục tiêu, có trợ lý hỏi đáp.'); },
     perks: [
-      'Mục tiêu: giảm mỡ, tăng cơ, sức bền',
-      'Goals: fat loss, muscle gain, endurance',
-      'Bảo lưu (Freeze) ngay trên Portal',
+      { vi: 'Mục tiêu: giảm mỡ, tăng cơ, sức bền', en: 'Goals: fat loss, muscle gain, endurance' },
+      { vi: 'Tạm dừng gói ngay trên Portal', en: 'Freeze your plan from the portal' },
     ],
   },
-] as const;
+];
 const faqs = [
   {
     get question() { return sourceText('Người mới bắt đầu có theo kịp không?'); },
@@ -794,7 +789,11 @@ export function FitnessLanding() {
             <h3>{benefit.title}</h3>
             <p>{benefit.description}</p>
             <ul>
-              {benefit.perks.map((perk) => <li key={sourceText(perk)}>{sourceText(perk)}</li>)}
+              {benefit.perks.map((perk) => (
+                <li key={typeof perk === 'string' ? perk : perk.vi}>
+                  {sourceText(perk)}
+                </li>
+              ))}
             </ul>
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">

@@ -19,7 +19,6 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     const header = root.querySelector<HTMLElement>('.fit-header');
     const progressBar = root.querySelector<HTMLElement>('.fit-scroll-progress');
     const benefits = root.querySelector<HTMLElement>('.fit-benefits');
-    const benefitsTrack = benefits?.querySelector<HTMLElement>('.fit-benefits-track');
     const hero = root.querySelector<HTMLElement>('.fit-hero');
     const finalCta = root.querySelector<HTMLElement>('.fit-final-cta');
     const manifestos = [...root.querySelectorAll<HTMLElement>('[data-scroll-scrub="manifesto"]')]
@@ -36,8 +35,6 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       const progress = preference.matches ? 0 : clamp(currentScrollY / maxScroll, 0, 1);
       const benefitRect = benefits?.getBoundingClientRect();
       const benefitHeight = benefits?.offsetHeight ?? 0;
-      const maxShift = benefits && benefitsTrack && window.innerWidth > 1100
-        ? Math.max(0, benefitsTrack.scrollWidth - benefits.clientWidth) : 0;
       const heroHeight = hero?.offsetHeight ?? 1;
       const manifestoRects = preference.matches ? [] : manifestos.map(({ element }) => element.getBoundingClientRect());
       const ctaRect = !preference.matches ? finalCta?.getBoundingClientRect() : undefined;
@@ -50,7 +47,6 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
           ? clamp(-benefitRect.top / Math.max(1, benefitHeight - viewportHeight), 0, 1)
           : clamp((viewportHeight * .72 - benefitRect.top) / Math.max(1, viewportHeight * .8), 0, 1);
         setProperty(benefits, '--fit-benefits-progress', benefitProgress.toFixed(4));
-        setProperty(benefits, '--fit-benefits-shift', `${(-benefitProgress * maxShift).toFixed(1)}px`);
       }
       if (preference.matches) return;
       setProperty(hero, '--fit-hero-scroll', clamp(currentScrollY / Math.max(1, heroHeight), 0, 1).toFixed(3));

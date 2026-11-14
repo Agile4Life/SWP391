@@ -69,8 +69,6 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
                 </div>
               </div>
 
-              {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={classesPath} /> : <CatalogStatus loading={!error} retry={retry} />}
-
               <div className="fit-trainer-hero-actions">
                 <Link to={bookPath} className="fit-pill">
                   {sourceText("Đặt lịch ")}{sportName}
@@ -82,6 +80,10 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
                 {hasCourts && <Link to={classesPath} className="fit-text-link">{sourceText("Xem lịch lớp ")}<RoundArrow diagonal /></Link>}
               </div>
             </div>
+          </div>
+
+          <div className="fit-sport-schedule-wrap" data-reveal="soft">
+            {catalog ? <CatalogSchedule catalog={catalog} sport={sport.id} joinPath={classesPath} /> : <CatalogStatus loading={!error} retry={retry} />}
           </div>
         </section>
       </main>

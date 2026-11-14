@@ -36,7 +36,7 @@ export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
   </span>;
 }
 
-export function PublicLayout({ children }: { children: ReactNode }) {
+export function PublicLayout({ children, minimal = false }: { children: ReactNode; minimal?: boolean }) {
   useSourceLanguage();
   const { lang, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -92,78 +92,85 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     <div className="fit-canvas">
       <header className="fit-header">
         <Link className="fit-brand" to="/" aria-label={t('SÖL Fitness · Trang chủ', 'SÖL Fitness · Home')} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>{"SÖL"}</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
-        <nav className={`fit-nav ${menuOpen ? 'is-open' : ''}`} id="public-navigation" aria-label={t('Điều hướng chính', 'Main navigation')}>
-          {links.map(({ to, hash: target, label, labelEn }) => <Link
-            key={label}
-            to={to}
-            data-nav-target={target}
-            aria-current={!target && to === '/products' && pathname.startsWith('/products') ? 'page' : undefined}
-            className={isNavActive(to, target) ? 'is-active' : undefined}
-            onClick={(event) => {
-              setMenuOpen(false);
-              if (target && pathname === '/') {
-                if (hash === `#${target}`) {
-                  event.preventDefault();
+        {!minimal && (
+          <nav className={`fit-nav ${menuOpen ? 'is-open' : ''}`} id="public-navigation" aria-label={t('Điều hướng chính', 'Main navigation')}>
+            {links.map(({ to, hash: target, label, labelEn }) => <Link
+              key={label}
+              to={to}
+              data-nav-target={target}
+              aria-current={!target && to === '/products' && pathname.startsWith('/products') ? 'page' : undefined}
+              className={isNavActive(to, target) ? 'is-active' : undefined}
+              onClick={(event) => {
+                setMenuOpen(false);
+                if (target && pathname === '/') {
+                  if (hash === `#${target}`) {
+                    event.preventDefault();
+                  }
+                  scrollToSection(target);
+                } else if (!target && pathname === to) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-                scrollToSection(target);
-              } else if (!target && pathname === to) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-            }}
-          >{lang === 'en' ? labelEn : label}</Link>)}
-        </nav>
+              }}
+            >{lang === 'en' ? labelEn : label}</Link>)}
+          </nav>
+        )}
         <div className="fit-header-actions">
+          {minimal && <LanguageSetting variant="footer" className="fit-auth-lang" />}
           <ThemeToggle />
-          <CartButton />
+          {!minimal && <CartButton />}
           <Link to={user ? homePath(user.role) : pathname === '/login' ? purchaseAuthPath('/register', search) : purchaseAuthPath('/login', search)} className="fit-pill fit-header-cta">
             <span className="fit-header-cta-label">{user ? t('Vào portal', 'Enter portal') : pathname === '/login' ? t('Tham gia ngay', 'Join now') : t('Đăng nhập', 'Sign in')}</span><RoundArrow />
           </Link>
-          <button type="button" className="fit-menu" aria-controls="public-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? t('Đóng menu', 'Close menu') : t('Mở menu', 'Open menu')} onClick={() => setMenuOpen(!menuOpen)}>
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-              {menuOpen ? <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /> : <path d="M3.5 5h9M3.5 8h9M3.5 11h9" />}
-            </svg>
-          </button>
+          {!minimal && (
+            <button type="button" className="fit-menu" aria-controls="public-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? t('Đóng menu', 'Close menu') : t('Mở menu', 'Open menu')} onClick={() => setMenuOpen(!menuOpen)}>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                {menuOpen ? <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /> : <path d="M3.5 5h9M3.5 8h9M3.5 11h9" />}
+              </svg>
+            </button>
+          )}
         </div>
       </header>
       {children}
-      <footer className="fit-footer" id="contact">
-        <div className="fit-footer-main">
-          <div>
-            <Link to="/" className="fit-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>{"SÖL"}</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
-          </div>
-          <nav aria-label={t('Điều hướng chân trang', 'Footer navigation')}>{links.map(({ to, hash: target, label, labelEn }) => <Link
-            key={label}
-            to={to}
-            onClick={(event) => {
-              if (target && pathname === '/') {
-                if (hash === `#${target}`) {
-                  event.preventDefault();
+      {!minimal && (
+        <footer className="fit-footer" id="contact">
+          <div className="fit-footer-main">
+            <div>
+              <Link to="/" className="fit-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>{"SÖL"}</span>Fitness<span className="fit-brand-dot" aria-hidden="true">®</span></Link>
+            </div>
+            <nav aria-label={t('Điều hướng chân trang', 'Footer navigation')}>{links.map(({ to, hash: target, label, labelEn }) => <Link
+              key={label}
+              to={to}
+              onClick={(event) => {
+                if (target && pathname === '/') {
+                  if (hash === `#${target}`) {
+                    event.preventDefault();
+                  }
+                  scrollToSection(target);
+                } else if (!target && pathname === to) {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
-                scrollToSection(target);
-              } else if (!target && pathname === to) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-            }}
-          >{lang === 'en' ? labelEn : label}</Link>)}</nav>
-          <address><span>{"120 Hai Bà Trưng, Quận 1, TP.HCM"}</span><a href="tel:19006868">1900 6868 ↗</a><a href="mailto:concierge@sol-wellness.vn">concierge@sol-wellness.vn</a></address>
-        </div>
-        <div className="fit-footer-bottom">
-          <span>{"© 2026 SÖL Fitness"}</span>
-          <span>{t('06:00 — 22:00 mỗi ngày', '06:00 — 22:00 daily')}</span>
-          <LanguageSetting variant="footer" />
-          <Link to={user ? homePath(user.role) : '/login'}>{user ? t('Không gian hội viên', 'Member workspace') : t('Đăng nhập hội viên', 'Member sign in')} ↗</Link>
-        </div>
-        <div className="fit-footer-watermark" aria-hidden="true">{"SÖL FITNESS"}</div>
-      </footer>
+              }}
+            >{lang === 'en' ? labelEn : label}</Link>)}</nav>
+            <address><span>{"120 Hai Bà Trưng, Quận 1, TP.HCM"}</span><a href="tel:19006868">1900 6868 ↗</a><a href="mailto:concierge@sol-wellness.vn">concierge@sol-wellness.vn</a></address>
+          </div>
+          <div className="fit-footer-bottom">
+            <span>{"© 2026 SÖL Fitness"}</span>
+            <span>{t('06:00 — 22:00 mỗi ngày', '06:00 — 22:00 daily')}</span>
+            <LanguageSetting variant="footer" />
+            <Link to={user ? homePath(user.role) : '/login'}>{user ? t('Không gian hội viên', 'Member workspace') : t('Đăng nhập hội viên', 'Member sign in')} ↗</Link>
+          </div>
+          <div className="fit-footer-watermark" aria-hidden="true">{"SÖL FITNESS"}</div>
+        </footer>
+      )}
     </div>
-    <ChatWidget />
+    {!minimal && <ChatWidget />}
   </div>;
 }
 
 export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'login' | 'register' }) {
   useSourceLanguage();
   const { lang, t } = useI18n();
-  return <PublicLayout>
+  return <PublicLayout minimal>
     <main id="public-main" className="fit-auth">
       <div className="fit-auth-story" data-reveal="soft">
         <h1>
