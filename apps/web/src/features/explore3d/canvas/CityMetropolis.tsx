@@ -5,6 +5,7 @@ import { CAMPUS_FLAGPOLE_ANCHORS } from '../renderers/architecture/buildCampusGe
 import { buildCityMetropolis } from '../renderers/architecture/buildCityMetropolis';
 import { useDocumentTheme, useExploreMaterials } from '../renderers/materials';
 import { useExploreStore } from '../state/exploreStore';
+import { CityLife } from './CityLife';
 import { CityTraffic } from './CityTraffic';
 
 const NOOP_RAYCAST = () => null;
@@ -45,6 +46,7 @@ export function CityMetropolis() {
       <mesh name="sol-city-glass" geometry={city.glassGeometry} material={glassMat} raycast={NOOP_RAYCAST} />
       <mesh name="sol-city-emissive" geometry={city.emissiveGeometry} material={emissiveMat} raycast={NOOP_RAYCAST} />
       <CityTraffic />
+      <CityLife city={city} />
       <Flags isLight={theme === 'light'} />
     </group>
   );

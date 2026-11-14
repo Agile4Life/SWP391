@@ -59,10 +59,38 @@ function buildCarGeometry(): THREE.BufferGeometry {
   return out;
 }
 
+function buildLightsGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+  const add = (x: number, z: number, r: number, g: number, b: number) => {
+    const geo = new THREE.BoxGeometry(0.08, 0.16, 0.34).toNonIndexed();
+    geo.translate(x, 0.62, z);
+    const col = new Float32Array(geo.getAttribute('position').count * 3);
+    for (let i = 0; i < col.length; i += 3) { col[i] = r; col[i + 1] = g; col[i + 2] = b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    parts.push(geo);
+  };
+  for (const z of [-0.62, 0.62]) { add(2.12, z, 4, 3.6, 2.6); add(-2.1, z, 3.5, 0.1, 0.05); }
+  const total = parts.reduce((n, g) => n + g.getAttribute('position').count, 0);
+  const pos = new Float32Array(total * 3);
+  const col = new Float32Array(total * 3);
+  let o = 0;
+  for (const g of parts) {
+    pos.set(g.getAttribute('position').array, o * 3);
+    col.set(g.getAttribute('color').array, o * 3);
+    o += g.getAttribute('position').count;
+    g.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return out;
+}
+
 /** Instanced cars looping along the boulevard and the two avenues. */
 export function CityTraffic() {
   const tier = useExploreStore(s => s.tier);
   const ref = useRef<THREE.InstancedMesh>(null);
+  const lightsRef = useRef<THREE.InstancedMesh>(null);
   const scale = tier === 'low' ? 0.5 : 1;
   const cars = useMemo(() => {
     const out: { lane: Lane; offset: number }[] = [];
@@ -77,6 +105,9 @@ export function CityTraffic() {
     () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.45, envMapIntensity: 1.2 }),
     [],
   );
+  const lightsGeo = useMemo(() => buildLightsGeometry(), []);
+  const lightsMat = useMemo(() => new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }), []);
+  useEffect(() => () => { lightsGeo.dispose(); lightsMat.dispose(); }, [lightsGeo, lightsMat]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => material.dispose(), [material]);
 
@@ -107,19 +138,25 @@ export function CityTraffic() {
         p.set(lane.fixed, 0, along);
         q.setFromAxisAngle(up, lane.dir === 1 ? -Math.PI / 2 : Math.PI / 2);
       }
-      mesh.setMatrixAt(i, m.compose(p, q, one));
+      m.compose(p, q, one);
+      mesh.setMatrixAt(i, m);
+      lightsRef.current?.setMatrixAt(i, m);
     });
     mesh.instanceMatrix.needsUpdate = true;
+    if (lightsRef.current) lightsRef.current.instanceMatrix.needsUpdate = true;
   });
 
   return (
-    <instancedMesh
-      key={cars.length}
-      ref={ref}
-      args={[geometry, material, cars.length]}
-      frustumCulled={false}
-      castShadow
-      raycast={() => null}
-    />
+    <>
+      <instancedMesh
+        key={cars.length}
+        ref={ref}
+        args={[geometry, material, cars.length]}
+        frustumCulled={false}
+        castShadow
+        raycast={() => null}
+      />
+      <instancedMesh key={`l${cars.length}`} ref={lightsRef} args={[lightsGeo, lightsMat, cars.length]} frustumCulled={false} raycast={() => null} />
+    </>
   );
 }
