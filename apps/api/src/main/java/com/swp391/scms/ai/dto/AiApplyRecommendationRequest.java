@@ -18,6 +18,9 @@ public class AiApplyRecommendationRequest {
     @JsonAlias("class_id")
     private Long classId;
 
+    @JsonAlias("coach_id")
+    private Long coachId;
+
     private String goal;
 
     @Valid
@@ -33,6 +36,8 @@ public class AiApplyRecommendationRequest {
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     public Long getClassId() { return classId; }
     public void setClassId(Long classId) { this.classId = classId; }
+    public Long getCoachId() { return coachId; }
+    public void setCoachId(Long coachId) { this.coachId = coachId; }
     public String getGoal() { return goal; }
     public void setGoal(String goal) { this.goal = goal; }
     public List<TrainingPlanItemCreateDto> getItems() { return items; }

@@ -37,4 +37,30 @@ describe('aiApi errors', () => {
     expect(bodies[0].items[0].rest_seconds).toBe(0);expect(bodies[1].items[0]).toMatchObject({id:501,sets:5,reps:8,restSeconds:90});
   });
 
+  it('forwards coach_id and duration_weeks on AI workout generation and loads member AI recommendation history', async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: { id: 77, memberId: 8, modelName: 'test', goal: 'Strength', analysis: 'OK', items: [{ dayOfWeek: 1, exerciseName: 'Plank', durationMinutes: 5 }] },
+      })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: 77, memberId: 8, modelName: 'test', goal: 'Strength', analysis: 'OK', items: [{ dayOfWeek: 1, exerciseName: 'Plank', durationMinutes: 5 }] }],
+      })));
+    vi.stubGlobal('fetch', fetch);
+
+    await aiApi.generateWorkoutPlan({ memberId: 8, coachId: 21, durationWeeks: 6, additionalRequirements: 'Ưu tiên core' });
+    const history = await aiApi.getMemberRecommendations(8);
+
+    const [genUrl, genInit] = fetch.mock.calls[0] as [string, RequestInit];
+    expect(genUrl).toBe('/api/v1/ai/generate-workout-plan');
+    expect(JSON.parse(String(genInit.body))).toEqual({
+      member_id: 8,
+      coach_id: 21,
+      additional_requirements: 'Ưu tiên core',
+      duration_weeks: 6,
+    });
+    expect(fetch.mock.calls[1][0]).toBe('/api/v1/ai/recommendations/member/8');
+    expect(history).toHaveLength(1);
+    expect(history[0].id).toBe(77);
+  });
+
 });

@@ -13,6 +13,7 @@ import java.util.Map;
 public class OpenAiRestClient implements AiClient {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    static final int MAX_JSON_OUTPUT_TOKENS = 2500;
 
     private final String apiKey;
     private final String model;
@@ -85,6 +86,7 @@ public class OpenAiRestClient implements AiClient {
             if (json) {
                 // OpenAI and Groq both accept JSON mode; it needs the word "JSON" in the prompt, which the plan prompt has.
                 body.put("response_format", Map.of("type", "json_object"));
+                body.put("max_completion_tokens", MAX_JSON_OUTPUT_TOKENS);
             }
             JsonNode response = restClient.post()
                 .uri("/chat/completions")

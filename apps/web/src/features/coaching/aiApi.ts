@@ -7,15 +7,16 @@ export interface WorkoutExerciseItem {
   dayOfWeek: number; // 1 = Thứ 2, 2 = Thứ 3, ..., 7 = Chủ Nhật
   exerciseName: string;
   description?: string;
-  sets: number;
-  reps: number;
-  durationMinutes?: number;
-  restSeconds?: number;
+  sets?: number | null;
+  reps?: number | null;
+  durationMinutes?: number | null;
+  restSeconds?: number | null;
   orderIndex?: number;
 }
 
 export interface GenerateWorkoutPlanPayload {
   memberId: number;
+  coachId?: number;
   additionalRequirements?: string;
   durationWeeks?: number;
 }
@@ -57,6 +58,7 @@ export interface MemberOption {
   heightCm?: number;
   weightKg?: number;
   bmi?: number;
+  canViewWorkoutPlan?: boolean;
 }
 
 export interface CoachOption {
@@ -111,6 +113,10 @@ export const aiApi = {
     return Array.isArray(coaches) ? coaches : [];
   },
 
+  /** Lịch sử gợi ý giáo án AI đã tạo cho học viên (mới nhất trước). */
+  getMemberRecommendations: (memberId: number): Promise<AiWorkoutPlanResult[]> =>
+    apiFetch<AiWorkoutPlanResult[]>(`/ai/recommendations/member/${memberId}`),
+
   /**
    * Gọi động cơ AI phân tích thể trạng và gợi ý giáo án bài tập cá nhân hóa
    * (POST /api/v1/ai/generate-workout-plan)
@@ -120,6 +126,7 @@ export const aiApi = {
       method: 'POST',
       body: JSON.stringify({
         member_id: payload.memberId,
+        ...(payload.coachId != null ? { coach_id: payload.coachId } : {}),
         additional_requirements: payload.additionalRequirements || '',
         duration_weeks: payload.durationWeeks || 4,
       }),
@@ -154,10 +161,10 @@ export const aiApi = {
           day_of_week: item.dayOfWeek,
           exercise_name: item.exerciseName,
           description: item.description,
-          sets: item.sets,
-          reps: item.reps,
-          rest_seconds: item.restSeconds,
-          duration_minutes: item.durationMinutes || 15,
+          sets: item.sets ?? undefined,
+          reps: item.reps ?? undefined,
+          rest_seconds: item.restSeconds ?? undefined,
+          duration_minutes: item.durationMinutes ?? (item.sets == null && item.reps == null ? 15 : undefined),
           order_index: item.orderIndex || idx + 1,
         })),
       }),

@@ -111,6 +111,7 @@ class AiClientTest {
         MockRestServiceServer openAi = MockRestServiceServer.bindTo(openAiBuilder).build();
         openAi.expect(requestTo("https://api.openai.com/v1/chat/completions"))
                 .andExpect(jsonPath("$.response_format.type").value("json_object"))
+                .andExpect(jsonPath("$.max_completion_tokens").value(2500))
                 .andRespond(withSuccess("{\"choices\":[{\"message\":{\"content\":\"{}\"}}]}", MediaType.APPLICATION_JSON));
         openAi.expect(requestTo("https://api.openai.com/v1/chat/completions"))
                 .andExpect(jsonPath("$.response_format").doesNotExist())
@@ -124,6 +125,7 @@ class AiClientTest {
         MockRestServiceServer gemini = MockRestServiceServer.bindTo(geminiBuilder).build();
         gemini.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"))
                 .andExpect(jsonPath("$.generationConfig.responseMimeType").value("application/json"))
+                .andExpect(jsonPath("$.generationConfig.maxOutputTokens").value(2500))
                 .andRespond(withSuccess("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{}\"}]}}]}", MediaType.APPLICATION_JSON));
         gemini.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"))
                 .andExpect(jsonPath("$.generationConfig.responseMimeType").doesNotExist())

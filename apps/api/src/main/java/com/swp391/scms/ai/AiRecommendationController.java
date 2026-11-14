@@ -48,8 +48,9 @@ public class AiRecommendationController {
     public ResponseEntity<ApiResponse<AiWorkoutPlanResponse>> generateWorkoutPlan(
             @Valid @RequestBody AiWorkoutPlanRequest request,
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        Long coachId = principal != null ? principal.id() : null;
-        AiWorkoutPlanResponse result = recommendationService.generateWorkoutPlan(request, coachId);
+        Long userId = principal != null ? principal.id() : null;
+        String role = principal != null ? principal.role() : null;
+        AiWorkoutPlanResponse result = recommendationService.generateWorkoutPlan(request, userId, role);
         return ResponseEntity.ok(ApiResponse.ok(msg("ai.recommend.generated"), result));
     }
 

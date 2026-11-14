@@ -433,4 +433,165 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).toContain('23');
   });
 
+  it('allows editing the training plan goal in Step 1 (including after AI apply), sends edited goal to server, and never writes dead localStorage', async () => {
+    await renderComponent();
+
+    const goalInput = host.querySelector('#plan-goal-input') as HTMLInputElement;
+    expect(goalInput).not.toBeNull();
+    expect(goalInput.value).toBe('Tăng cơ nạc');
+
+    // Apply AI suggestion -> updates goal input AND auto-advances to Step 2 on first scheduled day
+    const clickBtn = async (label: string) => act(async () => {
+      Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label))?.click();
+    });
+    await clickBtn('Gợi ý giáo án bằng AI');
+    await clickBtn('Phân tích & Sinh giáo án bằng AI');
+    await clickBtn('Áp dụng vào giáo án');
+
+    // Auto-advanced to Step 2 immediately
+    expect(host.querySelector('.plan-step__button.is-active')?.textContent).toContain('Bài tập theo ngày');
+
+    // Go back to Step 1 to refine the AI-suggested goal
+    await openStep(1);
+    const updatedGoalInput = host.querySelector('#plan-goal-input') as HTMLInputElement;
+    expect(updatedGoalInput.value).toBe('Tăng cơ nạc và phục hồi cơ lưng');
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(updatedGoalInput, 'Tăng cơ lưng xô an toàn 6 tuần');
+      updatedGoalInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    await openStep(3);
+    await act(async () => { saveButton()?.click(); });
+
+    expect(aiApi.saveTrainingPlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        goal: 'Tăng cơ lưng xô an toàn 6 tuần',
+        isAiGenerated: true,
+        aiRecommendationLogId: 999,
+      }),
+      true
+    );
+    expect(localStorage.getItem('sol_coach_training_plans')).toBeNull();
+  });
+
+  it('syncs AI duration weeks with endDate, forwards manager coachId, isolates AI results per member, and restores latest recommendation', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'mgr', name: 'Manager', identifier: 'mgr', role: 'MANAGER' }));
+    const restoreSpy = vi.spyOn(aiApi, 'getMemberRecommendations').mockResolvedValue([
+      {
+        ...mockAiResponse,
+        id: 1200,
+        memberId: 2,
+        memberName: 'Trần Thị Thu Thảo',
+        goal: 'Săn chắc cơ mông 8 tuần',
+      },
+    ]);
+
+    await renderComponent();
+
+    // Manager selects coach 32 first
+    await act(async () => { (host.querySelector('#plan-coach-select') as HTMLElement).click(); });
+    const coachOpt = Array.from(host.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('HLV Elena Cruz')) as HTMLElement;
+    await act(async () => { coachOpt.click(); });
+
+    const startInput = host.querySelector('input[name="plan-start-date"]') as HTMLInputElement;
+    const initialStart = startInput.value;
+
+    const clickBtn = async (label: string) => act(async () => {
+      Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label))?.click();
+    });
+    await clickBtn('Gợi ý giáo án bằng AI');
+
+    // Change AI cycle duration to 6 weeks in the modal
+    const weeksInput = host.ownerDocument.querySelector('#ai-duration-weeks-input') as HTMLInputElement;
+    expect(weeksInput).not.toBeNull();
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(weeksInput, '6');
+      weeksInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    await clickBtn('Phân tích & Sinh giáo án bằng AI');
+    expect(aiApi.generateWorkoutPlan).toHaveBeenCalledWith(
+      expect.objectContaining({ memberId: 1, coachId: 32, durationWeeks: 6 })
+    );
+    expect(host.ownerDocument.body.textContent).toContain('Assisted Pull-up & Face Pull');
+
+    // Switch member in AI modal to Member 2 -> Member 1's AI result must not leak under Member 2
+    await act(async () => { (host.ownerDocument.querySelector('#ai-member-select') as HTMLElement).click(); });
+    const member2Opt = Array.from(host.ownerDocument.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('Trần Thị Thu Thảo')) as HTMLElement;
+    await act(async () => { member2Opt.click(); });
+    expect(host.ownerDocument.body.textContent).not.toContain('Assisted Pull-up & Face Pull');
+
+    // Restore latest server recommendation for Member 2
+    await clickBtn('Khôi phục gợi ý gần nhất');
+    expect(restoreSpy).toHaveBeenCalledWith(2);
+    expect(host.ownerDocument.body.textContent).toContain('Săn chắc cơ mông 8 tuần');
+
+    // Switch back to Member 1 -> Member 1's generated AI result is still preserved and updates endDate to +42 days on apply
+    await act(async () => { (host.ownerDocument.querySelector('#ai-member-select') as HTMLElement).click(); });
+    const member1Opt = Array.from(host.ownerDocument.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('Lê Hoàng Long')) as HTMLElement;
+    await act(async () => { member1Opt.click(); });
+    expect(host.ownerDocument.body.textContent).toContain('Assisted Pull-up & Face Pull');
+
+    await clickBtn('Áp dụng vào giáo án');
+    await openStep(1);
+    const endInput = host.querySelector('input[name="plan-end-date"]') as HTMLInputElement;
+    const [sy, sm, sd] = initialStart.split('-').map(Number);
+    const expectedEnd = new Date(Date.UTC(sy, sm - 1, sd + 42)).toISOString().slice(0, 10);
+    expect(endInput.value).toBe(expectedEnd);
+  });
+
+  it('renders and edits timed AI exercises without sets/reps cleanly and warns when a Silver member cannot view workout plans', async () => {
+    vi.mocked(aiApi.getCoachMembers).mockResolvedValue([
+      { ...MEMBERS[0], canViewWorkoutPlan: false },
+    ]);
+    vi.mocked(aiApi.generateWorkoutPlan).mockResolvedValue({
+      ...mockAiResponse,
+      items: [
+        {
+          id: 'timed-1',
+          dayOfWeek: 3, // Thứ 4
+          exerciseName: 'Plank giữ core',
+          description: 'Giữ lưng thẳng',
+          durationMinutes: 5,
+          restSeconds: 45,
+        } as never,
+      ],
+    });
+
+    await renderComponent();
+    expect(host.textContent).toContain('gói Silver');
+
+    const clickBtn = async (label: string) => act(async () => {
+      Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label))?.click();
+    });
+    await clickBtn('Gợi ý giáo án bằng AI');
+    await clickBtn('Phân tích & Sinh giáo án bằng AI');
+    expect(host.ownerDocument.body.textContent).toContain('5 phút');
+    expect(host.ownerDocument.body.textContent).not.toContain('undefined');
+
+    await clickBtn('Áp dụng vào giáo án');
+    // Auto-switched to Step 2 on Thứ 4 (day 3)
+    expect(host.querySelector('.plan-day-tab.is-active')?.textContent).toContain('Thứ 4');
+    const card = [...host.querySelectorAll('.exercise-item-card')].find((c) => c.textContent?.includes('Plank giữ core'))!;
+    expect(card.textContent).not.toContain('reps');
+    expect(card.textContent).toContain('5p');
+
+    // Editing duration of the timed exercise without sets/reps succeeds without forcing fake sets/reps
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('button[aria-label="Sửa bài tập Plank giữ core"]')!.click();
+    });
+    const durationInput = document.getElementById('draft-exercise-duration') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(durationInput, '8');
+      durationInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const form = durationInput.closest('form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    const updatedCard = [...host.querySelectorAll('.exercise-item-card')].find((c) => c.textContent?.includes('Plank giữ core'))!;
+    expect(updatedCard.textContent).toContain('8p');
+  });
+
 });

@@ -37,4 +37,35 @@ class CurrentCoachMembersTest {
   assertThat(query).contains("select m from Member m", "CoachBooking", "TrainingPlan", "ClassEnrollment", "SessionBooking", "cb.status = 'confirmed'", "cb.bookingDate >= :today", "p.endDate >= :today", "u.deletedAt is null", "u.status = 'active'");
   assertThat(query).doesNotContain("join CoachBooking", "join TrainingPlan");
  }
+ @Test void marksSilverMemberWorkoutPlanInvisibleWhileGoldCanView() throws Exception {
+  var subscriptions = mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
+  org.springframework.test.util.ReflectionTestUtils.setField(service, "subscriptionRepository", subscriptions);
+  when(repository.findCurrent(20L, null, LocalDate.of(2026, 11, 4))).thenReturn(List.of(member(10), member(11)));
+  var silverPkg = new com.swp391.scms.facilities.entity.MembershipPackage();
+  silverPkg.setName("Silver 1 tháng");
+  silverPkg.setTier("SILVER");
+  silverPkg.setDurationDays(30);
+  var silverSub = new com.swp391.scms.membership.entity.MembershipSubscription();
+  silverSub.setMembershipPackage(silverPkg);
+  silverSub.setStartDate(LocalDate.of(2026, 11, 1));
+  silverSub.setEndDate(LocalDate.of(2026, 11, 30));
+  silverSub.setStatus("active");
+
+  var goldPkg = new com.swp391.scms.facilities.entity.MembershipPackage();
+  goldPkg.setName("Gold 1 tháng");
+  goldPkg.setTier("GOLD");
+  goldPkg.setDurationDays(30);
+  var goldSub = new com.swp391.scms.membership.entity.MembershipSubscription();
+  goldSub.setMembershipPackage(goldPkg);
+  goldSub.setStartDate(LocalDate.of(2026, 11, 1));
+  goldSub.setEndDate(LocalDate.of(2026, 11, 30));
+  goldSub.setStatus("active");
+
+  when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(silverSub));
+  when(subscriptions.findByMemberUserIdAndStatus(11L, "active")).thenReturn(List.of(goldSub));
+
+  var tree = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(service.list(20L, "COACH"));
+  assertThat(tree.get(0).path("canViewWorkoutPlan").asBoolean(true)).isFalse();
+  assertThat(tree.get(1).path("canViewWorkoutPlan").asBoolean(false)).isTrue();
+ }
 }

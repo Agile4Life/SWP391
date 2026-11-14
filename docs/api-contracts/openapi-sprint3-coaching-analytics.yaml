@@ -142,12 +142,30 @@ paths:
     post:
       summary: Generate AI workout recommendation from member health metrics (SCRUM-117)
       tags: [AI Coaching]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [member_id]
+              properties:
+                member_id: { type: integer, format: int64 }
+                coach_id: { type: integer, format: int64, description: Optional responsible coach ID when called by CENTER_MANAGER }
+                additional_requirements: { type: string, maxLength: 1000 }
+                duration_weeks: { type: integer, minimum: 1, maximum: 52 }
       responses:
-        '201':
+        '200':
           description: AI workout recommendation generated successfully
+        '400':
+          description: Validation error (e.g. duration_weeks outside 1..52)
+        '403':
+          description: COACH_MEMBER_NOT_ASSIGNED - member is not currently assigned to the coach
+        '429':
+          description: AI_RECOMMEND_RATE_LIMITED - too many AI workout generation requests
   /api/v1/ai/recommendations/{id}/apply:
     post:
-      summary: Apply AI workout recommendation into a draft training plan (SCRUM-117)
+      summary: Apply AI workout recommendation into a training plan (SCRUM-117)
       tags: [AI Coaching]
       parameters:
         - in: path
@@ -156,9 +174,35 @@ paths:
           schema:
             type: integer
             format: int64
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coach_id: { type: integer, format: int64, description: Optional target coach ID when applied by CENTER_MANAGER }
+                start_date: { type: string, format: date }
+                end_date: { type: string, format: date }
+                goal: { type: string, maxLength: 255 }
+                activate: { type: boolean }
       responses:
         '201':
           description: AI recommendation applied to training plan successfully
+        '403':
+          description: Cannot apply another coach's recommendation
+  /api/v1/ai/recommendations/member/{memberId}:
+    get:
+      summary: List AI workout recommendation history for a member (newest first)
+      tags: [AI Coaching]
+      parameters:
+        - in: path
+          name: memberId
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Member AI recommendation history retrieved successfully
   /api/v1/coaching/evaluations:
     post:
       summary: Submit coach session evaluation and progress score (SCRUM-119)

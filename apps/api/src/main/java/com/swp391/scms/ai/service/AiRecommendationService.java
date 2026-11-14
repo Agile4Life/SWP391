@@ -160,6 +160,7 @@ public class AiRecommendationService {
 
     private record WorkoutPlanReadSnapshot(
             Member member,
+            String memberName,
             Coach coach,
             BigDecimal height,
             BigDecimal weight,
@@ -170,18 +171,36 @@ public class AiRecommendationService {
     ) {}
 
     public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long coachUserId) {
+        return generateWorkoutPlan(request, coachUserId, null);
+    }
+
+    public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long callerUserId, String callerRole) {
         // Phase 1: short read-only transaction
         WorkoutPlanReadSnapshot snapshot = inReadOnlyTx(() -> {
             Member member = memberRepository.findById(request.getMemberId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.member", request.getMemberId()));
-
-            Coach coach = null;
-            if (coachUserId != null && coachRepository != null) {
-                coach = coachRepository.findById(coachUserId).orElse(null);
+            if (member.getUser() != null && (member.getUser().getDeletedAt() != null
+                    || (member.getUser().getStatus() != null && !"active".equalsIgnoreCase(member.getUser().getStatus())))) {
+                throw new ResourceNotFoundException("resource.member", request.getMemberId());
             }
-            // A coach (not a manager, who has no coach profile) plans only for members they train.
-            if (coach != null && coachMemberAccess != null) {
-                coachMemberAccess.requireCoachOf(coach.getUserId(), member.getUserId());
+            String memberName = member.getUser() != null ? member.getUser().getFullName() : null;
+
+            boolean isManagerCaller = "CENTER_MANAGER".equalsIgnoreCase(callerRole) || "Manager".equalsIgnoreCase(callerRole);
+            Coach callerCoach = (!isManagerCaller && callerUserId != null && coachRepository != null)
+                    ? coachRepository.findById(callerUserId).orElse(null)
+                    : null;
+            // A coach (not a manager, who has no coach profile) plans only for members currently assigned to them.
+            if (callerCoach != null) {
+                if (currentCoachMembers != null) {
+                    currentCoachMembers.requireCoachOf(callerCoach.getUserId(), member.getUserId());
+                } else if (coachMemberAccess != null) {
+                    coachMemberAccess.requireCoachOf(callerCoach.getUserId(), member.getUserId());
+                }
+            }
+            Coach coach = callerCoach;
+            if (coach == null && request.getCoachId() != null && coachRepository != null) {
+                coach = coachRepository.findById(request.getCoachId())
+                        .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.getCoachId()));
             }
 
             Map<String, BigDecimal> latestMetrics = readLatestMetrics(member.getUserId());
@@ -207,9 +226,11 @@ public class AiRecommendationService {
             }
 
             String inputContextJson = toJsonSafe(inputContextMap);
-            String retrievedContext = buildRetrievedPlanContext(member.getUserId(), request.getDurationWeeks());
-            return new WorkoutPlanReadSnapshot(member, coach, height, weight, bmi, inputContextMap, inputContextJson, retrievedContext);
+            String retrievedContext = buildRetrievedPlanContext(member.getUserId(), coach, request.getDurationWeeks());
+            return new WorkoutPlanReadSnapshot(member, memberName, coach, height, weight, bmi, inputContextMap, inputContextJson, retrievedContext);
         });
+
+        enforceRateLimit(callerUserId);
 
         // Phase 2: call AI outside transaction (no DB connection held)
         String userPrompt = "DỮ LIỆU\nHồ sơ thể chất hội viên (JSON): " + snapshot.inputContextJson()
@@ -256,7 +277,8 @@ public class AiRecommendationService {
         response.setId(saved.getId());
         response.setMemberId(member.getUserId());
         response.setMemberCode(member.getMembershipCode());
-        response.setCoachId(coach != null ? coach.getUserId() : coachUserId);
+        response.setMemberName(snapshot.memberName());
+        response.setCoachId(coach != null ? coach.getUserId() : callerUserId);
         response.setModelName(saved.getModelName());
         response.setApplied(saved.isApplied());
         response.setInputContext(snapshot.inputContextMap());
@@ -274,6 +296,14 @@ public class AiRecommendationService {
                                                String currentUserRole) {
         AiRecommendationLog log = recommendationLogRepository.findById(recommendationId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.ai_recommendation", recommendationId));
+
+        boolean callerIsCoach = "COACH".equalsIgnoreCase(currentUserRole) || "Coach".equalsIgnoreCase(currentUserRole);
+        Long logCoachId = log.getCoach() != null ? log.getCoach().getUserId() : null;
+        if (callerIsCoach && currentUserId != null && logCoachId != null && !currentUserId.equals(logCoachId)) {
+            throw new com.swp391.scms.common.exception.ForbiddenException(
+                    "FORBIDDEN", "coaching.plan.not_owner", null,
+                    "You can only apply your own AI workout recommendations");
+        }
 
         if (trainingPlanService == null) {
             log.setApplied(true);
@@ -304,8 +334,9 @@ public class AiRecommendationService {
                 ? request.getItems()
                 : parseOrBuildStructuredItems(savedContentRoot, log.getMember(), null);
 
-        Long targetCoachId = currentUserId != null ? currentUserId
-                : (log.getCoach() != null ? log.getCoach().getUserId() : null);
+        Long targetCoachId = callerIsCoach
+                ? (currentUserId != null ? currentUserId : logCoachId)
+                : (request != null && request.getCoachId() != null ? request.getCoachId() : logCoachId);
 
         TrainingPlanCreateDto createDto = new TrainingPlanCreateDto();
         createDto.setMemberId(log.getMember().getUserId());
@@ -324,17 +355,17 @@ public class AiRecommendationService {
         log.setApplied(true);
         recommendationLogRepository.save(log);
 
-        if (request == null || !Boolean.FALSE.equals(request.getActivate())) {
-            if (created.getId() != null && (request != null && Boolean.TRUE.equals(request.getActivate()))) {
-                return trainingPlanService.activatePlan(created.getId(), currentUserId, currentUserRole);
-            }
+        if (created.getId() != null && request != null && Boolean.TRUE.equals(request.getActivate())) {
+            return trainingPlanService.activatePlan(created.getId(), currentUserId, currentUserRole);
         }
         return created;
     }
 
     @Transactional(readOnly = true)
     public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId, Long currentUserId, String currentRole) {
-        if (coachMemberAccess != null) {
+        if ("COACH".equalsIgnoreCase(currentRole) && currentCoachMembers != null) {
+            currentCoachMembers.requireCoachOf(currentUserId, memberId);
+        } else if (coachMemberAccess != null) {
             coachMemberAccess.requireAccess(currentUserId, currentRole, memberId);
         }
         return getMemberRecommendations(memberId);
@@ -346,12 +377,14 @@ public class AiRecommendationService {
             throw new ResourceNotFoundException("resource.member", memberId);
         }
         return recommendationLogRepository.findByMemberUserId(memberId).stream()
+                .sorted(Comparator.comparing(AiRecommendationLog::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(log -> {
                     JsonNode contentRoot = tryReadTree(log.getRecommendedContent());
                     AiWorkoutPlanResponse dto = new AiWorkoutPlanResponse();
                     dto.setId(log.getId());
                     dto.setMemberId(log.getMember().getUserId());
                     dto.setMemberCode(log.getMember().getMembershipCode());
+                    dto.setMemberName(log.getMember().getUser() != null ? log.getMember().getUser().getFullName() : null);
                     dto.setCoachId(log.getCoach() != null ? log.getCoach().getUserId() : null);
                     dto.setModelName(log.getModelName());
                     dto.setApplied(log.isApplied());
@@ -529,15 +562,18 @@ public class AiRecommendationService {
      * the requested length, how the member's weight has moved, the plan they are on now,
      * and the equipment the centre actually has in service.
      */
-    private String buildRetrievedPlanContext(Long memberId, Integer durationWeeks) {
+    private String buildRetrievedPlanContext(Long memberId, Coach coach, Integer durationWeeks) {
         StringBuilder sb = new StringBuilder();
+        if (coach != null && coach.getSpecialization() != null && !coach.getSpecialization().isBlank()) {
+            sb.append("\nChuyên môn HLV phụ trách: ").append(coach.getSpecialization().trim());
+        }
         if (durationWeeks != null && durationWeeks > 0) {
             sb.append("\nThời lượng giáo án: ").append(durationWeeks)
                     .append(" tuần (lịch tuần bên dưới lặp lại, nêu cách tăng tiến theo tuần trong analysis).");
         }
         if (memberId != null) {
             appendWeightTrend(sb, memberId);
-            appendCurrentPlan(sb, memberId);
+            appendCurrentPlan(sb, memberId, coach != null ? coach.getUserId() : null);
         }
         appendEquipment(sb);
         return sb.toString();
@@ -567,7 +603,7 @@ public class AiRecommendationService {
                 .append(weights.size()).append(" lần đo.");
     }
 
-    private void appendCurrentPlan(StringBuilder sb, Long memberId) {
+    private void appendCurrentPlan(StringBuilder sb, Long memberId, Long targetCoachId) {
         if (trainingPlanRepository == null) {
             return;
         }
@@ -575,7 +611,15 @@ public class AiRecommendationService {
         if (active == null || active.isEmpty()) {
             return;
         }
-        TrainingPlan plan = active.get(0);
+        TrainingPlan plan = targetCoachId == null
+                ? active.get(0)
+                : active.stream()
+                        .filter(p -> p.getCoach() != null && targetCoachId.equals(p.getCoach().getUserId()))
+                        .findFirst()
+                        .orElse(null);
+        if (plan == null) {
+            return;
+        }
         sb.append("\nGiáo án đang áp dụng: ").append(plan.getGoal() != null ? plan.getGoal() : "(chưa đặt mục tiêu)");
         if (plan.getStartDate() != null && plan.getEndDate() != null) {
             sb.append(" (").append(plan.getStartDate()).append(" đến ").append(plan.getEndDate()).append(")");
@@ -647,6 +691,43 @@ public class AiRecommendationService {
     public AiClient getAiClient() {
         return aiClient;
     }
+
+    private final Map<Long, Deque<java.time.Instant>> rateLimitWindows = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @org.springframework.beans.factory.annotation.Value("${app.ai.recommend.rate-limit.max-requests:10}")
+    private int maxRequestsPerWindow = 10;
+
+    @org.springframework.beans.factory.annotation.Value("${app.ai.recommend.rate-limit.window-minutes:10}")
+    private int rateLimitWindowMinutes = 10;
+
+    private void enforceRateLimit(Long userId) {
+        if (userId == null) {
+            return;
+        }
+        java.time.Instant now = java.time.Instant.now();
+        java.time.Duration window = java.time.Duration.ofMinutes(Math.max(1, rateLimitWindowMinutes));
+        java.time.Instant cutoff = now.minus(window);
+        Deque<java.time.Instant> timestamps = rateLimitWindows.computeIfAbsent(userId, k -> new ArrayDeque<>());
+        synchronized (timestamps) {
+            while (!timestamps.isEmpty() && timestamps.peekFirst().isBefore(cutoff)) {
+                timestamps.pollFirst();
+            }
+            int limit = Math.max(1, maxRequestsPerWindow);
+            if (timestamps.size() >= limit) {
+                long retrySec = Math.max(1, java.time.Duration.between(now, timestamps.peekFirst().plus(window)).toSeconds());
+                long waitMinutes = Math.max(1, (retrySec + 59) / 60);
+                throw new com.swp391.scms.common.exception.TooManyRequestsException(
+                        "AI_RECOMMEND_RATE_LIMITED", "ai.recommend.rate_limited",
+                        new Object[]{limit, window.toMinutes(), waitMinutes},
+                        "Bạn đã tạo tối đa " + limit + " gợi ý giáo án AI trong " + window.toMinutes()
+                                + " phút. Vui lòng thử lại sau khoảng " + waitMinutes + " phút.");
+            }
+            timestamps.addLast(now);
+        }
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.coaching.service.CurrentCoachMembers currentCoachMembers;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;

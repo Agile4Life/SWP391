@@ -15,14 +15,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CurrentCoachMembers {
  private final CurrentCoachMemberRepository members; private final Clock clock; private final MemberProgressLogRepository progressLogs;
+ @Autowired(required=false) private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
  public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock){this(members,clock,null);}
  @Autowired public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock,@Autowired(required=false) MemberProgressLogRepository progressLogs){this.members=members;this.clock=clock;this.progressLogs=progressLogs;}
  /** Today in the center time zone, for callers that must apply the same "current" window. */
  public LocalDate centerToday(){return today();}
  private LocalDate today(){return LocalDate.now(clock.withZone(ZoneId.of("Asia/Ho_Chi_Minh")));}
- public record MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi) {
+ public record MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi,Boolean canViewWorkoutPlan) {
   public MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel){
-   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,null,null,null);
+   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,null,null,null,true);
+  }
+  public MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi){
+   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,heightCm,weightKg,bmi,true);
   }
  }
  @Transactional(readOnly=true)
@@ -47,7 +51,15 @@ public class CurrentCoachMembers {
   }
   BigDecimal bmi=calculateBmi(heightCm,weightKg);
   if(bmi==null) bmi=recordedBmi;
-  return new MemberOption(m.getUserId(),m.getMembershipCode(),m.getUser().getFullName(),m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi);
+  return new MemberOption(m.getUserId(),m.getMembershipCode(),m.getUser().getFullName(),m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi,canMemberViewWorkoutPlan(m.getUserId()));
+ }
+ private boolean canMemberViewWorkoutPlan(Long memberId){
+  if(subscriptionRepository==null||memberId==null) return true;
+  LocalDate currentDay=today();
+  var current=subscriptionRepository.findByMemberUserIdAndStatus(memberId,"active").stream()
+   .filter(s->s.getStartDate()!=null&&s.getEndDate()!=null&&!s.getStartDate().isAfter(currentDay)&&!s.getEndDate().isBefore(currentDay))
+   .toList();
+  return current.isEmpty()||current.stream().anyMatch(s->com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
  }
  public static BigDecimal calculateBmi(BigDecimal heightCm,BigDecimal weightKg){
   if(heightCm==null||weightKg==null||heightCm.compareTo(BigDecimal.ZERO)<=0||weightKg.compareTo(BigDecimal.ZERO)<=0) return null;

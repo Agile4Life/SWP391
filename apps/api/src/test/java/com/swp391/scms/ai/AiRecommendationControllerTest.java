@@ -345,4 +345,184 @@ class AiRecommendationControllerTest {
         assertEquals(3, plank.getDayOfWeek());
         assertNull(plank.getDurationMinutes());
     }
+
+    @Test
+    @DisplayName("Includes member fullName in response and history, and rejects soft-deleted members")
+    void shouldPopulateMemberNameAndRejectSoftDeletedMember() {
+        var activeUser = new com.swp391.scms.users.entity.User();
+        activeUser.setId(10L);
+        activeUser.setFullName("Lê Hoàng Long");
+        activeUser.setStatus("active");
+
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setUser(activeUser);
+        member.setMembershipCode("MB-2026-089");
+
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(memberRepository.existsById(10L)).thenReturn(true);
+        when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> {
+            AiRecommendationLog log = inv.getArgument(0);
+            ReflectionTestUtils.setField(log, "id", 88L);
+            return log;
+        });
+
+        AiWorkoutPlanResponse generated = recommendationService.generateWorkoutPlan(
+                new AiWorkoutPlanRequest(10L, null, 4), 20L);
+        assertEquals("Lê Hoàng Long", generated.getMemberName());
+
+        AiRecommendationLog stored = new AiRecommendationLog();
+        ReflectionTestUtils.setField(stored, "id", 88L);
+        stored.setMember(member);
+        stored.setRecommendedContent("{\"goal\":\"Sức bền\",\"items\":[]}");
+        when(recommendationLogRepository.findByMemberUserId(10L)).thenReturn(List.of(stored));
+
+        List<AiWorkoutPlanResponse> history = recommendationService.getMemberRecommendations(10L);
+        assertEquals("Lê Hoàng Long", history.get(0).getMemberName());
+
+        activeUser.setDeletedAt(java.time.LocalDateTime.now());
+        assertThrows(com.swp391.scms.common.exception.ResourceNotFoundException.class,
+                () -> recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 20L));
+    }
+
+    @Test
+    @DisplayName("Enforces current coach assignment during AI workout generation when CurrentCoachMembers is wired")
+    void shouldEnforceCurrentCoachAssignmentDuringAiGeneration() {
+        Member member = new Member();
+        member.setUserId(10L);
+        Coach coach = new Coach();
+        coach.setUserId(20L);
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+
+        var currentCoachMembers = mock(com.swp391.scms.coaching.service.CurrentCoachMembers.class);
+        doThrow(new com.swp391.scms.common.exception.ForbiddenException(
+                "COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, "No current coaching assignment."))
+                .when(currentCoachMembers).requireCoachOf(20L, 10L);
+        ReflectionTestUtils.setField(recommendationService, "currentCoachMembers", currentCoachMembers);
+
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 20L));
+    }
+
+    @Test
+    @DisplayName("Includes coach specialization and prefers the target coach's own active plan over another coach's plan")
+    void shouldIncludeCoachSpecializationAndPreferTargetCoachActivePlan() throws Exception {
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setMembershipCode("MEM-10");
+        Coach gymCoach = new Coach();
+        gymCoach.setUserId(20L);
+        gymCoach.setSpecialization("Strength & Conditioning");
+        Coach yogaCoach = new Coach();
+        yogaCoach.setUserId(99L);
+
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(gymCoach));
+        when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var plans = mock(com.swp391.scms.coaching.repository.TrainingPlanRepository.class);
+        var planItems = mock(com.swp391.scms.coaching.repository.TrainingPlanItemRepository.class);
+        var yogaPlan = new com.swp391.scms.coaching.entity.TrainingPlan();
+        ReflectionTestUtils.setField(yogaPlan, "id", 1L);
+        yogaPlan.setCoach(yogaCoach);
+        yogaPlan.setGoal("Yoga phục hồi buổi sáng");
+
+        var gymPlan = new com.swp391.scms.coaching.entity.TrainingPlan();
+        ReflectionTestUtils.setField(gymPlan, "id", 2L);
+        gymPlan.setCoach(gymCoach);
+        gymPlan.setGoal("Tăng cơ thân trên");
+
+        when(plans.findByMemberUserIdAndStatusOrderByCreatedAtDesc(10L, "active"))
+                .thenReturn(List.of(yogaPlan, gymPlan));
+        when(planItems.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(2L)).thenReturn(List.of());
+
+        var prompts = new java.util.ArrayList<String>();
+        AiClient capturingClient = new AiClient() {
+            @Override
+            public String generate(String systemPrompt, String userMessage) {
+                prompts.add(userMessage);
+                return "{\"goal\":\"Tăng cơ giai đoạn 2\",\"analysis\":\"Tốt\",\"items\":[]}";
+            }
+            @Override
+            public String getModelName() { return "test-model"; }
+            @Override
+            public String getProviderName() { return "test-provider"; }
+        };
+
+        AiRecommendationService service = new AiRecommendationService(capturingClient, recommendationLogRepository,
+                memberRepository, coachRepository, progressLogRepository, trainingPlanService, objectMapper);
+        ReflectionTestUtils.setField(service, "trainingPlanRepository", plans);
+        ReflectionTestUtils.setField(service, "trainingPlanItemRepository", planItems);
+
+        AiWorkoutPlanRequest managerReq = objectMapper.readValue(
+                "{\"member_id\":10,\"coach_id\":20,\"duration_weeks\":6}", AiWorkoutPlanRequest.class);
+        service.generateWorkoutPlan(managerReq, 1L, "CENTER_MANAGER");
+
+        String userPrompt = prompts.get(0);
+        assertTrue(userPrompt.contains("Strength & Conditioning"), "Prompt should include target coach specialization");
+        assertTrue(userPrompt.contains("Tăng cơ thân trên"), "Prompt should inherit target coach's active plan");
+        assertFalse(userPrompt.contains("Yoga phục hồi buổi sáng"), "Prompt must not inherit another coach's plan");
+    }
+
+    @Test
+    @DisplayName("Manager apply uses log coach or explicit coach_id instead of manager userId, and blocks cross-coach apply")
+    void shouldAllowManagerApplyAndBlockOtherCoachApply() throws Exception {
+        Member member = new Member();
+        member.setUserId(10L);
+        Coach logCoach = new Coach();
+        logCoach.setUserId(20L);
+
+        AiRecommendationLog log = new AiRecommendationLog();
+        ReflectionTestUtils.setField(log, "id", 77L);
+        log.setMember(member);
+        log.setCoach(logCoach);
+        log.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
+        when(recommendationLogRepository.findById(77L)).thenReturn(Optional.of(log));
+
+        var capturedCoachIds = new java.util.ArrayList<Long>();
+        when(trainingPlanService.createPlan(any(TrainingPlanCreateDto.class), eq(1L), eq("CENTER_MANAGER")))
+                .thenAnswer(inv -> {
+                    TrainingPlanCreateDto dto = inv.getArgument(0);
+                    capturedCoachIds.add(dto.getCoachId());
+                    TrainingPlanDto created = new TrainingPlanDto();
+                    created.setId(301L);
+                    return created;
+                });
+
+        recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 1L, "CENTER_MANAGER");
+        AiApplyRecommendationRequest explicitCoachReq = objectMapper.readValue(
+                "{\"coach_id\":25}", AiApplyRecommendationRequest.class);
+        recommendationService.applyRecommendation(77L, explicitCoachReq, 1L, "CENTER_MANAGER");
+
+        assertEquals(List.of(20L, 25L), capturedCoachIds);
+
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 21L, "COACH"));
+    }
+
+    @Test
+    @DisplayName("Validates durationWeeks range (1..52) and enforces per-user rate limit on workout generation")
+    void shouldValidateDurationWeeksAndRateLimitGeneration() throws Exception {
+        mockMvc.perform(post("/api/v1/ai/generate-workout-plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"member_id\":10,\"duration_weeks\":0}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/v1/ai/generate-workout-plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"member_id\":10,\"duration_weeks\":53}"))
+                .andExpect(status().isBadRequest());
+
+        Member member = new Member();
+        member.setUserId(10L);
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThrows(com.swp391.scms.common.exception.TooManyRequestsException.class, () -> {
+            for (int i = 0; i < 12; i++) {
+                recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 20L);
+            }
+        });
+    }
 }

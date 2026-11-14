@@ -1,4 +1,4 @@
-import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useStaffI18n, type StaffMessage, staffError, staffMessage, staffNotify as notify } from '../operations/staffI18n';
 import { calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './coachHealthUtils';
 import { listHealthMetrics } from '../member/profileApi';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
@@ -67,11 +67,17 @@ export function CoachTrainingPlanPage() {
   // Manager phải chỉ định Coach phụ trách vì Manager không có hồ sơ Coach của riêng mình
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
-  const [planTitle, setPlanTitle] = useState('Giáo án Cá nhân hóa 4 Tuần');
   const [planGoal, setPlanGoal] = useState('Tăng cường sức mạnh và cải thiện tư thế');
   const addCenterDays = (isoDate: string, days: number): string => {
     const [y, m, d] = isoDate.split('-').map(Number);
     return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+  };
+  const weeksBetween = (startIso: string, endIso: string): number => {
+    const [sy, sm, sd] = startIso.split('-').map(Number);
+    const [ey, em, ed] = endIso.split('-').map(Number);
+    const diffDays = Math.round((Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / 86_400_000);
+    if (!Number.isFinite(diffDays) || diffDays <= 0) return 4;
+    return Math.min(52, Math.max(1, Math.round(diffDays / 7) || 1));
   };
 
   const todayStr = useMemo(() => centerNowParts().date, []);
@@ -137,12 +143,16 @@ export function CoachTrainingPlanPage() {
   const [savedPlanLink, setSavedPlanLink] = useState(false);
   const [aiError, setAiError] = useState<StaffMessage | null>(null);
 
-  // AI Modal States
+  // AI Modal States (giữ riêng kết quả AI theo từng học viên để không nhầm khi đổi học viên hoặc đóng/mở lại modal)
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiSelectedMemberId, setAiSelectedMemberId] = useState<number | null>(null);
+  const [aiDurationWeeks, setAiDurationWeeks] = useState<number>(4);
   const [aiCoachPrompt, setAiCoachPrompt] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-  const [aiResult, setAiResult] = useState<AiWorkoutPlanResult | null>(null);
+  const [isRestoringAi, setIsRestoringAi] = useState(false);
+  const [aiResultsByMember, setAiResultsByMember] = useState<Record<number, { result: AiWorkoutPlanResult; durationWeeks: number }>>({});
+  const currentAiEntry = aiSelectedMemberId != null ? aiResultsByMember[aiSelectedMemberId] : undefined;
+  const aiResult = currentAiEntry?.result ?? null;
   const [appliedRecommendationId, setAppliedRecommendationId] = useState<number | undefined>();
 
   useEffect(() => {
@@ -264,20 +274,54 @@ export function CoachTrainingPlanPage() {
   // Xử lý gọi AI gợi ý
   const handleGenerateAiPlan = async () => {
     if (aiSelectedMemberId == null) return;
+    const targetMemberId = aiSelectedMemberId;
+    const weeks = Math.min(52, Math.max(1, Math.trunc(Number(aiDurationWeeks) || 4)));
+    setAiDurationWeeks(weeks);
     setIsGeneratingAi(true);
-    setAiResult(null);
     setAiError(null);
     try {
       const res = await aiApi.generateWorkoutPlan({
-        memberId: aiSelectedMemberId,
+        memberId: targetMemberId,
+        coachId: isManager && selectedCoachId != null ? selectedCoachId : undefined,
         additionalRequirements: aiCoachPrompt,
-        durationWeeks: 4,
+        durationWeeks: weeks,
       });
-      setAiResult(res);
-    } catch {
-      setAiError('Không thể tạo gợi ý giáo án bằng AI lúc này. Vui lòng thử lại.');
+      setAiResultsByMember((prev) => ({
+        ...prev,
+        [targetMemberId]: { result: res, durationWeeks: weeks },
+      }));
+    } catch (err) {
+      setAiError(staffError(err, 'Không thể tạo gợi ý giáo án bằng AI lúc này. Vui lòng thử lại.'));
     } finally {
       setIsGeneratingAi(false);
+    }
+  };
+
+  // Khôi phục gợi ý AI gần nhất đã lưu trên server cho học viên đang chọn
+  const handleRestoreLatestAiPlan = async () => {
+    if (aiSelectedMemberId == null) return;
+    const targetMemberId = aiSelectedMemberId;
+    setIsRestoringAi(true);
+    setAiError(null);
+    try {
+      const recs = await aiApi.getMemberRecommendations(targetMemberId);
+      const latest = Array.isArray(recs)
+        ? recs.find((r) => !r.applied && Array.isArray(r.items) && r.items.length > 0)
+          ?? recs.find((r) => Array.isArray(r.items) && r.items.length > 0)
+        : undefined;
+      if (!latest) {
+        setAiError(staffMessage('Chưa có gợi ý AI nào được lưu cho học viên này.', 'No saved AI workout suggestion found for this member yet.'));
+        return;
+      }
+      const weeks = Math.min(52, Math.max(1, Math.trunc(Number(aiDurationWeeks) || 4)));
+      setAiResultsByMember((prev) => ({
+        ...prev,
+        [targetMemberId]: { result: latest, durationWeeks: weeks },
+      }));
+    } catch (err) {
+      setAiError(staffError(err, 'Không thể tải gợi ý gần nhất của học viên. Vui lòng thử lại.'));
+    } finally {
+      setIsRestoringAi(false);
     }
   };
 
@@ -298,8 +342,10 @@ export function CoachTrainingPlanPage() {
     } catch {
       // Không tải được giáo án đã lưu thì chỉ kiểm tra phần soạn tay, không chặn việc áp dụng.
     }
+    const resolvedMemberName = aiResult.memberName || members.find((m) => m.id === aiResult.memberId)?.fullName;
     if (handComposed > 0 || activePlan) {
-      const memberLabel = aiResult.memberName || 'học viên';
+      const memberLabelVi = resolvedMemberName || 'học viên';
+      const memberLabelEn = resolvedMemberName || 'this member';
       const lines: string[] = [];
       const linesEn: string[] = [];
       if (handComposed > 0) {
@@ -308,8 +354,8 @@ export function CoachTrainingPlanPage() {
       }
       if (activePlan) {
         const range = `${activePlan.startDate.split('-').reverse().join('/')} – ${activePlan.endDate.split('-').reverse().join('/')}`;
-        lines.push(`${memberLabel} đang có giáo án "${activePlan.goal || 'chưa đặt mục tiêu'}" (${range}) đang áp dụng. Khi lưu giáo án AI, giáo án cũ của HLV này sẽ chuyển vào lịch sử và có thể áp dụng lại bất cứ lúc nào. Giáo án của HLV khác vẫn giữ nguyên.`);
-        linesEn.push(`${memberLabel} already has the plan "${activePlan.goal || 'no goal set'}" (${range}) in use. When you save the AI plan, this coach's old plan moves to history and can be re-applied at any time. Plans from other coaches stay as they are.`);
+        lines.push(`${memberLabelVi} đang có giáo án "${activePlan.goal || 'chưa đặt mục tiêu'}" (${range}) đang áp dụng. Khi lưu giáo án AI, giáo án cũ của HLV này sẽ chuyển vào lịch sử và có thể áp dụng lại bất cứ lúc nào. Giáo án của HLV khác vẫn giữ nguyên.`);
+        linesEn.push(`${memberLabelEn} already has the plan "${activePlan.goal || 'no goal set'}" (${range}) in use. When you save the AI plan, this coach's old plan moves to history and can be re-applied at any time. Plans from other coaches stay as they are.`);
       }
       const confirmed = await confirm({
         title: staffMessage('Ghi đè giáo án đã soạn trước đó?', 'Overwrite the plan you composed earlier?'),
@@ -320,11 +366,17 @@ export function CoachTrainingPlanPage() {
       if (!confirmed) return;
     }
 
-    // Cập nhật thông tin hội viên & mục tiêu theo kết quả AI
+    const appliedWeeks = currentAiEntry?.durationWeeks ?? Math.min(52, Math.max(1, Math.trunc(Number(aiDurationWeeks) || 4)));
+    const nextEndDate = startDate ? addCenterDays(startDate, appliedWeeks * 7) : endDate;
+
+    // Cập nhật thông tin hội viên, mục tiêu & chu kỳ ngày theo kết quả AI
     setSelectedMemberId(aiResult.memberId);
     setAppliedRecommendationId(aiResult.id);
     setPlanGoal(aiResult.goal);
-    setPlanTitle(`Giáo án Cá nhân hóa: ${aiResult.memberName || 'Hội viên'}`);
+    if (nextEndDate) {
+      setDateError(null);
+      setEndDate(nextEndDate);
+    }
 
     // Điền toàn bộ bài tập do AI gợi ý vào danh sách bài tập của HLV
     setExercises(
@@ -334,22 +386,27 @@ export function CoachTrainingPlanPage() {
       }))
     );
 
-    // Chuyển sang ngày đầu tiên có bài tập
+    // Chuyển sang ngày đầu tiên có bài tập và mở thẳng Bước 2 để HLV tinh chỉnh (trừ khi Quản lý chưa chọn HLV)
     if (aiResult.items[0]?.dayOfWeek) {
       setActiveDay(aiResult.items[0].dayOfWeek);
     }
 
     setIsAiModalOpen(false);
+    if (!(isManager && selectedCoachId == null) && !(startDate && nextEndDate && nextEndDate < startDate)) {
+      setPlanError(null);
+      setStep(2);
+    }
     notify('Đã áp dụng giáo án từ AI. Bạn có thể tinh chỉnh trước khi lưu.', 'success');
   };
 
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
-  // Bước 1 phải hợp lệ trước khi đi tiếp: có ngày hợp lệ và (Quản lý) đã chọn HLV phụ trách.
+  // Bước 1 phải hợp lệ trước khi đi tiếp: có mục tiêu, ngày hợp lệ và (Quản lý) đã chọn HLV phụ trách.
   const planInfoError = (): StaffMessage | null =>
-    startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
-      : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
-        : null;
+    !planGoal.trim() ? staffMessage('Vui lòng nhập mục tiêu giáo án.', 'Please enter a training plan goal.')
+      : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+        : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
+          : null;
   const goToStep = (next: PlanStep) => {
     if (next > 1) {
       const invalid = planInfoError();
@@ -363,23 +420,25 @@ export function CoachTrainingPlanPage() {
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
   const handleSavePlan = async () => {
+    const trimmedGoal = planGoal.trim();
     const invalid =
       exercises.length === 0 ? 'Giáo án chưa có bài tập nào. Vui lòng thêm bài tập trước khi lưu.'
-        : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
-          : !selectedMember ? 'Chưa xác minh được học viên. Tải lại danh sách.'
-            : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
-              : null;
+        : !trimmedGoal ? staffMessage('Vui lòng nhập mục tiêu giáo án.', 'Please enter a training plan goal.')
+          : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+            : !selectedMember ? 'Chưa xác minh được học viên. Tải lại danh sách.'
+              : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
+                : null;
     setPlanError(invalid);
     if (invalid || !selectedMember) return;
 
     setIsSaving(true);
     try {
-      const savedRes = await aiApi.saveTrainingPlan(
+      await aiApi.saveTrainingPlan(
         {
           memberId: selectedMember.id,
           coachId: isManager ? selectedCoachId ?? undefined : undefined,
-          title: planTitle,
-          goal: planGoal,
+          title: trimmedGoal,
+          goal: trimmedGoal,
           startDate,
           endDate,
           items: exercises,
@@ -392,32 +451,8 @@ export function CoachTrainingPlanPage() {
 
       const nowTime = formatCenterTime(new Date().toISOString());
       setLastSavedTime(nowTime);
-
-      // Lưu trữ đồng bộ vào localStorage
-      try {
-        const storedPlans = JSON.parse(localStorage.getItem('sol_coach_training_plans') || '[]');
-        const planRecord = {
-          id: (savedRes as { id?: number })?.id || Date.now(),
-          memberId: selectedMember.id,
-          memberName: selectedMember.fullName,
-          title: planTitle,
-          goal: planGoal,
-          startDate,
-          endDate,
-          totalExercises: exercises.length,
-          status: 'active',
-          savedAt: nowTime,
-        };
-        localStorage.setItem(
-          'sol_coach_training_plans',
-          JSON.stringify([planRecord, ...storedPlans.filter((p: { id?: number }) => p.id !== planRecord.id)])
-        );
-      } catch {
-        // ignore storage error
-      }
-
       setSavedPlanLink(true);
-      notify(staffMessage(`Đã lưu và kích hoạt giáo án "${planTitle}" cho học viên ${selectedMember.fullName}.`, `Saved and activated training plan "${planTitle}" for member ${selectedMember.fullName}.`), 'success');
+      notify(staffMessage(`Đã lưu và kích hoạt giáo án "${trimmedGoal}" cho học viên ${selectedMember.fullName}.`, `Saved and activated training plan "${trimmedGoal}" for member ${selectedMember.fullName}.`), 'success');
     } catch {
       notify('Đã xảy ra lỗi khi lưu giáo án. Vui lòng thử lại.', 'error');
     } finally {
@@ -462,6 +497,15 @@ export function CoachTrainingPlanPage() {
     </div>;
   }
 
+  const formatAiExerciseDose = (item: WorkoutExerciseItem): string => {
+    if (item.sets != null && item.reps != null) return `${item.sets} ${t('hiệp', 'sets')} × ${item.reps} ${t('lần', 'reps')}`;
+    if (item.sets != null && item.durationMinutes != null) return `${item.sets} ${t('hiệp', 'sets')} · ${item.durationMinutes} ${t('phút', 'min')}`;
+    if (item.durationMinutes != null) return `${item.durationMinutes} ${t('phút', 'min')}`;
+    if (item.sets != null) return `${item.sets} ${t('hiệp', 'sets')}`;
+    if (item.reps != null) return `${item.reps} ${t('lần', 'reps')}`;
+    return '—';
+  };
+
   return (
     <div data-i18n-managed className="portal-container plan-editor-page">
       <PageHeader
@@ -472,7 +516,12 @@ export function CoachTrainingPlanPage() {
               type="button"
               className="btn-secondary btn-ai-sparkle"
               onClick={() => {
-                setAiSelectedMemberId(selectedMemberId);
+                const targetId = selectedMemberId;
+                setAiSelectedMemberId(targetId);
+                setAiDurationWeeks(
+                  (targetId != null && aiResultsByMember[targetId]?.durationWeeks) || weeksBetween(startDate, endDate)
+                );
+                setAiError(null);
                 setIsAiModalOpen(true);
               }}
             >
@@ -519,15 +568,16 @@ export function CoachTrainingPlanPage() {
 
         <div className="plan-meta-grid">
           <div>
-            <label className="portal-label" htmlFor="plan-title-input">
-              {t("Tên giáo án")}</label>
+            <label className="portal-label" htmlFor="plan-goal-input">
+              {t("Mục tiêu giáo án", "Training plan goal")}</label>
             <input
-              id="plan-title-input"
+              id="plan-goal-input"
               type="text"
+              maxLength={255}
               className="portal-input"
-              value={planTitle}
-              onChange={(e) => setPlanTitle(e.target.value)}
-              placeholder={t("Ví dụ: Lộ trình Giảm Mỡ Tăng Cơ 4 Tuần...")}
+              value={planGoal}
+              onChange={(e) => { setPlanGoal(e.target.value); if (planError) setPlanError(null); }}
+              placeholder={t("Ví dụ: Tăng cơ nạc và cải thiện sức bền 4 tuần...", "Example: Build lean muscle and endurance in 4 weeks...")}
             />
           </div>
 
@@ -612,13 +662,33 @@ export function CoachTrainingPlanPage() {
           }}
         >
           <div>
-            <span>{t("Mục tiêu thể lực: ")}</span>
-            <strong style={{ color: 'var(--fit-salmon, var(--sol-accent))' }}>{planGoal}</strong>
+            <span>{t("Mục tiêu hồ sơ hội viên: ", "Member profile goal: ")}</span>
+            <strong style={{ color: 'var(--fit-salmon, var(--sol-accent))' }}>{selectedMember.fitnessGoal || t('Chưa cập nhật', 'Not set')}</strong>
           </div>
           <div style={{ color: selectedMember.healthNotes?.includes('Tránh') ? 'var(--portal-danger, #fca5a5)' : 'var(--color-text-muted)' }}>
             {t("Lưu ý sức khỏe: ")}<strong>{selectedMember.healthNotes || t('Bình thường')}</strong>
           </div>
         </div>
+
+        {selectedMember.canViewWorkoutPlan === false && (
+          <div
+            role="note"
+            style={{
+              marginTop: '12px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: '1px solid var(--portal-border-strong)',
+              background: 'var(--portal-raised)',
+              color: 'var(--color-text-muted)',
+              fontSize: '0.82rem',
+            }}
+          >
+            {t(
+              'Lưu ý gói tập: Học viên đang dùng gói Silver nên chưa xem được giáo án bài tập trên cổng Hội viên. Giáo án vẫn được lưu để huấn luyện viên theo dõi.',
+              'Membership note: This member has an active Silver plan and cannot view workout plans in the Member portal yet. The plan is still saved for coach tracking.'
+            )}
+          </div>
+        )}
       </div>}
 
       {/* Bước 2: bài tập theo ngày */}
@@ -795,12 +865,16 @@ export function CoachTrainingPlanPage() {
                   </div>
 
                   <div className="exercise-item-specs">
-                    <div className="exercise-spec-pill">
-                      {t("Hiệp: ")}<strong>{item.sets}</strong>
-                    </div>
-                    <div className="exercise-spec-pill">
-                      {t("Lần: ")}<strong>{item.reps} reps</strong>
-                    </div>
+                    {item.sets != null && (
+                      <div className="exercise-spec-pill">
+                        {t("Hiệp: ")}<strong>{item.sets}</strong>
+                      </div>
+                    )}
+                    {item.reps != null && (
+                      <div className="exercise-spec-pill">
+                        {t("Lần: ")}<strong>{item.reps} reps</strong>
+                      </div>
+                    )}
                     {item.restSeconds != null && (
                       <div data-i18n-managed className="exercise-spec-pill">
                         {t("Nghỉ: ")}<strong>{item.restSeconds}s</strong>
@@ -834,11 +908,10 @@ export function CoachTrainingPlanPage() {
       {step === 3 && <div className="plan-meta-card plan-review">
         <h2 className="portal-card-title" style={{ margin: '0 0 16px', fontSize: '1.2rem' }}>{t("Xem lại giáo án")}</h2>
         <div className="kv-list">
-          <div className="kv-row"><span>{t("Tên giáo án")}</span><strong>{planTitle}</strong></div>
+          <div className="kv-row"><span>{t("Mục tiêu giáo án", "Training plan goal")}</span><strong>{planGoal}</strong></div>
           <div className="kv-row"><span>{t("Học viên thụ hưởng")}</span><strong>{selectedMember.fullName} ({selectedMember.memberCode})</strong></div>
           {isManager && <div className="kv-row"><span>{t("Huấn luyện viên phụ trách")}</span><strong>{coaches.find((c) => c.id === selectedCoachId)?.fullName ?? '—'}</strong></div>}
           <div className="kv-row"><span>{t("Thời gian áp dụng")}</span><strong>{formatCenterDate(startDate)} → {formatCenterDate(endDate)}</strong></div>
-          <div className="kv-row"><span>{t("Mục tiêu thể lực")}</span><strong>{planGoal}</strong></div>
           <div className="kv-row"><span>{t("Lưu ý sức khỏe")}</span><strong>{selectedMember.healthNotes || t('Bình thường')}</strong></div>
         </div>
         <div className="plan-review__days">
@@ -883,22 +956,47 @@ export function CoachTrainingPlanPage() {
       {AI_UI_ENABLED && isAiModalOpen && (
         <Modal title={t("Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa")} onClose={() => setIsAiModalOpen(false)}>
           <div className="ai-modal-container">
-            <div>
-              <label className="portal-label" htmlFor="ai-member-select">
-                {t("Chọn học viên cần thiết kế giáo án")}</label>
-              <Select
-                id="ai-member-select"
-                className="portal-select"
-                value={String(aiSelectedMemberId)}
-                onChange={(e) => setAiSelectedMemberId(Number(e.target.value))}
-                disabled={isGeneratingAi}
-              >
-                {members.map((m) => (
-                  <option data-i18n-managed key={m.id} value={String(m.id)}>
-                    {m.fullName} ({m.memberCode}{t(") — Mục tiêu: ")}{m.fitnessGoal?.slice(0, 40)}...
-                  </option>
-                ))}
-              </Select>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 170px', gap: '12px', alignItems: 'end' }}>
+              <div>
+                <label className="portal-label" htmlFor="ai-member-select">
+                  {t("Chọn học viên cần thiết kế giáo án")}</label>
+                <Select
+                  id="ai-member-select"
+                  className="portal-select"
+                  value={String(aiSelectedMemberId)}
+                  onChange={(e) => {
+                    const nextId = Number(e.target.value);
+                    setAiSelectedMemberId(nextId);
+                    setAiError(null);
+                    if (aiResultsByMember[nextId]?.durationWeeks) {
+                      setAiDurationWeeks(aiResultsByMember[nextId].durationWeeks);
+                    }
+                  }}
+                  disabled={isGeneratingAi || isRestoringAi}
+                >
+                  {members.map((m) => (
+                    <option data-i18n-managed key={m.id} value={String(m.id)}>
+                      {m.fullName} ({m.memberCode}{t(") — Mục tiêu: ")}{m.fitnessGoal?.slice(0, 40)}...
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <label className="portal-label" htmlFor="ai-duration-weeks-input">
+                  {t("Chu kỳ (tuần)", "Cycle (weeks)")}</label>
+                <input
+                  id="ai-duration-weeks-input"
+                  type="number"
+                  min={1}
+                  max={52}
+                  step={1}
+                  className="portal-input"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
+                  value={aiDurationWeeks}
+                  onChange={(e) => setAiDurationWeeks(Math.min(52, Math.max(1, Number(e.target.value) || 1)))}
+                  disabled={isGeneratingAi || isRestoringAi}
+                />
+              </div>
             </div>
 
             {/* Xem nhanh chỉ số thể chất của học viên */}
@@ -923,6 +1021,26 @@ export function CoachTrainingPlanPage() {
               </div>
             </div>
 
+            {aiSelectedMember.canViewWorkoutPlan === false && (
+              <div
+                role="note"
+                style={{
+                  marginBottom: '14px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--portal-border-strong)',
+                  background: 'var(--portal-raised)',
+                  color: 'var(--color-text-muted)',
+                  fontSize: '0.82rem',
+                }}
+              >
+                {t(
+                  'Lưu ý gói tập: Học viên đang dùng gói Silver nên chưa xem được giáo án bài tập trên cổng Hội viên. Giáo án vẫn được lưu để huấn luyện viên theo dõi.',
+                  'Membership note: This member has an active Silver plan and cannot view workout plans in the Member portal yet. The plan is still saved for coach tracking.'
+                )}
+              </div>
+            )}
+
             {/* Lưu ý y tế & Tiền sử chấn thương */}
             {aiSelectedMember.healthNotes && (
               <div data-i18n-managed className="ai-caution-box">
@@ -940,17 +1058,25 @@ export function CoachTrainingPlanPage() {
                 value={aiCoachPrompt}
                 onChange={(e) => setAiCoachPrompt(e.target.value)}
                 placeholder={t("Ví dụ: tối đa 3–4 buổi/tuần, chú ý tiền sử xương khớp", "Example: max 3–4 sessions/week, note joint history")}
-                disabled={isGeneratingAi}
+                disabled={isGeneratingAi || isRestoringAi}
               />
             </div>
 
-            {/* Nút bấm kích hoạt AI */}
-            <div style={{ textAlign: 'right', marginBottom: '14px' }}>
+            {/* Nút bấm kích hoạt AI & khôi phục gợi ý gần nhất */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={() => void handleRestoreLatestAiPlan()}
+                disabled={isGeneratingAi || isRestoringAi}
+              >
+                {isRestoringAi ? t('Đang tải...', 'Loading...') : t('Khôi phục gợi ý gần nhất', 'Restore latest suggestion')}
+              </button>
               <button
                 type="button"
                 className="btn-primary btn-ai-sparkle"
                 onClick={() => void handleGenerateAiPlan()}
-                disabled={isGeneratingAi}
+                disabled={isGeneratingAi || isRestoringAi}
               >
                 <span aria-hidden="true">↗</span>
                 <span>{isGeneratingAi ? t('Đang phân tích...') : t('Phân tích & Sinh giáo án bằng AI')}</span>
@@ -973,6 +1099,13 @@ export function CoachTrainingPlanPage() {
                   <span className="badge badge-success">{t("Đã hoàn thành đề xuất")}</span>
                 </div>
 
+                {aiResult.goal && (
+                  <div style={{ fontSize: '0.86rem', marginBottom: '10px', color: 'var(--portal-paper)' }}>
+                    <span>{t("Mục tiêu đề xuất: ", "Suggested goal: ")}</span>
+                    <strong>{aiResult.goal}</strong>
+                  </div>
+                )}
+
                 <div className="ai-analysis-text">{aiResult.analysis}</div>
 
                 <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '10px', color: 'var(--portal-paper)' }}>
@@ -985,8 +1118,8 @@ export function CoachTrainingPlanPage() {
                         <strong>{t(DAYS_OF_WEEK.find((d) => d.id === item.dayOfWeek)?.name)}:</strong> {item.exerciseName}
                         <div style={{ fontSize: '0.78rem', color: 'var(--portal-muted)' }}>{item.description}</div>
                       </div>
-                      <div style={{ fontWeight: 700, color: 'var(--portal-salmon)', whiteSpace: 'nowrap' }}>
-                        {item.sets} {t(" hiệp × ")}{item.reps} {t(" lần")}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--portal-salmon)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatAiExerciseDose(item)}</div>
                     </div>
                   ))}
                 </div>
@@ -1011,7 +1144,16 @@ export function CoachTrainingPlanPage() {
           const error = validateExercise(editingExercise.values, true);
           if (error) { setEditExerciseError(error); return; }
           const value = editingExercise.values;
-          setExercises(current => current.map(item => item.id === editingExercise.id ? { ...item, exerciseName: value.exerciseName.trim(), description: value.description ?? undefined, dayOfWeek: value.dayOfWeek!, sets: value.sets!, reps: value.reps!, restSeconds: value.restSeconds!, durationMinutes: value.durationMinutes! } : item));
+          setExercises(current => current.map(item => item.id === editingExercise.id ? {
+            ...item,
+            exerciseName: value.exerciseName.trim(),
+            description: value.description ?? undefined,
+            dayOfWeek: value.dayOfWeek!,
+            sets: value.sets ?? undefined,
+            reps: value.reps ?? undefined,
+            restSeconds: value.restSeconds ?? undefined,
+            durationMinutes: value.durationMinutes ?? undefined,
+          } : item));
           setActiveDay(value.dayOfWeek!);setEditingExercise(null);
         }}>
           <TrainingExerciseFields prefix="draft-exercise" value={editingExercise.values} onChange={values => { setEditExerciseError(''); setEditingExercise({ ...editingExercise, values }); }} />

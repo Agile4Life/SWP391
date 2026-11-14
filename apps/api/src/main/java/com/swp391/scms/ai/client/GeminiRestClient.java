@@ -13,6 +13,7 @@ import java.util.Map;
 public class GeminiRestClient implements AiClient {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    static final int MAX_JSON_OUTPUT_TOKENS = 2500;
 
     private final String apiKey;
     private final String model;
@@ -70,6 +71,7 @@ public class GeminiRestClient implements AiClient {
             }
             if (json) {
                 generationConfig.put("responseMimeType", "application/json");
+                generationConfig.put("maxOutputTokens", MAX_JSON_OUTPUT_TOKENS);
             }
             Map<String, Object> body = Map.of("generationConfig", generationConfig,
                     "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt != null ? systemPrompt : ""))),
