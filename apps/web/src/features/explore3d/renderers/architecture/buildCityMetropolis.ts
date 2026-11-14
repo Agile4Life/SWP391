@@ -1332,41 +1332,43 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   const glass = isLight ? '#9fc0d4' : '#3b5a72';
   const salmon = '#f07654';
   const hdrLed = isLight ? 1.2 : 4.2;
-  const x0 = -23.2;
-  const x1 = 23.2;
-  const z0 = -17.2;
-  const z1 = 17.2;
+  const x0 = -22.6;
+  const x1 = 8.8;
+  const z0 = -16.6;
+  const z1 = 16.6;
   const w = x1 - x0;
   const d = z1 - z0;
+  const cxMid = (x0 + x1) * 0.5;
 
-  // Glass roof deck with a steel grid of beams (every ~5.8 m along X, ~5.7 m along Z).
-  pushBox(b.glass, w, 0.12, d, 0, roofY, 0, glass);
-  const nx = 8;
+  // Skylight glass canopy covers the Penthouse Yoga Studio (x = -22.6..8.8) while leaving
+  // the East Rooftop Sky Deck (x = 8.8..22) genuinely open-air to the sky above.
+  pushBox(b.glass, w, 0.12, d, cxMid, roofY, 0, glass);
+  const nx = 6;
   const nz = 6;
   for (let i = 0; i <= nx; i += 1) {
-    pushBox(b.metal, 0.24, 0.34, d + 0.2, x0 + (i / nx) * w, roofY + 0.06, 0, steel);
+    pushBox(b.metal, 0.22, 0.32, d + 0.2, x0 + (i / nx) * w, roofY + 0.06, 0, steel);
   }
   for (let j = 0; j <= nz; j += 1) {
-    pushBox(b.metal, w + 0.2, 0.3, 0.22, 0, roofY + 0.04, z0 + (j / nz) * d, steel);
+    pushBox(b.metal, w + 0.2, 0.28, 0.2, cxMid, roofY + 0.04, z0 + (j / nz) * d, steel);
   }
-  // Deep fascia with a salmon LED line all round.
-  pushBox(b.metal, w + 0.6, 0.55, 0.3, 0, roofY + 0.1, z0 - 0.15, steel);
-  pushBox(b.metal, w + 0.6, 0.55, 0.3, 0, roofY + 0.1, z1 + 0.15, steel);
-  pushBox(b.metal, 0.3, 0.55, d + 0.6, x0 - 0.15, roofY + 0.1, 0, steel);
-  pushBox(b.metal, 0.3, 0.55, d + 0.6, x1 + 0.15, roofY + 0.1, 0, steel);
-  pushBox(b.emissive, w + 0.7, 0.09, 0.1, 0, roofY - 0.2, z0 - 0.33, salmon, 0, 0, 0, hdrLed);
-  pushBox(b.emissive, w + 0.7, 0.09, 0.1, 0, roofY - 0.2, z1 + 0.33, salmon, 0, 0, 0, hdrLed);
-  pushBox(b.emissive, 0.1, 0.09, d + 0.7, x0 - 0.33, roofY - 0.2, 0, salmon, 0, 0, 0, hdrLed);
-  pushBox(b.emissive, 0.1, 0.09, d + 0.7, x1 + 0.33, roofY - 0.2, 0, salmon, 0, 0, 0, hdrLed);
-  // Columns carry the roof from the penthouse parapet; they stand in the wall line.
-  const colXs = [x0 + 0.4, x0 + w * 0.25, 0, x0 + w * 0.75, x1 - 0.4];
+  // Deep fascia with a salmon LED line around the Penthouse skylight crown.
+  pushBox(b.metal, w + 0.6, 0.5, 0.28, cxMid, roofY + 0.08, z0 - 0.14, steel);
+  pushBox(b.metal, w + 0.6, 0.5, 0.28, cxMid, roofY + 0.08, z1 + 0.14, steel);
+  pushBox(b.metal, 0.28, 0.5, d + 0.6, x0 - 0.14, roofY + 0.08, 0, steel);
+  pushBox(b.metal, 0.28, 0.5, d + 0.6, x1 + 0.14, roofY + 0.08, 0, steel);
+  pushBox(b.emissive, w + 0.7, 0.08, 0.09, cxMid, roofY - 0.18, z0 - 0.31, salmon, 0, 0, 0, hdrLed);
+  pushBox(b.emissive, w + 0.7, 0.08, 0.09, cxMid, roofY - 0.18, z1 + 0.31, salmon, 0, 0, 0, hdrLed);
+  pushBox(b.emissive, 0.09, 0.08, d + 0.7, x0 - 0.31, roofY - 0.18, 0, salmon, 0, 0, 0, hdrLed);
+  pushBox(b.emissive, 0.09, 0.08, d + 0.7, x1 + 0.31, roofY - 0.18, 0, salmon, 0, 0, 0, hdrLed);
+  // Slender perimeter columns carry the Penthouse canopy along its wall lines.
+  const colXs = [x0 + 0.4, x0 + w * 0.33, x0 + w * 0.67, x1 - 0.4];
   const colZs = [z0 + 0.4, z1 - 0.4];
   for (const cx of colXs) {
-    for (const cz of colZs) pushBox(b.metal, 0.36, lift + 0.1, 0.36, cx, base + lift / 2, cz, steel);
+    for (const cz of colZs) pushBox(b.metal, 0.32, lift + 0.1, 0.32, cx, base + lift / 2, cz, steel);
   }
   for (const cz of [-5.2, 5.2]) {
-    pushBox(b.metal, 0.36, lift + 0.1, 0.36, x0 + 0.4, base + lift / 2, cz, steel);
-    pushBox(b.metal, 0.36, lift + 0.1, 0.36, x1 - 0.4, base + lift / 2, cz, steel);
+    pushBox(b.metal, 0.32, lift + 0.1, 0.32, x0 + 0.4, base + lift / 2, cz, steel);
+    pushBox(b.metal, 0.32, lift + 0.1, 0.32, x1 - 0.4, base + lift / 2, cz, steel);
   }
 
   const result: GymCrownGeometries = {

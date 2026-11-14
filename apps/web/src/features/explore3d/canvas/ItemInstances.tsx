@@ -46,10 +46,20 @@ function isBatchItemVisible(
   focusLevel: LevelCode | 'ALL',
   resolved: ResolvedItemBindingState | undefined,
 ): boolean {
-  if (levelMode === 'stacked' && entry.item.id === 'item-rf-stairs') {
+  if (
+    (levelMode === 'stacked' || levelMode === 'exploded') &&
+    entry.item.id === 'item-rf-stairs'
+  ) {
     return false;
   }
-  if (!walkMode && levelMode === 'stacked' && focusLevel === 'ALL' && entry.level?.code === 'B1') {
+  if (
+    !walkMode &&
+    levelMode === 'stacked' &&
+    focusLevel === 'ALL' &&
+    entry.level?.code === 'B1' &&
+    kind !== 'stair-core' &&
+    kind !== 'elevator-core'
+  ) {
     return false;
   }
   if (
@@ -60,6 +70,11 @@ function isBatchItemVisible(
     !isWalkFloorAdjacent(entry.level.code, focusLevel)
   ) {
     return false;
+  }
+  // In solo floor inspection, keep the arriving stair flight visible inside the stairwell cutout
+  if (levelMode === 'solo' && kind === 'stair-core' && (!resolved || resolved.visible !== false)) {
+    if (focusLevel === 'L1' && entry.item.id === 'item-b1-stairs') return true;
+    if (focusLevel === 'L2' && entry.item.id === 'item-l1-stairs') return true;
   }
   return isItemInstanceVisible(entry, levelMode, focusLevel, resolved);
 }

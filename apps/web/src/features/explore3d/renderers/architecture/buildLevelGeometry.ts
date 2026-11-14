@@ -46,6 +46,8 @@ export interface ExteriorWallBuiltRecord {
   material: WallNode['material'];
   fullGeometry: THREE.BufferGeometry;
   lowCutGeometry: THREE.BufferGeometry;
+  frameGeometry?: THREE.BufferGeometry;
+  glassGeometry?: THREE.BufferGeometry;
 }
 
 export interface LevelBuiltGeometry {
@@ -573,24 +575,111 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
 
         if (op.kind === 'glass-door') {
           glassPanes.push(leafBox);
+
+          // Slim architectural top/bottom rails and double-sided pull handle on open glass leaf
+          const topRail = new THREE.BoxGeometry(leafW, 0.036, leafThick + 0.012);
+          topRail.translate(0, leafH * 0.5 - 0.018, 0);
+          topRail.rotateY(swingAngle);
+          topRail.translate(leafMidX, leafMidY, leafMidZ);
+          opaqueFrames.push(topRail);
+
+          const bottomRail = new THREE.BoxGeometry(leafW, 0.044, leafThick + 0.012);
+          bottomRail.translate(0, -leafH * 0.5 + 0.022, 0);
+          bottomRail.rotateY(swingAngle);
+          bottomRail.translate(leafMidX, leafMidY, leafMidZ);
+          opaqueFrames.push(bottomRail);
+
+          const pullHandle = new THREE.BoxGeometry(0.024, Math.min(0.42, leafH * 0.28), leafThick + 0.068);
+          pullHandle.translate(-leafW * 0.34, Math.min(0.12, leafH * 0.05), 0);
+          pullHandle.rotateY(swingAngle);
+          pullHandle.translate(leafMidX, leafMidY, leafMidZ);
+          opaqueFrames.push(pullHandle);
         } else {
           opaqueFrames.push(leafBox);
         }
       }
     } else if (op.kind === 'window') {
-      // Window frame perimeter + full glass pane
+      // Architectural curtain-wall window frame + slender mullions + glass pane
       const y0 = op.sillHeight;
       const y1 = Math.min(wall.height, op.sillHeight + op.height);
+      const frameT = 0.055;
+      const frameDepth = wall.thickness + 0.025;
+
+      const sillBar = buildBoxForWallRange(wall, op.offset, op.offset + op.width, y0, y0 + frameT, frameDepth);
+      const headBar = buildBoxForWallRange(wall, op.offset, op.offset + op.width, y1 - frameT, y1, frameDepth);
+      const leftJamb = buildBoxForWallRange(wall, op.offset, op.offset + frameT, y0 + frameT, y1 - frameT, frameDepth);
+      const rightJamb = buildBoxForWallRange(wall, op.offset + op.width - frameT, op.offset + op.width, y0 + frameT, y1 - frameT, frameDepth);
+      if (sillBar) opaqueFrames.push(sillBar);
+      if (headBar) opaqueFrames.push(headBar);
+      if (leftJamb) opaqueFrames.push(leftJamb);
+      if (rightJamb) opaqueFrames.push(rightJamb);
+
+      const mullionBays = Math.max(1, Math.round(op.width / 2.65));
+      const mullionW = 0.045;
+      for (let m = 1; m < mullionBays; m += 1) {
+        const mu = op.offset + (op.width * m) / mullionBays;
+        const mullion = buildBoxForWallRange(
+          wall,
+          mu - mullionW * 0.5,
+          mu + mullionW * 0.5,
+          y0 + frameT,
+          y1 - frameT,
+          wall.thickness * 0.65,
+        );
+        if (mullion) opaqueFrames.push(mullion);
+      }
+
+      if (y1 - y0 >= 3.2) {
+        const transomY = y0 + (y1 - y0) * 0.78;
+        const transom = buildBoxForWallRange(
+          wall,
+          op.offset + frameT,
+          op.offset + op.width - frameT,
+          transomY - 0.02,
+          transomY + 0.02,
+          wall.thickness * 0.62,
+        );
+        if (transom) opaqueFrames.push(transom);
+      }
+
       const pane = buildBoxForWallRange(
         wall,
-        op.offset,
-        op.offset + op.width,
-        y0,
-        y1,
-        wall.thickness * 0.35,
+        op.offset + frameT * 0.5,
+        op.offset + op.width - frameT * 0.5,
+        y0 + frameT * 0.5,
+        y1 - frameT * 0.5,
+        wall.thickness * 0.28,
       );
       if (pane) {
         glassPanes.push(pane);
+      }
+    }
+  }
+
+  // Add sleek top/bottom glazing channels & slender vertical mullions along tall glass walls
+  if (wall.material === 'glass' && wall.height >= 2.2) {
+    const solidRuns = splitWallIntoSegments(wall, wall.height).filter(s => s.kind === 'solid');
+    const railDepth = wall.thickness + 0.02;
+    for (const seg of solidRuns) {
+      const runLen = seg.u1 - seg.u0;
+      if (runLen < 0.4) continue;
+      const botTrack = buildBoxForWallRange(wall, seg.u0, seg.u1, 0, 0.045, railDepth);
+      const topTrack = buildBoxForWallRange(wall, seg.u0, seg.u1, wall.height - 0.045, wall.height, railDepth);
+      if (botTrack) opaqueFrames.push(botTrack);
+      if (topTrack) opaqueFrames.push(topTrack);
+
+      const bays = Math.max(1, Math.round(runLen / 2.75));
+      for (let b = 1; b < bays; b += 1) {
+        const mu = seg.u0 + (runLen * b) / bays;
+        const post = buildBoxForWallRange(
+          wall,
+          mu - 0.022,
+          mu + 0.022,
+          0.045,
+          wall.height - 0.045,
+          railDepth,
+        );
+        if (post) opaqueFrames.push(post);
       }
     }
   }
@@ -638,8 +727,6 @@ export function buildLevelGeometry(
 
   for (const wall of walls) {
     const details = buildOpeningArchitecturalDetails(wall);
-    glassParts.push(...details.glassPanes);
-    interiorOpaqueParts.push(...details.opaqueFrames);
 
     if (wall.exterior) {
       const normal = computeExteriorWallNormal(wall, level.slabPolygon);
@@ -652,6 +739,17 @@ export function buildLevelGeometry(
         wall,
         Math.min(CUTAWAY_WALL_HEIGHT, wall.height),
       );
+      const frameGeometry =
+        details.opaqueFrames.length > 0
+          ? mergeBufferGeometries(details.opaqueFrames)
+          : undefined;
+      const glassGeometry =
+        details.glassPanes.length > 0
+          ? mergeBufferGeometries(details.glassPanes)
+          : undefined;
+      details.opaqueFrames.forEach(g => g.dispose());
+      details.glassPanes.forEach(g => g.dispose());
+
       exteriorWallsByNormal.push({
         wallId: wall.id,
         normal,
@@ -659,11 +757,17 @@ export function buildLevelGeometry(
         material: wall.material,
         fullGeometry,
         lowCutGeometry,
+        frameGeometry,
+        glassGeometry,
       });
-    } else if (wall.material === 'glass') {
-      glassParts.push(buildSegmentedWallGeometry(wall, wall.height));
     } else {
-      interiorOpaqueParts.push(buildSegmentedWallGeometry(wall, wall.height));
+      glassParts.push(...details.glassPanes);
+      interiorOpaqueParts.push(...details.opaqueFrames);
+      if (wall.material === 'glass') {
+        glassParts.push(buildSegmentedWallGeometry(wall, wall.height));
+      } else {
+        interiorOpaqueParts.push(buildSegmentedWallGeometry(wall, wall.height));
+      }
     }
   }
 

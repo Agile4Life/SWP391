@@ -169,11 +169,26 @@ function buildB1Details(parts: ColoredPart[]): void {
     }
   }
 
-  // 2. Elevated Lifeguard Chair at West Pool Deck (x = -19.6, z = -5.5)
-  pushBox(parts, 0.82, 1.45, 0.82, -19.6, 0.72, -5.5, '#f8fafc');
-  pushBox(parts, 0.72, 0.1, 0.68, -19.6, 1.5, -5.5, salmon);
-  pushBox(parts, 0.1, 0.65, 0.72, -19.9, 1.82, -5.5, '#f8fafc');
-  pushBox(parts, 0.14, 0.68, 0.18, -19.6, 1.25, -4.98, '#ef4444');
+  // 2. Elevated Open-Frame Lifeguard Chair at West Pool Deck (x = -19.6, z = -5.5)
+  for (const [lx, lz] of [
+    [-19.92, -5.82],
+    [-19.28, -5.82],
+    [-19.92, -5.18],
+    [-19.28, -5.18],
+  ] as const) {
+    pushCylinder(parts, 0.032, 0.038, 1.48, lx, 0.74, lz, chrome, 8);
+  }
+  for (const ry of [0.38, 0.76, 1.14]) {
+    pushBox(parts, 0.04, 0.035, 0.66, -19.28, ry, -5.5, chrome);
+    pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.82, chrome);
+    pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.18, chrome);
+  }
+  pushBox(parts, 0.68, 0.08, 0.66, -19.6, 1.48, -5.5, '#f8fafc');
+  pushBox(parts, 0.58, 0.05, 0.56, -19.58, 1.53, -5.5, salmon);
+  pushBox(parts, 0.08, 0.52, 0.64, -19.92, 1.78, -5.5, '#f8fafc');
+  pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.82, chrome);
+  pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.18, chrome);
+  pushCylinder(parts, 0.075, 0.075, 0.66, -19.6, 1.24, -5.06, '#ef4444', 8, 0.25, 0, 0);
 
   // 3. 4 Stainless Steel Pool Ladders along North (z = -11.45) & South (z = 0.45) pool walls
   for (const [lx, lz] of [
@@ -188,10 +203,18 @@ function buildB1Details(parts: ColoredPart[]): void {
   }
 
   // 4. North Pool Wall Towel Cabana Counter, Rinse Showers & Digital Water Temp Clock (z = -14.8)
-  pushBox(parts, 2.8, 1.05, 0.68, -14.0, 0.52, -14.6, warmWood);
-  pushBox(parts, 2.6, 0.32, 0.52, -14.0, 1.2, -14.6, '#f8fafc');
-  pushBox(parts, 3.4, 0.95, 0.12, -6.0, 2.25, -15.65, darkSteel);
-  pushBox(parts, 3.15, 0.78, 0.14, -6.0, 2.25, -15.62, '#0ea5e9');
+  pushBox(parts, 2.8, 1.02, 0.68, -14.0, 0.51, -14.6, warmWood);
+  pushBox(parts, 2.86, 0.06, 0.74, -14.0, 1.05, -14.6, darkSteel);
+  for (let t = 0; t < 4; t += 1) {
+    const tx = -14.95 + t * 0.63;
+    pushCylinder(parts, 0.11, 0.11, 0.46, tx, 1.18, -14.6, t % 2 === 0 ? '#f8fafc' : salmon, 8, Math.PI / 2, 0, 0);
+  }
+  pushBox(parts, 3.4, 0.98, 0.12, -6.0, 2.25, -15.65, darkSteel);
+  pushBox(parts, 3.48, 0.06, 0.15, -6.0, 2.76, -15.64, salmon);
+  pushBox(parts, 3.16, 0.78, 0.13, -6.0, 2.25, -15.62, '#0f172a');
+  pushBox(parts, 1.15, 0.12, 0.14, -6.85, 2.42, -15.6, salmon);
+  pushBox(parts, 1.35, 0.12, 0.14, -5.25, 2.42, -15.6, '#38bdf8');
+  pushBox(parts, 2.75, 0.08, 0.14, -6.0, 2.08, -15.6, '#cbd5e1');
   for (const sx of [-1.2, 1.2]) {
     pushCylinder(parts, 0.04, 0.05, 2.2, sx, 1.1, -14.8, chrome, 8);
     pushCylinder(parts, 0.16, 0.16, 0.05, sx, 2.18, -14.55, chrome, 8);
@@ -214,15 +237,15 @@ function buildB1Details(parts: ColoredPart[]): void {
   }
   pushBox(parts, 7.6, 0.88, 0.68, -6.0, 0.44, 15.1, '#334155');
   pushBox(parts, 7.7, 0.07, 0.72, -6.0, 0.91, 15.1, '#f8fafc');
-  pushBox(parts, 7.4, 1.25, 0.08, -6.0, 1.72, 15.52, '#bae6fd');
+  pushBox(parts, 7.4, 1.25, 0.08, -6.0, 1.72, 15.52, '#242b38');
   pushBox(parts, 7.5, 0.08, 0.1, -6.0, 2.38, 15.52, salmon);
   for (const sx of [-8.6, -6.9, -5.1, -3.4]) {
     pushCylinder(parts, 0.22, 0.18, 0.14, sx, 0.98, 15.05, '#e2e8f0', 10);
   }
   for (let s = 0; s < 4; s += 1) {
     const sz = 5.6 + s * 2.0;
-    pushBox(parts, 1.25, 2.15, 0.06, -20.6, 1.08, sz - 0.95, '#94a3b8');
-    pushBox(parts, 0.06, 2.15, 1.6, -19.95, 1.08, sz, '#7dd3fc');
+    pushBox(parts, 1.25, 2.15, 0.06, -20.6, 1.08, sz - 0.95, '#334155');
+    pushBox(parts, 0.05, 2.15, 0.05, -19.98, 1.08, sz - 0.95, chrome);
     pushCylinder(parts, 0.14, 0.14, 0.04, -20.8, 2.05, sz, chrome, 8);
   }
 }
@@ -241,8 +264,18 @@ function buildL1Details(parts: ColoredPart[]): void {
     if (sx > 0.3 && sx < 3.7) continue;
     pushBox(parts, 0.12, 2.65, 0.22, sx, 1.5, 7.42, warmWood);
   }
-  pushBox(parts, 2.6, 0.95, 0.24, 2.0, 1.75, 7.45, salmon);
-  pushBox(parts, 2.2, 0.65, 0.26, 2.0, 1.75, 7.48, '#fff8f3');
+  pushBox(parts, 2.6, 0.96, 0.22, 2.0, 1.82, 7.45, salmon);
+  pushBox(parts, 2.44, 0.8, 0.24, 2.0, 1.82, 7.47, '#14171f');
+  // Sculpted SÖL architectural emblem bars on reception feature wall (proud of z = 7.59 plaque face)
+  pushBox(parts, 0.42, 0.09, 0.26, 1.32, 1.96, 7.5, salmon);
+  pushBox(parts, 0.42, 0.09, 0.26, 1.32, 1.81, 7.5, '#f8fafc');
+  pushBox(parts, 0.42, 0.09, 0.26, 1.32, 1.66, 7.5, salmon);
+  pushCylinder(parts, 0.18, 0.18, 0.06, 2.0, 1.79, 7.6, salmon, 16, Math.PI / 2, 0, 0);
+  pushCylinder(parts, 0.105, 0.105, 0.065, 2.0, 1.79, 7.606, '#14171f', 14, Math.PI / 2, 0, 0);
+  pushBox(parts, 0.065, 0.065, 0.06, 1.91, 2.05, 7.6, '#f8fafc');
+  pushBox(parts, 0.065, 0.065, 0.06, 2.09, 2.05, 7.6, '#f8fafc');
+  pushBox(parts, 0.1, 0.39, 0.26, 2.54, 1.81, 7.5, '#f8fafc');
+  pushBox(parts, 0.34, 0.09, 0.26, 2.66, 1.66, 7.5, '#f8fafc');
 
   // Lobby Waiting Lounge Sofas & Marble Coffee Tables (x = 7.6, z = 12.8 and x = -3.4, z = 13.6)
   for (const [lx, lz] of [
@@ -257,11 +290,16 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushBox(parts, 1.1, 0.34, 0.6, lx, 0.17, lz - 0.35, '#e2e8f0');
   }
 
-  // 2. QR Turnstile Gate Portal Arch & Glass Barriers (x = 0, z = 4.0)
+  // 2. QR Turnstile Gate Portal Arch & Open Brushed-Steel Guide Rails (x = 0, z = 4.0; zero opaque fake glass!)
   pushBox(parts, 7.6, 0.22, 0.45, 0.0, 2.85, 4.0, darkSteel);
   pushBox(parts, 7.8, 0.08, 0.52, 0.0, 2.98, 4.0, salmon);
-  pushBox(parts, 1.6, 1.0, 0.08, -4.4, 0.5, 4.0, '#7dd3fc');
-  pushBox(parts, 1.6, 1.0, 0.08, 4.4, 0.5, 4.0, '#7dd3fc');
+  for (const gx of [-4.4, 4.4]) {
+    pushCylinder(parts, 0.038, 0.044, 0.98, gx - 0.74, 0.49, 4.0, darkSteel, 8);
+    pushCylinder(parts, 0.038, 0.044, 0.98, gx + 0.74, 0.49, 4.0, darkSteel, 8);
+    pushBox(parts, 1.56, 0.045, 0.06, gx, 0.96, 4.0, chrome);
+    pushBox(parts, 1.48, 0.028, 0.04, gx, 0.64, 4.0, salmon);
+    pushBox(parts, 1.48, 0.028, 0.04, gx, 0.34, 4.0, chrome);
+  }
 
   // 3. Supplement Shop (x = 10..20, z = 6..15): Activewear Apparel Rack, RTD Fridge & POS Island
   pushBox(parts, 0.65, 1.65, 2.8, 20.6, 0.82, 9.6, midSteel);
@@ -269,21 +307,43 @@ function buildL1Details(parts: ColoredPart[]): void {
   for (let s = 0; s < 6; s += 1) {
     pushBox(parts, 0.48, 0.85, 0.28, 20.6, 1.05, 8.5 + s * 0.42, shirtColors[s]!);
   }
-  // Illuminated RTD Cooler Fridge (x = 20.6, z = 13.4)
+  // Open-Front Chilled RTD Beverage Merchandiser (x = 20.6, z = 13.4)
   pushBox(parts, 0.78, 2.15, 1.85, 20.6, 1.08, 13.4, darkSteel);
-  pushBox(parts, 0.82, 1.75, 1.65, 20.56, 1.12, 13.4, '#38bdf8');
+  pushBox(parts, 0.66, 1.76, 1.66, 20.64, 1.12, 13.4, '#0f172a');
   for (let shelf = 0; shelf < 4; shelf += 1) {
-    pushBox(parts, 0.84, 0.08, 1.55, 20.54, 0.55 + shelf * 0.38, 13.4, salmon);
+    const sy = 0.52 + shelf * 0.38;
+    pushBox(parts, 0.7, 0.04, 1.62, 20.58, sy, 13.4, chrome);
+    for (let b = 0; b < 5; b += 1) {
+      pushCylinder(
+        parts,
+        0.045,
+        0.045,
+        0.22,
+        20.46,
+        sy + 0.13,
+        12.8 + b * 0.3,
+        shirtColors[(shelf + b) % shirtColors.length]!,
+        7,
+      );
+    }
   }
-  // Shop Glass Showcase Island (x = 11.8, z = 12.6)
-  pushBox(parts, 1.8, 0.95, 0.82, 11.8, 0.48, 12.6, warmWood);
-  pushBox(parts, 1.84, 0.28, 0.86, 11.8, 1.08, 12.6, '#bae6fd');
+  // Shop Retail POS & Nutrition Bar Island (x = 11.8, z = 12.6)
+  pushBox(parts, 1.8, 0.94, 0.82, 11.8, 0.47, 12.6, warmWood);
+  pushBox(parts, 1.88, 0.06, 0.88, 11.8, 0.97, 12.6, darkSteel);
+  pushBox(parts, 0.42, 0.28, 0.06, 11.45, 1.14, 12.6, darkSteel, -0.25, 0, 0);
+  pushBox(parts, 0.38, 0.22, 0.07, 11.45, 1.14, 12.61, salmon, -0.25, 0, 0);
 
   // 4. Standard Gym Arena (x = -20..4, z = -14..2):
-  // Backlit Wall Mirrors along West wall (x = -21.82, z = -12..-1)
-  for (const mz of [-11.5, -6.5, -1.5]) {
-    pushBox(parts, 0.08, 2.45, 4.2, -21.82, 1.45, mz, '#94a3b8');
-    pushBox(parts, 0.1, 0.08, 4.3, -21.8, 2.7, mz, salmon);
+  // Architectural timber-slat acoustic feature panels anchored on solid West piers (leaving z = -14..0.5 panoramic window 100% clear)
+  for (const [mz, mw] of [
+    [-15.0, 1.4],
+    [1.25, 1.15],
+  ] as const) {
+    pushBox(parts, 0.06, 2.42, mw, -21.84, 1.44, mz, darkSteel);
+    for (let sz = mz - mw * 0.38; sz <= mz + mw * 0.38 + 0.01; sz += 0.22) {
+      pushBox(parts, 0.085, 2.28, 0.09, -21.81, 1.43, sz, warmWood);
+    }
+    pushBox(parts, 0.1, 0.07, mw + 0.06, -21.8, 2.68, mz, salmon);
   }
 
   // 5 Oak & Rubber Olympic Lifting Platforms under Smith Machines & Squat Racks (z = -4.8)
@@ -349,12 +409,33 @@ function buildL1Details(parts: ColoredPart[]): void {
       pushBox(parts, 5.34, 0.05, 0.035, cx, 1.52, cz, '#f8fafc');
     }
   }
-  // Umpire Chairs & Player Benches along center spine (x = -13.15)
+  // Open-Frame Tubular Steel Umpire Chairs & Slatted Player Benches along center spine (x = -13.15)
   for (const cz of [5.5, 11.6]) {
-    pushBox(parts, 0.55, 1.55, 0.55, -13.15, 0.78, cz - 0.8, darkSteel);
-    pushBox(parts, 0.52, 0.1, 0.5, -13.15, 1.6, cz - 0.8, salmon);
-    pushBox(parts, 0.46, 0.44, 1.65, -13.15, 0.22, cz + 1.0, warmWood);
-    pushBox(parts, 0.36, 0.3, 0.52, -13.15, 0.56, cz + 0.8, salmon);
+    const uz = cz - 0.8;
+    for (const [dx, dz] of [
+      [-0.22, -0.22],
+      [0.22, -0.22],
+      [-0.22, 0.22],
+      [0.22, 0.22],
+    ] as const) {
+      pushCylinder(parts, 0.024, 0.028, 1.52, -13.15 + dx, 0.76, uz + dz, darkSteel, 6);
+    }
+    for (const ry of [0.42, 0.82, 1.2]) {
+      pushBox(parts, 0.46, 0.03, 0.035, -13.15, ry, uz + 0.22, chrome);
+      pushBox(parts, 0.035, 0.03, 0.46, -13.15 - 0.22, ry, uz, darkSteel);
+      pushBox(parts, 0.035, 0.03, 0.46, -13.15 + 0.22, ry, uz, darkSteel);
+    }
+    pushBox(parts, 0.5, 0.06, 0.48, -13.15, 1.54, uz, darkSteel);
+    pushBox(parts, 0.44, 0.04, 0.42, -13.15, 1.58, uz, salmon);
+    pushBox(parts, 0.48, 0.36, 0.05, -13.15, 1.76, uz - 0.22, darkSteel);
+    // Open-leg warm oak bench
+    const bz = cz + 1.05;
+    pushBox(parts, 0.46, 0.06, 1.65, -13.15, 0.42, bz, warmWood);
+    pushBox(parts, 0.38, 0.04, 0.06, -13.15, 0.21, bz - 0.68, darkSteel);
+    pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz - 0.68, darkSteel);
+    pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz - 0.68, darkSteel);
+    pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz + 0.68, darkSteel);
+    pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz + 0.68, darkSteel);
   }
   // 7. Exterior Facade Structural Columns on L1 (0..5.76m local height, up to the L2 slab)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
@@ -406,10 +487,13 @@ function buildL2Details(parts: ColoredPart[]): void {
   const gold = '#f59e0b';
   const chrome = '#cbd5e1';
 
-  // 1. VIP Gym (x = -20..6, z = -14..6): Smoked-Gold Mirrors, 2 VIP Lifting Platforms, Stretching Sanctuary
-  for (const mz of [-10.5, -4.5, 1.5]) {
-    pushBox(parts, 0.08, 2.45, 4.4, -21.82, 1.45, mz, '#cbd5e1');
-    pushBox(parts, 0.1, 0.08, 4.5, -21.8, 2.7, mz, gold);
+  // 1. VIP Gym (x = -20..6, z = -14..6): Smoked-Gold Timber-Slat Feature Panels on solid South piers (keeping West panoramic windows clear)
+  for (const mx of [-15.5, -2.5]) {
+    pushBox(parts, 3.8, 2.35, 0.06, mx, 1.42, 5.88, darkSteel);
+    for (let sx = mx - 1.65; sx <= mx + 1.66; sx += 0.33) {
+      pushBox(parts, 0.14, 2.2, 0.09, sx, 1.41, 5.85, warmWood);
+    }
+    pushBox(parts, 3.9, 0.08, 0.1, mx, 2.62, 5.85, gold);
   }
   for (const px of [-16.0, -10.0]) {
     pushBox(parts, 2.8, 0.06, 2.2, px, 0.03, 1.5, darkSteel);
@@ -438,19 +522,34 @@ function buildL2Details(parts: ColoredPart[]): void {
     pushCylinder(parts, 0.09, 0.09, 0.75, mx, 0.12, 0.7, salmon, 8, 0, 0, Math.PI / 2);
   }
 
-  // 2. InBody 770 Suite (x = 6..20, z = -14..-2): 65" Diagnostic Screen & Posture Calibration Grid
+  // 2. InBody 770 Suite (x = 6..20, z = -14..-2): 65" Diagnostic Screen & Framed Posture Calibration Grid
   pushBox(parts, 2.8, 1.45, 0.1, 13.5, 1.85, -15.65, darkSteel);
-  pushBox(parts, 2.6, 1.25, 0.12, 13.5, 1.85, -15.62, '#38bdf8');
-  pushBox(parts, 1.8, 2.25, 0.06, 9.5, 1.25, -15.65, '#e2e8f0');
+  pushBox(parts, 2.62, 1.27, 0.12, 13.5, 1.85, -15.62, '#0f172a');
+  pushBox(parts, 0.95, 0.12, 0.14, 12.85, 2.18, -15.6, salmon);
+  pushBox(parts, 1.15, 0.55, 0.14, 14.05, 1.78, -15.6, '#1e293b');
+  pushBox(parts, 0.95, 0.08, 0.15, 14.05, 1.92, -15.59, '#38bdf8');
+  pushBox(parts, 0.75, 0.08, 0.15, 13.95, 1.74, -15.59, salmon);
+  // Framed architectural posture calibration grid
+  pushBox(parts, 1.72, 2.28, 0.06, 9.5, 1.26, -15.66, darkSteel);
+  pushBox(parts, 1.56, 2.12, 0.07, 9.5, 1.26, -15.64, '#1e2532');
+  pushBox(parts, 0.025, 2.04, 0.08, 9.5, 1.26, -15.62, salmon);
+  for (const gy of [0.65, 1.05, 1.45, 1.85]) {
+    pushBox(parts, 1.46, 0.02, 0.08, 9.5, gy, -15.62, '#64748b');
+  }
 
-  // 3. 1:1 PT Studio (x = 6..20, z = -2..14): 12.5m Emerald Sprint Turf Track, Prowler Sled & TRX Rig
+  // 3. 1:1 PT Studio (x = 6..20, z = -2..14): 12.5m Emerald Sprint Turf Track, Prowler Sled & Open-Frame TRX Rig
   pushBox(parts, 2.1, 0.025, 12.5, 18.4, 0.015, 6.0, '#059669');
   for (let tz = 0.5; tz <= 11.5; tz += 2.2) {
     pushBox(parts, 1.65, 0.03, 0.08, 18.4, 0.02, tz, '#f8fafc');
   }
   pushBox(parts, 0.85, 0.08, 1.1, 18.4, 0.06, 1.2, salmon);
-  pushBox(parts, 0.12, 2.45, 3.6, 21.65, 1.25, 6.0, darkSteel);
-  pushBox(parts, 0.16, 0.1, 3.7, 21.62, 2.42, 6.0, gold);
+  for (const rz of [4.2, 7.8]) {
+    pushBox(parts, 0.12, 2.45, 0.12, 21.55, 1.22, rz, darkSteel);
+  }
+  pushBox(parts, 0.16, 0.1, 3.8, 21.55, 2.42, 6.0, gold);
+  for (const sz of [5.3, 6.7]) {
+    pushCylinder(parts, 0.016, 0.016, 0.92, 21.48, 1.92, sz, '#eab308', 6);
+  }
 
   // 4. Platinum Lounge (x = -20..6, z = 6..14): Sofas are at x = -15.5, -9.0, -2.5, z = 10.2; Juice Bar at [2.0, 10.2]
   for (const lx of [-15.5, -9.0, -2.5]) {
@@ -465,30 +564,34 @@ function buildL2Details(parts: ColoredPart[]): void {
     pushCylinder(parts, 0.04, 0.04, 0.72, sx, 0.38, 8.9, gold, 8);
     pushCylinder(parts, 0.22, 0.22, 0.1, sx, 0.76, 8.9, salmon, 10);
   }
-  // Back-Bar Illuminated Bottle/Protein Display & Espresso Machine at (x = 2.0, z = 12.2)
+  // Back-Bar Illuminated Bottle/Protein Display & Sculpted Dual-Group Italian Espresso Machine at (x = 2.0, z = 10.2)
   pushBox(parts, 4.2, 2.35, 0.52, 2.0, 1.18, 12.3, darkSteel);
   pushBox(parts, 3.9, 0.1, 0.56, 2.0, 1.65, 12.3, gold);
   pushBox(parts, 3.9, 0.1, 0.56, 2.0, 2.15, 12.3, salmon);
-  pushBox(parts, 0.95, 0.48, 0.46, 2.0, 1.35, 10.2, chrome);
+  pushBox(parts, 0.78, 0.34, 0.42, 2.0, 1.28, 10.2, darkSteel);
+  pushBox(parts, 0.8, 0.04, 0.44, 2.0, 1.46, 10.2, chrome);
+  pushBox(parts, 0.74, 0.03, 0.06, 2.0, 1.49, 10.02, salmon);
+  pushCylinder(parts, 0.055, 0.055, 0.1, 1.82, 1.24, 9.96, chrome, 8);
+  pushCylinder(parts, 0.055, 0.055, 0.1, 2.18, 1.24, 9.96, chrome, 8);
 
-  // 5. Exterior Facade Structural Columns & Brise-Soleil Sun Fins on L2 (0..5.76m local height, up to the L2 slab)
+  // 5. Exterior Facade Structural Columns & Brise-Soleil Sun Fins on L2 (0..5.48m local height, flush under RF slab)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
-    pushBox(parts, 0.45, 5.76, 0.45, cx, 2.88, -16.15, darkSteel);
+    pushBox(parts, 0.45, 5.48, 0.45, cx, 2.74, -16.15, darkSteel);
   }
   for (const cz of [-15.8, -5.0, 5.0, 15.8]) {
-    pushBox(parts, 0.45, 5.76, 0.45, -22.15, 2.88, cz, darkSteel);
-    pushBox(parts, 0.45, 5.76, 0.45, 22.15, 2.88, cz, darkSteel);
+    pushBox(parts, 0.45, 5.48, 0.45, -22.15, 2.74, cz, darkSteel);
+    pushBox(parts, 0.45, 5.48, 0.45, 22.15, 2.74, cz, darkSteel);
   }
   for (const cx of [-21.8, -12.0, -5.2, 8.8, 15.5, 21.8]) {
-    pushBox(parts, 0.48, 5.76, 0.48, cx, 2.88, 16.15, darkSteel);
+    pushBox(parts, 0.48, 5.48, 0.48, cx, 2.74, 16.15, darkSteel);
   }
-  for (let fx = -20.0; fx <= 20.0; fx += 2.0) {
+  for (let fx = -20.0; fx <= 20.0; fx += 2.5) {
     if (fx > -5.5 && fx < 8.5) continue;
-    pushBox(parts, 0.08, 4.2, 0.34, fx, 2.25, 16.18, warmWood);
+    pushBox(parts, 0.08, 4.2, 0.32, fx, 2.25, 16.18, warmWood);
   }
-  for (let fz = -14.0; fz <= 14.0; fz += 2.0) {
-    pushBox(parts, 0.34, 4.2, 0.08, 22.18, 2.25, fz, warmWood);
-    pushBox(parts, 0.34, 4.2, 0.08, -22.18, 2.25, fz, warmWood);
+  for (let fz = -14.0; fz <= 14.0; fz += 3.5) {
+    pushBox(parts, 0.32, 4.2, 0.08, 22.18, 2.25, fz, warmWood);
+    pushBox(parts, 0.32, 4.2, 0.08, -22.18, 2.25, fz, warmWood);
   }
 
   // 6. Architectural Recessed Ceiling Coffers & LED Light Troffers for L1 mounted under L2 slab (-0.28m)
@@ -567,40 +670,46 @@ function buildRFDetails(parts: ColoredPart[]): void {
   pushCylinder(parts, 0.48, 0.32, 0.28, 15.0, 0.46, 4.6, salmon, 10);
   pushCylinder(parts, 0.24, 0.35, 0.32, 15.0, 0.62, 4.6, gold, 8);
 
-  // 7. Rooftop Crown Sky-Sign Frames ("SÖL FITNESS & WELLNESS" South & "SÖL CENTER" East) in RF local coords
-  // South Sky-Sign Frame at x = 1.5, y = 2.12 (world y = 11.12), z = 16.02
-  pushBox(parts, 18.8, 1.96, 0.42, 1.5, 2.12, 16.02, darkSteel);
-  pushBox(parts, 19.1, 0.12, 0.54, 1.5, 3.14, 16.04, salmon);
-  pushBox(parts, 19.1, 0.12, 0.54, 1.5, 1.1, 16.04, salmon);
-  for (const sx of [-6.8, -2.5, 1.5, 5.5, 9.8]) {
-    pushBox(parts, 0.26, 1.45, 0.26, sx, 0.72, 15.85, '#313949');
-    pushBox(parts, 0.75, 0.1, 0.35, sx, 3.22, 16.3, '#fef08a');
+  // 7. Panoramic Glass Balustrade Stone Curb, Brushed Steel Handrail & Stanchions + Fascia Spandrel Crown Signs
+  const brushedRail = '#cbd5e1';
+  const stoneCurb = '#2c323e';
+  // North & South balustrade stone curb + top steel handrail (stanchions proud of 0.08m glass to prevent z-fighting)
+  for (const bz of [-16.0, 16.0]) {
+    pushBox(parts, 44.22, 0.16, 0.2, 0, 0.08, bz, stoneCurb);
+    pushBox(parts, 44.22, 0.055, 0.13, 0, 1.165, bz, brushedRail);
+    for (let bx = -22.0; bx <= 22.0; bx += 4.4) {
+      const isCorner = Math.abs(Math.abs(bx) - 22.0) < 0.05;
+      pushBox(parts, isCorner ? 0.13 : 0.075, 1.14, 0.13, bx, 0.57, bz, darkSteel);
+    }
   }
-  // East Sky-Sign Frame at x = 22.02, y = 2.12 (world y = 11.12), z = -0.5
-  pushBox(parts, 0.42, 1.82, 14.4, 22.02, 2.12, -0.5, darkSteel);
-  pushBox(parts, 0.54, 0.12, 14.7, 22.04, 3.06, -0.5, salmon);
-  pushBox(parts, 0.54, 0.12, 14.7, 22.04, 1.18, -0.5, salmon);
-  for (const sz of [-6.2, -2.2, 1.8, 5.2]) {
-    pushBox(parts, 0.26, 1.45, 0.26, 21.85, 0.72, sz, '#313949');
-    pushBox(parts, 0.35, 0.1, 0.75, 22.3, 3.12, sz, '#fef08a');
+  // West & East balustrade stone curb + top steel handrail (skip corners ±16.0 already anchored above)
+  for (const bx of [-22.0, 22.0]) {
+    pushBox(parts, 0.2, 0.16, 31.8, bx, 0.08, 0, stoneCurb);
+    pushBox(parts, 0.13, 0.055, 31.9, bx, 1.165, 0, brushedRail);
+    for (let bz = -12.0; bz <= 12.0; bz += 4.0) {
+      pushBox(parts, 0.13, 1.14, 0.075, bx, 0.57, bz, darkSteel);
+    }
   }
+  // Cantilevered Fascia Spandrel Crown Sky-Signs (mounted at RF slab edge y = -0.70..+0.24 so 100% of rooftop street sightlines stay clear)
+  pushBox(parts, 16.4, 0.96, 0.28, 1.5, -0.22, 16.32, darkSteel);
+  pushBox(parts, 16.6, 0.08, 0.34, 1.5, 0.28, 16.33, salmon);
+  pushBox(parts, 16.6, 0.08, 0.34, 1.5, -0.72, 16.33, salmon);
+  pushBox(parts, 0.28, 0.96, 15.4, 22.32, -0.22, -0.5, darkSteel);
+  pushBox(parts, 0.34, 0.08, 15.6, 22.33, 0.28, -0.5, salmon);
+  pushBox(parts, 0.34, 0.08, 15.6, 22.33, -0.72, -0.5, salmon);
 
   // 8. Modern Architectural Glass & Steel Stairwell Headhouse Canopy (x = 10.5, z = 11.5)
-  // Corner steel structural posts rising from roof to canopy
+  // Corner steel structural posts rising from roof to canopy (transparent glass walls are rendered via wall-rf-stair-*)
   for (const px of [8.65, 12.35]) {
-    for (const pz of [9.35, 13.35]) {
+    for (const pz of [9.35, 13.6]) {
       pushBox(parts, 0.12, 2.65, 0.12, px, 1.32, pz, darkSteel);
     }
   }
-  // Cantilevered modern canopy roof with salmon edge fascia
-  pushBox(parts, 4.2, 0.12, 4.6, 10.5, 2.68, 11.35, darkSteel);
-  pushBox(parts, 4.3, 0.06, 4.7, 10.5, 2.74, 11.35, salmon);
+  // Cantilevered modern canopy roof with salmon edge fascia & perimeter steel transoms
+  pushBox(parts, 4.2, 0.12, 4.75, 10.5, 2.68, 11.48, darkSteel);
+  pushBox(parts, 4.3, 0.06, 4.85, 10.5, 2.74, 11.48, salmon);
   // Recessed warm LED ceiling downlight under canopy
-  pushBox(parts, 2.2, 0.03, 2.6, 10.5, 2.61, 11.35, '#fef08a');
-  // Glass shelter panels along West, East, and South (North exit at z = 9.35 is open onto terrace)
-  pushBox(parts, 0.04, 2.5, 3.8, 8.65, 1.25, 11.35, '#94a3b8');
-  pushBox(parts, 0.04, 2.5, 3.8, 12.35, 1.25, 11.35, '#94a3b8');
-  pushBox(parts, 3.6, 2.5, 0.04, 10.5, 1.25, 13.35, '#94a3b8');
+  pushBox(parts, 2.2, 0.03, 2.6, 10.5, 2.61, 11.48, '#fef08a');
 
   // 9. Architectural Recessed Ceiling Coffers & Warm LED Panels for L2 mounted under RF slab (-0.28m)
   appendCeilingCoffers(parts, {
@@ -658,17 +767,38 @@ function buildOUTDetails(parts: ColoredPart[]): void {
     pushBox(parts, 0.42, 1.14, 7.0, 45.2, 0.57, bz, '#cbd5e1');
   }
 
-  // 3. Center Spine between Court 01 & Court 02 (x = 34.65): 2 Umpire Chairs, 4 Covered Team Benches & 2 Ball Carts
+  // 3. Center Spine between Court 01 & Court 02 (x = 34.65): 2 Open-Frame Umpire Chairs, 4 Covered Team Benches & 2 Ball Carts
   for (const uz of [-1.2, 1.2]) {
-    pushBox(parts, 0.58, 1.65, 0.58, 34.65, 0.82, uz, darkSteel);
-    pushBox(parts, 0.54, 0.1, 0.52, 34.65, 1.68, uz, salmon);
+    for (const [dx, dz] of [
+      [-0.24, -0.24],
+      [0.24, -0.24],
+      [-0.24, 0.24],
+      [0.24, 0.24],
+    ] as const) {
+      pushCylinder(parts, 0.026, 0.032, 1.62, 34.65 + dx, 0.81, uz + dz, darkSteel, 6);
+    }
+    for (const ry of [0.45, 0.88, 1.3]) {
+      pushBox(parts, 0.5, 0.035, 0.035, 34.65, ry, uz - 0.24, midSteel);
+      pushBox(parts, 0.5, 0.035, 0.035, 34.65, ry, uz + 0.24, midSteel);
+    }
+    pushBox(parts, 0.54, 0.07, 0.52, 34.65, 1.64, uz, darkSteel);
+    pushBox(parts, 0.46, 0.04, 0.44, 34.65, 1.69, uz, salmon);
+    pushBox(parts, 0.52, 0.4, 0.06, 34.65, 1.88, uz + (uz < 0 ? -0.23 : 0.23), darkSteel);
   }
   for (const pz of [-6.8, -3.6, 3.6, 6.8]) {
-    pushBox(parts, 0.62, 0.45, 2.0, 34.65, 0.22, pz, warmWood);
-    pushBox(parts, 1.05, 0.12, 2.2, 34.65, 1.95, pz, salmon);
-    pushBox(parts, 0.1, 1.9, 0.1, 34.65, 0.96, pz - 0.9, darkSteel);
-    pushBox(parts, 0.1, 1.9, 0.1, 34.65, 0.96, pz + 0.9, darkSteel);
-    pushCylinder(parts, 0.18, 0.18, 0.52, 34.65, 0.26, pz + 1.25, '#38bdf8', 8);
+    pushBox(parts, 0.58, 0.07, 2.0, 34.65, 0.42, pz, warmWood);
+    pushBox(parts, 0.08, 0.4, 0.12, 34.65 - 0.2, 0.2, pz - 0.78, darkSteel);
+    pushBox(parts, 0.08, 0.4, 0.12, 34.65 + 0.2, 0.2, pz - 0.78, darkSteel);
+    pushBox(parts, 0.08, 0.4, 0.12, 34.65 - 0.2, 0.2, pz + 0.78, darkSteel);
+    pushBox(parts, 0.08, 0.4, 0.12, 34.65 + 0.2, 0.2, pz + 0.78, darkSteel);
+    pushBox(parts, 1.05, 0.09, 2.2, 34.65, 1.96, pz, darkSteel);
+    pushBox(parts, 1.09, 0.05, 2.24, 34.65, 2.02, pz, salmon);
+    pushBox(parts, 0.09, 1.92, 0.09, 34.65, 0.96, pz - 0.9, darkSteel);
+    pushBox(parts, 0.09, 1.92, 0.09, 34.65, 0.96, pz + 0.9, darkSteel);
+    // Insulated dark-steel & salmon pro court hydration cooler on stand
+    pushCylinder(parts, 0.15, 0.16, 0.24, 34.65, 0.12, pz + 1.25, darkSteel, 8);
+    pushCylinder(parts, 0.16, 0.16, 0.42, 34.65, 0.45, pz + 1.25, '#334155', 10);
+    pushCylinder(parts, 0.17, 0.17, 0.06, 34.65, 0.68, pz + 1.25, salmon, 10);
   }
   for (const cz of [-9.5, 9.5]) {
     pushBox(parts, 0.46, 0.82, 0.46, 34.65, 0.41, cz, darkSteel);

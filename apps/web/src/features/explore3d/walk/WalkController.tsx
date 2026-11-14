@@ -108,8 +108,8 @@ function WalkFrameLoop({
     if (pitchInput !== 0) {
       targetLookRef.current.targetPitch += pitchInput * 1.4 * dt;
       targetLookRef.current.targetPitch = Math.max(
-        -0.75,
-        Math.min(0.75, targetLookRef.current.targetPitch),
+        -0.95,
+        Math.min(1.02, targetLookRef.current.targetPitch),
       );
     }
 
@@ -425,8 +425,8 @@ export function WalkController() {
         const radPitch = (pitchDeg * Math.PI) / 180;
         targetLookRef.current.targetYaw += radYaw;
         targetLookRef.current.targetPitch = Math.max(
-          -0.75,
-          Math.min(0.75, targetLookRef.current.targetPitch + radPitch),
+          -0.95,
+          Math.min(1.02, targetLookRef.current.targetPitch + radPitch),
         );
         const rotated = rotateWalkPose(currentPose, radYaw, radPitch);
         if (forward === 0 && strafe === 0) {
@@ -627,8 +627,8 @@ export function WalkController() {
 
       targetLookRef.current.targetYaw = drag.startYaw + deltaYaw;
       targetLookRef.current.targetPitch = Math.max(
-        -0.75,
-        Math.min(0.75, drag.startPitch + deltaPitch),
+        -0.95,
+        Math.min(1.02, drag.startPitch + deltaPitch),
       );
       r3fStore?.getState()?.invalidate();
     };
@@ -660,8 +660,8 @@ export function WalkController() {
         const sens = 0.0022;
         targetLookRef.current.targetYaw += event.movementX * sens;
         targetLookRef.current.targetPitch = Math.max(
-          -0.75,
-          Math.min(0.75, targetLookRef.current.targetPitch - event.movementY * sens),
+          -0.95,
+          Math.min(1.02, targetLookRef.current.targetPitch - event.movementY * sens),
         );
         r3fStore?.getState()?.invalidate();
       }

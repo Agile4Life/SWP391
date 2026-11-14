@@ -582,8 +582,8 @@ export function CameraRig() {
       draggingSmoothTime={0.12}
       minDistance={walkMode ? 0.1 : CAMERA_LIMITS.minDistance}
       maxDistance={CAMERA_LIMITS.maxDistance}
-      minPolarAngle={walkMode ? 0 : CAMERA_LIMITS.minPolarAngle}
-      maxPolarAngle={walkMode ? Math.PI : CAMERA_LIMITS.maxPolarAngle}
+      minPolarAngle={walkMode ? 0 : 0.2}
+      maxPolarAngle={walkMode ? Math.PI : 1.65}
       onControlStart={handleControlStart}
       onControl={handleInvalidate}
       onUpdate={handleInvalidate}

@@ -15,6 +15,7 @@ import {
 } from '../renderers/actors/humanRetarget';
 import {
   buildLiveActorDefinitions,
+  evaluateActorPartsAtTime,
   solveHumanPose,
   type ActorActivityKind,
   type LiveActorDefinition,
@@ -556,5 +557,175 @@ describe('biomechanical poses & machine alignment', () => {
 
     expect(footAtPi.distanceTo(footAtZero)).toBeLessThan(1e-4);
     expect(handAtPi.distanceTo(handAtZero)).toBeLessThan(1e-4);
+  });
+
+  it('keeps white sportswear crisp instead of muddy grey and drapes untucked shirts cleanly over shorts', () => {
+    const model = cloneSkinned(male) as THREE.Object3D;
+    const whiteKit = {
+      skin: '#e0b18a',
+      hair: '#1f1a17',
+      top: '#f8fafc',
+      bottom: '#1e293b',
+      shoe: '#f8fafc',
+      accent: '#ce9180',
+    };
+    dressHuman(model, assets, {
+      gender: 'male',
+      palette: whiteKit,
+      hairStyle: 'hair-simpleparted',
+      outfit: {
+        sleeves: true,
+        crop: false,
+        leggings: false,
+        stripe: true,
+        wristbands: true,
+        headband: true,
+      },
+      swimCap: false,
+    });
+    const clothes = model.getObjectByName('sportswear') as THREE.SkinnedMesh;
+    const pos = clothes.geometry.getAttribute('position');
+    const col = clothes.geometry.getAttribute('color');
+
+    let maxChestLuma = 0;
+    let maxUntuckedHemR = 0;
+    let maxUpperShortsR = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const x = pos.getX(i);
+      if (y > 1.15 && y < 1.35 && z > 0.05) {
+        const luma = 0.2126 * col.getX(i) + 0.7152 * col.getY(i) + 0.0722 * col.getZ(i);
+        maxChestLuma = Math.max(maxChestLuma, luma);
+      }
+      // Untucked shirt hem (`y ~ 0.97..1.00`) must overhang slightly proud of the shorts just below (`y ~ 0.90..0.93`)
+      if (Math.abs(x) < 0.06 && z > 0.06) {
+        const r = Math.hypot(x, z);
+        if (y >= 0.97 && y <= 1.0) maxUntuckedHemR = Math.max(maxUntuckedHemR, r);
+        if (y >= 0.9 && y <= 0.93) maxUpperShortsR = Math.max(maxUpperShortsR, r);
+      }
+    }
+    expect(maxChestLuma).toBeGreaterThan(0.72);
+    expect(maxUntuckedHemR).toBeGreaterThan(maxUpperShortsR + 0.002);
+  });
+
+  it('drives tennis players with axial torso coil, alternating forehand/backhand strokes, and ball-tracked racket contact', () => {
+    const p1 = defs.find(d => d.id === 'actor-out-tennis-p1')!;
+    const spec = HUMAN_POSE_ACTIVITIES['tennis-player']!;
+    expect(typeof spec.forearmRoll).toBe('function');
+
+    const inst = createRiggedInstance(p1, { humans: assets, clips })!;
+    const racket = inst.holder.getObjectByName('rigged-hand-prop-racket')!;
+    expect(racket).toBeTruthy();
+    // Upgraded racket includes V-throat dual-bridge yoke + handle + buttcap + oval hoop + strings (>= 5 meshes)
+    expect(racket.children.length).toBeGreaterThanOrEqual(5);
+
+    // Forehand hit occurs at rallyCycle === 0 (`(t * speed * 0.55 + phaseOffset / PI) % 4 === 0`),
+    // backhand hit occurs at rallyCycle === 2.
+    const period = 1 / (p1.speed * 0.55);
+    const baseOffset = (p1.phaseOffset / Math.PI) % 4;
+    const tForehandImpact = ((4 - baseOffset) % 4) * period;
+    const tForehandTakeback = tForehandImpact - 0.22 * period;
+    const tForehandFollow = tForehandImpact + 0.24 * period;
+    const tBackhandTakeback = tForehandImpact + (2 - 0.22) * period;
+
+    const fhTakeback = solveHumanPose(p1, tForehandTakeback, [0, 0, 0]).pose;
+    const fhFollow = solveHumanPose(p1, tForehandFollow, [0, 0, 0]).pose;
+    const bhTakeback = solveHumanPose(p1, tBackhandTakeback, [0, 0, 0]).pose;
+
+    // Axial torso coil reverses cleanly from forehand takeback to follow-through, and flips sign on backhand takeback!
+    expect(fhTakeback.torsoTwist ?? 0).toBeLessThan(-0.3);
+    expect(fhFollow.torsoTwist ?? 0).toBeGreaterThan(0.3);
+    expect(bhTakeback.torsoTwist ?? 0).toBeGreaterThan(0.3);
+
+    // Across all 4 shots of the figure-8 rally (P1 Forehand u4=0, P2 Backhand u4=1, P1 Backhand u4=2, P2 Forehand u4=3),
+    // the hitting player's racket head meets the ball closely!
+    const p2 = defs.find(d => d.id === 'actor-out-tennis-p2')!;
+    const inst2 = createRiggedInstance(p2, { humans: assets, clips })!;
+    const racket2 = inst2.holder.getObjectByName('rigged-hand-prop-racket')!;
+
+    for (const [hitInst, hitRacket, beat] of [
+      [inst, racket, 0],
+      [inst2, racket2, 1],
+      [inst, racket, 2],
+      [inst2, racket2, 3],
+    ] as const) {
+      const tHit = tForehandImpact + beat * period;
+      const pose = placeInstance(hitInst, SOL_CENTER_SCENE, 'stacked', 'ALL', tHit);
+      stepInstance(hitInst, 0, pose, tHit);
+      hitInst.holder.updateMatrixWorld(true);
+      const racketHeadWorld = hitRacket.children[1]!.getWorldPosition(new THREE.Vector3());
+
+      const ballPart = evaluateActorPartsAtTime(defs, tHit, {
+        scene: SOL_CENTER_SCENE,
+        levelMode: 'stacked',
+        focusLevel: 'ALL',
+      }).find(p => p.actorId === 'prop-out-tennis-ball-1' && p.partName === 'tennis-ball-core')!;
+      const ballWorld = new THREE.Vector3(...ballPart.position);
+
+      expect(
+        racketHeadWorld.distanceTo(ballWorld),
+        `beat ${beat} racket=${racketHeadWorld.toArray().map(n => n.toFixed(2))} ball=${ballWorld.toArray().map(n => n.toFixed(2))}`,
+      ).toBeLessThan(0.45);
+    }
+  });
+
+  it('culls glute/back skin inside garments to prevent hip-bend poke-through, keeps tennis jerseys distinct from skin, and sizes shuttlecocks realistically', () => {
+    // 1. Tennis players must have zero skin triangles retained in the covered glute/pelvis band (`y in [0.75, 0.96], z < -0.04`)
+    for (const pid of ['actor-out-tennis-p1', 'actor-out-tennis-p2', 'actor-l1-badminton-p1', 'actor-rf-yoga-student-1']) {
+      const def = defs.find(d => d.id === pid)!;
+      const inst = createRiggedInstance(def, { humans: assets, clips })!;
+      let bodyMesh: THREE.SkinnedMesh | undefined;
+      inst.holder.traverse(obj => {
+        const m = obj as THREE.SkinnedMesh;
+        if (m.isSkinnedMesh && /^superhero/i.test(m.name)) bodyMesh = m;
+      });
+      expect(bodyMesh, `${pid} bodyMesh`).toBeDefined();
+      const idx = bodyMesh!.geometry.getIndex()!;
+      const pos = bodyMesh!.geometry.getAttribute('position');
+      let coveredGluteSkinVerts = 0;
+      for (let i = 0; i < idx.count; i++) {
+        const vi = idx.getX(i);
+        const y = pos.getY(vi);
+        const z = pos.getZ(vi);
+        if (y >= 0.76 && y <= 0.96 && z < -0.05) {
+          coveredGluteSkinVerts++;
+        }
+      }
+      expect(coveredGluteSkinVerts, `${pid} must cull covered glute skin triangles`).toBe(0);
+
+      // Jersey top colour on sportswear must stay visually distinct from skin colour (`RGB distance >= 0.20`)
+      const clothes = inst.holder.getObjectByName('sportswear') as THREE.SkinnedMesh;
+      const cPos = clothes.geometry.getAttribute('position');
+      const cCol = clothes.geometry.getAttribute('color');
+      const skinColor = new THREE.Color(def.palette.skin);
+      let backTopSample: THREE.Color | null = null;
+      for (let i = 0; i < cPos.count; i++) {
+        if (cPos.getY(i) > 1.22 && cPos.getY(i) < 1.30 && cPos.getZ(i) < -0.04 && Math.abs(cPos.getX(i)) < 0.05) {
+          backTopSample = new THREE.Color(cCol.getX(i), cCol.getY(i), cCol.getZ(i));
+          break;
+        }
+      }
+      expect(backTopSample, `${pid} back shirt sample`).not.toBeNull();
+      const dist = Math.hypot(
+        backTopSample!.r - skinColor.r,
+        backTopSample!.g - skinColor.g,
+        backTopSample!.b - skinColor.b,
+      );
+      expect(dist, `${pid} jersey must contrast against skin`).toBeGreaterThanOrEqual(0.2);
+    }
+
+    // 2. Badminton shuttlecock must be compact (`<= 0.095m`) with a crisp white feather skirt (`#f8fafc`), not a 14cm orange block
+    const shuttleParts = evaluateActorPartsAtTime(defs, 1.0, {
+      scene: SOL_CENTER_SCENE,
+      levelMode: 'stacked',
+      focusLevel: 'ALL',
+    }).filter(p => p.actorId === 'prop-l1-shuttlecock-1');
+    expect(shuttleParts).toHaveLength(2);
+    const skirt = shuttleParts.find(p => p.partName === 'shuttle-skirt')!;
+    const cork = shuttleParts.find(p => p.partName === 'shuttle-cork')!;
+    expect(Math.max(...skirt.scale)).toBeLessThanOrEqual(0.095);
+    expect(Math.max(...cork.scale)).toBeLessThanOrEqual(0.05);
+    expect(skirt.color.toLowerCase()).toBe('#f8fafc');
   });
 });

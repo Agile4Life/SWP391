@@ -22,7 +22,7 @@ precision highp float;
 varying vec3 vDir;
 uniform vec3 uSunDir, uSunCol, uZenith, uHorizon, uHorizonAway, uMidSun, uMidAway, uGround;
 uniform vec3 uCloudLight, uCloudDark;
-uniform float uCloudAmount, uEnv;
+uniform float uCloudAmount, uEnv, uTime;
 
 float h2(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float n2(vec2 p) {
@@ -46,9 +46,27 @@ void main() {
   col += uSunCol * vec3(1.0, 0.86, 0.68) *
     (pow(s, 8.0) * 0.14 + pow(s, 64.0) * 0.55 + pow(s, 600.0) * 2.2 + pow(s, 6000.0) * 14.0);
 
-  // ---- cloud deck ----
-  vec2 q = d.xz / (h + 0.10) * vec2(0.62, 0.95) + vec2(3.1, -1.7);
-  float warp = fbm3(q * 0.45 + 7.1);
+  // ---- subtle twilight starfield above rooftop in dusk mode (visible sky only) ----
+  if (uEnv < 0.5 && h > 0.08) {
+    float duskMask = clamp(1.0 - dot(uZenith, vec3(2.2, 2.2, 1.4)), 0.0, 1.0);
+    if (duskMask > 0.05) {
+      vec2 starUv = d.xz / (h + 0.35) * 95.0;
+      vec2 starCell = floor(starUv);
+      vec2 starF = fract(starUv) - 0.5;
+      float starSeed = h2(starCell);
+      if (starSeed > 0.986) {
+        float starDist = length(starF - (vec2(h2(starCell + 7.3), h2(starCell + 19.1)) - 0.5) * 0.55);
+        float twinkle = 0.78 + 0.22 * sin(uTime * 1.8 + starSeed * 62.8);
+        float starGlow = smoothstep(0.11, 0.015, starDist) * smoothstep(0.08, 0.36, h) * duskMask * twinkle;
+        col += mix(vec3(0.75, 0.84, 1.0), vec3(1.0, 0.90, 0.78), fract(starSeed * 53.7)) * starGlow * 0.52;
+      }
+    }
+  }
+
+  // ---- cloud deck & high-altitude cirrus ----
+  vec2 drift = vec2(uTime * 0.012, -uTime * 0.007) * (1.0 - uEnv);
+  vec2 q = d.xz / (h + 0.10) * vec2(0.62, 0.95) + vec2(3.1, -1.7) + drift;
+  float warp = fbm3(q * 0.45 + 7.1 + drift * 0.35);
   vec2 qq = q + (warp - 0.5) * 1.3;
   float dens = fbm5(qq);
   float ridg = 1.0 - abs(2.0 * fbm3(qq * 3.1 + 5.0) - 1.0);
@@ -67,6 +85,10 @@ void main() {
   cloud = mix(cloud, hc, exp(-h * 11.0));
   col = mix(col, cloud, cov * uCloudAmount);
 
+  // delicate high-altitude cirrus wisps overhead on rooftop
+  float cirrus = smoothstep(0.56, 0.82, fbm3(d.xz / (h + 0.28) * vec2(1.4, 0.55) - drift * 0.5 + 11.4)) * smoothstep(0.08, 0.38, h);
+  col = mix(col, mix(uCloudLight, uHorizon, 0.28) * 0.95, cirrus * 0.22 * uCloudAmount);
+
   // sun disc (the directional light plays the sun in the environment bake)
   col += uSunCol * 60.0 * smoothstep(0.99990, 0.99996, mu) * (1.0 - uEnv);
   col = mix(col, uGround, smoothstep(0.0, -0.10, d.y));
@@ -78,10 +100,14 @@ void main() {
 `;
 
 function useSkyMaterial(theme: ExploreTheme, env: boolean) {
-  const material = useMemo(() => {
+  const bundle = useMemo(() => {
     const { sky } = getAtmosphere(theme);
     const v = (c: [number, number, number]) => ({ value: new THREE.Vector3(...c) });
-    return new THREE.ShaderMaterial({
+    const timeUniform = { value: 0 };
+    const setTime = (t: number): void => {
+      timeUniform.value = t;
+    };
+    const material = new THREE.ShaderMaterial({
       name: env ? 'sol-sky-probe' : 'sol-sky-dome',
       vertexShader: SKY_VERT,
       fragmentShader: SKY_FRAG,
@@ -102,11 +128,13 @@ function useSkyMaterial(theme: ExploreTheme, env: boolean) {
         uCloudDark: v(sky.cloudDark),
         uCloudAmount: { value: sky.cloudAmount },
         uEnv: { value: env ? 1 : 0 },
+        uTime: timeUniform,
       },
     });
+    return { material, setTime };
   }, [theme, env]);
-  useEffect(() => () => material.dispose(), [material]);
-  return material;
+  useEffect(() => () => bundle.material.dispose(), [bundle]);
+  return bundle;
 }
 
 const SKY_GEOMETRY = new THREE.SphereGeometry(1, 48, 24);
@@ -114,16 +142,17 @@ const NOOP_RAYCAST = () => null;
 
 /** Sky rendered only inside the environment cube-camera bake (image-based sky light). */
 export function SkyProbe({ theme }: { theme: ExploreTheme }) {
-  const material = useSkyMaterial(theme, true);
+  const { material } = useSkyMaterial(theme, true);
   return <mesh geometry={SKY_GEOMETRY} material={material} scale={80} frustumCulled={false} />;
 }
 
 /** Visible sky backdrop; follows the camera so it always sits at the far distance. */
 export function SkyDome({ theme }: { theme: ExploreTheme }) {
-  const material = useSkyMaterial(theme, false);
+  const { material, setTime } = useSkyMaterial(theme, false);
   const ref = useRef<THREE.Mesh>(null);
-  useFrame(({ camera }) => {
+  useFrame(({ camera, clock }) => {
     ref.current?.position.copy(camera.position);
+    setTime(clock.elapsedTime);
   });
   return (
     <mesh

@@ -51,6 +51,13 @@ export function computeLevelTargetY(level: LevelNode, levelMode: LevelMode): num
     : level.elevation;
 }
 
+export function isExteriorWorldVisible(
+  levelMode: LevelMode,
+  focusLevel: LevelCode | 'ALL',
+): boolean {
+  return levelMode !== 'solo' || focusLevel !== 'B1';
+}
+
 export function isLevelVisibleInMode(
   level: LevelNode,
   levelMode: LevelMode,
@@ -60,6 +67,10 @@ export function isLevelVisibleInMode(
     return true;
   }
   if (level.code === focusLevel) {
+    return true;
+  }
+  // Keep ground-level outdoor tennis courts visible when looking out from L2 or RF
+  if ((focusLevel === 'L2' || focusLevel === 'RF') && level.code === 'OUT') {
     return true;
   }
   if (focusLevel !== 'L1') {
@@ -217,7 +228,7 @@ function LevelGroup({
               onPointerOver={handleZonePointerOver(zf.zoneId)}
               onPointerOut={handleZonePointerOut(zf.zoneId)}
             />
-            {isHighlighted && (
+            {isHighlighted && !walkMode && (
               <mesh
                 geometry={zf.borderGeometry}
                 material={materials.zoneSelectedBorder}
@@ -241,7 +252,14 @@ function LevelGroup({
         const wallNode = SOL_CENTER_SCENE.nodes[extWall.wallId];
         const hasOpenings =
           wallNode?.type === 'wall' && wallNode.openings.length > 0;
-        if (!hasOpenings) {
+        const hasExtFrames =
+          !isCut &&
+          Boolean(extWall.frameGeometry && (extWall.frameGeometry.getAttribute('position')?.count ?? 0) > 0);
+        const hasExtGlass =
+          !isCut &&
+          Boolean(extWall.glassGeometry && (extWall.glassGeometry.getAttribute('position')?.count ?? 0) > 0);
+
+        if (!hasOpenings && !hasExtFrames && !hasExtGlass) {
           const bounds = getGeometryBoundsTransform(extWall.fullGeometry);
           const scaledHeight = bounds.size[1] * extScaleY;
           return (
@@ -258,15 +276,30 @@ function LevelGroup({
           );
         }
         return (
-          <mesh
-            key={extWall.wallId}
-            name={extWall.wallId}
-            geometry={extWall.fullGeometry}
-            material={mat}
-            scale={[1, extScaleY, 1]}
-            receiveShadow
-            raycast={NOOP_RAYCAST}
-          />
+          <group key={extWall.wallId} name={extWall.wallId}>
+            <mesh
+              geometry={extWall.fullGeometry}
+              material={mat}
+              scale={[1, extScaleY, 1]}
+              receiveShadow
+              raycast={NOOP_RAYCAST}
+            />
+            {hasExtFrames && extWall.frameGeometry && (
+              <mesh
+                geometry={extWall.frameGeometry}
+                material={materials.items.equipmentFrame}
+                receiveShadow
+                raycast={NOOP_RAYCAST}
+              />
+            )}
+            {hasExtGlass && extWall.glassGeometry && (
+              <mesh
+                geometry={extWall.glassGeometry}
+                material={materials.walls.glass}
+                raycast={NOOP_RAYCAST}
+              />
+            )}
+          </group>
         );
       })}
 
@@ -346,6 +379,8 @@ export function LevelStack({ renderLevelChildren }: LevelStackProps) {
         for (const ext of built.exteriorWallsByNormal) {
           ext.fullGeometry.dispose();
           ext.lowCutGeometry.dispose();
+          ext.frameGeometry?.dispose();
+          ext.glassGeometry?.dispose();
         }
       }
     };

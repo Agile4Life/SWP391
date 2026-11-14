@@ -29,5 +29,6 @@ nhưng các spec dùng tài khoản demo (`docs/DEMO_ACCOUNTS.md`) đổi dữ l
 | 12 | quản lý (danh mục, thiết bị, nhân sự, báo cáo, audit) và admin |
 | 13 | đơn từ nội bộ (HLV → quản lý), thông báo, tin nhắn |
 | 14 | i18n, chế độ tối, di động 375px, tham quan 3D, SÖL AI |
+| 20 | tham quan 3D chuyên sâu: 5 tầng, đi bộ leo cầu thang B1→RF, kính phòng tập ra phố, bầu trời sân thượng, sân tennis, sơ đồ 2D & di động |
 
 `test.fail(true, 'BUG …')` đánh dấu lỗi sản phẩm đã xác nhận: test vẫn xanh, và sẽ đỏ ("expected to fail but passed") khi lỗi được sửa — lúc đó bỏ dòng `test.fail`.

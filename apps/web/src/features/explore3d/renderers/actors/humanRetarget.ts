@@ -229,13 +229,16 @@ export function applyRetargetPose(
   const sway = Math.sin(timeSec * 0.55) * 0.02;
   const look = Math.sin(timeSec * 0.31 + 1.3) * 0.1;
 
-  // Trunk: hips take a third of the lean, the spine the rest, the head follows half of it.
+  // Trunk: hips take a third of the lean and a quarter of axial coil; spine takes the rest.
   const lean = pose.torsoPitch;
-  const hipsTurn = axis(X, lean * 0.35).multiply(axis(Y, twist)).multiply(axis(Z, sway));
+  const axialTwist = pose.torsoTwist ?? 0;
+  const hipsTurn = axis(X, lean * 0.35)
+    .multiply(axis(Y, twist + axialTwist * 0.26))
+    .multiply(axis(Z, sway));
   rotate('Hips', extra?.Hips ? extra.Hips.clone().multiply(hipsTurn) : hipsTurn);
   for (const name of ['Spine', 'Spine1', 'Spine2'] as const) {
     const turn = axis(X, (lean * 0.65) / 3 + breath / 3)
-      .multiply(axis(Y, (-twist * 1.7) / 3))
+      .multiply(axis(Y, (-twist * 1.7 + axialTwist * 0.74) / 3))
       .multiply(axis(Z, -pose.torsoRoll / 3 - sway / 3));
     rotate(name, extra?.[name] ? extra[name]!.clone().multiply(turn) : turn);
   }

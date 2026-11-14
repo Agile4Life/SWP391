@@ -15,11 +15,13 @@ import {
 import { useExploreStore } from '../state/exploreStore';
 import {
   SURFACE_DETAIL_PRESETS,
+  applyArchitecturalGlassShader,
   applySurfaceDetail,
   createFoliageMaterialBundle,
   createWaterSurfaceMaterial,
 } from '../renderers/surfaceDetail';
 import { getAtmosphere } from './atmosphere';
+import { isExteriorWorldVisible } from './LevelStack';
 import { PracticalLights } from './PracticalLights';
 import { SkyDome } from './SkyProbe';
 
@@ -97,19 +99,28 @@ export function Environment() {
   );
   const campusGlassMaterial = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        name: 'sol-campus-glass',
-        vertexColors: true,
-        roughness: 0.04,
-        metalness: 0.72,
-        transparent: true,
-        opacity: 0.36,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-        envMapIntensity: 1.75,
-      }),
+      applyArchitecturalGlassShader(
+        new THREE.MeshStandardMaterial({
+          name: 'sol-campus-glass',
+          vertexColors: true,
+          roughness: 0.04,
+          metalness: 0.16,
+          transparent: true,
+          opacity: 0.36,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+          envMapIntensity: 2.0,
+        }),
+        theme === 'light',
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  useEffect(() => {
+    (campusGlassMaterial.userData.setGlassTheme as ((isLight: boolean) => void) | undefined)?.(
+      theme === 'light',
+    );
+  }, [campusGlassMaterial, theme]);
   const campusWaterBundle = useMemo(
     () => createWaterSurfaceMaterial('sol-campus-water', theme === 'light'),
     [theme],
@@ -158,11 +169,7 @@ export function Environment() {
   const castShadows = tier !== 'low';
   const showRooftopSigns =
     levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'RF';
-  const showGroundCampus =
-    levelMode !== 'solo' ||
-    focusLevel === 'ALL' ||
-    focusLevel === 'L1' ||
-    focusLevel === 'OUT';
+  const showGroundCampus = isExteriorWorldVisible(levelMode, focusLevel);
   const rooftopOffsetY = levelMode === 'exploded' ? 12.0 : 0;
 
   useFrame(({ clock }) => {

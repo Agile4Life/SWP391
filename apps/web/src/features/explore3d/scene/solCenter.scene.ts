@@ -443,8 +443,8 @@ const zoneL1Gym: ZoneNode = register({
       label: { vi: 'Đứng giữa sàn Gym', en: 'Gym Floor Eye View' },
       kind: 'eye',
       position: [-2, L1_Y + 1.65, 0],
-      target: [-12, L1_Y + 1.3, -8],
-      fov: 50,
+      target: [-15, L1_Y + 1.45, -7],
+      fov: 52,
     },
   ],
   children: [],
@@ -631,8 +631,8 @@ const zoneL2VipGym: ZoneNode = register({
       label: { vi: 'Góc nhìn trong Phòng VIP', en: 'VIP Gym Interior Eye View' },
       kind: 'eye',
       position: [2, L2_Y + 1.65, 2],
-      target: [-10, L2_Y + 1.3, -6],
-      fov: 50,
+      target: [-14, L2_Y + 1.45, -6],
+      fov: 52,
     },
   ],
   children: [],
@@ -684,7 +684,7 @@ const zoneL2PtStudio: ZoneNode = register({
     en: 'Private 1:1 coaching studio for personal trainer sessions and customized workout plans.',
   },
   category: 'studio',
-  polygon: rectPolygon(6, -2, 20, 14),
+  polygon: rectPolygon(6, -2, 20, 15),
   floorMaterial: 'turf',
   accentColor: '#ce9180',
   viewpoints: [
@@ -719,7 +719,7 @@ const zoneL2Lounge: ZoneNode = register({
     en: 'Post-workout recovery lounge serving protein shakes and electrolyte hydration.',
   },
   category: 'lounge',
-  polygon: rectPolygon(-20, 6, 6, 14),
+  polygon: rectPolygon(-20, 6, 6, 15),
   floorMaterial: 'hardwood',
   viewpoints: [
     {
@@ -770,9 +770,9 @@ const levelRF: LevelNode = register({
       id: 'vp-rf-overview',
       label: { vi: 'Toàn cảnh Tầng thượng Zen Garden', en: 'Rooftop Zen Garden Overview' },
       kind: 'overview',
-      position: [26, RF_Y + 18, 26],
-      target: [0, RF_Y + 1.0, 0],
-      fov: 38,
+      position: [30, RF_Y + 6.8, 28],
+      target: [-2, RF_Y + 2.2, -2],
+      fov: 44,
     },
   ],
 });
@@ -801,17 +801,17 @@ const zoneRfZen: ZoneNode = register({
       id: 'vp-zone-rf-zen-hero',
       label: { vi: 'Zen Garden Yoga Studio', en: 'Zen Garden Studio Hero View' },
       kind: 'hero',
-      position: [14, RF_Y + 8.0, 14],
-      target: [-3, RF_Y + 1.0, -2],
-      fov: 38,
+      position: [17, RF_Y + 4.2, 15],
+      target: [-4, RF_Y + 1.8, -3],
+      fov: 44,
     },
     {
       id: 'vp-zone-rf-zen-eye',
       label: { vi: 'Góc nhìn từ thảm Yoga', en: 'Yoga Mat Eye View' },
       kind: 'eye',
       position: [-3, RF_Y + 1.4, 5],
-      target: [-3, RF_Y + 1.2, -9],
-      fov: 50,
+      target: [-3, RF_Y + 1.5, -14],
+      fov: 52,
     },
   ],
   children: [],
@@ -835,17 +835,17 @@ const zoneRfTerrace: ZoneNode = register({
       id: 'vp-zone-rf-terrace-hero',
       label: { vi: 'Vườn Thiền Sân Thượng', en: 'Rooftop Terrace View' },
       kind: 'hero',
-      position: [26, RF_Y + 7.5, 18],
-      target: [14, RF_Y + 1.0, 6],
-      fov: 38,
+      position: [25, RF_Y + 4.2, 20],
+      target: [12, RF_Y + 1.8, -2],
+      fov: 45,
     },
     {
       id: 'vp-zone-rf-terrace-eye',
       label: { vi: 'Đứng trên Sân Thượng Ngắm Cảnh', en: 'Rooftop Sky Deck Eye View' },
       kind: 'eye',
-      position: [13.5, RF_Y + 1.65, 14.2],
-      target: [13.5, RF_Y + 1.4, 10.0],
-      fov: 50,
+      position: [17.8, RF_Y + 1.65, 8.2],
+      target: [34.0, RF_Y + 1.15, 14.5],
+      fov: 54,
     },
   ],
   children: [],
@@ -993,8 +993,8 @@ addWall(levelB1, 'stair-north', [8.7, 9.4], [12.3, 9.4], {
 addWall(levelL1, 'north', [-22, -16], [22, -16], {
   exterior: true,
   openings: [
-    { id: 'op-l1-n-win1', kind: 'window', offset: 4, width: 14, height: 2.4, sillHeight: 1.0 },
-    { id: 'op-l1-n-win2', kind: 'window', offset: 24, width: 14, height: 2.4, sillHeight: 1.0 },
+    { id: 'op-l1-n-win1', kind: 'window', offset: 3, width: 17, height: 3.8, sillHeight: 0.55 },
+    { id: 'op-l1-n-win2', kind: 'window', offset: 24, width: 17, height: 3.8, sillHeight: 0.55 },
   ],
 });
 addWall(levelL1, 'south', [-22, 16], [22, 16], {
@@ -1006,12 +1006,16 @@ addWall(levelL1, 'south', [-22, 16], [22, 16], {
 });
 addWall(levelL1, 'west', [-22, -16], [-22, 16], {
   exterior: true,
-  openings: [{ id: 'op-l1-w-win', kind: 'window', offset: 4, width: 10, height: 2.4, sillHeight: 1.0 }],
+  openings: [
+    { id: 'op-l1-w-win', kind: 'window', offset: 2, width: 14.5, height: 3.8, sillHeight: 0.55 },
+  ],
 });
 addWall(levelL1, 'east', [22, -16], [22, 16], {
   exterior: true,
   openings: [
-    { id: 'op-l1-e-door-out', kind: 'glass-door', offset: 14, width: 3.2, height: 2.6, sillHeight: 0 },
+    { id: 'op-l1-e-win1', kind: 'window', offset: 2, width: 10.5, height: 3.8, sillHeight: 0.55 },
+    { id: 'op-l1-e-door-out', kind: 'glass-door', offset: 14, width: 3.2, height: 2.8, sillHeight: 0 },
+    { id: 'op-l1-e-win2', kind: 'window', offset: 18.5, width: 11.0, height: 3.8, sillHeight: 0.55 },
   ],
 });
 addWall(levelL1, 'gym-south', [-20, 2], [4, 2], {
@@ -1056,14 +1060,26 @@ addWall(levelL1, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
 // L2 Walls
 addWall(levelL2, 'north', [-22, -16], [22, -16], {
   exterior: true,
-  openings: [{ id: 'op-l2-n-win', kind: 'window', offset: 5, width: 34, height: 2.5, sillHeight: 0.9 }],
+  openings: [{ id: 'op-l2-n-win', kind: 'window', offset: 2.5, width: 39, height: 3.7, sillHeight: 0.55 }],
 });
 addWall(levelL2, 'south', [-22, 16], [22, 16], {
   exterior: true,
   material: 'glass',
 });
-addWall(levelL2, 'west', [-22, -16], [-22, 16], { exterior: true });
-addWall(levelL2, 'east', [22, -16], [22, 16], { exterior: true });
+addWall(levelL2, 'west', [-22, -16], [-22, 16], {
+  exterior: true,
+  openings: [
+    { id: 'op-l2-w-win1', kind: 'window', offset: 2, width: 17, height: 3.7, sillHeight: 0.55 },
+    { id: 'op-l2-w-win2', kind: 'window', offset: 21, width: 9, height: 3.7, sillHeight: 0.55 },
+  ],
+});
+addWall(levelL2, 'east', [22, -16], [22, 16], {
+  exterior: true,
+  openings: [
+    { id: 'op-l2-e-win1', kind: 'window', offset: 2, width: 11, height: 3.7, sillHeight: 0.55 },
+    { id: 'op-l2-e-win2', kind: 'window', offset: 15.5, width: 14, height: 3.7, sillHeight: 0.55 },
+  ],
+});
 addWall(levelL2, 'vip-east', [6, -14], [6, 14], {
   material: 'glass',
   openings: [
@@ -1088,11 +1104,31 @@ addWall(levelL2, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
   height: 1.15,
 });
 
-// RF Walls (Penthouse glass pavilion + low parapet around roof)
-addWall(levelRF, 'parapet-n', [-22, -16], [22, -16], { exterior: true, height: 1.1 });
-addWall(levelRF, 'parapet-s', [-22, 16], [22, 16], { exterior: true, height: 1.1 });
-addWall(levelRF, 'parapet-w', [-22, -16], [-22, 16], { exterior: true, height: 1.1 });
-addWall(levelRF, 'parapet-e', [22, -16], [22, 16], { exterior: true, height: 1.1 });
+// RF Walls (Penthouse glass pavilion + panoramic structural glass balustrades around sky deck)
+addWall(levelRF, 'parapet-n', [-22, -16], [22, -16], {
+  exterior: true,
+  material: 'glass',
+  height: 1.15,
+  thickness: 0.08,
+});
+addWall(levelRF, 'parapet-s', [-22, 16], [22, 16], {
+  exterior: true,
+  material: 'glass',
+  height: 1.15,
+  thickness: 0.08,
+});
+addWall(levelRF, 'parapet-w', [-22, -16], [-22, 16], {
+  exterior: true,
+  material: 'glass',
+  height: 1.15,
+  thickness: 0.08,
+});
+addWall(levelRF, 'parapet-e', [22, -16], [22, 16], {
+  exterior: true,
+  material: 'glass',
+  height: 1.15,
+  thickness: 0.08,
+});
 addWall(levelRF, 'zen-n', [-16, -12], [8, -12], { material: 'glass', height: 3.4 });
 addWall(levelRF, 'zen-s', [-16, 8], [8, 8], {
   material: 'glass',
@@ -1105,17 +1141,17 @@ addWall(levelRF, 'zen-e', [8, -12], [8, 8], {
   height: 3.4,
   openings: [{ id: 'op-rf-terrace-door', kind: 'glass-door', offset: 7, width: 3.6, height: 2.6, sillHeight: 0 }],
 });
-addWall(levelRF, 'stair-west', [8.7, 9.4], [8.7, 13.6], {
+addWall(levelRF, 'stair-west', [8.65, 9.35], [8.65, 13.6], {
   material: 'glass',
-  height: 1.15,
+  height: 2.62,
 });
-addWall(levelRF, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
+addWall(levelRF, 'stair-east', [12.35, 9.35], [12.35, 13.6], {
   material: 'glass',
-  height: 1.15,
+  height: 2.62,
 });
-addWall(levelRF, 'stair-south', [8.7, 13.6], [12.3, 13.6], {
+addWall(levelRF, 'stair-south', [8.65, 13.6], [12.35, 13.6], {
   material: 'glass',
-  height: 1.15,
+  height: 2.62,
 });
 
 // OUT Fence Perimeter
@@ -1218,7 +1254,7 @@ addItem(zoneB1Core, {
   name: { vi: 'Cầu thang bộ B1–L1', en: 'Stair Core B1–L1' },
   position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 4.5, 4.2],
+  dimensions: [3.6, 5.4, 4.28],
 });
 addItem(zoneB1Core, {
   id: 'item-b1-elevator',
@@ -1472,7 +1508,7 @@ addItem(zoneL1Core, {
   name: { vi: 'Cầu thang bộ L1–L2', en: 'Stair Core L1–L2' },
   position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 5.76, 4.2],
+  dimensions: [3.6, 6.912, 4.28],
 });
 addItem(zoneL1Core, {
   id: 'item-l1-elevator',
@@ -1605,7 +1641,7 @@ addItem(zoneL2PtStudio, {
   name: { vi: 'Cầu thang bộ L1–L2–RF', en: 'Stair Core L1–L2–RF' },
   position: [10.5, 0, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 5.5, 4.2],
+  dimensions: [3.6, 6.6, 4.28],
 });
 addItem(zoneL2PtStudio, {
   id: 'item-l2-elevator',
@@ -1683,9 +1719,9 @@ addItem(zoneRfTerrace, {
   id: 'item-rf-stairs',
   kind: 'stair-core',
   name: { vi: 'Cầu thang bộ L2–RF (Tầng thượng)', en: 'Stair Core L2–RF (Rooftop)' },
-  position: [10.5, 0, 11.5],
+  position: [10.5, -5.5, 11.5],
   rotationY: 0,
-  dimensions: [3.6, 3.8, 4.2],
+  dimensions: [3.6, 6.6, 4.28],
 });
 addItem(zoneRfTerrace, {
   id: 'item-rf-elevator',

@@ -1262,13 +1262,13 @@ interface SignQuadSpec {
 }
 
 const SIGN_SPECS: readonly SignQuadSpec[] = [
-  // Band 0: Rooftop South Sky-Sign (facing +Z South, anchored on RF South Parapet)
-  { center: [1.5, 13.68, 16.24], width: 15.8, height: 1.72, rotY: 0, bandIndex: 0, isRooftop: true },
-  // Band 1: Rooftop East Sky-Sign (facing +X East toward default camera, anchored on RF East Parapet)
+  // Band 0: Rooftop South Fascia Sky-Sign (facing +Z South on RF outer spandrel fascia, clear of rooftop sightlines)
+  { center: [1.5, 11.04, 16.48], width: 15.8, height: 0.86, rotY: 0, bandIndex: 0, isRooftop: true },
+  // Band 1: Rooftop East Fascia Sky-Sign (facing +X East on RF outer spandrel fascia, clear of rooftop sightlines)
   {
-    center: [22.24, 13.68, -0.5],
+    center: [22.48, 11.04, -0.5],
     width: 14.8,
-    height: 1.72,
+    height: 0.86,
     rotY: Math.PI / 2,
     bandIndex: 1,
     isRooftop: true,

@@ -858,6 +858,14 @@ export interface StairElevationState {
   stairItemId: string | null;
 }
 
+/** Maps normalized South->North stair travel [0..1] onto the 2-flight + mid-landing elevation curve. */
+function stairProgressToElevationFraction(progress: number): number {
+  const p = Math.max(0, Math.min(1, progress));
+  if (p <= 0.43) return (p / 0.43) * 0.5;
+  if (p <= 0.57) return 0.5;
+  return 0.5 + ((p - 0.57) / 0.43) * 0.5;
+}
+
 export function computeStairElevationOffset(
   doc: SceneDoc,
   levelCode: LevelCode,
@@ -873,6 +881,7 @@ export function computeStairElevationOffset(
     if (Math.abs(x - sx) <= halfW && Math.abs(z - sz) <= halfD) {
       const rawProgress = (sz + d * 0.5 - z) / Math.max(0.5, d);
       const progress = Math.max(0, Math.min(1, rawProgress));
+      const riseFraction = stairProgressToElevationFraction(progress);
 
       // Compute exact floor-to-floor vertical rise between stacked levels
       let span = 4.5;
@@ -892,7 +901,7 @@ export function computeStairElevationOffset(
         }
       }
 
-      const elevationOffset = Number((progress * span).toFixed(3));
+      const elevationOffset = Number((riseFraction * span).toFixed(3));
       return {
         onStairs: true,
         progress: Number(progress.toFixed(3)),
@@ -1305,8 +1314,9 @@ export function resolveContinuousStairFlight(
 
       const rawProgress = (sz + d * 0.5 - z) / Math.max(0.5, d);
       const progress = Math.max(0, Math.min(1, rawProgress));
+      const riseFraction = stairProgressToElevationFraction(progress);
       const surfaceFootY =
-        fromLvl.elevation + progress * (toLvl.elevation - fromLvl.elevation);
+        fromLvl.elevation + riseFraction * (toLvl.elevation - fromLvl.elevation);
       const dy = Math.abs(surfaceFootY - currentFootY);
 
       if (dy <= 1.85 && dy < bestDy) {

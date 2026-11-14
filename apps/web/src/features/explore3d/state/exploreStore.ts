@@ -178,8 +178,16 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   },
 
   syncWalkLevel: level => {
-    if (get().focusLevel === level) return;
-    set({ focusLevel: level });
+    const current = get();
+    const selectedLevel = current.selectedId
+      ? levelOf(SOL_CENTER_SCENE, current.selectedId)?.code
+      : null;
+    const nextSelectedId =
+      current.selectedId && selectedLevel && selectedLevel !== level
+        ? `lvl-${level.toLowerCase()}`
+        : current.selectedId;
+    if (current.focusLevel === level && current.selectedId === nextSelectedId) return;
+    set({ focusLevel: level, selectedId: nextSelectedId });
   },
 
   setHoveredId: id => {

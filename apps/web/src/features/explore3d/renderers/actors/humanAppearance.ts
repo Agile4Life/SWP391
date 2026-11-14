@@ -238,6 +238,13 @@ function clothAt(
       if (y < L.soleTop) return SOLE;
       if (y > L.shoeTop - 0.015) return WAISTBAND;
       if (
+        y > L.shoeTop - 0.032 &&
+        Math.abs(x - L.footCenterX) < 0.022 &&
+        normalZ > 0.35
+      ) {
+        return TRIM;
+      }
+      if (
         y >= L.soleTop + 0.018 &&
         y < L.shoeTop - 0.026 &&
         Math.abs(normalX) > 0.78 &&
@@ -258,26 +265,29 @@ function clothAt(
   const crop = isStaff ? false : v.crop;
   const leggings = !isStaff && (v.leggings || wear === 'barefoot');
   const hem = isStaff ? L.shoeTop : leggings ? L.leggingsHem : L.shortsHem;
-
-  if (y >= hem && y < L.waist) {
-    if (y >= L.waist - 0.044) return WAISTBAND;
-    if (isStaff && y < hem + 0.024) return WAISTBAND;
-    if (!isStaff && !leggings && y < hem + 0.024) return TRIM;
-    if ((v.stripe || isStaff) && x > 0.065 && Math.abs(normalX) > 0.94) return STRIPE;
-    return BOTTOM;
-  }
-
-  const topHem = crop ? L.cropHem : L.waist;
+  const waistTop = crop ? L.waist + 0.068 : L.waist;
+  const untuckedDrop = 0.056;
+  const topHem = crop ? L.cropHem : L.waist - untuckedDrop;
   const shoulderLimit = sleeves ? L.torsoHalfWidth : L.strapOuter;
   const inner = y < L.armpit || x < shoulderLimit;
+
+  // Evaluate TOP before BOTTOM so untucked shirts drape naturally over the shorts waistband.
   if (y >= topHem && inner) {
     const neckCurve = L.neckFront + (L.neckShoulder - L.neckFront) * smooth((x - 0.045) / (L.collarX - 0.035));
     if (y >= neckCurve) return -1;
-    if (x < L.collarX + 0.012 && y > L.collarLow) return TRIM;
-    if (isStaff && x < 0.016 && normalZ > 0.55 && y > L.collarLow - 0.1 && y <= L.collarLow) return WAISTBAND;
+    if (x < L.collarX + 0.014 && y > L.collarLow - 0.005) return TRIM;
+    if (isStaff && x < 0.016 && normalZ > 0.55 && y > L.collarLow - 0.11 && y <= L.collarLow) return WAISTBAND;
     if (crop && y < topHem + 0.026) return WAISTBAND;
     if ((v.stripe || isStaff) && y > L.armpit - 0.095 && y < L.armpit - 0.064 && normalZ > 0.25) return STRIPE;
     return TOP;
+  }
+
+  if (y >= hem && y < waistTop) {
+    if (crop && y >= waistTop - 0.044) return WAISTBAND;
+    if (isStaff && y < hem + 0.024) return WAISTBAND;
+    if (!isStaff && !leggings && y < hem + 0.024) return TRIM;
+    if ((v.stripe || isStaff) && x > 0.065 && Math.abs(normalX) > 0.92) return STRIPE;
+    return BOTTOM;
   }
 
   if (y >= L.armLow && y < L.armHigh && x >= shoulderLimit) {
@@ -287,14 +297,16 @@ function clothAt(
   return -1;
 }
 
-/** Stand-off thickness (metres) with natural drape and snug tapered hems/cuffs. */
+/** Stand-off thickness (metres) with natural drape, overhanging untucked hems, and snug tapered cuffs. */
 function standOff(kind: number, y: number, x: number, gender: Gender, wear: WearMode, v: OutfitVariant): number {
   const L = LANDMARKS[gender];
   if (wear === 'swim') {
     return kind === WAISTBAND || kind === TRIM ? 0.0055 : 0.0045;
   }
   const isStaff = wear === 'staff';
+  const crop = isStaff ? false : v.crop;
   const leggings = !isStaff && (v.leggings || wear === 'barefoot');
+  const shirtHem = L.waist - 0.056;
 
   switch (kind) {
     case SOLE:
@@ -306,41 +318,53 @@ function standOff(kind: number, y: number, x: number, gender: Gender, wear: Wear
       return 0.004 + 0.0025 * cuffTaper;
     }
     case WAISTBAND:
-      return 0.0085;
+      return 0.0105;
     case BOTTOM:
     case STRIPE:
     case TRIM: {
       if (y < L.sockTop && wear !== 'staff') return 0.0065;
       if (y >= L.armLow && x >= L.strapOuter) {
-        // Sleeve cuff or wristband: snug against the arm at the outer edge.
+        // Sleeve cuff or wristband: ribbed welt with snug outer taper.
         const cuffEdge = x < L.sleeveEndX + 0.02 ? smooth((L.sleeveEndX - x) / 0.022) : 1;
-        return 0.0065 + 0.0045 * cuffEdge;
+        return 0.0072 + 0.0042 * cuffEdge;
       }
-      if (y >= L.waist) {
+      if (kind === TRIM && y > L.collarLow - 0.008 && x < L.collarX + 0.02) {
+        // Raised ribbed crew-neck / polo collar welt.
+        const neckLip = smooth((L.neckShoulder + 0.008 - y) / 0.02);
+        return 0.0068 + 0.0024 * neckLip;
+      }
+      if (y >= (crop ? L.cropHem : shirtHem)) {
         const collarTaper = smooth((L.neckShoulder - y) / 0.025);
-        return 0.006 + 0.008 * smooth((L.armpit - y) / 0.28) * collarTaper;
+        return 0.0065 + 0.0118 * smooth((L.armpit - y) / (L.armpit - shirtHem)) * collarTaper;
       }
       if (isStaff) {
-        // Tapered athletic track pants: relaxed at hip, slimming down to the ankle cuff.
-        return 0.0065 + 0.009 * smooth((y - L.shoeTop) / (L.waist - L.shoeTop));
+        // Tapered athletic chinos/track pants tucked cleanly under the staff polo hem.
+        const hipRelax = Math.sin(smooth((y - L.shoeTop) / (shirtHem - L.shoeTop)) * Math.PI * 0.82);
+        return 0.0062 + 0.0068 * hipRelax;
       }
       if (leggings) {
-        return 0.0042 + 0.0015 * smooth((y - L.leggingsHem) / 0.03);
+        const seatGuard = smooth((y - 0.72) / 0.16);
+        return 0.0048 + 0.0014 * smooth((y - L.leggingsHem) / 0.03) + 0.0048 * seatGuard;
       }
-      // Loose athletic shorts: fuller toward the thigh hem with rolled hem lip, never ballooning.
-      const drape = smooth((L.waist - y) / (L.waist - L.shortsHem));
-      const hemTaper = 0.72 + 0.28 * smooth((y - L.shortsHem) / 0.018);
-      return (0.0075 + 0.016 * drape) * hemTaper;
+      // Tailored athletic shorts: tucked neatly under untucked shirt hem, flaring toward thigh with rolled hem welt.
+      const shortsTop = crop ? L.waist : shirtHem;
+      const drape = smooth((shortsTop - y) / (shortsTop - L.shortsHem));
+      const hemTaper = 0.78 + 0.22 * smooth((y - L.shortsHem) / 0.018);
+      const hemWelt = y < L.shortsHem + 0.024 ? 0.0016 : 0;
+      return (0.0064 + 0.0155 * drape) * hemTaper + hemWelt;
     }
     default: {
       if (x >= L.strapOuter && y >= L.armLow) {
-        const sleeveTaper = 0.65 + 0.35 * smooth((L.sleeveEndX - x) / 0.025);
-        return 0.0105 * sleeveTaper;
+        const sleeveTaper = 0.68 + 0.32 * smooth((L.sleeveEndX - x) / 0.026);
+        return 0.0112 * sleeveTaper;
       }
-      if (v.crop && !isStaff) {
-        return 0.0055 + 0.0025 * smooth((y - L.cropHem) / 0.04);
+      if (crop) {
+        return 0.0055 + 0.0028 * smooth((y - L.cropHem) / 0.04);
       }
-      return 0.0065 + 0.0125 * smooth((L.armpit - y) / 0.3);
+      const collarTaper = smooth((L.neckShoulder - y) / 0.024);
+      const drape = smooth((L.armpit - y) / (L.armpit - shirtHem));
+      const hemLip = y < shirtHem + 0.024 ? 0.0018 * smooth((y - shirtHem) / 0.006) : 0;
+      return (0.0065 + 0.0122 * drape) * collarTaper + hemLip;
     }
   }
 }
@@ -375,16 +399,19 @@ function displaceClothVertex(
     const signX = px >= 0 ? 1 : -1;
     const cx = signX * L.footCenterX;
     const dx = px - cx;
-    const soleFlare = py < L.soleTop ? 0.014 : 0.009;
+    const soleFlare = py < L.soleTop ? 0.015 : 0.0095;
     let sx = px + c.n.x * soleFlare + (dx >= 0 ? 1 : -1) * 0.003;
     if (Math.abs(sx) < 0.055) sx = signX * 0.055;
-    const sz = pz + c.n.z * (py < L.soleTop ? 0.015 : 0.01) + (pz > 0.02 ? 0.006 : 0);
+    const heelCup = py >= L.soleTop && pz < -0.04 ? 0.004 : 0;
+    const tonguePuff =
+      py >= L.soleTop + 0.012 && pz > 0.005 && pz < 0.095 && Math.abs(dx) < 0.024 ? 0.0045 : 0;
+    const sz = pz + c.n.z * (py < L.soleTop ? 0.015 : 0.01) + (pz > 0.02 ? 0.006 : -heelCup) + tonguePuff;
 
-    // Smooth vamp dome bridges individual toe valleys into a clean running-shoe toe box.
+    // Smooth vamp dome bridges individual toe valleys into a clean court/running sneaker toe box.
     const zNorm = Math.max(0, pz + 0.01) / 0.145;
     const xNorm = dx / 0.062;
     const arch = Math.max(0, 1 - zNorm * zNorm) * Math.max(0, 1 - xNorm * xNorm);
-    const vampFloor = py >= L.soleTop ? L.soleTop + 0.034 * Math.sqrt(arch) : py;
+    const vampFloor = py >= L.soleTop ? L.soleTop + 0.035 * Math.sqrt(arch) + tonguePuff * 0.6 : py;
     const sy = Math.max(py + c.n.y * (py < L.soleTop ? 0.006 : 0.009), vampFloor);
 
     outPos.set(sx, sy, sz);
@@ -475,7 +502,9 @@ function buildShell(
   const emit = (c0: Corner, c1: Corner, c2: Corner, depth: number) => {
     const centre = blend(blend(c0, c1), c2);
     const kinds = [kindAt(c0), kindAt(c1), kindAt(c2), kindAt(centre)];
-    if (depth < MAX_SPLITS && new Set(kinds).size > 1) {
+    const hasBareEdge = kinds.some(k => k < 0) && kinds.some(k => k >= 0);
+    const splitLimit = hasBareEdge ? 3 : MAX_SPLITS;
+    if (depth < splitLimit && new Set(kinds).size > 1) {
       const m01 = blend(c0, c1);
       const m12 = blend(c1, c2);
       const m20 = blend(c2, c0);
@@ -536,7 +565,7 @@ function occludedBodyGeometry(
 
   const pos = source.getAttribute('position');
   const nor = source.getAttribute('normal');
-  const margin = 0.032;
+  const margin = 0.005;
   const covered = new Uint8Array(pos.count);
 
   for (let i = 0; i < pos.count; i++) {
@@ -577,7 +606,12 @@ const outfitGeometries = new Map<string, THREE.BufferGeometry>();
 const jitter = new THREE.Color();
 
 /** The shell with this outfit's colours; shared by every actor that wears the same one. */
-function outfitGeometry(shell: Shell, key: string, colours: readonly THREE.Color[]): THREE.BufferGeometry {
+function outfitGeometry(
+  shell: Shell,
+  key: string,
+  colours: readonly THREE.Color[],
+  underHemY: number | null,
+): THREE.BufferGeometry {
   const cached = outfitGeometries.get(key);
   if (cached) return cached;
   const geometry = new THREE.BufferGeometry();
@@ -595,10 +629,17 @@ function outfitGeometry(shell: Shell, key: string, colours: readonly THREE.Color
     const pz = pos.getZ(i);
     const ny = normal.getY(i);
     // Smooth continuous spatial micro-drape & ambient occlusion (no per-triangle facet steps).
-    const drape = 0.965 + 0.035 * Math.sin(py * 19.0 + Math.cos(px * 14.0) * 1.1 + Math.sin(pz * 15.0) * 0.9);
+    const drape = 0.968 + 0.032 * Math.sin(py * 19.0 + Math.cos(px * 14.0) * 1.1 + Math.sin(pz * 15.0) * 0.9);
     const underShade = 1 - 0.11 * smooth((-ny - 0.15) / 0.65);
     const innerLegAo = py > 0.35 && py < 0.95 ? 0.92 + 0.08 * smooth(Math.abs(px) / 0.09) : 1;
-    jitter.multiplyScalar(drape * underShade * innerLegAo);
+    // Contact shadow cast by an untucked shirt hem onto the top of the shorts/pants below.
+    const hemAo =
+      underHemY !== null && (k === BOTTOM || k === STRIPE) && py > underHemY - 0.042 && py < underHemY + 0.005
+        ? 0.82 + 0.18 * smooth((underHemY - py) / 0.042)
+        : 1;
+    // Grounded rubber outsole tread line along the bottom 8 mm of sneakers.
+    const soleTread = k === SOLE && py < 0.009 ? 0.58 + 0.42 * smooth(py / 0.009) : 1;
+    jitter.multiplyScalar(drape * underShade * innerLegAo * hemAo * soleTread);
     data[i * 3] = jitter.r;
     data[i * 3 + 1] = jitter.g;
     data[i * 3 + 2] = jitter.b;
@@ -610,11 +651,14 @@ function outfitGeometry(shell: Shell, key: string, colours: readonly THREE.Color
 
 const hsl = { h: 0, s: 0, l: 0 };
 
-/** Sportswear is muted toward realistic textile dyes rather than toy primaries. */
+/** Sportswear preserves crisp whites/ivories while taming neon toy primaries into athletic dyes. */
 function mute(hex: string): THREE.Color {
   const color = new THREE.Color(hex);
   color.getHSL(hsl);
-  return color.setHSL(hsl.h, hsl.s * 0.68, Math.min(0.58, Math.max(0.08, hsl.l * 0.95)));
+  const chroma = hsl.s * (1 - Math.abs(2 * hsl.l - 1));
+  const maxL = chroma < 0.22 ? 0.89 : 0.74;
+  const satScale = chroma < 0.22 ? 0.6 : 0.76;
+  return color.setHSL(hsl.h, hsl.s * satScale, Math.min(maxL, Math.max(0.09, hsl.l * 0.95)));
 }
 
 /** The colour table of an outfit, indexed by kind of cloth. */
@@ -623,16 +667,16 @@ function outfitColours(palette: ActorOutfitPalette): THREE.Color[] {
   const bottom = mute(palette.bottom);
   const trim = new THREE.Color(palette.accent);
   trim.getHSL(hsl);
-  trim.setHSL(hsl.h, Math.min(0.78, hsl.s), Math.min(0.62, Math.max(0.42, hsl.l)));
+  trim.setHSL(hsl.h, Math.min(0.8, hsl.s), Math.min(0.66, Math.max(0.42, hsl.l)));
   const shoe = mute(palette.shoe);
   const colours: THREE.Color[] = [];
   colours[TOP] = top;
   colours[BOTTOM] = bottom;
   colours[SHOE] = shoe;
-  colours[SOLE] = new THREE.Color('#eae8e1');
-  colours[SOCK] = new THREE.Color('#f0efe9');
+  colours[SOLE] = new THREE.Color('#efede6');
+  colours[SOCK] = new THREE.Color('#f4f3ee');
   colours[TRIM] = trim;
-  colours[WAISTBAND] = bottom.clone().multiplyScalar(0.76);
+  colours[WAISTBAND] = bottom.clone().multiplyScalar(0.74);
   colours[STRIPE] = trim;
   return colours;
 }
@@ -809,8 +853,15 @@ export function dressHuman(model: THREE.Object3D, assets: HumanAssets, look: Hum
   bodyMesh.geometry = occludedBodyGeometry(bodyMesh.geometry, gender, wear, outfit, cut);
 
   const colours = outfitColours(palette);
+  const underHemY =
+    wear !== 'swim' && !(wear !== 'staff' && outfit.crop) ? LANDMARKS[gender].waist - 0.056 : null;
   const clothes = new THREE.SkinnedMesh(
-    outfitGeometry(shell, `${cut}|${palette.top}|${palette.bottom}|${palette.shoe}|${palette.accent}`, colours),
+    outfitGeometry(
+      shell,
+      `${cut}|${palette.top}|${palette.bottom}|${palette.shoe}|${palette.accent}`,
+      colours,
+      underHemY,
+    ),
     fabricMaterial(),
   );
   clothes.name = 'sportswear';

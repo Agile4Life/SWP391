@@ -191,4 +191,99 @@ describe('Item chamfer bevel', () => {
       expect(getGeometryTriangleCount(geom)).toBeLessThanOrEqual(ITEM_HIGH_DETAIL_TRIANGLE_BUDGET);
     }
   });
+
+  it('designs stair-core without opaque glass walls, aligns top treads flush to upper slabs, and keeps RF stairs under canopy', () => {
+    const highStair = getItemGeometry('stair-core', 'high');
+    const col = highStair.getAttribute('color');
+    const pos = highStair.getAttribute('position');
+    const norm = highStair.getAttribute('normal');
+    const fakeGlass = new THREE.Color('#c8d4e0');
+
+    let fakeGlassVerts = 0;
+    let highestWalkableTreadY = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const dr = Math.abs(col.getX(i) - fakeGlass.r);
+      const dg = Math.abs(col.getY(i) - fakeGlass.g);
+      const db = Math.abs(col.getZ(i) - fakeGlass.b);
+      if (dr < 0.01 && dg < 0.01 && db < 0.01) fakeGlassVerts++;
+
+      // Upward-facing walkable tread/landing surface (`ny > 0.95`, inside `3.20 m` walkway, excluding outer `|x| >= 1.64` rail posts/brackets)
+      if (norm.getY(i) > 0.95 && Math.abs(pos.getX(i)) < 1.62 && pos.getY(i) < 4.1) {
+        highestWalkableTreadY = Math.max(highestWalkableTreadY, pos.getY(i));
+      }
+    }
+    expect(fakeGlassVerts).toBe(0);
+
+    const baseH = DEFAULT_ITEM_DIMENSIONS['stair-core'][1];
+    const treadRatio = highestWalkableTreadY / baseH;
+
+    // B1->L1 (4.5m), L1->L2 (5.76m), L2->RF (5.5m): scaled top landing tread must meet upper floor within 4 cm!
+    const b1Stair = SOL_CENTER_SCENE.nodes['item-b1-stairs'];
+    const l1Stair = SOL_CENTER_SCENE.nodes['item-l1-stairs'];
+    const l2Stair = SOL_CENTER_SCENE.nodes['item-l2-stairs'];
+    const rfStair = SOL_CENTER_SCENE.nodes['item-rf-stairs'];
+    if (
+      b1Stair?.type !== 'item' ||
+      l1Stair?.type !== 'item' ||
+      l2Stair?.type !== 'item' ||
+      rfStair?.type !== 'item'
+    ) {
+      throw new Error('Missing stair items in SOL_CENTER_SCENE');
+    }
+
+    expect(Math.abs(b1Stair.dimensions[1] * treadRatio - 4.5)).toBeLessThan(0.04);
+    expect(Math.abs(l1Stair.dimensions[1] * treadRatio - 5.76)).toBeLessThan(0.04);
+    expect(Math.abs(l2Stair.dimensions[1] * treadRatio - 5.5)).toBeLessThan(0.04);
+
+    // Rooftop arrival stair must sit in the stairwell shaft below RF canopy (never poking 3.8m above RF slab)
+    const rfTopLocalY = rfStair.position[1] + rfStair.dimensions[1];
+    expect(rfTopLocalY).toBeLessThan(2.4);
+    expect(Math.abs((rfStair.position[1] + rfStair.dimensions[1] * treadRatio) - 0)).toBeLessThan(0.04);
+  });
+
+  it('keeps stair-core spine beams & side stringers strictly underneath the oak treads and avoids opaque blue elevator panels', () => {
+    const highStair = getItemGeometry('stair-core', 'high');
+    const pos = highStair.getAttribute('position');
+
+    // Flight 1 climbs from (z = +1.54, y = 0.23) to (z = +0.42, y = 1.69)
+    // Flight 2 climbs from (z = -0.42, y = 2.13) to (z = -1.54, y = 3.59)
+    let protrudingBeamVerts = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      // Inside the 3.08 m stair walkway (excluding outer `|x| >= 1.60` handrail stanchions & tension rods)
+      if (Math.abs(x) < 1.56) {
+        if (z >= 0.48 && z <= 1.48) {
+          const u = (1.54 - z) / (1.54 - 0.42);
+          const stepSurfaceY = 0.23 + u * (1.69 - 0.23);
+          if (y > stepSurfaceY + 0.19) {
+            protrudingBeamVerts++;
+          }
+        } else if (z >= -1.48 && z <= -0.48) {
+          const u = (-0.42 - z) / (-0.42 - -1.54);
+          const stepSurfaceY = 2.13 + u * (3.59 - 2.13);
+          if (y > stepSurfaceY + 0.19) {
+            protrudingBeamVerts++;
+          }
+        }
+      }
+    }
+    expect(protrudingBeamVerts).toBe(0);
+
+    // Elevator core uses vertex-colored instanced opaque geometry: must not use bright saturated sky-blue fake glass panels
+    const highElev = getItemGeometry('elevator-core', 'high');
+    const eCol = highElev.getAttribute('color');
+    const ePos = highElev.getAttribute('position');
+    let brightBlueShaftVerts = 0;
+    for (let i = 0; i < ePos.count; i++) {
+      const r = eCol.getX(i);
+      const g = eCol.getY(i);
+      const b = eCol.getZ(i);
+      if (ePos.getY(i) > 1.5 && b > r + 0.14 && b > g + 0.04 && b > 0.35) {
+        brightBlueShaftVerts++;
+      }
+    }
+    expect(brightBlueShaftVerts).toBe(0);
+  });
 });

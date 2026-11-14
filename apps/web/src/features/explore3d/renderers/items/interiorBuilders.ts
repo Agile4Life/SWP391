@@ -425,67 +425,125 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
 
   const buildStairCore = (): Geo => {
     const parts: Geo[] = [];
-    const clearWidth = 2.88;
-    const stairZ0 = 1.95;
-    const stairZ1 = -1.95;
-    const stairY0 = 0.08;
-    const stairY1 = 3.72;
-    const steps = 18;
+    const treadW = 3.04;
+    const landingW = 3.2;
 
-    const rise = (stairY1 - stairY0) / (steps - 1);
-    const going = (stairZ1 - stairZ0) / (steps - 1);
+    // Exact [3.60, 4.56, 4.28] architectural envelope:
+    // - Base threshold rests at y = 0.00 (z = +2.14)
+    // - Mid-flight rest landing sits at y = 1.90 (z = 0.00)
+    // - Top arrival bridge sits flush at y = 3.80 (z = -2.14)
+    // - Ergonomic handrail peaks at y = 4.56 (+0.76 m above top landing)
+    parts.push(box(landingW, 0.08, 0.52, stone, [0, 0.04, 1.88]));
+    parts.push(box(treadW, 0.014, 0.036, P.salmonBright, [0, 0.081, 1.66]));
 
-    // Continuous wide architectural steps (zero center spine wall - unobstructed 2.88m path)
-    for (let i = 0; i < steps; i++) {
-      const y = stairY0 + i * rise;
-      const z = stairZ0 + i * going;
-      // Hardwood / terrazzo step tread
-      parts.push(rbox(clearWidth, 0.065, 0.28, 0.012, P.wood, [0, y, z]));
-      // Contrasting safety tactile nosing strip
-      parts.push(box(clearWidth, 0.012, 0.035, rubber, [0, y + 0.033, z + 0.12]));
-    }
+    // Mid-flight structural rest landing + steel support crossbeam + warm accent reveal
+    parts.push(box(landingW, 0.12, 0.64, stone, [0, 1.84, 0]));
+    parts.push(box(landingW - 0.16, 0.14, 0.22, steel, [0, 1.71, 0]));
+    parts.push(box(treadW, 0.014, 0.032, P.salmon, [0, 1.901, 0.28]));
+    parts.push(box(treadW, 0.014, 0.032, P.salmon, [0, 1.901, -0.28]));
 
-    // Top arrival landing tread connecting flush to upper floor level
-    parts.push(rbox(clearWidth, 0.08, 0.42, 0.015, stone, [0, stairY1, stairZ1]));
+    // Top arrival bridge connecting flush to upper floor slab at y = 3.80, z = -2.14
+    parts.push(box(landingW, 0.14, 0.52, stone, [0, 3.73, -1.88]));
+    parts.push(box(treadW, 0.014, 0.038, rubber, [0, 3.795, -1.65]));
 
-    // Steel stringer beams and underside soffit
-    const slope = Math.atan2(stairY1 - stairY0, Math.abs(stairZ1 - stairZ0));
-    const spanLen = Math.hypot(stairY1 - stairY0, stairZ1 - stairZ0) + 0.28;
-    const midY = (stairY0 + stairY1) * 0.5;
-    const midZ = (stairZ0 + stairZ1) * 0.5;
+    const flights = [
+      { y0: 0.23, y1: 1.69, z0: 1.54, z1: 0.42 },
+      { y0: 2.13, y1: 3.59, z0: -0.42, z1: -1.54 },
+    ] as const;
 
-    // Structural underside soffit
-    parts.push(box(clearWidth, 0.035, spanLen, panel, [0, midY - 0.22, midZ], [-slope, 0, 0]));
+    const stepsPerFlight = 8;
+    for (const fl of flights) {
+      const rise = (fl.y1 - fl.y0) / (stepsPerFlight - 1);
+      const going = (fl.z1 - fl.z0) / (stepsPerFlight - 1);
 
-    // Heavy steel side stringers along lateral boundaries
-    for (const sx of [-clearWidth * 0.5 - 0.03, clearWidth * 0.5 + 0.03]) {
-      parts.push(box(0.06, 0.32, spanLen, steel, [sx, midY - 0.12, midZ], [-slope, 0, 0]));
-    }
-
-    // Left and right transparent architectural glass & brushed-steel balustrades
-    for (const sx of [-clearWidth * 0.5 - 0.07, clearWidth * 0.5 + 0.07]) {
-      // Tempered safety glass balustrade panel
-      parts.push(box(0.018, 0.92, spanLen, '#c8d4e0', [sx, midY + 0.46, midZ], [-slope, 0, 0]));
-
-      // Sturdy vertical steel baluster posts
-      for (let i = 0; i < steps; i += 3) {
-        const py = stairY0 + i * rise;
-        const pz = stairZ0 + i * going;
-        parts.push(cyl(0.016, 0.016, 0.96, steel, [sx, py + 0.48, pz], undefined, 8));
+      for (let i = 0; i < stepsPerFlight; i++) {
+        const y = fl.y0 + i * rise;
+        const z = fl.z0 + i * going;
+        // Solid warm oak floating tread + anti-slip dark nosing + recessed shadow-gap riser
+        parts.push(box(treadW, 0.068, 0.25, P.wood, [0, y - 0.034, z]));
+        parts.push(box(treadW - 0.04, 0.01, 0.032, rubber, [0, y + 0.003, z + 0.102]));
+        parts.push(box(treadW - 0.18, 0.145, 0.024, plinth, [0, y - 0.1, z - 0.09]));
       }
 
-      // Brushed stainless steel ergonomic round handrail
+      // Segmented structural side stringers + twin inset steel spine beams strictly underneath oak treads
+      const dy = fl.y1 - fl.y0;
+      const dz = fl.z0 - fl.z1;
+      const slope = Math.atan2(dy, dz);
+      const spanLen = Math.hypot(dy, dz) - 0.36;
+      const midY = (fl.y0 + fl.y1) * 0.5 - 0.2 + 0.06;
+      const midZ = (fl.z0 + fl.z1) * 0.5 - 0.05;
+
+      for (const sx of [-1.46, 1.46]) {
+        parts.push(box(0.065, 0.11, spanLen, body, [sx, midY - 0.05, midZ], [slope, 0, 0]));
+        parts.push(box(0.072, 0.022, spanLen, steel, [sx, midY + 0.015, midZ], [slope, 0, 0]));
+      }
+      for (const bx of [-0.62, 0.62]) {
+        parts.push(box(0.08, 0.11, spanLen, panel, [bx, midY - 0.06, midZ], [slope, 0, 0]));
+      }
+    }
+
+    // Horizontal stringer knees across mid-landing & landings
+    for (const sx of [-1.46, 1.46]) {
+      parts.push(box(0.065, 0.22, 0.72, body, [sx, 1.74, 0]));
+      parts.push(box(0.08, 0.04, 0.36, steel, [sx, 0.02, 1.88]));
+      parts.push(box(0.08, 0.16, 0.44, body, [sx, 3.68, -1.88]));
+    }
+
+    // Open architectural steel stanchions, 3-tier chrome tension rods & warm oak handrails (zero opaque fake glass!)
+    for (const side of [-1, 1] as const) {
+      const postX = side * 1.66;
+      const bracketX = side * 1.76;
+
+      // Outer mounting brackets define exact 3.60 m total width (`±1.80 m`)
+      parts.push(box(0.08, 0.06, 0.14, steel, [bracketX, 0.12, 1.92]));
+      parts.push(box(0.08, 0.06, 0.14, steel, [bracketX, 1.92, 0]));
+      parts.push(box(0.08, 0.06, 0.14, steel, [bracketX, 3.82, -1.92]));
+
+      const postAnchors: Array<[number, number]> = [
+        [0.08, 1.96],
+        [0.44, 1.38],
+        [1.06, 0.9],
+        [1.69, 0.42],
+        [1.9, 0.0],
+        [2.34, -0.58],
+        [2.96, -1.06],
+        [3.59, -1.54],
+        [3.8, -1.96],
+      ];
+      for (const [py, pz] of postAnchors) {
+        parts.push(box(0.026, 0.74, 0.042, body, [postX, py + 0.37, pz]));
+        parts.push(box(0.036, 0.022, 0.056, chrome, [postX, py + 0.73, pz]));
+      }
+
+      // Three parallel brushed-chrome tension rods + top ergonomic oak handrail along all 5 segments
+      const railProfile: Array<[number, number]> = [
+        [0.08, 1.98],
+        [0.23, 1.54],
+        [1.9, 0.3],
+        [1.9, -0.3],
+        [3.8, -1.62],
+        [3.8, -1.98],
+      ];
+      for (const rodH of [0.22, 0.41, 0.59]) {
+        parts.push(
+          ...tube(
+            railProfile.map(([ry, rz]) => [postX, ry + rodH, rz] as [number, number, number]),
+            0.008,
+            chrome,
+            5,
+          ),
+        );
+      }
       parts.push(
         ...tube(
-          [
-            [sx, stairY0 + 0.96, stairZ0 + 0.15],
-            [sx, stairY1 + 0.96, stairZ1 - 0.15],
-          ],
-          0.024,
-          chrome,
-          10,
+          railProfile.map(([ry, rz]) => [postX, ry + 0.738, rz] as [number, number, number]),
+          0.022,
+          P.woodLight,
+          8,
         ),
       );
+      // Top handrail chrome terminal cap peaking cleanly at y = 4.560
+      parts.push(box(0.046, 0.044, 0.12, chrome, [postX, 4.538, -1.96]));
     }
 
     return fit(parts, dims['stair-core']);
@@ -494,34 +552,40 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const buildElevatorCore = (): Geo =>
     fit(
       [
+        // Grounded granite plinth & cantilevered charcoal penthouse cap with signature SÖL salmon fascia
         box(2.58, 0.14, 2.58, plinth, [0, 0.07, 0]),
-        rbox(2.58, 0.24, 2.58, 0.02, body, [0, 3.68, 0]),
-        // steel-framed glass shaft around the cab
+        rbox(2.54, 0.2, 2.54, 0.02, body, [0, 3.64, 0]),
+        box(2.58, 0.06, 2.58, P.salmon, [0, 3.77, 0]),
+        // Architectural dark-steel corner pilasters & matte graphite cladding panels (no opaque sky-blue fake glass)
         ...[
-          [-1.22, -1.22],
-          [1.22, -1.22],
-          [-1.22, 1.22],
-          [1.22, 1.22],
-        ].map(([x, z]) => box(0.12, 3.5, 0.12, steel, [x, 1.86, z])),
-        box(2.32, 3.4, 0.016, glass, [0, 1.86, -1.22]),
-        box(0.016, 3.4, 2.32, glass, [-1.22, 1.86, 0]),
-        box(0.016, 3.4, 2.32, glass, [1.22, 1.86, 0]),
-        box(2.32, 0.06, 0.06, steel, [0, 2.5, -1.22]),
-        box(0.06, 0.06, 2.32, steel, [-1.22, 2.5, 0]),
-        box(0.06, 0.06, 2.32, steel, [1.22, 2.5, 0]),
-        // cab with brushed-steel portal and centre-opening doors
-        rbox(1.96, 2.4, 1.96, 0.03, panel, [0, 1.36, -0.08]),
-        box(2.32, 3.4, 0.03, body, [0, 1.86, 1.2]),
-        box(1.76, 2.3, 0.02, steel, [0, 1.3, 1.22]),
-        box(0.8, 2.14, 0.012, chrome, [-0.405, 1.22, 1.236]),
-        box(0.8, 2.14, 0.012, chrome, [0.405, 1.22, 1.236]),
-        box(0.008, 2.14, 0.014, plinth, [0, 1.22, 1.238]),
-        // floor indicator and call panel
-        rbox(0.5, 0.12, 0.02, 0.008, plinth, [0, 2.55, 1.235]),
-        box(0.16, 0.06, 0.004, P.salmonBright, [0, 2.55, 1.247]),
-        rbox(0.1, 0.24, 0.016, 0.006, steel, [1.02, 1.2, 1.226]),
-        disc(0.018, 0.006, P.screenGlow, [1.02, 1.24, 1.236], 'z', 10),
-        disc(0.018, 0.006, chrome, [1.02, 1.16, 1.236], 'z', 10),
+          [-1.21, -1.21],
+          [1.21, -1.21],
+          [-1.21, 1.21],
+          [1.21, 1.21],
+        ].map(([x, z]) => box(0.14, 3.44, 0.14, body, [x, 1.84, z])),
+        box(2.3, 3.4, 0.04, panel, [0, 1.84, -1.2]),
+        box(0.04, 3.4, 2.3, panel, [-1.2, 1.84, 0]),
+        box(0.04, 3.4, 2.3, panel, [1.2, 1.84, 0]),
+        // Architectural horizontal steel transom reveals on side & rear elevations
+        ...[1.22, 2.44].flatMap(ty => [
+          box(2.36, 0.05, 0.07, steel, [0, ty, -1.21]),
+          box(0.07, 0.05, 2.36, steel, [-1.21, ty, 0]),
+          box(0.07, 0.05, 2.36, steel, [1.21, ty, 0]),
+        ]),
+        // Front portal wall, deep-set brushed-steel architrave & centre-opening doors
+        box(2.3, 3.4, 0.05, body, [0, 1.84, 1.19]),
+        box(1.84, 2.34, 0.05, steel, [0, 1.28, 1.215]),
+        box(1.68, 2.22, 0.03, plinth, [0, 1.23, 1.228]),
+        box(0.79, 2.16, 0.024, steel, [-0.408, 1.21, 1.242]),
+        box(0.79, 2.16, 0.024, steel, [0.408, 1.21, 1.242]),
+        box(0.04, 2.16, 0.028, chrome, [-0.04, 1.21, 1.246]),
+        box(0.04, 2.16, 0.028, chrome, [0.04, 1.21, 1.246]),
+        // Warm digital floor indicator & brushed stainless call station
+        rbox(0.56, 0.13, 0.028, 0.008, plinth, [0, 2.58, 1.24]),
+        box(0.22, 0.055, 0.008, P.salmonBright, [0, 2.58, 1.256]),
+        rbox(0.11, 0.26, 0.02, 0.006, chrome, [1.04, 1.2, 1.232]),
+        disc(0.018, 0.008, P.salmonBright, [1.04, 1.25, 1.244], 'z', 10),
+        disc(0.018, 0.008, body, [1.04, 1.15, 1.244], 'z', 10),
       ],
       dims['elevator-core'],
     );

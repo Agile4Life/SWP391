@@ -336,17 +336,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
           {/* Clickable Zones */}
           {zones.map(zone => {
             const isZoneSelected = selectedId === zone.id;
-            const zBinding = resolvedBindings.zones[zone.id];
-            const [cx, cz] = polygonCentroid(zone.polygon);
             const zoneName = lang === 'en' ? zone.name.en : zone.name.vi;
-            const statusText =
-              zBinding?.roomStatus === 'available'
-                ? t('Sẵn sàng', 'Available')
-                : zBinding?.roomStatus === 'maintenance'
-                  ? t('Bảo trì', 'Maintenance')
-                  : zBinding?.roomStatus === 'closed'
-                    ? t('Đóng cửa', 'Closed')
-                    : null;
 
             return (
               <g
@@ -371,42 +361,6 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                   stroke={isZoneSelected ? 'var(--explore-accent)' : 'rgba(250, 249, 246, 0.22)'}
                   strokeWidth={isZoneSelected ? 0.24 : 0.12}
                 />
-                <text
-                  x={cx}
-                  y={cz - 0.55}
-                  textAnchor="middle"
-                  fill={isZoneSelected ? 'var(--explore-accent)' : '#faf9f6'}
-                  fontSize={0.72}
-                  fontWeight={700}
-                >
-                  {zone.code}
-                </text>
-                <text
-                  x={cx}
-                  y={cz + 0.45}
-                  textAnchor="middle"
-                  fill="#faf9f6"
-                  fontSize={0.62}
-                  fontWeight={600}
-                >
-                  {zoneName}
-                </text>
-                {statusText && (
-                  <text
-                    x={cx}
-                    y={cz + 1.35}
-                    textAnchor="middle"
-                    fill={
-                      zBinding?.roomStatus === 'maintenance'
-                        ? '#e0a050'
-                        : 'var(--explore-accent)'
-                    }
-                    fontSize={0.52}
-                    fontWeight={600}
-                  >
-                    {statusText}
-                  </text>
-                )}
               </g>
             );
           })}
@@ -539,6 +493,93 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
               );
             });
           })}
+
+          {/* Zone Labels (top layer with dark halo and smart hotspot avoidance) */}
+          <g className="explore3d-svg-zone-labels" pointerEvents="none">
+            {zones.map(zone => {
+              const isZoneSelected = selectedId === zone.id;
+              const zBinding = resolvedBindings.zones[zone.id];
+              const bounds = polygonBounds2D(zone.polygon);
+              const [cx, rawCz] = polygonCentroid(zone.polygon);
+              const hotspots = hotspotsOfZone(SOL_CENTER_SCENE, zone.id);
+              let cz = rawCz;
+              const blockingHs = hotspots.find(
+                hs => Math.abs(hs.position[0] - cx) < 3.6 && Math.abs(hs.position[2] - rawCz) < 1.9,
+              );
+              if (blockingHs) {
+                const roomAbove = rawCz - (bounds.minZ + 1.8);
+                const roomBelow = bounds.maxZ - 2.0 - rawCz;
+                if (blockingHs.position[2] >= rawCz && roomAbove >= 1.5) {
+                  cz = Math.max(bounds.minZ + 1.8, blockingHs.position[2] - 2.3);
+                } else if (roomBelow >= 1.5) {
+                  cz = Math.min(bounds.maxZ - 2.0, blockingHs.position[2] + 2.3);
+                } else if (roomAbove > 0.6) {
+                  cz = bounds.minZ + 1.6;
+                }
+              }
+
+              const zoneName = lang === 'en' ? zone.name.en : zone.name.vi;
+              const statusText =
+                zBinding?.roomStatus === 'available'
+                  ? t('Sẵn sàng', 'Available')
+                  : zBinding?.roomStatus === 'maintenance'
+                    ? t('Bảo trì', 'Maintenance')
+                    : zBinding?.roomStatus === 'closed'
+                      ? t('Đóng cửa', 'Closed')
+                      : null;
+
+              const haloStyle = {
+                paintOrder: 'stroke',
+                stroke: 'rgba(18, 18, 18, 0.92)',
+                strokeWidth: 0.32,
+                strokeLinejoin: 'round' as const,
+              };
+
+              return (
+                <g key={`lbl-${zone.id}`}>
+                  <text
+                    x={cx}
+                    y={cz - 0.55}
+                    textAnchor="middle"
+                    fill={isZoneSelected ? 'var(--explore-accent)' : '#faf9f6'}
+                    fontSize={0.72}
+                    fontWeight={700}
+                    style={haloStyle}
+                  >
+                    {zone.code}
+                  </text>
+                  <text
+                    x={cx}
+                    y={cz + 0.45}
+                    textAnchor="middle"
+                    fill="#faf9f6"
+                    fontSize={0.6}
+                    fontWeight={600}
+                    style={haloStyle}
+                  >
+                    {zoneName}
+                  </text>
+                  {statusText && (
+                    <text
+                      x={cx}
+                      y={cz + 1.32}
+                      textAnchor="middle"
+                      fill={
+                        zBinding?.roomStatus === 'maintenance'
+                          ? '#e0a050'
+                          : 'var(--explore-accent)'
+                      }
+                      fontSize={0.52}
+                      fontWeight={600}
+                      style={haloStyle}
+                    >
+                      {statusText}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
         </svg>
       </div>
 

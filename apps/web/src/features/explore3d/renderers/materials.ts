@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { WallNode, ZoneNode } from '../scene/schema';
-import { SURFACE_DETAIL_PRESETS as SD, applySurfaceDetail } from './surfaceDetail';
+import {
+  SURFACE_DETAIL_PRESETS as SD,
+  applyArchitecturalGlassShader,
+  applySurfaceDetail,
+} from './surfaceDetail';
 
 export type ExploreTheme = 'dark' | 'light';
 export type FloorMaterialKind = ZoneNode['floorMaterial'];
@@ -297,9 +301,9 @@ export class MaterialRegistry {
       glass: new THREE.MeshStandardMaterial({
         name: 'wall-glass',
         color: p.walls.glass,
-        roughness: 0.03,
-        metalness: 0.72,
-        envMapIntensity: 1.9,
+        roughness: 0.04,
+        metalness: 0.16,
+        envMapIntensity: 2.15,
         transparent: true,
         opacity: 0.34,
         depthWrite: false,
@@ -490,6 +494,7 @@ export class MaterialRegistry {
     applySurfaceDetail(this.walls.exteriorConcrete, SD.wall);
     applySurfaceDetail(this.walls['wood-slat'], SD.wood);
     applySurfaceDetail(this.walls['accent-salmon'], SD.item);
+    applyArchitecturalGlassShader(this.walls.glass, this.currentTheme === 'light');
     applySurfaceDetail(this.slabBase, SD.plaster);
     applySurfaceDetail(this.plazaGround, SD.plaza);
     applySurfaceDetail(this.plazaWalkway, SD.walkway);
@@ -516,6 +521,9 @@ export class MaterialRegistry {
 
     this.walls.concrete.color.set(p.walls.concrete);
     this.walls.glass.color.set(p.walls.glass);
+    (this.walls.glass.userData.setGlassTheme as ((isLight: boolean) => void) | undefined)?.(
+      theme === 'light',
+    );
     this.walls['accent-salmon'].color.set(p.walls['accent-salmon']);
     this.walls['accent-salmon'].emissive.set(p.walls['accent-salmon']);
     this.walls['wood-slat'].color.set(p.walls['wood-slat']);

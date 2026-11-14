@@ -22,6 +22,9 @@ const SCREEN = '#68b5c9';
 
 interface SharedParts {
   handle: THREE.BufferGeometry;
+  buttCap: THREE.BufferGeometry;
+  throatStrut: THREE.BufferGeometry;
+  throatBridge: THREE.BufferGeometry;
   frame: THREE.BufferGeometry;
   strings: THREE.BufferGeometry;
   tabletBody: THREE.BufferGeometry;
@@ -32,6 +35,7 @@ interface SharedParts {
   gloveThumb: THREE.BufferGeometry;
   gloveCuff: THREE.BufferGeometry;
   frameMaterial: THREE.MeshStandardMaterial;
+  throatMaterial: THREE.MeshStandardMaterial;
   gripMaterial: THREE.MeshStandardMaterial;
   chromeMaterial: THREE.MeshStandardMaterial;
   stringMaterial: THREE.MeshStandardMaterial;
@@ -45,9 +49,12 @@ function getSharedParts(): SharedParts {
   if (shared) return shared;
   shared = {
     // Racket points along -Y in its own frame, then rotated into the hand's +Z grip axis.
-    handle: new THREE.CylinderGeometry(0.015, 0.017, 0.24, 8),
-    frame: new THREE.TorusGeometry(0.1, 0.015, 6, 20),
-    strings: new THREE.CircleGeometry(0.095, 16),
+    handle: new THREE.CylinderGeometry(0.014, 0.0155, 0.18, 8),
+    buttCap: new THREE.CylinderGeometry(0.019, 0.016, 0.022, 8),
+    throatStrut: new THREE.CylinderGeometry(0.0075, 0.009, 0.105, 6),
+    throatBridge: new THREE.CylinderGeometry(0.0065, 0.0065, 0.082, 6).rotateX(Math.PI / 2),
+    frame: new THREE.TorusGeometry(0.102, 0.0125, 6, 22),
+    strings: new THREE.CircleGeometry(0.098, 18),
     tabletBody: new THREE.BoxGeometry(0.22, 0.014, 0.16),
     tabletScreen: new THREE.PlaneGeometry(0.2, 0.14),
     // Anatomical grip axis in `hand_l` and `hand_r` runs along local Z (pinky -Z to index/thumb +Z).
@@ -57,14 +64,15 @@ function getSharedParts(): SharedParts {
     gloveFist: new THREE.SphereGeometry(0.068, 12, 10).scale(0.84, 1.22, 0.96),
     gloveThumb: new THREE.CapsuleGeometry(0.022, 0.042, 3, 6),
     gloveCuff: new THREE.CylinderGeometry(0.044, 0.041, 0.065, 10),
-    frameMaterial: new THREE.MeshStandardMaterial({ color: FRAME, roughness: 0.4, metalness: 0.3 }),
-    gripMaterial: new THREE.MeshStandardMaterial({ color: GRIP, roughness: 0.72 }),
+    frameMaterial: new THREE.MeshStandardMaterial({ color: FRAME, roughness: 0.34, metalness: 0.32 }),
+    throatMaterial: new THREE.MeshStandardMaterial({ color: '#272a32', roughness: 0.38, metalness: 0.45 }),
+    gripMaterial: new THREE.MeshStandardMaterial({ color: GRIP, roughness: 0.76 }),
     chromeMaterial: new THREE.MeshStandardMaterial({ color: CHROME, roughness: 0.25, metalness: 0.9 }),
     stringMaterial: new THREE.MeshStandardMaterial({
       color: '#f4f3ef',
-      roughness: 0.9,
+      roughness: 0.85,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.42,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -119,11 +127,16 @@ export function buildHandProp(spec: RiggedHandPropSpec, modelScale: number): THR
   group.name = `rigged-hand-prop-${spec.kind}`;
 
   if (spec.kind === 'racket') {
-    group.add(mesh(parts.handle, parts.gripMaterial, [0, -0.12, 0]));
-    // Oval head, flat in the swing plane (normal along prop X -> palm normal after rotation).
-    const headScale: [number, number, number] = [0.85, 1.15, 1];
-    group.add(mesh(parts.frame, parts.frameMaterial, [0, -0.34, 0], [0, Math.PI / 2, 0], headScale));
-    group.add(mesh(parts.strings, parts.stringMaterial, [0, -0.34, 0], [0, Math.PI / 2, 0], headScale));
+    group.add(mesh(parts.handle, parts.gripMaterial, [0, -0.09, 0]));
+    // Oval head (children[1]) flat in the YZ swing plane (normal along prop X -> palm normal after rotation).
+    const headScale: [number, number, number] = [0.88, 1.18, 1];
+    group.add(mesh(parts.frame, parts.frameMaterial, [0, -0.375, 0], [0, Math.PI / 2, 0], headScale));
+    group.add(mesh(parts.strings, parts.stringMaterial, [0, -0.375, 0], [0, Math.PI / 2, 0], headScale));
+    // Flared butt-cap + twin graphite V-throat bridge struts + throat crossbar.
+    group.add(mesh(parts.buttCap, parts.frameMaterial, [0, 0.004, 0]));
+    group.add(mesh(parts.throatStrut, parts.throatMaterial, [0, -0.222, -0.025], [-0.38, 0, 0]));
+    group.add(mesh(parts.throatStrut, parts.throatMaterial, [0, -0.222, 0.025], [0.38, 0, 0]));
+    group.add(mesh(parts.throatBridge, parts.throatMaterial, [0, -0.256, 0]));
   } else if (spec.kind === 'dumbbell') {
     group.add(mesh(parts.dumbbellBar, parts.chromeMaterial, [0, 0, 0]));
     group.add(mesh(parts.dumbbellHead, parts.gripMaterial, [0, 0, -0.088]));

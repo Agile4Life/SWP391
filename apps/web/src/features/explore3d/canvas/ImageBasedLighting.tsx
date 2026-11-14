@@ -70,7 +70,15 @@ export function getImageBasedLightingConfig(
         rotation: [Math.PI / 2, 0, 0],
         scale: [26, 4, 1],
         color: '#ffffff',
-        intensity: isDark ? 0.4 : 0.7,
+        intensity: isDark ? 0.45 : 0.75,
+      },
+      {
+        id: 'window-horizon-strip',
+        position: [-18, 7, 18],
+        rotation: [0, -Math.PI / 4, 0],
+        scale: [24, 3.5, 1],
+        color: isDark ? '#ffd4b2' : '#fff8ee',
+        intensity: isDark ? 0.42 : 0.68,
       },
     ],
   };

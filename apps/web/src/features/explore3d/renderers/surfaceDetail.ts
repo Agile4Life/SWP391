@@ -679,3 +679,125 @@ float slCityHash3(vec3 p) {
   material.customProgramCacheKey = () => `sol-city-glaze-${isLight ? 'light' : 'dark'}`;
   return material;
 }
+
+/**
+ * Single-pass soft ray-traced architectural glass shader for MeshStandardMaterial.
+ * Combines true Schlick Fresnel angle-dependent opacity/reflectivity, dual-pane IGU
+ * ghost offset, analytical sky/horizon/sun bounce, and ray-cast ceiling LED strip
+ * reflections without MeshPhysicalMaterial multi-pass transmission overhead.
+ */
+export function applyArchitecturalGlassShader<T extends THREE.MeshStandardMaterial>(
+  material: T,
+  isLight: boolean,
+): T {
+  const isLightUniform = { value: isLight ? 1 : 0 };
+  material.userData.setGlassTheme = (nextIsLight: boolean): void => {
+    isLightUniform.value = nextIsLight ? 1 : 0;
+  };
+
+  material.onBeforeCompile = shader => {
+    shader.uniforms.uGlassIsLight = isLightUniform;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vGlassWorldPos;\nvarying vec3 vGlassWorldNorm;',
+      )
+      .replace(
+        '#include <project_vertex>',
+        /* glsl */ `#include <project_vertex>
+vGlassWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
+vGlassWorldNorm = normalize((modelMatrix * vec4(normal, 0.0)).xyz);`,
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        /* glsl */ `#include <common>
+varying vec3 vGlassWorldPos;
+varying vec3 vGlassWorldNorm;
+uniform float uGlassIsLight;
+float gFresnelTerm = 0.12;
+float gSeamBevel = 0.0;
+vec3 gWorldNormal = vec3(0.0, 0.0, 1.0);
+vec3 gViewDirWorld = vec3(0.0, 0.0, 1.0);
+
+vec3 evalSoftGlassRayBounce(vec3 rayDir, vec3 worldPos, float isLightMode) {
+  vec3 sunDir = normalize(isLightMode > 0.5 ? vec3(-26.0, 23.0, 40.0) : vec3(-26.0, 11.0, 40.0));
+  float upK = smoothstep(-0.18, 0.55, rayDir.y);
+  float horizonK = exp(-abs(rayDir.y) * 5.2);
+  float sunAlign = max(dot(rayDir, sunDir), 0.0);
+
+  vec3 zenithCol = isLightMode > 0.5 ? vec3(0.24, 0.42, 0.72) : vec3(0.055, 0.105, 0.24);
+  vec3 groundCol = isLightMode > 0.5 ? vec3(0.18, 0.17, 0.16) : vec3(0.03, 0.035, 0.05);
+  vec3 horizonCol = isLightMode > 0.5 ? vec3(0.95, 0.74, 0.56) : vec3(0.42, 0.24, 0.18);
+  vec3 sunTint = isLightMode > 0.5 ? vec3(1.15, 0.92, 0.68) : vec3(0.95, 0.58, 0.34);
+
+  vec3 env = mix(groundCol, zenithCol, upK);
+  env = mix(env, horizonCol, horizonK * (0.42 + 0.45 * pow(sunAlign, 2.0)));
+  env += sunTint * (pow(sunAlign, 10.0) * 0.22 + pow(sunAlign, 72.0) * 0.85);
+
+  // Soft analytical ray-cast against interior architectural LED ceiling strips
+  if (rayDir.y > 0.035) {
+    float tCeil = clamp(2.5 / (rayDir.y + 0.10), 0.4, 18.0);
+    vec2 hitXZ = worldPos.xz + rayDir.xz * tCeil;
+    vec2 cell = abs(fract(hitXZ / vec2(6.5, 5.5)) - 0.5);
+    float stripX = 1.0 - smoothstep(0.10, 0.24, cell.x);
+    float stripZ = 1.0 - smoothstep(0.16, 0.34, cell.y);
+    float distFade = exp(-tCeil * 0.14) * smoothstep(0.035, 0.22, rayDir.y);
+    vec3 stripCol = isLightMode > 0.5 ? vec3(0.95, 0.94, 0.90) : vec3(0.88, 0.76, 0.62);
+    env += stripCol * (stripX * stripZ) * distFade * (isLightMode > 0.5 ? 0.42 : 0.58);
+  }
+  return env;
+}`,
+      )
+      .replace(
+        '#include <color_fragment>',
+        /* glsl */ `#include <color_fragment>
+{
+  gWorldNormal = normalize(vGlassWorldNorm) * (gl_FrontFacing ? 1.0 : -1.0);
+  gViewDirWorld = normalize(cameraPosition - vGlassWorldPos);
+  float ndotv = clamp(abs(dot(gWorldNormal, gViewDirWorld)), 0.0, 1.0);
+  // Schlick Fresnel: ultra-clear straight-on for street/equipment visibility, luminous at grazing angles
+  gFresnelTerm = 0.045 + 0.955 * pow(1.0 - ndotv, 4.0);
+
+  float isVertPane = 1.0 - smoothstep(0.25, 0.65, abs(gWorldNormal.y));
+  float paneCoord = (vGlassWorldPos.x * abs(gWorldNormal.z) + vGlassWorldPos.z * abs(gWorldNormal.x)) / 1.85;
+  float seamDist = abs(fract(paneCoord) - 0.5);
+  gSeamBevel = smoothstep(0.472, 0.498, seamDist) * isVertPane;
+
+  // Subtle low-iron tempered glass edge dispersion (cool cyan-silver rim)
+  vec3 lowIronEdge = uGlassIsLight > 0.5 ? vec3(0.80, 0.93, 0.97) : vec3(0.76, 0.90, 0.98);
+  diffuseColor.rgb = mix(diffuseColor.rgb, lowIronEdge, pow(1.0 - ndotv, 2.2) * 0.34);
+
+  // Crystal-clear normal transmittance (~0.13 alpha) rising smoothly to reflective grazing sheen (~0.74)
+  float baseAlpha = diffuseColor.a * 0.38;
+  diffuseColor.a = clamp(mix(baseAlpha, 0.74, smoothstep(0.04, 0.88, gFresnelTerm)) + gSeamBevel * 0.14, 0.11, 0.82);
+}`,
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        /* glsl */ `#include <normal_fragment_maps>
+if (gSeamBevel > 0.005) {
+  float panePhase = fract((vGlassWorldPos.x * abs(gWorldNormal.z) + vGlassWorldPos.z * abs(gWorldNormal.x)) / 1.85) - 0.5;
+  vec3 bevelWorld = normalize(gWorldNormal + vec3(sign(panePhase) * 0.12 * abs(gWorldNormal.z), 0.02, sign(panePhase) * 0.12 * abs(gWorldNormal.x)) * gSeamBevel);
+  normal = normalize((viewMatrix * vec4(bevelWorld, 0.0)).xyz);
+}`,
+      )
+      .replace(
+        '#include <lights_fragment_end>',
+        /* glsl */ `#include <lights_fragment_end>
+{
+  vec3 reflPrimary = reflect(-gViewDirWorld, gWorldNormal);
+  // Subtle dual-pane IGU secondary offset reflection for soft ray-traced glass depth
+  vec3 reflSecondary = normalize(reflPrimary + vec3(0.018, 0.014, -0.015));
+  vec3 bouncePrimary = evalSoftGlassRayBounce(reflPrimary, vGlassWorldPos, uGlassIsLight);
+  vec3 bounceSecondary = evalSoftGlassRayBounce(reflSecondary, vGlassWorldPos, uGlassIsLight) * vec3(0.88, 0.96, 1.02);
+  vec3 rtSheen = bouncePrimary * 0.82 + bounceSecondary * 0.22;
+  reflectedLight.indirectSpecular += rtSheen * (0.14 + 0.82 * gFresnelTerm) + vec3(0.32, 0.38, 0.44) * gSeamBevel * 0.35;
+}`,
+      );
+  };
+
+  material.customProgramCacheKey = () => 'sol-arch-glass-rt';
+  return material;
+}

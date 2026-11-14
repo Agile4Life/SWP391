@@ -346,4 +346,36 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(bilingualNameLink.selectedId).toBe('zone-l2-vip-gym');
     expect(bilingualNameLink.level).toBe('L2');
   });
+
+  it('syncs selectedId and ExploreBreadcrumb when climbing floors via syncWalkLevel, and hides SelectionHighlight wireframes in walkMode', async () => {
+    const { SelectionHighlight } = await import('../canvas/SelectionHighlight');
+    renderUi(
+      <>
+        <ExploreBreadcrumb />
+        <SelectionHighlight />
+      </>,
+    );
+
+    act(() => {
+      useExploreStore.setState({
+        walkMode: true,
+        focusLevel: 'B1',
+        levelMode: 'solo',
+        selectedId: 'item-b1-stairs',
+      });
+    });
+    expect(container.textContent).toContain('Tầng B1');
+
+    // Climbing from B1 onto L1 updates focusLevel AND replaces stale B1 item selection with lvl-l1
+    act(() => {
+      useExploreStore.getState().syncWalkLevel('L1');
+    });
+    expect(useExploreStore.getState().focusLevel).toBe('L1');
+    expect(useExploreStore.getState().selectedId).toBe('lvl-l1');
+    expect(container.textContent).not.toContain('Tầng B1');
+    expect(container.textContent).toContain('Tầng L1');
+
+    // SelectionHighlight must render null while walkMode is active so CAD wireframes never cut across sky/rooms
+    expect(container.querySelector('lineSegments')).toBeNull();
+  });
 });

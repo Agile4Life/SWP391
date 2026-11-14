@@ -32,10 +32,14 @@ export interface RiggedPoseSpec {
   hipsHeight?: number;
   /** Prop parented to a hand bone; replaces the procedural prop of the same activity. */
   handProp?: RiggedHandPropSpec;
-  /** Twist of the hand about the forearm (radians), static or per-phase (e.g. supinating curls). */
+  /** Twist of the hand about the forearm (radians), static or per-phase (e.g. supinating curls, topspin pronation). */
   forearmRoll?:
     | Partial<Record<'left' | 'right', number>>
-    | ((phase: number) => Partial<Record<'left' | 'right', number>>);
+    | ((
+        phase: number,
+        actor?: LiveActorDefinition,
+        timeSec?: number,
+      ) => Partial<Record<'left' | 'right', number>>);
   /** Draw a barbell held between the two hands. */
   barbellInHands?: boolean;
   /** Put a dumbbell in each hand. */
@@ -112,7 +116,37 @@ export const HUMAN_POSE_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedPose
     }),
   },
   'badminton-player': { groundLock: true, handProp: { ...RACKET, size: 1.08 } },
-  'tennis-player': { groundLock: true, handProp: { ...RACKET, size: 1.26 } },
+  'tennis-player': {
+    groundLock: true,
+    handProp: { ...RACKET, size: 1.24 },
+    forearmRoll: (phase, actor, timeSec) => {
+      const c =
+        actor && timeSec !== undefined
+          ? (((timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 4) + 4) % 4
+          : (((phase * (0.55 / 3.2)) % 4) + 4) % 4;
+      const dFh = c > 2 ? c - 4 : c;
+      const dBh = c - 2;
+      if (Math.abs(dFh) < 0.52) {
+        // Forehand: laid-back drop (-0.75) -> waist-high horizontal drive (-0.38 at dFh=0) -> topspin wiper finish (+0.85)
+        if (dFh <= 0) {
+          const u = (dFh + 0.52) / 0.52;
+          return { right: -0.75 + 0.37 * Math.sin(u * Math.PI * 0.5) };
+        }
+        const u = dFh / 0.52;
+        return { right: -0.38 + 1.23 * (u * u * (3 - 2 * u)) };
+      }
+      if (Math.abs(dBh) < 0.52) {
+        // Backhand: extends across left side (+0.42 at dBh=0) -> opens high over right shoulder (-0.65)
+        if (dBh <= 0) {
+          const u = (dBh + 0.52) / 0.52;
+          return { right: 0.65 - 0.23 * Math.sin(u * Math.PI * 0.5), left: -0.35 };
+        }
+        const u = dBh / 0.52;
+        return { right: 0.42 - 1.07 * (u * u * (3 - 2 * u)), left: -0.2 };
+      }
+      return { right: -0.35, left: 0.25 };
+    },
+  },
   'pt-coach-tablet': {
     groundLock: true,
     // Palm up so the tablet rests flat on `hand_r` (-X palm normal flipped upward) tilted toward the coach.

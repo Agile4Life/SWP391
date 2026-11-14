@@ -215,31 +215,49 @@ function Birds() {
   const ref = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
+    // Slender body spine + swept two-segment gull/swallow wings (continuous centerline chord, no bowtie pinch)
     g.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute([0, 0, 0.35, -1.3, 0.25, -0.1, -0.5, 0, -0.35, 0, 0, 0.35, 0.5, 0, -0.35, 1.3, 0.25, -0.1], 3),
+      new THREE.Float32BufferAttribute(
+        [
+          // Body spine left & right
+          0, 0, 0.44, -0.11, 0, -0.04, 0, 0, -0.42,
+          0, 0, 0.44, 0, 0, -0.42, 0.11, 0, -0.04,
+          // Left inner wing + outer swept tip
+          0, 0, 0.24, -0.62, 0.11, 0.05, -0.46, 0.07, -0.18,
+          0, 0, 0.24, -0.46, 0.07, -0.18, 0, 0, -0.14,
+          -0.62, 0.11, 0.05, -1.28, 0.02, -0.3, -0.46, 0.07, -0.18,
+          // Right inner wing + outer swept tip
+          0, 0, 0.24, -0.0, 0, -0.14, 0.46, 0.07, -0.18,
+          0, 0, 0.24, 0.46, 0.07, -0.18, 0.62, 0.11, 0.05,
+          0.62, 0.11, 0.05, 0.46, 0.07, -0.18, 1.28, 0.02, -0.3,
+        ],
+        3,
+      ),
     );
     g.computeVertexNormals();
     return g;
   }, []);
-  const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#262626', side: THREE.DoubleSide }), []);
+  const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#383e47', side: THREE.DoubleSide }), []);
   useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
   const m = useMemo(() => new THREE.Matrix4(), []);
   const q = useMemo(() => new THREE.Quaternion(), []);
+  const eul = useMemo(() => new THREE.Euler(0, 0, 0, 'YXZ'), []);
   const p = useMemo(() => new THREE.Vector3(), []);
   const sc = useMemo(() => new THREE.Vector3(), []);
-  const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   useFrame(({ clock }) => {
     const mesh = ref.current;
     if (!mesh) return;
     const t = clock.elapsedTime;
     for (let i = 0; i < BIRDS; i += 1) {
-      const r = 45 + (i % 7) * 12;
-      const w = 0.07 + (i % 5) * 0.012;
+      const r = 46 + (i % 7) * 11;
+      const w = 0.065 + (i % 5) * 0.011;
       const a = t * w + i * 2.4;
-      p.set(10 + Math.cos(a) * r, 42 + (i % 9) * 4 + Math.sin(t * 0.5 + i) * 1.5, Math.sin(a) * r);
-      q.setFromAxisAngle(up, -a);
-      sc.set(1.4, 0.3 + Math.abs(Math.sin(t * 7 + i * 1.7)) * 0.9, 1.4);
+      p.set(10 + Math.cos(a) * r, 44 + (i % 9) * 3.8 + Math.sin(t * 0.5 + i) * 1.4, Math.sin(a) * r);
+      eul.set(0.04, -a, -0.22);
+      q.setFromEuler(eul);
+      const flap = 0.55 + Math.sin(t * 4.2 + i * 1.7) * 0.35;
+      sc.set(1.05, flap, 1.05);
       mesh.setMatrixAt(i, m.compose(p, q, sc));
     }
     mesh.instanceMatrix.needsUpdate = true;

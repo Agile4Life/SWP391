@@ -83,6 +83,7 @@ export function SelectionHighlight({ scene = SOL_CENTER_SCENE }: SelectionHighli
   const selectedId = useExploreStore(s => s.selectedId);
   const hoveredId = useExploreStore(s => s.hoveredId);
   const levelMode = useExploreStore(s => s.levelMode);
+  const walkMode = useExploreStore(s => s.walkMode);
   const theme = useDocumentTheme();
 
   const resources = useMemo(() => {
@@ -123,9 +124,9 @@ export function SelectionHighlight({ scene = SOL_CENTER_SCENE }: SelectionHighli
 
   useEffect(() => {
     r3fStore?.getState().invalidate();
-  }, [selectedFrame, hoveredFrame, r3fStore]);
+  }, [selectedFrame, hoveredFrame, walkMode, r3fStore]);
 
-  if (!selectedFrame && !hoveredFrame) {
+  if (walkMode || (!selectedFrame && !hoveredFrame)) {
     return null;
   }
 

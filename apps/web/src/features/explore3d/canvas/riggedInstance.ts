@@ -146,10 +146,30 @@ function wearForActor(def: LiveActorDefinition): WearMode {
   return 'athletic';
 }
 
-/** The cut and details of an actor's sportswear, stable per actor. */
-function outfitFor(id: string, gender: Gender): OutfitVariant {
-  const bits = hashString(`${id}:outfit`);
+/** The cut and details of an actor's sportswear, stable per actor and tailored to the sport. */
+function outfitFor(def: LiveActorDefinition, gender: Gender, wear: WearMode): OutfitVariant {
+  const bits = hashString(`${def.id}:outfit`);
   const bit = (n: number) => ((bits >>> n) & 1) === 1;
+  if (wear === 'staff') {
+    return {
+      sleeves: true,
+      crop: false,
+      leggings: false,
+      stripe: true,
+      wristbands: false,
+      headband: false,
+    };
+  }
+  if (def.activity === 'tennis-player') {
+    return {
+      sleeves: true,
+      crop: false,
+      leggings: false,
+      stripe: true,
+      wristbands: true,
+      headband: bit(2),
+    };
+  }
   return {
     sleeves: !bit(0),
     crop: gender === 'female' && bit(1) && bit(2),
@@ -254,7 +274,7 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
     gender,
     palette: def.palette,
     hairStyle,
-    outfit: outfitFor(def.id, gender),
+    outfit: outfitFor(def, gender, wear),
     swimCap: swimmer,
     wear,
     beard: gender === 'male' && !swimmer && (hash >>> 9) % 3 === 0,
@@ -435,7 +455,10 @@ export function stepInstance(
   } else if (rig) {
     const phase = getActorPhase(def, timeSec);
     const override = motion.spec.override?.(phase);
-    const roll = typeof motion.spec.forearmRoll === 'function' ? motion.spec.forearmRoll(phase) : motion.spec.forearmRoll;
+    const roll =
+      typeof motion.spec.forearmRoll === 'function'
+        ? motion.spec.forearmRoll(phase, def, timeSec)
+        : motion.spec.forearmRoll;
     applyRetargetPose(rig, pose, motion.spec, roll, timeSec, override);
   }
   if (instance.barbell) updateHeldBarbell(instance.holder, instance.barbell);

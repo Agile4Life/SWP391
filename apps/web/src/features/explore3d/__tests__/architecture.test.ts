@@ -18,7 +18,10 @@ import {
   buildCampusSceneGeometries,
   buildCampusSignageGeometry,
 } from '../renderers/architecture/buildCampusGeometry';
-import { buildCityMetropolisGeometries } from '../renderers/architecture/buildCityMetropolis';
+import {
+  buildCityMetropolisGeometries,
+  buildGymCrown,
+} from '../renderers/architecture/buildCityMetropolis';
 import { buildLevelInteriorDetailsGeometry } from '../renderers/architecture/buildInteriorDetails';
 import {
   collectSceneExteriorWallDescriptors,
@@ -29,6 +32,7 @@ import {
 } from '../canvas/Cutaway';
 import {
   computeLevelTargetY,
+  isExteriorWorldVisible,
   isLevelDimmedInMode,
   isLevelVisibleInMode,
 } from '../canvas/LevelStack';
@@ -393,6 +397,39 @@ describe('Phase 2 foliage buckets & structural stairwell cutouts', () => {
     const b1SlabMesh = new THREE.Mesh(b1Built.slabGeometry);
     b1SlabMesh.updateMatrixWorld(true);
     expect(downRay.intersectObject(b1SlabMesh, false).length).toBeGreaterThan(0);
+
+    // RF stairwell headhouse must use real transparent glass walls up to the canopy rather than opaque grey vertex boxes
+    const rfWest = SOL_CENTER_SCENE.nodes['wall-rf-stair-west'] as WallNode;
+    const rfEast = SOL_CENTER_SCENE.nodes['wall-rf-stair-east'] as WallNode;
+    const rfSouth = SOL_CENTER_SCENE.nodes['wall-rf-stair-south'] as WallNode;
+    expect(rfWest.material).toBe('glass');
+    expect(rfEast.material).toBe('glass');
+    expect(rfSouth.material).toBe('glass');
+    expect(rfWest.height).toBeGreaterThanOrEqual(2.5);
+    expect(rfEast.height).toBeGreaterThanOrEqual(2.5);
+    expect(rfSouth.height).toBeGreaterThanOrEqual(2.5);
+
+    const rfDetails = buildLevelInteriorDetailsGeometry('RF');
+    const dPos = rfDetails.getAttribute('position');
+    const dCol = rfDetails.getAttribute('color');
+    const bunkerGrey = new THREE.Color('#94a3b8');
+    let opaqueHeadhouseWallVerts = 0;
+    for (let i = 0; i < dPos.count; i++) {
+      const x = dPos.getX(i);
+      const y = dPos.getY(i);
+      const z = dPos.getZ(i);
+      if (x >= 8.5 && x <= 12.5 && z >= 9.2 && z <= 13.6 && y > 0.3 && y < 2.5) {
+        if (
+          Math.abs(dCol.getX(i) - bunkerGrey.r) < 0.02 &&
+          Math.abs(dCol.getY(i) - bunkerGrey.g) < 0.02 &&
+          Math.abs(dCol.getZ(i) - bunkerGrey.b) < 0.02
+        ) {
+          opaqueHeadhouseWallVerts++;
+        }
+      }
+    }
+    expect(opaqueHeadhouseWallVerts).toBe(0);
+    rfDetails.dispose();
   });
 });
 
@@ -403,5 +440,143 @@ describe('metro timetable', () => {
     expect(Math.min(...samples)).toBeGreaterThanOrEqual(-LOOP / 2 - 1);
     expect(Math.max(...samples)).toBeLessThanOrEqual(LOOP / 2 + 1);
     expect(samples.filter(p => Math.abs(p - 4) < 0.01).length).toBeGreaterThan(10);
+  });
+});
+
+describe('Soft ray-traced gym glass, rooftop sky & street sightlines', () => {
+  it('attaches soft ray-traced Fresnel + reflection shader to MeshStandardMaterial glass without breaking PBR invariants', () => {
+    const registry = new MaterialRegistry('dark');
+    const glass = registry.walls.glass;
+    expect(glass).toBeInstanceOf(THREE.MeshStandardMaterial);
+    expect(glass).not.toBeInstanceOf(THREE.MeshPhysicalMaterial);
+    expect(glass.opacity).toBeCloseTo(0.34, 3);
+    expect(glass.customProgramCacheKey()).toContain('sol-arch-glass');
+
+    const mockShader: THREE.WebGLProgramParametersWithUniforms = {
+      uniforms: {},
+      vertexShader: '#include <common>\nvoid main() {\n#include <project_vertex>\n}',
+      fragmentShader:
+        '#include <common>\nvoid main() {\n#include <color_fragment>\n#include <normal_fragment_maps>\n#include <lights_fragment_end>\n}',
+    } as unknown as THREE.WebGLProgramParametersWithUniforms;
+
+    glass.onBeforeCompile(mockShader, {} as THREE.WebGLRenderer);
+    expect(mockShader.uniforms.uGlassIsLight).toBeDefined();
+    expect((mockShader.uniforms.uGlassIsLight as { value: number }).value).toBe(0);
+    expect(mockShader.fragmentShader).toContain('vGlassWorldPos');
+    expect(mockShader.fragmentShader).toContain('reflect(');
+
+    registry.applyTheme('light');
+    expect((mockShader.uniforms.uGlassIsLight as { value: number }).value).toBe(1);
+    registry.dispose();
+  });
+
+  it('equips L1/L2 gym perimeter walls with panoramic windows & mullions and clears RF glass balustrades for street views', () => {
+    for (const wallId of [
+      'wall-l1-west',
+      'wall-l1-east',
+      'wall-l2-north',
+      'wall-l2-west',
+      'wall-l2-east',
+    ]) {
+      const wall = SOL_CENTER_SCENE.nodes[wallId] as WallNode;
+      expect(wall).toBeDefined();
+      const winOpenings = wall.openings.filter(o => o.kind === 'window');
+      expect(winOpenings.length, `${wallId} must have panoramic windows`).toBeGreaterThan(0);
+      for (const win of winOpenings) {
+        expect(win.sillHeight).toBeLessThanOrEqual(0.65);
+        expect(win.height).toBeGreaterThanOrEqual(3.4);
+      }
+    }
+
+    const l2Built = buildLevelGeometry(SOL_CENTER_SCENE, 'lvl-l2');
+    const l2WestExt = l2Built.exteriorWallsByNormal.find(w => w.wallId === 'wall-l2-west')!;
+    expect(l2WestExt.glassGeometry).toBeDefined();
+    expect(l2WestExt.frameGeometry).toBeDefined();
+    assertValidBufferGeometry(l2WestExt.glassGeometry!);
+    assertValidBufferGeometry(l2WestExt.frameGeometry!);
+
+    // Rooftop parapets must be glass balustrades and free of eye-level opaque sign backboards
+    for (const pid of [
+      'wall-rf-parapet-n',
+      'wall-rf-parapet-s',
+      'wall-rf-parapet-w',
+      'wall-rf-parapet-e',
+    ]) {
+      const parapet = SOL_CENTER_SCENE.nodes[pid] as WallNode;
+      expect(parapet.material).toBe('glass');
+      expect(parapet.height).toBeGreaterThanOrEqual(1.1);
+    }
+
+    const rfDetails = buildLevelInteriorDetailsGeometry('RF');
+    const pos = rfDetails.getAttribute('position');
+    let blockingPerimeterVerts = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      if (y > 1.28 && y < 3.25 && (z > 15.5 || x > 21.5)) {
+        blockingPerimeterVerts++;
+      }
+    }
+    expect(blockingPerimeterVerts).toBe(0);
+    rfDetails.dispose();
+
+    // GymCrown leaves the East Rooftop Sky Deck (x > 9.5) open to the sky
+    const crown = buildGymCrown('dark');
+    crown.glassGeometry.computeBoundingBox();
+    expect(crown.glassGeometry.boundingBox!.max.x).toBeLessThanOrEqual(9.5);
+  });
+
+  it('keeps streets & outdoor tennis visible from L2 and RF in solo mode and frames the sky on all RF viewpoints', () => {
+    expect(isExteriorWorldVisible('solo', 'L2')).toBe(true);
+    expect(isExteriorWorldVisible('solo', 'RF')).toBe(true);
+    expect(isExteriorWorldVisible('solo', 'L1')).toBe(true);
+    expect(isExteriorWorldVisible('solo', 'B1')).toBe(false);
+
+    const levels = getLevels(SOL_CENTER_SCENE);
+    const out = levels.find(l => l.code === 'OUT')!;
+    expect(isLevelVisibleInMode(out, 'solo', 'RF')).toBe(true);
+    expect(isLevelVisibleInMode(out, 'solo', 'L2')).toBe(true);
+
+    const rfNodes = [
+      SOL_CENTER_SCENE.nodes['lvl-rf'],
+      SOL_CENTER_SCENE.nodes['zone-rf-zen'],
+      SOL_CENTER_SCENE.nodes['zone-rf-terrace'],
+    ];
+    for (const node of rfNodes) {
+      if (!node || !('viewpoints' in node)) continue;
+      for (const vp of node.viewpoints) {
+        const dx = vp.target[0] - vp.position[0];
+        const dy = vp.target[1] - vp.position[1];
+        const dz = vp.target[2] - vp.position[2];
+        const horiz = Math.hypot(dx, dz);
+        const pitchDeg = (Math.atan2(dy, horiz) * 180) / Math.PI;
+        const topOfFrameDeg = pitchDeg + (vp.fov ?? 38) * 0.5;
+      expect(
+        topOfFrameDeg,
+        `Viewpoint ${vp.id} must extend above horizon to show rooftop sky`,
+      ).toBeGreaterThanOrEqual(12);
+      }
+    }
+  });
+
+  it('eliminates opaque cyan fake-glass barrier blocks (#7dd3fc) from L1 QR turnstiles', () => {
+    const l1Details = buildLevelInteriorDetailsGeometry('L1');
+    const pos = l1Details.getAttribute('position');
+    const col = l1Details.getAttribute('color');
+    const cyanGlass = new THREE.Color('#7dd3fc');
+    let cyanGateVerts = 0;
+    for (let i = 0; i < pos.count; i++) {
+      if (
+        Math.abs(pos.getZ(i) - 4.0) < 0.3 &&
+        Math.abs(col.getX(i) - cyanGlass.r) < 0.02 &&
+        Math.abs(col.getY(i) - cyanGlass.g) < 0.02 &&
+        Math.abs(col.getZ(i) - cyanGlass.b) < 0.02
+      ) {
+        cyanGateVerts++;
+      }
+    }
+    expect(cyanGateVerts).toBe(0);
+    l1Details.dispose();
   });
 });

@@ -6,6 +6,7 @@ import { buildCityMetropolis, buildGymCrown } from '../renderers/architecture/bu
 import { useDocumentTheme, type ExploreTheme } from '../renderers/materials';
 import {
   SURFACE_DETAIL_PRESETS,
+  applyArchitecturalGlassShader,
   applyCityGlazingShader,
   applySurfaceDetail,
   createFoliageMaterialBundle,
@@ -14,6 +15,7 @@ import { useExploreStore } from '../state/exploreStore';
 import { CityLife } from './CityLife';
 import { CitySky } from './CitySky';
 import { CityTraffic } from './CityTraffic';
+import { isExteriorWorldVisible } from './LevelStack';
 
 const NOOP_RAYCAST = () => null;
 
@@ -24,7 +26,7 @@ export function CityMetropolis() {
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const city = useMemo(() => buildCityMetropolis(theme, tier), [theme, tier]);
-  const visible = levelMode !== 'solo' || focusLevel === 'ALL' || focusLevel === 'L1' || focusLevel === 'OUT';
+  const visible = isExteriorWorldVisible(levelMode, focusLevel);
 
   // Scanned-concrete / asphalt grain & surface roughness from per-vertex `surf`.
   const opaqueMat = useMemo(
@@ -49,18 +51,27 @@ export function CityMetropolis() {
   // Translucent so the penthouse stays visible from above through its roof.
   const roofGlassMat = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
-        name: 'sol-gym-roof-glass',
-        vertexColors: true,
-        roughness: 0.1,
-        metalness: 0.2,
-        transparent: true,
-        opacity: 0.3,
-        depthWrite: false,
-        envMapIntensity: 1.4,
-      }),
+      applyArchitecturalGlassShader(
+        new THREE.MeshStandardMaterial({
+          name: 'sol-gym-roof-glass',
+          vertexColors: true,
+          roughness: 0.06,
+          metalness: 0.16,
+          transparent: true,
+          opacity: 0.3,
+          depthWrite: false,
+          envMapIntensity: 1.95,
+        }),
+        theme === 'light',
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  useEffect(() => {
+    (roofGlassMat.userData.setGlassTheme as ((isLight: boolean) => void) | undefined)?.(
+      theme === 'light',
+    );
+  }, [roofGlassMat, theme]);
   useEffect(() => () => roofGlassMat.dispose(), [roofGlassMat]);
   const glassMat = useMemo(
     () =>

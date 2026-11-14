@@ -79,7 +79,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#e8be9e',
     hair: '#1e2024',
-    top: '#ce9180', // SÖL signature salmon
+    top: '#b34738', // Deep SÖL terracotta jersey (high contrast against warm skin)
     bottom: '#23252a',
     shoe: '#f4f3ef',
     accent: '#f07654',
@@ -111,7 +111,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#eac0a0',
     hair: '#4a3222',
-    top: '#e07a5f', // Warm terracotta coral
+    top: '#9e3a2e', // Rich crimson-terracotta jersey
     bottom: '#252830',
     shoe: '#f4f3ef',
     accent: '#f59e0b',
@@ -166,7 +166,7 @@ const YOGA_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#ebbfa0',
     hair: '#241c18',
-    top: '#ce9180',
+    top: '#a94538',
     bottom: '#32363f',
     shoe: '#ebbfa0',
     accent: '#f4f3ef',
@@ -174,7 +174,7 @@ const YOGA_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#dfb190',
     hair: '#1a1b1e',
-    top: '#d6d3cd',
+    top: '#f4f3ef',
     bottom: '#282b32',
     shoe: '#dfb190',
     accent: '#ce9180',
@@ -186,6 +186,41 @@ const YOGA_PALETTES: readonly ActorOutfitPalette[] = [
     bottom: '#22252b',
     shoe: '#f1c9aa',
     accent: '#ce9180',
+  },
+] as const;
+
+const TENNIS_PALETTES: readonly ActorOutfitPalette[] = [
+  {
+    skin: '#e7bc9b',
+    hair: '#1f1c1a',
+    top: '#f8fafc', // Crisp Grand Slam ivory court polo
+    bottom: '#1e293b', // Tailored navy court shorts
+    shoe: '#f8fafc',
+    accent: '#ce9180',
+  },
+  {
+    skin: '#eec4a5',
+    hair: '#3b281d',
+    top: '#a83f31', // Deep SÖL clay-court crimson terracotta polo (crisp contrast vs skin & cream shorts)
+    bottom: '#f4f3ef', // Crisp cream court shorts
+    shoe: '#f8fafc',
+    accent: '#262930',
+  },
+  {
+    skin: '#d9a480',
+    hair: '#18191d',
+    top: '#3d6352', // Heritage court sage polo
+    bottom: '#f4f3ef', // Crisp cream court shorts
+    shoe: '#f8fafc',
+    accent: '#ce9180',
+  },
+  {
+    skin: '#f0c8aa',
+    hair: '#2a201b',
+    top: '#223046', // Midnight navy tour jersey
+    bottom: '#f8fafc', // Crisp white court shorts
+    shoe: '#f4f3ef',
+    accent: '#68b5c9',
   },
 ] as const;
 
@@ -765,23 +800,32 @@ export function buildLiveActorDefinitions(
   const tennisCourts = ['item-out-tennis-01', 'item-out-tennis-02'];
   tennisCourts.forEach((courtId, idx) => {
     const rallyPhase = idx * 1.85 + 0.3;
+    const rallySpec = {
+      rallySpanZ: 7.94,
+      rallySpanX: 0.92,
+      rallyNetHeight: 1.0,
+    };
     addFromItem(
       courtId,
       `actor-out-tennis-p${idx * 2 + 1}`,
       'tennis-player',
-      [-0.6, 0.02, -8.8],
+      [0, 0.02, -8.8],
       0,
       rallyPhase,
       0.92,
+      TENNIS_PALETTES[(idx * 2) % TENNIS_PALETTES.length]!,
+      rallySpec,
     );
     addFromItem(
       courtId,
       `actor-out-tennis-p${idx * 2 + 2}`,
       'tennis-player',
-      [0.6, 0.02, 8.8],
+      [0, 0.02, 8.8],
       Math.PI,
       rallyPhase + Math.PI,
       0.92,
+      TENNIS_PALETTES[(idx * 2 + 1) % TENNIS_PALETTES.length]!,
+      rallySpec,
     );
     addFromItem(
       courtId,
@@ -792,11 +836,7 @@ export function buildLiveActorDefinitions(
       rallyPhase,
       0.92,
       undefined,
-      {
-        rallySpanZ: 8.6,
-        rallySpanX: 1.15,
-        rallyNetHeight: 1.0,
-      },
+      rallySpec,
     );
   });
 
@@ -892,6 +932,7 @@ export interface HumanPoseAngles {
   yawOffset: number;
   torsoPitch: number;
   torsoRoll: number;
+  torsoTwist?: number;
   headYaw: number;
   headPitch: number;
   leftShoulderPitch: number;
@@ -1199,28 +1240,165 @@ export function solveHumanPose(
     }
 
     case 'tennis-player': {
-      const cycle = (timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 2;
-      // Ball bounces & strikes baseline at `cycle === 0` (`d === 0`): unit-turn backswing -> baseline drive -> follow-through.
-      const d = cycle > 1 ? cycle - 2 : cycle;
-      const w = 0.42;
-      const swing = Math.abs(d) < w ? Math.sin(((d + w) / (2 * w)) * Math.PI) : 0;
-      const coil = d > -w && d < 0 ? Math.sin((-d / w) * Math.PI) : 0;
-      const baselineX = Math.sin(phase * 0.55) * 1.15;
-      pose.rootOffset = [baselineX, Math.abs(Math.sin(phase * 1.3)) * 0.03, swing * 0.24 - coil * 0.08];
-      pose.torsoPitch = 0.15 + swing * 0.08;
-      pose.yawOffset = -0.18 - coil * 0.42 + swing * 0.88;
-      pose.leftShoulderPitch = 0.48 + coil * 0.22;
-      pose.leftShoulderSplay = -0.26;
-      pose.leftElbowPitch = 1.15;
-      pose.rightShoulderPitch = 0.34 - coil * 0.45 + swing * 1.25;
-      pose.rightShoulderSplay = 0.42 + coil * 0.18 - swing * 0.28;
-      pose.rightElbowPitch = 0.92 - coil * 0.25 + swing * 0.85;
-      pose.leftHipPitch = 0.22 + swing * 0.18;
-      pose.leftHipSplay = -0.15;
-      pose.leftKneePitch = -0.22;
-      pose.rightHipPitch = -0.12 + swing * 0.28;
-      pose.rightHipSplay = 0.15;
-      pose.rightKneePitch = -0.22;
+      // 4-beat synchronized figure-8 rally (`c = 0`: Forehand drive, `c = 1` & `3`: center split-step, `c = 2`: Backhand drive).
+      const c = (((timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 4) + 4) % 4;
+      const spanX = actor.rallySpanX ?? 0.92;
+      const ease = (t: number) => {
+        const cl = Math.min(1, Math.max(0, t));
+        return cl * cl * (3 - 2 * cl);
+      };
+
+      const fhPlantX = -spanX - 0.3; // Racket head (+0.30 local X at waist height) meets ball at `-spanX`
+      const bhPlantX = spanX + 0.62; // Backhand racket head (-0.62 local X at waist height) meets ball at `+spanX`
+
+      let localBaselineX: number;
+      let moveIntensity = 0;
+      if (c < 0.28) {
+        localBaselineX = fhPlantX;
+      } else if (c < 0.9) {
+        localBaselineX = fhPlantX + (-0.08 - fhPlantX) * ease((c - 0.28) / 0.62);
+        moveIntensity = Math.sin(((c - 0.28) / 0.62) * Math.PI);
+      } else if (c < 1.16) {
+        localBaselineX = -0.08 + 0.14 * ease((c - 0.9) / 0.26);
+      } else if (c < 1.72) {
+        localBaselineX = 0.06 + (bhPlantX - 0.06) * ease((c - 1.16) / 0.56);
+        moveIntensity = Math.sin(((c - 1.16) / 0.56) * Math.PI);
+      } else if (c < 2.28) {
+        localBaselineX = bhPlantX;
+      } else if (c < 2.9) {
+        localBaselineX = bhPlantX + (0.08 - bhPlantX) * ease((c - 2.28) / 0.62);
+        moveIntensity = Math.sin(((c - 2.28) / 0.62) * Math.PI);
+      } else if (c < 3.16) {
+        localBaselineX = 0.08 - 0.14 * ease((c - 2.9) / 0.26);
+      } else if (c < 3.72) {
+        localBaselineX = -0.06 + (fhPlantX + 0.06) * ease((c - 3.16) / 0.56);
+        moveIntensity = Math.sin(((c - 3.16) / 0.56) * Math.PI);
+      } else {
+        localBaselineX = fhPlantX;
+      }
+
+      // Move baseline footwork directly in court space so torso/stance yaw never swings feet in an arc.
+      actorWorldPos = rotateLocalToWorld(baseAnchor, actor.rotationY, localBaselineX, 0, 0);
+
+      // Split-step hop & wide ready landing right as the opponent strikes at `c = 1` and `c = 3`.
+      const dSplit = Math.min(Math.abs(c - 1), Math.abs(c - 3));
+      const splitHop = dSplit < 0.18 ? Math.sin((1 - dSplit / 0.18) * Math.PI) : 0;
+
+      const dFh = c > 2 ? c - 4 : c;
+      const dBh = c - 2;
+      const strokeWin = 0.46;
+
+      if (Math.abs(dFh) < strokeWin) {
+        // --- FOREHAND TOPSPIN DRIVE (Unit Turn -> Lag & Drive -> Windshield-Wiper Finish) ---
+        const takeback =
+          dFh < 0
+            ? Math.sin(ease((dFh + strokeWin) / (strokeWin * 0.58)) * Math.PI * 0.5) *
+              (1 - ease((dFh + 0.14) / 0.14))
+            : 0;
+        const contact = Math.exp(-(dFh * dFh) / (2 * 0.095 * 0.095));
+        const follow =
+          dFh > -0.06
+            ? Math.sin(ease((dFh + 0.06) / (strokeWin * 0.65)) * Math.PI * 0.5) *
+              (1 - ease((dFh - strokeWin * 0.68) / (strokeWin * 0.32)))
+            : 0;
+
+        const kneeLoad = (takeback * 0.65 + contact * 0.45) * 0.12;
+        pose.rootOffset = [0, -kneeLoad, contact * 0.12 + follow * 0.16 - takeback * 0.08];
+        pose.torsoPitch = 0.16 + takeback * 0.06 + contact * 0.08 + follow * 0.04;
+        pose.torsoRoll = takeback * 0.06 - follow * 0.08;
+        pose.yawOffset = -takeback * 0.18 + contact * 0.05 + follow * 0.16;
+        pose.torsoTwist = -takeback * 0.66 + contact * 0.08 + follow * 0.62;
+        pose.headYaw = takeback * 0.26 - follow * 0.18;
+        pose.headPitch = 0.08;
+
+        // Off-hand (`left`) cradles throat on unit-turn, pulls in for rotational torque on follow-through.
+        pose.leftShoulderPitch = 0.46 + takeback * 0.36 + contact * 0.22 + follow * 0.18;
+        pose.leftShoulderSplay = -0.22 + takeback * 0.42 - contact * 0.18 - follow * 0.22;
+        pose.leftElbowPitch = 1.18 + takeback * 0.24 + follow * 0.42;
+        pose.leftElbowSplay = -0.08 + takeback * 0.28 - follow * 0.15;
+
+        // Racket arm (`right`) loops back, slots into waist-high contact zone, and wraps high across left shoulder.
+        pose.rightShoulderPitch = 0.42 - takeback * 0.72 + contact * 0.18 + follow * 0.98;
+        pose.rightShoulderSplay = 0.32 + takeback * 0.36 + contact * 0.26 - follow * 0.68;
+        pose.rightElbowPitch = 1.05 - takeback * 0.34 - contact * 0.28 + follow * 0.86;
+        pose.rightElbowSplay = 0.16 + takeback * 0.24 + contact * 0.28 - follow * 0.68;
+
+        // Semi-open/neutral forehand leg drive
+        pose.leftHipPitch = 0.22 + takeback * 0.16 + contact * 0.26 + follow * 0.18;
+        pose.leftHipSplay = -0.18 - takeback * 0.05;
+        pose.leftKneePitch = -0.24 - takeback * 0.18 - contact * 0.12;
+        pose.rightHipPitch = -0.08 + takeback * 0.18 - contact * 0.16 - follow * 0.14;
+        pose.rightHipSplay = 0.2 + takeback * 0.08;
+        pose.rightKneePitch = -0.24 - takeback * 0.22 - contact * 0.08;
+      } else if (Math.abs(dBh) < strokeWin) {
+        // --- TWO-HANDED / DRIVE BACKHAND (Deep Left Coil -> Cross-Body Drive -> High Open Finish) ---
+        const takeback =
+          dBh < 0
+            ? Math.sin(ease((dBh + strokeWin) / (strokeWin * 0.58)) * Math.PI * 0.5) *
+              (1 - ease((dBh + 0.14) / 0.14))
+            : 0;
+        const contact = Math.exp(-(dBh * dBh) / (2 * 0.095 * 0.095));
+        const follow =
+          dBh > -0.06
+            ? Math.sin(ease((dBh + 0.06) / (strokeWin * 0.65)) * Math.PI * 0.5) *
+              (1 - ease((dBh - strokeWin * 0.68) / (strokeWin * 0.32)))
+            : 0;
+
+        const kneeLoad = (takeback * 0.65 + contact * 0.45) * 0.12;
+        pose.rootOffset = [0, -kneeLoad, contact * 0.38 + follow * 0.22 - takeback * 0.08];
+        pose.torsoPitch = 0.17 + takeback * 0.07 + contact * 0.08 + follow * 0.04;
+        pose.torsoRoll = -takeback * 0.06 + follow * 0.08;
+        pose.yawOffset = takeback * 0.2 - contact * 0.05 - follow * 0.14;
+        pose.torsoTwist = takeback * 0.68 - contact * 0.06 - follow * 0.58;
+        pose.headYaw = -takeback * 0.28 + follow * 0.16;
+        pose.headPitch = 0.08;
+
+        // Guide hand (`left`) joins grip on takeback & contact, then extends back gracefully on finish.
+        pose.leftShoulderPitch = 0.46 - takeback * 0.24 + contact * 0.24 - follow * 0.58;
+        pose.leftShoulderSplay = -0.24 - takeback * 0.26 + contact * 0.1 - follow * 0.34;
+        pose.leftElbowPitch = 1.18 - takeback * 0.08 - contact * 0.14 - follow * 0.72;
+        pose.leftElbowSplay = -0.12 - takeback * 0.16 - contact * 0.06 - follow * 0.22;
+
+        // Dominant arm (`right`) draws across torso to left hip, drives waist-high through `-0.36 X`, finishes high right.
+        pose.rightShoulderPitch = 0.44 - takeback * 0.06 + contact * 0.2 + follow * 0.96;
+        pose.rightShoulderSplay = 0.24 - takeback * 0.86 - contact * 0.78 + follow * 0.28;
+        pose.rightElbowPitch = 1.08 + takeback * 0.12 - contact * 0.26 + follow * 0.38;
+        pose.rightElbowSplay = 0.12 - takeback * 0.7 - contact * 0.72 + follow * 0.26;
+
+        // Front right leg steps across/forward into backhand while left leg anchors
+        pose.leftHipPitch = -0.06 + takeback * 0.16 - contact * 0.16 - follow * 0.12;
+        pose.leftHipSplay = -0.2 - takeback * 0.06;
+        pose.leftKneePitch = -0.24 - takeback * 0.22 - contact * 0.08;
+        pose.rightHipPitch = 0.22 + takeback * 0.14 + contact * 0.26 + follow * 0.18;
+        pose.rightHipSplay = 0.16;
+        pose.rightKneePitch = -0.24 - takeback * 0.18 - contact * 0.12;
+      } else {
+        // --- ATHLETIC READY STANCE, SPLIT-STEP & LATERAL RECOVERY FOOTWORK ---
+        const footStep = Math.sin(phase * 2.6) * moveIntensity;
+        pose.rootOffset = [0, splitHop * 0.048 + Math.abs(footStep) * 0.028 - 0.03, 0];
+        pose.torsoPitch = 0.18 + splitHop * 0.04;
+        pose.torsoRoll = footStep * 0.04;
+        pose.torsoTwist = 0;
+        pose.headPitch = -0.06;
+
+        // Both hands poised in front holding racket throat in athletic ready position
+        pose.leftShoulderPitch = 0.54 + Math.abs(footStep) * 0.08;
+        pose.leftShoulderSplay = -0.14;
+        pose.leftElbowPitch = 1.28;
+        pose.leftElbowSplay = 0.12;
+        pose.rightShoulderPitch = 0.52 + Math.abs(footStep) * 0.08;
+        pose.rightShoulderSplay = 0.18;
+        pose.rightElbowPitch = 1.24;
+        pose.rightElbowSplay = -0.08;
+
+        const splitWide = splitHop * 0.08;
+        pose.leftHipPitch = 0.18 + footStep * 0.36;
+        pose.leftHipSplay = -0.19 - splitWide - Math.max(0, -footStep) * 0.08;
+        pose.leftKneePitch = -0.28 - splitHop * 0.1 - Math.max(0, footStep) * 0.18;
+        pose.rightHipPitch = 0.18 - footStep * 0.36;
+        pose.rightHipSplay = 0.19 + splitWide + Math.max(0, footStep) * 0.08;
+        pose.rightKneePitch = -0.28 - splitHop * 0.1 - Math.max(0, -footStep) * 0.18;
+      }
       break;
     }
 
@@ -1486,37 +1664,42 @@ export function evaluateActorPartsAtTime(
         visible,
         worldPos,
         [pitch, 0, 0],
-        [0.09, 0.09, 0.09],
-        '#f8fafc',
+        [0.038, 0.038, 0.038],
+        '#f07654',
       );
       pushPart(
         actor,
         'shuttle-skirt',
         visible,
-        [worldPos[0], worldPos[1] + 0.05, worldPos[2] + (forward ? -0.05 : 0.05)],
-        [pitch + (forward ? -0.3 : 0.3), 0, 0],
-        [0.14, 0.14, 0.14],
-        '#f07654',
+        [worldPos[0], worldPos[1] + 0.032, worldPos[2] + (forward ? -0.042 : 0.042)],
+        [pitch + (forward ? -Math.PI * 0.42 : Math.PI * 0.42), 0, 0],
+        [0.068, 0.088, 0.068],
+        '#f8fafc',
       );
       continue;
     }
 
     if (actor.activity === 'tennis-ball') {
-      const spanZ = actor.rallySpanZ ?? 8.6;
-      const spanX = actor.rallySpanX ?? 1.15;
-      const cycle = (timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 2;
-      const forward = cycle < 1;
-      const u = forward ? cycle : cycle - 1;
-      const z = forward ? -spanZ + 2 * spanZ * u : spanZ - 2 * spanZ * u;
-      const x = (forward ? 1 : -1) * spanX * (u - 0.5);
+      const spanZ = actor.rallySpanZ ?? 8.22;
+      const spanX = actor.rallySpanX ?? 0.92;
+      // 4-beat figure-8 tour drill synchronized with P1 & P2 forehand (`0, 3`) and backhand (`1, 2`) strikes.
+      const u4 = (((timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 4) + 4) % 4;
+      const leg = Math.min(3, Math.floor(u4));
+      const u = u4 - leg;
+      const startZ = leg % 2 === 0 ? -spanZ : spanZ;
+      const z = startZ + (-startZ - startZ) * u;
+      const waypointX = [-1, -1, 1, 1] as const;
+      const x0 = waypointX[leg]! * spanX;
+      const x1 = waypointX[(leg + 1) % 4]! * spanX;
+      const x = x0 + (x1 - x0) * u;
 
       let y: number;
       if (u <= 0.78) {
         const s = u / 0.78;
-        y = (1 - s) * 1.05 + s * 0.09 + 4 * s * (1 - s) * 1.48;
+        y = (1 - s) * 1.02 + s * 0.08 + 4 * s * (1 - s) * 1.24;
       } else {
         const b = (u - 0.78) / 0.22;
-        y = 0.09 + Math.sin(b * Math.PI * 0.5) * 0.96;
+        y = 0.08 + Math.sin(b * Math.PI * 0.5) * 0.94;
       }
 
       const worldPos: Vec3 = [baseAnchor[0] + x, baseAnchor[1] + y, baseAnchor[2] + z];

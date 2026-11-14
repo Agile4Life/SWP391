@@ -71,7 +71,7 @@ export const DEFAULT_ITEM_DIMENSIONS: Record<ItemKind, Vec3> = {
   'jacuzzi-tub': [3.6, 0.95, 3.2],
   'lounge-sofa': [2.6, 0.85, 1.4],
   'juice-bar': [3.8, 1.15, 1.4],
-  'stair-core': [3.6, 3.8, 4.2],
+  'stair-core': [3.6, 4.56, 4.28],
   'elevator-core': [2.6, 3.8, 2.6],
   'planter-tree': [1.4, 2.6, 1.4],
 };
@@ -1361,30 +1361,34 @@ function buildJuiceBar(): THREE.BufferGeometry {
 function buildStairCore(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Central shear wall divider & mid-level landing
-    box(0.24, 3.6, 2.8, P.charcoal, [0, 1.8, -0.2]),
-    box(3.52, 0.22, 1.24, P.stone, [0, 1.9, -1.46]),
-    // Glass safety balustrades + salmon top handrails (aligned with flight slopes)
-    box(0.06, 0.95, 2.7, P.glass, [-1.68, 1.4, 0.52], [0.58, 0, 0]),
-    box(0.06, 0.95, 2.7, P.glass, [1.68, 2.8, 0.52], [-0.58, 0, 0]),
-    box(0.08, 0.06, 2.75, P.salmon, [-1.68, 1.88, 0.52], [0.58, 0, 0]),
-    box(0.08, 0.06, 2.75, P.salmon, [1.68, 3.28, 0.52], [-0.58, 0, 0]),
+    // Bottom threshold (y = 0..0.08), mid-landing (y = 1.90), top arrival bridge (y = 3.80)
+    box(3.2, 0.08, 0.52, P.stone, [0, 0.04, 1.88]),
+    box(3.2, 0.12, 0.64, P.stone, [0, 1.84, 0]),
+    box(3.2, 0.14, 0.52, P.stone, [0, 3.73, -1.88]),
+    // Twin side stringers (lower & upper flights) + outer brackets to 3.60 m width
+    box(0.08, 0.24, 1.9, P.charcoal, [-1.46, 0.88, 0.98], [-0.82, 0, 0]),
+    box(0.08, 0.24, 1.9, P.charcoal, [1.46, 0.88, 0.98], [-0.82, 0, 0]),
+    box(0.08, 0.24, 1.9, P.charcoal, [-1.46, 2.78, -0.98], [-0.82, 0, 0]),
+    box(0.08, 0.24, 1.9, P.charcoal, [1.46, 2.78, -0.98], [-0.82, 0, 0]),
+    box(0.08, 0.06, 0.14, P.metal, [-1.76, 1.92, 0]),
+    box(0.08, 0.06, 0.14, P.metal, [1.76, 1.92, 0]),
+    // Open steel stanchions + top handrails peaking at y = 4.56 (zero center wall or opaque glass)
+    box(0.04, 0.74, 0.05, P.charcoal, [-1.66, 0.45, 1.94]),
+    box(0.04, 0.74, 0.05, P.charcoal, [1.66, 0.45, 1.94]),
+    box(0.04, 0.74, 0.05, P.charcoal, [-1.66, 2.27, 0]),
+    box(0.04, 0.74, 0.05, P.charcoal, [1.66, 2.27, 0]),
+    box(0.04, 0.76, 0.05, P.charcoal, [-1.66, 4.18, -1.94]),
+    box(0.04, 0.76, 0.05, P.charcoal, [1.66, 4.18, -1.94]),
+    box(0.05, 0.05, 2.2, P.woodLight, [-1.66, 1.72, 1.12], [-0.78, 0, 0]),
+    box(0.05, 0.05, 2.2, P.woodLight, [1.66, 1.72, 1.12], [-0.78, 0, 0]),
+    box(0.05, 0.05, 2.2, P.woodLight, [-1.66, 3.62, -1.12], [-0.78, 0, 0]),
+    box(0.05, 0.05, 2.2, P.woodLight, [1.66, 3.62, -1.12], [-0.78, 0, 0]),
   ];
 
-  // Lower flight treads (left side, ascending from front z=+1.8 to landing z=-0.8)
-  for (let i = 0; i < 7; i++) {
-    const t = i / 6;
-    const y = 0.18 + t * 1.62;
-    const z = 1.75 - t * 2.45;
-    parts.push(box(1.48, 0.14, 0.36, P.wood, [-0.92, y, z]));
-  }
-
-  // Upper flight treads (right side, ascending from landing z=-0.8 to top z=+1.8)
-  for (let i = 0; i < 7; i++) {
-    const t = i / 6;
-    const y = 2.08 + t * 1.62;
-    const z = -0.7 + t * 2.45;
-    parts.push(box(1.48, 0.14, 0.36, P.woodLight, [0.92, y, z]));
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5;
+    parts.push(box(3.04, 0.08, 0.26, P.wood, [0, 0.24 + t * 1.42, 1.52 - t * 1.08]));
+    parts.push(box(3.04, 0.08, 0.26, P.wood, [0, 2.14 + t * 1.42, -0.44 - t * 1.08]));
   }
 
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['stair-core']);
