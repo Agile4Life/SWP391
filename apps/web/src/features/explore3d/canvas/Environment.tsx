@@ -55,7 +55,7 @@ export function buildPlazaGridGeometry(
 }
 
 const SHARED_PLAZA_PLANE = new THREE.PlaneGeometry(1, 1);
-const TERRAIN_DISC = new THREE.CircleGeometry(340, 64);
+const TERRAIN_DISC = new THREE.CircleGeometry(1000, 64);
 const NOOP_RAYCAST = () => null;
 
 export function Environment() {

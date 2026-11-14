@@ -92,3 +92,7 @@ Có hai cách điều khiển chuyển động, khai báo ở `renderers/actors/
 
 - Chi phí (đo trên Apple M4, 53 người cùng lúc): dựng xong trong khoảng 0,7 giây; vẽ cả 53 người kèm bóng đổ mất trung bình 4,4 ms mỗi khung (chậm nhất 5,7 ms, đã gồm chuyển động CPU và chờ GPU), 705 lệnh vẽ, khoảng 3 triệu tam giác tính cả lượt vẽ bóng (mỗi người khoảng 7.300 thân, 10.000–15.000 áo quần, vài nghìn tóc, mắt và lông mày; hình học áo quần dùng chung giữa người cùng kiểu đồ). Số này chỉ là nhân vật, chưa gồm cả cảnh; máy yếu chưa đo. Mọi tier đều vẽ nhân vật thật.
 - Muốn thay tư thế theo góc bằng chuyển động chụp (vợt, cuốn tạ, squat…), cần clip tương ứng (thư viện bản Standard không có) rồi chuyển hoạt động sang `HUMAN_CLIP_ACTIVITIES`.
+
+## Thành phố bao quanh (procedural, không có asset ngoài)
+
+`renderers/architecture/buildCityMetropolis.ts` dựng toàn bộ thành phố quanh khu gym (lưới đường, tuyến metro trên cao, công viên phía nam, khoảng 100 tòa nhà đến bán kính ~460 m) thành 4 geometry gộp (opaque, metal, glass, emissive) cache theo `(theme, tier)`, khoảng 64k tam giác và 4 lệnh vẽ ở tier high. `canvas/CityMetropolis.tsx` render chúng cùng cờ SÖL có gió; `canvas/CityTraffic.tsx` là xe chạy bằng một `InstancedMesh`. Không thêm file model hay license mới.
