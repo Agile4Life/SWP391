@@ -32,6 +32,6 @@
 - Landing, thể thao và popup nhóm cơ: `apps/web/src/features/landing/fitness-public.css`.
 - Tiêu đề portal dùng chung: `apps/web/src/features/portal/portal-shell.css`.
 - [Số đo chi tiết](sizes.json), [dashboard desktop](dashboard-1440.png), [dashboard mobile](dashboard-390.png).
-- Chạy lại: `node scripts/audit-heading-sizes.cjs`, với Playwright qua `NODE_PATH` và Chromium qua `CHROME_PATH` nếu cần.
+- Chạy lại: `node scripts/qa/audit-heading-sizes.cjs`, với Playwright qua `NODE_PATH` và Chromium qua `CHROME_PATH` nếu cần.
 
 Giữ dashboard bốn cột và sidebar icon khi điều chỉnh sau này; tăng cỡ chữ có chọn lọc và cho tiêu đề xuống dòng tự nhiên. Theo `DESIGN.md`, mọi quyết định đổi cỡ chữ cần được cập nhật cùng phần quy chuẩn liên quan.

@@ -35,7 +35,7 @@ Theo yêu cầu tiếp theo, viền sáng của nút màu trong Dark chạy ch�
 
 ## Giới hạn của script có sẵn
 
-- `scripts/verify-public-ui.cjs` dừng ở dòng 47: kiểm tra số `.fit-site--landing` ngay sau navigation, trước khi route tải xong (`0 !== 1`). Script còn dùng tab “Tất cả gói tập” đã được thay bằng “Gói 1 tháng”.
-- `scripts/verify-public-animation.cjs` qua kiểm tra replay hai chiều, partial visibility, cuộn native, carousel HLV và gallery; dừng tại dòng 76 khi đợi 6 buổi học. Fixture có nhóm “Movement & Core” không thuộc danh mục bộ môn chuẩn và bị lọc, nên trang hiện 4 buổi.
-- `scripts/verify-ux-consistency.cjs` dừng khi đợi `.portal-v2`: fixture chưa cung cấp `/auth/me` hợp lệ, nên bước đồng bộ phiên đưa trình duyệt về đăng nhập. Lượt kiểm chứng trực tiếp dùng `{ username: 'review', role: 'MEMBER' }` (và `CENTER_MANAGER` ở catalog) để kiểm tra đúng portal.
+- `scripts/qa/verify-public-ui.cjs` dừng ở dòng 47: kiểm tra số `.fit-site--landing` ngay sau navigation, trước khi route tải xong (`0 !== 1`). Script còn dùng tab “Tất cả gói tập” đã được thay bằng “Gói 1 tháng”.
+- `scripts/qa/verify-public-animation.cjs` qua kiểm tra replay hai chiều, partial visibility, cuộn native, carousel HLV và gallery; dừng tại dòng 76 khi đợi 6 buổi học. Fixture có nhóm “Movement & Core” không thuộc danh mục bộ môn chuẩn và bị lọc, nên trang hiện 4 buổi.
+- `scripts/qa/verify-ux-consistency.cjs` dừng khi đợi `.portal-v2`: fixture chưa cung cấp `/auth/me` hợp lệ, nên bước đồng bộ phiên đưa trình duyệt về đăng nhập. Lượt kiểm chứng trực tiếp dùng `{ username: 'review', role: 'MEMBER' }` (và `CENTER_MANAGER` ở catalog) để kiểm tra đúng portal.
 - Các luồng trực tiếp nêu trên được kiểm chứng riêng theo UI hiện hành. Không sửa logic nghiệp vụ hoặc các script lịch sử trong phạm vi chỉnh neon.

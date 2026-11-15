@@ -48,17 +48,17 @@ Chạy Vite trên `http://127.0.0.1:5173`, cung cấp `playwright-core` qua NODE
 ```powershell
 $env:SHOP_UI_OUTPUT = 'docs/qa/shop-ui-audit-2026-11-06/after'
 $env:SHOP_AUDIT_MATRIX = '1'
-node scripts/verify-shop-ui.cjs
+node scripts/qa/verify-shop-ui.cjs
 
 $env:SHOP_UI_OUTPUT = 'docs/qa/shop-ui-audit-2026-11-06/states'
 $env:SHOP_AUDIT_STATES = '1'
 $env:SHOP_AUDIT_WIDTHS = '390,1440'
-node scripts/verify-shop-ui.cjs
+node scripts/qa/verify-shop-ui.cjs
 
 $env:SHOP_UI_OUTPUT = 'docs/qa/shop-ui-audit-2026-11-06/landscape'
 $env:SHOP_AUDIT_WIDTHS = '844'
 $env:SHOP_AUDIT_HEIGHT = '320'
-node scripts/verify-shop-ui.cjs
+node scripts/qa/verify-shop-ui.cjs
 ```
 
 Để chạy luồng mua hàng gốc, bỏ SHOP_AUDIT_MATRIX/SHOP_AUDIT_STATES/SHOP_AUDIT_HEIGHT trước khi chạy lại script. Các lệnh xuất lại toàn bộ ảnh; thư mục screenshots chỉ giữ bộ ảnh tiêu biểu được chọn cho lần audit này.

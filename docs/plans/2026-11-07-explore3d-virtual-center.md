@@ -425,7 +425,7 @@ Từ output build, ghi lại kích thước gzip của entry chunk (trước và
 - `?perf=1`: overlay DOM cập nhật 2 lần/giây hiển thị FPS, frame time p50/p95/p99 (cửa sổ 120 frame), draw call, số tam giác, geometry, texture và tier.
 - `?bench=1`: chạy tự động qua mọi viewpoint `hero` với chuyển cảnh 1.2 s cố định, ép `frameloop="always"` trong lúc chạy, cuối cùng in JSON `{ device, ua, tier, dpr, avgFps, p95, p99, maxDrawCalls, maxTris }` và có nút sao chép.
 - Kết quả trên ít nhất 2 thiết bị thật (1 laptop, 1 điện thoại) ghi vào `docs/qa/explore3d-perf.md`. Không đạt mục tiêu 8.1 thì Epic chưa xong.
-- Script Playwright tuỳ chọn `scripts/verify-explore3d.mjs`: chạy Chrome có GPU (`--use-angle=metal` trên macOS), mở `?bench=1`, kiểm tra không có lỗi console và có JSON kết quả. Script này là smoke test, không dùng làm bằng chứng FPS.
+- Script Playwright tuỳ chọn `scripts/qa/verify-explore3d.mjs`: chạy Chrome có GPU (`--use-angle=metal` trên macOS), mở `?bench=1`, kiểm tra không có lỗi console và có JSON kết quả. Script này là smoke test, không dùng làm bằng chứng FPS.
 
 ### 9.4 Thủ công (dùng preview trình duyệt có sẵn)
 

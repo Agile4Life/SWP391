@@ -11,7 +11,7 @@
 - API thật: chỉ GET health và public catalog; landing thật được kiểm tra cùng API thật, khớp tên/giá của cả ba gói.
 - Theo yêu cầu người dùng, mọi bước đăng ký, gửi/xác thực OTP, đăng nhập, mua/hủy gói và xác nhận thanh toán đều được giả lập tại ranh giới HTTP. Không tạo tài khoản, gửi email hay sửa subscription/payment thật.
 - **34 tình huống: 22 đạt, 12 phát hiện vấn đề; không còn lỗi chạy script.** Các case có vấn đề được gom thành 8 nhóm dưới đây, không phải 12 lỗi độc lập. Không có lỗi JavaScript runtime trong các case giả lập.
-- [Kết quả máy đọc được](results.json), [script chạy lại](../../../scripts/audit-membership-purchase.cjs).
+- [Kết quả máy đọc được](results.json), [script chạy lại](../../../scripts/qa/audit-membership-purchase.cjs).
 
 Catalog thật tại thời điểm kiểm tra:
 
@@ -132,7 +132,7 @@ Luồng gọn hơn: **chọn gói → xác thực → quay lại đúng gói →
 
 Kết quả ghi dữ liệu chứng minh hành vi frontend trước các response được kiểm soát. Chưa chứng minh SMTP gửi OTP thật, xác thực/account thật, transaction/trigger database hoặc nghiệp vụ thu tiền tại quầy chạy end-to-end. Các lỗi UI và state nêu trên đã được tái hiện trên browser; lỗi phục hồi register được đối chiếu thêm với backend source. Đây là báo cáo audit, chưa sửa hành vi sản phẩm hay push/commit thay đổi.
 
-Để chạy lại: chuẩn bị web/API local cùng `playwright-core` trong `NODE_PATH`, đặt `CHROME_PATH` nếu cần, chạy `node scripts/audit-membership-purchase.cjs`. Dùng `AUDIT_CASE_FILTER` để chọn case và `AUDIT_OUTPUT` để tách artifact của lần chạy riêng.
+Để chạy lại: chuẩn bị web/API local cùng `playwright-core` trong `NODE_PATH`, đặt `CHROME_PATH` nếu cần, chạy `node scripts/qa/audit-membership-purchase.cjs`. Dùng `AUDIT_CASE_FILTER` để chọn case và `AUDIT_OUTPUT` để tách artifact của lần chạy riêng.
 
 ## Ma trận kiểm thử
 

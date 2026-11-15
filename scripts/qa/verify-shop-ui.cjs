@@ -9,7 +9,7 @@ const { chromium } = require('playwright-core');
 const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';
 const output = process.env.SHOP_UI_OUTPUT
   ? path.resolve(process.env.SHOP_UI_OUTPUT)
-  : path.resolve(__dirname, '../docs/ui-review/shop');
+  : path.resolve(__dirname, '../../docs/ui-review/shop');
 
 const catalogFixture = require('./public-catalog-fixture.cjs');
 

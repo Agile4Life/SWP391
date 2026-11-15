@@ -7,6 +7,6 @@ Added nullable JPA `Notification.actionPath`; Hibernate update adds the column w
 Verification:
 - Maven: 972 tests, 0 failures/errors, 34 skipped (Supabase integration credentials not configured).
 - Frontend: 672 tests passed; ESLint and production build passed.
-- `scripts/verify-evaluation-notifications.cjs`: passed with mocked API at 390/768/1440/1920/2560px, including read mutation, feedback navigation, no console page errors and no horizontal document overflow.
+- `scripts/qa/verify-evaluation-notifications.cjs`: passed with mocked API at 390/768/1440/1920/2560px, including read mutation, feedback navigation, no console page errors and no horizontal document overflow.
 - Real Supabase schema update, cross-account notification delivery and deployment not exercised.
 - PowerShell and graphify are unavailable in this environment; database policy/profile tests run through Maven. No manual SQL applied.

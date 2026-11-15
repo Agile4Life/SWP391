@@ -124,6 +124,6 @@ Không có bước nào ở trên được tự chạy trên database chung tron
 - `docs/specs/2026-11-10-membership-and-attendance-business-rules.md`
 - `docs/qa/2026-11-13-pt-attendance.md` (lịch sử giai đoạn đầu, có link tới báo cáo hiện tại)
 - `docs/qa/2026-11-13-pt-attendance-audit-migration.md`
-- `docs/superpowers/plans/2026-11-13-pt-attendance-fix.md`
+- `docs/plans/2026-11-13-pt-attendance-fix.md`
 
 Không stage hai file `SCMS_Business_Rules_Latest_Change_Report.md`, `SCMS_Business_Rules_Latest_Updated.docx`, target/binaries/log test hoặc `.env`/secrets.

@@ -13,10 +13,10 @@ Kiểm chứng:
 - Frontend: build, lint, 200 tests đạt.
 - Backend: 511 tests, 0 failures/errors; 17 skipped theo điều kiện môi trường. Chưa kiểm thử truy vấn trên Supabase dev/test thật.
 - `scripts/test-database-config.ps1`: 10 ca đạt.
-- `scripts/verify-public-ui.cjs`: 8 viewport, menu, auth/OTP và CTA hội viên đạt.
-- `scripts/verify-public-animation.cjs`: reveal/replay, lọc động, native scroll, mobile, reduced motion và fallback đạt.
-- `scripts/verify-ux-consistency.cjs`: 13 route, 5 kích thước dashboard, dialog, loading/empty/error; giữ dashboard 4 cột và sidebar icon.
-- `scripts/verify-catalog-sync.cjs`: đối chiếu giá landing–portal, đổi giá, hồ sơ HLV, lịch, empty/error/retry; viewport 320/390/768/1024/1440/1920/2560px.
+- `scripts/qa/verify-public-ui.cjs`: 8 viewport, menu, auth/OTP và CTA hội viên đạt.
+- `scripts/qa/verify-public-animation.cjs`: reveal/replay, lọc động, native scroll, mobile, reduced motion và fallback đạt.
+- `scripts/qa/verify-ux-consistency.cjs`: 13 route, 5 kích thước dashboard, dialog, loading/empty/error; giữ dashboard 4 cột và sidebar icon.
+- `scripts/qa/verify-catalog-sync.cjs`: đối chiếu giá landing–portal, đổi giá, hồ sơ HLV, lịch, empty/error/retry; viewport 320/390/768/1024/1440/1920/2560px.
 
 Các ảnh trong thư mục này dùng **API giả lập để kiểm chứng giao diện**, không phải bảng giá hoặc HLV của trung tâm. Môi trường chạy thật luôn lấy API, không fallback về fixture.
 

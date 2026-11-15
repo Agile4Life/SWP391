@@ -19,9 +19,9 @@ Chạy với Vite tại `http://127.0.0.1:5173`, `NODE_PATH` trỏ đến Playwr
 - `npm --prefix apps/web run build`
 - `npm --prefix apps/web run lint`
 - `npm --prefix apps/web run test -- src/features/landing` — 9 tests, gồm cuộn nhanh tại 450ms rồi chuyển ngay tại 500ms, cuộn ngược, focus và live reduced motion.
-- `node scripts/verify-sport-story.cjs` — 375×667, 390×844, 844×390, 768×650, 1024×600, 1280×600, 1440×900, 1920×900, 2560×1000; cả hai theme. Kiểm tra ảnh sticky, nhả sticky, thứ tự chuyển cảnh thực tế, nội dung/CTA, overflow, native wheel và fallback.
-- `node scripts/verify-public-ui.cjs` và `node scripts/verify-public-animation.cjs` — regression cho public layout, điều hướng, form và reveal.
-- `node scripts/benchmark-sport-stack.cjs` — tên lệnh được giữ tương thích, đo story mới; kết quả tại [performance.json](performance.json). Khoảng 59–60 rAF/giây trên Chrome headless trong lần đo, không có long task; không suy ra FPS trên thiết bị khác.
+- `node scripts/qa/verify-sport-story.cjs` — 375×667, 390×844, 844×390, 768×650, 1024×600, 1280×600, 1440×900, 1920×900, 2560×1000; cả hai theme. Kiểm tra ảnh sticky, nhả sticky, thứ tự chuyển cảnh thực tế, nội dung/CTA, overflow, native wheel và fallback.
+- `node scripts/qa/verify-public-ui.cjs` và `node scripts/qa/verify-public-animation.cjs` — regression cho public layout, điều hướng, form và reveal.
+- `node scripts/qa/benchmark-sport-stack.cjs` — tên lệnh được giữ tương thích, đo story mới; kết quả tại [performance.json](performance.json). Khoảng 59–60 rAF/giây trên Chrome headless trong lần đo, không có long task; không suy ra FPS trên thiết bị khác.
 
 Ảnh đối chiếu: [desktop sáng](light-1440x900.png), [desktop tối](dark-1440x900.png), [mobile sáng](light-390x844.png), [mobile tối](dark-390x844.png), [màn hình rộng](light-2560x1000.png).
 

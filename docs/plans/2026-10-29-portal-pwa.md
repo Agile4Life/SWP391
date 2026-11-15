@@ -61,7 +61,7 @@ Interface tiêu thụ: `PwaStatus` từ `features/pwa/PwaStatus`; route `/member
 
 ## Task 4 — Integration và verification (root)
 
-Files: `src/app/router.tsx`, `DESIGN.md`, `scripts/verify-portal-pwa.cjs`, `docs/qa/portal-pwa-2026-10-29.md`.
+Files: `src/app/router.tsx`, `DESIGN.md`, `scripts/qa/verify-portal-pwa.cjs`, `docs/qa/portal-pwa-2026-10-29.md`.
 
 - [ ] Nối MemberCheckInPage dưới Member-only guard; xác nhận bottom nav đúng role và PwaStatus mount.
 - [ ] Cập nhật DESIGN theo quyết định mobile/PWA mới.

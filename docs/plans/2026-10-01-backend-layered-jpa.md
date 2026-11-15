@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 3.4.4, Spring Data JPA, Jakarta Validation, Spring Security, Maven, PostgreSQL, SQL Server.
 
-**Spec:** `docs/superpowers/specs/2026-10-01-backend-layered-jpa-design.md`; PostgreSQL amendment: `docs/superpowers/specs/2026-10-01-backend-postgresql-amendment.md`.
+**Spec:** `docs/specs/2026-10-01-backend-layered-jpa-design.md`; PostgreSQL amendment: `docs/specs/2026-10-01-backend-postgresql-amendment.md`.
 
 ## Global Constraints
 

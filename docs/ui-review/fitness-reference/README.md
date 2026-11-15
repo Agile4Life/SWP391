@@ -57,8 +57,8 @@ Xem bản chạy: `http://localhost:5173/`, `/login`, `/register` khi Vite đang
 - Production build: chạy `npm --prefix apps/web run build`.
 - Lint: chạy `npm --prefix apps/web run lint`.
 - Test frontend: chạy `npm --prefix apps/web run test`.
-- Browser: `scripts/verify-public-ui.cjs`, cần Playwright có trong môi trường và Vite đang chạy. Nếu dùng bản Playwright cài global trên PowerShell: `$env:NODE_PATH = npm root -g; node scripts/verify-public-ui.cjs`.
-- Animation: `scripts/verify-public-animation.cjs`, kiểm tra khi animation bật, replay hai chiều, không nhấp nháy khi còn một phần component trên màn hình, chuyển nội dung, đăng ký thẻ mới sau khi lọc, stagger, nhập BMI, mở/đóng FAQ nhiều lần, tương tác form, mobile, thay đổi reduced motion khi đang chạy và fallback khi không có IntersectionObserver. Kiểm tra các section mới được thực hiện khi section đã có trong trang.
+- Browser: `scripts/qa/verify-public-ui.cjs`, cần Playwright có trong môi trường và Vite đang chạy. Nếu dùng bản Playwright cài global trên PowerShell: `$env:NODE_PATH = npm root -g; node scripts/qa/verify-public-ui.cjs`.
+- Animation: `scripts/qa/verify-public-animation.cjs`, kiểm tra khi animation bật, replay hai chiều, không nhấp nháy khi còn một phần component trên màn hình, chuyển nội dung, đăng ký thẻ mới sau khi lọc, stagger, nhập BMI, mở/đóng FAQ nhiều lần, tương tác form, mobile, thay đổi reduced motion khi đang chạy và fallback khi không có IntersectionObserver. Kiểm tra các section mới được thực hiện khi section đã có trong trang.
 - Browser kiểm tra landing ở 320 / 375 / 390 / 768 / 1024 / 1440 / 1920 / 2560px; auth ở mobile, tablet và desktop. Xác nhận canvas chạm hai mép viewport, không có padding ngoài, không tràn ngang, scrollbar dùng đúng màu, document theme không áp dụng ngoài layout công khai. Kiểm tra thêm chuyển trainer, gallery, lọc gói; menu mobile; hiện mật khẩu; lỗi đăng nhập; đăng ký → OTP; đếm ngược và lỗi OTP.
 - Các request auth trong browser check được chặn bằng response giả lập. Kết quả này xác nhận UI và payload gửi đi, không xác nhận email/OTP hoặc Google OAuth end-to-end với backend thật.
 - [Kết quả browser](browser-verification.json).

@@ -55,6 +55,6 @@ Trên Render → service backend → Environment, thêm `VNPAY_ENABLED=true`, `V
 - `JAVA_HOME=<JDK21> ./mvnw test` tại `apps/api`.
 - `pwsh -File scripts/test-database-config.ps1` khi có PowerShell.
 - `npm --prefix apps/web run build`, `npm --prefix apps/web run lint`, `npm --prefix apps/web test`.
-- `NODE_PATH=<thư mục node_modules có playwright-core> CHROME_PATH=<đường dẫn Chromium/Chrome> node scripts/verify-vnpay-sandbox.cjs` khi Vite đang chạy. Script chặn toàn bộ API và URL VNPay, không tạo giao dịch thật.
+- `NODE_PATH=<thư mục node_modules có playwright-core> CHROME_PATH=<đường dẫn Chromium/Chrome> node scripts/qa/verify-vnpay-sandbox.cjs` khi Vite đang chạy. Script chặn toàn bộ API và URL VNPay, không tạo giao dịch thật.
 
 Hợp đồng API: [openapi-vnpay.yaml](api-contracts/openapi-vnpay.yaml). Tài liệu giao thức chính thức: [PAY 2.1.0](https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html).

@@ -6,7 +6,7 @@ const { chromium } = require('playwright-core');
 
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
-  const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI_OUTPUT) : path.resolve(__dirname, '../docs/ui-review/sport-story');
+  const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI_OUTPUT) : path.resolve(__dirname, '../../docs/ui-review/sport-story');
   fs.mkdirSync(output, { recursive: true });
   const page = await browser.newPage({ reducedMotion: 'no-preference' });
   const errors = [];

@@ -5,7 +5,7 @@
 **Goal:** Private Member ↔ Receptionist/Coach chat with persistent history and Supabase Realtime updates.
 **Architecture:** Spring Boot owns authorization and writes; JPA owns schema. Supabase private Broadcast invalidates each participant's authenticated API data.
 **Tech Stack:** Java 21 / Spring Boot 3 / PostgreSQL / React TypeScript / installed supabase-js 2.118.0.
-**Spec:** `docs/superpowers/specs/2026-10-29-direct-chat-design.md`.
+**Spec:** `docs/specs/2026-10-29-direct-chat-design.md`.
 
 ## Global constraints
 

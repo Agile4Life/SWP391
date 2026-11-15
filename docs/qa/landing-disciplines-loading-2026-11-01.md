@@ -32,20 +32,20 @@
   invoice list/detail, chat directory/thread, support, class catalogs, coach members,
   POS lookup/payment and image source changes/errors. Tests reveal data without
   advancing a display-delay timer.
-- `scripts/verify-loading-states.cjs`: passed Light/Dark at 390/1440px, including
+- `scripts/qa/verify-loading-states.cjs`: passed Light/Dark at 390/1440px, including
   reduced motion on mobile, held startup JS, catalog error/retry, image buffering,
   public module loading, preserved portal navigation, invoices and delayed logout.
   Measured after releasing intercepted responses on the final build: catalog
   53–95ms; invoices 25–38ms.
-- `scripts/verify-public-ui.cjs`: passed eight viewport widths, auth/OTP flows,
+- `scripts/qa/verify-public-ui.cjs`: passed eight viewport widths, auth/OTP flows,
   existing member links, gallery, filters, BMI and FAQ.
-- `scripts/verify-catalog-sync.cjs`: passed price/catalog parity, real DTOs,
+- `scripts/qa/verify-catalog-sync.cjs`: passed price/catalog parity, real DTOs,
   trainer details, seven widths, empty/error/retry states.
-- `scripts/verify-public-animation.cjs`: passed replay in both directions,
+- `scripts/qa/verify-public-animation.cjs`: passed replay in both directions,
   stable partially visible content, live reduced motion and no-observer fallback.
-- `scripts/verify-sport-story.cjs`: passed Light/Dark at nine viewport configurations
+- `scripts/qa/verify-sport-story.cjs`: passed Light/Dark at nine viewport configurations
   each, reverse scroll, sticky boundaries, keyboard, native wheel and reduced motion.
-- `scripts/verify-ux-consistency.cjs`: passed 13 routes, five dashboard widths,
+- `scripts/qa/verify-ux-consistency.cjs`: passed 13 routes, five dashboard widths,
   existing layout, themed controls, dialogs, pickers and empty/error states.
 - Independent code review found the logout and POS buffering issues; both were
   fixed with regression tests and reviewed again. `git diff --check` passed.

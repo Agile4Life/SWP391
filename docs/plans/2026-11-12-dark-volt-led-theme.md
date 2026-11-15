@@ -44,7 +44,7 @@ Light giữ nguyên toàn bộ: nền nhấn `#ce9180`, hover `#e1aa98`, chữ n
   - Glow chạy quanh nút: `shared/ui/button-glow.css`, lấy màu từ `--portal-salmon` hoặc `--fit-salmon`.
 - **Hex salmon viết cứng** (`ce9180`, `e1aa98`, `e8b5a4`, `rgb(206,145,128)`) còn ở khoảng 48 file. Nhiều nhất: `fitness-public.css` (43), `datepicker.css` (24), `portal-shell.css` (16), `theme.css` (15), `explore3d.css` (15), `timepicker.css` (12), `chat-widget.css` (12), `chat.css` (9), `liquid-glass.css` (7), `shop-public.css` (5), cùng một số TSX (`CoachClassesPage`, `ManagerInternalRequestsPage`, `FitnessLanding`, `MemberCardPage`…) và file 3D. Lấy danh sách đầy đủ bằng lệnh ở mục 7.
 - Ảnh cơ bắp phát sáng ở hero (`.fit-muscle-lit-image`, `fitness-public.css:113`) dùng `sepia + hue-rotate(-10deg)` chỉnh riêng cho tông salmon.
-- Test ràng buộc màu: `features/explore3d/__tests__/architecture.test.ts:270` (`dark.accentSalmon === '#ce9180'`). Script `scripts/verify-ux-consistency.cjs` và `scripts/verify-public-ui.cjs` có nhắc salmon, cần đọc trước khi chạy.
+- Test ràng buộc màu: `features/explore3d/__tests__/architecture.test.ts:270` (`dark.accentSalmon === '#ce9180'`). Script `scripts/qa/verify-ux-consistency.cjs` và `scripts/qa/verify-public-ui.cjs` có nhắc salmon, cần đọc trước khi chạy.
 
 ## 4. Ràng buộc và ngoại lệ
 
@@ -137,7 +137,7 @@ Giới hạn: tối đa ba lớp `box-shadow` mỗi phần tử; không animatio
 
 1. Chụp lại toàn bộ danh sách giai đoạn 0 vào `docs/qa/dark-volt-2026-11-12/after/`, viết `README.md` trong thư mục đó: bảng màu, tỷ lệ tương phản đo trên trình duyệt, ảnh trước/sau, các chỗ đã cố ý giữ salmon.
 2. Kiểm tra: reduced motion, focus bàn phím trên nút/tab/sidebar, chuyển Light ↔ Dark nhiều lần không sót màu, mobile 390px.
-3. Chạy `npm run lint`, `npx tsc -b`, `npm test` trong `apps/web`; chạy `scripts/verify-public-ui.cjs` và `scripts/verify-ux-consistency.cjs` sau khi cập nhật các giá trị màu chúng kiểm tra.
+3. Chạy `npm run lint`, `npx tsc -b`, `npm test` trong `apps/web`; chạy `scripts/qa/verify-public-ui.cjs` và `scripts/qa/verify-ux-consistency.cjs` sau khi cập nhật các giá trị màu chúng kiểm tra.
 4. Cập nhật `DESIGN.md` (thêm mục mới ở đầu, ghi rõ ghi đè “neon chỉ dùng màu salmon” ngày 05/11/2026): bảng token, phạm vi LED, ngoại lệ giữ salmon, quy tắc “màu mới phải đi qua `--sol-accent*`, không viết hex”. Sửa dòng trong `AGENTS.md` mô tả “charcoal–salmon” thành “Light: charcoal–salmon; Dark: charcoal–Volt”.
 
 ### Giai đoạn 6 (tùy chọn, hỏi chủ dự án trước) — Hiệu ứng khi đổi theme

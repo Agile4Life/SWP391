@@ -28,7 +28,8 @@ Dự án là monorepo gồm một React SPA và một Spring Boot modular monoli
 │       ├── mvnw / mvnw.cmd
 │       ├── pom.xml              # Dependencies backend; không dùng npm
 │       └── Dockerfile
-├── scripts/                     # Runner, kiểm tra chính sách và công cụ QA
+├── scripts/                     # Runner local, Maven wrapper, kiểm tra chính sách database
+│   └── qa/                     # Script QA chủ động: verify-*, audit-*, benchmark-*, fixture
 ├── .github/workflows/           # Pipeline: CI + CD Render/Vercel + CD VPS (một workflow)
 ├── docs/
 │   ├── architecture/           # Bản đồ cấu trúc và audit kỹ thuật
@@ -36,7 +37,9 @@ Dự án là monorepo gồm một React SPA và một Spring Boot modular monoli
 │   ├── api-contracts/          # Hợp đồng API
 │   ├── rules/                  # Quy chuẩn bắt buộc
 │   ├── plans/                  # Backlog và kế hoạch triển khai
+│   ├── specs/                  # Đặc tả thiết kế kỹ thuật
 │   └── qa/                     # Báo cáo và minh chứng QA có chủ đích
+├── postman/                    # Collection, environment và globals của Postman
 ├── db/                         # Tham chiếu SQL lịch sử, không dùng triển khai
 ├── .agents/                    # Tooling và quy tắc dành cho coding agent
 ├── compose.yml                 # Ghép web/API trên VPS

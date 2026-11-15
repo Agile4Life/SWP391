@@ -45,7 +45,7 @@ Từ repo root, với `playwright-core` có sẵn qua `NODE_PATH` và Chrome đ�
 ```powershell
 $env:PUBLIC_UI_URL = 'http://127.0.0.1:5179'
 $env:CHROME_PATH = 'C:/Program Files/Google/Chrome/Application/chrome.exe'
-node scripts/verify-member-schedule.cjs
+node scripts/qa/verify-member-schedule.cjs
 ```
 
 Kết quả: [browser-results.json](browser-results.json), [desktop](schedule-1440.png), [mobile](schedule-390.png). Ảnh mobile được chụp sau cuộn tới nút đặt chỗ. Script là công cụ QA, không được import vào ứng dụng.

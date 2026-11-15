@@ -1441,13 +1441,13 @@ it('orders tab reuses the staff table and shows the three real summary numbers',
 ## Task 19: Hoàn thiện giao diện, kiểm chứng trình duyệt, tài liệu
 
 **Files:**
-- Create: `scripts/verify-shop-ui.cjs` (theo khuôn `scripts/verify-court-booking.cjs`/`verify-public-ui.cjs`: Playwright + API giả lập)
+- Create: `scripts/qa/verify-shop-ui.cjs` (theo khuôn `scripts/qa/verify-court-booking.cjs`/`verify-public-ui.cjs`: Playwright + API giả lập)
 - Modify: `DESIGN.md` (mục mới ở đầu, ngày 05/11/2026), `docs/PROJECT_MASTER_GUIDE.md` (mục nghiệp vụ Cửa hàng), `docs/plans/README.md` (link plan này)
 - Run: `graphify update .`
 
 - [x] **Step 1: Script kiểm chứng** — với API giả lập, ở 390×844 (mobile, cảm ứng), 768, 1440, 1920, theme sáng + tối: (1) landing có link “Sản phẩm” và section `#products`, không tràn ngang (`scrollWidth - innerWidth === 0`); (2) `/products` lọc theo chip đổi URL; (3) chi tiết: chọn biến thể, thêm giỏ, badge = 1; (4) drawer → “Thanh toán” khi chưa đăng nhập về `/login?returnTo=%2Fcheckout`; (5) đăng nhập giả lập → `/checkout` còn giỏ, chọn tỉnh/phường, đặt hàng → gọi `/payments/vnpay/checkout` với `productOrderId`; (6) `/member/orders/:id` hiện timeline; (7) `/staff/orders` chuyển trạng thái; (8) `prefers-reduced-motion` không có animation trên badge/drawer; (9) `NutritionFacts` tương phản chữ ≥ 4,5:1 cả hai theme; (10) ô nhập trên mobile có `font-size ≥ 16px`. Chụp ảnh vào `docs/ui-review/shop/` và tự xem lại từng ảnh.
 - [x] **Step 2: DESIGN.md** — thêm đoạn “Cửa hàng ‘Sản phẩm’ (05/11/2026)”: topbar có link route `/products` + nút giỏ icon; section `#products` giữa Gói tập và FAQ; signature nhãn thành phần (giấy sáng, vạch 10/5/1px); giá mỗi lần dùng; không số liệu giả; câu miễn trừ bắt buộc; địa chỉ 2 cấp; sổ địa chỉ ở `/member/orders` (Hồ sơ giữ một card); sidebar Member “Đơn hàng”, Staff “Đơn hàng sản phẩm”, Manager “Sản phẩm & Đơn hàng”, mobile primary nav không đổi.
-- [x] **Step 3: Kiểm tra cuối** — chạy và ghi số liệu thật vào cuối file plan này (mục “Verification evidence”): `cd apps/api && ./mvnw.cmd -q test`; `cd apps/web && npx tsc -b && npx eslint src --max-warnings=0 && npx vitest run && npm run build`; `pwsh scripts/test-database-config.ps1`; `node scripts/verify-shop-ui.cjs`; `node scripts/verify-public-ui.cjs`; `node scripts/verify-public-animation.cjs`. Ghi rõ test nào bị skip (đặc biệt `ProductOrderPostgreSqlTest` nếu thiếu `SCMS_POSTGRES_TEST_URL` — khi đó **chưa kiểm chứng DB thật**).
+- [x] **Step 3: Kiểm tra cuối** — chạy và ghi số liệu thật vào cuối file plan này (mục “Verification evidence”): `cd apps/api && ./mvnw.cmd -q test`; `cd apps/web && npx tsc -b && npx eslint src --max-warnings=0 && npx vitest run && npm run build`; `pwsh scripts/test-database-config.ps1`; `node scripts/qa/verify-shop-ui.cjs`; `node scripts/qa/verify-public-ui.cjs`; `node scripts/qa/verify-public-animation.cjs`. Ghi rõ test nào bị skip (đặc biệt `ProductOrderPostgreSqlTest` nếu thiếu `SCMS_POSTGRES_TEST_URL` — khi đó **chưa kiểm chứng DB thật**).
 - [ ] **Step 4: VNPay Sandbox thật** — theo `docs/VNPAY_SANDBOX.md`, đặt một đơn online, thanh toán thẻ test, xác nhận IPN chuyển đơn sang `paid`, hóa đơn có đủ dòng sản phẩm + phí giao, thông báo tới hội viên và lễ tân. Nếu không có cấu hình sandbox, ghi rõ “chưa kiểm chứng VNPay thật”.
 - [ ] **Step 5: Commit** `docs(shop): design rules, master guide and verification evidence`. Không push/mở PR khi chưa có Jira key và chưa được người dùng cho phép.
 
@@ -1490,8 +1490,8 @@ it('orders tab reuses the staff table and shows the three real summary numbers',
   - Lệnh: `node scripts/generate-vn-admin-units.mjs`
   - Kết quả: **PASS** — Tạo `apps/api/src/main/resources/geo/vn-admin-units.json` với `effectiveFrom = "2025-07-01"`, đúng **34 tỉnh/thành phố** mới và **3.321 phường/xã/đặc khu** không trùng mã.
   - Đã cập nhật `app.shop.pickup-address` trong `apps/api/src/main/resources/application.yml` sang địa chỉ 2 cấp hợp lệ: `"120 Hai Bà Trưng, Phường Sài Gòn, Thành phố Hồ Chí Minh — quầy lễ tân"`.
-- **Playwright Shop UI Verification (`scripts/verify-shop-ui.cjs`):**
-  - Lệnh: `node scripts/verify-shop-ui.cjs`
+- **Playwright Shop UI Verification (`scripts/qa/verify-shop-ui.cjs`):**
+  - Lệnh: `node scripts/qa/verify-shop-ui.cjs`
   - Kết quả: **PASS (11/11 hạng mục, exit code 0)**:
     1. `PASS (1) Landing #products shelf & topbar link across 390/768/1440/1920 and dark/light with 0 overflow`
     2. `PASS (2)-(6), (8)-(9) Catalog filter, detail variant/cart, NutritionFacts contrast, guest redirect, checkout VNPay, member timeline`
@@ -1509,8 +1509,8 @@ it('orders tab reuses the staff table and shows the three real summary numbers',
     - `member-shop-dark-1440.png`, `member-shop-dark-390.png`
     - `staff-orders-dark-1440.png`, `staff-order-dialog-dark-1440.png`
     - `manager-products-dark-1440.png`, `manager-products-light-1440.png`, `manager-product-editor-dark-1440.png`
-- **Playwright Legacy Public Scripts (`scripts/verify-public-ui.cjs` & `scripts/verify-public-animation.cjs`):**
-  - Lệnh: `node scripts/verify-public-ui.cjs && node scripts/verify-public-animation.cjs`
+- **Playwright Legacy Public Scripts (`scripts/qa/verify-public-ui.cjs` & `scripts/qa/verify-public-animation.cjs`):**
+  - Lệnh: `node scripts/qa/verify-public-ui.cjs && node scripts/qa/verify-public-animation.cjs`
   - Kết quả: **PASS 100% (exit code 0)** cho cả hai script.
 - **Graphify Knowledge Graph (`graphify-out/`):**
   - Đã chạy AST rebuild bằng Python 3 cục bộ: **733 nodes, 1.384 edges** trong `graphify-out/graph.json` và `graphify-out/GRAPH_REPORT.md`.

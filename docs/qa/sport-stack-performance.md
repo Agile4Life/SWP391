@@ -27,6 +27,6 @@ Raw evidence: [before](sport-stack-performance-before.json), [after](sport-stack
 
 ## Reproduce
 
-Run a production preview on port 5173, make `playwright-core` available, and point `CHROME_PATH` to Chromium if needed. Then run `node scripts/benchmark-sport-stack.cjs`. Set `STACK_PERF_CHECK=1` to assert the frame budget and `STACK_PERF_OUTPUT` to save JSON. `PUBLIC_UI_URL` overrides the local URL.
+Run a production preview on port 5173, make `playwright-core` available, and point `CHROME_PATH` to Chromium if needed. Then run `node scripts/qa/benchmark-sport-stack.cjs`. Set `STACK_PERF_CHECK=1` to assert the frame budget and `STACK_PERF_OUTPUT` to save JSON. `PUBLIC_UI_URL` overrides the local URL.
 
-Behavior checks: `scripts/verify-sport-stack.cjs`, `scripts/verify-public-ui.cjs`, `scripts/verify-public-animation.cjs`; frontend unit tests, build and lint.
+Behavior checks: `scripts/qa/verify-sport-stack.cjs`, `scripts/qa/verify-public-ui.cjs`, `scripts/qa/verify-public-animation.cjs`; frontend unit tests, build and lint.

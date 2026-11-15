@@ -58,7 +58,7 @@
 - [x] `member-shop-dark-1440.png`, `member-shop-dark-390.png` (giao diện mua sản phẩm trong Portal cho Desktop & Mobile 390×844)
 - [x] Ảnh landing tại 390, 768, 1440 và 1920 cho cả dark và light (`landing-shelf-{dark,light}-{390,768,1440,1920}.png`)
 - [x] Ảnh `checkout` theme sáng (`checkout-light-1440.png`) và mobile 390 (`checkout-dark-390.png`)
-- [x] Cập nhật `scripts/verify-shop-ui.cjs` để chụp các ảnh trên, chạy lại `node scripts/verify-shop-ui.cjs` → **PASS (11/11 checks)**, tự xem lại từng ảnh.
+- [x] Cập nhật `scripts/qa/verify-shop-ui.cjs` để chụp các ảnh trên, chạy lại `node scripts/qa/verify-shop-ui.cjs` → **PASS (11/11 checks)**, tự xem lại từng ảnh.
 
 ### 2.2 Sửa mục “Verification evidence” trong plan gốc
 - [x] Cập nhật danh sách đúng **28 ảnh thật** trong `docs/ui-review/shop/`.
@@ -66,7 +66,7 @@
 - [x] Ghi số test backend thật (**1.183 tests run, 0 failures, 25 skipped**) và frontend thật (**125 test files, 803 tests passed**).
 
 ### 2.3 Script public cũ
-- [x] Cập nhật `scripts/verify-public-ui.cjs` và `scripts/verify-public-animation.cjs` cho khớp với nhãn `"Gói 1 tháng"` hiện tại và chạy lại cả 2 script → **PASS 100%**.
+- [x] Cập nhật `scripts/qa/verify-public-ui.cjs` và `scripts/qa/verify-public-animation.cjs` cho khớp với nhãn `"Gói 1 tháng"` hiện tại và chạy lại cả 2 script → **PASS 100%**.
 
 ### 2.4 VNPay Sandbox thật (Step 4)
 - [ ] Theo `docs/VNPAY_SANDBOX.md`: chạy backend có URL callback công khai, đặt một đơn online, thanh toán thẻ test (cần môi trường mạng + cấu hình VNPay Sandbox thật).

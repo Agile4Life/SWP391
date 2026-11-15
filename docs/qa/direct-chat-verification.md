@@ -6,7 +6,7 @@ Nhánh: `feat/SCRUM-106-direct-chat-realtime`
 ## 1. Phạm vi đã triển khai
 
 - **Hợp đồng API & Đặc tả (`7c5d4da`):**
-  - `docs/api-contracts/openapi-direct-chat.yaml`, `docs/superpowers/specs/2026-10-29-direct-chat-design.md`, `docs/superpowers/plans/2026-10-29-direct-chat.md`.
+  - `docs/api-contracts/openapi-direct-chat.yaml`, `docs/specs/2026-10-29-direct-chat-design.md`, `docs/plans/2026-10-29-direct-chat.md`.
 - **Backend Persistence, Phân quyền & i18n (`f180bfc`, `397756d`):**
   - JPA Code-First (`ChatConversation`, `ChatMessage`) với unique constraint cặp `(member_user_id, staff_user_id)` và khóa chống gửi trùng `(conversation_id, sender_user_id, client_message_id)`.
   - Khóa bi quan (`PESSIMISTIC_WRITE`) trên dòng `User` của Member khi mở hội thoại và trên `ChatConversation` khi gửi tin để chống race condition đa instance.

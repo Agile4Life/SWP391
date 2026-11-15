@@ -29,7 +29,7 @@ Số đo đầy đủ: [trước](before.json), [sau](after.json). Chiều cao c
 
 - 17 file / 69 test shop đạt; build và lint frontend đạt; `git diff --check` đạt.
 - Kiểm tra trình duyệt ở 320/390/768/1024/1440/1920/2560px, cả Light/Dark: khung ảnh vuông, kích thước thẻ gọn, không tràn ngang, chữ nút không tràn và vùng bấm cao tối thiểu 44px.
-- `scripts/verify-shop-ui.cjs`: toàn bộ kiểm tra đạt, gồm landing/catalog, bộ lọc, chọn biến thể/giỏ hàng, redirect đăng nhập, checkout fixture, lịch sử đơn, thao tác xử lý đơn của lễ tân và màn quản lý sản phẩm. Unit test shop xác minh thêm mở mua nhanh/thêm giỏ trong portal. Không kết nối thanh toán hay tạo đơn hàng thật.
+- `scripts/qa/verify-shop-ui.cjs`: toàn bộ kiểm tra đạt, gồm landing/catalog, bộ lọc, chọn biến thể/giỏ hàng, redirect đăng nhập, checkout fixture, lịch sử đơn, thao tác xử lý đơn của lễ tân và màn quản lý sản phẩm. Unit test shop xác minh thêm mở mua nhanh/thêm giỏ trong portal. Không kết nối thanh toán hay tạo đơn hàng thật.
 
 ## Ảnh
 

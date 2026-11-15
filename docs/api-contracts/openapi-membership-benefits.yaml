@@ -3,7 +3,7 @@ info:
   title: Membership benefits, courses and holds
   version: 2026-11-09
   description: |
-    Contract changes from docs/superpowers/specs/2026-11-09-membership-benefits-design.md.
+    Contract changes from docs/specs/2026-11-09-membership-benefits-design.md.
     Sections are added per delivery part (P1 quotas and courses, P2 absences and holds, P3 tier services).
 servers:
   - url: /api/v1

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Java 21, Spring Boot 3, Hibernate Code-First, Supabase PostgreSQL, React 19, TypeScript, Tailwind CSS / SÖL Fitness charcoal-salmon styles.
 
-**Spec:** [docs/superpowers/specs/2026-11-09-recurring-courses-design.md](file:///c:/Users/gkgam/OneDrive/Tài%20liệu/GitHub/SWP391_GROUP1/docs/superpowers/specs/2026-11-09-recurring-courses-design.md)
+**Spec:** [docs/specs/2026-11-09-recurring-courses-design.md](file:///c:/Users/gkgam/OneDrive/Tài%20liệu/GitHub/SWP391_GROUP1/docs/specs/2026-11-09-recurring-courses-design.md)
 
 ## Global Constraints
 

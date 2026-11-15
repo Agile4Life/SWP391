@@ -35,7 +35,7 @@ Với Vite local, Chrome và playwright-core có sẵn qua NODE_PATH:
 ```powershell
 $env:PUBLIC_UI_URL = 'http://localhost:5173'
 $env:SCHEDULE_QA_OUTPUT = "$env:TEMP/member-schedule-browser-verification"
-node scripts/verify-member-schedule.cjs
+node scripts/qa/verify-member-schedule.cjs
 ```
 
 Output chạy lại để ngoài repository, tránh commit screenshot sinh lại hoặc trùng. Script QA không được import vào ứng dụng.

@@ -95,7 +95,7 @@ Browser dùng bản production build trên local preview, chặn toàn bộ API 
 
 ## Chạy lại
 
-Browser: chạy preview ở port 4173, cung cấp `playwright-core` qua `NODE_PATH` và Chrome qua `CHROME_PATH` nếu cần; chạy `node scripts/audit-role-flows.cjs`. Script chỉ dùng tài khoản/dữ liệu fixture, ghi `browser-results.json` và ảnh minh chứng trong thư mục này. Exit 0 nghĩa probe đã chạy xong, không có nghĩa các finding đã được sửa.
+Browser: chạy preview ở port 4173, cung cấp `playwright-core` qua `NODE_PATH` và Chrome qua `CHROME_PATH` nếu cần; chạy `node scripts/qa/audit-role-flows.cjs`. Script chỉ dùng tài khoản/dữ liệu fixture, ghi `browser-results.json` và ảnh minh chứng trong thư mục này. Exit 0 nghĩa probe đã chạy xong, không có nghĩa các finding đã được sửa.
 
 Java: file `RoleFlowPolicyProbeTest.java` được giữ trong thư mục QA, không nằm trong test suite thường xuyên vì nó mô tả hành vi lỗi hiện tại. Để chạy lại, copy file vào `apps/api/src/test/java/com/swp391/scms/security/`, chạy `mvnw.cmd -Dtest=RoleFlowPolicyProbeTest test` tại `apps/api`, rồi bỏ bản copy. File dùng cùng package và dependency test sẵn có; không dùng database. `policy-probe-results.json` ghi kết quả của lượt audit.
 

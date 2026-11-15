@@ -89,4 +89,4 @@ Not verified E2E: browser-to-real-API persistence, deployed schema/error logs, a
 - `apps/api/src/main/java/com/swp391/scms/coaching/service/CoachBookingService.java`: future-only UPCOMING and DTO lock mapping; mark/unmark/audit implementation unchanged.
 - `apps/api/src/test/java/com/swp391/scms/coaching/CoachBookingServiceTest.java`, `PtAttendanceSecurityTest.java`, `PtAttendanceTransactionDiagnosticTest.java`: time/filter/state, security and blocked-defect diagnostics.
 - `docs/api-contracts/openapi-membership-benefits.yaml`, `docs/specs/2026-11-10-membership-and-attendance-business-rules.md`, `DESIGN.md`: contract and current UI/business rules.
-- This report and `docs/superpowers/plans/2026-11-13-pt-attendance-fix.md`.
+- This report and `docs/plans/2026-11-13-pt-attendance-fix.md`.

@@ -49,7 +49,7 @@ Commit: `ef9c246`.
 
 FCP sau thay đổi có thể là loading state, nên không dùng FCP để khẳng định mức cải thiện thời gian form xuất hiện. Phép đo dùng production preview local, cache lạnh, chặn request ngoài origin và không gọi API thật. Dữ liệu: [trước](2026-10-29-login-before-split.json), [sau](2026-10-29-login-after-split.json).
 
-Công cụ chạy lại: `scripts/audit-load-performance.cjs` (ngân sách startup JS dưới 650 KB), `scripts/verify-lazy-routes.cjs` (first-control/offline/loading/error/retry), `scripts/verify-portal-pwa.cjs` (PWA/QR/role). Cần production preview tại port 4173, `playwright-core` trong `NODE_PATH`; có thể đặt `CHROME_PATH`.
+Công cụ chạy lại: `scripts/qa/audit-load-performance.cjs` (ngân sách startup JS dưới 650 KB), `scripts/qa/verify-lazy-routes.cjs` (first-control/offline/loading/error/retry), `scripts/qa/verify-portal-pwa.cjs` (PWA/QR/role). Cần production preview tại port 4173, `playwright-core` trong `NODE_PATH`; có thể đặt `CHROME_PATH`.
 
 Hoàn tất kiểm chứng sau nửa đêm, **30/10/2026**; tên artifact giữ ngày bắt đầu kiểm tra 29/10.
 

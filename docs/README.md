@@ -61,4 +61,5 @@ docs/
 
 - **Quy ước cho Contributor & AI Agent:** [`../AGENTS.md`](../AGENTS.md) — Bất biến dữ liệu, trigger và phạm vi MVP.
 - **Schema triển khai:** JPA Entity trong `apps/api/src/main/java/com/swp391/scms/`; [`../db/databaseschema.sql`](../db/databaseschema.sql) chỉ là tham chiếu lịch sử, không dùng triển khai.
-- **Bộ công cụ khởi chạy hệ thống:** [`../scripts/`](../scripts/README.md) — Scripts run-local, stop-local, init-db.
+- **Bộ công cụ khởi chạy hệ thống:** [`../scripts/`](../scripts/README.md) — Scripts run-local, stop-local, init-db; script QA nằm trong `../scripts/qa/`.
+- **Postman:** [`../postman/`](../postman/) — collection, environment và globals.

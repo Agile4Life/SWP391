@@ -24,7 +24,7 @@ Pending-registration storage chỉ gồm username, email, createdAt và resendAt
 - **35 Playwright case đạt, 1 case API thật SKIP**, không có ISSUE/ERROR; Playwright không ghi nhận sự kiện pageerror trong các case giả lập. [Kết quả chi tiết](results.json).
 - Case API live bị skip vì web/API local đang chạy trước đó đã dừng giữa phiên. Đã khởi động lại riêng frontend; dùng snapshot catalog thật đã đọc ở audit ban đầu. Không khởi động backend để tránh tác động DB ngoài phạm vi chỉ đọc đã thống nhất.
 - Callback Google được kiểm bằng handoff/response giả lập, không đăng nhập provider thật. Thanh toán, register, OTP và mọi thao tác ghi đều bị intercept; chưa thử SMTP hoặc thu tiền/DB thật end-to-end.
-- Regression bổ sung cho shared Modal trên 4 route coach/audit, hai theme và mobile/desktop: đạt (`scripts/verify-coach-theme.cjs`).
+- Regression bổ sung cho shared Modal trên 4 route coach/audit, hai theme và mobile/desktop: đạt (`scripts/qa/verify-coach-theme.cjs`).
 - Review độc lập không còn blocker; các phát hiện bổ sung về email sai và focus sau đóng đã sửa và có browser check.
 - Khi dừng Vite, log dev có thông báo `ResizeObserver loop completed with undelivered notifications` từ các lần chạy responsive. Các assertion vẫn đạt và pageerror không ghi nhận lỗi; nguồn thông báo này chưa được điều tra trong phạm vi 8 nhóm lỗi mua gói.
 
@@ -38,14 +38,14 @@ Pending-registration storage chỉ gồm username, email, createdAt và resendAt
 
 ## Chạy lại
 
-Script: `scripts/audit-membership-purchase.cjs`. Cần frontend local, Chrome và playwright-core trong NODE_PATH.
+Script: `scripts/qa/audit-membership-purchase.cjs`. Cần frontend local, Chrome và playwright-core trong NODE_PATH.
 
 ```powershell
 $env:CHROME_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
 $env:AUDIT_CATALOG_SNAPSHOT = 'docs/qa/purchase-ux-2026-10-26/results.json'
 $env:AUDIT_OUTPUT = 'docs/qa/purchase-ux-2026-10-26/after'
 $env:AUDIT_STRICT = '1'
-node scripts/audit-membership-purchase.cjs
+node scripts/qa/audit-membership-purchase.cjs
 ```
 
 Đặt NODE_PATH tới bản playwright-core đã cài trên máy. Bỏ AUDIT_CATALOG_SNAPSHOT để kiểm lại catalog/API thật khi dịch vụ sẵn sàng. Có thể dùng AUDIT_CASE_FILTER để chọn case. Strict mode trả exit code khác 0 khi có ISSUE/ERROR; SKIP được ghi riêng.

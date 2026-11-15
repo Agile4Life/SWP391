@@ -25,7 +25,7 @@ Mở rộng SCRUM-75 (An), SCRUM-83 (Khoa), SCRUM-87 (Thịnh): triển khai Por
 - **Frontend Lint & Production Build (`npm --prefix apps/web run lint`, `npm --prefix apps/web run build`):** ESLint `--max-warnings=0` **PASS**; TypeScript + Vite build **PASS** (sinh `dist/sw.js` và worker giải mã QR).
 - **Backend Unit & WebMvc Tests (`apps/api/mvnw.cmd test`):** `678` tests run, `0` failures, `0` errors, `20` skipped — **BUILD SUCCESS** (bao gồm `GateQrServiceTest`, `CenterCheckinAccessTest`, `CenterCheckinServiceTest`, `DatabasePolicyTest`, `DatabaseProfilesTest`).
 - **Chính sách cấu hình Database (`scripts/test-database-config.ps1`):** `10` cases **PASS**.
-- **Kiểm chứng Trình duyệt Production Preview (`scripts/verify-portal-pwa.cjs`):** **PASS** với `0` lỗi runtime:
+- **Kiểm chứng Trình duyệt Production Preview (`scripts/qa/verify-portal-pwa.cjs`):** **PASS** với `0` lỗi runtime:
   - Mở `/portal` cho cả 4 role (`MEMBER`, `RECEPTIONIST`, `COACH`, `CENTER_MANAGER`) và khách chưa đăng nhập (`/login`).
   - Responsive không tràn ngang, kích thước vùng chạm `>= 44px`, input `>= 16px` tại `375px`, `390px`, `430px` (mobile) và `844px`, `1440px`, `1920px`, `2560px` (desktop, giữ nguyên lưới 4 cột), cả hai chế độ sáng/tối.
   - Màn hình lễ tân `/staff/check-in` hiển thị mã QR cổng rõ nét trên cả desktop và mobile.
