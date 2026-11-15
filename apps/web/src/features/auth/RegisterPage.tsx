@@ -187,7 +187,7 @@ export function RegisterPage() {
         {debugOtp && <div className="fit-debug-otp">{sourceText("Mã OTP thử nghiệm (debug): ")}<strong>{debugOtp}</strong></div>}
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="otp-code">{sourceText("Nhập mã 6 chữ số")}</label>
-          <input id="otp-code" className="portal-input fit-otp-input" type="text" inputMode="numeric" maxLength={6} autoComplete="one-time-code" placeholder="000000" autoFocus required value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} />
+          <input id="otp-code" className="portal-input fit-otp-input" type="text" inputMode="numeric" autoComplete="one-time-code" placeholder="000000" autoFocus required value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} />
         </div>
         <button className="luxury-login-submit-btn" type="submit" disabled={busy || success}>
           {success ? <><StatusMark size={22} /><span>{sourceText("ĐÃ KÍCH HOẠT")}</span></> : <><span>{busy ? sourceText('ĐANG XÁC THỰC...') : sourceText('XÁC THỰC & HOÀN TẤT')}</span><span className="submit-arrow" aria-hidden="true">→</span></>}

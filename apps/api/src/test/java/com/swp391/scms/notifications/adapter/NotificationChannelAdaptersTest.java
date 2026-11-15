@@ -196,7 +196,7 @@ class NotificationChannelAdaptersTest {
                 .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.html")
                         .value(org.hamcrest.Matchers.containsString("Nguyễn Văn A")))
                 .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath("$.html")
-                        .value(org.hamcrest.Matchers.containsString("VÍ ĐIỆN TỬ SÖL")))
+                        .value(org.hamcrest.Matchers.containsString("Xem giao dịch")))
                 .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
                         "{\"id\":\"email_wallet_1\"}", org.springframework.http.MediaType.APPLICATION_JSON));
 

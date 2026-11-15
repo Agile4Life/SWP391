@@ -732,11 +732,11 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               id="reset-otp-input"
               type="text"
               inputMode="numeric"
-              maxLength={6}
+              autoComplete="one-time-code"
               className="portal-input"
               placeholder="000000"
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               required
             />
           </div>
@@ -835,7 +835,6 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
               className="portal-input"
               placeholder="000000"
               style={{
@@ -846,7 +845,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 padding: '12px',
               }}
               value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               autoFocus
               required
             />

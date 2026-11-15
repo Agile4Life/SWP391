@@ -24,6 +24,9 @@ public class NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
+    /** Chỉ các loại này được gửi email; còn lại chỉ hiện trong app (tránh spam hộp thư). */
+    private static final Set<String> EMAIL_TYPES = Set.of("password_changed", "payment", "schedule_change", "package_expiry");
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final NotificationMapper notificationMapper;
@@ -118,10 +121,15 @@ public class NotificationService {
         notification.setActionPath(actionPath);
         notificationRepository.save(notification);
         if (notificationDispatcher != null) {
+            // password_changed không nằm trong ALLOWED_TYPES nên bị chuẩn hóa thành "system": xét cả kiểu gốc.
+            boolean important = EMAIL_TYPES.contains(notification.getType()) || (type != null && EMAIL_TYPES.contains(type));
+            Set<NotificationChannel> channels = important
+                    ? Set.of(NotificationChannel.EMAIL, NotificationChannel.PUSH)
+                    : Set.of(NotificationChannel.PUSH);
             Runnable dispatch = () -> {
                 try {
                     notificationDispatcher.dispatch(userId, title, message, type,
-                            relatedEntityType, relatedEntityId, Set.of(NotificationChannel.EMAIL, NotificationChannel.PUSH));
+                            relatedEntityType, relatedEntityId, channels);
                 } catch (RuntimeException e) {
                     log.warn("Could not submit external notification for user {}", userId, e);
                 }

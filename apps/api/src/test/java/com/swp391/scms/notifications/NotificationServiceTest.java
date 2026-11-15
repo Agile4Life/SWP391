@@ -43,8 +43,26 @@ class NotificationServiceTest {
         assertThat(saved.getValue().getMessage()).isEqualTo("You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).");
         verify(dispatcher).dispatch(101L, "Class session booked",
                 "You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).", "booking", null, null,
-                java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.EMAIL,
-                        com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+                java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+    }
+
+    @Test
+    void importantTypesAlsoGoByEmail() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(new User()));
+        var emailAndPush = java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.EMAIL,
+                com.swp391.scms.notifications.port.NotificationChannel.PUSH);
+
+        service.send(101L, "T", "M", "payment", "wallet", 1L);
+        service.send(101L, "T", "M", "password_changed", "user", 1L);
+        service.send(101L, "T", "M", "schedule_change", "class_session", 1L);
+        service.send(101L, "T", "M", "package_expiry", "membership_subscription", 1L);
+
+        verify(dispatcher).dispatch(101L, "T", "M", "payment", "wallet", 1L, emailAndPush);
+        verify(dispatcher).dispatch(101L, "T", "M", "password_changed", "user", 1L, emailAndPush);
+        verify(dispatcher).dispatch(101L, "T", "M", "schedule_change", "class_session", 1L, emailAndPush);
+        verify(dispatcher).dispatch(101L, "T", "M", "package_expiry", "membership_subscription", 1L, emailAndPush);
     }
 
     @Test
@@ -89,8 +107,7 @@ class NotificationServiceTest {
             org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
                     .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);
             verify(dispatcher).dispatch(101L, "Title", "Message", "system", null, null,
-                    java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.EMAIL,
-                                     com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+                    java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.PUSH));
         } finally {
             org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
         }
