@@ -39,8 +39,10 @@ struct ManagerTabs: View {
                 .tag(1)
             NavigationStack { TodaySessionsView(title: t("Lớp hôm nay", "Today's classes"), coachOnly: false) }.tabItem { Label(t("Lớp học", "Classes"), systemImage: "calendar") }
                 .tag(2)
-            NavigationStack { StaffMoreView() }.tabItem { Label(t("Thêm", "More"), systemImage: "ellipsis.circle") }
+            NavigationStack { AdminHubView() }.tabItem { Label(t("Quản trị", "Admin"), systemImage: "gearshape.2") }
                 .tag(3)
+            NavigationStack { StaffMoreView() }.tabItem { Label(t("Thêm", "More"), systemImage: "ellipsis.circle") }
+                .tag(4)
         }
     }
 }
