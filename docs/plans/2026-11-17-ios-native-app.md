@@ -85,6 +85,18 @@ Chỉ làm khi PO yêu cầu. Cần backend.
 - [ ] App lắng nghe `appUrlOpen` → điều hướng WebView tới `/login#google_login_code=...` để `googleRedeemHandoff` chạy như web.
 - [ ] Cập nhật OpenAPI `docs/api-contracts/`, i18n vi/en nếu có message mới, test `GoogleOAuthRedirectService`.
 
+## Milestone 4 — App SwiftUI native (`apps/ios`)
+
+Theo yêu cầu "viết lại bằng SwiftUI": app native riêng, gọi thẳng `/api/v1` (không WebView). Chi tiết và phạm vi ở `apps/ios/README.md`. Bản Capacitor ở M1–M2 giữ lại làm phương án dự phòng.
+
+- [x] Project Xcode (iOS 17+, folder đồng bộ), API client, AuthStore (Keychain), theme, i18n vi/en.
+- [x] Auth: đăng nhập, đăng ký + OTP, quên mật khẩu.
+- [x] Member: tổng quan, lớp học, thẻ QR động, check-in, gói tập + thanh toán, ví, hoá đơn, tiến độ, thông báo, hồ sơ.
+- [x] Staff / Coach / Manager: lễ tân, check-in quầy, điểm danh, báo cáo, duyệt huỷ gói.
+- [x] Unit test (`SOLTests`) và chế độ demo Debug để kiểm giao diện.
+- [ ] Kiểm với tài khoản thật trên VPS (chưa có tài khoản test) — shape JSON hiện lấy từ interface TypeScript của web.
+- [ ] Phần còn lại so với web: Google OAuth, chat realtime, shop, đặt sân, PT 1:1, KYC, nâng cấp gói.
+
 ## Chạy trên iPhone thật
 
 Xcode → Signing & Capabilities → Team = Apple ID cá nhân (miễn phí, app hết hạn sau 7 ngày) hoặc tài khoản Apple Developer của nhóm. Dùng để kiểm camera QR và cảm giác chạm thật.
