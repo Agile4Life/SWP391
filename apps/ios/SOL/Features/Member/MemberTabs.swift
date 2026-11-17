@@ -51,6 +51,7 @@ struct MemberMoreView: View {
                 MoreLink(icon: "sparkles", title: t("Trợ lý AI", "AI assistant")) { AIChatView() }
                 MoreLink(icon: "lifepreserver", title: t("Hỗ trợ", "Support")) { SupportView() }
                 MoreLink(icon: "person.badge.shield.checkmark", title: t("Xác minh danh tính", "Identity verification")) { KycView() }
+                MoreLink(icon: "cube.transparent", title: t("Khám phá 3D", "Explore 3D")) { ExploreView() }
                 MoreLink(icon: "sportscourt", title: t("Đặt sân", "Courts")) { CourtsView() }
                 MoreLink(icon: "bag", title: t("Cửa hàng", "Shop")) { ShopView() }
                 MoreLink(icon: "checkmark.seal", title: t("Check-in & chuỗi tập", "Check-in & streak")) { CheckInView() }

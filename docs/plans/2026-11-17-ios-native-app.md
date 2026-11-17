@@ -95,7 +95,8 @@ Theo yêu cầu "viết lại bằng SwiftUI": app native riêng, gọi thẳng 
 - [x] Staff / Coach / Manager: lễ tân, check-in quầy, điểm danh, báo cáo, duyệt huỷ gói.
 - [x] Unit test (`SOLTests`) và chế độ demo Debug để kiểm giao diện.
 - [ ] Kiểm với tài khoản thật trên VPS (chưa có tài khoản test) — shape JSON hiện lấy từ interface TypeScript của web.
-- [ ] Phần còn lại so với web: Google OAuth, chat realtime, shop, đặt sân, PT 1:1, KYC, nâng cấp gói.
+- [x] Bổ sung: Google OAuth (backend `client=ios` + `solapp://login`), chat trực tiếp/hỗ trợ/AI, shop đặt mua, đặt sân, PT 1:1, KYC, nâng cấp gói, quản trị, Explore 3D rút gọn bằng SceneKit.
+- [ ] Deploy backend mới lên VPS rồi thử Google sign-in end-to-end; thử thanh toán VNPay và camera QR trên thiết bị thật.
 
 ## Chạy trên iPhone thật
 
