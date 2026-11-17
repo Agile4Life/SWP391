@@ -60,6 +60,8 @@ struct LoginView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var lockUntil: Date?
+    @State private var googleOtpEmail: String?
+    @State private var googleFlow = GoogleSignIn()
 
     var body: some View {
         ScrollView {
@@ -76,6 +78,8 @@ struct LoginView: View {
                     Button { Task { await submit() } } label: {
                         if busy { ProgressView() } else { Text(t("ĐĂNG NHẬP", "SIGN IN")) }
                     }.buttonStyle(.solPrimary).disabled(busy || identifier.isEmpty || password.isEmpty)
+                    HStack { Rectangle().fill(Theme.border).frame(height: 1); Text(t("HOẶC", "OR")).font(.caption).foregroundStyle(Theme.textMuted); Rectangle().fill(Theme.border).frame(height: 1) }
+                    Button { Task { await google() } } label: { Label(t("Đăng nhập bằng Google", "Sign in with Google"), systemImage: "g.circle") }.buttonStyle(.solSecondary).disabled(busy)
                     HStack(spacing: 4) {
                         Text(t("Chưa có tài khoản?", "No account yet?")).foregroundStyle(Theme.textMuted)
                         Button(t("Đăng ký hội viên", "Become a member"), action: onRegister).foregroundStyle(Theme.accentText).fontWeight(.semibold)
@@ -85,6 +89,20 @@ struct LoginView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .screenBackground()
+        .sheet(item: Binding(get: { googleOtpEmail.map { IdentifiableString(value: $0) } }, set: { if $0 == nil { googleOtpEmail = nil } })) { item in
+            GoogleOtpSheet(email: item.value) { res in do { try auth.apply(res) } catch { self.error = error.localizedDescription } }
+        }
+    }
+
+    private func google() async {
+        busy = true; error = nil
+        defer { busy = false }
+        switch await googleFlow.start() {
+        case .signedIn(let res): do { try auth.apply(res) } catch { self.error = error.localizedDescription }
+        case .needsOtp(let email): googleOtpEmail = email
+        case .failed(let msg): error = msg
+        case .cancelled: break
+        }
     }
 
     private func submit() async {
@@ -265,3 +283,5 @@ struct ForgotPasswordView: View {
         catch { self.error = error.localizedDescription }
     }
 }
+
+struct IdentifiableString: Identifiable { let value: String; var id: String { value } }
