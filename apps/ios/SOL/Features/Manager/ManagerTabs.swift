@@ -71,6 +71,7 @@ struct ReportsView: View {
                         ForEach(r.packages) { p in LabeledRow(label: p.packageName, value: Fmt.money(p.revenue)) }
                         if r.packages.isEmpty { Text(t("Chưa có dữ liệu", "No data")).foregroundStyle(Theme.textMuted) }
                     }.card()
+                    ShareLink(item: csv(r), preview: SharePreview("revenue-\(Fmt.todayString()).csv")) { Label(t("Xuất CSV doanh thu", "Export revenue CSV"), systemImage: "square.and.arrow.up") }.buttonStyle(.solSecondary)
                     SectionTitle(t("Giao dịch gần đây", "Recent transactions"))
                     ForEach(r.recent.prefix(15)) { tx in
                         HStack { VStack(alignment: .leading, spacing: 3) { Text(tx.memberName).font(.subheadline.weight(.semibold)); Text((tx.packageName ?? "") + " · " + Fmt.dayTime(tx.paidAt)).font(.caption).foregroundStyle(Theme.textMuted) }
@@ -82,6 +83,17 @@ struct ReportsView: View {
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Báo cáo doanh thu", "Revenue reports")).navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+    }
+}
+
+extension ReportsView {
+    /// CSV tạo ngay trên máy từ dữ liệu đang hiển thị (không gọi thêm API).
+    func csv(_ r: ReportData) -> String {
+        func esc(_ s: String) -> String { s.contains(",") || s.contains("\"") ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" : s }
+        var out = "date,revenue,transactions\n" + r.daily.map { "\($0.date),\(Int($0.revenue)),\($0.transactionCount ?? 0)" }.joined(separator: "\n")
+        out += "\n\npackage,revenue,subscriptions\n" + r.packages.map { "\(esc($0.packageName)),\(Int($0.revenue)),\($0.subscriptionCount ?? 0)" }.joined(separator: "\n")
+        out += "\n\ninvoice,member,package,amount,paid_at\n" + r.recent.map { "\(esc($0.invoiceNumber ?? "")),\(esc($0.memberName)),\(esc($0.packageName ?? "")),\(Int($0.amount)),\($0.paidAt)" }.joined(separator: "\n")
+        return out
     }
 }
 

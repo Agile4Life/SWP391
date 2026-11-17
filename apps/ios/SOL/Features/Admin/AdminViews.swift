@@ -57,7 +57,10 @@ struct AdminHubView: View {
             VStack(spacing: 12) {
                 MoreLink(icon: "person.2", title: t("Người dùng", "Users")) { UsersAdminView() }
                 MoreLink(icon: "person.badge.key", title: t("Tài khoản nhân viên", "Staff accounts")) { StaffAccountsView() }
+                MoreLink(icon: "figure.strengthtraining.traditional", title: t("Phân công huấn luyện viên", "Coach assignments")) { CoachAssignmentsView() }
                 MoreLink(icon: "creditcard", title: t("Gói tập", "Membership plans")) { PackagesAdminView() }
+                MoreLink(icon: "bag", title: t("Sản phẩm", "Products")) { ProductsAdminView() }
+                if auth.user?.role == .admin { MoreLink(icon: "lock.shield", title: t("Phân quyền vai trò", "Role permissions")) { RolePermissionsView() } }
                 MoreLink(icon: "square.grid.2x2", title: t("Phòng & môn tập", "Rooms & disciplines")) { RoomsAdminView() }
                 MoreLink(icon: "dumbbell", title: t("Thiết bị", "Equipment")) { EquipmentAdminView() }
                 if auth.user?.role == .admin { MoreLink(icon: "list.bullet.clipboard", title: t("Nhật ký hệ thống", "Audit logs")) { AuditLogsView() } }
@@ -329,5 +332,122 @@ struct AuditLogsView: View {
         }
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Nhật ký hệ thống", "Audit logs")).navigationBarTitleDisplayMode(.inline).screenBackground()
+    }
+}
+
+// MARK: - Role permissions
+
+struct PermissionDto: Decodable, Identifiable, Hashable { let id: Int; let code: String; let name: String? }
+
+struct RolePermissionsView: View {
+    @State private var roles: [RoleDto] = []
+    @State private var perms: [PermissionDto] = []
+    @State private var granted: [Int: Set<Int>] = [:]
+    @State private var role: RoleDto?
+    @State private var loaded = false
+    @State private var error: String?
+
+    private let core = ["MEMBER", "COACH", "RECEPTIONIST", "CENTER_MANAGER"]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                if !loaded { ProgressView().frame(minHeight: 160) }
+                ErrorBanner(message: error)
+                if loaded {
+                    Picker("", selection: $role) { ForEach(roles, id: \.id) { Text(roleName($0.code)).tag(Optional($0)) } }.pickerStyle(.menu)
+                    if let role {
+                        ForEach(perms) { p in
+                            Toggle(isOn: Binding(get: { granted[role.id]?.contains(p.id) == true }, set: { on in Task { await toggle(role, p, on: on) } })) {
+                                VStack(alignment: .leading, spacing: 2) { Text(p.name ?? p.code).foregroundStyle(Theme.text); Text(p.code).font(.caption).foregroundStyle(Theme.textMuted) }
+                            }.tint(Theme.accent).card()
+                        }
+                    }
+                }
+            }.padding(Metrics.pad)
+        }
+        .navigationTitle(t("Phân quyền vai trò", "Role permissions")).navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+        .task { await load() }
+    }
+
+    private func load() async {
+        do {
+            let all = try await AdminAPI.roles()
+            roles = all.filter { core.contains($0.code) }
+            perms = try await APIClient.shared.get("/roles/permissions")
+            for r in roles { let list: [PermissionDto] = try await APIClient.shared.get("/roles/\(r.id)/permissions"); granted[r.id] = Set(list.map(\.id)) }
+            role = roles.first; loaded = true
+        } catch { self.error = error.localizedDescription; loaded = true }
+    }
+
+    private func toggle(_ r: RoleDto, _ p: PermissionDto, on: Bool) async {
+        error = nil
+        do {
+            let _: Empty? = on ? try await APIClient.shared.put("/roles/\(r.id)/permissions/\(p.id)") : try await APIClient.shared.delete("/roles/\(r.id)/permissions/\(p.id)")
+            if on { granted[r.id, default: []].insert(p.id) } else { granted[r.id]?.remove(p.id) }
+        } catch { self.error = error.localizedDescription }
+    }
+}
+extension RoleDto: Hashable {}
+
+// MARK: - Coach assignments
+
+struct AssignedStudent: Decodable, Identifiable, Hashable {
+    let memberId: Int; let membershipCode: String?; let fullName: String
+    let assignmentType: String; let assignmentTypeLabel: String?; let detail: String?; let status: String?; let referenceId: Int
+    var id: String { "\(memberId)-\(assignmentType)-\(referenceId)" }
+}
+struct CoachOverview: Decodable, Identifiable, Hashable {
+    let coachId: Int; let coachName: String; let specialization: String?; let employmentStatus: String?
+    let totalStudentsCount: Int; let students: [AssignedStudent]
+    var id: Int { coachId }
+}
+struct CoachAssignmentData: Decodable { let coaches: [CoachOverview] }
+private struct ReassignBody: Encodable { let memberId: Int; let fromCoachId: Int; let toCoachId: Int; let referenceId: Int; let assignmentType: String; let reason: String? }
+
+struct CoachAssignmentsView: View {
+    @State private var loader = Loader { try await APIClient.shared.get("/manager/coach-assignments") as CoachAssignmentData }
+    @State private var moving: (AssignedStudent, CoachOverview)?
+    @State private var error: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                ErrorBanner(message: error)
+                LoadView(loader) { d in
+                    if d.coaches.isEmpty { EmptyState(icon: "person.2", title: t("Chưa có huấn luyện viên", "No coaches")).card() }
+                    ForEach(d.coaches) { c in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack { Avatar(name: c.coachName, size: 38); VStack(alignment: .leading) { Text(c.coachName).font(.headline).foregroundStyle(Theme.text); Text(c.specialization ?? "").font(.caption).foregroundStyle(Theme.textMuted) }
+                                Spacer(); Pill(text: t("\(c.totalStudentsCount) học viên", "\(c.totalStudentsCount) members"), tone: .accent) }
+                            ForEach(c.students) { s in
+                                Divider()
+                                HStack { VStack(alignment: .leading, spacing: 2) { Text(s.fullName).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text); Text((s.assignmentTypeLabel ?? s.assignmentType) + (s.detail.map { " · \($0)" } ?? "")).font(.caption).foregroundStyle(Theme.textMuted) }
+                                    Spacer()
+                                    if s.assignmentType != "CLASS" { Button(t("Chuyển", "Move")) { moving = (s, c) }.font(.footnote.weight(.semibold)).foregroundStyle(Theme.accentText) }
+                                    if s.assignmentType == "TRAINING_PLAN" { Button(role: .destructive) { Task { await remove(s) } } label: { Image(systemName: "trash") }.foregroundStyle(Theme.danger) } }
+                            }
+                        }.card()
+                    }
+                }
+            }.padding(Metrics.pad)
+        }
+        .refreshable { await loader.load(silent: true) }
+        .navigationTitle(t("Phân công huấn luyện viên", "Coach assignments")).navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+        .confirmationDialog(t("Chuyển học viên sang huấn luyện viên", "Move member to coach"), isPresented: Binding(get: { moving != nil }, set: { if !$0 { moving = nil } }), titleVisibility: .visible) {
+            if let (s, from) = moving { ForEach((loader.value?.coaches ?? []).filter { $0.coachId != from.coachId }) { c in Button(c.coachName) { Task { await move(s, from: from, to: c) } } } }
+        }
+    }
+
+    private func move(_ s: AssignedStudent, from: CoachOverview, to: CoachOverview) async {
+        error = nil
+        do { let _: Empty? = try await APIClient.shared.post("/manager/coach-assignments/reassign", body: ReassignBody(memberId: s.memberId, fromCoachId: from.coachId, toCoachId: to.coachId, referenceId: s.referenceId, assignmentType: s.assignmentType, reason: nil)); await loader.load(silent: true) }
+        catch { self.error = error.localizedDescription }
+    }
+    private func remove(_ s: AssignedStudent) async {
+        error = nil
+        do { let _: Empty? = try await APIClient.shared.delete("/manager/coach-assignments/\(s.referenceId)"); await loader.load(silent: true) } catch { self.error = error.localizedDescription }
     }
 }
