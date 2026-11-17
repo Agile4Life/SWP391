@@ -1,21 +1,27 @@
 import SwiftUI
 
 struct MemberTabs: View {
+    @State private var tab = Demo.initialTab
     @Environment(AuthStore.self) private var auth
     @State private var unread = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             NavigationStack { DashboardView() }
                 .tabItem { Label(t("Tổng quan", "Home"), systemImage: "square.grid.2x2") }
+                .tag(0)
             NavigationStack { ClassesView() }
                 .tabItem { Label(t("Lớp học", "Classes"), systemImage: "calendar") }
+                .tag(1)
             NavigationStack { MemberCardView() }
                 .tabItem { Label(t("Thẻ QR", "QR card"), systemImage: "qrcode") }
+                .tag(2)
             NavigationStack { PackagesView() }
                 .tabItem { Label(t("Gói tập", "Plans"), systemImage: "creditcard") }
+                .tag(3)
             NavigationStack { MemberMoreView(unread: $unread) }
                 .tabItem { Label(t("Thêm", "More"), systemImage: "ellipsis.circle") }
+                .tag(4)
                 .badge(unread)
         }
         .task { unread = (try? await MemberAPI.unreadCount()) ?? 0 }

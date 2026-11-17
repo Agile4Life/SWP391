@@ -1,12 +1,17 @@
 import SwiftUI
 
 struct StaffTabs: View {
+    @State private var tab = Demo.initialTab
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             NavigationStack { ReceptionView() }.tabItem { Label(t("Lễ tân", "Reception"), systemImage: "person.badge.clock") }
+                .tag(0)
             NavigationStack { StaffCheckInView() }.tabItem { Label(t("Check-in", "Check-in"), systemImage: "qrcode.viewfinder") }
+                .tag(1)
             NavigationStack { TodaySessionsView(title: t("Lớp hôm nay", "Today's classes"), coachOnly: false) }.tabItem { Label(t("Lớp học", "Classes"), systemImage: "calendar") }
+                .tag(2)
             NavigationStack { StaffMoreView() }.tabItem { Label(t("Thêm", "More"), systemImage: "ellipsis.circle") }
+                .tag(3)
         }
     }
 }

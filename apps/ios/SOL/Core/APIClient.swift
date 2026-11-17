@@ -57,6 +57,9 @@ final class APIClient {
     }
 
     private func send(_ method: String, _ path: String, query: [String: String?], body: Data?) async throws -> Data {
+        #if DEBUG
+        if method == "GET", let demo = Demo.response(method, path) { return demo }
+        #endif
         let req = makeRequest(method, path, query: query, body: body)
         let sentToken = token
         let data: Data, resp: URLResponse

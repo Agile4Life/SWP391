@@ -27,10 +27,13 @@ enum CoachAPI {
 }
 
 struct CoachTabs: View {
+    @State private var tab = Demo.initialTab
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             NavigationStack { CoachScheduleView() }.tabItem { Label(t("Lịch dạy", "Schedule"), systemImage: "calendar") }
+                .tag(0)
             NavigationStack { StaffMoreView() }.tabItem { Label(t("Thêm", "More"), systemImage: "ellipsis.circle") }
+                .tag(1)
         }
     }
 }

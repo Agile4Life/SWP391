@@ -25,17 +25,22 @@ enum ManagerAPI {
         return ReportData(daily: try await d, packages: try await p, recent: try await r, renewal: await n?.renewalRate)
     }
     static func cancellations() async throws -> [CancellationRequest] { try await APIClient.shared.get("/memberships/cancellations") }
-    static func approve(_ r: CancellationRequest) async throws { let _: Empty? = try await APIClient.shared.post("/memberships/cancellations/\(r.id)/approve", body: NoteBody(note: nil, refundAmount: r.refundAmount)) }
-    static func reject(_ r: CancellationRequest) async throws { let _: Empty? = try await APIClient.shared.post("/memberships/cancellations/\(r.id)/reject", body: NoteBody(note: nil, refundAmount: nil)) }
+    static func approve(_ r: CancellationRequest) async throws { let _: Empty? = try await APIClient.shared.post("/memberships/cancellations/\(r.id)/approve", body: NoteBody(note: "Quản lý phê duyệt hủy gói & hoàn tiền về Ví", refundAmount: r.refundAmount)) }
+    static func reject(_ r: CancellationRequest) async throws { let _: Empty? = try await APIClient.shared.post("/memberships/cancellations/\(r.id)/reject", body: NoteBody(note: "Quản lý từ chối yêu cầu hủy gói", refundAmount: nil)) }
 }
 
 struct ManagerTabs: View {
+    @State private var tab = Demo.initialTab
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             NavigationStack { ReportsView() }.tabItem { Label(t("Báo cáo", "Reports"), systemImage: "chart.bar") }
+                .tag(0)
             NavigationStack { CancellationsView() }.tabItem { Label(t("Yêu cầu huỷ", "Cancellations"), systemImage: "arrow.uturn.backward.circle") }
+                .tag(1)
             NavigationStack { TodaySessionsView(title: t("Lớp hôm nay", "Today's classes"), coachOnly: false) }.tabItem { Label(t("Lớp học", "Classes"), systemImage: "calendar") }
+                .tag(2)
             NavigationStack { StaffMoreView() }.tabItem { Label(t("Thêm", "More"), systemImage: "ellipsis.circle") }
+                .tag(3)
         }
     }
 }

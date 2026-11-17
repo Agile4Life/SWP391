@@ -24,6 +24,9 @@ final class AuthStore {
     init() {
         if APIClient.shared.token != nil, let data = UserDefaults.standard.data(forKey: "sol_user"),
            let saved = try? JSONDecoder().decode(SessionUser.self, from: data) { user = saved }
+        #if DEBUG
+        if let role = Demo.role { user = SessionUser(username: "demo", fullName: "Nguyễn Minh Anh", role: role) }
+        #endif
         APIClient.shared.onUnauthorized = { [weak self] in Task { @MainActor in self?.signOut(expired: true) } }
     }
 
