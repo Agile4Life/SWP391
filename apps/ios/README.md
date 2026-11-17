@@ -44,7 +44,7 @@ TEST_RUNNER_SOL_LIVE_API=1 TEST_RUNNER_SOL_API_BASE=http://localhost:8080/api/v1
 
 ## Giới hạn so với web
 
-- Explore 3D là bản mô hình khối rút gọn (không walk-through, không diễn viên động, không hiệu ứng hậu kỳ).
+- Explore 3D là bản mô hình khối rút gọn: có chế độ đi bộ góc nhìn thứ nhất (joystick, vuốt xoay, tường, nhãn khu vực, chuyển tầng, chặn ra ngoài sàn) nhưng chưa có kiến trúc chi tiết, diễn viên động, hiệu ứng hậu kỳ hay va chạm với từng vật thể.
 - Chat trực tiếp/hỗ trợ và trạng thái gói tập dùng Supabase Realtime qua WebSocket (`Core/Realtime.swift`, giao thức Phoenix như `chatRealtime.ts`/`membershipRealtime.ts`), rơi về thăm dò 4 giây khi realtime tắt hoặc lỗi.
 - Quản trị: phân quyền vai trò, phân công huấn luyện viên (gán mới theo giáo án, chuyển, xoá), sản phẩm (sửa, tồn kho, ảnh, tạo mới kèm thành phần dinh dưỡng cơ bản), loại sản phẩm, xuất CSV/PDF doanh thu (PDF một trang vẽ trên máy).
 - VNPay mở trong Safari View Controller; app đối chiếu trạng thái giao dịch sau khi đóng.
