@@ -14,5 +14,7 @@ RUN npm run build
 
 FROM nginx:1.28-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY 40-swagger-auth.sh /docker-entrypoint.d/40-swagger-auth.sh
+RUN chmod +x /docker-entrypoint.d/40-swagger-auth.sh
 COPY --from=build /build/dist /usr/share/nginx/html
 EXPOSE 80
