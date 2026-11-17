@@ -199,6 +199,10 @@ paths:
         - name: redirect_uri
           in: query
           schema: {type: string, format: uri}
+        - name: client
+          in: query
+          description: 'Only "ios" is accepted. The native SwiftUI app sets it so the final redirect goes to the fixed scheme solapp://login (same query/fragment as the web /login); any other value is rejected with 400.'
+          schema: {type: string, enum: [ios]}
       responses:
         '302':
           description: Redirect to canonical backend authorize/start, or frontend login with google_oauth=not_configured
@@ -214,6 +218,10 @@ paths:
           in: query
           required: true
           schema: {type: string, pattern: '^[A-Za-z0-9_-]{43}$'}
+        - name: client
+          in: query
+          description: Propagated from /auth/google/authorize; stored with the single-use state, never trusted at callback.
+          schema: {type: string, enum: [ios]}
       responses:
         '302':
           description: Google consent URL including state, or not_configured fallback

@@ -165,13 +165,15 @@ public class AuthController {
     @GetMapping("/google/authorize")
     public ResponseEntity<Void> authorizeGoogleOAuth(
             @RequestParam(value = "redirect_uri", required = false) String redirectUri,
-            @RequestParam("code_challenge") String challenge) {
-        return redirect(googleOAuthRedirectService.entry(redirectUri, challenge));
+            @RequestParam("code_challenge") String challenge,
+            @RequestParam(value = "client", required = false) String client) {
+        return redirect(googleOAuthRedirectService.entry(redirectUri, challenge, client));
     }
 
     @GetMapping("/google/authorize/start")
-    public ResponseEntity<Void> startGoogleOAuth(HttpServletRequest request, @RequestParam("code_challenge") String challenge) {
-        return redirect(googleOAuthRedirectService.authorize(request.getSession(true), challenge));
+    public ResponseEntity<Void> startGoogleOAuth(HttpServletRequest request, @RequestParam("code_challenge") String challenge,
+            @RequestParam(value = "client", required = false) String client) {
+        return redirect(googleOAuthRedirectService.authorize(request.getSession(true), challenge, client));
     }
 
     @GetMapping("/google/callback")

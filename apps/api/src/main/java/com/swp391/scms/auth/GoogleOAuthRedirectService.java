@@ -50,23 +50,35 @@ public class GoogleOAuthRedirectService {
         this.debugOtp = debugOtp;
     }
 
-    public URI entry(String requestedRedirect, String challenge) {
+    /** Fixed final redirect for the native iOS app; never taken from the request (no open redirect). */
+    static final String NATIVE_LOGIN = "solapp://login";
+    private static final String NATIVE_CLIENT = "ios";
+
+    public URI entry(String requestedRedirect, String challenge) { return entry(requestedRedirect, challenge, null); }
+
+    public URI entry(String requestedRedirect, String challenge, String client) {
         validateRedirect(requestedRedirect);
-        if (clientId.isBlank()) return login().queryParam("google_oauth", "not_configured").build().encode().toUri();
+        boolean nativeApp = isNative(client);
+        if (clientId.isBlank()) return login(nativeApp).queryParam("google_oauth", "not_configured").build().encode().toUri();
         validateChallenge(challenge);
         // Establish cookies on the callback host even when entry was accessed through a frontend proxy.
-        return UriComponentsBuilder.fromUriString(redirectUri)
+        var start = UriComponentsBuilder.fromUriString(redirectUri)
                 .replacePath("/api/v1/auth/google/authorize/start").replaceQuery(null)
-                .queryParam("code_challenge", challenge).build().toUri();
+                .queryParam("code_challenge", challenge);
+        if (nativeApp) start.queryParam("client", NATIVE_CLIENT);
+        return start.build().toUri();
     }
 
-    public URI authorize(HttpSession session, String challenge) {
-        if (clientId.isBlank()) return entry(null, challenge);
+    public URI authorize(HttpSession session, String challenge) { return authorize(session, challenge, null); }
+
+    public URI authorize(HttpSession session, String challenge, String client) {
+        boolean nativeApp = isNative(client);
+        if (clientId.isBlank()) return entry(null, challenge, client);
         validateChallenge(challenge);
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String state = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        session.setAttribute(STATE_KEY, new PendingState(state, clock.instant(), challenge));
+        session.setAttribute(STATE_KEY, new PendingState(state, clock.instant(), challenge, nativeApp));
         return UriComponentsBuilder.fromUriString("https://accounts.google.com/o/oauth2/v2/auth")
                 .queryParam("client_id", clientId).queryParam("redirect_uri", redirectUri)
                 .queryParam("response_type", "code").queryParam("scope", "openid email profile")
@@ -76,21 +88,22 @@ public class GoogleOAuthRedirectService {
 
     public URI complete(HttpSession session, String state, String code, String error, String requestedRedirect) {
         PendingState pendingState = consumeState(session, state);
-        if (pendingState == null) return failure("auth.google.state_invalid");
+        if (pendingState == null) return failure(false, "auth.google.state_invalid");
+        boolean nativeApp = pendingState.nativeApp();
         try {
             validateRedirect(requestedRedirect);
-            if (error != null || code == null || code.isBlank()) return failure("auth.google.invalid_token");
+            if (error != null || code == null || code.isBlank()) return failure(nativeApp, "auth.google.invalid_token");
             var challenge = authService.authenticateGoogle(new GoogleOAuthCallbackRequest(null, null, code, redirectUri));
             if (challenge.authentication() != null) {
-                return login().queryParam("google_oauth", "authenticated")
+                return login(nativeApp).queryParam("google_oauth", "authenticated")
                         .fragment("google_login_code=" + createHandoff(challenge.authentication(), pendingState.challenge())).build().encode().toUri();
             }
-            var result = login().queryParam("google_oauth", "callback").queryParam("email", challenge.email())
+            var result = login(nativeApp).queryParam("google_oauth", "callback").queryParam("email", challenge.email())
                     .queryParam("message", message("auth.google.otp.sent", challenge.email()));
             if (debugOtp && challenge.otpCode() != null) result.queryParam("debug_otp", challenge.otpCode());
             return result.build().encode().toUri();
         } catch (AppException ex) {
-            return failure(ex.getMessageKey() == null ? "auth.google.invalid_token" : ex.getMessageKey(),
+            return failure(nativeApp, ex.getMessageKey() == null ? "auth.google.invalid_token" : ex.getMessageKey(),
                     ex.getMessageArgs() == null ? new Object[0] : ex.getMessageArgs());
         }
     }
@@ -151,10 +164,15 @@ public class GoogleOAuthRedirectService {
         }
     }
 
-    private UriComponentsBuilder login() { return UriComponentsBuilder.fromUriString(webOrigin + "/login"); }
-    private URI failure(String key, Object... args) {
-        return login().queryParam("google_oauth", "error").queryParam("error", message(key, args)).build().encode().toUri();
+    private static boolean isNative(String client) {
+        if (client == null || client.isBlank()) return false;
+        if (!NATIVE_CLIENT.equals(client)) throw new BadRequestException("INVALID_GOOGLE_CLIENT", "auth.google.redirect_invalid", null, null);
+        return true;
+    }
+    private UriComponentsBuilder login(boolean nativeApp) { return UriComponentsBuilder.fromUriString(nativeApp ? NATIVE_LOGIN : webOrigin + "/login"); }
+    private URI failure(boolean nativeApp, String key, Object... args) {
+        return login(nativeApp).queryParam("google_oauth", "error").queryParam("error", message(key, args)).build().encode().toUri();
     }
     private String message(String key, Object... args) { return messages == null ? key : messages.getMessage(key, args); }
-    private record PendingState(String value, Instant createdAt, String challenge) implements java.io.Serializable { }
+    private record PendingState(String value, Instant createdAt, String challenge, boolean nativeApp) implements java.io.Serializable { }
 }

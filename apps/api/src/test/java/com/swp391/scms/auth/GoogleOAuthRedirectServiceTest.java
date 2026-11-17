@@ -105,4 +105,20 @@ class GoogleOAuthRedirectServiceTest {
         assertThrows(com.swp391.scms.common.exception.UnauthorizedException.class, () -> service.redeem(code, VERIFIER));
     }
 
+
+    @Test void nativeClientReturnsToFixedAppSchemeOnly() {
+        var service = service(NOW, false);
+        assertTrue(service.entry(null, CHALLENGE, "ios").toString().endsWith("code_challenge=" + CHALLENGE + "&client=ios"));
+        assertThrows(com.swp391.scms.common.exception.BadRequestException.class, () -> service.entry(null, CHALLENGE, "https://attacker.example"));
+        var browser = new MockHttpSession();
+        String state = UriComponentsBuilder.fromUri(service.authorize(browser, CHALLENGE, "ios")).build().getQueryParams().getFirst("state");
+        var authentication = new com.swp391.scms.auth.dto.AuthTokenResponse("private-jwt", "member", "MEMBER");
+        when(auth.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("member@gmail.com", null, authentication));
+        var redirect = service.complete(browser, state, "code", null, null);
+        assertTrue(redirect.toString().startsWith("solapp://login?google_oauth=authenticated#google_login_code="));
+        assertFalse(redirect.toString().contains("private-jwt"));
+        var webBrowser = new MockHttpSession();
+        String webState = state(service, webBrowser);
+        assertTrue(service.complete(webBrowser, webState, "code", null, null).toString().startsWith("https://web.example.com/login"));
+    }
 }
