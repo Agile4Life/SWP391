@@ -20,6 +20,7 @@ import { getProfile } from '../member/profileApi';
 import { usePortalNotices } from '../../shared/lib/portalNotices';
 import { ChatWidget } from '../chat/ChatWidget';
 import { PwaStatus } from '../pwa/PwaStatus';
+import { isNativeApp } from '../../shared/lib/nativeApp';
 import { NotificationsPopover } from '../member/NotificationsPopover';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { navigateToVnpay } from '../payments/vnpayApi';
@@ -732,7 +733,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {results.length === 0 && <p className="portal-search-empty" role="status">{t('Không tìm thấy màn hình. Hãy thử từ khóa khác.', 'No matching screens found. Try another keyword.')}</p>}
         </nav>
         {dialog === 'menu' && <div className="portal-menu-settings">
-          <PwaStatus mode="install" />
+          {!isNativeApp() && <PwaStatus mode="install" />}
           <Link className="portal-menu-home" to="/" onClick={() => setDialog(null)}>{t('Về trang chủ SÖL', 'Back to SÖL Home')}</Link>
         </div>}
       </Modal>}

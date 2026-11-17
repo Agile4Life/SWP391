@@ -45,6 +45,16 @@ it('does not register a worker during development', async () => {
   expect(register).not.toHaveBeenCalled();
 });
 
+it('does not register a worker inside the iOS app shell', async () => {
+  vi.stubEnv('PROD', true);
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 SOLiOSApp');
+  const register = vi.fn();
+  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { register } });
+  const { registerPwa } = await import('./registerPwa');
+  await registerPwa();
+  expect(register).not.toHaveBeenCalled();
+});
+
 it('announces an update but activates it only after user action', async () => {
   vi.stubEnv('PROD', true);
   const waiting = { postMessage: vi.fn() };

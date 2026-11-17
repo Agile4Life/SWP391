@@ -59,6 +59,8 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 }
 .fit-canvas { width: 100%; min-height: 100dvh; background: var(--fit-ink); overflow: clip; }
 .fit-header { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 32px 5.4%; position: sticky; top: 0; z-index: 15; transition: padding 260ms var(--fit-ease-out), background-color 260ms var(--fit-ease-out), border-color 260ms var(--fit-ease-out), backdrop-filter 260ms var(--fit-ease-out); border-bottom: 1px solid transparent; }
+/* Chừa vùng tai thỏ/Dynamic Island khi chạy toàn màn hình (app iOS, PWA); nền header vẫn phủ lên vùng này. */
+.fit-header { border-top: env(safe-area-inset-top, 0px) solid transparent; }
 .fit-header.is-scrolled { padding-block: 16px; background: #202020de; backdrop-filter: blur(12px); border-bottom-color: #ffffff14; }
 .fit-brand { display: inline-flex; align-items: baseline; font-size: 22px; font-weight: 700; letter-spacing: -.9px; white-space: nowrap; }
 .fit-header .fit-brand { font-size: 26px; }

@@ -353,3 +353,10 @@ it('locks login submission and shows countdown when receiving 429 lockout respon
 
   vi.useRealTimers();
 });
+
+it('hides Google sign-in inside the iOS app shell where Google blocks embedded WebViews', async () => {
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 SOLiOSApp');
+  await renderForm();
+  expect(host.querySelector('#google-oauth-btn')).toBeNull();
+  expect(host.querySelector('button[type="submit"]')).not.toBeNull();
+});

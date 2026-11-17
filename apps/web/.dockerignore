@@ -12,3 +12,6 @@ graphify-out/
 .graphify_*
 playwright-report/
 test-results/
+
+# Capacitor iOS shell
+ios/

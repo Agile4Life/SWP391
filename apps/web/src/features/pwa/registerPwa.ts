@@ -1,3 +1,5 @@
+import { isNativeApp } from '../../shared/lib/nativeApp';
+
 let waitingRegistration: ServiceWorkerRegistration | null = null;
 const listeners = new Set<() => void>();
 let registrationStarted = false;
@@ -46,7 +48,8 @@ export function applyPwaUpdate() {
 export async function registerPwa() {
   // Capture even on public pages, before the authenticated portal is mounted.
   capturePwaInstall();
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator) || registrationStarted) return;
+  // The iOS shell loads the live VPS site; a worker cache would pin old assets in WKWebView.
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator) || isNativeApp() || registrationStarted) return;
   registrationStarted = true;
   try {
     const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
