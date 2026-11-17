@@ -55,7 +55,8 @@ struct AdminHubView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                MoreLink(icon: "person.2", title: t("Người dùng", "Users")) { UsersAdminView() }
+                // Backend chỉ cho ADMIN gọi /users và /roles (Quản lý nhận 403), nên ẩn khỏi tab của Quản lý.
+                if auth.user?.role == .admin { MoreLink(icon: "person.2", title: t("Người dùng", "Users")) { UsersAdminView() } }
                 MoreLink(icon: "person.badge.key", title: t("Tài khoản nhân viên", "Staff accounts")) { StaffAccountsView() }
                 MoreLink(icon: "figure.strengthtraining.traditional", title: t("Phân công huấn luyện viên", "Coach assignments")) { CoachAssignmentsView() }
                 MoreLink(icon: "creditcard", title: t("Gói tập", "Membership plans")) { PackagesAdminView() }

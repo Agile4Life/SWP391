@@ -16,6 +16,19 @@ Trỏ sang máy chủ khác: biến môi trường `SOL_API_BASE` (vd. `http://l
 Bản Debug có chế độ demo không cần tài khoản (dữ liệu mẫu, chỉ GET): `SOL_DEMO_ROLE=member|staff|coach|manager`,
 tuỳ chọn `SOL_DEMO_TAB=<số tab>`. Bản Release không chứa mã này.
 
+## Kiểm với backend thật (cục bộ)
+
+Dựng stack e2e (DB tạm + API từ code repo, tài khoản demo `docs/DEMO_ACCOUNTS.md`), map cổng khác 8080 nếu bị chiếm, rồi chạy test live:
+
+```bash
+docker compose -f apps/web/e2e/stack/compose.e2e.yml up -d --build --wait api   # đổi cổng API nếu 8080 bận
+TEST_RUNNER_SOL_LIVE_API=1 TEST_RUNNER_SOL_API_BASE=http://localhost:8080/api/v1 \
+  xcodebuild -project apps/ios/SOL.xcodeproj -scheme SOL \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' test CODE_SIGNING_ALLOWED=NO -only-testing:SOLTests/LiveAPITests
+```
+
+`LiveAPITests` đăng nhập 5 vai trò (an@, letan@, hung@, manager@ và admin) và giải mã mọi endpoint mà các màn đang dùng; tự bỏ qua khi không đặt `SOL_LIVE_API`.
+
 ## Cấu trúc
 
 - `SOL/Core`: `APIClient` (bóc `ApiResponse.data`, `Accept-Language`, xử lý 401), `AuthStore`, Keychain, theme (token Light charcoal–salmon / Dark charcoal–bạc theo `DESIGN.md`), `Lang` (vi/en).
@@ -36,4 +49,4 @@ tuỳ chọn `SOL_DEMO_TAB=<số tab>`. Bản Release không chứa mã này.
 - Quản trị: phân quyền vai trò, phân công huấn luyện viên (gán mới theo giáo án, chuyển, xoá), sản phẩm (sửa, tồn kho, ảnh, tạo mới kèm thành phần dinh dưỡng cơ bản), loại sản phẩm, xuất CSV/PDF doanh thu (PDF một trang vẽ trên máy).
 - VNPay mở trong Safari View Controller; app đối chiếu trạng thái giao dịch sau khi đóng.
 - Đăng nhập Google chỉ hoạt động khi VPS đã deploy backend mới (tham số `client=ios`).
-- Chưa kiểm với tài khoản thật: chỉ kiểm bằng dữ liệu mẫu (Debug) và API công khai.
+- Đã kiểm giải mã với backend cục bộ cho cả 5 vai trò (không kiểm trên VPS). Chưa kiểm: realtime Supabase thật (stack cục bộ tắt realtime), VNPay, camera QR, Google với khoá thật.

@@ -37,9 +37,16 @@ final class APIClient {
         session = URLSession(configuration: config)
     }
 
+    /// Bản nhớ trong bộ nhớ làm dự phòng khi Keychain không ghi được (bản build không ký, môi trường test).
+    private var memoryToken: String?
+    private var memoryLoaded = false
+
     var token: String? {
-        get { Keychain.get("jwt") }
-        set { Keychain.set(newValue, for: "jwt") }
+        get {
+            if !memoryLoaded { memoryToken = Keychain.get("jwt"); memoryLoaded = true }
+            return memoryToken
+        }
+        set { memoryToken = newValue; memoryLoaded = true; Keychain.set(newValue, for: "jwt") }
     }
 
     private func makeRequest(_ method: String, _ path: String, query: [String: String?], body: Data?) -> URLRequest {
