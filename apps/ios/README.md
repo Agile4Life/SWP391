@@ -32,8 +32,8 @@ tuỳ chọn `SOL_DEMO_TAB=<số tab>`. Bản Release không chứa mã này.
 ## Giới hạn so với web
 
 - Explore 3D là bản mô hình khối rút gọn (không walk-through, không diễn viên động, không hiệu ứng hậu kỳ).
-- Chat trực tiếp/hỗ trợ dùng Supabase Realtime qua WebSocket (`Core/Realtime.swift`, giao thức Phoenix như `chatRealtime.ts`), rơi về thăm dò 4 giây khi realtime tắt hoặc lỗi; chưa có realtime cho trạng thái gói tập.
-- Quản trị: có phân quyền vai trò, phân công huấn luyện viên (chuyển/xoá, chưa gán mới), sản phẩm (sửa, tồn kho, ảnh, tạo mới không kèm thành phần dinh dưỡng), xuất CSV doanh thu; chưa có quản lý danh mục sản phẩm, PDF.
+- Chat trực tiếp/hỗ trợ và trạng thái gói tập dùng Supabase Realtime qua WebSocket (`Core/Realtime.swift`, giao thức Phoenix như `chatRealtime.ts`/`membershipRealtime.ts`), rơi về thăm dò 4 giây khi realtime tắt hoặc lỗi.
+- Quản trị: phân quyền vai trò, phân công huấn luyện viên (gán mới theo giáo án, chuyển, xoá), sản phẩm (sửa, tồn kho, ảnh, tạo mới kèm thành phần dinh dưỡng cơ bản), loại sản phẩm, xuất CSV/PDF doanh thu (PDF một trang vẽ trên máy).
 - VNPay mở trong Safari View Controller; app đối chiếu trạng thái giao dịch sau khi đóng.
 - Đăng nhập Google chỉ hoạt động khi VPS đã deploy backend mới (tham số `client=ios`).
 - Chưa kiểm với tài khoản thật: chỉ kiểm bằng dữ liệu mẫu (Debug) và API công khai.

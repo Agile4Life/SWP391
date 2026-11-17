@@ -184,6 +184,7 @@ struct NewProductSheet: View {
     @State private var label = ""
     @State private var price = ""
     @State private var stock = "0"
+    @State private var nutrients: [AdminNutrient] = []
     @State private var error: String?
     @State private var busy = false
     private let forms = ["powder", "capsule", "tablet", "liquid", "bar", "other"]
@@ -203,6 +204,16 @@ struct NewProductSheet: View {
                     SOLField(label: t("Nhãn (vị · khối lượng)", "Label"), text: $label)
                     SOLField(label: t("Giá (₫)", "Price (₫)"), text: $price, keyboard: .numberPad)
                     SOLField(label: t("Tồn kho ban đầu", "Initial stock"), text: $stock, keyboard: .numberPad)
+                    Text(t("Thành phần dinh dưỡng", "Nutrition facts")).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(nutrients.indices, id: \.self) { i in
+                        HStack {
+                            TextField(t("Tên", "Name"), text: Binding(get: { nutrients[i].name }, set: { nutrients[i].name = $0 })).textFieldStyle(.roundedBorder)
+                            TextField(t("SL", "Amt"), text: Binding(get: { nutrients[i].amount == 0 ? "" : nutrients[i].amount.formatted() }, set: { nutrients[i].amount = Double($0) ?? 0 }), prompt: Text("0")).keyboardType(.decimalPad).textFieldStyle(.roundedBorder).frame(width: 64)
+                            TextField(t("Đv", "Unit"), text: Binding(get: { nutrients[i].unit }, set: { nutrients[i].unit = $0 })).textFieldStyle(.roundedBorder).frame(width: 56)
+                            Button { nutrients.remove(at: i) } label: { Image(systemName: "minus.circle").foregroundStyle(Theme.danger) }
+                        }
+                    }
+                    Button { nutrients.append(AdminNutrient(name: "", amount: 0, unit: "g", dailyValuePercent: nil, subRow: false, highlight: false, sortOrder: nutrients.count)) } label: { Label(t("Thêm thành phần", "Add nutrient"), systemImage: "plus") }.buttonStyle(.solSecondary)
                     ErrorBanner(message: error)
                     Button { Task { await create() } } label: { if busy { ProgressView() } else { Text(t("TẠO SẢN PHẨM", "CREATE PRODUCT")) } }.buttonStyle(.solPrimary).disabled(busy || name.count < 2 || categoryId == 0 || sku.isEmpty || label.isEmpty || (Double(price) ?? 0) <= 0)
                 }.padding(Metrics.pad)
@@ -217,7 +228,75 @@ struct NewProductSheet: View {
         busy = true; error = nil
         defer { busy = false }
         let body = ProductUpsert(name: name, categoryId: categoryId, form: form, brand: nil, shortDescription: shortDesc, description: desc, servingSize: serving, usageInstructions: nil, warnings: nil, registrationNumber: nil, goals: [], active: false, featured: false,
-                                 variants: [.init(id: nil, sku: sku, label: label, price: Double(price) ?? 0, servingsPerContainer: nil, initialStock: Int(stock) ?? 0, active: true, sortOrder: 0)], nutrients: [])
+                                 variants: [.init(id: nil, sku: sku, label: label, price: Double(price) ?? 0, servingsPerContainer: nil, initialStock: Int(stock) ?? 0, active: true, sortOrder: 0)],
+                                 nutrients: nutrients.filter { !$0.name.isEmpty }.enumerated().map { .init(name: $1.name, amount: $1.amount, unit: $1.unit, dailyValuePercent: nil, subRow: false, highlight: false, sortOrder: $0) })
         do { _ = try await ProductsAdminAPI.save(id: nil, body); dismiss() } catch { self.error = error.localizedDescription }
+    }
+}
+
+
+// MARK: - Categories
+
+struct AdminCategory: Decodable, Identifiable, Hashable { let id: Int; let name: String; let slug: String?; let sortOrder: Int; let active: Bool; let productCount: Int? }
+private struct CategoryBody: Encodable { let name: String; let sortOrder: Int; let active: Bool }
+
+struct CategoriesAdminView: View {
+    @State private var loader = Loader { try await APIClient.shared.get("/manager/product-categories") as [AdminCategory] }
+    @State private var editing: AdminCategory?
+    @State private var creating = false
+    @State private var error: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 10) {
+                ErrorBanner(message: error)
+                LoadView(loader) { list in
+                    ForEach(list) { c in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) { Text(c.name).font(.headline).foregroundStyle(Theme.text); Text(t("\(c.productCount ?? 0) sản phẩm", "\(c.productCount ?? 0) products")).font(.caption).foregroundStyle(Theme.textMuted) }
+                            Spacer()
+                            if !c.active { Pill(text: t("Đang ẩn", "Hidden"), tone: .neutral) }
+                            Button(t("Sửa", "Edit")) { editing = c }.buttonStyle(.solSecondary)
+                            Button(role: .destructive) { Task { do { let _: Empty? = try await APIClient.shared.delete("/manager/product-categories/\(c.id)"); await loader.load(silent: true) } catch { self.error = error.localizedDescription } } } label: { Image(systemName: "trash") }.foregroundStyle(Theme.danger)
+                        }.card()
+                    }
+                }
+            }.padding(Metrics.pad)
+        }
+        .refreshable { await loader.load(silent: true) }
+        .toolbar { ToolbarItem(placement: .primaryAction) { Button { creating = true } label: { Image(systemName: "plus") } } }
+        .navigationTitle(t("Loại sản phẩm", "Product categories")).navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+        .sheet(item: $editing, onDismiss: { Task { await loader.load(silent: true) } }) { CategorySheet(existing: $0) }
+        .sheet(isPresented: $creating, onDismiss: { Task { await loader.load(silent: true) } }) { CategorySheet(existing: nil) }
+    }
+}
+
+struct CategorySheet: View {
+    let existing: AdminCategory?
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var order = "0"
+    @State private var active = true
+    @State private var error: String?
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 14) {
+                SOLField(label: t("Tên loại", "Name"), text: $name)
+                SOLField(label: t("Thứ tự", "Sort order"), text: $order, keyboard: .numberPad)
+                Toggle(t("Hiển thị", "Visible"), isOn: $active).tint(Theme.accent)
+                ErrorBanner(message: error)
+                Button(t("LƯU", "SAVE")) { Task { await save() } }.buttonStyle(.solPrimary).disabled(name.count < 2)
+                Spacer()
+            }.padding(Metrics.pad).screenBackground()
+            .navigationTitle(existing == nil ? t("Loại mới", "New category") : t("Sửa loại", "Edit category")).navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t("Đóng", "Close")) { dismiss() } } }
+            .onAppear { if let e = existing { name = e.name; order = String(e.sortOrder); active = e.active } }
+        }
+    }
+    private func save() async {
+        let body = CategoryBody(name: name, sortOrder: Int(order) ?? 0, active: active)
+        do { let _: AdminCategory = existing == nil ? try await APIClient.shared.post("/manager/product-categories", body: body) : try await APIClient.shared.put("/manager/product-categories/\(existing!.id)", body: body); dismiss() }
+        catch { self.error = error.localizedDescription }
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct PackagesData { var packages: [MembershipPackage]; var current: Subscription?; var history: [Subscription] }
 
 struct PackagesView: View {
+    @State private var realtime: RealtimeSubscription?
     @State private var loader = Loader<PackagesData> {
         async let p = MemberAPI.packages()
         async let c = MemberAPI.currentSubscription()
@@ -28,6 +29,8 @@ struct PackagesView: View {
                 }
             }.padding(Metrics.pad)
         }
+        .onAppear { let rt = RealtimeSubscription(sessionPath: "/memberships/subscriptions/realtime-session", isPrivate: false) { Task { await loader.load(silent: true) } }; realtime = rt; rt.start() }
+        .onDisappear { realtime?.stop(); realtime = nil }
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Gói tập", "Plans")).navigationBarTitleDisplayMode(.inline)
         .screenBackground()

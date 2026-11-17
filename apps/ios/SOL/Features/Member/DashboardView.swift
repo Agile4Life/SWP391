@@ -9,6 +9,7 @@ struct DashboardData {
 
 struct DashboardView: View {
     @Environment(AuthStore.self) private var auth
+    @State private var realtime: RealtimeSubscription?
     @State private var loader = Loader<DashboardData> {
         async let sub = MemberAPI.currentSubscription()
         async let classes = MemberAPI.upcomingEnrollments()
@@ -43,6 +44,8 @@ struct DashboardView: View {
                 }.padding(Metrics.pad)
             }
         }
+        .onAppear { let rt = RealtimeSubscription(sessionPath: "/memberships/subscriptions/realtime-session", isPrivate: false) { Task { await loader.load(silent: true) } }; realtime = rt; rt.start() }
+        .onDisappear { realtime?.stop(); realtime = nil }
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Tổng quan", "Overview"))
         .navigationBarTitleDisplayMode(.inline)

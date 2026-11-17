@@ -71,6 +71,7 @@ struct ReportsView: View {
                         ForEach(r.packages) { p in LabeledRow(label: p.packageName, value: Fmt.money(p.revenue)) }
                         if r.packages.isEmpty { Text(t("Chưa có dữ liệu", "No data")).foregroundStyle(Theme.textMuted) }
                     }.card()
+                    if let pdf = reportPDF(r) { ShareLink(item: pdf, preview: SharePreview("revenue-\(Fmt.todayString()).pdf")) { Label(t("Xuất PDF doanh thu", "Export revenue PDF"), systemImage: "doc.richtext") }.buttonStyle(.solSecondary) }
                     ShareLink(item: csv(r), preview: SharePreview("revenue-\(Fmt.todayString()).csv")) { Label(t("Xuất CSV doanh thu", "Export revenue CSV"), systemImage: "square.and.arrow.up") }.buttonStyle(.solSecondary)
                     SectionTitle(t("Giao dịch gần đây", "Recent transactions"))
                     ForEach(r.recent.prefix(15)) { tx in
@@ -87,6 +88,29 @@ struct ReportsView: View {
 }
 
 extension ReportsView {
+    /// PDF một trang tổng hợp, vẽ bằng UIGraphicsPDFRenderer từ dữ liệu đang hiển thị.
+    func reportPDF(_ r: ReportData) -> URL? {
+        let total = r.daily.reduce(0) { $0 + $1.revenue }
+        var lines: [(String, String)] = [(t("Doanh thu kỳ", "Period revenue"), Fmt.money(total)), (t("Tỉ lệ gia hạn", "Renewal rate"), r.renewal.map { "\(Int($0.rounded()))%" } ?? "—")]
+        lines += r.packages.map { ($0.packageName, Fmt.money($0.revenue)) }
+        lines += r.recent.prefix(25).map { ("\($0.memberName) · \(Fmt.dayTime($0.paidAt))", Fmt.money($0.amount)) }
+        let page = CGRect(x: 0, y: 0, width: 595, height: 842)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("revenue-\(Fmt.todayString()).pdf")
+        let data = UIGraphicsPDFRenderer(bounds: page).pdfData { ctx in
+            ctx.beginPage()
+            ("SÖL Fitness — " + t("Báo cáo doanh thu", "Revenue report") as NSString).draw(at: CGPoint(x: 40, y: 40), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 20)])
+            var y: CGFloat = 84
+            for (k, v) in lines {
+                if y > 790 { ctx.beginPage(); y = 40 }
+                (k as NSString).draw(at: CGPoint(x: 40, y: y), withAttributes: [.font: UIFont.systemFont(ofSize: 12)])
+                let w = (v as NSString).size(withAttributes: [.font: UIFont.boldSystemFont(ofSize: 12)]).width
+                (v as NSString).draw(at: CGPoint(x: 555 - w, y: y), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 12)])
+                y += 22
+            }
+        }
+        return (try? data.write(to: url)) != nil ? url : nil
+    }
+
     /// CSV tạo ngay trên máy từ dữ liệu đang hiển thị (không gọi thêm API).
     func csv(_ r: ReportData) -> String {
         func esc(_ s: String) -> String { s.contains(",") || s.contains("\"") ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" : s }

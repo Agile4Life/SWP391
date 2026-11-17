@@ -20,7 +20,10 @@ final class RealtimeSubscription {
     private var socket: URLSessionWebSocketTask?
     private var failures = 0
 
-    init(sessionPath: String, changed: @escaping () -> Void) { self.sessionPath = sessionPath; self.changed = changed }
+    private let isPrivate: Bool
+
+    /// `isPrivate: false` cho kênh công khai (trạng thái gói tập): không cần token riêng.
+    init(sessionPath: String, isPrivate: Bool = true, changed: @escaping () -> Void) { self.sessionPath = sessionPath; self.isPrivate = isPrivate; self.changed = changed }
 
     func start() {
         guard task == nil else { return }
@@ -34,8 +37,8 @@ final class RealtimeSubscription {
             do {
                 let session: RealtimeSession = try await APIClient.shared.post(sessionPath)
                 guard session.enabled else { await pollForever(); return }
-                guard let base = session.url, let key = session.publishableKey, key.hasPrefix("sb_publishable_"), let topic = session.topic, let token = session.token else { throw URLError(.badServerResponse) }
-                try await listen(base: base, key: key, topic: topic, token: token, expires: session.expiresAt.flatMap { Fmt.date($0) })
+                guard let base = session.url, let key = session.publishableKey, key.hasPrefix("sb_publishable_"), let topic = session.topic, (!isPrivate || session.token != nil) else { throw URLError(.badServerResponse) }
+                try await listen(base: base, key: key, topic: topic, token: session.token, expires: session.expiresAt.flatMap { Fmt.date($0) })
                 failures = 0
             } catch is CancellationError { return }
             catch { failures += 1 }
@@ -50,7 +53,7 @@ final class RealtimeSubscription {
         while !Task.isCancelled { try? await Task.sleep(for: .seconds(4)); if !Task.isCancelled { changed() } }
     }
 
-    private func listen(base: String, key: String, topic: String, token: String, expires: Date?) async throws {
+    private func listen(base: String, key: String, topic: String, token: String?, expires: Date?) async throws {
         var comps = URLComponents(string: base)!
         comps.scheme = comps.scheme == "http" ? "ws" : "wss"
         comps.path = "/realtime/v1/websocket"
@@ -63,7 +66,7 @@ final class RealtimeSubscription {
 
         let channel = "realtime:\(topic)"
         try await send(ws, ["topic": channel, "event": "phx_join", "ref": "1", "join_ref": "1",
-                            "payload": ["config": ["broadcast": ["ack": false, "self": false], "presence": ["key": ""], "postgres_changes": [], "private": true], "access_token": token]])
+                            "payload": ["config": ["broadcast": ["ack": false, "self": false], "presence": ["key": ""], "postgres_changes": [], "private": isPrivate], "access_token": token ?? key]])
         let heartbeat = Task { var n = 2; while !Task.isCancelled { try? await Task.sleep(for: .seconds(25)); n += 1; try? await self.send(ws, ["topic": "phoenix", "event": "heartbeat", "payload": [String: String](), "ref": String(n)]) } }
         defer { heartbeat.cancel() }
         // Làm mới token trước khi hết hạn: thoát vòng nghe để `run` mở phiên mới.

@@ -60,6 +60,7 @@ struct AdminHubView: View {
                 MoreLink(icon: "figure.strengthtraining.traditional", title: t("Phân công huấn luyện viên", "Coach assignments")) { CoachAssignmentsView() }
                 MoreLink(icon: "creditcard", title: t("Gói tập", "Membership plans")) { PackagesAdminView() }
                 MoreLink(icon: "bag", title: t("Sản phẩm", "Products")) { ProductsAdminView() }
+                MoreLink(icon: "tag", title: t("Loại sản phẩm", "Product categories")) { CategoriesAdminView() }
                 if auth.user?.role == .admin { MoreLink(icon: "lock.shield", title: t("Phân quyền vai trò", "Role permissions")) { RolePermissionsView() } }
                 MoreLink(icon: "square.grid.2x2", title: t("Phòng & môn tập", "Rooms & disciplines")) { RoomsAdminView() }
                 MoreLink(icon: "dumbbell", title: t("Thiết bị", "Equipment")) { EquipmentAdminView() }
@@ -409,6 +410,7 @@ private struct ReassignBody: Encodable { let memberId: Int; let fromCoachId: Int
 struct CoachAssignmentsView: View {
     @State private var loader = Loader { try await APIClient.shared.get("/manager/coach-assignments") as CoachAssignmentData }
     @State private var moving: (AssignedStudent, CoachOverview)?
+    @State private var assigning = false
     @State private var error: String?
 
     var body: some View {
@@ -435,6 +437,8 @@ struct CoachAssignmentsView: View {
         }
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Phân công huấn luyện viên", "Coach assignments")).navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .primaryAction) { Button { assigning = true } label: { Image(systemName: "person.badge.plus") } } }
+        .sheet(isPresented: $assigning, onDismiss: { Task { await loader.load(silent: true) } }) { AssignCoachSheet(coaches: loader.value?.coaches ?? []) }
         .screenBackground()
         .confirmationDialog(t("Chuyển học viên sang huấn luyện viên", "Move member to coach"), isPresented: Binding(get: { moving != nil }, set: { if !$0 { moving = nil } }), titleVisibility: .visible) {
             if let (s, from) = moving { ForEach((loader.value?.coaches ?? []).filter { $0.coachId != from.coachId }) { c in Button(c.coachName) { Task { await move(s, from: from, to: c) } } } }
@@ -449,5 +453,55 @@ struct CoachAssignmentsView: View {
     private func remove(_ s: AssignedStudent) async {
         error = nil
         do { let _: Empty? = try await APIClient.shared.delete("/manager/coach-assignments/\(s.referenceId)"); await loader.load(silent: true) } catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct AssignBody: Encodable { let memberId: Int; let coachId: Int; let assignmentType: String; let goal: String?; let startDate: String; let endDate: String }
+
+/// Gán hội viên cho huấn luyện viên theo giáo án (TRAINING_PLAN).
+struct AssignCoachSheet: View {
+    let coaches: [CoachOverview]
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var results: [MemberLookup] = []
+    @State private var member: MemberLookup?
+    @State private var coachId = 0
+    @State private var goal = ""
+    @State private var start = Date()
+    @State private var end = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
+    @State private var error: String?
+    @State private var busy = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 14) {
+                    if let member {
+                        HStack { Avatar(name: member.fullName, size: 38); VStack(alignment: .leading) { Text(member.fullName).font(.headline); Text(member.membershipCode ?? "").font(.caption).foregroundStyle(Theme.textMuted) }; Spacer(); Button(t("Đổi", "Change")) { self.member = nil } }.card()
+                    } else {
+                        SOLField(label: t("Tìm hội viên (SĐT, mã, tên)", "Find member"), text: $query)
+                        ForEach(results) { m in Button { member = m } label: { HStack { Text(m.fullName).foregroundStyle(Theme.text); Spacer(); Text(m.membershipCode ?? "").font(.caption).foregroundStyle(Theme.textMuted) }.card() } }
+                    }
+                    Picker(t("Huấn luyện viên", "Coach"), selection: $coachId) { ForEach(coaches) { Text($0.coachName).tag($0.coachId) } }
+                    SOLField(label: t("Mục tiêu", "Goal"), text: $goal)
+                    DatePicker(t("Bắt đầu", "Start"), selection: $start, displayedComponents: .date)
+                    DatePicker(t("Kết thúc", "End"), selection: $end, in: start..., displayedComponents: .date)
+                    ErrorBanner(message: error)
+                    Button { Task { await assign() } } label: { if busy { ProgressView() } else { Text(t("PHÂN CÔNG", "ASSIGN")) } }.buttonStyle(.solPrimary).disabled(busy || member == nil || coachId == 0)
+                }.padding(Metrics.pad)
+            }.screenBackground()
+            .navigationTitle(t("Phân công mới", "New assignment")).navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t("Đóng", "Close")) { dismiss() } } }
+            .onAppear { coachId = coaches.first?.coachId ?? 0 }
+            .onChange(of: query) { _, q in Task { try? await Task.sleep(for: .milliseconds(350)); if q == query, q.count >= 2 { results = (try? await StaffAPI.lookup(q)) ?? [] } else if q.count < 2 { results = [] } } }
+        }
+    }
+
+    private func assign() async {
+        guard let member else { return }
+        busy = true; error = nil
+        defer { busy = false }
+        do { let _: Empty? = try await APIClient.shared.post("/manager/coach-assignments/assign", body: AssignBody(memberId: member.userId, coachId: coachId, assignmentType: "TRAINING_PLAN", goal: goal.nilIfEmpty, startDate: Fmt.dayString(start), endDate: Fmt.dayString(end))); dismiss() }
+        catch { self.error = error.localizedDescription }
     }
 }
