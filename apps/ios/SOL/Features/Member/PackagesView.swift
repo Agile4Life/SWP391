@@ -10,6 +10,7 @@ struct PackagesView: View {
         return PackagesData(packages: try await p, current: try await c, history: try await h)
     }
     @State private var paying: PayTarget?
+    @State private var upgradeFrom: Subscription?
     @State private var busy = false
     @State private var message: String?
     @State private var isError = false
@@ -30,6 +31,7 @@ struct PackagesView: View {
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Gói tập", "Plans")).navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .sheet(item: $upgradeFrom) { cur in UpgradeSheet(current: cur, packages: loader.value?.packages ?? [], onCreated: { n in upgradeFrom = nil; Task { await loader.load(silent: true); paying = PayTarget(subscription: n) } }) }
         .sheet(item: $paying, onDismiss: { Task { await loader.load(silent: true) } }) { target in PaySheet(target: target) }
     }
 
@@ -38,7 +40,12 @@ struct PackagesView: View {
             HStack { Text(s.packageName).font(.title3.weight(.bold)); Spacer(); Pill(text: t("Đang hoạt động", "Active"), tone: .success) }
             LabeledRow(label: t("Hiệu lực", "Valid"), value: "\(Fmt.day(s.startDate)) – \(Fmt.day(s.endDate))")
             if let left = Fmt.daysLeft(until: s.endDate) { LabeledRow(label: t("Còn lại", "Left"), value: t("\(left) ngày", "\(left) days")) }
-            Button(t("Gia hạn", "Renew")) { Task { await renew(s) } }.buttonStyle(.solSecondary).disabled(busy)
+            HStack {
+                Button(t("Gia hạn", "Renew")) { Task { await renew(s) } }.buttonStyle(.solSecondary).disabled(busy)
+                if loader.value?.packages.contains(where: { $0.price > (s.remainingValue ?? .infinity) && $0.id != s.packageId }) == true {
+                    Button(t("Nâng cấp", "Upgrade")) { upgradeFrom = s }.buttonStyle(.solSecondary).disabled(busy)
+                }
+            }
         }.card()
     }
 
@@ -155,3 +162,44 @@ struct PaySheet: View {
 }
 
 struct IdentifiableURL: Identifiable { let url: URL; var id: String { url.absoluteString } }
+
+
+struct UpgradeSheet: View {
+    let current: Subscription
+    let packages: [MembershipPackage]
+    let onCreated: (Subscription) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var busy = false
+    @State private var error: String?
+
+    /// Phí = giá gói mới − giá trị còn lại của kỳ hiện tại (backend chốt số tiền cuối).
+    private func quote(_ p: MembershipPackage) -> Double? { current.remainingValue.map { max(0, p.price - $0) } }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    if let r = current.remainingValue { Text(t("Giá trị còn lại của gói hiện tại: ", "Remaining value of your current plan: ") + Fmt.money(r)).font(.subheadline).foregroundStyle(Theme.textMuted) }
+                    ErrorBanner(message: error)
+                    ForEach(packages.filter { $0.id != current.packageId && $0.price > (current.remainingValue ?? .infinity) }) { p in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(p.name).font(.headline)
+                            LabeledRow(label: t("Giá gói", "Plan price"), value: Fmt.money(p.price))
+                            if let q = quote(p) { LabeledRow(label: t("Cần thanh toán", "To pay"), value: Fmt.money(q)) }
+                            Button(t("Nâng cấp lên gói này", "Upgrade to this plan")) { Task { await upgrade(p) } }.buttonStyle(.solPrimary).disabled(busy)
+                        }.card()
+                    }
+                }.padding(Metrics.pad)
+            }
+            .screenBackground()
+            .navigationTitle(t("Nâng cấp gói", "Upgrade plan")).navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(t("Đóng", "Close")) { dismiss() } } }
+        }
+    }
+
+    private func upgrade(_ p: MembershipPackage) async {
+        busy = true; error = nil
+        defer { busy = false }
+        do { onCreated(try await ExtraAPI.upgrade(subscriptionId: current.id, packageId: p.id)) } catch { self.error = error.localizedDescription }
+    }
+}

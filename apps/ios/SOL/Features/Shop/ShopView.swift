@@ -59,7 +59,7 @@ struct ShopView: View {
                         }
                     }
                 }
-                Text(t("Đặt mua và nhận hàng tại quầy lễ tân hoặc trên website SÖL.", "Order and pick up at the front desk or on the SÖL website.")).font(.footnote).foregroundStyle(Theme.textMuted)
+                Text(t("Nhận hàng tại quầy lễ tân hoặc giao tận nơi.", "Pick up at the front desk or get it delivered.")).font(.footnote).foregroundStyle(Theme.textMuted)
             }.padding(Metrics.pad)
         }
         .searchable(text: $query, prompt: t("Tìm sản phẩm", "Search products"))
@@ -69,6 +69,10 @@ struct ShopView: View {
         .task { cats = (try? await ShopAPI.categories()) ?? [] }
         .refreshable { await loader.load(silent: true) }
         .navigationTitle(t("Cửa hàng", "Shop")).navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .secondaryAction) { NavigationLink { OrdersView() } label: { Label(t("Đơn hàng của tôi", "My orders"), systemImage: "shippingbox") } }
+            ToolbarItem(placement: .primaryAction) { NavigationLink { CartView() } label: { Image(systemName: "cart") } }
+        }
         .screenBackground()
     }
 
@@ -123,6 +127,8 @@ struct ProductDetailView: View {
     let slug: String
     let name: String
     @State private var loader: Loader<ProductDetail>
+    @State private var cart = CartStore.shared
+    @State private var added = false
 
     init(slug: String, name: String) { self.slug = slug; self.name = name; _loader = State(initialValue: Loader { try await ShopAPI.detail(slug) }) }
 
@@ -136,12 +142,17 @@ struct ProductDetailView: View {
                     if let desc = d.description { Text(desc).font(.body).foregroundStyle(Theme.textMuted) }
                     SectionTitle(t("Phân loại", "Variants"))
                     ForEach(d.variants ?? []) { v in
+                        VStack(spacing: 10) {
                         HStack {
                             VStack(alignment: .leading, spacing: 3) { Text(v.label).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
                                 if let s = v.servingsPerContainer { Text(t("\(s) lần dùng", "\(s) servings")).font(.caption).foregroundStyle(Theme.textMuted) } }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 3) { Text(Fmt.money(v.price)).font(.subheadline.weight(.bold)).foregroundStyle(Theme.accentText)
                                 if v.available == false { Pill(text: t("Hết hàng", "Sold out"), tone: .danger) } }
+                        }
+                        if v.available != false {
+                            Button { cart.add(CartLine(variantId: v.id, productName: d.name, variantLabel: v.label, unitPrice: v.price, imageUrl: d.images?.first?.url, quantity: 1)); added = true } label: { Label(t("Thêm vào giỏ", "Add to cart"), systemImage: "cart.badge.plus") }.buttonStyle(.solSecondary)
+                        }
                         }.card()
                     }
                     if let n = d.nutrients, !n.isEmpty {
@@ -162,6 +173,9 @@ struct ProductDetailView: View {
             }
         }
         .navigationTitle(name).navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .primaryAction) { NavigationLink { CartView() } label: { Image(systemName: "cart") } } }
+        .overlay(alignment: .bottom) { if added { Text(t("Đã thêm vào giỏ", "Added to cart")).padding(12).background(Theme.success, in: Capsule()).foregroundStyle(.white).padding(.bottom, 90).task { try? await Task.sleep(for: .seconds(1.5)); added = false } } }
+        .animation(.default, value: added)
         .screenBackground()
     }
 }

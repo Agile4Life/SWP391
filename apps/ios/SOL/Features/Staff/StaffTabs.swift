@@ -23,6 +23,10 @@ struct StaffMoreView: View {
             VStack(spacing: 12) {
                 RoleHeader()
                 MoreLink(icon: "bubble.left.and.bubble.right", title: t("Tin nhắn", "Messages")) { ChatListView() }
+                if auth.user?.role == .staff || auth.user?.role == .manager || auth.user?.role == .admin {
+                    MoreLink(icon: "lifepreserver", title: t("Yêu cầu hỗ trợ", "Support inbox")) { SupportView(staff: true) }
+                    MoreLink(icon: "shippingbox", title: t("Đơn sản phẩm", "Product orders")) { StaffOrdersView() }
+                }
                 MoreLink(icon: "bell", title: t("Thông báo", "Notifications")) { NotificationsView() }
                 SettingsSection()
             }.padding(Metrics.pad)

@@ -47,6 +47,10 @@ struct MemberMoreView: View {
                 }.buttonStyle(.plain)
                 MoreLink(icon: "bell", title: t("Thông báo", "Notifications"), badge: unread) { NotificationsView(onChange: { unread = $0 }) }
                 MoreLink(icon: "bubble.left.and.bubble.right", title: t("Tin nhắn", "Messages")) { ChatListView() }
+                MoreLink(icon: "figure.strengthtraining.traditional", title: t("PT 1:1", "1:1 coaching")) { CoachBookingView() }
+                MoreLink(icon: "sparkles", title: t("Trợ lý AI", "AI assistant")) { AIChatView() }
+                MoreLink(icon: "lifepreserver", title: t("Hỗ trợ", "Support")) { SupportView() }
+                MoreLink(icon: "person.badge.shield.checkmark", title: t("Xác minh danh tính", "Identity verification")) { KycView() }
                 MoreLink(icon: "sportscourt", title: t("Đặt sân", "Courts")) { CourtsView() }
                 MoreLink(icon: "bag", title: t("Cửa hàng", "Shop")) { ShopView() }
                 MoreLink(icon: "checkmark.seal", title: t("Check-in & chuỗi tập", "Check-in & streak")) { CheckInView() }

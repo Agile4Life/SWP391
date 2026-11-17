@@ -15,6 +15,7 @@ struct Subscription: Decodable, Identifiable, Hashable {
     let quotedPrice: Double?
     let holdStatus: String?
     let holdReason: String?
+    let remainingValue: Double?
 
     var isActive: Bool { status == "active" }
     var isPending: Bool { status == "pending_payment" }
