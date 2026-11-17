@@ -10,7 +10,6 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
 import org.springdoc.core.models.GroupedOpenApi;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,7 +25,7 @@ public class OpenApiConfig {
     private static final String SECURITY_SCHEME_NAME = "BearerAuth";
 
     @Bean
-    public OpenAPI scmsOpenAPI(@Value("${server.port:8080}") String serverPort) {
+    public OpenAPI scmsOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
                         .title("Sports Center Management System (SCMS) API")
@@ -38,11 +37,8 @@ public class OpenApiConfig {
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
-                .servers(List.of(
-                        new Server()
-                                .url("http://localhost:" + serverPort)
-                                .description("Máy chủ phát triển cục bộ (Local Development Server)")
-                ))
+                // Relative URL: "Try it out" calls whichever origin serves Swagger (localhost, VPS, Render).
+                .servers(List.of(new Server().url("/").description("Máy chủ hiện tại (Current Server)")))
                 .tags(List.of(
                         new Tag().name("Authentication").description("Đăng ký tài khoản, đăng nhập JWT, gửi và xác thực mã OTP"),
                         new Tag().name("Users & RBAC").description("Quản trị người dùng, trạng thái khóa/mở khóa và phân quyền vai trò"),
