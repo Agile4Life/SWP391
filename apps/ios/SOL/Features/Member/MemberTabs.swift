@@ -46,6 +46,9 @@ struct MemberMoreView: View {
                     }.card()
                 }.buttonStyle(.plain)
                 MoreLink(icon: "bell", title: t("Thông báo", "Notifications"), badge: unread) { NotificationsView(onChange: { unread = $0 }) }
+                MoreLink(icon: "bubble.left.and.bubble.right", title: t("Tin nhắn", "Messages")) { ChatListView() }
+                MoreLink(icon: "sportscourt", title: t("Đặt sân", "Courts")) { CourtsView() }
+                MoreLink(icon: "bag", title: t("Cửa hàng", "Shop")) { ShopView() }
                 MoreLink(icon: "checkmark.seal", title: t("Check-in & chuỗi tập", "Check-in & streak")) { CheckInView() }
                 MoreLink(icon: "chart.line.uptrend.xyaxis", title: t("Tiến độ & giáo án", "Progress & plans")) { ProgressPlansView() }
                 MoreLink(icon: "wallet.bifold", title: t("Ví SÖL", "SÖL wallet")) { WalletView() }

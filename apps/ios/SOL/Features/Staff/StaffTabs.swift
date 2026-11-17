@@ -22,6 +22,7 @@ struct StaffMoreView: View {
         ScrollView {
             VStack(spacing: 12) {
                 RoleHeader()
+                MoreLink(icon: "bubble.left.and.bubble.right", title: t("Tin nhắn", "Messages")) { ChatListView() }
                 MoreLink(icon: "bell", title: t("Thông báo", "Notifications")) { NotificationsView() }
                 SettingsSection()
             }.padding(Metrics.pad)

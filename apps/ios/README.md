@@ -22,6 +22,7 @@ tuỳ chọn `SOL_DEMO_TAB=<số tab>`. Bản Release không chứa mã này.
 - `SOL/UI`: thành phần dùng chung (Loader + loading/empty/error, card, nút, QR).
 - `SOL/Features/Auth`: đăng nhập, đăng ký + OTP, quên mật khẩu.
 - `SOL/Features/Member`: tổng quan, lớp học, thẻ QR động, check-in (quét QR cổng), gói tập (đăng ký/gia hạn/thanh toán ví/VNPay/tiền mặt), ví, thanh toán + hoá đơn PDF, tiến độ + giáo án, thông báo, hồ sơ.
+- `SOL/Features/Shop` (xem sản phẩm, API public), `Chat` (tin nhắn trực tiếp, thăm dò 4 giây), `Courts` (xem giờ trống, đặt/huỷ sân).
 - `SOL/Features/Staff`: lễ tân (thu tiền mặt, huỷ yêu cầu, duyệt bảo lưu, tra cứu hội viên), check-in quầy (quét QR hội viên), lớp hôm nay.
 - `SOL/Features/Coach`: lịch dạy 14 ngày, điểm danh + chấm tiến bộ.
 - `SOL/Features/Manager`: báo cáo doanh thu (biểu đồ), duyệt/từ chối yêu cầu huỷ gói, lớp hôm nay.
@@ -29,5 +30,5 @@ tuỳ chọn `SOL_DEMO_TAB=<số tab>`. Bản Release không chứa mã này.
 
 ## Chưa làm (so với web)
 
-Google OAuth, chat/hỗ trợ realtime, cửa hàng, đặt sân, PT 1:1, KYC, nâng cấp gói, quản trị người dùng/danh mục, Explore 3D.
+Google OAuth, chat hỗ trợ/AI và realtime Supabase (chat trực tiếp dùng thăm dò), giỏ hàng và đặt mua (cửa hàng chỉ xem), PT 1:1, KYC, nâng cấp gói, quản trị người dùng/danh mục, Explore 3D.
 Thanh toán VNPay mở trong Safari View Controller và app đối chiếu trạng thái giao dịch sau khi đóng.
