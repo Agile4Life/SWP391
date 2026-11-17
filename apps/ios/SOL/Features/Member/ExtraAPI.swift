@@ -56,6 +56,8 @@ enum ExtraAPI {
     static func sendTicketMessage(_ id: Int, _ text: String) async throws -> SupportMessage { try await c.post("/support/requests/\(id)/messages", body: SupportSend(message: text, clientMessageId: UUID().uuidString)) }
     static func setTicketStatus(_ id: Int, _ status: String) async throws -> SupportTicket { try await c.patch("/support/requests/\(id)/status", body: ["status": status]) }
 
+    static func escalate(_ id: Int, reason: String) async throws { let _: Empty? = try await c.post("/support/requests/\(id)/escalate", body: ["reason": reason]) }
+
     static func aiSessions() async throws -> [AiSession] { try await c.get("/ai/chat/sessions") }
     static func createAiSession() async throws -> AiSession { try await c.post("/ai/chat/sessions", body: [String: String]()) }
     static func aiHistory(_ id: Int) async throws -> [AiMessage] { try await c.get("/ai/chat/sessions/\(id)/history") }

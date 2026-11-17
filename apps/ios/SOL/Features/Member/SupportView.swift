@@ -77,6 +77,9 @@ struct TicketThreadView: View {
     @State private var messages: [SupportMessage] = []
     @State private var draft = ""
     @State private var error: String?
+    @State private var realtime: RealtimeSubscription?
+    @State private var escalating = false
+    @State private var reason = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -107,7 +110,21 @@ struct TicketThreadView: View {
         }
         .navigationTitle(ticket.subject).navigationBarTitleDisplayMode(.inline)
         .screenBackground()
-        .task { while !Task.isCancelled { if let m = try? await ExtraAPI.ticketMessages(ticket.id), m.map(\.id) != messages.map(\.id) { messages = m }; try? await Task.sleep(for: .seconds(5)) } }
+        .task { await refresh() }
+        .onAppear { let rt = RealtimeSubscription(sessionPath: "/support/requests/\(ticket.id)/realtime-session") { Task { await refresh() } }; realtime = rt; rt.start() }
+        .onDisappear { realtime?.stop(); realtime = nil }
+        .toolbar { if staff && ticket.status != "closed" { ToolbarItem(placement: .primaryAction) { Button { escalating = true } label: { Image(systemName: "arrow.up.forward.circle") } } } }
+        .alert(t("Chuyển cấp lên quản lý", "Escalate to manager"), isPresented: $escalating) {
+            TextField(t("Lý do", "Reason"), text: $reason)
+            Button(t("Chuyển cấp", "Escalate")) { Task { await escalate() } }
+            Button(t("Huỷ", "Cancel"), role: .cancel) { reason = "" }
+        }
+    }
+
+    private func refresh() async { if let m = try? await ExtraAPI.ticketMessages(ticket.id), m.map(\.id) != messages.map(\.id) { messages = m } }
+    private func escalate() async {
+        let r = reason.trimmingCharacters(in: .whitespaces); guard !r.isEmpty else { return }
+        do { try await ExtraAPI.escalate(ticket.id, reason: r); reason = ""; onChange() } catch { self.error = error.localizedDescription }
     }
 
     private func send() async {

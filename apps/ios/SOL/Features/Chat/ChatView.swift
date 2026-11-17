@@ -26,6 +26,7 @@ struct ChatListView: View {
     @State private var loader = Loader { try await ChatAPI.conversations() }
     @State private var showContacts = false
     @State private var open: ChatConversation?
+    @State private var realtime: RealtimeSubscription?
 
     var body: some View {
         ScrollView {
@@ -49,6 +50,8 @@ struct ChatListView: View {
             }.padding(Metrics.pad)
         }
         .refreshable { await loader.load(silent: true) }
+        .onAppear { let rt = RealtimeSubscription(sessionPath: "/chat/realtime-session") { Task { await loader.load(silent: true) } }; realtime = rt; rt.start() }
+        .onDisappear { realtime?.stop(); realtime = nil }
         .navigationTitle(t("Tin nhắn", "Messages")).navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .primaryAction) { Button { showContacts = true } label: { Image(systemName: "square.and.pencil") } } }
         .screenBackground()
@@ -96,6 +99,7 @@ struct ChatThreadView: View {
     @State private var draft = ""
     @State private var error: String?
     @State private var loaded = false
+    @State private var realtime: RealtimeSubscription?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -125,20 +129,19 @@ struct ChatThreadView: View {
         }
         .navigationTitle(conversation.peer.name).navigationBarTitleDisplayMode(.inline)
         .screenBackground()
-        .task { await poll() }
+        .task { await refresh() }
+        .onAppear { let rt = RealtimeSubscription(sessionPath: "/chat/realtime-session") { Task { await refresh() } }; realtime = rt; rt.start() }
+        .onDisappear { realtime?.stop(); realtime = nil }
     }
 
-    /// Thăm dò mỗi 4 giây (không dùng Supabase realtime trong app native).
-    private func poll() async {
-        while !Task.isCancelled {
-            if let items = try? await ChatAPI.history(conversation.id) {
-                let ordered = items.sorted { $0.id < $1.id }
-                if ordered.map(\.id) != messages.map(\.id) { messages = ordered }
-                if let last = ordered.last { await ChatAPI.markRead(conversation.id, last: last.id) }
-            }
-            loaded = true
-            try? await Task.sleep(for: .seconds(4))
+    /// Tải lại lịch sử khi realtime báo có thay đổi (hoặc thăm dò 4 giây nếu realtime tắt).
+    private func refresh() async {
+        if let items = try? await ChatAPI.history(conversation.id) {
+            let ordered = items.sorted { $0.id < $1.id }
+            if ordered.map(\.id) != messages.map(\.id) { messages = ordered }
+            if let last = ordered.last { await ChatAPI.markRead(conversation.id, last: last.id) }
         }
+        loaded = true
     }
 
     private func send() async {
