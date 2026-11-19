@@ -159,27 +159,6 @@ public class CoachAssignmentService {
         return null;
     }
 
-    public CoachAssignmentStudentDto assignStudent(CoachAssignmentAssignDto dto) {
-        if (!"TRAINING_PLAN".equals(dto.assignmentType())) throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
-        Coach coach = activeCoach(dto.coachId());
-        Member member = activeMember(dto.memberId());
-        if (dto.startDate() == null || dto.endDate() == null || dto.startDate().isAfter(dto.endDate()) || dto.endDate().isBefore(today())) {
-            throw invalid("INVALID_DATE_RANGE", "invalid_dates");
-        }
-        requireMembership(member.getUserId());
-        String goal = dto.goal() != null && !dto.goal().isBlank() ? dto.goal().trim()
-                : member.getFitnessGoal() != null ? member.getFitnessGoal() : msg("default_goal");
-        TrainingPlan plan = new TrainingPlan();
-        plan.setCoach(coach); plan.setMember(member); plan.setGoal(goal); plan.setStartDate(dto.startDate());
-        plan.setEndDate(dto.endDate()); plan.setStatus("active");
-        plan = trainingPlanRepository.save(plan);
-        notificationService.send(coach.getUserId(), msg("notice.assigned.title"), msg("notice.assigned.coach", member.getUser().getFullName(), goal),
-                "system", "training_plan", plan.getId(), "/coach/training-plans");
-        notificationService.send(member.getUserId(), msg("notice.assigned.title"), msg("notice.assigned.member", coach.getUser().getFullName(), goal),
-                "system", "training_plan", plan.getId(), "/member/progress");
-        return student(member, "TRAINING_PLAN", goal, plan.getStartDate(), plan.getEndDate(), plan.getEndDate().toString(), plan.getStatus(), plan.getId());
-    }
-
     public void reassignStudent(CoachAssignmentReassignDto dto) {
         if (dto.referenceId() == null || dto.assignmentType() == null || !Set.of("TRAINING_PLAN", "PT_1_1").contains(dto.assignmentType())) {
             throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
@@ -215,6 +194,7 @@ public class CoachAssignmentService {
             requireCoachAvailable(to.getUserId(), booking);
             booking.setCoach(to);
             coachBookingRepository.save(booking);
+            inheritPlans(member.getUserId(), from, to);
             entityType = null; coachPath = "/coach/classes";
         }
         recordTransfer(dto, reason);
@@ -224,6 +204,22 @@ public class CoachAssignmentService {
                 "system", entityType, dto.referenceId(), coachPath);
         notificationService.send(member.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.member", to.getUser().getFullName(), dto.referenceId(), reason),
                 "system", entityType, dto.referenceId(), "TRAINING_PLAN".equals(dto.assignmentType()) ? "/member/progress" : "/member/classes?tab=coach_booking");
+    }
+
+    /**
+     * The member's plans follow the PT session to the new coach, who edits them from there; the previous coach no longer
+     * owns them. If the new coach already has an active plan for the member, theirs stays and the inherited one goes to history.
+     */
+    private void inheritPlans(Long memberId, Coach from, Coach to) {
+        boolean toHasActive = !trainingPlanRepository.findOtherActiveForMemberAndCoach(memberId, to.getUserId(), -1L).isEmpty();
+        for (TrainingPlan plan : trainingPlanRepository.findByMemberUserIdAndCoachUserIdAndStatusIn(memberId, from.getUserId(),
+                List.of("active", "draft", "superseded"))) {
+            plan.setCoach(to);
+            if ("active".equals(plan.getStatus())) {
+                if (toHasActive) plan.setStatus("superseded"); else toHasActive = true;
+            }
+            trainingPlanRepository.save(plan);
+        }
     }
 
     private void requireRelationship(Member member, Coach coach, CoachAssignmentReassignDto dto) {

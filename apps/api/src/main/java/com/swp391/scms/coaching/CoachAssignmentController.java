@@ -1,8 +1,6 @@
 package com.swp391.scms.coaching;
 
-import com.swp391.scms.coaching.dto.CoachAssignmentAssignDto;
 import com.swp391.scms.coaching.dto.CoachAssignmentReassignDto;
-import com.swp391.scms.coaching.dto.CoachAssignmentStudentDto;
 import com.swp391.scms.coaching.service.CoachAssignmentService;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
@@ -10,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -50,18 +47,6 @@ public class CoachAssignmentController {
         return ResponseEntity.ok(ApiResponse.ok(
                 msg("manager.coach_assignments.loaded"),
                 data
-        ));
-    }
-
-    @Operation(summary = "Phân công học viên mới cho HLV kèm mục tiêu và thời hạn")
-    @PostMapping("/assign")
-    public ResponseEntity<ApiResponse<CoachAssignmentStudentDto>> assign(
-            @Valid @RequestBody CoachAssignmentAssignDto dto
-    ) {
-        CoachAssignmentStudentDto student = coachAssignmentService.assignStudent(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(
-                msg("manager.coach_assignments.assigned"),
-                student
         ));
     }
 

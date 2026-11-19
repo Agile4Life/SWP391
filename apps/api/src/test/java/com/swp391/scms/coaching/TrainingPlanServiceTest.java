@@ -415,12 +415,30 @@ class TrainingPlanServiceTest {
     }
 
 
- @Test void rejectsCreatingPlanForExpiredOrUnassignedMember() {
+ @Test void rejectsCreatingPlanWithoutRegisteredPtSession() {
   var dto = new com.swp391.scms.coaching.dto.TrainingPlanCreateDto();
   dto.setMemberId(10L);dto.setStartDate(LocalDate.of(2026,11,4));dto.setEndDate(LocalDate.of(2026,11,10));
   Member member=new Member();member.setUserId(10L);when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
-  doThrow(new com.swp391.scms.common.exception.ForbiddenException("COACH_MEMBER_NOT_ASSIGNED","coaching.member.not_assigned",null,"Denied")).when(currentCoachMembers).requireCoachOf(20L,10L);
-  assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,()->service.createPlan(dto,20L,"COACH"));
+  var bookings=org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+  when(bookings.existsForCoachAndMember(20L,10L)).thenReturn(false);
+  org.springframework.test.util.ReflectionTestUtils.setField(service,"coachBookingRepository",bookings);
+  var ex=assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,()->service.createPlan(dto,20L,"COACH"));
+  assertEquals("PT_SESSION_REQUIRED",ex.getErrorCode());
+  verify(trainingPlanRepository,never()).save(any());
+ }
+
+ @Test void rejectsCreatingPlanForMemberWithoutGoldOrPlatinum() {
+  var dto = new com.swp391.scms.coaching.dto.TrainingPlanCreateDto();
+  dto.setMemberId(10L);dto.setStartDate(LocalDate.of(2026,11,4));dto.setEndDate(LocalDate.of(2026,11,10));
+  Member member=new Member();member.setUserId(10L);when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+  var bookings=org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+  when(bookings.existsForCoachAndMember(20L,10L)).thenReturn(true);
+  var subs=org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
+  when(subs.findByMemberUserIdAndStatus(10L,"active")).thenReturn(java.util.List.of());
+  org.springframework.test.util.ReflectionTestUtils.setField(service,"coachBookingRepository",bookings);
+  org.springframework.test.util.ReflectionTestUtils.setField(service,"subscriptionRepository",subs);
+  var ex=assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,()->service.createPlan(dto,20L,"COACH"));
+  assertEquals("PLAN_TIER_REQUIRED",ex.getErrorCode());
   verify(trainingPlanRepository,never()).save(any());
  }
 

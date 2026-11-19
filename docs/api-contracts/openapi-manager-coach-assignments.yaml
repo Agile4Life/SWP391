@@ -50,35 +50,6 @@ paths:
         '400': { description: Invalid assignment type, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
         '401': { description: Authentication required }
         '403': { description: Manager role required }
-  /manager/coach-assignments/assign:
-    post:
-      summary: Create an active training-plan assignment
-      description: |
-        Requires a currently active, non-deleted member account, an active employed coach
-        account, and a membership with status active covering center today. A held, expired
-        or future-only subscription is insufficient. startDate must not follow endDate and
-        endDate must not precede today. Notifications are stored for the coach and member.
-        The goal is saved on the training plan; there is no separate notes field.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AssignRequest' }
-      responses:
-        '201':
-          description: Created relationship
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Envelope'
-                  - type: object
-                    properties:
-                      data: { $ref: '#/components/schemas/Student' }
-        '400': { description: Invalid dates/type, inactive account/coach or no current active membership }
-        '401': { description: Authentication required }
-        '403': { description: Manager role required }
-        '404': { description: Member or coach not found }
   /manager/coach-assignments/reassign:
     post:
       summary: Transfer exactly one training plan or future PT session
@@ -93,7 +64,11 @@ paths:
         Existing database schedule triggers remain enabled. A missing or stale relationship
         fails without success notifications. Audit logs preserve actor, assignment type,
         reference ID, member ID, old/new coach IDs and the required reason. No plan items,
-        lifecycle dates or unrelated relationships change. Only after a valid transfer are
+        lifecycle dates or unrelated relationships change, except that a PT_1_1 transfer also
+        hands the member's training plans (active, draft, history) from the previous coach to the
+        receiving coach, who edits them from then on; the previous coach loses edit rights. If the
+        receiving coach already has an active plan for the member, the inherited active plan moves
+        to history. Only after a valid transfer are
         the member and both coaches notified. The member's in-app notification and email
         include the manager's reason. PT notices open the PT booking tab.
       requestBody:
@@ -143,16 +118,6 @@ components:
       properties:
         code: { type: string }
         message: { type: string }
-    AssignRequest:
-      type: object
-      required: [memberId, coachId, assignmentType, startDate, endDate]
-      properties:
-        memberId: { type: integer, format: int64, description: The userId returned by members/lookup }
-        coachId: { type: integer, format: int64 }
-        assignmentType: { type: string, enum: [TRAINING_PLAN] }
-        goal: { type: string, maxLength: 255, nullable: true }
-        startDate: { type: string, format: date }
-        endDate: { type: string, format: date }
     ReassignRequest:
       type: object
       required: [memberId, fromCoachId, toCoachId, referenceId, assignmentType, reason]

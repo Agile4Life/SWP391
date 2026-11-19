@@ -78,7 +78,7 @@ public class TrainingPlanService {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                     "Coaches can only create training plans for themselves");
         }
-        if (isCoach(currentUserRole)) requireCurrentAssignment(currentUserId, member.getUserId());
+        if (isCoach(currentUserRole)) requirePersonalPlanEligibility(currentUserId, member.getUserId());
 
         Coach coach = coachRepository.findById(targetCoachId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", targetCoachId));
@@ -442,6 +442,26 @@ public class TrainingPlanService {
 
     @org.springframework.beans.factory.annotation.Autowired
     private CurrentCoachMembers currentCoachMembers;
+
+    @Autowired(required = false)
+    private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
+
+    /** A coach writes a personal plan only for a member with a registered 1:1 PT session with them and a Gold/Platinum package. */
+    private void requirePersonalPlanEligibility(Long coachId, Long memberId) {
+        if (coachBookingRepository != null && !coachBookingRepository.existsForCoachAndMember(coachId, memberId)) {
+            throw new ForbiddenException("PT_SESSION_REQUIRED", "coaching.plan.pt_required", null,
+                    "A personal plan needs a registered 1:1 PT session");
+        }
+        if (subscriptionRepository != null) {
+            java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+            boolean eligible = subscriptionRepository.findByMemberUserIdAndStatus(memberId, "active").stream()
+                    .anyMatch(sub -> sub.getStartDate() != null && sub.getEndDate() != null
+                            && !sub.getStartDate().isAfter(today) && !sub.getEndDate().isBefore(today)
+                            && com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(sub.getMembershipPackage()));
+            if (!eligible) throw new ForbiddenException("PLAN_TIER_REQUIRED", "coaching.plan.tier_required_author", null,
+                    "Personal plans need a Gold or Platinum package");
+        }
+    }
 
     private void requireCurrentAssignment(Long coachId, Long memberId) {
         if(currentCoachMembers == null) throw new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, "Current assignment cannot be verified.");

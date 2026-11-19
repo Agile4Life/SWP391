@@ -31,6 +31,8 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
             @org.springframework.data.repository.query.Param("coachId") Long coachId,
             @org.springframework.data.repository.query.Param("exceptId") Long exceptId);
 
+    List<TrainingPlan> findByMemberUserIdAndCoachUserIdAndStatusIn(Long memberId, Long coachId, java.util.Collection<String> statuses);
+
     List<TrainingPlan> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
 
     List<TrainingPlan> findByCoachUserIdOrderByCreatedAtDesc(Long coachId);

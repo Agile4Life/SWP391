@@ -67,30 +67,6 @@ class CoachAssignmentControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/manager/coach-assignments/assign creates assignment")
-    void testAssign() throws Exception {
-        CoachAssignmentAssignDto dto = new CoachAssignmentAssignDto(
-                100L, 10L, "TRAINING_PLAN", "Tập tăng cơ",
-                LocalDate.of(2026, 11, 10), LocalDate.of(2026, 12, 10)
-        );
-
-        CoachAssignmentStudentDto studentDto = new CoachAssignmentStudentDto(
-                100L, "SOL-MB-100", "Học viên A", "0988888888", "a@test.com", null,
-                "Tập tăng cơ", "beginner", null, "TRAINING_PLAN", "Theo giáo án riêng",
-                "Tập tăng cơ", dto.startDate(), dto.endDate(), null, "active", 1L
-        );
-
-        when(coachAssignmentService.assignStudent(any(CoachAssignmentAssignDto.class)))
-                .thenReturn(studentDto);
-
-        mockMvc.perform(post("/api/v1/manager/coach-assignments/assign")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.fullName").value("Học viên A"));
-    }
-
-    @Test
     @DisplayName("POST /api/v1/manager/coach-assignments/reassign transfers student")
     void testReassign() throws Exception {
         CoachAssignmentReassignDto dto = new CoachAssignmentReassignDto(

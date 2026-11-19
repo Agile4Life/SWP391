@@ -85,61 +85,10 @@ class CoachAssignmentServiceTest {
         CoachBooking b = new CoachBooking(); b.setId(id); b.setMember(member); b.setCoach(from); b.setStatus("confirmed");
         b.setBookingDate(today.plusDays(1)); b.setStartTime(LocalTime.of(10, 0)); b.setEndTime(LocalTime.of(11, 0)); return b;
     }
-    private CoachAssignmentAssignDto assign() { return new CoachAssignmentAssignDto(100L, 10L, "TRAINING_PLAN", "Strength", today, today.plusDays(30)); }
     private CoachAssignmentReassignDto transfer(String type, Long id) { return new CoachAssignmentReassignDto(100L, 10L, 20L, id, type, "Schedule adjustment"); }
     private void validAccounts() {
         when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(coaches.findById(20L)).thenReturn(Optional.of(to));
         when(members.findById(100L)).thenReturn(Optional.of(member)); when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
-    }
-
-    @Test void assignsUsingCurrentActiveMembership() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
-        when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
-        when(plans.save(any())).thenAnswer(inv -> { TrainingPlan p = inv.getArgument(0); p.setId(999L); return p; });
-        var result = service.assignStudent(assign());
-        assertThat(result.memberId()).isEqualTo(100L); assertThat(result.referenceId()).isEqualTo(999L); assertThat(result.status()).isEqualTo("active");
-        verify(subscriptions, never()).existsEntitlementEndingOnOrAfter(anyLong(), any());
-        verify(notifications, times(2)).send(anyLong(), anyString(), anyString(), eq("system"), eq("training_plan"), eq(999L), anyString());
-    }
-
-    @Test void rejectsFutureOrHeldMembershipThatIsNotCurrentlyActive() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
-        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "NO_ACTIVE_SUBSCRIPTION");
-        verify(plans, never()).save(any()); verifyNoInteractions(notifications);
-    }
-
-    @Test void aFrozenMembershipIsReportedAsOnHoldNotAsMissing() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
-        when(subscriptions.findByMemberUserIdAndStatus(100L, "frozen"))
-                .thenReturn(java.util.List.of(new com.swp391.scms.membership.entity.MembershipSubscription()));
-        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_FROZEN");
-        verify(plans, never()).save(any());
-    }
-
-    @ParameterizedTest @ValueSource(strings = {"inactive", "pending", "locked"})
-    void rejectsInactiveMemberAccount(String status) {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
-        member.getUser().setStatus(status);
-        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "MEMBER_INACTIVE");
-        verifyNoInteractions(plans, notifications);
-    }
-
-    @Test void rejectsDeletedMember() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
-        member.getUser().setDeletedAt(LocalDateTime.now(clock));
-        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "MEMBER_INACTIVE");
-    }
-
-    @Test void rejectsUnavailableCoach() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); from.setEmploymentStatus("on_leave");
-        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_INACTIVE");
-    }
-
-    @Test void rejectsDeletedCoachAccount() {
-        when(coaches.findById(10L)).thenReturn(Optional.of(from)); from.getUser().setDeletedAt(LocalDateTime.now(clock));
-        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_INACTIVE");
     }
 
     @Test void transfersOnlySelectedPlanAndRecordsBothCoachIdsAndActor() throws Exception {
@@ -204,8 +153,20 @@ class CoachAssignmentServiceTest {
         when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
         service.reassignStudent(transfer("PT_1_1", 601L));
         assertThat(selected.getCoach()).isSameAs(to); assertThat(untouched.getCoach()).isSameAs(from);
-        verify(bookings).save(selected); verify(bookings, never()).findByMemberId(anyLong()); verifyNoInteractions(plans);
+        verify(bookings).save(selected); verify(bookings, never()).findByMemberId(anyLong());
         verify(audit).save(any());
+    }
+
+    @Test void ptTransferHandsPlansToNewCoachAndKeepsOneActive() {
+        validAccounts(); CoachBooking selected = booking(601L);
+        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
+        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
+        TrainingPlan active = plan(701L, "active"), draft = plan(702L, "draft"), history = plan(703L, "superseded");
+        when(plans.findOtherActiveForMemberAndCoach(100L, 20L, -1L)).thenReturn(java.util.List.of(plan(800L, "active")));
+        when(plans.findByMemberUserIdAndCoachUserIdAndStatusIn(eq(100L), eq(10L), any())).thenReturn(java.util.List.of(active, draft, history));
+        service.reassignStudent(transfer("PT_1_1", 601L));
+        assertThat(java.util.List.of(active, draft, history)).allSatisfy(p -> assertThat(p.getCoach()).isSameAs(to));
+        assertThat(active.getStatus()).isEqualTo("superseded"); assertThat(draft.getStatus()).isEqualTo("draft");
     }
 
     @Test void doesNotTransferEarlierTodayPt() {
