@@ -172,21 +172,17 @@ class CatalogSeederTest {
     }
 
     @Test
-    void retiresSixAndTwelveMonthPackagesWithoutDeletingThem() {
+    void leavesManagerControlledPackageStatusAlone() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
         when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
         when(packages.list()).thenReturn(List.of(
-                new PackageDto(7L, CatalogSeeder.SILVER_6M_NAME, null, new BigDecimal("999000"), 180, 2, "active"),
-                new PackageDto(8L, CatalogSeeder.GOLD_6M_NAME, null, new BigDecimal("1499000"), 180, 5, "inactive"),
-                new PackageDto(9L, CatalogSeeder.SILVER_12M_NAME, null, new BigDecimal("1799000"), 365, 2, "active"),
-                new PackageDto(10L, CatalogSeeder.SILVER_3M_NAME, null, new BigDecimal("549000"), 90, 6, "active")));
+                new PackageDto(7L, "SILVER 6 THÁNG", null, new BigDecimal("999000"), 180, 2, "active"),
+                new PackageDto(9L, "GOLD 12 THÁNG", null, new BigDecimal("1799000"), 365, 2, "active"),
+                new PackageDto(10L, CatalogSeeder.SILVER_3M_NAME, null, new BigDecimal("549000"), 90, 6, "inactive")));
 
         seeder.run(null);
 
-        verify(packages).updateStatus(7L, "inactive");
-        verify(packages, never()).updateStatus(8L, "inactive");
-        verify(packages).updateStatus(9L, "inactive");
-        verify(packages, never()).updateStatus(10L, "inactive");
+        verify(packages, never()).updateStatus(any(), any());
         verify(packages, never()).update(any(), any());
     }
 

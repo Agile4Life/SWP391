@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
 import { localizeSeededCatalogText, sessionDate } from '../publicCatalog';
-import { formatPrice, getPackageDetails, isTrialPackage, localizeSeededPackageName } from '../../../shared/lib/membershipPresentation';
+import { formatPrice, getPackageDetails, isTrialPackage, localizeSeededPackageName, LONG_TERM_DAYS, MIN_TERM_DAYS } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
@@ -29,16 +29,15 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
   const packages = catalog.packages.filter(pkg => {
     if (pkg.status !== 'active') return false;
     if (isTrialPackage(pkg)) return false;
-    // Trang đầu: chỉ hiển thị 3 gói 1 tháng (Bạc, Vàng, Platinum)
-    if (!longTerm) return pkg.durationDays < 90;
-    // Đồng hành dài hạn: các gói từ 90 ngày trở lên (hiện là 3 gói 12 tháng)
-    return pkg.durationDays >= 90;
+    // Cùng quy tắc với trang gói hội viên: chỉ quảng cáo gói hội viên mua được (từ 3 tháng).
+    if (pkg.durationDays < MIN_TERM_DAYS) return false;
+    return longTerm ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
   });
 
   return <>
     <div className="fit-pricing-switch" data-reveal="soft" aria-label={sourceText("Lọc thời hạn gói tập")}>
-      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>{sourceText("Gói 1 tháng")}</button>
-      <button type="button" aria-pressed={longTerm} onClick={() => setLongTerm(true)}>{sourceText("Đồng hành dài hạn")}</button>
+      <button type="button" aria-pressed={!longTerm} onClick={() => setLongTerm(false)}>{sourceText("Gói 3 tháng")}</button>
+      <button type="button" aria-pressed={longTerm} onClick={() => setLongTerm(true)}>{sourceText("Đồng hành dài hạn (6–12 tháng)")}</button>
     </div>
     {packages.length === 0 && <p className="fit-catalog-state" role="status">{sourceText("Chưa có gói tập phù hợp.")}</p>}
     <div className="fit-pricing-grid" key={String(longTerm)}>

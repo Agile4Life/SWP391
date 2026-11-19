@@ -87,6 +87,10 @@ export function isTrialPackage(pkg: { price?: number; durationDays?: number; nam
   return name.includes('trải nghiệm') || name.includes('trial');
 }
 
+// Quy tắc thời hạn bán gói (khớp PackageService.MIN_TERM_DAYS ở backend), dùng chung cho landing và trang hội viên.
+export const MIN_TERM_DAYS = 90;
+export const LONG_TERM_DAYS = 180;
+
 export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = getLanguage()) {
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';

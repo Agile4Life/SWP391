@@ -5,7 +5,7 @@ import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
-import { formatPrice, getPackageDetails, isTrialPackage } from '../../shared/lib/membershipPresentation';
+import { formatPrice, getPackageDetails, isTrialPackage, LONG_TERM_DAYS, MIN_TERM_DAYS } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
@@ -51,8 +51,6 @@ interface RequestResult {
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
 /** Sellable plans run 3-12 months: 3 months is "short", 6 months and up is "long". */
-const MIN_TERM_DAYS = 90;
-const LONG_TERM_DAYS = 180;
 const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.';
 
 // The backend VNPay guard decides whether a pending online attempt can still settle.

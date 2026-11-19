@@ -13,7 +13,7 @@ vi.mock('./components/ProductShelf', () => ({
 }));
 
 const catalog: PublicCatalog = {
-  packages: [{ id: 1, name: 'Gói mới', price: 789000, durationDays: 45, classCreditLimit: 8, description: 'Quyền lợi mới', status: 'active' }],
+  packages: [{ id: 1, name: 'Gói mới', price: 789000, durationDays: 90, classCreditLimit: 8, description: 'Quyền lợi mới', status: 'active' }],
   coaches: [{ id: 2, name: 'HLV An', specialization: 'Yoga', bio: 'Hồ sơ mới', certification: 'Yoga 200h', avatarUrl: null }],
   sessions: [{ id: 3, classId: 1, className: 'Yoga sáng', disciplineId: 1, disciplineName: 'Yoga', coachId: 2, coachName: 'HLV An', roomId: 1, roomName: 'Phòng 1', sessionDate: '2026-10-24', startTime: '09:00:00', endTime: '10:00:00', status: 'scheduled', cancelReason: null, capacity: 12, bookedCount: 5 }],
 };
@@ -35,7 +35,7 @@ it('renders API price, duration, benefits, coaches and actual session seats with
     <CatalogSchedule catalog={catalog} joinPath="/member/classes" />
   </MemoryRouter>));
   expect(host.textContent).toContain('789.000');
-  expect(host.textContent).toContain('45 ngày');
+  expect(host.textContent).toContain('90 ngày');
   expect(host.textContent).toContain('Quyền lợi mới');
   expect(host.textContent).toContain('HLV An');
   expect(host.textContent).toContain('Ảnh minh họa');
@@ -104,6 +104,8 @@ it('excludes trial packages from the public catalog pricing grid', async () => {
     packages: [
       ...catalog.packages,
       { id: 99, name: 'Gói Trải Nghiệm 3 Ngày', price: 0, durationDays: 3, classCreditLimit: 3, description: 'Gói trải nghiệm', status: 'active' },
+      // Hội viên không mua được gói dưới 3 tháng nên landing không được quảng cáo.
+      { id: 98, name: 'SILVER', price: 299000, durationDays: 30, classCreditLimit: 2, description: 'Gói tháng', status: 'active' },
     ],
   };
   await act(async () => root.render(<MemoryRouter>
@@ -111,6 +113,7 @@ it('excludes trial packages from the public catalog pricing grid', async () => {
   </MemoryRouter>));
   expect(host.textContent).toContain('Gói mới');
   expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày');
+  expect(host.textContent).not.toContain('SILVER');
   expect(host.textContent).not.toContain('0 đ');
 });
 
@@ -202,7 +205,7 @@ it('localizes seeded package perks and coach specialization in English while lea
         id: 1,
         name: 'SILVER',
         price: 199000,
-        durationDays: 30,
+        durationDays: 90,
         classCreditLimit: 1,
         description: 'BASIC – Cơ bản\nQuyền lợi:\n- Tập luyện không giới hạn trong giờ hoạt động.',
         status: 'active',

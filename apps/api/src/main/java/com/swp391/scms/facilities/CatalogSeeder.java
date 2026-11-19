@@ -120,17 +120,6 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final int PLATINUM_3M_DURATION = 90;
     public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
 
-    // --- 6 và 12 THÁNG: đã ngừng bán ---
-    // Chỉ giữ tên để chuyển gói đã có trong CSDL về inactive; không xóa vì hội viên có thể đang dùng.
-    public static final String SILVER_6M_NAME = "SILVER 6 THÁNG";
-    public static final String GOLD_6M_NAME = "GOLD 6 THÁNG";
-    public static final String PLATINUM_6M_NAME = "PLATINUM 6 THÁNG";
-    public static final String SILVER_12M_NAME = "SILVER 12 THÁNG";
-    public static final String GOLD_12M_NAME = "GOLD 12 THÁNG";
-    public static final String PLATINUM_12M_NAME = "PLATINUM 12 THÁNG";
-    public static final BigDecimal SILVER_12M_PRICE = new BigDecimal("1990000");
-    public static final BigDecimal GOLD_12M_PRICE = new BigDecimal("2990000");
-    public static final BigDecimal PLATINUM_12M_PRICE = new BigDecimal("5990000");
 
     private final DisciplineService disciplines;
     private final RoomService rooms;
@@ -188,11 +177,8 @@ public class CatalogSeeder implements ApplicationRunner {
         alignBenefits(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_CREDIT_LIMIT, "GOLD", 15);
         alignBenefits(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM", null);
 
-        // Ngừng bán các gói 6 và 12 tháng đã seed trước đây
-        for (String retired : new String[] {SILVER_6M_NAME, GOLD_6M_NAME, PLATINUM_6M_NAME,
-                SILVER_12M_NAME, GOLD_12M_NAME, PLATINUM_12M_NAME}) {
-            retirePackage(retired);
-        }
+        // Không tự đổi trạng thái gói ở đây: việc ngừng bán gói 6/12 tháng cũ đã chạy trên mọi CSDL,
+        // từ nay Manager toàn quyền bật/tắt gói (chạy lại mỗi lần khởi động sẽ tắt gói Manager vừa bật).
 
         if (equipmentRepository != null && roomRepository != null && equipmentRepository.count() == 0) {
             seedInitialEquipment();
@@ -267,14 +253,6 @@ public class CatalogSeeder implements ApplicationRunner {
     }
 
     /** Đặt gói đang active về inactive (idempotent); không tạo mới, không xóa. */
-    private void retirePackage(String name) {
-        for (var pkg : packages.list()) {
-            if (name.equalsIgnoreCase(pkg.name()) && "active".equals(pkg.status())) {
-                packages.updateStatus(pkg.id(), "inactive");
-            }
-        }
-    }
-
     /**
      * Chuyển gói seed cũ sang quyền lợi mới (spec 2026-11-09). Chỉ đụng vào gói còn nguyên mô tả và hạn mức seed cũ;
      * gói mà Manager đã chỉnh sửa thì giữ nguyên, kể cả giá.
