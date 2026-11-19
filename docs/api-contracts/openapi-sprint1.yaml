@@ -62,7 +62,7 @@ components:
         fullName: { type: string, minLength: 1, maxLength: 150 }
         email: { type: string, format: email, maxLength: 150 }
         phone: { type: string, maxLength: 20, nullable: true }
-        password: { type: string, minLength: 6, maxLength: 50 }
+        password: { type: string, minLength: 8, maxLength: 50, pattern: '^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$' }
         roleId: { type: integer, format: int64 }
         gender: { type: string, enum: [male, female, other] }
     UserUpdate:
@@ -79,7 +79,7 @@ components:
         fullName: { type: string, minLength: 1, maxLength: 150 }
         email: { type: string, format: email, maxLength: 150 }
         phone: { type: string, maxLength: 20, nullable: true }
-        password: { type: string, minLength: 6, maxLength: 50 }
+        password: { type: string, minLength: 8, maxLength: 50, pattern: '^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$' }
         gender: { type: string, enum: [male, female, other] }
         roleCode: { type: string, enum: [COACH, RECEPTIONIST] }
 security:
@@ -437,7 +437,7 @@ paths:
               required: [currentPassword, newPassword]
               properties:
                 currentPassword: { type: string, minLength: 1 }
-                newPassword: { type: string, minLength: 6, maxLength: 50 }
+                newPassword: { type: string, minLength: 8, maxLength: 50, pattern: '^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$' }
       responses:
         '200':
           description: >-

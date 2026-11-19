@@ -101,11 +101,11 @@ it('switches registration and existing client validation VI → EN → VI', asyn
   await act(async () => setLanguage('en'));
   expect(host.querySelector('label[for="reg-username"]')?.textContent).toContain('Username');
   expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Invalid phone number');
-  expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('At least 6 characters');
+  expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('8–50 characters, letters and digits, no spaces');
   expect(api.register).not.toHaveBeenCalled();
   await act(async () => setLanguage('vi'));
   expect(host.querySelector('#reg-phone-error')?.textContent).toContain('Số điện thoại');
-  expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('Tối thiểu 6 ký tự');
+  expect(host.querySelector<HTMLInputElement>('#reg-password')?.placeholder).toBe('8–50 ký tự, có chữ cái và chữ số, không khoảng trắng');
 });
 
 it('validates incomplete phone numbers and non-standard gmail addresses immediately after input', async () => {

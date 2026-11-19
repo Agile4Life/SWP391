@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 export const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
+/** Same rule as the backend PasswordPolicy: 8–50 characters, at least one letter and one digit, no whitespace. */
+export const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$/;
+export const PASSWORD_RULE_ERROR = 'Mật khẩu phải dài 8–50 ký tự, có ít nhất 1 chữ cái và 1 chữ số, không chứa khoảng trắng.';
+export const PASSWORD_RULE_HINT = '8–50 ký tự, có chữ cái và chữ số, không khoảng trắng';
+export const isValidPassword = (value: string) => PASSWORD_REGEX.test(value);
 export const EMAIL_REGEX = /^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
 const GMAIL_LOCAL_REGEX = /^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*(\+[a-zA-Z0-9._-]+)?$/;
 const INVALID_GMAIL_DOMAIN_REGEX = /^(gmail\.(?!com$).+|(gmai|gmial|gmal|gamil)\..+)$/i;
@@ -36,7 +41,7 @@ export const registrationSchema = z.object({
   phone: z.string().transform(value => value.replace(/\s/g, ''))
     .refine(value => !value || PHONE_REGEX.test(value), 'Số điện thoại không hợp lệ (vd: 0912 345 678).')
     .transform(value => value || undefined),
-  password: z.string().min(6, 'Mật khẩu cần tối thiểu 6 ký tự.'),
+  password: z.string().regex(PASSWORD_REGEX, PASSWORD_RULE_ERROR),
 });
 
 export const loginSchema = z.object({

@@ -5,7 +5,7 @@ import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
 import { AuthLayout } from '../landing/components/PublicLayout';
 import { purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
 import { StatusMark } from '../../shared/ui/StatusMark';
-import { registrationSchema, otpSchema, validateRegistrationField, type RegistrationFields } from './authValidation';
+import { registrationSchema, otpSchema, validateRegistrationField, PASSWORD_RULE_HINT, type RegistrationFields } from './authValidation';
 import { readPendingRegistration, savePendingRegistration, type PendingRegistration } from './pendingRegistration';
 
 const RESEND_COOLDOWN = 30;
@@ -179,7 +179,7 @@ export function RegisterPage() {
             <label className="portal-label" htmlFor="reg-password">{sourceText("Mật khẩu")}</label>
             <button className="fit-auth-link" type="button" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? sourceText('Ẩn mật khẩu') : sourceText('Hiện mật khẩu')}</button>
           </div>
-          <input id="reg-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'reg-password-error' : undefined} className="portal-input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={sourceText("Tối thiểu 6 ký tự")} required value={form.password} onChange={(e) => updateField('password', e.target.value)} onBlur={() => handleFieldBlur('password')} />
+          <input id="reg-password" aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'reg-password-error' : undefined} className="portal-input" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder={sourceText(PASSWORD_RULE_HINT)} required value={form.password} onChange={(e) => updateField('password', e.target.value)} onBlur={() => handleFieldBlur('password')} />
           {fieldErrors.password && <p id="reg-password-error" className="portal-field-error">{sourceText(fieldErrors.password)}</p>}
         </div>
         <button className="luxury-login-submit-btn" type="submit" disabled={busy}><span>{busy ? sourceText('ĐANG TẠO TÀI KHOẢN...') : sourceText('TIẾP TỤC XÁC THỰC')}</span><span className="submit-arrow" aria-hidden="true">→</span></button>

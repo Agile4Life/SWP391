@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, ApiError, type UserSession } from '../../shared/api/client';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
-import { loginSchema } from './authValidation';
+import { loginSchema, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from './authValidation';
 import { loadGoogleIdentity } from './loadGoogleIdentity';
 import {
   getGoogleOAuthAuthorizeUrl,
@@ -409,8 +409,8 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       fail('Mã OTP gồm đúng 6 chữ số.');
       return;
     }
-    if (resetNewPassword.length < 6) {
-      fail('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (!isValidPassword(resetNewPassword)) {
+      fail(PASSWORD_RULE_ERROR);
       return;
     }
 
@@ -748,7 +748,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               id="reset-new-password-input"
               type={showPassword ? 'text' : 'password'}
               className="portal-input"
-              placeholder={sourceText('Tối thiểu 6 ký tự')}
+              placeholder={sourceText(PASSWORD_RULE_HINT)}
               value={resetNewPassword}
               onChange={(e) => setResetNewPassword(e.target.value)}
               required

@@ -14,7 +14,7 @@ import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerT
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
-import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber } from '../auth/authValidation';
+import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from '../auth/authValidation';
 
 function validateUserEmail(raw: string, existingUsers: UserAccount[] = []): string | undefined {
   const cleanEmail = raw.trim();
@@ -268,8 +268,8 @@ export function UserManagerPage() {
     const phoneErr = validateUserPhone(cleanPhone, true, users);
     if (phoneErr) errors.phone = phoneErr;
 
-    if (formData.password.length < 6 || formData.password.length > 50) {
-      errors.password = 'Mật khẩu phải từ 6 đến 50 ký tự.';
+    if (!isValidPassword(formData.password)) {
+      errors.password = PASSWORD_RULE_ERROR;
     }
 
     if (!formData.gender) {
@@ -936,7 +936,7 @@ export function UserManagerPage() {
                 type="password"
                 className="portal-input"
                 autoComplete="new-password"
-                placeholder={t("Tối thiểu 6 ký tự")}
+                placeholder={t(PASSWORD_RULE_HINT)}
                 value={formData.password}
                 onChange={(e) => {
                   setFormData({ ...formData, password: e.target.value });

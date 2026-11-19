@@ -373,6 +373,25 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     expect(mockApi.changePassword).toHaveBeenCalledWith('OldPass123', 'NewPass456');
   });
 
+  it('shows password mistakes right under each field and does not call the API', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('#toggle-password-change-btn')!.click());
+    const type = (id: string, value: string) => {
+      const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    expect(host.querySelector('#newPassword-hint')!.textContent).toContain('8–50 ký tự');
+    await act(async () => { type('currentPassword', 'x'); type('newPassword', 'ab'); type('confirmPassword', 'a'); });
+    await act(async () => host.querySelector<HTMLButtonElement>('#submit-password-change-btn')!.click());
+
+    expect(host.querySelector('#newPassword-hint')!.textContent).toContain('ít nhất 1 chữ cái và 1 chữ số');
+    expect(host.querySelector('#confirmPassword-error')!.textContent).toContain('không khớp');
+    expect(host.querySelector('#newPassword')!.getAttribute('aria-invalid')).toBe('true');
+    expect(mockApi.changePassword).not.toHaveBeenCalled();
+  });
+
   it('displays member KYC verification status inside the single profile card', async () => {
     localStorage.setItem(
       AUTH_STORAGE_KEY,

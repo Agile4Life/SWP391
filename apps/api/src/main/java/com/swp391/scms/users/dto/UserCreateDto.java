@@ -21,7 +21,7 @@ public class UserCreateDto {
     private String phone;
 
     @NotBlank(message = "{validation.users.password.not_blank}")
-    @Size(min = 6, max = 50, message = "{validation.users.password.size}")
+    @jakarta.validation.constraints.Pattern(regexp = com.swp391.scms.auth.PasswordPolicy.REGEX, message = "{validation.auth.password.policy}")
     private String password;
 
     @NotNull(message = "{validation.users.role_id.not_null}")

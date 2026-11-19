@@ -24,7 +24,7 @@ public class ProfileController {
             @NotBlank(message = "{validation.auth.password.not_blank}")
             String currentPassword,
             @NotBlank(message = "{validation.auth.password.not_blank}")
-            @Size(min = 6, max = 50, message = "{validation.auth.password.size}")
+            @jakarta.validation.constraints.Pattern(regexp = com.swp391.scms.auth.PasswordPolicy.REGEX, message = "{validation.auth.password.policy}")
             String newPassword
     ) {}
 

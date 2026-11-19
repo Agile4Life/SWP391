@@ -11,7 +11,7 @@ import { notify } from '../../shared/lib/portalNotices';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
-import { isValidPhoneNumber } from '../auth/authValidation';
+import { isValidPhoneNumber, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from '../auth/authValidation';
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const MIN_AVATAR_DIMENSION = 100;
@@ -100,6 +100,8 @@ export function MemberProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
+  // Lỗi hiện ngay dưới từng ô của form đổi mật khẩu (không phải ở đầu trang).
+  const [passwordErrors, setPasswordErrors] = useState<{ current?: string; next?: string; confirm?: string; form?: string }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -211,19 +213,13 @@ export function MemberProfilePage() {
 
   const handleChangePassword = async () => {
     if (passwordBusy) return;
-    setError('');
-    if (!currentPassword || !newPassword) {
-      setError(memberMessage('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.'));
-      return;
-    }
-    if (newPassword.length < 6) {
-      setError(memberMessage('Mật khẩu mới phải có ít nhất 6 ký tự.'));
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError(memberMessage('Mật khẩu xác nhận không khớp.'));
-      return;
-    }
+    const errors: typeof passwordErrors = {};
+    if (!currentPassword) errors.current = memberText('Vui lòng nhập mật khẩu hiện tại.', 'Enter your current password.');
+    if (!isValidPassword(newPassword)) errors.next = memberText(PASSWORD_RULE_ERROR);
+    else if (newPassword === currentPassword) errors.next = memberText('Mật khẩu mới phải khác mật khẩu hiện tại.', 'The new password must differ from the current one.');
+    if (confirmPassword !== newPassword) errors.confirm = memberText('Mật khẩu xác nhận không khớp.', 'The passwords do not match.');
+    setPasswordErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setPasswordBusy(true);
     try {
@@ -236,7 +232,8 @@ export function MemberProfilePage() {
         translation: memberMessage('Đã đổi mật khẩu thành công.'),
       });
     } catch (err) {
-      setError(memberError(err, 'Không thể đổi mật khẩu.'));
+      const message = memberError(err, 'Không thể đổi mật khẩu.');
+      setPasswordErrors({ form: typeof message === 'string' ? message : memberText(message.vi, message.en) });
     } finally {
       setPasswordBusy(false);
     }
@@ -728,9 +725,13 @@ export function MemberProfilePage() {
                     id="currentPassword"
                     type="password"
                     className="portal-input"
+                    autoComplete="current-password"
+                    aria-invalid={!!passwordErrors.current}
+                    aria-describedby={passwordErrors.current ? 'currentPassword-error' : undefined}
                     value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    onChange={(e) => { setCurrentPassword(e.target.value); setPasswordErrors((p) => ({ ...p, current: undefined, form: undefined })); }}
                   />
+                  {passwordErrors.current && <p id="currentPassword-error" className="portal-field-error">{passwordErrors.current}</p>}
                 </div>
                 <div className="grid-2">
                   <div className="portal-form-group">
@@ -741,9 +742,15 @@ export function MemberProfilePage() {
                       id="newPassword"
                       type="password"
                       className="portal-input"
+                      autoComplete="new-password"
+                      aria-invalid={!!passwordErrors.next}
+                      aria-describedby="newPassword-hint"
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => { setNewPassword(e.target.value); setPasswordErrors((p) => ({ ...p, next: undefined, form: undefined })); }}
                     />
+                    {passwordErrors.next
+                      ? <p id="newPassword-hint" className="portal-field-error">{passwordErrors.next}</p>
+                      : <small id="newPassword-hint" className="muted">{memberText(PASSWORD_RULE_HINT)}</small>}
                   </div>
                   <div className="portal-form-group">
                     <label className="portal-label" htmlFor="confirmPassword">
@@ -753,11 +760,16 @@ export function MemberProfilePage() {
                       id="confirmPassword"
                       type="password"
                       className="portal-input"
+                      autoComplete="new-password"
+                      aria-invalid={!!passwordErrors.confirm}
+                      aria-describedby={passwordErrors.confirm ? 'confirmPassword-error' : undefined}
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => { setConfirmPassword(e.target.value); setPasswordErrors((p) => ({ ...p, confirm: undefined, form: undefined })); }}
                     />
+                    {passwordErrors.confirm && <p id="confirmPassword-error" className="portal-field-error">{passwordErrors.confirm}</p>}
                   </div>
                 </div>
+                {passwordErrors.form && <p className="portal-field-error" role="alert">{passwordErrors.form}</p>}
                 <button
                   type="button"
                   id="submit-password-change-btn"
