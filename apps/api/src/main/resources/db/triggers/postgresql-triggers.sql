@@ -24,6 +24,7 @@ DECLARE
     previous_class_id BIGINT;
     class_capacity INTEGER;
     booked_count BIGINT;
+    busiest_session BIGINT;
 BEGIN
     IF TG_OP = 'UPDATE' THEN
         previous_class_id := OLD.class_id;
@@ -40,8 +41,14 @@ BEGIN
         SELECT COUNT(*) INTO booked_count
         FROM class_enrollments
         WHERE class_id = NEW.class_id AND status = 'booked';
+        -- Per-session bookings occupy seats too: a class-wide seat must fit the busiest session.
+        SELECT COALESCE(MAX(per_session), 0) INTO busiest_session
+        FROM (SELECT COUNT(*) AS per_session
+              FROM session_bookings b JOIN class_sessions s ON s.id = b.session_id
+              WHERE s.class_id = NEW.class_id AND b.status = 'booked'
+              GROUP BY b.session_id) counts;
 
-        IF booked_count > class_capacity THEN
+        IF booked_count + busiest_session > class_capacity THEN
             RAISE EXCEPTION 'Lớp học đã đầy chỗ (vượt quá capacity cho phép).'
                 USING ERRCODE = '23514', CONSTRAINT = 'trg_enrollments_check_capacity';
         END IF;
@@ -65,6 +72,9 @@ DECLARE
     session_room_id BIGINT;
     lock_key BIGINT;
 BEGIN
+    IF NEW.status <> 'scheduled' THEN
+        RETURN NEW;
+    END IF;
     SELECT coach_id, room_id INTO session_coach_id, session_room_id
     FROM classes WHERE id = NEW.class_id FOR SHARE;
 
@@ -282,10 +292,38 @@ CREATE TRIGGER trg_session_bookings_check_capacity
 AFTER INSERT OR UPDATE OF session_id, status ON session_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_check_session_booking_capacity();
 
+CREATE OR REPLACE FUNCTION scms_require_membership_for_session_booking()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+    target_date date;
+BEGIN
+    IF NEW.status <> 'booked' THEN
+        RETURN NEW;
+    END IF;
+    SELECT session_date INTO target_date FROM class_sessions WHERE id = NEW.session_id;
+    IF NOT EXISTS (
+        SELECT 1
+        FROM membership_subscriptions subscription
+        WHERE subscription.member_id = NEW.member_id
+          AND subscription.status = 'active'
+          AND subscription.start_date <= LEAST(business_date, target_date)
+          AND subscription.end_date >= GREATEST(business_date, target_date)
+        FOR SHARE
+    ) THEN
+        RAISE EXCEPTION 'Học viên không có gói thành viên còn hiệu lực để đăng ký lớp.'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_enrollments_check_membership';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 DROP TRIGGER IF EXISTS trg_session_bookings_check_membership ON session_bookings;
 CREATE TRIGGER trg_session_bookings_check_membership
 BEFORE INSERT OR UPDATE OF member_id, status ON session_bookings
-FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_enrollment();
+FOR EACH ROW EXECUTE FUNCTION scms_require_membership_for_session_booking();
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_session_booking_active ON session_bookings (session_id, member_id) WHERE status = 'booked';
 
@@ -648,6 +686,12 @@ DECLARE
     target_coach BIGINT;
     schedule_conflict BOOLEAN := FALSE;
 BEGIN
+    -- Rows leaving the active state (cancel, complete) cannot create a conflict: skip the lock entirely.
+    IF (TG_TABLE_NAME = 'coach_bookings' AND NEW.status <> 'confirmed')
+       OR (TG_TABLE_NAME IN ('class_enrollments', 'session_bookings') AND NEW.status <> 'booked')
+       OR (TG_TABLE_NAME = 'class_sessions' AND NEW.status <> 'scheduled') THEN
+        RETURN NEW;
+    END IF;
     -- ponytail: serialize schedule writes for this MVP; use ordered participant locks if contention grows.
     -- Never wait while a caller may already hold a class row lock.
     IF NOT pg_try_advisory_xact_lock(hashtext(current_schema()), 391133) THEN
