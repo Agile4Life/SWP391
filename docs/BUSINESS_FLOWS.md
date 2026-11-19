@@ -187,7 +187,7 @@
 | Tài khoản nhân viên (HLV, lễ tân) | `/manager/staff-accounts` | Quản lý |
 | Danh mục: bộ môn, phòng, gói tập | `/manager/catalogs` | Quản lý |
 | Thiết bị phòng tập | `/manager/equipment` | Quản lý; nhân viên đổi trạng thái |
-| Phân công HLV cho hội viên | `/manager/coach-assignments` | Quản lý |
+| Xem và điều chuyển HLV phụ trách (không phân công mới) | `/manager/coach-assignments` | Quản lý |
 | Đánh giá HLV | `/manager/coach-reviews` | Quản lý |
 | Yêu cầu nội bộ: nghỉ phép, đổi ca, đổi lịch, khác | `/staff/requests` (gửi), `/manager/requests` (duyệt) | Nhân viên, Quản lý |
 | Sản phẩm, danh mục cửa hàng | `/manager/products` | Quản lý |
@@ -216,10 +216,10 @@
 ### 6.2 Giáo án và AI
 **Màn hình:** `/coach/training-plans`, `/coach/saved-plans`, `/coach/health-metrics`; hội viên ở `/member/progress`, `/member/streak`. **API:** `/api/v1/coaching/*`, `/api/v1/ai`.
 
-1. HLV xem hồ sơ sức khỏe và chỉ số của học viên được phân công.
+1. HLV xem hồ sơ sức khỏe và chỉ số của học viên được phân công. **Giáo án riêng chỉ soạn cho hội viên đã đăng ký ít nhất một buổi PT 1:1 (chưa hủy) với chính HLV đó và đang có gói Gold/Platinum còn hạn** (gói dùng thử tính như Gold); Silver hoặc chỉ học lớp nhóm thì bị từ chối (`PT_SESSION_REQUIRED`, `PLAN_TIER_REQUIRED`). Quản lý không còn thao tác "phân công học viên mới" thủ công.
 2. HLV tự soạn hoặc bấm "Yêu cầu AI hỗ trợ". AI trả danh sách bài tập, sets, reps, nghỉ (tối đa 40 mục) và ghi `ai_recommendation_logs`.
 3. HLV chỉnh rồi áp dụng: giáo án `active`, log AI đánh dấu `is_applied` và gắn vào giáo án.
-4. Mỗi cặp hội viên–HLV chỉ có một giáo án `active`. Giáo án cũ chuyển `superseded` và có thể áp dụng lại.
+4. Mỗi cặp hội viên–HLV chỉ có một giáo án `active`. Giáo án cũ chuyển `superseded` và có thể áp dụng lại. **Điều chuyển HLV (`/manager/coach-assignments`):** chuyển buổi PT 1:1 sang HLV mới thì toàn bộ giáo án (active, draft, lịch sử) của hội viên với HLV cũ chuyển theo để HLV mới sửa tiếp; HLV cũ mất quyền sửa, xóa, áp dụng lại. Nếu HLV mới đã có giáo án active cho hội viên thì giáo án kế thừa vào lịch sử.
 5. Hội viên đánh dấu bài đã tập theo ngày. Chuỗi ngày tập hiện ở `/member/streak`. Hội viên Silver không xem được giáo án.
 
 **State `training_plans.status`:** `draft` → `active` → `superseded` / `cancelled`, hoặc `completed` (tự động khi qua `end_date`).
