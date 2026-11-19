@@ -90,6 +90,9 @@ public class ClassService {
     @Autowired(required = false)
     private NotificationService notificationService;
     @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private EnrollmentService enrollmentService;
+    @Autowired(required = false)
     private ApplicationEventPublisher eventPublisher;
     @Autowired(required = false)
     private MessageService messageService;
@@ -390,6 +393,13 @@ public class ClassService {
         gymClass.setLevel(request.level() != null ? request.level() : "all");
         gymClass.setDescription(request.description());
         if (request.status() != null && !request.status().isBlank()) {
+            boolean closing = !"cancelled".equalsIgnoreCase(gymClass.getStatus()) && !"archived".equalsIgnoreCase(gymClass.getStatus())
+                    && ("cancelled".equalsIgnoreCase(request.status()) || "archived".equalsIgnoreCase(request.status()));
+            if (closing) {
+                // Same cascade as deleting a class, so stopping a class never leaves live bookings behind.
+                closeClass(gymClass, enrollments.findByGymClassId(classId),
+                        sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId), LocalDateTime.now(clock));
+            }
             gymClass.setStatus(request.status());
         }
         gymClass.setUpdatedAt(LocalDateTime.now(clock));
@@ -412,6 +422,107 @@ public class ClassService {
     }
 
     /**
+     * Closing a class: cancels its sessions that have not started, releases their bookings and the course enrollments,
+     * refunds settled course fees to the wallet and notifies the members.
+     */
+    private void closeClass(GymClass gymClass, List<ClassEnrollment> classEnrollments, List<ClassSession> classSessions,
+                            LocalDateTime now) {
+        Long classId = gymClass.getId();
+        String className = gymClass.getName() != null ? gymClass.getName() : "";
+
+        if (classSessions != null) {
+            for (ClassSession session : classSessions) {
+                if (session == null || !SESSION_SCHEDULED.equalsIgnoreCase(session.getStatus())) {
+                    continue;
+                }
+                // Sessions already held keep their history; they are settled as completed later.
+                if (session.getSessionDate() != null && session.getStartTime() != null
+                        && !LocalDateTime.of(session.getSessionDate(), session.getStartTime()).isAfter(now)) {
+                    continue;
+                }
+                session.setStatus("cancelled");
+                session.setCancelReason(CLASS_DEACTIVATED_REASON);
+                session.setUpdatedAt(now);
+                sessions.saveAndFlush(session);
+
+                List<Long> affectedMemberUserIds = new ArrayList<>();
+                String sessionDateStr = session.getSessionDate() != null ? session.getSessionDate().toString() : "";
+
+                if (classEnrollments != null) {
+                    for (ClassEnrollment enrollment : classEnrollments) {
+                        if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())
+                                && enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
+                            Long memberId = enrollment.getMember().getUserId();
+                            if (!affectedMemberUserIds.contains(memberId)) {
+                                affectedMemberUserIds.add(memberId);
+                                if (notificationService != null) {
+                                    notificationService.send(
+                                            memberId,
+                                            msg("notifications.session.cancelled.title"),
+                                            msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
+                                            "schedule_change",
+                                            "class_session",
+                                            session.getId());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (sessionBookings != null && session.getId() != null) {
+                    for (SessionBooking booking : sessionBookings.findBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED)) {
+                        booking.setStatus("cancelled");
+                        booking.setCancelledAt(now);
+                        booking.setCancelReason(CLASS_DEACTIVATED_REASON);
+                        sessionBookings.save(booking);
+                        Member member = booking.getMember();
+                        if (member != null && member.getUserId() != null) {
+                            if (!affectedMemberUserIds.contains(member.getUserId())) {
+                                affectedMemberUserIds.add(member.getUserId());
+                                if (notificationService != null) {
+                                    notificationService.send(
+                                            member.getUserId(),
+                                            msg("notifications.session.cancelled.title"),
+                                            msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
+                                            "schedule_change",
+                                            "class_session",
+                                            session.getId());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (eventPublisher != null) {
+                    eventPublisher.publishEvent(new SessionCancelledEvent(
+                            session.getId(),
+                            classId,
+                            className,
+                            session.getSessionDate(),
+                            session.getStartTime(),
+                            CLASS_DEACTIVATED_REASON,
+                            affectedMemberUserIds));
+                }
+            }
+        }
+
+        if (classEnrollments != null) {
+            for (ClassEnrollment enrollment : classEnrollments) {
+                if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())) {
+                    enrollment.setStatus("cancelled");
+                    enrollment.setCancelledAt(now);
+                    enrollment.setCancelReason(CLASS_DEACTIVATED_REASON);
+                    enrollments.save(enrollment);
+                    // The centre closed the course: a settled fee goes back to the member's wallet.
+                    if (enrollmentService != null) {
+                        enrollmentService.settleFeeOnClassClosure(enrollment, CLASS_DEACTIVATED_REASON);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * SCRUM-131 AC & A4: Manager deletes a class (after double confirmation on UI).
      * If historical/dependent records exist, soft-deactivates the class, cancels upcoming
      * scheduled sessions with reason "Lớp học ngừng hoạt động", and notifies booked members.
@@ -427,89 +538,7 @@ public class ClassService {
 
         if (hasDependentRecords(classId, classEnrollments, classSessions)) {
             LocalDateTime now = LocalDateTime.now(clock);
-            String className = gymClass.getName() != null ? gymClass.getName() : "";
-
-            if (classSessions != null) {
-                for (ClassSession session : classSessions) {
-                    if (session == null || !SESSION_SCHEDULED.equalsIgnoreCase(session.getStatus())) {
-                        continue;
-                    }
-                    session.setStatus("cancelled");
-                    session.setCancelReason(CLASS_DEACTIVATED_REASON);
-                    session.setUpdatedAt(now);
-                    sessions.saveAndFlush(session);
-
-                    List<Long> affectedMemberUserIds = new ArrayList<>();
-                    String sessionDateStr = session.getSessionDate() != null ? session.getSessionDate().toString() : "";
-
-                    if (classEnrollments != null) {
-                        for (ClassEnrollment enrollment : classEnrollments) {
-                            if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())
-                                    && enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
-                                Long memberId = enrollment.getMember().getUserId();
-                                if (!affectedMemberUserIds.contains(memberId)) {
-                                    affectedMemberUserIds.add(memberId);
-                                    if (notificationService != null) {
-                                        notificationService.send(
-                                                memberId,
-                                                msg("notifications.session.cancelled.title"),
-                                                msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
-                                                "schedule_change",
-                                                "class_session",
-                                                session.getId());
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (sessionBookings != null && session.getId() != null) {
-                        for (SessionBooking booking : sessionBookings.findBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED)) {
-                            booking.setStatus("cancelled");
-                            booking.setCancelledAt(now);
-                            booking.setCancelReason(CLASS_DEACTIVATED_REASON);
-                            sessionBookings.save(booking);
-                            Member member = booking.getMember();
-                            if (member != null && member.getUserId() != null) {
-                                if (!affectedMemberUserIds.contains(member.getUserId())) {
-                                    affectedMemberUserIds.add(member.getUserId());
-                                    if (notificationService != null) {
-                                        notificationService.send(
-                                                member.getUserId(),
-                                                msg("notifications.session.cancelled.title"),
-                                                msg("notifications.session.cancelled.body", className, sessionDateStr, CLASS_DEACTIVATED_REASON),
-                                                "schedule_change",
-                                                "class_session",
-                                                session.getId());
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (eventPublisher != null) {
-                        eventPublisher.publishEvent(new SessionCancelledEvent(
-                                session.getId(),
-                                classId,
-                                className,
-                                session.getSessionDate(),
-                                session.getStartTime(),
-                                CLASS_DEACTIVATED_REASON,
-                                affectedMemberUserIds));
-                    }
-                }
-            }
-
-            if (classEnrollments != null) {
-                for (ClassEnrollment enrollment : classEnrollments) {
-                    if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())) {
-                        enrollment.setStatus("cancelled");
-                        enrollment.setCancelledAt(now);
-                        enrollment.setCancelReason(CLASS_DEACTIVATED_REASON);
-                        enrollments.save(enrollment);
-                    }
-                }
-            }
+            closeClass(gymClass, classEnrollments, classSessions, now);
 
             gymClass.setStatus(CLASS_INACTIVE);
             gymClass.setUpdatedAt(now);

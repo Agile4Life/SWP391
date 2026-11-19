@@ -532,6 +532,28 @@ public class EnrollmentService {
                         && !sess.getSessionDate().isBefore(from) && !sess.getSessionDate().isAfter(to));
     }
 
+    /**
+     * The centre closed the class: an unpaid fee is closed as failed, a settled fee is refunded in full to the wallet.
+     * Returns the amount refunded.
+     */
+    @Transactional
+    public BigDecimal settleFeeOnClassClosure(ClassEnrollment enrollment, String reason) {
+        if (paymentRepository == null || enrollment == null || enrollment.getId() == null || enrollment.getMember() == null) {
+            return BigDecimal.ZERO;
+        }
+        Payment payment = paymentRepository.findByClassEnrollmentId(enrollment.getId()).orElse(null);
+        if (payment == null) return BigDecimal.ZERO;
+        if ("pending".equalsIgnoreCase(payment.getStatus())) {
+            payment.setStatus("failed");
+            paymentRepository.save(payment);
+            return BigDecimal.ZERO;
+        }
+        if (!"success".equalsIgnoreCase(payment.getStatus()) || payment.netAmount().signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return refundCoursePayment(payment, enrollment.getMember().getUserId(), enrollment.getId(), reason);
+    }
+
     /** Refunds the whole settled fee to the wallet and marks the payment refunded; returns the amount refunded. */
     private BigDecimal refundCoursePayment(Payment payment, Long memberId, Long enrollmentId, String reason) {
         BigDecimal refundable = payment.netAmount();
