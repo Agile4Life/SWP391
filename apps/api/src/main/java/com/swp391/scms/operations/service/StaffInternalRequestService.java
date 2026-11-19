@@ -16,6 +16,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -78,6 +79,21 @@ public class StaffInternalRequestService {
 
         if ("LEAVE".equals(type) && (requestDto.startDate() == null || requestDto.endDate() == null)) {
             throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required", null, "A leave request needs its start and end dates.");
+        }
+
+        // A second leave on days already asked for is usually a mistake: warn first, send only once the user confirms.
+        if ("LEAVE".equals(type) && !Boolean.TRUE.equals(requestDto.confirmOverlap())) {
+            List<StaffInternalRequest> overlaps = requestRepository.findOverlappingLeaves(userId, requestDto.startDate(), requestDto.endDate());
+            if (!overlaps.isEmpty()) {
+                StaffInternalRequest first = overlaps.get(0);
+                var dmy = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                LocalDate end = first.getEndDate() != null ? first.getEndDate() : first.getStartDate();
+                throw new com.swp391.scms.common.exception.ConflictException("LEAVE_OVERLAP",
+                        "APPROVED".equals(first.getStatus()) ? "error.operations.request.leave_overlap_approved"
+                                : "error.operations.request.leave_overlap_pending",
+                        new Object[]{first.getStartDate().format(dmy), end.format(dmy)},
+                        "You already have a leave request on these days.");
+            }
         }
 
         // A replacement must be another active staff member who can actually cover the shift.

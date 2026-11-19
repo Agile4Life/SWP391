@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffInternalRequestsPage } from './StaffInternalRequestsPage';
 import * as staffRequestApi from './staffRequestApi';
 
+// Plain inputs stand in for the date picker so a test can type the leave dates.
+vi.mock('../../shared/ui/DatePicker', () => ({
+  DatePicker: (props: { id: string; value: string; onChange: (e: { target: { value: string } }) => void }) => (
+    <input id={props.id} value={props.value} onChange={(e) => props.onChange({ target: { value: e.target.value } })} />
+  ),
+}));
+
 vi.mock('./staffRequestApi', () => ({
   getMyStaffRequests: vi.fn(),
   createStaffRequest: vi.fn(),
@@ -163,5 +170,32 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
     expect(host.textContent).toContain('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu và Ngày kết thúc.');
     expect(staffRequestApi.createStaffRequest).not.toHaveBeenCalled();
   });
-});
 
+  it('warns about a leave on days already requested and sends it again only after confirmation', async () => {
+    const { ApiError } = await import('../../shared/api/client');
+    vi.mocked(staffRequestApi.createStaffRequest)
+      .mockRejectedValueOnce(new ApiError('Bạn đã có đơn nghỉ từ 20/11/2026 đến 21/11/2026 đã được duyệt, trùng với những ngày này. Bạn có muốn gửi thêm đơn nữa không?', 409, 'LEAVE_OVERLAP'))
+      .mockResolvedValueOnce({ ...mockRequests[0], id: 9 });
+    await render();
+    await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tạo đơn từ mới'))?.click(); });
+    const fill = (selector: string, value: string, proto: typeof HTMLInputElement | typeof HTMLTextAreaElement = HTMLInputElement) => {
+      const el = host.querySelector(selector) as HTMLInputElement;
+      Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set?.call(el, value);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    await act(async () => {
+      fill('#internal-request-title', 'Xin nghỉ');
+      fill('#internal-request-reason', 'Việc riêng', HTMLTextAreaElement);
+      fill('#internal-request-start', '2026-11-20');
+      fill('#internal-request-end', '2026-11-21');
+    });
+    await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Gửi đơn tới Quản Lý'))?.click(); });
+
+    expect(document.body.textContent).toContain('Đã có đơn nghỉ trùng ngày');
+    expect(document.body.textContent).toContain('20/11/2026 đến 21/11/2026');
+    expect(staffRequestApi.createStaffRequest).toHaveBeenCalledTimes(1);
+
+    await act(async () => { [...document.body.querySelectorAll('button')].find((b) => b.textContent === 'Vẫn gửi đơn')?.click(); });
+    expect(staffRequestApi.createStaffRequest).toHaveBeenLastCalledWith(expect.objectContaining({ startDate: '2026-11-20', confirmOverlap: true }));
+  });
+});

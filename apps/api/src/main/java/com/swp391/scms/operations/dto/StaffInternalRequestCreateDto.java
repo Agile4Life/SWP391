@@ -16,6 +16,13 @@ public record StaffInternalRequestCreateDto(
         LocalDate startDate,
         LocalDate endDate,
         String targetShift,
-        Long replacementUserId
-) {}
+        Long replacementUserId,
+        /** True when the user already saw the overlapping-leave warning and still wants to send this leave. */
+        Boolean confirmOverlap
+) {
+    public StaffInternalRequestCreateDto(String requestType, String title, String reason, LocalDate startDate,
+                                         LocalDate endDate, String targetShift, Long replacementUserId) {
+        this(requestType, title, reason, startDate, endDate, targetShift, replacementUserId, null);
+    }
+}
 

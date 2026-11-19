@@ -14,6 +14,7 @@ import {
   type RequestType,
 } from './staffRequestApi';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { ApiError } from '../../shared/api/client';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
@@ -97,15 +98,29 @@ export function StaffInternalRequestsPage() {
 
     setSubmitting(true);
     setFormError('');
+    const payload = {
+      requestType: createType,
+      title: createTitle.trim(),
+      reason: createReason.trim(),
+      startDate: createStartDate || null,
+      endDate: createEndDate || null,
+      targetShift: createTargetShift.trim() || null,
+    };
     try {
-      await createStaffRequest({
-        requestType: createType,
-        title: createTitle.trim(),
-        reason: createReason.trim(),
-        startDate: createStartDate || null,
-        endDate: createEndDate || null,
-        targetShift: createTargetShift.trim() || null,
-      });
+      try {
+        await createStaffRequest(payload);
+      } catch (err: unknown) {
+        // Đã có đơn nghỉ (chờ duyệt/đã duyệt) trùng ngày: hỏi lại trước khi gửi thêm đơn.
+        if (!(err instanceof ApiError && err.code === 'LEAVE_OVERLAP')) throw err;
+        const resend = await confirm({
+          title: staffMessage('Đã có đơn nghỉ trùng ngày', 'Leave already requested for these days'),
+          message: err.message,
+          confirmLabel: staffMessage('Vẫn gửi đơn', 'Send anyway'),
+          cancelLabel: staffMessage('Không gửi', 'Do not send'),
+        });
+        if (!resend) return;
+        await createStaffRequest({ ...payload, confirmOverlap: true });
+      }
 
       notify('Đã gửi đơn từ.', 'success');
       setShowCreateModal(false);

@@ -28,6 +28,16 @@ public interface StaffInternalRequestRepository extends JpaRepository<StaffInter
     List<StaffInternalRequest> findWithFilters(@Param("status") String status,
                                               @Param("requestType") String requestType);
 
+    /** The user's pending or approved leaves that share at least one day with {@code start..end}. */
+    @Query("""
+            select r from StaffInternalRequest r
+            where r.user.id = :userId and r.requestType = 'LEAVE' and r.status in ('PENDING', 'APPROVED')
+              and r.startDate <= :end and coalesce(r.endDate, r.startDate) >= :start
+            order by r.startDate
+            """)
+    List<StaffInternalRequest> findOverlappingLeaves(@Param("userId") Long userId, @Param("start") java.time.LocalDate start,
+                                                     @Param("end") java.time.LocalDate end);
+
     /** An approved leave covering {@code date}; a leave without an end date covers its start day only. */
     @Query("""
             select (count(r) > 0) from StaffInternalRequest r

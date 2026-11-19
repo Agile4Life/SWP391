@@ -34,6 +34,8 @@ export interface StaffInternalRequestCreatePayload {
   endDate?: string | null;
   targetShift?: string | null;
   replacementUserId?: number | null;
+  /** Send a leave even though it overlaps a pending/approved one (after the user confirmed the warning). */
+  confirmOverlap?: boolean;
 }
 
 export interface StaffInternalRequestReviewPayload {

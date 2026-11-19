@@ -253,6 +253,31 @@ class StaffInternalRequestServiceTest {
     }
 
     @Test
+    void aLeaveOnDaysAlreadyApprovedIsWarnedFirstAndSentOnlyAfterConfirmation() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        StaffInternalRequest approved = new StaffInternalRequest();
+        approved.setUser(staffUser);
+        approved.setRequestType("LEAVE");
+        approved.setStatus("APPROVED");
+        approved.setStartDate(LocalDate.of(2026, 11, 20));
+        approved.setEndDate(LocalDate.of(2026, 11, 21));
+        when(requestRepository.findOverlappingLeaves(10L, LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 21)))
+                .thenReturn(java.util.List.of(approved));
+
+        var again = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
+                LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 21), null, null);
+        var error = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.createRequest(10L, again));
+        assertEquals("LEAVE_OVERLAP", error.getErrorCode());
+        verify(requestRepository, never()).save(any());
+
+        when(requestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var confirmed = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
+                LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 21), null, null, true);
+        service.createRequest(10L, confirmed);
+        verify(requestRepository).save(any());
+    }
+
+    @Test
     void replacementMustBeAnotherActiveStaffMember() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
         Role memberRole = new Role();

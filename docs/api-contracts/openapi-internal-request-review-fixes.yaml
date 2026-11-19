@@ -13,6 +13,7 @@ paths:
       responses:
         '201': {description: Request created}
         '400': {description: Invalid request type, INVALID_DATE_RANGE, LEAVE_DATES_REQUIRED or INVALID_REPLACEMENT}
+        '409': {description: "LEAVE_OVERLAP: a LEAVE shares a day with the user's PENDING or APPROVED leave. The localized message names that leave's dates; resend with confirmOverlap: true to submit anyway."}
   /operations/requests/{id}/cancel:
     put:
       summary: Owner cancels a pending request
