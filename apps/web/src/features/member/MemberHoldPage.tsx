@@ -197,7 +197,8 @@ export function MemberHoldPage() {
                 <li>{t(`Tối đa ${policy.maxDays} ngày, tối thiểu ${policy.minDays} ngày.`, `Between ${policy.minDays} and ${policy.maxDays} days.`)}</li>
                 <li>{t('Mỗi gói chỉ được bảo lưu một lần.', 'Each package can be put on hold only once.')}</li>
                 <li>{t(`Nộp đơn trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ (có thể đính kèm giấy tờ nếu có).`, `File at least ${policy.noticeHours} hours before it starts (supporting documents optional).`)}</li>
-                <li>{t('Khi được duyệt, các buổi PT và đặt sân trong giai đoạn bảo lưu sẽ tự hủy; ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions and courts booked during the hold are cancelled and the held days are added to your expiry.')}</li>
+                <li>{t('Khi được duyệt, các buổi PT và đặt sân trong giai đoạn bảo lưu sẽ tự hủy (buổi PT dùng lượt của gói được trả lại lượt); ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions and courts booked during the hold are cancelled (PT sessions booked with package sessions get them back); the held days are added to your expiry.')}</li>
+                <li>{t('Khóa học còn buổi trong giai đoạn bảo lưu sẽ bị hủy: duyệt trước ngày khóa bắt đầu ít nhất 3 ngày thì được trả lại lượt hoặc hoàn học phí vào Ví; muộn hơn hoặc khóa đã bắt đầu thì mất lượt/học phí.', 'Courses with a session during the hold are cancelled: approved at least 3 days before the course starts, the course credit or fee is returned to your Wallet; later, or once the course has started, it is lost.')}</li>
               </ul>
             ) : (
               <p className="hold-notice hold-notice--info" role="status">{t('Gói này không được bảo lưu. Chỉ gói 3 tháng và gói Platinum 1 tháng được bảo lưu.', 'This package cannot be put on hold. Only 3-month packages and the 1-month Platinum package can be held.')}</p>
@@ -225,7 +226,7 @@ export function MemberHoldPage() {
                   <button type="button" className="btn-secondary" disabled={busy} onClick={() => void onWithdraw()}>
                     {status === 'PENDING' ? t('Rút đơn', 'Withdraw request') : t('Hủy bảo lưu chưa bắt đầu', 'Cancel the hold before it starts')}
                   </button>
-                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
+                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các khóa học, lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'Courses, PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
                 </div>
               )}
               {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}</p>}

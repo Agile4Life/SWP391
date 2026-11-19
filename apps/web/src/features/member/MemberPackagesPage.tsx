@@ -972,7 +972,7 @@ export function MemberPackagesPage() {
             </p>
           )}
           <p className="row-card__meta" style={{ marginTop: 6 }}>
-            {t(" Gói tập đang được bảo lưu. Các lịch lớp đã đặt đã bị hủy. ", "Your membership is on hold. Booked classes have been cancelled.")}</p>
+            {t(" Gói tập đang được bảo lưu. Khóa học, lịch PT và đặt sân trong giai đoạn bảo lưu đã bị hủy. ", "Your membership is on hold. Courses, PT sessions and courts within the hold period have been cancelled.")}</p>
           <p className="row-card__meta">{t("Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.", "Resume to use your remaining days; no new payment needed.")}</p>
           <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
             onClick={() => void handleResume()}>

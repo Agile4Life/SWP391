@@ -153,6 +153,9 @@ export function HoldManagementPage() {
                   <button type="button" className="btn-primary" disabled={busyId !== null} onClick={() => void decide(item, true)}>{t('Duyệt bảo lưu', 'Approve hold')}</button>
                 </div>
               )}
+              {item.holdStatus === 'PENDING' && (
+                <small className="meta-label">{t('Duyệt sẽ hủy PT, sân và khóa học trong giai đoạn bảo lưu. Khóa bắt đầu trong dưới 3 ngày hoặc đã bắt đầu sẽ mất lượt/học phí.', 'Approving cancels PT sessions, courts and courses within the hold. Courses starting in under 3 days, or already running, lose their credit or fee.')}</small>
+              )}
             </li>
           ))}
         </ul>

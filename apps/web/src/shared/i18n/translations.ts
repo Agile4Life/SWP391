@@ -120,7 +120,7 @@ export const englishLabels: Readonly<Record<string, string>> = {
   "ĐANG BẢO LƯU": "PAUSED",
   "Thời hạn gói:": "Membership period:",
   "Lý do bảo lưu: \"": "Pause reason: \"",
-  "Gói tập đang được bảo lưu. Các lịch lớp đã đặt đã bị hủy.": "Your membership is on hold. Booked classes have been cancelled.",
+  "Gói tập đang được bảo lưu. Khóa học, lịch PT và đặt sân trong giai đoạn bảo lưu đã bị hủy.": "Your membership is on hold. Courses, PT sessions and courts within the hold period have been cancelled.",
   "Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.": "Resume to use your remaining days; no new payment needed.",
   "Đang mở lại…": "Resuming…",
   "Mở lại gói tập miễn phí": "Resume membership for free",

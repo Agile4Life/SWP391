@@ -99,7 +99,7 @@ public class EntitlementRevocationService {
 
     /**
      * A frozen membership with an approved, dated hold still covers its own period: the days of the hold itself
-     * (course seats are kept and excused) and the days after it, up to the end date pushed back by the held days.
+     * and the days after it, up to the end date pushed back by the held days.
      * Without this the nightly sweep would cancel everything booked after the hold, as the member is "not active" yet.
      */
     private boolean coveredByDatedHold(Long memberId, LocalDate date) {
@@ -114,8 +114,8 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). Course seats are
-     * kept by the caller, which marks their sessions excused instead.
+     * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). No money is
+     * refunded here; course enrollments are handled by {@code EnrollmentService#releaseCoursesForHold}.
      */
     @Transactional
     public int releaseBookingsBetween(Long memberId, LocalDate from, LocalDate to, String reason) {
