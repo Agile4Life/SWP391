@@ -52,15 +52,6 @@ export interface CoachAssignmentData {
   stats: CoachAssignmentSummaryStats;
 }
 
-export interface AssignStudentRequest {
-  memberId: number;
-  coachId: number;
-  assignmentType: 'TRAINING_PLAN';
-  goal?: string;
-  startDate: string;
-  endDate: string;
-}
-
 export interface ReassignStudentRequest {
   memberId: number;
   fromCoachId: number;
@@ -79,12 +70,6 @@ export const coachAssignmentsApi = {
     const qs = query.toString();
     return apiFetch<CoachAssignmentData>(`/manager/coach-assignments${qs ? `?${qs}` : ''}`);
   },
-
-  assignStudent: (body: AssignStudentRequest) =>
-    apiFetch<CoachAssignmentStudent>('/manager/coach-assignments/assign', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
 
   reassignStudent: (body: ReassignStudentRequest) =>
     apiFetch<void>('/manager/coach-assignments/reassign', {

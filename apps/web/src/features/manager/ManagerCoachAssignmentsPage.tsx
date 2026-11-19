@@ -4,27 +4,17 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
-import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
-import { addDays } from '../../shared/lib/recurrence';
+import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import {
   coachAssignmentsApi,
   type CoachAssignmentData,
   type CoachAssignmentOverview,
   type CoachAssignmentStudent,
 } from './coachAssignmentsApi';
-import { apiFetch } from '../../shared/api/client';
 import { staffError as safeMessage, staffText } from '../operations/staffI18n';
 import './manager-coach-assignments.css';
 
 import { Select } from '../../shared/ui/Select';
-import { DatePicker } from '../../shared/ui/DatePicker';
-interface MemberLookupItem {
-  userId: number;
-  fullName: string;
-  membershipCode: string;
-  phone?: string | null;
-}
-
 /** Short tag shown only when the member's plan blocks coaching; nothing is shown when the plan is fine. */
 function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['membershipIssue'] }) {
   if (!issue) return null;
@@ -79,26 +69,14 @@ export function ManagerCoachAssignmentsPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<StaffMessage | null>(null);
-  const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupError, setLookupError] = useState<StaffMessage | null>(null);
 
   // Modals state
-  const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [reassignStudent, setReassignStudent] = useState<{
     student: CoachAssignmentStudent;
     currentCoachId: number;
     currentCoachName: string;
   } | null>(null);
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<CoachAssignmentStudent | null>(null);
-
-  // Form states for Assign
-  const [assignCoachId, setAssignCoachId] = useState<number | ''>('');
-  const [memberSearchQuery, setMemberSearchQuery] = useState('');
-  const [memberSearchResults, setMemberSearchResults] = useState<MemberLookupItem[]>([]);
-  const [selectedMember, setSelectedMember] = useState<MemberLookupItem | null>(null);
-  const [assignGoal, setAssignGoal] = useState('');
-  const [assignStartDate, setAssignStartDate] = useState(() => centerNowParts().date);
-  const [assignEndDate, setAssignEndDate] = useState(() => addDays(centerNowParts().date, 30));
 
   // Form state for Reassign
   const [targetCoachId, setTargetCoachId] = useState<number | ''>('');
@@ -131,69 +109,9 @@ export function ManagerCoachAssignmentsPage() {
     return () => { clearTimeout(timer); generation.current += 1; };
   }, [load]);
 
-  // Member search in assign modal
-  useEffect(() => {
-    if (!isAssignOpen || selectedMember || memberSearchQuery.length < 2) {
-      setMemberSearchResults([]);
-      setLookupLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLookupLoading(true);
-    setLookupError(null);
-    const timer = setTimeout(async () => {
-      try {
-        const results = await apiFetch<MemberLookupItem[]>(`/members/lookup?q=${encodeURIComponent(memberSearchQuery)}`);
-        if (!cancelled) setMemberSearchResults(results || []);
-      } catch {
-        if (!cancelled) { setMemberSearchResults([]); setLookupError('Không thể tìm học viên. Vui lòng thử lại.'); }
-      } finally {
-        if (!cancelled) setLookupLoading(false);
-      }
-    }, 300);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [memberSearchQuery, isAssignOpen, selectedMember]);
-
   const allCoachesList = useMemo(() => {
     return data?.availableCoaches || [];
   }, [data]);
-
-  const handleOpenAssign = () => {
-    setSelectedMember(null);
-    setMemberSearchQuery('');
-    setAssignGoal('');
-    setAssignStartDate(centerNowParts().date);
-    setAssignEndDate(addDays(centerNowParts().date, 30));
-    setFormError(null);
-    setLookupError(null);
-    setAssignCoachId(allCoachesList[0]?.coachId || '');
-    setIsAssignOpen(true);
-  };
-
-  const handleAssignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy || !selectedMember || !assignCoachId) return;
-
-    setBusy(true);
-    setFormError(null);
-    try {
-      await coachAssignmentsApi.assignStudent({
-        memberId: selectedMember.userId,
-        coachId: Number(assignCoachId),
-        assignmentType: 'TRAINING_PLAN',
-        goal: assignGoal,
-        startDate: assignStartDate,
-        endDate: assignEndDate,
-      });
-      setIsAssignOpen(false);
-      notify('Phân công học viên cho huấn luyện viên thành công!', 'success');
-      await load();
-    } catch (err) {
-      setFormError(safeMessage(err, 'Lỗi khi phân công học viên'));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleReassignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,15 +179,6 @@ export function ManagerCoachAssignmentsPage() {
     <div data-i18n-managed className="portal-container coach-assignments-page">
       <PageHeader
         title={t("HLV & học viên phụ trách")}
-        actions={
-          <button
-            type="button"
-            className="btn-primary coach-action-btn"
-            onClick={handleOpenAssign}
-            disabled={busy || loading}
-          >
-            {t("+ Phân công học viên mới")}</button>
-        }
       />
 
       {confirmDialog}
@@ -548,141 +457,6 @@ export function ManagerCoachAssignmentsPage() {
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Modal 1: Assign Student to Coach */}
-      {isAssignOpen && (
-        <Modal title={t("Phân công học viên mới cho Huấn luyện viên")} busy={busy} onClose={() => setIsAssignOpen(false)}>
-          <form className="coach-modal-form" onSubmit={(e) => void handleAssignSubmit(e)}>
-            <fieldset disabled={busy}>
-            {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
-            <div className="coach-form-group">
-              <label htmlFor="assign-coach-select">{t("Chọn Huấn luyện viên phụ trách *")}</label>
-              <Select
-                id="assign-coach-select"
-                className="coach-form-control"
-                value={String(assignCoachId)}
-                onChange={(e) => setAssignCoachId(Number(e.target.value))}
-                required
-              >
-                {allCoachesList.map((c) => (
-                  <option data-i18n-managed key={c.coachId} value={c.coachId}>
-                    {c.coachName} {t(" - Chuyên môn: ")}{c.specialization}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="coach-form-group">
-              <label htmlFor="assign-member-search">{t("Tìm kiếm học viên theo tên / mã thẻ / SĐT *")}</label>
-              <input
-                id="assign-member-search"
-                type="text"
-                className="coach-form-control"
-                placeholder={t("Nhập tên hoặc mã thẻ học viên (vd: SOL-MB...)")}
-                value={memberSearchQuery}
-                onChange={(e) => {
-                  setMemberSearchQuery(e.target.value);
-                  setSelectedMember(null);
-                }}
-              />
-              {memberSearchResults.length > 0 && !selectedMember && (
-                <ul data-i18n-managed
-                  style={{
-                    background: 'var(--portal-raised)',
-                    border: '1px solid var(--portal-border, rgba(255, 255, 255, 0.15))',
-                    borderRadius: '8px',
-                    margin: '0.25rem 0 0',
-                    padding: '0.5rem',
-                    listStyle: 'none',
-                    maxHeight: '150px',
-                    overflowY: 'auto',
-                  }}
-                >
-                  {memberSearchResults.map((m) => (
-                    <li data-i18n-managed key={m.userId}>
-                    <button type="button" className="coach-member-result" disabled={busy}
-                      style={{
-                        padding: '0.4rem 0.6rem',
-                        cursor: 'pointer',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem',
-                        color: 'var(--portal-paper)',
-                      }}
-                      onClick={() => {
-                        setSelectedMember(m);
-                        setMemberSearchQuery(`${m.fullName} (${m.membershipCode})`);
-                        setMemberSearchResults([]);
-                      }}
-                    >
-                      <strong>{m.fullName}</strong> {t(" — Mã thẻ: ")}{m.membershipCode} {m.phone ? t(`• SĐT: ${m.phone}`, `• Phone: ${m.phone}`) : ''}
-                    </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {lookupLoading && <p role="status">{t("Đang tìm học viên…")}</p>}
-              {lookupError && <p role="alert">{t(lookupError)}</p>}
-              {!lookupLoading && !lookupError && !selectedMember && memberSearchQuery.length >= 2 && memberSearchResults.length === 0 && <p>{t("Không tìm thấy học viên phù hợp.")}</p>}
-              {selectedMember && (
-                <div data-i18n-managed style={{ fontSize: '0.85rem', color: 'var(--portal-success)', marginTop: '0.25rem' }}>
-                  {t("Đã chọn học viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode})
-                </div>
-              )}
-            </div>
-
-            <div className="coach-form-group">
-              <label htmlFor="assign-goal">{t("Mục tiêu luyện tập")}</label>
-              <input
-                id="assign-goal"
-                type="text"
-                className="coach-form-control"
-                placeholder={t("Ví dụ: Giảm mỡ tăng cơ, rèn luyện thể lực 3 buổi/tuần")}
-                value={assignGoal}
-                onChange={(e) => setAssignGoal(e.target.value)}
-              />
-            </div>
-
-            <div className="coach-form-row">
-              <div className="coach-form-group">
-                <label htmlFor="assign-start-date">{t("Ngày bắt đầu *")}</label>
-                <DatePicker
-                  id="assign-start-date"
-                  value={assignStartDate}
-                  onChange={(e) => setAssignStartDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="coach-form-group">
-                <label htmlFor="assign-end-date">{t("Ngày kết thúc *")}</label>
-                <DatePicker
-                  id="assign-end-date"
-                  value={assignEndDate}
-                  onChange={(e) => setAssignEndDate(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="coach-modal-actions">
-              <button
-                type="button"
-                className="btn-secondary coach-action-btn"
-                onClick={() => setIsAssignOpen(false)}
-                disabled={busy}
-              >
-                {t("Hủy bỏ")}</button>
-              <button
-                type="submit"
-                className="btn-primary coach-action-btn"
-                disabled={busy || !selectedMember || !assignCoachId}
-              >
-                {busy ? t('Đang phân công…') : t('Xác nhận phân công')}
-              </button>
-            </div>
-            </fieldset>
-          </form>
-        </Modal>
       )}
 
       {/* Modal 2: Reassign Student */}
