@@ -1778,6 +1778,8 @@ paths:
     patch:
       summary: Cập nhật trạng thái giao dịch thanh toán (CENTER_MANAGER, RECEPTIONIST)
       description: >-
+        Payment gắn với đặt sân, buổi PT 1:1, đơn hàng hoặc nạp Ví bị từ chối (400 PAYMENT_STATUS_USE_TARGET_FLOW);
+        hãy xác nhận ở màn hình tương ứng.
         Allowed transitions are pending → success, pending → failed and failed → pending.
         success → refunded is rejected with 400 INVALID_STATUS_TRANSITION; refunds go through
         POST /payments/{id}/refund (CENTER_MANAGER, audited, with a reason). Confirming a payment
