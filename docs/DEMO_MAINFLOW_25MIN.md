@@ -76,7 +76,7 @@ Có hai đường vào, demo cả hai:
 
 Chuẩn bị riêng: lấy sẵn mã QR của `dung@` và `em@` (đăng nhập, mở thẻ, sao chép) vì mã sống theo từng gói; nếu thẻ không hiện mã, quét QR cổng bằng tài khoản đó trên `/member/check-in` để lấy kết quả DENIED. **Hãy chạy thử trước một lần** — mình chưa kiểm chứng thẻ của gói hết hạn/đóng băng có cho sao chép mã hay không.
 
-Nói thêm khi quét cổng: nếu Lan có buổi lớp/PT trong ngày, hệ thống tự điểm danh (từ 30 phút trước giờ bắt đầu; muộn hơn 15 phút là `late`).
+Nói thêm khi quét cổng: quét cổng **không tự điểm danh** cả khóa học lẫn PT 1:1. HLV (và lễ tân với PT) điểm danh; màn điểm danh hiện tag "Đã check-in" cho người đã vào cổng trong khung giờ buổi và hỏi xác nhận nếu vẫn đánh vắng / gỡ có mặt.
 
 ## D. Đặt lịch (13:30–18:30)
 
@@ -86,7 +86,7 @@ Chính sách: **không có lớp lẻ / đặt từng buổi** (`SingleSessionPo
 2. Thử đăng ký một khóa **trùng giờ** với khóa vừa đăng ký → bị chặn (kiểm tra chồng lịch ở giao diện và trigger DB).
 3. Nói: chỉ hội viên có gói `active` đăng ký được; khóa phải nằm gọn trong hạn gói; sĩ số khóa dòng + trigger capacity. Nút "Đặt chỗ ngay" ở danh sách buổi cũng chỉ đăng ký cả khóa. Quản lý chỉ tạo được khóa định kỳ (`POST /classes/recurring`).
 4. **PT 1:1** — cùng trang, tab **Đặt lịch HLV 1:1 (PT)** (`?tab=pt`) → chọn HLV → khung giờ trống cùng ngày (hôm nay + 5) → xác nhận. Platinum có 6 buổi PT miễn phí/chu kỳ nên **không phát sinh thanh toán**; hết hạn mức thì PT trả theo giờ (tiền mặt hoặc VNPay).
-5. Hiện lịch của tôi: khóa đã đăng ký + buổi PT. Buổi PT sẽ bị hủy ở phần E; các buổi của khóa trong kỳ bảo lưu được đánh dấu `excused`.
+5. Hiện lịch của tôi: khóa đã đăng ký + buổi PT. Buổi PT và khóa này sẽ bị hủy ở phần E (khóa bắt đầu từ hôm nay + 3 trở đi nên được trả lượt).
 
 ## E. Bảo lưu (18:30–23:00)
 
@@ -94,10 +94,10 @@ Chính sách: **không có lớp lẻ / đặt từng buổi** (`SingleSessionPo
 2. Điền: bắt đầu **hôm nay + 3**, kết thúc **hôm nay + 9**, lý do (ví dụ "Công tác xa"), đính kèm 1 ảnh/PDF (giấy tờ không bắt buộc ở giao diện hiện tại — tài liệu spec nói "bắt buộc" đã lạc hậu, giao diện và code chỉ giới hạn tối đa 5 tệp, mỗi tệp 5 MB; xin đừng nói bắt buộc). **Gửi đơn** → trạng thái **Đang chờ duyệt**.
 3. Thử nộp sai để thấy guard (chọn một lần): bắt đầu ngày mai (vi phạm nộp trước 24 giờ), hoặc khoảng 2 ngày (dưới tối thiểu 3 ngày).
 4. **Lễ tân** → `/staff/holds` → bấm mở giấy tờ đính kèm → **Duyệt bảo lưu**.
-5. **Quay lại Lan**: `/member/classes` — buổi PT trong khoảng bảo lưu **đã bị hủy tự động**, chỗ được giải phóng; các buổi của khóa trong kỳ bảo lưu hiện **excused** (không tính vắng, cần kiểm tra trên màn điểm danh); `/member/hold` hiện **Đã duyệt**; có thông báo. Hạn gói sẽ được cộng đúng số ngày bảo lưu khi kỳ bảo lưu kết thúc.
+5. **Quay lại Lan**: `/member/classes` — buổi PT trong khoảng bảo lưu **đã bị hủy tự động**, chỗ được giải phóng, lượt PT được trả lại; khóa đã đăng ký **bị hủy** và thông báo báo "lượt đăng ký khóa học được hoàn lại" (khóa có phí: học phí hoàn vào Ví); `/member/hold` hiện **Đã duyệt**; có thông báo. Hạn gói sẽ được cộng đúng số ngày bảo lưu khi kỳ bảo lưu kết thúc.
 6. Giải thích vòng đời (không cần chờ thật): job 00:15 hằng ngày đóng băng gói sang `frozen` vào ngày đầu kỳ bảo lưu và tự khôi phục sau ngày cuối; hội viên cũng có thể `resume` sớm. Trong lúc `frozen`: không check-in, không đặt lịch.
 7. **Chứng minh bằng dữ liệu có sẵn**: mở `em@` (Silver, **đang bảo lưu**) → `/member/hold` hiện đơn đã duyệt; dán QR của `em@` vào `/staff/check-in` → từ chối. Kết nối lại với phần C.
-8. Nhấn mạnh: có thể **hủy bảo lưu chưa bắt đầu** (lịch đã hủy không tự khôi phục, gói được trả lại lượt bảo lưu), và buổi lớp trong kỳ bảo lưu được đánh dấu `excused` nên không tính vắng, không dính quy tắc 50%.
+8. Nhấn mạnh: có thể **hủy bảo lưu chưa bắt đầu** (lịch đã hủy không tự khôi phục, gói được trả lại lượt bảo lưu), và quy tắc 3 ngày: duyệt khi khóa còn ≥ 3 ngày mới bắt đầu thì trả lượt/hoàn phí, muộn hơn hoặc khóa đã chạy thì mất. Khung Quy định ở `/member/hold` và dòng nhắc ở `/staff/holds` nói rõ điều này.
 
 Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo lưu không?"* Không — chỉ gói dài hạn và Platinum 1 tháng. *"Bảo lưu hai lần?"* Không — `hold_used` đặt khi duyệt và không xóa.
 
@@ -138,5 +138,4 @@ Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo
 
 - Luồng chạy end-to-end trên DB demo hiện tại; thứ tự nút, câu chữ giao diện lấy từ mã nguồn, có thể lệch nhẹ.
 - Thẻ QR của gói hết hạn/đóng băng có sao chép được không (phần C, mục DENIED).
-- Khi duyệt bảo lưu, việc xử lý đăng ký **trọn khóa** (giữ nguyên + excused hay hủy) — chạy thử trước khi nói với hội đồng.
 - VNPay Sandbox: cần merchant thật.

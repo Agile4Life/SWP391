@@ -81,9 +81,13 @@
 ### 2.4 Bảo lưu gói
 **Màn hình:** `/member/hold`, `/staff/holds`. **API:** `/api/v1/memberships/subscriptions/{id}/hold` (+ `/approve`, `/reject`, `/withdraw`, `/policy`), `/holds`, `/holds/pending`.
 
-- Điều kiện: gói cho phép bảo lưu và chưa dùng lượt bảo lưu duy nhất. Gửi trước ngày bắt đầu ít nhất **24 giờ**. Thời lượng từ **3 ngày** tới mức tối đa của gói. Bắt buộc kèm giấy tờ y tế (tối đa 5 tệp, mỗi tệp 5 MB).
+- Điều kiện: gói cho phép bảo lưu và chưa dùng lượt bảo lưu duy nhất. Gửi trước ngày bắt đầu ít nhất **24 giờ**. Thời lượng từ **3 ngày** tới mức tối đa của gói. Giấy tờ (ví dụ giấy tờ y tế) không bắt buộc; nếu đính kèm thì tối đa 5 tệp, mỗi tệp 5 MB.
 - Lễ tân duyệt hoặc từ chối. Hội viên rút yêu cầu khi chưa duyệt; lễ tân rút giúp khi chưa tới ngày bắt đầu.
-- Khi duyệt, các lịch đặt trong khoảng bảo lưu bị hủy. Tới ngày bắt đầu, gói chuyển `frozen`. Hết hạn bảo lưu (hoặc chạm trần **90 ngày**), gói tự `active` lại và được cộng bù số ngày đã giữ. Ngày bảo lưu không bị tính vào chu kỳ quyền lợi.
+- Khi duyệt (hoàn/mất được quyết định ngay lúc duyệt):
+  - **PT 1:1 và đặt sân** có ngày nằm trong khoảng bảo lưu bị hủy. PT đặt bằng lượt gói được trả lại lượt; PT trả tiền mặt/chuyển khoản và đặt sân **không** tự hoàn tiền. Lịch ngoài khoảng bảo lưu giữ nguyên.
+  - **Khóa học** còn buổi chưa diễn ra trong khoảng bảo lưu bị **hủy đăng ký** (không giữ chỗ). Duyệt trước ngày khóa bắt đầu **≥ 3 ngày**: khóa miễn phí được trả lượt, khóa có phí được hoàn 100% vào Ví. Muộn hơn hoặc khóa đã bắt đầu: mất lượt (vẫn tính vào chu kỳ) hoặc mất học phí. Học phí đang chờ thanh toán thì payment chuyển `failed`.
+  - Hội viên nhận thông báo cho từng khóa (hoàn lượt / mất lượt / hoàn phí / mất phí). Lịch đã hủy không tự khôi phục kể cả khi rút bảo lưu chưa bắt đầu.
+- Tới ngày bắt đầu, gói chuyển `frozen`. Hết hạn bảo lưu (hoặc chạm trần **90 ngày**), gói tự `active` lại và được cộng bù số ngày đã giữ. Ngày bảo lưu không bị tính vào chu kỳ quyền lợi.
 
 ### 2.5 Hủy gói và hoàn tiền
 **Màn hình:** `/member/packages` (yêu cầu), `/staff/reception` (lễ tân trình), `/manager/cancellations` (duyệt). **API:** `/api/v1/memberships/cancellations`.
@@ -121,8 +125,8 @@
 
 - Khóa học phải kết thúc trong thời hạn gói (được nối các kỳ đã trả liền mạch). Mỗi chu kỳ có số khóa miễn phí theo hạng gói; vượt thì đóng học phí (giảm 10%/20% cho Gold/Platinum).
 - Học phí online giữ chỗ **15 phút**; quá hạn chưa trả thì tự giải phóng.
-- **Quy tắc vắng:** vắng quá **50%** số buổi của một khóa thì bị chặn đăng ký khóa mới trong **30 ngày**. Đi muộn tính là có mặt. Buổi trong thời gian bảo lưu đã duyệt tính là có phép.
-- Bảo lưu làm hủy khóa: báo trước ≥ 3 ngày thì được trả lại lượt/hoàn phí, muộn hơn thì mất.
+- **Quy tắc vắng:** vắng quá **50%** số buổi của một khóa thì bị chặn đăng ký khóa mới trong **30 ngày**. Đi muộn tính là có mặt. (Bảo lưu hủy hẳn khóa nên không phát sinh buổi vắng trong kỳ bảo lưu.)
+- Bảo lưu làm hủy khóa: duyệt trước ngày khóa bắt đầu ≥ 3 ngày thì được trả lại lượt/hoàn phí, muộn hơn hoặc khóa đã chạy thì mất (chi tiết ở mục 2.4).
 
 **State `class_enrollments.status`:** `booked` → `cancelled`, hoặc `completed` khi mọi buổi không bị hủy của lớp đã qua 7 ngày.
 
@@ -130,7 +134,9 @@
 **Màn hình:** `/staff/attendance`, `/staff/attendance/:sessionId` (HLV). **API:** `/api/v1/attendance`.
 
 - HLV điểm danh khi buổi đã bắt đầu, chỉ cho hội viên có chỗ trong buổi: `present`, `late`, `absent`, `excused`.
-- Job 30 phút một lần đánh `absent` cho buổi đã kết thúc mà chưa điểm danh, xét lùi 7 ngày. Nếu hội viên check-in vào trung tâm sớm tối đa 30 phút và ở suốt buổi thì được tính `present`.
+- **Điểm danh khóa học do HLV của lớp thực hiện; quét cổng không tự điểm danh.** Màn điểm danh hiện tag "Đã check-in HH:mm" cho hội viên có lượt vào cổng phủ buổi học (vào trong 3 giờ trước giờ học và còn trong trung tâm lúc buổi bắt đầu). HLV đánh vắng hội viên có tag thì phải xác nhận lại trên màn hình.
+- Job 30 phút một lần đánh `absent` cho buổi đã kết thúc mà chưa điểm danh, xét lùi 7 ngày. Hội viên có lượt vào cổng phủ buổi thì job bỏ qua, để HLV tự điểm danh.
+- PT 1:1 cũng không tự ghi nhận đến khi quét cổng (mục 6.1).
 - HLV nhập điểm tiến bộ (1–100) và nhận xét. Dữ liệu này hiện ở `/member/progress`.
 
 **State `class_sessions.status`:** `scheduled` → `cancelled`, hoặc `completed` (tự động, 7 ngày sau ngày học, để vẫn sửa điểm danh muộn được).
@@ -199,7 +205,7 @@
 - Mỗi chu kỳ có số buổi miễn phí theo hạng gói; buổi thêm trả theo giờ (giảm theo hạng gói). Tối đa **2 buổi chưa trả** sắp tới.
 - Không trùng giờ với lịch khác của HLV hoặc hội viên. HLV không có quá **3 giờ PT liên tiếp** trong cửa sổ 4 giờ (phải nghỉ).
 - Hủy trước giờ bắt đầu: lượt miễn phí được trả lại, tiền đã trả vào Ví.
-- Ghi nhận đến: quét cổng tối đa 30 phút trước giờ tập hoặc HLV/lễ tân đánh dấu tay. Có thể gỡ lượt đến ghi nhầm.
+- Ghi nhận đến: HLV/lễ tân/quản lý đánh dấu tay từ giờ bắt đầu; **quét cổng không tự ghi nhận**. Màn `/coach/pt-attendance`, `/staff/pt-attendance` hiện tag "Đã check-in HH:mm" khi hội viên có lượt vào cổng phủ buổi (vào trong 3 giờ trước giờ tập, còn trong trung tâm lúc bắt đầu). Gỡ đánh dấu có mặt của người có tag phải xác nhận lại.
 
 **State `coach_bookings.status`:** `confirmed` → `cancelled`, hoặc `completed` (tự động, 3 ngày sau buổi tập).
 
@@ -302,7 +308,6 @@ Hội viên đánh giá HLV sau một buổi đã học. Quản lý xem tổng h
 | `SessionCompletionScheduler` | 00:30 hằng ngày | Buổi học, booking theo buổi, khóa học đã qua 7 ngày → `completed` |
 | `CoachingCompletionScheduler` | 00:35 hằng ngày | PT 1:1 đã qua 3 ngày, giáo án hết hạn → `completed` |
 | `CourseAttendanceService` | 30 phút | Đánh vắng buổi đã kết thúc, áp quy tắc 50% |
-| `PtAttendanceService` | 30 phút | Ghi nhận đến buổi PT từ lượt quét cổng |
 | `CenterCheckinService` | 03:00 hằng ngày | Đóng lượt check-in treo |
 | `SupportRequestService` | Hằng giờ | Đóng phiếu `resolved` quá 72 giờ |
 | `NotificationScheduler` | 8:00 và 30 phút | Nhắc gia hạn gói, nhắc giờ học |

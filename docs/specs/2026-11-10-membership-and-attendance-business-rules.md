@@ -120,8 +120,8 @@ Số tiền phải thu là giá **lúc tạo yêu cầu** (`upgrade_charge` ho�
 - Hội viên được rút yêu cầu khi chưa được quyết định.
 
 **Xử lý:** Lễ tân duyệt hoặc từ chối. Khi duyệt:
-- Các lịch lớp/buổi đã đặt trong khoảng bảo lưu bị hủy ngay, chỗ được giải phóng.
-- Các buổi khóa học trong khoảng đó được đánh dấu `excused` để **không tính là vắng** (xem 2.5).
+- PT 1:1 và đặt sân trong khoảng bảo lưu bị hủy ngay; PT dùng lượt gói được trả lượt, PT trả tiền và sân không tự hoàn tiền.
+- Khóa học còn buổi trong khoảng bảo lưu bị hủy đăng ký: duyệt trước ngày khóa bắt đầu ≥ 3 ngày thì trả lượt hoặc hoàn học phí vào Ví, muộn hơn hoặc khóa đã chạy thì mất (xem `BUSINESS_FLOWS.md` mục 2.4).
 - Job hằng ngày (00:15) đóng băng gói sang `frozen` vào ngày đầu của kỳ bảo lưu và tự khôi phục vào ngày sau ngày cuối. Hết bảo lưu thì `end_date` được cộng thêm đúng số ngày đã bảo lưu (tối đa 90 ngày, `MAX_HOLD_DAYS`).
 - Hội viên cũng có thể chủ động `resume` sớm.
 
@@ -199,29 +199,26 @@ Trạng thái: `present`, `late`, `absent`, `excused`. Mỗi cặp (buổi, hộ
 - `present`/`late` lưu giờ có mặt; trạng thái khác xóa giờ có mặt.
 - Có thể gửi kèm đánh giá tiến độ cho học viên; công bố thì hội viên nhận thông báo.
 
-**Tự động khi quét cổng:** khi hội viên vào trung tâm, hệ thống đánh dấu các buổi **hôm nay** của khóa họ đã đặt nếu giờ quét nằm trong khoảng từ **30 phút trước giờ bắt đầu** đến giờ kết thúc:
-- quét muộn hơn **15 phút** sau giờ bắt đầu → `late`;
-- còn lại → `present`.
-- Buổi HLV đã ghi tay thì không bị ghi đè. Ghi chú tự động: `auto: gate scan`.
+**Quét cổng không tự điểm danh khóa học (thay đổi 2026-11-19).** HLV của lớp tự điểm danh. Roster trả `gateCheckinAt` khi hội viên có lượt vào cổng phủ buổi (vào trong **3 giờ trước** giờ học và còn trong trung tâm lúc buổi bắt đầu); màn HLV hiện tag "Đã check-in" và hỏi xác nhận nếu HLV vẫn đánh vắng hội viên đó. Dòng cũ có ghi chú `auto: gate scan` là dữ liệu trước thay đổi.
 
 ### 2.5 Vắng mặt và quy tắc 50%
 
 Job quét mỗi **30 phút**, nhìn lại 7 ngày:
 
 1. Buổi đã kết thúc, hội viên có chỗ nhưng chưa có dòng điểm danh nào:
-   - Có lượt vào trung tâm bắt đầu trong **3 giờ trước** buổi và vẫn ở lại qua buổi → `present` (`auto: visit covered the session`).
+   - Có lượt vào trung tâm phủ buổi (như trên) → bỏ qua, để HLV điểm danh.
    - Ngược lại → `absent` (`auto: not attended`).
    - Hội viên đăng ký sau ngày của buổi đó thì không bị tính vắng.
-2. Trong khoảng bảo lưu đã duyệt → `excused`, không tính vắng.
+2. Bảo lưu đã duyệt hủy hẳn đăng ký khóa (trả lượt/hoàn phí nếu duyệt trước ngày khóa bắt đầu ≥ 3 ngày), nên không phát sinh buổi vắng trong kỳ bảo lưu.
 3. **Quy tắc 50%:** vắng **hơn một nửa** số buổi chưa hủy của khóa (`vắng × 2 > tổng`) thì bị **khóa đăng ký khóa mới 30 ngày** (`course_enroll_blocked_until`) và nhận thông báo hệ thống. Đi muộn tính là có mặt.
 
 ### 2.6 Buổi PT 1:1
 
-- Quét cổng từ **30 phút trước** giờ bắt đầu đến giờ kết thúc → đánh dấu `attended_at` cho buổi 1:1 chưa ghi nhận trong ngày.
-- Job quét lúc phút 5 và 35 mỗi giờ, nhìn lại 3 ngày: buổi đã kết thúc mà chưa có mặt, nếu hội viên vào trung tâm trong 3 giờ trước và ở lại qua buổi → ghi nhận có mặt.
+- **Quét cổng không tự ghi nhận đến (thay đổi 2026-11-19); không còn job ghi nhận bù.** HLV/lễ tân/quản lý đánh dấu tay.
+- `GET /coach-bookings/attendance` trả `gateCheckinAt` khi hội viên có lượt vào cổng phủ buổi (vào trong **3 giờ trước** giờ bắt đầu, còn trong trung tâm lúc buổi bắt đầu). Màn điểm danh 1:1 hiện tag "Đã check-in" và hỏi xác nhận khi gỡ đánh dấu có mặt của người có tag.
 - Buổi đã kết thúc không có mặt là **no-show**: vẫn trừ vào hạn mức, **không có buổi bù** (xem 1.2 cho hạn mức/chu kỳ).
 - Huấn luyện viên, lễ tân và quản lý có thể đánh dấu tay đã tham dự trên màn hình điểm danh 1:1.
-- Đánh dấu tay chỉ từ giờ bắt đầu trở đi; code hiện tại cho phép sửa buổi đã kết thúc. Bỏ đánh dấu xóa `attended_at`, đặt `attendance_locked=true`, giữ nguyên trạng thái booking và lịch sử cổng; đánh dấu tay lại sẽ mở khóa. DTO trả `attendanceLocked` để phân biệt đã bỏ ghi nhận với chưa ghi nhận.
+- Đánh dấu tay chỉ từ giờ bắt đầu trở đi; code hiện tại cho phép sửa buổi đã kết thúc. Bỏ đánh dấu xóa `attended_at`, đặt `attendance_locked=true` (để màn hình ghi "Đã bỏ ghi nhận có mặt"), giữ nguyên trạng thái booking và lịch sử cổng; đánh dấu tay lại sẽ bỏ cờ. DTO trả `attendanceLocked` để phân biệt đã bỏ ghi nhận với chưa ghi nhận.
 - Bộ lọc điểm danh dùng Asia/Ho_Chi_Minh: Đã có mặt có `attendedAt`; Không có mặt là buổi đã kết thúc không có `attendedAt` (kết quả suy ra, không ghi ABSENT); Sắp diễn ra là buổi chưa bắt đầu không có `attendedAt`. Buổi đang diễn ra chưa có dấu có mặt chỉ nằm trong Tất cả, có nhãn riêng. Buổi đã hủy không nằm trong danh sách/số lượng.
 - Cập nhật 13/11/2026 sau khi Leader duyệt: Entity và migration tường minh `AuditEntityTypeSchemaUpgrade` cho phép `coach_bookings`; migration chạy qua PostgreSQL provider, giữ nguyên predicate CHECK cũ và mọi log lịch sử. Đã kiểm thử transaction/migration trên PostgreSQL isolated; chưa áp dụng database chung. Trigger vẫn kiểm tra gói active với booking `confirmed` lịch sử; xem `docs/qa/2026-11-13-pt-attendance-audit-migration.md` trước khi triển khai.
 
