@@ -37,6 +37,7 @@ import java.util.UUID;
 public class MemberTrialService {
 
     public static final int TRIAL_DAYS = 3;
+    static final long MAX_DOCUMENT_IMAGE_BYTES = 2L * 1024 * 1024;
 
     private final MemberTrialRedemptionRepository trialRedemptions;
     private final MemberRepository members;
@@ -123,6 +124,13 @@ public class MemberTrialService {
         }
     }
 
+    /** Document photos are uploaded images only (JPEG/PNG/WebP, at most 2 MB), never outside links. */
+    private static void validateDocumentImage(String dataUrl) {
+        if (dataUrl == null || dataUrl.isBlank()) return;
+        com.swp391.scms.common.image.ImageDataUrlValidator.validate(dataUrl, MAX_DOCUMENT_IMAGE_BYTES,
+                "KYC_IMAGE_INVALID", "error.kyc.image_invalid");
+    }
+
     private boolean isVietnamese(String nationality) {
         if (nationality == null) return false;
         String s = nationality.trim().toUpperCase(Locale.ROOT);
@@ -144,6 +152,8 @@ public class MemberTrialService {
 
         // 1. Kiểm tra định dạng giấy tờ & quốc tịch
         validateDocument(docType, docNumber, nationality);
+        validateDocumentImage(frontImageUrl);
+        validateDocumentImage(backImageUrl);
 
         String docHash = cccdHasher.hash(docNumber);
 
@@ -255,6 +265,11 @@ public class MemberTrialService {
             throw new ConflictException("TRIAL_ALREADY_APPROVED", "trial.already_approved", null,
                     "Đơn đăng ký gói trải nghiệm này đã được phê duyệt trước đó.");
         }
+        // A rejected request no longer reserves its document; the member must resubmit before it can be approved.
+        if (MemberTrialRedemption.STATUS_REJECTED.equalsIgnoreCase(redemption.getStatus())) {
+            throw new ConflictException("TRIAL_REJECTED_RESUBMIT", "trial.rejected.resubmit_required", null,
+                    "Rejected request: the member must resubmit it first.");
+        }
 
         Member member = redemption.getMember();
         if (member == null) {
@@ -327,6 +342,9 @@ public class MemberTrialService {
 
         String rejectionReason = (reason != null && !reason.isBlank()) ? reason.trim() : "Thông tin giấy tờ không khớp";
         redemption.setStatus(MemberTrialRedemption.STATUS_REJECTED);
+        // A rejected document must not stay reserved: someone may have sent another person's ID. The owner can still
+        // resubmit, which writes the real hash again.
+        redemption.setCccdHash("rejected-" + redemption.getId());
         redemption.setRejectionReason(rejectionReason);
         redemption.setReviewedBy(reviewer != null ? reviewer.id() : null);
         redemption.setReviewedAt(LocalDateTime.now(clock));

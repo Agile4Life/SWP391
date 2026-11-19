@@ -253,7 +253,7 @@ class MemberTrialServiceTest {
     @DisplayName("requestTrial: Successfully submits CCCD trial request in PENDING_APPROVAL status")
     void testRequestTrial_CccdSuccess() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
-        TrialClaimRequest request = new TrialClaimRequest("CCCD", "001200001234", "001200001234", "Nguyen Van A", "VN", "front.jpg", "back.jpg");
+        TrialClaimRequest request = new TrialClaimRequest("CCCD", "001200001234", "001200001234", "Nguyen Van A", "VN", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=");
 
         when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
@@ -279,7 +279,7 @@ class MemberTrialServiceTest {
     @DisplayName("requestTrial: Successfully submits foreign passport request in PENDING_APPROVAL status")
     void testRequestTrial_ForeignPassportSuccess() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
-        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "P12345678", null, "John Doe", "United States", "passport.jpg", null);
+        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "P12345678", null, "John Doe", "United States", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", null);
 
         when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
@@ -303,7 +303,7 @@ class MemberTrialServiceTest {
     @DisplayName("requestTrial: Rejects Vietnamese citizen trying to use Passport")
     void testRequestTrial_VietnamesePassportRejected() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
-        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "P12345678", null, "Nguyen Van B", "Vietnam", "passport.jpg", null);
+        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "P12345678", null, "Nguyen Van B", "Vietnam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", null);
 
         BadRequestException ex = assertThrows(BadRequestException.class, () -> service.requestTrial(principal, request));
         assertEquals("TRIAL_PASSPORT_FOREIGN_ONLY", ex.getErrorCode());
@@ -313,7 +313,7 @@ class MemberTrialServiceTest {
     @DisplayName("requestTrial: Rejects invalid passport number format")
     void testRequestTrial_InvalidPassportFormat() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
-        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "AB", null, "John Doe", "France", "passport.jpg", null);
+        TrialClaimRequest request = new TrialClaimRequest("PASSPORT", "AB", null, "John Doe", "France", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", null);
 
         BadRequestException ex = assertThrows(BadRequestException.class, () -> service.requestTrial(principal, request));
         assertEquals("TRIAL_PASSPORT_INVALID", ex.getErrorCode());
@@ -388,5 +388,29 @@ class MemberTrialServiceTest {
 
         assertEquals(1, results.size());
         assertEquals("Alice Smith", results.get(0).documentFullName());
+    }
+
+    @Test
+    void rejectingFreesTheDocumentAndARejectedRequestCannotBeApproved() {
+        MemberTrialRedemption rejected = new MemberTrialRedemption();
+        rejected.setId(70L);
+        rejected.setCccdHash("real-hash");
+        rejected.setStatus(MemberTrialRedemption.STATUS_PENDING);
+        when(trialRedemptions.findById(70L)).thenReturn(java.util.Optional.of(rejected));
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
+        AuthenticatedPrincipal desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+
+        service.rejectTrial(desk, 70L, "Ảnh mờ");
+
+        assertEquals("rejected-70", rejected.getCccdHash());
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.approveTrial(desk, 70L));
+    }
+
+    @Test
+    void documentPhotosMustBeUploadedImagesNotLinks() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        TrialClaimRequest request = new TrialClaimRequest("CCCD", "001200001234", "001200001234", "Nguyen Van A", "VN",
+                "https://attacker.example/x.png", null);
+        assertThrows(com.swp391.scms.common.exception.BadRequestException.class, () -> service.requestTrial(principal, request));
     }
 }

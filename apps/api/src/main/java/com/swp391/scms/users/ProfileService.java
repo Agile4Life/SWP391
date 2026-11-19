@@ -296,6 +296,11 @@ public class ProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
     }
 
+    private static void validateDocumentImage(String dataUrl) {
+        com.swp391.scms.common.image.ImageDataUrlValidator.validate(dataUrl.trim(), MAX_AVATAR_BYTES,
+                "KYC_IMAGE_INVALID", "error.kyc.image_invalid");
+    }
+
     private static final java.util.regex.Pattern CCCD_PATTERN = java.util.regex.Pattern.compile("^(\\d{9}|\\d{12})$");
     private static final java.util.regex.Pattern PASSPORT_PATTERN = java.util.regex.Pattern.compile("^[A-Z0-9]{6,15}$", java.util.regex.Pattern.CASE_INSENSITIVE);
 
@@ -348,11 +353,10 @@ public class ProfileService {
                     "Vui lòng tải lên ảnh mặt trước của giấy tờ.");
         }
 
-        if (request.frontImageUrl().trim().startsWith("data:")) {
-            validateAvatarUrl(request.frontImageUrl());
-        }
-        if (request.backImageUrl() != null && request.backImageUrl().trim().startsWith("data:")) {
-            validateAvatarUrl(request.backImageUrl());
+        // Only an uploaded image is kept: an outside link would make staff browsers load a URL a stranger chose.
+        validateDocumentImage(request.frontImageUrl());
+        if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
+            validateDocumentImage(request.backImageUrl());
         }
 
         member.setDocumentType(docType);

@@ -405,7 +405,7 @@ class ProfileControllerTest {
         when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
 
         com.swp391.scms.users.dto.MemberKycRequest request = new com.swp391.scms.users.dto.MemberKycRequest(
-                "CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "front.jpg", "back.jpg"
+                "CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         );
 
         mockMvc.perform(post("/api/v1/profile/kyc")
@@ -430,7 +430,7 @@ class ProfileControllerTest {
         when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
 
         com.swp391.scms.users.dto.MemberKycRequest request = new com.swp391.scms.users.dto.MemberKycRequest(
-                "PASSPORT", "P12345678", "JOHN DOE", "Vietnam", "passport.jpg", null
+                "PASSPORT", "P12345678", "JOHN DOE", "Vietnam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", null
         );
 
         mockMvc.perform(post("/api/v1/profile/kyc")

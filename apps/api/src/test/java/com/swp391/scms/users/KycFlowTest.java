@@ -49,7 +49,7 @@ class KycFlowTest {
     }
 
     private void submit() {
-        profiles.submitMemberKyc(10L, new MemberKycRequest("CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "front.jpg", "back.jpg"));
+        profiles.submitMemberKyc(10L, new MemberKycRequest("CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="));
     }
 
     @Test
