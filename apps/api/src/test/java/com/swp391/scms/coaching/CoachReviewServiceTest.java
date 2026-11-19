@@ -81,7 +81,27 @@ class CoachReviewServiceTest {
         booking.setStatus("completed");
         booking.setBookingDate(java.time.LocalDate.now().minusDays(1));
         booking.setEndTime(java.time.LocalTime.NOON);
+        booking.setAttendedAt(java.time.LocalDate.now().minusDays(1).atTime(11, 0));
         lenient().when(bookingRepository.findById(55L)).thenReturn(Optional.of(booking));
+    }
+
+    @Test
+    void ptReviewRequiresTheSessionToBeMarkedAttended() {
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        var missed = new com.swp391.scms.coaching.entity.CoachBooking();
+        missed.setId(56L);
+        missed.setMember(member);
+        missed.setCoach(coach);
+        missed.setStatus("completed");
+        missed.setBookingDate(java.time.LocalDate.now().minusDays(1));
+        missed.setEndTime(java.time.LocalTime.NOON);
+        when(bookingRepository.findById(56L)).thenReturn(Optional.of(missed));
+
+        assertThatThrownBy(() -> reviewService.createReview(10L,
+                new CoachReviewCreateDto(20L, 56L, null, 5, "Review", false)))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+        verify(reviewRepository, never()).save(any());
     }
 
     @Test
@@ -106,6 +126,24 @@ class CoachReviewServiceTest {
         assertThat(result.memberName()).isEqualTo("Nguyen Van Member");
 
         verify(notificationService).send(eq(20L), anyString(), anyString(), eq("system"), isNull(), eq(100L));
+    }
+
+    @Test
+    void aNewReviewRefreshesThatMonthsLeaderboard() {
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(reviewRepository.save(any(CoachReview.class))).thenAnswer(invocation -> {
+            CoachReview r = invocation.getArgument(0);
+            r.setId(102L);
+            return r;
+        });
+        var leaderboard = mock(com.swp391.scms.coaching.service.CoachLeaderboardService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(reviewService, "leaderboard", leaderboard);
+
+        reviewService.createReview(10L, new CoachReviewCreateDto(20L, 55L, null, 5, "Tốt", false));
+
+        java.time.LocalDate today = java.time.LocalDate.now();
+        verify(leaderboard).refreshMonth(today.getYear(), today.getMonthValue());
     }
 
     @Test

@@ -1145,7 +1145,10 @@ export function MemberCoachBookingView({
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                       {/* Đánh giá HLV sau khi kết thúc buổi */}
                       {hasEnded ? (
-                        !existingReview ? (
+                        !existingReview && !b.attendedAt ? (
+                          <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
+                            {memberText("Không có mặt · không thể đánh giá", "Not marked present · cannot review")}</span>
+                        ) : !existingReview ? (
                           <button
                             type="button"
                             className="btn-primary btn-sm"

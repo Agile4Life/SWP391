@@ -44,6 +44,9 @@ public class CoachReviewService {
     @Autowired(required = false)
     private com.swp391.scms.attendance.repository.SessionAttendanceRepository attendanceRepository;
 
+    @Autowired(required = false)
+    private CoachLeaderboardService leaderboard;
+
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository) {
@@ -108,6 +111,10 @@ public class CoachReviewService {
         review.setCreatedAt(LocalDateTime.now());
 
         CoachReview saved = reviewRepository.save(review);
+        // The month's ranking and bonuses follow the new rating right away (the month is when the review was written).
+        if (leaderboard != null) {
+            leaderboard.refreshMonth(saved.getCreatedAt().getYear(), saved.getCreatedAt().getMonthValue());
+        }
 
         // Send in-app notification to the Coach
         if (notificationService != null) {
@@ -173,6 +180,11 @@ public class CoachReviewService {
             if ("cancelled".equals(booking.getStatus())
                     || !LocalDateTime.of(booking.getBookingDate(), booking.getEndTime()).isBefore(LocalDateTime.now(clock))) {
                 throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", null, "The session has not finished.");
+            }
+            // Same rule as courses: only a session the coach or desk marked as attended can be reviewed.
+            if (booking.getAttendedAt() == null) {
+                throw new ForbiddenException("REVIEW_NOT_ATTENDED", "error.review.not_attended", null,
+                        "Only members who attended this session can review it.");
             }
             if (reviewRepository.existsByMemberUserIdAndBookingId(memberId, request.bookingId())) {
                 throw new ConflictException("DUPLICATE_REVIEW", "error.review.duplicate", null, "This session was already reviewed.");

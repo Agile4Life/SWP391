@@ -143,6 +143,7 @@ describe('MemberCoachBookingView Review Logic', () => {
         status: 'confirmed',
         paymentMethod: 'package_quota',
         hourlyRate: 250000,
+        attendedAt: '2020-01-01T09:02:00',
       },
     ]);
 
@@ -164,6 +165,18 @@ describe('MemberCoachBookingView Review Logic', () => {
     expect(host.textContent).toContain('Đánh giá Huấn luyện viên: Huỳnh Đắc Tài');
     expect(host.textContent).toContain('Mức độ hài lòng của bạn:');
     expect(host.textContent).toContain('Gửi đánh giá');
+  });
+
+  it('does not offer a review for a finished session the member was not marked present at', async () => {
+    mocks.getMyCoachBookings.mockResolvedValue([
+      { id: 89, coachId: 1, coachName: 'Huỳnh Đắc Tài', bookingDate: '2020-01-01', startTime: '09:00:00', endTime: '10:00:00',
+        status: 'confirmed', paymentMethod: 'package_quota', hourlyRate: 250000, attendedAt: null },
+    ]);
+
+    await renderComponent();
+
+    expect(host.textContent).toContain('Không có mặt · không thể đánh giá');
+    expect([...host.querySelectorAll('button')].some((b) => b.textContent?.includes('Đánh giá HLV'))).toBe(false);
   });
 });
 

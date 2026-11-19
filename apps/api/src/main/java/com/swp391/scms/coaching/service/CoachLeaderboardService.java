@@ -33,6 +33,11 @@ import java.util.List;
 @Service
 public class CoachLeaderboardService {
 
+    /** A coach needs at least this many reviews in the month to rank for a bonus. */
+    public static final int MIN_REVIEWS_FOR_BONUS = 3;
+    /** A Top 1-3 coach gets the bonus only with at least this average rating. */
+    public static final BigDecimal MIN_AVERAGE_FOR_BONUS = new BigDecimal("4.00");
+
     private final CoachMonthlyReviewRepository monthlyReviewRepository;
     private final CoachReviewRepository reviewRepository;
     private final CoachRepository coachRepository;
@@ -94,6 +99,19 @@ public class CoachLeaderboardService {
 
     @Transactional
     public List<CoachMonthlyReview> generateMonthlyReviews(int year, int month, Long managerUserId) {
+        return computeMonth(year, month, managerUserId, false);
+    }
+
+    /**
+     * Recomputes the month after a new review so the leaderboard and bonuses follow the latest ratings. Keeps the
+     * manager and the status a manager may have set on existing rows.
+     */
+    @Transactional
+    public void refreshMonth(int year, int month) {
+        computeMonth(year, month, null, true);
+    }
+
+    private List<CoachMonthlyReview> computeMonth(int year, int month, Long managerUserId, boolean keepStatus) {
         User manager = managerUserId != null ? userRepository.findById(managerUserId).orElse(null) : null;
         List<Coach> coaches = coachRepository.findPublicCoaches();
 
@@ -128,24 +146,23 @@ public class CoachLeaderboardService {
                         return r;
                     });
 
-            review.setManager(manager);
+            if (manager != null) review.setManager(manager);
             BigDecimal avg = (avgRating != null && totalReviews > 0)
                     ? BigDecimal.valueOf(avgRating).setScale(2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
             review.setAverageRating(avg);
             review.setTotalReviews((int) totalReviews);
             review.setTotalSessions(totalSessions);
-            review.setStatus("published");
+            if (!keepStatus || review.getStatus() == null) review.setStatus("published");
 
             results.add(review);
         }
 
-        // Sort coaches with reviews (totalReviews > 0) before coaches with 0 reviews,
-        // then descending by averageRating, then totalSessions, then totalReviews
-        results.sort(Comparator.comparing((CoachMonthlyReview r) -> r.getTotalReviews() != null && r.getTotalReviews() > 0).reversed()
+        // Coaches with enough reviews rank first; then by average rating, number of reviews and sessions taught.
+        results.sort(Comparator.comparing(CoachLeaderboardService::hasEnoughReviews).reversed()
                 .thenComparing(Comparator.comparing(CoachMonthlyReview::getAverageRating).reversed())
-                .thenComparing(Comparator.comparing(CoachMonthlyReview::getTotalSessions).reversed())
-                .thenComparing(Comparator.comparing(CoachMonthlyReview::getTotalReviews).reversed()));
+                .thenComparing(Comparator.comparing(CoachMonthlyReview::getTotalReviews).reversed())
+                .thenComparing(Comparator.comparing(CoachMonthlyReview::getTotalSessions).reversed()));
 
         // Assign rankings and default badges
         for (int i = 0; i < results.size(); i++) {
@@ -154,7 +171,10 @@ public class CoachLeaderboardService {
             r.setRankPosition(rank);
 
             if (r.getBadge() == null || r.getBadge().isBlank() || isDefaultBadge(r.getBadge())) {
-                if (rank == 1) {
+                if (!earnsBonus(r)) {
+                    r.setBadge("HLV Năng Động ⭐");
+                    r.setBonusAmount(BigDecimal.ZERO);
+                } else if (rank == 1) {
                     r.setBadge("Top 1: Coach of the Month 🏆");
                     r.setBonusAmount(new BigDecimal("2000000.00"));
                 } else if (rank == 2) {
@@ -183,6 +203,16 @@ public class CoachLeaderboardService {
         }
 
         return results;
+    }
+
+    private static boolean hasEnoughReviews(CoachMonthlyReview r) {
+        return r.getTotalReviews() != null && r.getTotalReviews() >= MIN_REVIEWS_FOR_BONUS;
+    }
+
+    /** Top 1-3 bonus needs enough reviews and an average of at least {@link #MIN_AVERAGE_FOR_BONUS}. */
+    static boolean earnsBonus(CoachMonthlyReview r) {
+        return hasEnoughReviews(r) && r.getAverageRating() != null
+                && r.getAverageRating().compareTo(MIN_AVERAGE_FOR_BONUS) >= 0;
     }
 
     private static boolean isDefaultBadge(String badge) {

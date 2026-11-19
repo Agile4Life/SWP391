@@ -245,6 +245,11 @@ export function ManagerCoachReviewsPage() {
         </button>
       </div>
 
+      {activeTab === 'leaderboard' && (
+        <p className="row-card__meta" style={{ margin: '0 0 12px' }}>
+          {t("Xếp hạng theo điểm trung bình tháng; cần tối thiểu 3 đánh giá. Thưởng Top 1–3 (2.000.000 / 1.000.000 / 500.000 đ) khi điểm trung bình từ 4.0 sao. Bảng tự cập nhật khi có đánh giá mới.",
+            "Ranked by the month's average rating; at least 3 reviews needed. Top 1–3 bonus (2,000,000 / 1,000,000 / 500,000 VND) requires an average of 4.0 stars or more. Updates automatically with each new review.")}</p>
+      )}
       {loading ? (
         <div data-i18n-managed className="portal-card" style={{ padding: 40, textAlign: 'center' }}>
           <p className="row-card__meta">{t("Đang tải bảng xếp hạng và đánh giá...")}</p>

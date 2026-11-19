@@ -164,5 +164,62 @@ class CoachLeaderboardServiceTest {
             assertThat(factory.getValidator().validate(valid)).isEmpty();
         }
     }
-}
 
+    private Coach coach(long id, String name) {
+        User u = new User();
+        u.setId(id);
+        u.setFullName(name);
+        Coach c = new Coach();
+        c.setUserId(id);
+        c.setUser(u);
+        return c;
+    }
+
+    private void ratings(Coach c, double avg, long count) {
+        when(reviewRepository.getAverageRatingForPeriod(eq(c.getUserId()), any(), any())).thenReturn(count > 0 ? avg : null);
+        when(reviewRepository.countReviewsForPeriod(eq(c.getUserId()), any(), any())).thenReturn(count);
+    }
+
+    @Test
+    void bonusGoesOnlyToTopCoachesWithEnoughReviewsAndAnAverageOfFourStars() {
+        Coach steady = coach(31L, "Steady");      // 5 reviews, 4.6 -> rank 1, bonus
+        Coach fewReviews = coach(32L, "Few");      // 2 reviews, 5.0 -> not enough reviews, ranked after
+        Coach lowRated = coach(33L, "Low");        // 4 reviews, 3.5 -> rank 2 but below 4.0, no bonus
+        when(coachRepository.findPublicCoaches()).thenReturn(List.of(fewReviews, lowRated, steady));
+        ratings(steady, 4.6, 5);
+        ratings(fewReviews, 5.0, 2);
+        ratings(lowRated, 3.5, 4);
+        when(monthlyReviewRepository.findByCoachIdAndPeriod(any(), eq(2026), eq(11))).thenReturn(Optional.empty());
+
+        List<CoachMonthlyReview> result = leaderboardService.generateMonthlyReviews(2026, 11, null);
+
+        assertThat(result).extracting(r -> r.getCoach().getUserId()).containsExactly(31L, 33L, 32L);
+        assertThat(result.get(0).getBonusAmount()).isEqualByComparingTo("2000000");
+        assertThat(result.get(1).getBonusAmount()).isEqualByComparingTo("0");
+        assertThat(result.get(2).getBonusAmount()).isEqualByComparingTo("0");
+        assertThat(result.get(2).getRankPosition()).isEqualTo(3);
+    }
+
+    @Test
+    void refreshAfterANewReviewKeepsAStatusAndManagerTheManagerSet() {
+        Coach c = coach(41L, "Hidden");
+        when(coachRepository.findPublicCoaches()).thenReturn(List.of(c));
+        ratings(c, 4.8, 3);
+        CoachMonthlyReview existing = new CoachMonthlyReview();
+        existing.setCoach(c);
+        existing.setYear(2026);
+        existing.setMonth(11);
+        existing.setStatus("draft");
+        User manager = new User();
+        existing.setManager(manager);
+        when(monthlyReviewRepository.findByCoachIdAndPeriod(41L, 2026, 11)).thenReturn(Optional.of(existing));
+
+        leaderboardService.refreshMonth(2026, 11);
+
+        assertThat(existing.getStatus()).isEqualTo("draft");
+        assertThat(existing.getManager()).isSameAs(manager);
+        assertThat(existing.getAverageRating()).isEqualByComparingTo("4.80");
+        assertThat(existing.getBonusAmount()).isEqualByComparingTo("2000000");
+        verify(monthlyReviewRepository).save(existing);
+    }
+}
