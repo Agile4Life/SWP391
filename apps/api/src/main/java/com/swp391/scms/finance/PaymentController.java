@@ -88,7 +88,7 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentDto>> updatePaymentStatus(
             @PathVariable Long id,
             @Valid @RequestBody PaymentStatusUpdateRequest request) {
-        PaymentDto updated = paymentService.updatePaymentStatus(id, request.status());
+        PaymentDto updated = paymentService.updatePaymentStatusByStaff(id, request.status());
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.status_updated"), updated));
     }
 

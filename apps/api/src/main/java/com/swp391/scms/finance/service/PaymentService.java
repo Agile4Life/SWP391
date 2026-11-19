@@ -326,6 +326,23 @@ public class PaymentService {
         return joined.isEmpty() ? null : joined;
     }
 
+    /**
+     * Desk/manager status change. Court, 1:1, shop and wallet top-up payments have their own confirmation that also
+     * marks the booking/order paid or credits the wallet; settling them here would take the money and leave the target
+     * unpaid. (VNPay settlement calls {@link #updatePaymentStatus} directly and handles those targets itself.)
+     */
+    public PaymentDto updatePaymentStatusByStaff(Long id, String status) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
+        if (payment.getCourtBookingId() != null || payment.getCoachBookingId() != null
+                || payment.getProductOrderId() != null
+                || (payment.getNote() != null && payment.getNote().startsWith("WALLET_TOPUP"))) {
+            throw new BadRequestException("PAYMENT_STATUS_USE_TARGET_FLOW", "finance.payment.use_target_flow", null,
+                    "Confirm this payment from its court booking, 1:1 session, order or wallet screen");
+        }
+        return updatePaymentStatus(id, status);
+    }
+
     public PaymentDto updatePaymentStatus(Long id, String status) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));

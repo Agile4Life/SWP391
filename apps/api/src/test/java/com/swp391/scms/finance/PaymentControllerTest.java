@@ -120,7 +120,7 @@ class PaymentControllerTest {
         dto.setId(1L);
         dto.setStatus("refunded");
 
-        when(paymentService.updatePaymentStatus(eq(1L), eq("refunded"))).thenReturn(dto);
+        when(paymentService.updatePaymentStatusByStaff(eq(1L), eq("refunded"))).thenReturn(dto);
 
         mockMvc.perform(patch("/api/v1/payments/1/status")
                         .contentType(MediaType.APPLICATION_JSON)

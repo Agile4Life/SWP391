@@ -940,4 +940,19 @@ class PaymentServiceTest {
         assertTrue(result.get(0).isVnpayPending());
         assertFalse(result.get(1).isVnpayPending());
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"court", "coach", "order", "topup"})
+    void staffCannotSettleCourtCoachOrderOrTopupPaymentsByStatus(String kind) {
+        Payment payment = new Payment(); payment.setId(91L); payment.setStatus("pending");
+        switch (kind) {
+            case "court" -> payment.setCourtBookingId(1L);
+            case "coach" -> payment.setCoachBookingId(1L);
+            case "order" -> payment.setProductOrderId(1L);
+            default -> payment.setNote("WALLET_TOPUP:COUNTER");
+        }
+        when(paymentRepository.findById(91L)).thenReturn(Optional.of(payment));
+        assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatusByStaff(91L, "success"));
+        assertEquals("pending", payment.getStatus());
+    }
 }
