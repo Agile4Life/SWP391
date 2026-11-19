@@ -127,8 +127,9 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelector('.mcal__col')!.getAttribute('aria-label')).toContain('05/01');
     const chips = [...host.querySelectorAll<HTMLButtonElement>('.mcal__daychip')];
     expect(chips).toHaveLength(7);
-    expect(chips[0].textContent).toContain('1 buổi');
-    expect(chips[1].textContent).toContain('Trống');
+    expect(chips[0].textContent).toBe('T2051');
+    expect(chips[0].getAttribute('aria-label')).toContain('1 buổi học');
+    expect(chips[1].textContent).toBe('T306–');
     await act(async () => chips[2].click());
     expect(host.querySelector('.mcal__col')!.getAttribute('aria-label')).toContain('07/01');
     expect(host.querySelector('.mcal__event')!.textContent).toContain('Boxing');

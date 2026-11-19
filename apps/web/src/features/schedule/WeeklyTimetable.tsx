@@ -66,6 +66,8 @@ const MINUTE_MS = 60_000;
 const NARROW_QUERY = '(max-width: 767px)';
 const HOUR_PX = 64;
 const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+const WEEKDAY_CHIP: [string, string][] = [['T2', 'Mon'], ['T3', 'Tue'], ['T4', 'Wed'], ['T5', 'Thu'], ['T6', 'Fri'], ['T7', 'Sat'], ['CN', 'Sun']];
+const sessionCount = (count: number) => memberText(`${count} buổi học`, `${count} ${count === 1 ? 'session' : 'sessions'}`);
 
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
@@ -268,12 +270,12 @@ export function WeeklyTimetable({
                 type="button"
                 className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
-                aria-label={`${memberText(weekdayLabel(day))} ${shortDate(day)}, ${count} ${memberText('buổi học')}`}
+                aria-label={`${memberText(weekdayLabel(day))} ${shortDate(day)}, ${sessionCount(count)}`}
                 onClick={() => setFocusDay(day)}
               >
-                <span>{weekdayLabel(day).replace(memberText("Thứ "), 'T').replace(memberText("Chủ nhật"), 'CN')}</span>
+                <span>{memberText(...WEEKDAY_CHIP[days.indexOf(day)])}</span>
                 <strong>{shortDate(day).slice(0, 2)}</strong>
-                <small>{count > 0 ? `${count} ${memberText('buổi học')}` : memberText("Trống")}</small>
+                <small aria-hidden="true">{count > 0 ? count : '–'}</small>
               </button>
             );
           })}
@@ -318,7 +320,7 @@ export function WeeklyTimetable({
                 key={day}
                 className={`mcal__col${day === today ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}`}
                 role="group"
-                aria-label={`${weekdayLabel(day)} ${shortDate(day)}`}
+                aria-label={`${memberText(weekdayLabel(day))} ${shortDate(day)}`}
               >
                 {onSlotClick && hours.map((hour, hourIndex) => {
                   const busy = busyEvents.some((event) => overlapsHour(event, hour));
@@ -336,8 +338,8 @@ export function WeeklyTimetable({
                       aria-disabled={past || undefined}
                       aria-label={
                         past
-                          ? `${weekdayLabel(day)} ${shortDate(day)}, ${range}: ${memberText('Đã qua')}`
-                          : `${weekdayLabel(day)} ${shortDate(day)}, ${range}: ${busy ? memberText("đã có lịch, ") : memberText("trống, ")}${slotActionLabel === 'tạo lịch' ? memberText(slotActionLabel) : slotActionLabel}`
+                          ? `${memberText(weekdayLabel(day))} ${shortDate(day)}, ${range}: ${memberText('Đã qua')}`
+                          : `${memberText(weekdayLabel(day))} ${shortDate(day)}, ${range}: ${busy ? memberText("đã có lịch, ") : memberText("trống, ")}${slotActionLabel === 'tạo lịch' ? memberText(slotActionLabel) : slotActionLabel}`
                       }
                       onFocus={() => setRovingKey(key)}
                       onKeyDown={(event) => moveFocus(event, dayIndex, hour)}
