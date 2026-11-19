@@ -247,6 +247,7 @@ components:
         memberPhone: { type: string }
         documentType: { type: string }
         documentNumberMasked: { type: string }
+        documentNumber: { type: string, nullable: true, description: Full document number, only while the request is pending (stored AES-GCM encrypted and cleared on approve/reject) }
         documentFullName: { type: string }
         nationality: { type: string }
         frontImageUrl: { type: string }

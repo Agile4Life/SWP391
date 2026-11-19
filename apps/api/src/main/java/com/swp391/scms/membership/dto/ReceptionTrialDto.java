@@ -12,6 +12,8 @@ public record ReceptionTrialDto(
         String memberPhone,
         String documentType,
         String documentNumberMasked,
+        /** Số đầy đủ, chỉ có khi đơn đang chờ duyệt. */
+        String documentNumber,
         String documentFullName,
         String nationality,
         String frontImageUrl,

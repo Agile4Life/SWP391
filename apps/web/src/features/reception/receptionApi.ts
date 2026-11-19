@@ -25,6 +25,8 @@ export interface ReceptionTrialItem {
   memberPhone: string | null;
   documentType: 'CCCD' | 'PASSPORT';
   documentNumberMasked: string;
+  /** Full number, only while the request is pending. */
+  documentNumber?: string | null;
   documentFullName: string;
   nationality?: string | null;
   frontImageUrl?: string | null;

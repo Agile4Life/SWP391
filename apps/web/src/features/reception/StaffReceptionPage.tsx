@@ -934,7 +934,7 @@ export function StaffReceptionPage() {
                                 )}
                               </div>
                               <div>
-                                <strong>{t("Số giấy tờ:")}</strong> {item.documentNumberMasked}
+                                <strong>{t("Số giấy tờ:")}</strong> {item.documentNumber ?? item.documentNumberMasked}
                                 {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
                               </div>
                               <div>
@@ -1531,7 +1531,7 @@ export function StaffReceptionPage() {
               </div>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
-                <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{inspectingTrial.documentNumberMasked}</strong>
+                <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{inspectingTrial.documentNumber ?? inspectingTrial.documentNumberMasked}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Họ và tên trên giấy tờ")}</span>
@@ -1593,13 +1593,6 @@ export function StaffReceptionPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--portal-border-strong)', paddingTop: '14px' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={processingTrialId === inspectingTrial.id}
-                onClick={() => setInspectingTrial(null)}
-              >
-                {t("Đóng")}</button>
               <button
                 type="button"
                 className="btn-secondary"

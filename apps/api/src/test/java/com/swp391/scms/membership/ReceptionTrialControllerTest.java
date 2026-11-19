@@ -80,7 +80,7 @@ class ReceptionTrialControllerTest {
     void listTrials_returnsOk() throws Exception {
         ReceptionTrialDto item = new ReceptionTrialDto(
                 1L, 10L, "MEM-10", "Nguyen Van A", "a@test.com", "0900000000",
-                "CCCD", "********1234", "Nguyen Van A", "VN", "front.png", "back.png",
+                "CCCD", "********1234", null, "Nguyen Van A", "VN", "front.png", "back.png",
                 "PENDING_APPROVAL", LocalDateTime.now(), null, null, null, null, null, null, null
         );
         when(trialService.listTrials(eq("PENDING_APPROVAL"), eq(null))).thenReturn(List.of(item));
@@ -97,7 +97,7 @@ class ReceptionTrialControllerTest {
     void approveTrial_returnsOk() throws Exception {
         ReceptionTrialDto approved = new ReceptionTrialDto(
                 1L, 10L, "MEM-10", "Nguyen Van A", "a@test.com", "0900000000",
-                "CCCD", "********1234", "Nguyen Van A", "VN", "front.png", "back.png",
+                "CCCD", "********1234", null, "Nguyen Van A", "VN", "front.png", "back.png",
                 "APPROVED", LocalDateTime.now(), 99L, LocalDateTime.now(), null, 300L,
                 LocalDate.now(), LocalDate.now().plusDays(3), "active"
         );
@@ -114,7 +114,7 @@ class ReceptionTrialControllerTest {
     void rejectTrial_returnsOk() throws Exception {
         ReceptionTrialDto rejected = new ReceptionTrialDto(
                 1L, 10L, "MEM-10", "Nguyen Van A", "a@test.com", "0900000000",
-                "CCCD", "********1234", "Nguyen Van A", "VN", "front.png", "back.png",
+                "CCCD", "********1234", null, "Nguyen Van A", "VN", "front.png", "back.png",
                 "REJECTED", LocalDateTime.now(), 99L, LocalDateTime.now(), "Ảnh mờ", null, null, null, null
         );
         when(trialService.rejectTrial(any(), eq(1L), eq("Ảnh mờ"))).thenReturn(rejected);

@@ -327,6 +327,7 @@ class MemberTrialServiceTest {
         pending.setId(55L);
         pending.setMember(testMember);
         pending.setFullName("Nguyen Van Verified");
+        pending.setDocumentNumberEnc("enc");
         pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
 
         when(trialRedemptions.findById(55L)).thenReturn(Optional.of(pending));
@@ -344,6 +345,8 @@ class MemberTrialServiceTest {
         assertEquals(300L, result.subscriptionId());
         assertEquals("APPROVED", result.status());
         assertEquals("Nguyen Van Verified", testMember.getUser().getFullName());
+        assertNull(pending.getDocumentNumberEnc());
+        assertNull(result.documentNumber());
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(300L));
     }
 

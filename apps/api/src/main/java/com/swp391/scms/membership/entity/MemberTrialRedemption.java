@@ -38,6 +38,10 @@ public class MemberTrialRedemption {
     @Column(name = "cccd_last4", nullable = false, length = 4)
     private String cccdLast4;
 
+    /** Số giấy tờ mã hóa AES-GCM, chỉ giữ trong lúc đơn chờ duyệt; xóa khi duyệt hoặc từ chối. */
+    @Column(name = "document_number_enc", length = 255)
+    private String documentNumberEnc;
+
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
@@ -106,6 +110,14 @@ public class MemberTrialRedemption {
 
     public void setCccdHash(String cccdHash) {
         this.cccdHash = cccdHash;
+    }
+
+    public String getDocumentNumberEnc() {
+        return documentNumberEnc;
+    }
+
+    public void setDocumentNumberEnc(String documentNumberEnc) {
+        this.documentNumberEnc = documentNumberEnc;
     }
 
     public String getCccdLast4() {

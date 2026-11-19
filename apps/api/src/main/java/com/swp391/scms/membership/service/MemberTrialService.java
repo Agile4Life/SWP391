@@ -186,6 +186,7 @@ public class MemberTrialService {
             redemption.setDocumentType(docType);
             redemption.setCccdHash(docHash);
             redemption.setCccdLast4(cccdHasher.last4(docNumber));
+            redemption.setDocumentNumberEnc(cccdHasher.encrypt(docNumber));
             redemption.setFullName(fullName);
             redemption.setNationality(nationality);
             redemption.setFrontImageUrl(frontImageUrl);
@@ -208,6 +209,7 @@ public class MemberTrialService {
             redemption.setDocumentType(docType);
             redemption.setCccdHash(docHash);
             redemption.setCccdLast4(cccdHasher.last4(docNumber));
+            redemption.setDocumentNumberEnc(cccdHasher.encrypt(docNumber));
             redemption.setFullName(fullName);
             redemption.setNationality(nationality);
             redemption.setFrontImageUrl(frontImageUrl);
@@ -312,6 +314,7 @@ public class MemberTrialService {
 
         redemption.setSubscription(savedSub);
         redemption.setStatus(MemberTrialRedemption.STATUS_APPROVED);
+        redemption.setDocumentNumberEnc(null);
         redemption.setReviewedBy(reviewer != null ? reviewer.id() : null);
         redemption.setReviewedAt(LocalDateTime.now(clock));
         trialRedemptions.saveAndFlush(redemption);
@@ -342,6 +345,7 @@ public class MemberTrialService {
 
         String rejectionReason = (reason != null && !reason.isBlank()) ? reason.trim() : "Thông tin giấy tờ không khớp";
         redemption.setStatus(MemberTrialRedemption.STATUS_REJECTED);
+        redemption.setDocumentNumberEnc(null);
         // A rejected document must not stay reserved: someone may have sent another person's ID. The owner can still
         // resubmit, which writes the real hash again.
         redemption.setCccdHash("rejected-" + redemption.getId());
@@ -521,6 +525,7 @@ public class MemberTrialService {
                 u != null ? u.getPhone() : null,
                 effectiveDocType,
                 cccdHasher.mask(r.getCccdLast4()),
+                MemberTrialRedemption.STATUS_PENDING.equalsIgnoreCase(effectiveStatus) ? cccdHasher.decrypt(r.getDocumentNumberEnc()) : null,
                 r.getFullName(),
                 r.getNationality(),
                 r.getFrontImageUrl(),
