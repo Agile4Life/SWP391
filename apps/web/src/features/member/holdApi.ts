@@ -35,6 +35,7 @@ export interface HoldDetail {
   status: string;
   holdStatus: HoldStatus | null;
   holdReason: string | null;
+  holdRejectionReason?: string | null;
   holdRequestedAt: string | null;
   holdResolvedAt: string | null;
   cancelledEnrollmentsCount: number;
@@ -76,8 +77,8 @@ export const listHolds = (status: HoldStatus | 'ALL') =>
 export const approveHold = (subscriptionId: number) =>
   apiFetch<HoldDetail>(`${base}/${subscriptionId}/hold/approve`, { method: 'POST' });
 
-export const rejectHold = (subscriptionId: number) =>
-  apiFetch<HoldDetail>(`${base}/${subscriptionId}/hold/reject`, { method: 'POST' });
+export const rejectHold = (subscriptionId: number, reason: string) =>
+  apiFetch<HoldDetail>(`${base}/${subscriptionId}/hold/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
 
 /** Medical documents are private: fetch with the session token and open the blob, never link them directly. */
 export const fetchHoldDocument = (subscriptionId: number, documentId: number) =>

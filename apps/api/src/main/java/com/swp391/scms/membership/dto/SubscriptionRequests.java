@@ -18,6 +18,12 @@ public final class SubscriptionRequests {
             Long packageId
     ) {}
 
+    public record HoldRejectRequest(
+            @NotBlank(message = "{validation.membership.hold_rejection_reason.required}")
+            @Size(max = 500, message = "{validation.membership.hold_rejection_reason.size}")
+            String reason
+    ) {}
+
     public record HoldRequest(
             @NotBlank(message = "{validation.membership.hold_reason.not_blank}")
             @Size(max = 500, message = "{validation.membership.hold_reason.size}")

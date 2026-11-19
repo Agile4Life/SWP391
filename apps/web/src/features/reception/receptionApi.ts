@@ -293,9 +293,10 @@ export const receptionApi = {
   /**
    * Lễ tân từ chối yêu cầu bảo lưu gói tập
    */
-  rejectHoldRequest: async (subscriptionId: number): Promise<HoldRequestItem> => {
+  rejectHoldRequest: async (subscriptionId: number, reason: string): Promise<HoldRequestItem> => {
     return apiFetch<HoldRequestItem>(`/memberships/subscriptions/${subscriptionId}/hold/reject`, {
       method: 'POST',
+      body: JSON.stringify({ reason }),
     });
   },
 

@@ -40,6 +40,23 @@ describe('HoldManagementPage', () => {
     expect(mocks.approve).toHaveBeenCalledWith(7);
   });
 
+  it('requires a reason before rejecting and sends it', async () => {
+    mocks.list.mockResolvedValue([pending]);
+    mocks.reject.mockResolvedValue({});
+    await render();
+    const card = host.querySelector('[data-testid="hold-7"]')!;
+    await act(async () => [...card.querySelectorAll('button')].find((button) => button.textContent === 'Từ chối')!.click());
+    const submit = [...card.querySelectorAll('button')].find((button) => button.textContent === 'Xác nhận từ chối')!;
+    expect(submit.disabled).toBe(true);
+    const box = card.querySelector('textarea')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(box, '  Giấy tờ chưa hợp lệ ');
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => submit.click());
+    expect(mocks.reject).toHaveBeenCalledWith(7, 'Giấy tờ chưa hợp lệ');
+  });
+
   it('switches the filter to read the hold history without decision buttons', async () => {
     mocks.list.mockResolvedValueOnce([pending]).mockResolvedValueOnce([{ ...pending, holdStatus: 'COMPLETED' }]);
     await render();

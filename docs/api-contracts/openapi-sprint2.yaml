@@ -1317,9 +1317,23 @@ paths:
           schema:
             type: integer
             format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Lý do từ chối, hội viên sẽ thấy lý do này
       responses:
         '200':
           description: Đã từ chối yêu cầu bảo lưu
+        '400':
+          description: Thiếu lý do từ chối hoặc đơn không ở trạng thái chờ duyệt
 
   /memberships/subscriptions/my:
     get:

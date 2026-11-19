@@ -1,4 +1,3 @@
-import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { useCallback, useEffect, useState } from 'react';
 import { useI18n } from '../../shared/i18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -27,7 +26,8 @@ export function HoldManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [confirm, confirmDialog] = useConfirm();
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,20 +52,15 @@ export function HoldManagementPage() {
     ALL: t('Tất cả', 'All'),
   };
 
-  async function decide(item: HoldDetail, approve: boolean) {
+  async function decide(item: HoldDetail, approve: boolean, reason?: string) {
     if (busyId !== null) return;
-    if (!approve && !(await confirm({
-      title: { vi: 'Từ chối đơn bảo lưu?', en: 'Reject this hold request?' },
-      message: { vi: 'Hội viên sẽ được báo là đơn bị từ chối và có thể nộp đơn mới. Thao tác này không thể hoàn tác.', en: 'The member will be told the request was rejected and may submit a new one. This cannot be undone.' },
-      confirmLabel: { vi: 'Từ chối', en: 'Reject' },
-      cancelLabel: { vi: 'Giữ lại', en: 'Keep' },
-      danger: true,
-    }))) return;
     setBusyId(item.id);
     setError(null);
     try {
-      if (approve) await approveHold(item.id); else await rejectHold(item.id);
+      if (approve) await approveHold(item.id); else await rejectHold(item.id, reason ?? '');
       notify(approve ? t('Đã duyệt bảo lưu.', 'Hold approved.') : t('Đã từ chối bảo lưu.', 'Hold rejected.'), 'success');
+      setRejectingId(null);
+      setRejectReason('');
       await load();
     } catch (cause) {
       setError(localizableError(cause, 'Không thể xử lý yêu cầu. Vui lòng thử lại.'));
@@ -104,7 +99,6 @@ export function HoldManagementPage() {
 
   return (
     <div data-i18n-managed className="portal-container hold-management">
-      {confirmDialog}
       <PageHeader title={t('Quản lý bảo lưu', 'Hold management')} />
       <div role="tablist" className="portal-tabs" aria-label={t('Lọc theo trạng thái', 'Filter by status')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         {FILTERS.map((value) => (
@@ -130,6 +124,9 @@ export function HoldManagementPage() {
                 <div>{t('Bảo lưu', 'Hold')}: <strong>{formatCenterDate(item.holdStartDate)} – {formatCenterDate(item.holdEndDate)}</strong></div>
               )}
               {item.holdReason && <div>{t('Lý do', 'Reason')}: {item.holdReason}</div>}
+              {item.holdStatus === 'REJECTED' && item.holdRejectionReason && (
+                <div>{t('Lý do từ chối', 'Rejection reason')}: {item.holdRejectionReason}</div>
+              )}
               {item.holdRequestedAt && <small>{t('Nộp lúc', 'Filed')} {formatCenterDateTime(item.holdRequestedAt)}</small>}
               {item.documents.length > 0 ? (
                 <ul aria-label={t('Giấy tờ đính kèm', 'Attached documents')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, listStyle: 'none', padding: 0 }}>
@@ -147,9 +144,34 @@ export function HoldManagementPage() {
                   </button>
                 </div>
               )}
-              {item.holdStatus === 'PENDING' && (
+              {item.holdStatus === 'PENDING' && rejectingId === item.id && (
+                <form
+                  className="stack"
+                  onSubmit={(event) => { event.preventDefault(); if (rejectReason.trim()) void decide(item, false, rejectReason.trim()); }}
+                >
+                  <label className="portal-label" htmlFor={`hold-reject-reason-${item.id}`}>{t('Lý do từ chối *', 'Rejection reason *')}</label>
+                  <textarea
+                    id={`hold-reject-reason-${item.id}`}
+                    className="portal-input"
+                    rows={3}
+                    maxLength={500}
+                    required
+                    placeholder={t('Vd: giấy tờ chưa hợp lệ, thời gian bảo lưu không phù hợp', 'e.g. documents are not valid, the requested dates do not fit')}
+                    value={rejectReason}
+                    onChange={(event) => setRejectReason(event.target.value)}
+                    disabled={busyId !== null}
+                    style={{ width: '100%', resize: 'vertical' }}
+                  />
+                  <small className="meta-label">{t('Hội viên sẽ thấy lý do này và có thể nộp đơn mới. Không thể hoàn tác.', 'The member will see this reason and may file a new request. This cannot be undone.')}</small>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => { setRejectingId(null); setRejectReason(''); }}>{t('Giữ lại', 'Keep')}</button>
+                    <button type="submit" className="btn-primary" disabled={busyId !== null || !rejectReason.trim()}>{t('Xác nhận từ chối', 'Confirm rejection')}</button>
+                  </div>
+                </form>
+              )}
+              {item.holdStatus === 'PENDING' && rejectingId !== item.id && (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => void decide(item, false)}>{t('Từ chối', 'Reject')}</button>
+                  <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => { setRejectingId(item.id); setRejectReason(''); }}>{t('Từ chối', 'Reject')}</button>
                   <button type="button" className="btn-primary" disabled={busyId !== null} onClick={() => void decide(item, true)}>{t('Duyệt bảo lưu', 'Approve hold')}</button>
                 </div>
               )}

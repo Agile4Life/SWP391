@@ -73,6 +73,10 @@ public class MembershipSubscription {
     @Column(name = "hold_reason", length = 500)
     private String holdReason;
 
+    /** Why reception rejected the hold request; shown to the member. Cleared when a new request is filed. */
+    @Column(name = "hold_rejection_reason", length = 500)
+    private String holdRejectionReason;
+
     @Column(name = "hold_requested_at")
     private LocalDateTime holdRequestedAt;
 
@@ -146,6 +150,8 @@ public class MembershipSubscription {
     }
     public String getHoldStatus() { return holdStatus; }
     public void setHoldStatus(String holdStatus) { this.holdStatus = holdStatus; }
+    public String getHoldRejectionReason() { return holdRejectionReason; }
+    public void setHoldRejectionReason(String holdRejectionReason) { this.holdRejectionReason = holdRejectionReason; }
     public String getHoldReason() { return holdReason; }
     public void setHoldReason(String holdReason) { this.holdReason = holdReason; }
     public LocalDateTime getHoldRequestedAt() { return holdRequestedAt; }

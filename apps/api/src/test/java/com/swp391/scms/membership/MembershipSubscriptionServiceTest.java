@@ -692,9 +692,10 @@ class MembershipSubscriptionServiceTest {
         when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        HoldRequestDto rejected = service.rejectHold(staffPrincipal, 100L);
+        HoldRequestDto rejected = service.rejectHold(staffPrincipal, 100L, "  Thiếu giấy xác nhận  ");
 
         assertThat(rejected.status()).isEqualTo("active");
+        assertThat(rejected.holdRejectionReason()).isEqualTo("Thiếu giấy xác nhận");
         assertThat(rejected.holdStatus()).isEqualTo("REJECTED");
         assertThat(rejected.cancelledEnrollmentsCount()).isZero();
     }
@@ -1510,7 +1511,7 @@ class MembershipSubscriptionServiceTest {
         when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
 
         assertThatThrownBy(() -> service.approveHold(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
-        assertThatThrownBy(() -> service.rejectHold(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.rejectHold(staffPrincipal, 100L, "Không đủ điều kiện")).isInstanceOf(BadRequestException.class);
 
         sub.setHoldStatus("PENDING");
         when(subscriptions.existsByMemberUserIdAndStatus(10L, "pending_payment")).thenReturn(true);

@@ -242,12 +242,14 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.hold_approved"), service.approveHold(principal, id));
     }
 
-    @Operation(summary = "Reject a hold request")
+    @Operation(summary = "Reject a hold request with a reason shown to the member")
     @PostMapping("/{id}/hold/reject")
     @PreAuthorize("hasRole('RECEPTIONIST')")
     public ApiResponse<HoldRequestDto> rejectHold(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @PathVariable Long id) {
-        return ApiResponse.ok(msg("membership.subscription.hold_rejected"), service.rejectHold(principal, id));
+            @PathVariable Long id,
+            @Valid @RequestBody SubscriptionRequests.HoldRejectRequest request) {
+        return ApiResponse.ok(msg("membership.subscription.hold_rejected"),
+                service.rejectHold(principal, id, request.reason()));
     }
 }

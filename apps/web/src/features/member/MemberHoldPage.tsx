@@ -229,7 +229,7 @@ export function MemberHoldPage() {
                   {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các khóa học, lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'Courses, PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
                 </div>
               )}
-              {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}</p>}
+              {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}{detail.holdRejectionReason ? <> {t('Lý do từ Lễ tân', 'Reception\'s reason')}: <strong>{detail.holdRejectionReason}</strong></> : null}</p>}
             </section>
           )}
 

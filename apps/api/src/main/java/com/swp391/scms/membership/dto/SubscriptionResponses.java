@@ -128,7 +128,8 @@ public final class SubscriptionResponses {
             int cancelledEnrollmentsCount,
             LocalDate holdStartDate,
             LocalDate holdEndDate,
-            List<HoldDocumentDto> documents
+            List<HoldDocumentDto> documents,
+            String holdRejectionReason
     ) {
         public HoldRequestDto(Long id, Long memberId, String membershipCode, String memberName, String memberEmail,
                 String memberPhone, Long packageId, String packageName, LocalDate startDate, LocalDate endDate,
@@ -136,7 +137,7 @@ public final class SubscriptionResponses {
                 LocalDateTime holdResolvedAt, int cancelledEnrollmentsCount) {
             this(id, memberId, membershipCode, memberName, memberEmail, memberPhone, packageId, packageName, startDate,
                     endDate, status, holdStatus, holdReason, holdRequestedAt, holdResolvedAt, cancelledEnrollmentsCount,
-                    null, null, List.of());
+                    null, null, List.of(), null);
         }
     }
 

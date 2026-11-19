@@ -641,6 +641,7 @@ public class MembershipSubscriptionService {
         subscription.setHoldEndDate(request.endDate());
         subscription.setHoldStatus(HOLD_PENDING);
         subscription.setHoldReason(reason);
+        subscription.setHoldRejectionReason(null);
         subscription.setHoldRequestedAt(now);
         subscription.setHoldResolvedAt(null);
         subscription.setHoldResolvedBy(null);
@@ -1126,7 +1127,7 @@ public class MembershipSubscriptionService {
      * Lễ tân từ chối yêu cầu bảo lưu: giữ nguyên trạng thái gói tập active.
      */
     @Transactional
-    public HoldRequestDto rejectHold(AuthenticatedPrincipal principal, Long subscriptionId) {
+    public HoldRequestDto rejectHold(AuthenticatedPrincipal principal, Long subscriptionId, String rejectionReason) {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
 
@@ -1144,8 +1145,21 @@ public class MembershipSubscriptionService {
                     "Subscription does not have a pending hold request");
         }
 
+        String reason = rejectionReason == null ? "" : rejectionReason.trim();
+        if (reason.isEmpty()) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_REJECTION_REASON_REQUIRED",
+                    "validation.membership.hold_rejection_reason.required", null,
+                    "A rejection reason is required");
+        }
+        if (reason.length() > 500) {
+            throw new BadRequestException("MEMBERSHIP_HOLD_REJECTION_REASON_TOO_LONG",
+                    "validation.membership.hold_rejection_reason.size", null,
+                    "Rejection reason must not exceed 500 characters");
+        }
+
         LocalDateTime now = LocalDateTime.now(clock);
         subscription.setHoldStatus(HOLD_REJECTED);
+        subscription.setHoldRejectionReason(reason);
         subscription.setHoldResolvedAt(now);
         if (principal != null && principal.id() != null && userRepository != null) {
             userRepository.findById(principal.id()).ifPresent(subscription::setHoldResolvedBy);
@@ -1159,7 +1173,7 @@ public class MembershipSubscriptionService {
             notificationService.send(
                     saved.getMember().getUserId(),
                     msg("notifications.membership.hold_rejected.title"),
-                    msg("notifications.membership.hold_rejected.body", pkgName),
+                    msg("notifications.membership.hold_rejected.body", pkgName, reason),
                     "system",
                     "membership_subscription",
                     saved.getId());
@@ -1370,7 +1384,8 @@ public class MembershipSubscriptionService {
                 cancelledEnrollmentsCount,
                 s.getHoldStartDate(),
                 s.getHoldEndDate(),
-                holdDocumentDtos(s));
+                holdDocumentDtos(s),
+                s.getHoldRejectionReason());
     }
 
     private boolean isTrialSubscription(MembershipSubscription sub) {
