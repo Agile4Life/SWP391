@@ -441,7 +441,7 @@ export function ManagerReportsPage() {
                     padding: '16px 18px',
                     borderRadius: '10px',
                     border: isPending ? '1px solid var(--portal-salmon)' : '1px solid var(--portal-border)',
-                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-card)',
+                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-surface)',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 260 }}>
@@ -462,7 +462,7 @@ export function ManagerReportsPage() {
                         {req.status === 'PENDING' ? t('CHỜ DUYỆT') : req.status === 'APPROVED' ? t('ĐÃ HOÀN VỀ VÍ') : t('ĐÃ TỪ CHỐI')}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-ink)', marginTop: '6px' }}>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
                       {t("Gói tập: ")}<strong>{req.packageName}</strong> {t(" • Số tiền hoàn về Ví:")}{' '}
                       <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
                       {req.requestedByName && <span> {t(" • Trình bởi: ")}{req.requestedByName}</span>}
@@ -472,10 +472,10 @@ export function ManagerReportsPage() {
                         marginTop: '8px',
                         padding: '8px 12px',
                         borderRadius: '8px',
-                        backgroundColor: 'var(--portal-card)',
+                        backgroundColor: 'var(--portal-surface)',
                         border: '1px solid var(--portal-border)',
                         fontSize: '0.88rem',
-                        color: 'var(--portal-ink)',
+                        color: 'var(--portal-paper)',
                       }}
                     >
                       <strong>{t("Lý do hủy gói:")}</strong> {req.reason}
@@ -617,7 +617,7 @@ export function ManagerReportsPage() {
                   {dailyData.map((d) => {
                     const heightPercent = d.revenue > 0 ? Math.max(8, Math.round((d.revenue / maxDailyRevenue) * 100)) : 0;
                     const isHovered = hoveredBar?.date === d.date;
-                    const dateFormatted = d.date.slice(5).replace('-', '/');
+                    const dateFormatted = `${d.date.slice(8, 10)}/${d.date.slice(5, 7)}`;
                     return (
                       <div data-i18n-managed
                         key={d.date}
@@ -801,7 +801,7 @@ export function ManagerReportsPage() {
                           const { date, time } = formatTransactionTime(tx.paidAt);
                           return (
                             <div data-i18n-managed style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontWeight: 600, color: 'var(--portal-ink)', fontSize: '0.86rem' }}>
+                              <span style={{ fontWeight: 600, color: 'var(--portal-paper)', fontSize: '0.86rem' }}>
                                 {date}
                               </span>
                               {time && (

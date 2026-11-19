@@ -649,7 +649,7 @@ export function AdminAuditLogsPage() {
           </div>}
 
           <div className="occupancy-chart-card">
-            <h3 style={{ fontSize: '1.15rem', color: 'var(--portal-ink)', margin: '0 0 12px' }}>
+            <h3 style={{ fontSize: '1.15rem', color: 'var(--portal-paper)', margin: '0 0 12px' }}>
               {t("Biểu đồ trực quan tỷ lệ lấp đầy theo lớp & bộ môn")}</h3>
 
             {loadingOccupancy ? (
