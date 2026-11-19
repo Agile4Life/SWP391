@@ -46,6 +46,7 @@
 2. Nhập OTP gửi qua email đúng thì tài khoản chuyển sang `active` và được đăng nhập.
 3. Chỉ `MEMBER`, `COACH`, `RECEPTIONIST` được đăng nhập bằng Google/OTP. Quản lý và Admin dùng mật khẩu.
 4. Tài khoản `locked` hoặc đã xóa mềm không đăng nhập được bằng bất kỳ cách nào.
+5. **Quy tắc mật khẩu** (đăng ký, quên mật khẩu, đổi mật khẩu, quản lý tạo tài khoản): 8–50 ký tự, có ít nhất 1 chữ cái và 1 chữ số, không khoảng trắng (`PasswordPolicy.REGEX` = `^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$`, frontend dùng chung `PASSWORD_REGEX`). Đăng nhập vẫn nhận mật khẩu cũ không đạt quy tắc này.
 
 **State `users.status`:** `inactive` (chờ OTP) → `active` ⇄ `locked` (Quản lý/Admin khóa, mở). Xóa mềm đặt `deleted_at`; user đã xóa không hiện trong danh sách mặc định.
 
@@ -106,6 +107,7 @@
 
 - Lớp gồm bộ môn, HLV, phòng, sức chứa, trình độ. Tạo buổi đơn lẻ hoặc theo các thứ trong tuần.
 - Không xếp được khi HLV hoặc phòng trùng giờ, HLV có đơn nghỉ đã duyệt hôm đó, hoặc phòng đã có người đặt sân. Lớp phòng VIP chỉ cho hội viên Platinum.
+- **Đơn nghỉ trùng ngày:** HLV/lễ tân gửi đơn nghỉ trùng ít nhất một ngày với đơn nghỉ đang chờ duyệt hoặc đã duyệt của chính mình thì server trả `409 LEAVE_OVERLAP`; màn hình hỏi "Vẫn gửi đơn" và chỉ gửi khi người dùng xác nhận (`confirmOverlap: true`).
 - Đổi HLV/phòng thì kiểm tra trùng lịch với mọi buổi sắp tới. Không giảm sức chứa xuống dưới số chỗ đang giữ.
 - **Hủy một buổi:** hủy các booking của buổi, gửi thông báo `schedule_change`.
 - **Ngừng lớp** (xóa lớp có dữ liệu, hoặc đổi trạng thái sang `cancelled`/`archived`): hủy các buổi **chưa diễn ra**, hủy booking và đăng ký khóa học, **hoàn học phí đã thu vào Ví**, đóng học phí chưa trả, báo hội viên. Lớp chưa có dữ liệu thì xóa hẳn.
@@ -138,6 +140,8 @@
 - Job 30 phút một lần đánh `absent` cho buổi đã kết thúc mà chưa điểm danh, xét lùi 7 ngày. Hội viên có lượt vào cổng phủ buổi thì job bỏ qua, để HLV tự điểm danh.
 - PT 1:1 cũng không tự ghi nhận đến khi quét cổng (mục 6.1).
 - HLV nhập điểm tiến bộ (1–100) và nhận xét. Dữ liệu này hiện ở `/member/progress`.
+- **Sửa điểm danh:** HLV của lớp, lễ tân hoặc quản lý sửa được từ lúc buổi bắt đầu tới **7 ngày sau buổi học**; quá hạn thì không đổi được trạng thái (lỗi `ATTENDANCE_EDIT_WINDOW_CLOSED`) nhưng vẫn sửa được điểm/nhận xét. Mỗi lần lưu ghi audit log `CLASS_ATTENDANCE_RECORD` (trạng thái từng hội viên trước/sau, người sửa là user của audit). Sửa xong tính lại quy tắc vắng 50%.
+- Lịch sử điểm danh/đánh giá trên màn HLV đọc từ server (`GET /attendance/sessions/history`, 31 ngày gần nhất), không lưu trên trình duyệt.
 
 **State `class_sessions.status`:** `scheduled` → `cancelled`, hoặc `completed` (tự động, 7 ngày sau ngày học, để vẫn sửa điểm danh muộn được).
 
@@ -221,7 +225,12 @@
 **State `training_plans.status`:** `draft` → `active` → `superseded` / `cancelled`, hoặc `completed` (tự động khi qua `end_date`).
 
 ### 6.3 Đánh giá HLV
-Hội viên đánh giá HLV sau một buổi đã học. Quản lý xem tổng hợp theo tháng ở `/manager/coach-reviews`.
+Hội viên đánh giá HLV sau một buổi đã kết thúc **và được ghi nhận có mặt** (khóa học: HLV điểm danh `present`/`late`; PT 1:1: đã đánh dấu có mặt). Quét cổng không tính. Mỗi buổi đánh giá một lần. Quản lý xem tổng hợp theo tháng ở `/manager/coach-reviews`.
+
+**Bảng xếp hạng và thưởng tháng** (`CoachLeaderboardService`):
+- Tự tính lại tháng của đánh giá mỗi khi có đánh giá mới (quản lý vẫn bấm tổng hợp lại được). Giữ trạng thái và huy hiệu/thưởng quản lý đã sửa tay.
+- Xếp hạng: HLV có **≥ 3 đánh giá** trong tháng đứng trước; trong nhóm, theo điểm trung bình, rồi số đánh giá, rồi số buổi dạy.
+- Thưởng Top 1/2/3: **2.000.000 / 1.000.000 / 500.000 đ**, chỉ khi có ≥ 3 đánh giá và điểm trung bình **≥ 4.0 sao**; không đạt thì huy hiệu "HLV Năng Động", thưởng 0.
 
 ---
 
