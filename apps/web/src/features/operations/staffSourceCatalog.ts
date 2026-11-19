@@ -1280,6 +1280,8 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Gói hết hạn trong kỳ được gia hạn": "Memberships expiring during the period that were renewed",
   "Chưa có gói hết hạn trong kỳ": "No memberships expiring in this period",
   "Doanh thu theo ngày": "Daily revenue",
+  "Ngày trước": "Previous day",
+  "Ngày sau": "Next day",
   "Không có dữ liệu phát sinh doanh thu trong kỳ được chọn.": "No revenue recorded for the selected period.",
   "Ngày": "Date",
   "giao dịch)": "transactions)",

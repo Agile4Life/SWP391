@@ -323,6 +323,17 @@ export function ManagerReportsPage() {
   // Tìm giá trị max doanh thu trong chart để chuẩn hóa tỷ lệ cột
   const dailyData = summary?.dailyRevenue || [];
   const maxDailyRevenue = Math.max(...dailyData.map((d) => d.revenue), 1);
+  // Mũi tên chỉ nhảy giữa các ngày có doanh thu để không phải bấm qua hàng loạt ngày trống.
+  const revenueDays = dailyData.filter((d) => d.revenue > 0);
+  const stepDay = (dir: -1 | 1) => {
+    if (revenueDays.length === 0) return;
+    const idx = revenueDays.findIndex((d) => d.date === hoveredBar?.date);
+    const next = idx === -1
+      ? revenueDays[dir === 1 ? 0 : revenueDays.length - 1]
+      : revenueDays[Math.min(Math.max(idx + dir, 0), revenueDays.length - 1)];
+    setHoveredBar({ date: next.date, revenue: next.revenue, count: next.transactionCount });
+  };
+  const hoveredIdx = revenueDays.findIndex((d) => d.date === hoveredBar?.date);
 
   return (
     <div data-i18n-managed className="portal-container">
@@ -594,7 +605,11 @@ export function ManagerReportsPage() {
             ) : (
               <div data-i18n-managed>
                 {/* Khu vực tooltip hiển thị khi hover */}
-                <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
+                <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button type="button" className="btn-secondary btn-sm" aria-label={t("Ngày trước")} title={t("Ngày trước")}
+                    onClick={() => stepDay(-1)} disabled={hoveredIdx === 0}>‹</button>
+                  <button type="button" className="btn-secondary btn-sm" aria-label={t("Ngày sau")} title={t("Ngày sau")}
+                    onClick={() => stepDay(1)} disabled={hoveredIdx !== -1 && hoveredIdx === revenueDays.length - 1}>›</button>
                   {hoveredBar && (
                     <span data-i18n-managed style={{ color: 'var(--portal-salmon)' }}>
                       {t("Ngày ")}{formatCenterDate(hoveredBar.date)}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} {t(" giao dịch)")}</span>
