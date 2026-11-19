@@ -195,7 +195,8 @@ public class SessionAttendanceService {
                     coachId,
                     coachName,
                     notes,
-                    scoreMap.get(member.getUserId())
+                    scoreMap.get(member.getUserId()),
+                    courseAttendance != null ? courseAttendance.gateCheckinFor(member.getUserId(), session) : null
             ));
         }
 

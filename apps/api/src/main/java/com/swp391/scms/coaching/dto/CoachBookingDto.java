@@ -26,8 +26,10 @@ public record CoachBookingDto(
         LocalDateTime createdAt,
         LocalDateTime cancelledAt,
         String cancelReason,
-        /** When the member was recorded as present (gate scan during the session); null when not recorded. */
+        /** When the coach or the desk recorded the member as present; null when not recorded. */
         LocalDateTime attendedAt,
-        /** True when staff removed the mark; prevents automatic re-credit without changing booking status. */
-        boolean attendanceLocked
+        /** True when staff removed the mark on purpose. */
+        boolean attendanceLocked,
+        /** Gate check-in that covered the session (attendance list only), shown as a hint; null otherwise. */
+        LocalDateTime gateCheckinAt
 ) {}

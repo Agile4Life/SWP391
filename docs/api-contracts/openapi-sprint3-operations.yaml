@@ -144,6 +144,11 @@ components:
         notes:
           type: string
           nullable: true
+        gateCheckinAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Giờ quét cổng (GRANTED) phủ buổi học, bắt đầu tối đa 3 giờ trước giờ học và còn ở trong trung tâm lúc buổi bắt đầu. Chỉ để HLV tham khảo, không tự ghi điểm danh.
 
     CancelSessionRequest:
       type: object

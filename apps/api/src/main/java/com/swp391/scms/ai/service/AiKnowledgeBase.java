@@ -87,8 +87,6 @@ public class AiKnowledgeBase {
         v.put("trial.days", String.valueOf(MemberTrialService.TRIAL_DAYS));
         v.put("checkin.qrTtlSeconds", String.valueOf(DynamicQrService.DEFAULT_TTL_SECONDS));
         v.put("checkin.autoCheckoutHours", String.valueOf(CenterCheckinService.ANTI_PASSBACK_TIMEOUT_HOURS));
-        v.put("course.earlyMinutes", String.valueOf(CourseAttendanceService.EARLY_MINUTES));
-        v.put("course.lateAfterMinutes", String.valueOf(CourseAttendanceService.LATE_AFTER_MINUTES));
         v.put("course.onlineHoldMinutes", String.valueOf(EnrollmentService.ONLINE_HOLD_MINUTES));
         v.put("course.blockDays", String.valueOf(CourseAttendanceService.BLOCK_DAYS));
         v.put("booking.maxBulk", String.valueOf(SessionBookingRequests.MAX_BULK));

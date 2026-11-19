@@ -85,20 +85,14 @@ public class CourseAttendanceService {
                 Member member = enrollment.getMember();
                 if (member == null || joinedAfter(enrollment, session)
                         || attendance.existsBySessionIdAndMemberUserId(session.getId(), member.getUserId())) continue;
+                // Only the coach records attendance; a member who was in the center then is left for the coach to mark.
+                if (gateCheckinFor(member.getUserId(), session) != null) continue;
                 SessionAttendance row = new SessionAttendance();
                 row.setSession(session);
                 row.setMember(member);
                 row.setRecordedBy(session.getGymClass().getCoach());
-                LocalDateTime visit = coveringVisit(member.getUserId(), session);
-                if (visit != null) {
-                    // Came in early and stayed through the session: present, not absent.
-                    row.setStatus("present");
-                    row.setCheckedInAt(visit);
-                    row.setNotes("auto: visit covered the session");
-                } else {
-                    row.setStatus("absent");
-                    row.setNotes("auto: not attended");
-                }
+                row.setStatus("absent");
+                row.setNotes("auto: not attended");
                 attendance.save(row);
                 created++;
                 touched.add(member.getUserId() + ":" + classId);
@@ -123,77 +117,15 @@ public class CourseAttendanceService {
         return rows.size();
     }
 
-    /** Start of a granted visit that was inside the center while the session ran, or null. */
-    private LocalDateTime coveringVisit(Long memberId, ClassSession session) {
+    /**
+     * Start of a granted gate check-in that was inside the center while the session ran (it began at most
+     * {@value #STAY_BEFORE_HOURS} hours before the start), or null. Shown to the coach; it never records attendance.
+     */
+    public LocalDateTime gateCheckinFor(Long memberId, ClassSession session) {
         if (checkins == null || session.getSessionDate() == null) return null;
         LocalDateTime start = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
         LocalDateTime end = LocalDateTime.of(session.getSessionDate(), session.getEndTime());
         return checkins.findCoveringVisitStart(memberId, start.minusHours(STAY_BEFORE_HOURS), start, end);
-    }
-
-    /**
-     * Marks the member's course sessions inside {@code from..to} as excused (an approved hold) so the hold never counts
-     * as an absence. Sessions already recorded are left alone. Returns how many rows were created.
-     */
-    @Transactional
-    public int excuseSessionsBetween(Long memberId, LocalDate from, LocalDate to) {
-        if (memberId == null || from == null || to == null) return 0;
-        int created = 0;
-        for (ClassSession session : sessions.findNotCancelledBetween(from, to)) {
-            if (session.getGymClass() == null || session.getGymClass().getCoach() == null) continue;
-            for (ClassEnrollment enrollment : enrollments.findByGymClassIdAndStatus(session.getGymClass().getId(), "booked")) {
-                Member member = enrollment.getMember();
-                if (member == null || !memberId.equals(member.getUserId())
-                        || attendance.existsBySessionIdAndMemberUserId(session.getId(), memberId)) continue;
-                SessionAttendance row = new SessionAttendance();
-                row.setSession(session);
-                row.setMember(member);
-                row.setStatus("excused");
-                row.setRecordedBy(session.getGymClass().getCoach());
-                row.setNotes("auto: membership hold");
-                attendance.save(row);
-                created++;
-            }
-        }
-        return created;
-    }
-
-    /** How early before a session starts a gate scan already counts as arriving for it. */
-    public static final int EARLY_MINUTES = 30;
-    /** A scan later than this after the start is recorded as late. */
-    public static final int LATE_AFTER_MINUTES = 15;
-
-    /**
-     * A member entering the center is marked present for today's sessions of the courses they are booked in
-     * (from 30 minutes before the start until the end); the session then counts as attended and leaves the
-     * remaining count. Sessions already recorded by the coach are left alone. Returns how many were marked.
-     */
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
-    public int markPresentOnEntry(Long memberId, LocalDateTime now) {
-        if (memberId == null || now == null) return 0;
-        Member member = members.findById(memberId).orElse(null);
-        if (member == null) return 0;
-        int marked = 0;
-        for (ClassSession session : sessions.findNotCancelledBetween(now.toLocalDate(), now.toLocalDate())) {
-            if (session.getGymClass() == null || session.getGymClass().getCoach() == null
-                    || session.getStartTime() == null || session.getEndTime() == null) continue;
-            LocalDateTime start = LocalDateTime.of(session.getSessionDate(), session.getStartTime());
-            LocalDateTime end = LocalDateTime.of(session.getSessionDate(), session.getEndTime());
-            if (now.isBefore(start.minusMinutes(EARLY_MINUTES)) || now.isAfter(end)) continue;
-            boolean booked = enrollments.findByGymClassIdAndStatus(session.getGymClass().getId(), "booked").stream()
-                    .anyMatch(e -> e.getMember() != null && memberId.equals(e.getMember().getUserId()));
-            if (!booked || attendance.existsBySessionIdAndMemberUserId(session.getId(), memberId)) continue;
-            SessionAttendance row = new SessionAttendance();
-            row.setSession(session);
-            row.setMember(member);
-            row.setStatus(now.isAfter(start.plusMinutes(LATE_AFTER_MINUTES)) ? "late" : "present");
-            row.setCheckedInAt(now);
-            row.setRecordedBy(session.getGymClass().getCoach());
-            row.setNotes("auto: gate scan");
-            attendance.save(row);
-            marked++;
-        }
-        return marked;
     }
 
     /** True when the member missed more than half of the course and was blocked now. */

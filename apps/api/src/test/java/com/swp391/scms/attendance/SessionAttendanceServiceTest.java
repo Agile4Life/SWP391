@@ -134,6 +134,26 @@ class SessionAttendanceServiceTest {
     }
 
     @Test
+    void getSessionAttendanceRoster_showsTheGateCheckinThatCoveredTheSession() {
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
+        when(attendanceRepository.findBySessionIdWithDetails(100L)).thenReturn(List.of());
+        var course = mock(com.swp391.scms.attendance.service.CourseAttendanceService.class);
+        ReflectionTestUtils.setField(service, "courseAttendance", course);
+        when(course.gateCheckinFor(20L, session)).thenReturn(LocalDateTime.of(2026, 10, 25, 8, 50));
+
+        MemberAttendanceItem item = service.getSessionAttendanceRoster(100L, coachPrincipal).members().get(0);
+
+        assertEquals(LocalDateTime.of(2026, 10, 25, 8, 50), item.gateCheckinAt());
+        // The scan is only shown to the coach: nothing is recorded for the member.
+        assertNull(item.attendanceStatus());
+    }
+
+    @Test
     void getSessionAttendanceRoster_otherCoach_isForbidden() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
         AuthenticatedPrincipal otherCoach = new AuthenticatedPrincipal(11L, "other@test.com", "COACH");

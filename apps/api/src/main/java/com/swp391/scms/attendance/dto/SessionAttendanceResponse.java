@@ -39,8 +39,18 @@ public record SessionAttendanceResponse(
             Long recordedByCoachId,
             String recordedByCoachName,
             String notes,
-            Integer progressScore
+            Integer progressScore,
+            /** Gate check-in that covered this session, shown to the coach as a tag; null when none. */
+            LocalDateTime gateCheckinAt
     ) {
+        public MemberAttendanceItem(Long memberId, String membershipCode, String fullName, String email, String phone,
+                                    String avatarUrl, String enrollmentStatus, String attendanceStatus,
+                                    LocalDateTime checkedInAt, Long recordedByCoachId, String recordedByCoachName,
+                                    String notes, Integer progressScore) {
+            this(memberId, membershipCode, fullName, email, phone, avatarUrl, enrollmentStatus, attendanceStatus,
+                    checkedInAt, recordedByCoachId, recordedByCoachName, notes, progressScore, null);
+        }
+
         public MemberAttendanceItem(
                 Long memberId,
                 String membershipCode,
@@ -57,7 +67,7 @@ public record SessionAttendanceResponse(
         ) {
             this(memberId, membershipCode, fullName, email, phone, avatarUrl,
                     enrollmentStatus, attendanceStatus, checkedInAt,
-                    recordedByCoachId, recordedByCoachName, notes, null);
+                    recordedByCoachId, recordedByCoachName, notes, null, null);
         }
     }
 }

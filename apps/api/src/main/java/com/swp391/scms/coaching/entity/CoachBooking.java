@@ -70,7 +70,7 @@ public class CoachBooking {
     @Column(name = "attended_at")
     private LocalDateTime attendedAt;
 
-    /** Set when staff removed the arrival: gate scans and the sweep must not record it again. */
+    /** Set when staff removed the arrival, so the list can say the mark was taken off on purpose. */
     @Column(name = "attendance_locked")
     private Boolean attendanceLocked = false;
 

@@ -221,6 +221,11 @@
   color: var(--portal-muted);
 }
 
+.student-gate-tag {
+  align-self: flex-start;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Radio button 2 trạng thái: Có mặt / Vắng mặt */
 .attendance-radio-group {
   display: inline-flex;

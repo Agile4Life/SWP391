@@ -29,7 +29,7 @@ Từ khóa: trai nghiem, dung thu, trial, mien phi, tap thu
 Từ khóa: check in, checkin, check out, checkout, qr, cong, the hoi vien, quet ma, vao cong
 - Mở 'Thẻ & Check-in' > 'Quét QR cổng' và quét mã tại cổng sảnh lễ tân. Mã QR tự đổi sau mỗi {{checkin.qrTtlSeconds}} giây nên ảnh chụp màn hình không dùng được.
 - Lượt vào chưa check-out sau {{checkin.autoCheckoutHours}} giờ được hệ thống tự check-out.
-- Vào cổng từ {{course.earlyMinutes}} phút trước giờ học đến khi buổi kết thúc thì được điểm danh có mặt cho buổi khóa học đã đăng ký hôm đó; vào sau giờ bắt đầu hơn {{course.lateAfterMinutes}} phút thì ghi nhận đi muộn (vẫn tính là có mặt).
+- Điểm danh buổi khóa học do HLV của lớp thực hiện. Quét cổng không tự điểm danh; HLV chỉ thấy thông tin bạn đã check-in vào trung tâm trong khung giờ buổi học.
 
 ## Lịch học và đặt chỗ
 Từ khóa: dat lop, dat cho, lich hoc, huy lop, huy buoi, huy cho, khoa hoc, lop hoc, buoi hoc, dat nhieu buoi

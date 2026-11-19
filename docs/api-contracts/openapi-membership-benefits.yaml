@@ -208,10 +208,10 @@ paths:
         - { name: to, in: query, schema: { type: string, format: date } }
         - { name: outcome, in: query, schema: { type: string, enum: [ALL, ATTENDED, MISSED, UPCOMING, IN_PROGRESS] } }
       responses:
-        '200': { description: "List of CoachBookingDto including attendedAt and attendanceLocked (whether staff removed the mark; false for legacy null locks)" }
+        '200': { description: "List of CoachBookingDto including attendedAt, attendanceLocked (whether staff removed the mark; false for legacy null locks) and gateCheckinAt (start of a GRANTED gate check-in that began up to 3 hours before the session and was still inside at its start; a hint only, never recorded as attendance; null when none)" }
   /coach-bookings/{id}/mark-attended:
     post:
-      summary: Record that the member attended a 1:1 session (forgot to scan)
+      summary: Record that the member attended a 1:1 session (gate scans never record it)
       description: |
         Coach (own sessions only), receptionist or manager. The session must have started (400 COACH_BOOKING_NOT_STARTED)
         and not be cancelled (409). Sets `attendedAt` to now; marking again keeps the first time. Audited as PT_ATTENDANCE_MARK.
@@ -285,7 +285,7 @@ paths:
       summary: Remove a wrong attendance mark of a 1:1 session
       description: |
         Coach (own sessions), receptionist or manager. Clears `attendedAt` and sets `attendanceLocked=true`
-        so a gate scan or the sweep does not record it again; marking by hand unlocks it.
+        so the list shows the mark was removed on purpose; marking by hand clears the flag.
         Booking status is unchanged. No ABSENT value is persisted; an ended session without an arrival is derived MISSED.
         Audited as PT_ATTENDANCE_UNMARK. On startup the PostgreSQL provider widens the legacy audit CHECK to allow
         coach_bookings (on by default; app.database.audit-entity-type-upgrade-enabled=false turns it off).

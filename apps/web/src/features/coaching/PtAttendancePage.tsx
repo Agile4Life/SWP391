@@ -5,7 +5,8 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getCurrentUser } from '../../shared/api/client';
 import { localizableError } from '../../shared/lib/errorMessage';
-import { centerNowParts, formatCenterDate, formatCenterDateTime, parseCenterTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterDateTime, formatCenterTime, parseCenterTime } from '../../shared/lib/centerTime';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import type { CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { getPtAttendance, markPtAttended, unmarkPtAttended, type PtOutcome } from './ptAttendanceApi';
@@ -45,6 +46,7 @@ export function PtAttendancePage() {
   const busy = useRef(false);
   const requestId = useRef(0);
   const [now, setNow] = useState(() => new Date());
+  const [confirm, confirmDialog] = useConfirm();
 
   const load = useCallback(async () => {
     const current = ++requestId.current;
@@ -106,6 +108,17 @@ export function PtAttendancePage() {
 
   async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busy.current || loading) return;
+    // The member scanned in at the gate around this session: removing the mark needs a second look.
+    if (!attended && row.gateCheckinAt && !(await confirm({
+      title: { vi: 'Bỏ ghi nhận có mặt?', en: 'Remove the attended mark?' },
+      message: {
+        vi: `${row.memberName} đã quét QR vào trung tâm trong khung giờ buổi tập. Bạn chắc chắn bỏ ghi nhận có mặt?`,
+        en: `${row.memberName} checked in at the gate during this session. Remove the attended mark anyway?`,
+      },
+      confirmLabel: { vi: 'Vẫn bỏ ghi nhận', en: 'Remove anyway' },
+      cancelLabel: { vi: 'Xem lại', en: 'Review' },
+      danger: true,
+    }))) return;
     busy.current = true;
     setBusyId(row.id);
     setError(null);
@@ -123,6 +136,7 @@ export function PtAttendancePage() {
 
   return (
     <div data-i18n-managed className="portal-container pt-attendance">
+      {confirmDialog}
       <PageHeader title={t('Điểm danh buổi PT 1:1', '1:1 session attendance')} />
       <div className="portal-card pt-range">
         <div className="pt-range__fields">
@@ -160,7 +174,10 @@ export function PtAttendancePage() {
                 <div>
                   <strong>{formatCenterDate(row.bookingDate)} · {row.startTime.slice(0, 5)}–{row.endTime.slice(0, 5)}</strong>
                   <div>{t('Hội viên', 'Member')}: {row.memberName}{!isCoach && <> · {t('HLV', 'Coach')}: {row.coachName}</>}</div>
-                  {row.attendedAt && <small>{t('Có mặt lúc', 'Arrived')} {formatCenterDateTime(row.attendedAt)}</small>}
+                  {row.gateCheckinAt && (
+                    <span className="badge badge-info pt-gate-tag">{t(`Đã check-in ${formatCenterTime(row.gateCheckinAt)}`, `Checked in ${formatCenterTime(row.gateCheckinAt)}`)}</span>
+                  )}
+                  {row.attendedAt && <small>{t('Đánh dấu có mặt lúc', 'Marked attended at')} {formatCenterDateTime(row.attendedAt)}</small>}
                   {!row.attendedAt && row.attendanceLocked && <small>{t('Đã bỏ ghi nhận có mặt', 'Attendance mark removed')}</small>}
                 </div>
                 <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

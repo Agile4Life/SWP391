@@ -46,6 +46,9 @@ public class CoachBookingService {
     private static final java.util.Set<String> DESK_ROLES = java.util.Set.of("RECEPTIONIST", "CENTER_MANAGER");
 
     @Autowired(required = false)
+    private PtAttendanceService ptAttendance;
+
+    @Autowired(required = false)
     private com.swp391.scms.scheduling.service.MemberScheduleGuard scheduleGuard;
 
     @Autowired(required = false)
@@ -548,13 +551,13 @@ public class CoachBookingService {
                 : coachBookingRepository.findForAttendance(start, end);
         return rows.stream()
                 .filter(b -> "ALL".equals(wanted) || wanted.equals(attendanceOutcome(b, now)))
-                .map(this::mapToDto)
+                .map(b -> mapToDto(b, ptAttendance != null ? ptAttendance.gateCheckinFor(b) : null))
                 .toList();
     }
 
     /**
      * A coach (for their own sessions), the desk or a manager records that the member did attend: for a member who
-     * forgot to scan. The session must have started. Marking an already marked session changes nothing.
+     * the scan is only a hint. The session must have started. Marking an already marked session changes nothing.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_MARK", entity = "coach_bookings")
@@ -787,6 +790,10 @@ public class CoachBookingService {
     }
 
     private CoachBookingDto mapToDto(CoachBooking b) {
+        return mapToDto(b, null);
+    }
+
+    private CoachBookingDto mapToDto(CoachBooking b, LocalDateTime gateCheckinAt) {
         return new CoachBookingDto(
                 b.getId(),
                 b.getMember().getUserId(),
@@ -809,7 +816,8 @@ public class CoachBookingService {
                 b.getCancelledAt(),
                 b.getCancelReason(),
                 b.getAttendedAt(),
-                b.isAttendanceLocked()
+                b.isAttendanceLocked(),
+                gateCheckinAt
         );
     }
     private String msg(String key, Object... args) {

@@ -1925,4 +1925,5 @@ textarea.portal-textarea:focus-visible,
 .pt-range { display: grid; gap: 12px; }
 .pt-range__fields { display: flex; flex-wrap: wrap; gap: 16px; }
 .pt-range__fields .portal-form-group { margin: 0; }
+.pt-gate-tag { display: inline-block; margin: 4px 8px 0 0; font-variant-numeric: tabular-nums; }
 .pt-range .form-hint { margin: 0; }

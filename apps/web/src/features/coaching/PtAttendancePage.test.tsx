@@ -103,6 +103,23 @@ describe('PtAttendancePage', () => {
     expect(mocks.load).toHaveBeenCalledTimes(2);
   });
 
+  it('tags a member who checked in at the gate and asks before removing their attended mark', async () => {
+    mocks.load.mockResolvedValue([{ ...attended, gateCheckinAt: '2020-01-02T08:40:00' }]);
+    mocks.unmark.mockResolvedValue({});
+    await render();
+    expect(host.querySelector('[data-testid="pt-row-1"] .pt-gate-tag')?.textContent).toContain('Đã check-in');
+    const button = (label: string) => [...document.body.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === label)!;
+
+    await act(async () => button('Bỏ đánh dấu có mặt').click());
+    expect(document.body.textContent).toContain('Khoa Hội Viên đã quét QR vào trung tâm');
+    await act(async () => button('Xem lại').click());
+    expect(mocks.unmark).not.toHaveBeenCalled();
+
+    await act(async () => button('Bỏ đánh dấu có mặt').click());
+    await act(async () => button('Vẫn bỏ ghi nhận').click());
+    expect(mocks.unmark).toHaveBeenCalledWith(1);
+  });
+
   it('reloads actual unmarked data, updates counts and retains it after remount', async () => {
     mocks.load.mockResolvedValueOnce([attended]).mockResolvedValue([{ ...attended, attendedAt: null, attendanceLocked: true }]);
     mocks.unmark.mockResolvedValue({ ...attended, attendedAt: null });

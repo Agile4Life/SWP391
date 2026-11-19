@@ -12,6 +12,8 @@ export interface AttendanceStudent {
   status: AttendanceStatus;
   progressScore: number; // 1 - 100
   notes: string;
+  /** Gate check-in that covered the session; shown as a tag, never counted as attendance. */
+  gateCheckinAt?: string | null;
 }
 
 export interface CoachClassSession {
@@ -49,6 +51,7 @@ interface SessionAttendanceRosterResponse {
     status?: AttendanceStatus | null; attendanceStatus?: AttendanceStatus | null;
     notes?: string | null;
     progressScore?: number | null;
+    gateCheckinAt?: string | null;
   }>;
 }
 
@@ -82,6 +85,7 @@ export const attendanceApi = {
         status: ((m.attendanceStatus || m.status) as AttendanceStatus) || 'present',
         progressScore: m.progressScore != null ? Number(m.progressScore) : 80,
         notes: m.notes || '',
+        gateCheckinAt: m.gateCheckinAt ?? null,
       }));
     }
     throw new Error('Invalid attendance roster data');

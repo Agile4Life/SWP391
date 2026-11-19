@@ -6,7 +6,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { formatCenterDate, formatTimeRange } from '../../shared/lib/centerTime';
+import { formatCenterDate, formatCenterTime, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
@@ -19,6 +19,10 @@ import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
 import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './coach-attendance.css';
+
+/** Names of members marked absent although a gate check-in covered the session. */
+const checkedInButAbsent = (list: AttendanceStudent[]) =>
+  list.filter((s) => s.status === 'absent' && s.gateCheckinAt).map((s) => s.fullName);
 
 // Chỉ giữ lại 2 trạng thái điểm danh: Có mặt và Vắng mặt (đã bỏ Đi muộn & Có phép)
 const STATUS_CONFIG: {
@@ -283,6 +287,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       notify('Vui lòng chọn buổi học cần lưu điểm danh.', 'error');
       return;
     }
+    if (!(await confirmAbsentDespiteCheckin(checkedInButAbsent(students)))) return;
 
     setSaving(true);
     try {
@@ -306,7 +311,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       });
 
       const updatedHistoryItem: AttendanceHistoryRecord = {
-        id: `hist-${selectedSessionId}-${Date.now()}`,
+        id: `hist-${selectedSessionId}-${new Date().getTime()}`,
         sessionId: selectedSessionId,
         className: activeSession.className,
         roomName: activeSession.roomName,
@@ -388,6 +393,17 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     }
   };
 
+  // Hội viên đã quét cổng trong khung giờ buổi học mà vẫn bị đánh vắng: HLV phải xác nhận lại.
+  const confirmAbsentDespiteCheckin = (names: string[]) => names.length === 0 ? Promise.resolve(true) : confirm({
+    title: staffMessage('Đánh vắng hội viên đã check-in?', 'Mark checked-in members absent?'),
+    message: staffMessage(
+      `${names.join(', ')} đã quét QR vào trung tâm trong khung giờ buổi học. Bạn chắc chắn vẫn đánh vắng?`,
+      `${names.join(', ')} checked in at the gate during this session. Mark them absent anyway?`),
+    confirmLabel: staffMessage('Vẫn đánh vắng', 'Mark absent'),
+    cancelLabel: staffMessage('Xem lại', 'Review'),
+    danger: true,
+  });
+
   // Xoá điểm danh buổi hiện tại
   const confirmHide = () => confirm({
     title: staffMessage('Ẩn bản ghi?', staffTranslation('Ẩn bản ghi?')),
@@ -433,8 +449,10 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
           ...student,
           progressScore: current?.progressScore ?? student.progressScore,
           notes: current?.notes ?? student.notes,
+          gateCheckinAt: current?.gateCheckinAt ?? null,
         };
       });
+      if (!(await confirmAbsentDespiteCheckin(checkedInButAbsent(updatedStudents)))) return;
       await attendanceApi.saveBatchAttendance(editingAttendanceRecord.sessionId, updatedStudents.map(student => ({
         memberId: student.memberId,
         status: student.status,
@@ -816,6 +834,9 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                         <div className="student-meta-text">
                           <h4 className="student-full-name">{student.fullName}</h4>
                           <span className="student-code-badge">{student.membershipCode}</span>
+                          {student.gateCheckinAt && (
+                            <span className="badge badge-info student-gate-tag">{t(`Đã check-in ${formatCenterTime(student.gateCheckinAt)}`, `Checked in ${formatCenterTime(student.gateCheckinAt)}`)}</span>
+                          )}
                         </div>
                       </div>
 

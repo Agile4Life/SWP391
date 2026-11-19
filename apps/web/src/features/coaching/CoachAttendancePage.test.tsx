@@ -340,6 +340,24 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(attendanceApi.saveBatchAttendance).not.toHaveBeenCalled();
   });
 
+  it('tags members who checked in at the gate and asks before marking one of them absent', async () => {
+    vi.mocked(attendanceApi.getSessionStudents).mockResolvedValue(mockStudents.map(student =>
+      student.memberId === 102 ? { ...student, gateCheckinAt: '2026-10-27T17:05:00' } : student));
+    await act(async () => { root.render(pageAt(SESSION)); });
+    const card = [...host.querySelectorAll('.attendance-student-card')].find(el => el.textContent?.includes('Trần Thị Mai'))!;
+    expect(card.querySelector('.student-gate-tag')?.textContent).toContain('Đã check-in');
+    const button = (label: string) => [...document.body.querySelectorAll('button')].find(b => b.textContent === label)!;
+
+    await act(async () => { (host.querySelector('.btn-batch-save') as HTMLButtonElement).click(); });
+    expect(document.body.textContent).toContain('Trần Thị Mai đã quét QR vào trung tâm');
+    await act(async () => { button('Xem lại').click(); });
+    expect(attendanceApi.saveBatchAttendance).not.toHaveBeenCalled();
+
+    await act(async () => { (host.querySelector('.btn-batch-save') as HTMLButtonElement).click(); });
+    await act(async () => { button('Vẫn đánh vắng').click(); });
+    expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 102, status: 'absent' })]));
+  });
+
   it('keeps the save button locked while an attendance write is pending, then stores the record', async () => {
     let complete!: (value: { success: boolean; updatedCount: number; message: string }) => void;
     vi.mocked(attendanceApi.saveBatchAttendance).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));

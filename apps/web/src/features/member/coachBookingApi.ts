@@ -44,6 +44,8 @@ export interface CoachBookingDto {
   attendedAt?: string | null;
   /** Staff removed the mark; scans and the sweep must not restore it automatically. */
   attendanceLocked?: boolean;
+  /** Gate check-in that covered the session (attendance list only); a hint, never the attendance itself. */
+  gateCheckinAt?: string | null;
 }
 
 export interface CoachBookingCreatePayload {

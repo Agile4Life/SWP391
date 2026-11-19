@@ -739,6 +739,20 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    void attendanceListShowsTheGateCheckinAsAHintWithoutMarkingTheArrival() {
+        var missed = ptSession(2, LocalDate.of(2026, 10, 30), LocalTime.of(15, 0), LocalTime.of(16, 0), null);
+        when(coachBookingRepository.findForAttendance(any(), any())).thenReturn(List.of(missed));
+        var pt = org.mockito.Mockito.mock(com.swp391.scms.coaching.service.PtAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "ptAttendance", pt);
+        when(pt.gateCheckinFor(missed)).thenReturn(LocalDateTime.of(2026, 10, 30, 14, 50));
+
+        var row = service.getAttendance(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), null, null, "ALL").get(0);
+
+        assertThat(row.gateCheckinAt()).isEqualTo(LocalDateTime.of(2026, 10, 30, 14, 50));
+        assertThat(row.attendedAt()).isNull();
+    }
+
+    @Test
     void attendanceScreenRejectsMembersAndRangesLongerThanTwoMonths() {
         assertThatThrownBy(() -> service.getAttendance(principal, null, null, "ALL"))
                 .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
