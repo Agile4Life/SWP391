@@ -823,3 +823,121 @@
 @media (max-width: 767px) {
   .portal-v2 .shop-stepper__input { font-size: 16px; }
 }
+
+/* Checkout inside the member portal (/member/checkout): the public rules are scoped to .fit-site. */
+.portal-v2 .fit-shop-page .shop-page .fit-kicker {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--portal-salmon);
+}
+.portal-v2 .fit-shop-page .shop-catalog__title {
+  margin: 6px 0 0;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 800;
+  color: var(--portal-paper);
+}
+.portal-v2 .fit-shop-page .fit-title-dot { color: var(--portal-salmon); }
+
+.portal-v2 .shop-checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+.portal-v2 .shop-checkout-main { display: grid; gap: 20px; min-width: 0; }
+.portal-v2 .shop-checkout-card {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px solid var(--portal-border);
+  background: var(--portal-surface);
+  color: var(--portal-paper);
+}
+.portal-v2 .shop-checkout-card h2,
+.portal-v2 .shop-checkout-card h3 { margin: 0; font-size: 18px; font-weight: 800; color: var(--portal-paper); }
+.portal-v2 .shop-checkout-card p { margin: 0; line-height: 1.5; }
+
+.portal-v2 .shop-fulfillment-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.portal-v2 .shop-fulfillment-options .shop-address-option { align-items: center; min-height: 52px; }
+.portal-v2 .shop-checkout-addresses { display: grid; gap: 16px; }
+.portal-v2 .shop-checkout-addresses > h3 { padding-top: 12px; border-top: 1px solid var(--portal-border); }
+.portal-v2 .shop-pickup-box {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--portal-raised);
+  font-size: 14px;
+  color: var(--portal-muted);
+}
+.portal-v2 .shop-pickup-box strong { color: var(--portal-paper); }
+
+.portal-v2 .shop-checkout-card .btn-primary,
+.portal-v2 .shop-checkout-card .btn-secondary { min-height: 44px; }
+.portal-v2 .shop-checkout__hold-note,
+.portal-v2 .shop-checkout-status,
+.portal-v2 .shop-checkout__hint { font-size: 13px; color: var(--portal-muted); }
+
+.portal-v2 .shop-checkout-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.portal-v2 .shop-checkout-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--portal-border);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.portal-v2 .shop-checkout-item:last-child { padding-bottom: 0; border-bottom: 0; }
+.portal-v2 .shop-checkout-item > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.portal-v2 .shop-checkout-item > div span { font-size: 12px; color: var(--portal-muted); }
+.portal-v2 .shop-checkout-item > span { flex-shrink: 0; white-space: nowrap; font-weight: 700; }
+
+.portal-v2 .shop-checkout-alert {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--portal-danger);
+  color: var(--portal-danger);
+}
+.portal-v2 .shop-checkout__edit-cart { width: 100%; }
+.portal-v2 .shop-checkout-totals {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--portal-border);
+  font-variant-numeric: tabular-nums;
+}
+.portal-v2 .shop-checkout-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--portal-muted);
+}
+.portal-v2 .shop-checkout-row--total {
+  padding-top: 10px;
+  border-top: 1px solid var(--portal-border);
+  font-size: 17px;
+  color: var(--portal-paper);
+}
+
+@media (min-width: 1100px) {
+  .portal-v2 .shop-checkout-summary { position: sticky; top: 24px; }
+}
+@media (max-width: 1099px) {
+  .portal-v2 .shop-checkout-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .portal-v2 .shop-checkout-card { padding: 18px; }
+  .portal-v2 .shop-fulfillment-options { grid-template-columns: 1fr; }
+}

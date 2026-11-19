@@ -23,6 +23,7 @@ import type {
   ShopConfigDto,
 } from './shopTypes';
 import './shop-public.css';
+import './shop-portal.css';
 import { generateRequestId } from '../../shared/lib/requestId';
 
 const EMPTY_ADDRESS: AddressRequest = {
