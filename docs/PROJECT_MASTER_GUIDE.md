@@ -1,5 +1,7 @@
 # CẨM NANG TOÀN TẬP DỰ ÁN HỆ THỐNG QUẢN LÝ TRUNG TÂM THỂ THAO (SPORTS CENTER MANAGEMENT SYSTEM)
 
+> **Nghiệp vụ đang triển khai thực tế** (màn hình, API, quy tắc, state machine, khác biệt so với thiết kế dưới đây): xem [`BUSINESS_FLOWS.md`](BUSINESS_FLOWS.md).
+
 > **Tài liệu hướng dẫn kỹ thuật toàn diện (Comprehensive Master Guide) dành cho AI Agent, Kỹ sư phần mềm & Nhóm phát triển.**  
 > **Môn học:** SWP391 - Đồ án Phát triển Phần mềm (Software Development Project) — FPT University  
 > **Repository:** `SWP391` (`PhongTCT/SWP391_GROUP1`)  
