@@ -561,6 +561,9 @@ public class PaymentService {
         if (vnpayGuard != null) vnpayGuard.refund(paymentId);
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", paymentId));
+        lockSubscriptionMember(payment);
+        // Two concurrent refunds must not both read the same refundedAmount.
+        if (entityManager != null) entityManager.refresh(payment, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
 
         String currentStatus = payment.getStatus() != null ? payment.getStatus().toLowerCase(Locale.ROOT) : "";
         if (!"success".equals(currentStatus)) {
@@ -578,6 +581,13 @@ public class PaymentService {
 
         BigDecimal totalRefunded = alreadyRefunded.add(refundAmount);
         boolean fullRefund = totalRefunded.compareTo(payment.getAmount()) == 0;
+        // Court, 1:1 and shop payments are fully refunded by cancelling the booking/order, which also frees the slot or
+        // stock; refunding them here would leave the booking live and let its later cancellation pay again.
+        if (fullRefund && (payment.getCourtBookingId() != null || payment.getCoachBookingId() != null
+                || payment.getProductOrderId() != null)) {
+            throw new BadRequestException("REFUND_VIA_CANCELLATION", "finance.payment.refund_via_cancellation", null,
+                    "Cancel the booking or order to refund it in full");
+        }
         payment.setRefundedAmount(totalRefunded);
         // A partial refund keeps the payment successful and the membership running; only the full amount ends it.
         if (fullRefund) {

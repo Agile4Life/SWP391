@@ -46,14 +46,18 @@ public class ProductOrderRefunds {
         if (paid == null) {
             return BigDecimal.ZERO;
         }
-        BigDecimal amount = paid.getAmount();
+        // A partial refund made earlier at the desk is already paid out.
+        BigDecimal amount = paid.netAmount();
+        if (amount == null || amount.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
         Long memberUserId = order.getMember().getUserId();
         if (walletService != null) {
             walletService.creditOrderRefund(memberUserId, amount, "ORDER_REFUND_" + order.getId(),
                     refundDescription(order, reason), order.getId());
         }
         paid.setStatus("refunded");
-        paid.setRefundedAmount(amount);
+        paid.setRefundedAmount(paid.getAmount());
         appendNote(paid, reason);
         payments.save(paid);
         return amount;

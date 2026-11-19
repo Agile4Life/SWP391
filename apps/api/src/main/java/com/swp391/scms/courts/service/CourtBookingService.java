@@ -270,8 +270,10 @@ public class CourtBookingService {
         if (vnpayGuard != null) vnpayGuard.court(booking.getId());
         String trimmedReason = reason == null || reason.isBlank() ? null : reason.trim();
         BigDecimal refundedTotal = BigDecimal.ZERO;
+        boolean hasPaymentRows = false;
         if (payments != null) {
             for (Payment payment : payments.findAllByCourtBookingId(booking.getId())) {
+                hasPaymentRows = true;
                 if ("pending".equals(payment.getStatus())) {
                     payment.setStatus("failed");
                 } else if ("success".equals(payment.getStatus())) {
@@ -286,7 +288,8 @@ public class CourtBookingService {
         }
         if ("paid".equals(booking.getPaymentStatus())) {
             booking.setPaymentStatus("refunded");
-            if (refundedTotal.compareTo(BigDecimal.ZERO) == 0
+            // Only legacy bookings paid without a payment row fall back to the price; a payment already refunded must not pay twice.
+            if (!hasPaymentRows && refundedTotal.compareTo(BigDecimal.ZERO) == 0
                     && booking.getPrice() != null && booking.getPrice().compareTo(BigDecimal.ZERO) > 0) {
                 refundedTotal = booking.getPrice();
             }

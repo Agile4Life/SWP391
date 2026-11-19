@@ -152,6 +152,7 @@ public class MembershipCancellationService {
         BigDecimal refundAmount = (body.refundAmount() != null && body.refundAmount().compareTo(BigDecimal.ZERO) >= 0)
                 ? body.refundAmount()
                 : defaultRefund;
+        ensureRefundWithinPaid(subscription, refundAmount);
 
         MembershipCancellationRequest request = new MembershipCancellationRequest();
         request.setMember(member);
@@ -256,8 +257,11 @@ public class MembershipCancellationService {
             if (refundAmount == null) {
                 refundAmount = defaultRefund(subscription);
             }
+            ensureRefundWithinPaid(subscription, refundAmount);
             request.setRefundAmount(refundAmount);
             if (walletService != null && refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                // The payment must show the refund too, or revenue overstates it and /payments/{id}/refund can pay it again.
+                recordRefundOnPayments(subscription, refundAmount, request.getReason());
                 walletService.creditRefund(
                         memberId,
                         refundAmount,
@@ -407,6 +411,42 @@ public class MembershipCancellationService {
     private BigDecimal defaultRefund(MembershipSubscription subscription) {
         SubscriptionValueCalculator calculator = valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(payments);
         return calculator.remainingValue(subscription, LocalDate.now(clock));
+    }
+
+    /** A refund may not exceed what the member actually paid for this period (cash plus credit carried over). */
+    private void ensureRefundWithinPaid(MembershipSubscription subscription, BigDecimal refundAmount) {
+        if (refundAmount == null) return;
+        SubscriptionValueCalculator calculator = valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(payments);
+        BigDecimal paid = calculator.paidValue(subscription);
+        if (refundAmount.compareTo(paid) > 0) {
+            throw new BadRequestException("CANCELLATION_REFUND_EXCEEDS_PAID", "error.membership.refund_exceeds_paid",
+                    new Object[]{refundAmount.toPlainString(), paid.toPlainString()}, null);
+        }
+    }
+
+    /** Spreads the refund over the period's successful payments; a fully refunded payment becomes {@code refunded}. */
+    private void recordRefundOnPayments(MembershipSubscription subscription, BigDecimal refundAmount, String reason) {
+        if (payments == null || subscription.getId() == null) return;
+        BigDecimal remaining = refundAmount;
+        for (var payment : payments.findAllBySubscriptionId(subscription.getId()).stream()
+                .filter(p -> "success".equalsIgnoreCase(p.getStatus()))
+                .sorted(java.util.Comparator.comparing(com.swp391.scms.finance.entity.Payment::getId))
+                .toList()) {
+            if (remaining.signum() <= 0) break;
+            BigDecimal already = payment.getRefundedAmount() != null ? payment.getRefundedAmount() : BigDecimal.ZERO;
+            BigDecimal net = payment.getAmount().subtract(already);
+            if (net.signum() <= 0) continue;
+            BigDecimal portion = net.min(remaining);
+            payment.setRefundedAmount(already.add(portion));
+            if (payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0) {
+                payment.setStatus("refunded");
+            }
+            String note = "CANCEL_REQ refund " + portion.toPlainString() + (reason == null || reason.isBlank() ? "" : " - " + reason);
+            String combined = payment.getNote() == null || payment.getNote().isBlank() ? note : payment.getNote() + " | " + note;
+            payment.setNote(combined.length() > 255 ? combined.substring(0, 255) : combined);
+            payments.save(payment);
+            remaining = remaining.subtract(portion);
+        }
     }
 
     private boolean isActiveNow(MembershipSubscription subscription) {
