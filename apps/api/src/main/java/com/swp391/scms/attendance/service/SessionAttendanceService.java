@@ -32,6 +32,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -220,11 +221,77 @@ public class SessionAttendanceService {
         );
     }
 
+    /** Longest range the history tabs load at once. */
+    public static final int MAX_HISTORY_DAYS = 31;
+
+    /**
+     * Past class sessions with attendance or evaluations recorded, newest first: a coach sees their own classes,
+     * staff see every class. Defaults to the last {@value #MAX_HISTORY_DAYS} days.
+     */
+    @Transactional(readOnly = true)
+    public List<com.swp391.scms.attendance.dto.CoachSessionHistoryItem> getHistory(AuthenticatedPrincipal principal,
+                                                                                   LocalDate from, LocalDate to) {
+        if (principal == null) {
+            throw new ForbiddenException("ATTENDANCE_UNAUTHENTICATED", "error.unauthorized", null, "Unauthenticated");
+        }
+        LocalDate today = LocalDate.now(clock);
+        LocalDate last = to != null ? to : today;
+        LocalDate first = from != null ? from : last.minusDays(MAX_HISTORY_DAYS - 1L);
+        if (first.isAfter(last) || java.time.temporal.ChronoUnit.DAYS.between(first, last) >= MAX_HISTORY_DAYS) {
+            throw new com.swp391.scms.common.exception.BadRequestException("ATTENDANCE_INVALID_RANGE",
+                    "error.attendance.invalid_range", null, "Invalid date range");
+        }
+        List<ClassSession> sessions = ("COACH".equalsIgnoreCase(principal.role())
+                ? sessionRepository.findByCoachId(principal.id()) : sessionRepository.findNotCancelledBetween(first, last))
+                .stream()
+                .filter(s -> s.getSessionDate() != null && !s.getSessionDate().isBefore(first) && !s.getSessionDate().isAfter(last)
+                        && !"cancelled".equalsIgnoreCase(s.getStatus()))
+                .toList();
+        if (sessions.isEmpty()) return List.of();
+        List<Long> ids = sessions.stream().map(ClassSession::getId).toList();
+
+        Map<Long, Map<String, Long>> statusCounts = new HashMap<>();
+        for (Object[] row : attendanceRepository.countByStatusForSessions(ids)) {
+            statusCounts.computeIfAbsent((Long) row[0], k -> new HashMap<>())
+                    .merge(String.valueOf(row[1]).toLowerCase(), ((Number) row[2]).longValue(), Long::sum);
+        }
+        Map<Long, Object[]> evaluations = new HashMap<>();
+        if (evaluationRepository != null) {
+            for (Object[] row : evaluationRepository.summarizeForSessions(ids)) evaluations.put((Long) row[0], row);
+        }
+        LocalDate editableFrom = today.minusDays(com.swp391.scms.scheduling.service.SessionCompletionScheduler.GRACE_DAYS);
+
+        return sessions.stream()
+                .filter(s -> statusCounts.containsKey(s.getId()) || evaluations.containsKey(s.getId()))
+                .sorted(java.util.Comparator.comparing(ClassSession::getSessionDate)
+                        .thenComparing(ClassSession::getStartTime, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                        .reversed())
+                .map(s -> {
+                    Map<String, Long> c = statusCounts.getOrDefault(s.getId(), Map.of());
+                    Object[] e = evaluations.get(s.getId());
+                    var gymClass = s.getGymClass();
+                    return new com.swp391.scms.attendance.dto.CoachSessionHistoryItem(
+                            s.getId(),
+                            gymClass != null ? gymClass.getId() : null,
+                            gymClass != null ? gymClass.getName() : null,
+                            gymClass != null && gymClass.getRoom() != null ? gymClass.getRoom().getName() : null,
+                            s.getSessionDate(), s.getStartTime(), s.getEndTime(),
+                            c.getOrDefault("present", 0L), c.getOrDefault("late", 0L),
+                            c.getOrDefault("absent", 0L), c.getOrDefault("excused", 0L),
+                            e != null ? ((Number) e[1]).longValue() : 0L,
+                            e != null && e[2] != null ? new java.math.BigDecimal(e[2].toString()).setScale(0, java.math.RoundingMode.HALF_UP) : null,
+                            e != null ? (LocalDateTime) e[3] : null,
+                            !s.getSessionDate().isBefore(editableFrom));
+                })
+                .toList();
+    }
+
     /**
      * SCRUM-111 AC: POST /api/v1/attendance/sessions/{id}/batch
      * Transactional batch attendance recording (and optional progress evaluation) by authenticated coach / staff.
      */
     @Transactional
+    @com.swp391.scms.audit.Audited(action = "CLASS_ATTENDANCE_RECORD", entity = "session_attendance")
     public List<MemberAttendanceItem> recordBatchAttendance(Long sessionId,
                                                            BatchAttendanceRequest request,
                                                            AuthenticatedPrincipal principal) {
@@ -275,6 +342,11 @@ public class SessionAttendanceService {
             }
         }
 
+        // Attendance stays editable as long as the session is open (GRACE_DAYS after it); later only evaluations change.
+        int editDays = com.swp391.scms.scheduling.service.SessionCompletionScheduler.GRACE_DAYS;
+        boolean statusLocked = session.getSessionDate() != null
+                && session.getSessionDate().isBefore(now.toLocalDate().minusDays(editDays));
+
         try {
             for (BatchAttendanceRequest.AttendanceItem item : request.records()) {
                 if (!enrollmentStatus.containsKey(item.memberId())) {
@@ -288,6 +360,11 @@ public class SessionAttendanceService {
                 String normalizedStatus = item.status().trim().toLowerCase();
                 Optional<SessionAttendance> existingOpt = attendanceRepository
                         .findBySessionIdAndMemberUserId(sessionId, item.memberId());
+                if (statusLocked && existingOpt.map(a -> !normalizedStatus.equalsIgnoreCase(a.getStatus())).orElse(true)) {
+                    throw new com.swp391.scms.common.exception.BadRequestException("ATTENDANCE_EDIT_WINDOW_CLOSED",
+                            "attendance.error.edit_window_closed", new Object[]{editDays},
+                            "Attendance can no longer be changed for this session");
+                }
 
                 SessionAttendance attendance;
                 if (existingOpt.isPresent()) {

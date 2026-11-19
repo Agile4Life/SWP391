@@ -108,6 +108,27 @@ components:
           items:
             $ref: '#/components/schemas/MemberAttendanceItem'
 
+    CoachSessionHistoryItem:
+      type: object
+      properties:
+        sessionId: { type: integer, format: int64 }
+        classId: { type: integer, format: int64, nullable: true }
+        className: { type: string }
+        roomName: { type: string, nullable: true }
+        sessionDate: { type: string, format: date }
+        startTime: { type: string, example: '17:30:00' }
+        endTime: { type: string, example: '18:30:00' }
+        presentCount: { type: integer }
+        lateCount: { type: integer }
+        absentCount: { type: integer }
+        excusedCount: { type: integer }
+        evaluatedCount: { type: integer }
+        averageScore: { type: number, nullable: true }
+        lastEvaluatedAt: { type: string, format: date-time, nullable: true }
+        attendanceEditable:
+          type: boolean
+          description: False once the session is more than 7 days old; statuses can no longer change.
+
     MemberAttendanceItem:
       type: object
       properties:
@@ -262,8 +283,42 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/MemberAttendanceItem'
+        '400':
+          description: >-
+            ATTENDANCE_EDIT_WINDOW_CLOSED when a status would change more than 7 days after the session
+            (evaluations with unchanged statuses are still accepted); also not started / not enrolled.
         '409':
           description: Duplicate attendance record constraint violation
+
+  /attendance/sessions/history:
+    get:
+      summary: Past class sessions with attendance or evaluations recorded (coach sees own classes)
+      description: Replaces the per-browser history of the coach attendance page. Range defaults to the last 31 days; at most 31 days.
+      tags: [Attendance]
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: History, newest session first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CoachSessionHistoryItem'
+        '400':
+          description: ATTENDANCE_INVALID_RANGE
 
   /classes/sessions/{id}/cancel:
     post:

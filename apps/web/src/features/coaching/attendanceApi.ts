@@ -14,6 +14,10 @@ export interface AttendanceStudent {
   notes: string;
   /** Gate check-in that covered the session; shown as a tag, never counted as attendance. */
   gateCheckinAt?: string | null;
+  /** True when the server has an attendance row (status is otherwise a UI default). */
+  recorded?: boolean;
+  /** True when the server has an evaluation score (progressScore is otherwise a UI default). */
+  evaluated?: boolean;
 }
 
 export interface CoachClassSession {
@@ -55,7 +59,29 @@ interface SessionAttendanceRosterResponse {
   }>;
 }
 
+/** A past session with attendance or evaluations recorded (GET /attendance/sessions/history). */
+export interface CoachSessionHistoryItem {
+  sessionId: number;
+  classId: number | null;
+  className: string;
+  roomName: string | null;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  excusedCount: number;
+  evaluatedCount: number;
+  averageScore: number | null;
+  lastEvaluatedAt: string | null;
+  attendanceEditable: boolean;
+}
+
 export const attendanceApi = {
+  /** Lịch sử điểm danh/đánh giá lưu trên server (mặc định 31 ngày gần nhất). */
+  getHistory: () => apiFetch<CoachSessionHistoryItem[]>('/attendance/sessions/history'),
+
   /**
    * Lấy danh sách buổi học phụ trách của HLV hôm nay
    */
@@ -86,6 +112,8 @@ export const attendanceApi = {
         progressScore: m.progressScore != null ? Number(m.progressScore) : 80,
         notes: m.notes || '',
         gateCheckinAt: m.gateCheckinAt ?? null,
+        recorded: (m.attendanceStatus || m.status) != null,
+        evaluated: m.progressScore != null,
       }));
     }
     throw new Error('Invalid attendance roster data');

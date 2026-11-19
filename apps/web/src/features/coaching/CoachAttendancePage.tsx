@@ -1,17 +1,17 @@
-import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
-import { coachHistoryStorageKey } from './coachHistoryStorage';
+import { staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { formatCenterDate, formatCenterTime, formatTimeRange } from '../../shared/lib/centerTime';
+import { formatCenterDate, formatCenterDateTime, formatCenterTime, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
   type AttendanceStudent,
   type CoachClassSession,
+  type CoachSessionHistoryItem,
 } from './attendanceApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
 import { mondayOf, parseISODate, todayISO } from '../schedule/timetable';
@@ -19,6 +19,43 @@ import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
 import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './coach-attendance.css';
+
+/** Roster as the page edits it: only Có mặt / Vắng mặt, default score 80. */
+const normalizeRoster = (list: AttendanceStudent[]): AttendanceStudent[] => list.map((item) => ({
+  ...item,
+  status: (item.status === 'present' ? 'present' : 'absent') as 'present' | 'absent',
+  progressScore: item.progressScore || 80,
+  notes: item.notes || '',
+}));
+
+const toAttendanceHistory = (item: CoachSessionHistoryItem): AttendanceHistoryRecord => ({
+  id: `att-${item.sessionId}`,
+  sessionId: item.sessionId,
+  className: item.className,
+  roomName: item.roomName ?? '',
+  sessionDate: item.sessionDate,
+  startTime: item.startTime,
+  endTime: item.endTime,
+  presentCount: item.presentCount + item.lateCount,
+  absentCount: item.absentCount,
+  totalStudents: item.presentCount + item.lateCount + item.absentCount + item.excusedCount,
+  attendanceEditable: item.attendanceEditable,
+  students: [],
+});
+
+const toEvaluationHistory = (item: CoachSessionHistoryItem): EvaluationHistoryRecord => ({
+  id: `eval-${item.sessionId}`,
+  sessionId: item.sessionId,
+  className: item.className,
+  roomName: item.roomName ?? '',
+  sessionDate: item.sessionDate,
+  startTime: item.startTime,
+  endTime: item.endTime,
+  savedAt: formatCenterDateTime(item.lastEvaluatedAt),
+  averageScore: item.averageScore ?? 0,
+  totalStudents: item.evaluatedCount,
+  students: [],
+});
 
 /** Names of members marked absent although a gate check-in covered the session. */
 const checkedInButAbsent = (list: AttendanceStudent[]) =>
@@ -43,10 +80,11 @@ export interface AttendanceHistoryRecord {
   sessionDate: string;
   startTime: string;
   endTime: string;
-  savedAt: string;
   presentCount: number;
   absentCount: number;
   totalStudents: number;
+  /** False once the session is more than 7 days old: statuses can no longer change. */
+  attendanceEditable: boolean;
   students: AttendanceStudent[];
 }
 
@@ -80,8 +118,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const { t } = useStaffI18n();
   const navigate = useNavigate();
   const sessionMode = routeSessionId !== undefined;
-  const STORAGE_KEY_HISTORY = coachHistoryStorageKey('attendance');
-  const STORAGE_KEY_EVAL_HISTORY = coachHistoryStorageKey('evaluation');
   const [activeTab, setActiveTab] = useState<AttendanceTab>(sessionMode ? 'attendance' : 'timetable');
   const [sessions, setSessions] = useState<CoachClassSession[]>([]);
   const [ptBookings, setPtBookings] = useState<CoachBookingDto[]>([]);
@@ -107,47 +143,21 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [confirm, confirmDialog] = useConfirm();
   const showCenterNotification = useCallback((msg: string = 'Cập nhật thành công') => notify(msg, 'success'), []);
 
-  // Lịch sử điểm danh (hỗ trợ lưu, sửa trong popup, xoá)
-  const [history, setHistory] = useState<AttendanceHistoryRecord[]>(() => {
+  // Lịch sử điểm danh & đánh giá: đọc từ server, không lưu trên trình duyệt.
+  const [history, setHistory] = useState<AttendanceHistoryRecord[]>([]);
+  const [evalHistory, setEvalHistory] = useState<EvaluationHistoryRecord[]>([]);
+  const [historyError, setHistoryError] = useState(false);
+  const loadHistory = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_HISTORY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch {// Fallback
+      const items = await attendanceApi.getHistory();
+      setHistory(items.filter((i) => i.presentCount + i.lateCount + i.absentCount + i.excusedCount > 0).map(toAttendanceHistory));
+      setEvalHistory(items.filter((i) => i.evaluatedCount > 0).map(toEvaluationHistory));
+      setHistoryError(false);
+    } catch {
+      setHistoryError(true);
     }
-    return [];
-  });
-
-  // Lịch sử đánh giá học viên (hỗ trợ lưu, sửa trong popup, xoá)
-  const [evalHistory, setEvalHistory] = useState<EvaluationHistoryRecord[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_EVAL_HISTORY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
-    } catch {// Fallback
-    }
-    return [];
-  });
-
-  // Đồng bộ lịch sử điểm danh vào localStorage
-  const saveHistoryToStorage = (updated: AttendanceHistoryRecord[]) => {
-    setHistory(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
-    } catch {// ignore
-    }
-  };
-
-  // Đồng bộ lịch sử đánh giá vào localStorage
-  const saveEvalHistoryToStorage = (updated: EvaluationHistoryRecord[]) => {
-    setEvalHistory(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY_EVAL_HISTORY, JSON.stringify(updated));
-    } catch {// ignore
-    }
-  };
+  }, []);
+  useEffect(() => { void loadHistory(); }, [loadHistory]);
 
   // Load danh sách buổi học & buổi PT 1:1 của HLV
   useEffect(() => {
@@ -220,14 +230,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       try {
         const list = await attendanceApi.getSessionStudents(selectedSessionId);
         if (mounted) {
-          // Chuẩn hóa trạng thái: chỉ giữ 'present' hoặc 'absent'
-          const normalized = list.map((item) => ({
-            ...item,
-            status: (item.status === 'present' ? 'present' : 'absent') as 'present' | 'absent',
-            progressScore: item.progressScore || 80,
-            notes: item.notes || '',
-          }));
-          setStudents(normalized);
+          setStudents(normalizeRoster(list));
           setLoadedSessionId(selectedSessionId);
         }
       } catch {if (mounted) {
@@ -300,34 +303,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
       await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
 
-      const presentCount = students.filter((s) => s.status === 'present').length;
-      const absentCount = students.filter((s) => s.status === 'absent').length;
-      const nowFormatted = new Date().toLocaleString(staffLocale(), {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-
-      const updatedHistoryItem: AttendanceHistoryRecord = {
-        id: `hist-${selectedSessionId}-${new Date().getTime()}`,
-        sessionId: selectedSessionId,
-        className: activeSession.className,
-        roomName: activeSession.roomName,
-        sessionDate: activeSession.sessionDate,
-        startTime: activeSession.startTime,
-        endTime: activeSession.endTime,
-        savedAt: nowFormatted,
-        presentCount,
-        absentCount,
-        totalStudents: students.length,
-        students: [...students],
-      };
-
-      const filtered = history.filter((h) => h.sessionId !== selectedSessionId);
-      const newHistory = [updatedHistoryItem, ...filtered];
-      saveHistoryToStorage(newHistory);
+      void loadHistory();
 
       showCenterNotification(
         currentSavedRecord
@@ -358,33 +334,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
       await attendanceApi.saveBatchAttendance(selectedSessionId, payload, true);
 
-      const totalScore = students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
-      const averageScore = students.length > 0 ? Math.round(totalScore / students.length) : 0;
-      const nowFormatted = new Date().toLocaleString(staffLocale(), {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-
-      const updatedEvalItem: EvaluationHistoryRecord = {
-        id: `eval-${selectedSessionId}-${Date.now()}`,
-        sessionId: selectedSessionId,
-        className: activeSession.className,
-        roomName: activeSession.roomName,
-        sessionDate: activeSession.sessionDate,
-        startTime: activeSession.startTime,
-        endTime: activeSession.endTime,
-        savedAt: nowFormatted,
-        averageScore,
-        totalStudents: students.length,
-        students: [...students],
-      };
-
-      const filtered = evalHistory.filter((h) => h.sessionId !== selectedSessionId);
-      const newEvalHistory = [updatedEvalItem, ...filtered];
-      saveEvalHistoryToStorage(newEvalHistory);
+      void loadHistory();
 
       showCenterNotification('Đã gửi đánh giá tiến độ và thông báo đến học viên.');
     } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.'), 'error');
@@ -404,25 +354,14 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     danger: true,
   });
 
-  // Xoá điểm danh buổi hiện tại
-  const confirmHide = () => confirm({
-    title: staffMessage('Ẩn bản ghi?', staffTranslation('Ẩn bản ghi?')),
-    message: staffMessage('Chỉ ẩn trên trình duyệt này; dữ liệu vẫn được giữ.', staffTranslation('Chỉ ẩn trên trình duyệt này; dữ liệu vẫn được giữ.')),
-    confirmLabel: staffMessage('Ẩn bản ghi', staffTranslation('Ẩn bản ghi')),
-  });
-
-  const handleDeleteCurrentAttendance = async () => {
-    if (!selectedSessionId || !(await confirmHide())) return;
-    const filtered = history.filter((h) => h.sessionId !== selectedSessionId);
-    saveHistoryToStorage(filtered);
-  };
-
   // Mở modal sửa điểm danh trực tiếp giữa màn hình (Không chuyển tab)
-  const handleOpenEditAttendanceModal = (record: AttendanceHistoryRecord) => {
-    setEditingAttendanceRecord({
-      ...record,
-      students: record.students.map((s) => ({ ...s })),
-    });
+  const handleOpenEditAttendanceModal = async (record: AttendanceHistoryRecord) => {
+    try {
+      const list = await attendanceApi.getSessionStudents(record.sessionId);
+      setEditingAttendanceRecord({ ...record, students: normalizeRoster(list) });
+    } catch (err) {
+      notify(errorMessage(err, 'Không thể tải danh sách học viên. Hãy thử lại.'), 'error');
+    }
   };
 
   // Thay đổi trạng thái học viên trong Modal sửa điểm danh
@@ -460,47 +399,27 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         notes: student.notes.trim(),
       })));
 
-      const presentCount = editingAttendanceRecord.students.filter((s) => s.status === 'present').length;
-      const absentCount = editingAttendanceRecord.students.filter((s) => s.status === 'absent').length;
-      const nowFormatted = new Date().toLocaleString(staffLocale(), {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-
-      const updatedRecord: AttendanceHistoryRecord = {
-        ...editingAttendanceRecord,
-        students: updatedStudents,
-        presentCount,
-        absentCount,
-        savedAt: nowFormatted,
-      };
-
-      const newHistory = history.map((h) =>
-        h.id === updatedRecord.id ? updatedRecord : h
-      );
-      saveHistoryToStorage(newHistory);
-
-      if (selectedSessionId === updatedRecord.sessionId) {
-        setStudents(updatedRecord.students);
+      void loadHistory();
+      if (selectedSessionId === editingAttendanceRecord.sessionId) {
+        setStudents(updatedStudents);
       }
 
       setEditingAttendanceRecord(null);
       showCenterNotification('Cập nhật thành công');
-    } catch {notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
+    } catch (err) { notify(errorMessage(err, 'Không thể lưu cập nhật. Vui lòng thử lại.'), 'error');
     } finally {
       setSaving(false);
     }
   };
 
   // Mở modal sửa đánh giá trực tiếp giữa màn hình (Không chuyển tab)
-  const handleOpenEditEvalModal = (record: EvaluationHistoryRecord) => {
-    setEditingEvalRecord({
-      ...record,
-      students: record.students.map((s) => ({ ...s })),
-    });
+  const handleOpenEditEvalModal = async (record: EvaluationHistoryRecord) => {
+    try {
+      const list = await attendanceApi.getSessionStudents(record.sessionId);
+      setEditingEvalRecord({ ...record, students: normalizeRoster(list) });
+    } catch (err) {
+      notify(errorMessage(err, 'Không thể tải danh sách học viên. Hãy thử lại.'), 'error');
+    }
   };
 
   // Cập nhật điểm trong Modal sửa đánh giá
@@ -543,55 +462,17 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         notes: student.notes.trim(),
       })), true);
 
-      const totalScore = editingEvalRecord.students.reduce((acc, s) => acc + (s.progressScore || 80), 0);
-      const averageScore =
-        editingEvalRecord.students.length > 0
-          ? Math.round(totalScore / editingEvalRecord.students.length)
-          : 0;
-      const nowFormatted = new Date().toLocaleString(staffLocale(), {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-
-      const updatedRecord: EvaluationHistoryRecord = {
-        ...editingEvalRecord,
-        students: updatedStudents,
-        averageScore,
-        savedAt: nowFormatted,
-      };
-
-      const newEvalHistory = evalHistory.map((h) =>
-        h.id === updatedRecord.id ? updatedRecord : h
-      );
-      saveEvalHistoryToStorage(newEvalHistory);
-
-      if (selectedSessionId === updatedRecord.sessionId) {
-        setStudents(updatedRecord.students);
+      void loadHistory();
+      if (selectedSessionId === editingEvalRecord.sessionId) {
+        setStudents(updatedStudents);
       }
 
       setEditingEvalRecord(null);
       showCenterNotification('Cập nhật thành công');
-    } catch {notify('Không thể lưu cập nhật. Vui lòng thử lại.', 'error');
+    } catch (err) { notify(errorMessage(err, 'Không thể lưu cập nhật. Vui lòng thử lại.'), 'error');
     } finally {
       setSaving(false);
     }
-  };
-
-  // Xoá bản ghi trong Lịch sử điểm danh
-  const handleDeleteFromHistory = async (recordId: string) => {
-    if (!(await confirmHide())) return;
-    const updated = history.filter((h) => h.id !== recordId);
-    saveHistoryToStorage(updated);
-  };
-
-  // Xoá bản ghi trong Lịch sử đánh giá
-  const handleDeleteFromEvalHistory = async (recordId: string) => {
-    if (!(await confirmHide())) return;
-    const updated = evalHistory.filter((h) => h.id !== recordId);
-    saveEvalHistoryToStorage(updated);
   };
 
   // Thống kê nhanh trạng thái (chỉ Có mặt và Vắng mặt)
@@ -729,7 +610,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               </h3>
               {currentSavedRecord ? (
                 <span data-i18n-managed className="session-status-badge is-saved">
-                  {t("Đã lưu điểm danh lúc ")}{currentSavedRecord.savedAt}
+                  {t("Đã có điểm danh", "Attendance recorded")}
                 </span>
               ) : (
                 <span data-i18n-managed className="session-status-badge is-pending">
@@ -802,15 +683,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                 disabled={!rosterReady || saving || savingEvaluation || students.length === 0}
               >
                 {t("Điểm danh nhanh tất cả Có mặt")}</button>
-              {currentSavedRecord && (
-                <button data-i18n-managed
-                  type="button"
-                  className="btn-delete-attendance"
-                  onClick={handleDeleteCurrentAttendance}
-                  title={t("Ẩn bản ghi trên trình duyệt này")}
-                >
-                  {t("Ẩn trên trình duyệt này")}</button>
-              )}
             </div>
           </div>
 
@@ -1005,7 +877,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
           {history.length === 0 ? (
             <div data-i18n-managed className="attendance-empty-state">
-              <p>{t("Chưa có lịch sử điểm danh nào được lưu.")}</p>
+              <p>{historyError ? t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.") : t("Chưa có buổi nào được điểm danh trong 31 ngày qua.", "No sessions recorded in the last 31 days.")}</p>
             </div>
           ) : (
             <div data-i18n-managed className="history-cards-grid">
@@ -1030,7 +902,9 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                           <span>{t("Ngày: ")}{formatCenterDate(record.sessionDate)}</span>
                         </div>
                       </div>
-                      <span className="history-saved-badge">{t("Đã lưu: ")}{record.savedAt}</span>
+                      {!record.attendanceEditable && (
+                        <span className="history-saved-badge">{t("Đã khóa sửa (quá 7 ngày)", "Locked (over 7 days)")}</span>
+                      )}
                     </div>
 
                     <div className="history-stat-row">
@@ -1053,18 +927,14 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                     </div>
 
                     <div className="history-actions-row">
-                      <button
-                        type="button"
-                        className="btn-history-edit"
-                        onClick={() => handleOpenEditAttendanceModal(record)}
-                      >
-                        {t("Sửa điểm danh")}</button>
-                      <button
-                        type="button"
-                        className="btn-history-delete"
-                        onClick={() => handleDeleteFromHistory(record.id)}
-                      >
-                  {t("Ẩn trên trình duyệt này")}</button>
+                      {record.attendanceEditable && (
+                        <button
+                          type="button"
+                          className="btn-history-edit"
+                          onClick={() => void handleOpenEditAttendanceModal(record)}
+                        >
+                          {t("Sửa điểm danh")}</button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1087,7 +957,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
           {evalHistory.length === 0 ? (
             <div data-i18n-managed className="attendance-empty-state">
-              <p>{t("Chưa có lịch sử đánh giá nào được lưu.")}</p>
+              <p>{historyError ? t("Không tải được lịch sử đánh giá.", "Could not load the evaluation history.") : t("Chưa có đánh giá nào trong 31 ngày qua.", "No evaluations in the last 31 days.")}</p>
             </div>
           ) : (
             <div data-i18n-managed className="history-cards-grid">
@@ -1125,15 +995,9 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                       <button
                         type="button"
                         className="btn-history-edit"
-                        onClick={() => handleOpenEditEvalModal(record)}
+                        onClick={() => void handleOpenEditEvalModal(record)}
                       >
                         {t("Sửa đánh giá")}</button>
-                      <button
-                        type="button"
-                        className="btn-history-delete"
-                        onClick={() => handleDeleteFromEvalHistory(record.id)}
-                      >
-                  {t("Ẩn trên trình duyệt này")}</button>
                     </div>
                   </div>
                 );

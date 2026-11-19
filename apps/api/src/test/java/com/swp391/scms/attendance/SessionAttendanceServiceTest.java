@@ -318,4 +318,66 @@ class SessionAttendanceServiceTest {
         assertEquals(2, response.totalBooked());
         assertEquals(List.of(20L, 21L), response.members().stream().map(m -> m.memberId()).toList());
     }
+
+    private void bookedMember() {
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
+        lenient().when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        lenient().when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
+    }
+
+    @Test
+    void attendanceCannotChangeMoreThanSevenDaysAfterTheSessionButEvaluationsStillCan() {
+        // The session was on 2026-10-25; the clock is now 2026-11-02, eight days later.
+        when(clock.instant()).thenReturn(Instant.parse("2026-11-02T09:00:00Z"));
+        bookedMember();
+        SessionAttendance present = new SessionAttendance();
+        present.setSession(session);
+        present.setMember(member);
+        present.setStatus("present");
+        when(attendanceRepository.findBySessionIdAndMemberUserId(100L, 20L)).thenReturn(Optional.of(present));
+
+        var changeStatus = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "absent", null, null)), false);
+        var ex = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.recordBatchAttendance(100L, changeStatus, coachPrincipal));
+        assertEquals("ATTENDANCE_EDIT_WINDOW_CLOSED", ex.getErrorCode());
+
+        when(attendanceRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        var sameStatus = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Tiến bộ", 90)), false);
+        assertEquals("present", service.recordBatchAttendance(100L, sameStatus, coachPrincipal).get(0).attendanceStatus());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void historyListsTheCoachsRecordedSessionsWithCountsAndWhetherTheyCanStillBeEdited() {
+        when(clock.instant()).thenReturn(Instant.parse("2026-11-02T09:00:00Z"));
+        session.setStatus("completed");
+        ClassSession untouched = new ClassSession();
+        ReflectionTestUtils.setField(untouched, "id", 101L);
+        untouched.setGymClass(gymClass);
+        untouched.setSessionDate(LocalDate.of(2026, 10, 30));
+        untouched.setStatus("scheduled");
+        when(sessionRepository.findByCoachId(10L)).thenReturn(List.of(session, untouched));
+        when(attendanceRepository.countByStatusForSessions(any())).thenReturn(List.<Object[]>of(
+                new Object[]{100L, "present", 3L}, new Object[]{100L, "absent", 1L}));
+        var evaluations = mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
+        ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        when(evaluations.summarizeForSessions(any())).thenReturn(List.<Object[]>of(
+                new Object[]{100L, 2L, 84.5, LocalDateTime.of(2026, 10, 25, 11, 0)}));
+
+        var history = service.getHistory(coachPrincipal, null, null);
+
+        assertEquals(1, history.size());
+        var item = history.get(0);
+        assertEquals(100L, item.sessionId());
+        assertEquals(3L, item.presentCount());
+        assertEquals(1L, item.absentCount());
+        assertEquals(2L, item.evaluatedCount());
+        assertEquals(new java.math.BigDecimal("85"), item.averageScore());
+        assertFalse(item.attendanceEditable());
+    }
 }

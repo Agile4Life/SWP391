@@ -1,11 +1,10 @@
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
-import { coachHistoryStorageKey } from './coachHistoryStorage';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoachAttendancePage } from './CoachAttendancePage';
-import { attendanceApi, type AttendanceStudent, type CoachClassSession } from './attendanceApi';
+import { attendanceApi, type AttendanceStudent, type CoachClassSession, type CoachSessionHistoryItem } from './attendanceApi';
 import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 
@@ -42,6 +41,14 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
       capacity: 6,
     },
   ];
+
+  // Lịch sử nằm trên server: buổi 101 đã điểm danh và đã đánh giá, còn trong hạn sửa.
+  const historyItem: CoachSessionHistoryItem = {
+    sessionId: 101, classId: 5, className: 'Reformer Core & Spinal Alignment', roomName: 'Studio 01 (Tầng 2)',
+    sessionDate: '2026-10-25', startTime: '17:30:00', endTime: '18:30:00',
+    presentCount: 1, lateCount: 0, absentCount: 1, excusedCount: 0,
+    evaluatedCount: 2, averageScore: 78, lastEvaluatedAt: '2026-10-25T19:00:00', attendanceEditable: true,
+  };
 
   const mockStudents: AttendanceStudent[] = [
     {
@@ -80,9 +87,6 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     vi.stubGlobal('confirm', vi.fn(() => true));
     localStorage.clear();
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach-a', name: 'Coach A', role: 'COACH' }));
-    const record = { ...mockSessions[0], id: 'saved-101', sessionId: 101, savedAt: '27/10/2026', presentCount: 1, absentCount: 1, totalStudents: 2, averageScore: 78, students: mockStudents };
-    localStorage.setItem(coachHistoryStorageKey('attendance'), JSON.stringify([record]));
-    localStorage.setItem(coachHistoryStorageKey('evaluation'), JSON.stringify([record]));
 
     host = document.createElement('div');
     document.body.append(host);
@@ -90,6 +94,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
 
     vi.spyOn(attendanceApi, 'getCoachSessions').mockResolvedValue(mockSessions);
     vi.spyOn(attendanceApi, 'getSessionStudents').mockResolvedValue(mockStudents);
+    vi.spyOn(attendanceApi, 'getHistory').mockResolvedValue([historyItem]);
     vi.spyOn(attendanceApi, 'saveBatchAttendance').mockResolvedValue({
       success: true,
       updatedCount: 2,
@@ -276,20 +281,20 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(host.querySelector('.center-toast-card')).toBeNull();
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ progressScore: 85 })]), true);
   });
-  it('keeps a failed history edit open and does not overwrite its stored record', async () => {
-    vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
-    const original = localStorage.getItem(coachHistoryStorageKey('attendance'));
+  it('keeps a failed history edit open and does not reload the history', async () => {
+    vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new TypeError('Rejected'));
     await act(async () => { root.render(pageAt(LIST)); });
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
-    expect(localStorage.getItem(coachHistoryStorageKey('attendance'))).toBe(original);
+    expect(attendanceApi.getHistory).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith('Không thể lưu cập nhật. Vui lòng thử lại.', 'error', { translation: { vi: 'Không thể lưu cập nhật. Vui lòng thử lại.', en: 'Unable to save changes. Please try again.' } });
   });
 
-  it('does not fabricate history for a fresh browser', async () => {
-    localStorage.clear();
+  it('shows no history when the server has none, whatever the browser cached before', async () => {
+    vi.mocked(attendanceApi.getHistory).mockResolvedValue([]);
+    localStorage.setItem('sol_coach_attendance_history:coach-a', JSON.stringify([{ sessionId: 101, students: mockStudents }]));
     await act(async () => { root.render(pageAt(LIST)); });
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
@@ -297,36 +302,35 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
   });
 
-  it('keeps a failed evaluation edit open without changing stored history', async () => {
-    vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new Error('Rejected'));
-    const original = localStorage.getItem(coachHistoryStorageKey('evaluation'));
+  it('keeps a failed evaluation edit open without reloading the history', async () => {
+    vi.mocked(attendanceApi.saveBatchAttendance).mockRejectedValueOnce(new TypeError('Rejected'));
     await act(async () => { root.render(pageAt(LIST)); });
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement).click(); });
     expect(host.querySelector('.modal-edit-container')).not.toBeNull();
-    expect(localStorage.getItem(coachHistoryStorageKey('evaluation'))).toBe(original);
+    expect(attendanceApi.getHistory).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith('Không thể lưu cập nhật. Vui lòng thử lại.', 'error', { translation: { vi: 'Không thể lưu cập nhật. Vui lòng thử lại.', en: 'Unable to save changes. Please try again.' } });
   });
 
   it('preserves the latest attendance when updating an older evaluation snapshot', async () => {
     await act(async () => { root.render(pageAt(LIST)); });
-    vi.mocked(attendanceApi.getSessionStudents).mockResolvedValueOnce(mockStudents.map(student => ({ ...student, status: 'absent' })));
+    // The modal loads the roster from the server, so it edits scores on top of the latest statuses.
+    vi.mocked(attendanceApi.getSessionStudents).mockResolvedValue(mockStudents.map(student => ({ ...student, status: 'absent' })));
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.btn-history-edit') as HTMLButtonElement).click(); });
     await act(async () => { (host.querySelector('.modal-footer-actions .btn-primary') as HTMLButtonElement).click(); });
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 101, status: 'absent', progressScore: 85 })]), true);
   });
 
-  it('isolates cached histories between coaches sharing a browser', async () => {
-    const coachAHistory = localStorage.getItem(coachHistoryStorageKey('attendance'));
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach-b', name: 'Coach B', role: 'COACH' }));
-    localStorage.setItem('sol_coach_attendance_history', coachAHistory!);
+  it('locks attendance editing for a session older than 7 days but keeps evaluations editable', async () => {
+    vi.mocked(attendanceApi.getHistory).mockResolvedValue([{ ...historyItem, attendanceEditable: false }]);
     await act(async () => { root.render(pageAt(LIST)); });
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[1] as HTMLButtonElement).click(); });
     expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
+    expect(host.textContent).toContain('Đã khóa sửa (quá 7 ngày)');
     await act(async () => { (host.querySelectorAll('.attendance-tab-btn')[2] as HTMLButtonElement).click(); });
-    expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(0);
+    expect(host.querySelectorAll('.btn-history-edit')).toHaveLength(1);
   });
 
   it('clears the previous roster and blocks both saves when the session fails to load', async () => {
@@ -358,7 +362,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect(attendanceApi.saveBatchAttendance).toHaveBeenCalledWith(101, expect.arrayContaining([expect.objectContaining({ memberId: 102, status: 'absent' })]));
   });
 
-  it('keeps the save button locked while an attendance write is pending, then stores the record', async () => {
+  it('keeps the save button locked while an attendance write is pending, then reloads the history', async () => {
     let complete!: (value: { success: boolean; updatedCount: number; message: string }) => void;
     vi.mocked(attendanceApi.saveBatchAttendance).mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
     await act(async () => { root.render(pageAt(SESSION)); });
@@ -366,7 +370,7 @@ describe('CoachAttendancePage (SCRUM-123: HLV Điểm danh, Đánh giá & Lịch
     expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(true);
     await act(async () => { complete({ success: true, updatedCount: 2, message: 'Saved' }); });
     expect((host.querySelector('.btn-batch-save') as HTMLButtonElement).disabled).toBe(false);
-    expect(JSON.parse(localStorage.getItem(coachHistoryStorageKey('attendance'))!)[0].sessionId).toBe(101);
+    expect(attendanceApi.getHistory).toHaveBeenCalledTimes(2);
   });
 
   it('picks a session from the weekly timetable, marks saved ones, filters by class and opens a dedicated attendance page', async () => {

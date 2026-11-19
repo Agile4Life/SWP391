@@ -1,5 +1,5 @@
 import { useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
-import { coachHistoryStorageKey } from './coachHistoryStorage';
+import { attendanceApi, type AttendanceStudent } from './attendanceApi';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser } from '../../shared/api/client';
@@ -41,15 +41,6 @@ interface StoredAttendanceStudent {
   notes: string;
 }
 
-interface StoredAttendanceSession {
-  sessionId: number | string;
-  savedAt: string;
-  presentCount: number;
-  absentCount: number;
-  totalStudents: number;
-  rate: number;
-  students: StoredAttendanceStudent[];
-}
 
 interface StoredEvaluationStudent {
   id: number | string;
@@ -60,13 +51,6 @@ interface StoredEvaluationStudent {
   notes: string;
 }
 
-interface StoredEvaluationSession {
-  sessionId: number | string;
-  savedAt: string;
-  averageScore: number;
-  totalStudents: number;
-  students: StoredEvaluationStudent[];
-}
 
 
 function getWeekMonday(date: Date): Date {
@@ -132,39 +116,51 @@ export function CoachClassesPage() {
   const [cancelPtError, setCancelPtError] = useState<StaffMessage | null>(null);
   const [cancelBusy, setCancelBusy] = useState<boolean>(false);
 
-  // Lấy dữ liệu điểm danh của buổi học (từ localStorage của tài khoản hiện tại)
+  // Điểm danh & đánh giá của buổi lấy từ server (roster), cùng nguồn với màn điểm danh.
+  const [sessionRoster, setSessionRoster] = useState<{ sessionId: number; students: AttendanceStudent[] } | null>(null);
+  useEffect(() => {
+    if (!activeSession) return;
+    let mounted = true;
+    attendanceApi.getSessionStudents(Number(activeSession.id))
+      .then((students) => { if (mounted) setSessionRoster({ sessionId: Number(activeSession.id), students }); })
+      .catch(() => { if (mounted) setSessionRoster(null); });
+    return () => { mounted = false; };
+  }, [activeSession]);
+  const roster = useMemo(
+    () => (activeSession && sessionRoster?.sessionId === Number(activeSession.id) ? sessionRoster.students : []),
+    [activeSession, sessionRoster],
+  );
+
   const sessionAttendanceData = useMemo(() => {
-    if (!activeSession) return null;
-    try {
-      const stored = localStorage.getItem(coachHistoryStorageKey('attendance'));
-      if (stored) {
-        const historyList = JSON.parse(stored);
-        const found = historyList.find((h: StoredAttendanceSession) => h.sessionId === activeSession.id);
-        if (found) return { ...found, rate: found.totalStudents > 0 ? Math.round(found.presentCount / found.totalStudents * 100) : 0 };
-      }
-    } catch {
-      // ignore
-    }
+    const recorded = roster.filter((st) => st.recorded);
+    if (recorded.length === 0) return null;
+    const students: StoredAttendanceStudent[] = recorded.map((st) => ({
+      id: st.id, memberId: st.memberId, fullName: st.fullName, membershipCode: st.membershipCode,
+      status: st.status === 'present' || st.status === 'late' ? 'present' : 'absent', notes: st.notes || '',
+    }));
+    const presentCount = students.filter((st) => st.status === 'present').length;
+    return {
+      presentCount,
+      absentCount: students.length - presentCount,
+      totalStudents: students.length,
+      rate: Math.round((presentCount / students.length) * 100),
+      students,
+    };
+  }, [roster]);
 
-    return null;
-  }, [activeSession]);
-
-  // Lấy dữ liệu đánh giá của buổi học (từ localStorage của tài khoản hiện tại)
   const sessionEvaluationData = useMemo(() => {
-    if (!activeSession) return null;
-    try {
-      const stored = localStorage.getItem(coachHistoryStorageKey('evaluation'));
-      if (stored) {
-        const historyList = JSON.parse(stored);
-        const found = historyList.find((h: StoredEvaluationSession) => h.sessionId === activeSession.id);
-        if (found) return found;
-      }
-    } catch {
-      // ignore
-    }
-
-    return null;
-  }, [activeSession]);
+    const evaluated = roster.filter((st) => st.evaluated);
+    if (evaluated.length === 0) return null;
+    const students: StoredEvaluationStudent[] = evaluated.map((st) => ({
+      id: st.id, memberId: st.memberId, fullName: st.fullName, membershipCode: st.membershipCode,
+      progressScore: st.progressScore, notes: st.notes || '',
+    }));
+    return {
+      averageScore: Math.round(students.reduce((sum, st) => sum + st.progressScore, 0) / students.length),
+      totalStudents: students.length,
+      students,
+    };
+  }, [roster]);
 
   const filteredAttendanceStudents = useMemo(() => {
     if (!sessionAttendanceData) return [];
@@ -1140,9 +1136,6 @@ export function CoachClassesPage() {
                     <span className="history-stat-badge is-rate">
                       {t("Tỷ lệ chuyên cần: ")}{sessionAttendanceData.rate}%
                     </span>
-                    <span className="history-timestamp">
-                      {t("Đã lưu: ")}{sessionAttendanceData.savedAt}
-                    </span>
                   </div>
                 )}
 
@@ -1189,9 +1182,6 @@ export function CoachClassesPage() {
                     </span>
                     <span className="history-stat-badge is-rate">
                       {t("Đã đánh giá: ")}{sessionEvaluationData.totalStudents} {t(" học viên")}</span>
-                    <span className="history-timestamp">
-                      {t("Đã lưu: ")}{sessionEvaluationData.savedAt}
-                    </span>
                   </div>
                 )}
 

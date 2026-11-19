@@ -556,8 +556,9 @@ public class CoachBookingService {
     }
 
     /**
-     * A coach (for their own sessions), the desk or a manager records that the member did attend: for a member who
-     * the scan is only a hint. The session must have started. Marking an already marked session changes nothing.
+     * A coach (for their own sessions), the desk or a manager records that the member did attend; a gate scan is only
+     * shown as a hint and never records it. The session must have started. Marking an already marked session changes
+     * nothing.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_MARK", entity = "coach_bookings")
@@ -590,9 +591,9 @@ public class CoachBookingService {
     }
 
     /**
-     * Staff remove an arrival that was recorded by mistake (a scan during the session by someone passing through, or a
-     * wrong manual mark). The session is locked so neither a gate scan nor the sweep records it again; marking it by hand
-     * unlocks it. Same people and same limits as {@link #markAttended}, except the session may be any past one.
+     * Staff remove an arrival that was marked by mistake. The session is flagged (attendanceLocked) so the list shows
+     * the mark was taken off on purpose; marking it by hand clears the flag. Same people and same limits as
+     * {@link #markAttended}, except the session may be any past one.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_UNMARK", entity = "coach_bookings")

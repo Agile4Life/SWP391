@@ -43,6 +43,18 @@ public class SessionAttendanceController {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    @Operation(summary = "Past sessions with attendance or evaluations recorded (coach: own classes)")
+    @GetMapping("/sessions/history")
+    @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
+    public ApiResponse<List<com.swp391.scms.attendance.dto.CoachSessionHistoryItem>> getHistory(
+            @org.springframework.web.bind.annotation.RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+            @org.springframework.web.bind.annotation.RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        return ApiResponse.ok(msg("attendance.roster.success"), service.getHistory(principal, from, to));
+    }
+
     @Operation(summary = "Get enrolled members and attendance status for a session")
     @GetMapping("/sessions/{id}")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")

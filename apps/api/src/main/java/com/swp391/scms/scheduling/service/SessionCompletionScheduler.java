@@ -22,7 +22,7 @@ import java.time.ZoneId;
  */
 @Service
 public class SessionCompletionScheduler {
-    static final int GRACE_DAYS = 7;
+    public static final int GRACE_DAYS = 7;
     private static final Logger log = LoggerFactory.getLogger(SessionCompletionScheduler.class);
     private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 

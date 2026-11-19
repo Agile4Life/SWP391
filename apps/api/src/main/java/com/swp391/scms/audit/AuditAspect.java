@@ -150,6 +150,15 @@ public class AuditAspect {
                     if (session.getStartTime() != null) node.put("startTime", session.getStartTime().toString());
                     if (session.getEndTime() != null) node.put("endTime", session.getEndTime().toString());
                 }
+                case "session_attendance" -> {
+                    // Who was marked what in the session (memberId -> status); no contact details in the log.
+                    var records = node.putObject("records");
+                    node.put("sessionId", id);
+                    entityManager.createQuery("select a.member.userId, a.status from SessionAttendance a where a.session.id = :id "
+                                    + "order by a.member.userId", Object[].class)
+                            .setParameter("id", id).getResultList()
+                            .forEach(row -> records.put(String.valueOf(row[0]), String.valueOf(row[1])));
+                }
                 case "role_permissions" -> {
                     if (args.length < 2 || !(args[1] instanceof Long permissionId)) return null;
                     var role = entityManager.find(com.swp391.scms.users.entity.Role.class, id, LockModeType.PESSIMISTIC_WRITE);

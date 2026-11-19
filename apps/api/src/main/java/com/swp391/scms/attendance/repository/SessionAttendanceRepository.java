@@ -12,6 +12,10 @@ import java.util.Optional;
 @Repository
 public interface SessionAttendanceRepository extends JpaRepository<SessionAttendance, Long> {
 
+    /** Rows per (session, status) for the given sessions: [sessionId, status, count]. */
+    @Query("select a.session.id, a.status, count(a) from SessionAttendance a where a.session.id in :ids group by a.session.id, a.status")
+    List<Object[]> countByStatusForSessions(@Param("ids") java.util.Collection<Long> ids);
+
     List<SessionAttendance> findBySessionId(Long sessionId);
 
     @Query("""

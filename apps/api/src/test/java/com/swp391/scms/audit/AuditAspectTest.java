@@ -48,6 +48,32 @@ class AuditAspectTest {
         org.junit.jupiter.api.Assertions.assertFalse(captor.getValue().getNewValue().contains("c2Vuc2l0aXZlLWltYWdl"));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void classAttendanceLogsWhoWasMarkedWhatBeforeAndAfterWithoutContactDetails() throws Throwable {
+        var entityManager = mock(jakarta.persistence.EntityManager.class);
+        var query = mock(jakarta.persistence.TypedQuery.class);
+        var point = mock(org.aspectj.lang.ProceedingJoinPoint.class);
+        when(point.getArgs()).thenReturn(new Object[]{100L, null, null});
+        when(entityManager.createQuery(any(String.class), org.mockito.ArgumentMatchers.eq(Object[].class))).thenReturn(query);
+        when(query.setParameter("id", 100L)).thenReturn(query);
+        when(query.getResultList())
+                .thenReturn(java.util.List.<Object[]>of(new Object[]{20L, "present"}))
+                .thenReturn(java.util.List.<Object[]>of(new Object[]{20L, "absent"}));
+        when(point.proceed()).thenReturn(java.util.List.of(Map.of("email", "jane@test.com", "phone", "0900000000")));
+
+        new AuditAspect(repository, new ObjectMapper(), entityManager)
+                .around(point, audited("CLASS_ATTENDANCE_RECORD", "session_attendance"));
+
+        ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
+        verify(repository).save(captor.capture());
+        AuditLog entry = captor.getValue();
+        assertEquals(100L, entry.getEntityId());
+        assertEquals("present", new ObjectMapper().readTree(entry.getOldValue()).get("records").get("20").asText());
+        assertEquals("absent", new ObjectMapper().readTree(entry.getNewValue()).get("records").get("20").asText());
+        org.junit.jupiter.api.Assertions.assertFalse(entry.getNewValue().contains("jane@test.com"));
+    }
+
     @Mock AuditLogRepository repository;
     @Mock JoinPoint joinPoint;
 

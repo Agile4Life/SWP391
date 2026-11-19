@@ -258,7 +258,7 @@ export function AdminAuditLogsPage() {
     ) {
       return 'is-delete';
     }
-    if (a === 'SCAN' || a === 'PT_ATTENDANCE_MARK') return 'is-scan';
+    if (a === 'SCAN' || a === 'PT_ATTENDANCE_MARK' || a === 'CLASS_ATTENDANCE_RECORD') return 'is-scan';
     return '';
   };
 
@@ -298,6 +298,7 @@ export function AdminAuditLogsPage() {
       case 'CLASS_DELETE': return t('Xóa lớp học', 'Delete class');
       case 'SESSION_CREATE': return t('Tạo buổi học', 'Create session');
       case 'SESSION_RESCHEDULE': return t('Dời lịch buổi học', 'Reschedule session');
+      case 'CLASS_ATTENDANCE_RECORD': return t('Điểm danh lớp học', 'Record class attendance');
       case 'PT_ATTENDANCE_MARK': return t('Điểm danh PT 1:1', 'Mark PT attendance');
       case 'PT_ATTENDANCE_UNMARK': return t('Gỡ điểm danh PT 1:1', 'Unmark PT attendance');
       case 'COACH_ASSIGNMENT_TRANSFER': return t('Chuyển phân công HLV', 'Transfer coach assignment');
