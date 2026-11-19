@@ -161,7 +161,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                 const editable = plan.status === 'draft' || plan.status === 'active';
                 return (
                   <tr data-i18n-managed key={plan.id}>
-                    <td><strong>{plan.memberName ?? `#${plan.memberId}`}</strong>{plan.coachName && <div className="muted">{t("HLV:")}{plan.coachName}</div>}</td>
+                    <td className="saved-plan-member"><strong>{plan.memberName ?? `#${plan.memberId}`}</strong>{plan.coachName && <div className="muted">{t("HLV")}: {plan.coachName}</div>}</td>
                     <td>{plan.goal || <span className="muted">—</span>}</td>
                     <td>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</td>
                     <td>{plan.items?.length ?? 0}</td>
@@ -171,6 +171,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                       </span>
                     </td>
                     <td className="actions">
+                      <div className="saved-plan-actions">
                       <button type="button" className="btn-secondary btn-sm" onClick={() => setResultPlan(plan)}>{t("Kết quả")}</button>
                       {plan.status === 'superseded' && (
                         <button data-i18n-managed type="button" className="btn-primary btn-sm" disabled={busyId !== null} onClick={() => void reapply(plan)}>
@@ -184,6 +185,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                         <button data-i18n-managed type="button" className="btn-danger btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
                           {t("Xóa")}</button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 );

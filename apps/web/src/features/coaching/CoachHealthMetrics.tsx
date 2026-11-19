@@ -174,7 +174,7 @@ function HealthMetricsForm({ memberId, memberName, intakeOnly, onMetricsChange }
           {FIELDS.filter((field) => !field.optional).map((field) => <MetricInput key={field.key} field={field} value={draft[field.key]} previous={previous[field.key]} disabled={saving} onChange={setField} />)}
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="coach-metric-bmi">{t("BMI")}</label>
-            <input id="coach-metric-bmi" className="portal-input" type="text" readOnly tabIndex={-1} value={liveBmi !== undefined ? String(liveBmi) : '—'} aria-describedby="coach-metric-bmi-hint" />
+            <input id="coach-metric-bmi" className="portal-input" type="text" readOnly disabled value={liveBmi !== undefined ? String(liveBmi) : '—'} aria-describedby="coach-metric-bmi-hint" />
             <small id="coach-metric-bmi-hint" className="muted">{t("BMI được tính tự động từ chiều cao và cân nặng.")}</small>
           </div>
         </div>

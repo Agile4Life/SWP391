@@ -43,6 +43,7 @@ it('auto-calculates BMI from height and weight and notifies parent without manua
  expect(host.textContent).toContain('BMI được tính tự động từ chiều cao và cân nặng.');
  const bmi=host.querySelector('#coach-metric-bmi') as HTMLInputElement;
  expect(bmi.readOnly).toBe(true);
+ expect(bmi.disabled).toBe(true);
  expect(bmi.value).toBe('23');
  await typeInto('coach-metric-weight','80');
  expect(bmi.value).toBe('27');

@@ -1927,3 +1927,10 @@ textarea.portal-textarea:focus-visible,
 .pt-range__fields .portal-form-group { margin: 0; }
 .pt-gate-tag { display: inline-block; margin: 4px 8px 0 0; font-variant-numeric: tabular-nums; }
 .pt-range .form-hint { margin: 0; }
+
+/* Bảng "Giáo án đã lưu": các nút cùng một hàng, nút Xóa cùng dáng viền với nút phụ; tên học viên không bị bóp hẹp. */
+.saved-plan-member { min-width: 160px; }
+.saved-plan-member .muted { margin-top: 2px; white-space: nowrap; }
+.saved-plan-actions { display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 6px; }
+.portal-table td.actions .saved-plan-actions > .btn-secondary + .btn-secondary { margin-left: 0; }
+.saved-plan-actions .btn-danger { border-width: 1px; border-style: solid; letter-spacing: normal; text-transform: none; }

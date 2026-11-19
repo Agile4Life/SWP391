@@ -149,7 +149,6 @@ export function PtAttendancePage() {
             <DatePicker id="pt-to" disabled={busyId !== null} min={from} value={to} onChange={(event) => setTo(event.target.value)} />
           </div>
         </div>
-        <p className="form-hint">{t('Tối đa 62 ngày mỗi lần xem.', 'Up to 62 days at a time.')}</p>
       </div>
       {invalidRange && <div className="portal-alert" role="alert">{t('Ngày bắt đầu phải trước ngày kết thúc.', 'The start date must be before the end date.')}</div>}
       <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ marginTop: 16 }}>
