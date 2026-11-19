@@ -80,6 +80,10 @@ public class CoachBooking {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    /** A package slot cancelled by a hold too close to the session: it still counts against the monthly quota. */
+    @Column(name = "quota_forfeited")
+    private Boolean quotaForfeited = false;
+
     public CoachBooking() {}
 
     public Long getId() { return id; }
@@ -112,6 +116,8 @@ public class CoachBooking {
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 
+    public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
+    public void setQuotaForfeited(boolean quotaForfeited) { this.quotaForfeited = quotaForfeited; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 

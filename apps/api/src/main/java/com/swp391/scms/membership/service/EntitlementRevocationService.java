@@ -23,6 +23,11 @@ import java.util.function.Predicate;
 @Service
 public class EntitlementRevocationService {
 
+    /** A 1:1 session is returned (quota slot or money) only if the hold is approved this many days before it. */
+    static final int PT_HOLD_REFUND_DAYS = 3;
+    /** A court is returned (quota slot or money) only if the hold is approved this many hours before it. */
+    static final int COURT_HOLD_REFUND_HOURS = 2;
+
     private final MembershipSubscriptionRepository subscriptions;
     private final EnrollmentService enrollmentService;
     private final CoachBookingRepository coachBookings;
@@ -34,6 +39,12 @@ public class EntitlementRevocationService {
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.common.i18n.MessageService messageService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.finance.repository.PaymentRepository payments;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.wallet.WalletService walletService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollments;
@@ -114,8 +125,8 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). No money is
-     * refunded here; course enrollments are handled by {@code EnrollmentService#releaseCoursesForHold}.
+     * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). Package slots and
+     * paid fees go back to the member only inside the notice windows; course enrollments are handled by {@code EnrollmentService#releaseCoursesForHold}.
      */
     @Transactional
     public int releaseBookingsBetween(Long memberId, LocalDate from, LocalDate to, String reason) {
@@ -134,8 +145,19 @@ public class EntitlementRevocationService {
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
             cancelled++;
-            notifyReleased(memberId, "notifications.membership.pt_released.body", booking.getId(),
-                    booking.getBookingDate(), booking.getStartTime());
+            // 1:1 sessions are given back only when the hold is approved at least PT_HOLD_REFUND_DAYS days ahead;
+            // after that the package slot (or the money paid) counts as used.
+            boolean inTime = !booking.getBookingDate().isBefore(today.plusDays(PT_HOLD_REFUND_DAYS));
+            boolean quota = "package_quota".equalsIgnoreCase(booking.getPaymentMethod());
+            java.math.BigDecimal[] money = settleCoachPayments(booking, inTime, cancelReason);
+            if (quota && !inTime) booking.setQuotaForfeited(true);
+            String ptKey = money[0].signum() == 0 && !quota ? "notifications.membership.pt_hold_released.unpaid"
+                    : inTime ? (quota ? "notifications.membership.pt_hold_released.quota"
+                                      : "notifications.membership.pt_hold_released.refunded")
+                    : "notifications.membership.pt_hold_released.forfeited";
+            notify(memberId, "notifications.membership.booking_released.title",
+                    msg(ptKey, booking.getBookingDate(), hhmm(booking.getStartTime()), money[1].toBigInteger(),
+                            PT_HOLD_REFUND_DAYS), booking.getId());
             if (booking.getCoach() != null) {
                 notify(booking.getCoach().getUserId(), "notifications.coaching.booking.cancelled.title",
                         msg("notifications.coaching.booking.cancelled.body",
@@ -152,10 +174,84 @@ public class EntitlementRevocationService {
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
             cancelled++;
-            notifyReleased(memberId, "notifications.membership.court_released.body", booking.getId(),
-                    booking.getBookingDate(), booking.getStartTime());
+            // A court is given back only when the hold is approved at least COURT_HOLD_REFUND_HOURS before it starts.
+            boolean inTime = !booking.getBookingDate().atTime(booking.getStartTime())
+                    .isBefore(now.plusHours(COURT_HOLD_REFUND_HOURS));
+            boolean quota = "package_quota".equalsIgnoreCase(booking.getPaymentMethod());
+            java.math.BigDecimal[] money = settleCourtPayments(booking, inTime, cancelReason);
+            if (quota && !inTime) booking.setQuotaForfeited(true);
+            String courtKey = money[0].signum() == 0 && !quota ? "notifications.membership.court_hold_released.free"
+                    : inTime ? (quota ? "notifications.membership.court_hold_released.quota"
+                                      : "notifications.membership.court_hold_released.refunded")
+                    : "notifications.membership.court_hold_released.forfeited";
+            notify(memberId, "notifications.membership.booking_released.title",
+                    msg(courtKey, booking.getBookingDate(), hhmm(booking.getStartTime()), money[1].toBigInteger(),
+                            COURT_HOLD_REFUND_HOURS), booking.getId());
         }
         return cancelled;
+    }
+
+    /**
+     * Closes the payments of a 1:1 session cancelled by a hold. Returns {paid, refunded}: what the member had paid,
+     * and what went back to the wallet (nothing when {@code inTime} is false).
+     */
+    private java.math.BigDecimal[] settleCoachPayments(CoachBooking booking, boolean inTime, String reason) {
+        java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal refunded = java.math.BigDecimal.ZERO;
+        if (payments != null) {
+            for (var payment : payments.findAllByCoachBookingId(booking.getId())) {
+                if ("pending".equals(payment.getStatus())) {
+                    payment.setStatus("failed");
+                } else if ("success".equals(payment.getStatus()) && payment.netAmount() != null
+                        && payment.netAmount().signum() > 0) {
+                    java.math.BigDecimal net = payment.netAmount();
+                    paid = paid.add(net);
+                    if (inTime) {
+                        payment.setRefundedAmount(payment.getAmount());
+                        payment.setStatus("refunded");
+                        refunded = refunded.add(net);
+                    }
+                }
+            }
+        }
+        if (refunded.signum() > 0 && walletService != null && booking.getMember() != null) {
+            walletService.creditCoachBookingRefund(booking.getMember().getUserId(), refunded,
+                    "COACH_REFUND_" + booking.getId(), reason);
+        }
+        return new java.math.BigDecimal[]{paid, refunded};
+    }
+
+    /** Same as {@link #settleCoachPayments} for a court booking, including legacy bookings paid without a payment row. */
+    private java.math.BigDecimal[] settleCourtPayments(CourtBooking booking, boolean inTime, String reason) {
+        java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal refunded = java.math.BigDecimal.ZERO;
+        boolean hasRows = false;
+        if (payments != null) {
+            for (var payment : payments.findAllByCourtBookingId(booking.getId())) {
+                hasRows = true;
+                if ("pending".equals(payment.getStatus())) {
+                    payment.setStatus("failed");
+                } else if ("success".equals(payment.getStatus()) && payment.netAmount() != null
+                        && payment.netAmount().signum() > 0) {
+                    java.math.BigDecimal net = payment.netAmount();
+                    paid = paid.add(net);
+                    if (inTime) {
+                        payment.setRefundedAmount(payment.getAmount());
+                        payment.setStatus("refunded");
+                    }
+                }
+            }
+        }
+        if (!hasRows && "paid".equals(booking.getPaymentStatus()) && booking.getPrice() != null) {
+            paid = booking.getPrice();
+        }
+        if (inTime) refunded = paid;
+        if (paid.signum() > 0 && inTime) booking.setPaymentStatus("refunded");
+        if (refunded.signum() > 0 && walletService != null && booking.getMember() != null) {
+            walletService.creditCourtRefund(booking.getMember().getId(), refunded,
+                    "COURT_REFUND_" + booking.getId(), reason);
+        }
+        return new java.math.BigDecimal[]{paid, refunded};
     }
 
     /** Members holding a class booking, an upcoming 1:1 session or an upcoming court; the daily sweep checks each. */

@@ -94,6 +94,126 @@ class EntitlementRevocationServiceTest {
         assertEquals("cancelled", pastTheEnd.getStatus());
     }
 
+    private EntitlementRevocationService holdService(com.swp391.scms.finance.repository.PaymentRepository payments,
+                                                     com.swp391.scms.wallet.WalletService wallets) {
+        Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
+        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "payments", payments);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "walletService", wallets);
+        return service;
+    }
+
+    private static com.swp391.scms.finance.entity.Payment successPayment(String amount) {
+        var payment = new com.swp391.scms.finance.entity.Payment();
+        payment.setAmount(new java.math.BigDecimal(amount));
+        payment.setStatus("success");
+        return payment;
+    }
+
+    private static CourtBooking court(LocalDate date, LocalTime start, String method, String paymentStatus) {
+        CourtBooking court = new CourtBooking();
+        court.setBookingDate(date);
+        court.setStartTime(start);
+        court.setPaymentMethod(method);
+        court.setPaymentStatus(paymentStatus);
+        court.setStatus("booked");
+        var user = new com.swp391.scms.users.entity.User();
+        user.setId(10L);
+        court.setMember(user);
+        return court;
+    }
+
+    @Test
+    void holdReturnsAPtQuotaSlotOnlyWhenApprovedThreeDaysAhead() {
+        var service = holdService(null, null);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        CoachBooking inTime = pt(today.plusDays(3));
+        CoachBooking late = pt(today.plusDays(2));
+        inTime.setPaymentMethod("package_quota");
+        late.setPaymentMethod("package_quota");
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(inTime, late));
+        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of());
+
+        assertEquals(2, service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold"));
+
+        assertEquals("cancelled", inTime.getStatus());
+        assertFalse(inTime.isQuotaForfeited());
+        assertEquals("cancelled", late.getStatus());
+        assertTrue(late.isQuotaForfeited());
+    }
+
+    @Test
+    void holdRefundsAPaidPtSessionToTheWalletOnlyWhenApprovedThreeDaysAhead() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
+        var service = holdService(payments, wallets);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        CoachBooking inTime = pt(today.plusDays(5));
+        CoachBooking late = pt(today.plusDays(1));
+        inTime.setId(1L);
+        late.setId(2L);
+        var member = new com.swp391.scms.users.entity.Member();
+        member.setUserId(10L);
+        inTime.setMember(member);
+        late.setMember(member);
+        inTime.setPaymentMethod("cash");
+        late.setPaymentMethod("cash");
+        var paidInTime = successPayment("200000");
+        var paidLate = successPayment("200000");
+        when(payments.findAllByCoachBookingId(1L)).thenReturn(List.of(paidInTime));
+        when(payments.findAllByCoachBookingId(2L)).thenReturn(List.of(paidLate));
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(inTime, late));
+        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of());
+
+        service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold");
+
+        assertEquals("refunded", paidInTime.getStatus());
+        assertEquals("success", paidLate.getStatus());
+        org.mockito.Mockito.verify(wallets).creditCoachBookingRefund(eq(10L), eq(new java.math.BigDecimal("200000")), eq("COACH_REFUND_1"), any());
+        org.mockito.Mockito.verifyNoMoreInteractions(wallets);
+    }
+
+    @Test
+    void holdRefundsAPaidCourtOnlyWhenApprovedTwoHoursAhead() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
+        var service = holdService(payments, wallets);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        // The clock is 10:00 UTC; 12:00 is exactly two hours ahead, 11:00 is one hour ahead.
+        CourtBooking inTime = court(today, LocalTime.of(12, 0), "vnpay", "paid");
+        CourtBooking late = court(today, LocalTime.of(11, 0), "vnpay", "paid");
+        inTime.setId(1L);
+        late.setId(2L);
+        var paidInTime = successPayment("100000");
+        var paidLate = successPayment("100000");
+        when(payments.findAllByCourtBookingId(1L)).thenReturn(List.of(paidInTime));
+        when(payments.findAllByCourtBookingId(2L)).thenReturn(List.of(paidLate));
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of());
+        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of(inTime, late));
+
+        service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold");
+
+        assertEquals("refunded", paidInTime.getStatus());
+        assertEquals("success", paidLate.getStatus());
+        org.mockito.Mockito.verify(wallets).creditCourtRefund(eq(10L), eq(new java.math.BigDecimal("100000")), eq("COURT_REFUND_1"), any());
+        org.mockito.Mockito.verifyNoMoreInteractions(wallets);
+    }
+
+    @Test
+    void holdForfeitsACourtQuotaSlotWithinTwoHours() {
+        var service = holdService(null, null);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        CourtBooking inTime = court(today, LocalTime.of(12, 0), "package_quota", "covered");
+        CourtBooking late = court(today, LocalTime.of(11, 59), "package_quota", "covered");
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of());
+        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of(inTime, late));
+
+        service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold");
+
+        assertFalse(inTime.isQuotaForfeited());
+        assertTrue(late.isQuotaForfeited());
+    }
+
     private static CoachBooking pt(LocalDate date) {
         CoachBooking booking = new CoachBooking();
         booking.setBookingDate(date);

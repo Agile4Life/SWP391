@@ -164,6 +164,11 @@ public class MembershipSubscription {
     public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
     public boolean isHoldDaysCredited() { return Boolean.TRUE.equals(holdDaysCredited); }
     public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
+    /** True when an approved hold covers {@code date}: nothing may be booked on a held day. */
+    public boolean isHeldOn(LocalDate date) {
+        return "APPROVED".equalsIgnoreCase(holdStatus) && holdStartDate != null && holdEndDate != null
+                && !date.isBefore(holdStartDate) && !date.isAfter(holdEndDate);
+    }
     public boolean isHoldUsed() { return Boolean.TRUE.equals(holdUsed); }
     public void setHoldUsed(boolean holdUsed) { this.holdUsed = holdUsed; }
     public User getHoldResolvedBy() { return holdResolvedBy; }

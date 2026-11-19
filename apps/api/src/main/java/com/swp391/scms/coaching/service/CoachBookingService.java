@@ -381,8 +381,13 @@ public class CoachBookingService {
                         && !sub.getStartDate().isAfter(LocalDate.now(clock))
                         && !sub.getEndDate().isBefore(LocalDate.now(clock))
                         && !sub.getStartDate().isAfter(request.bookingDate())
-                        && !sub.getEndDate().isBefore(request.bookingDate()))
+                        && !sub.getEndDate().isBefore(request.bookingDate())
+                        && !sub.isHeldOn(request.bookingDate()))
                 .toList();
+        if (subscriptionRepository.existsApprovedHoldCovering(member.getUserId(), request.bookingDate())) {
+            throw new BadRequestException("MEMBERSHIP_ON_HOLD", "error.coach_booking.membership_on_hold",
+                    new Object[]{request.bookingDate()}, "Gói tập đang bảo lưu vào ngày đặt lịch.");
+        }
         if (validSubscriptions.isEmpty()) {
             throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription", null,
                     "Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.");

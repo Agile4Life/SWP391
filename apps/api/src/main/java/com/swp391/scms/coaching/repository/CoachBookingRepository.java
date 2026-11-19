@@ -66,7 +66,7 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             where cb.member.userId = :memberId
               and cb.bookingDate between :startDate and :endDate
               and cb.paymentMethod = :paymentMethod
-              and cb.status <> 'cancelled'
+              and (cb.status <> 'cancelled' or coalesce(cb.quotaForfeited, false) = true)
             """)
     long countMonthlyQuotaUsage(
             @Param("memberId") Long memberId,

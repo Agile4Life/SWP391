@@ -151,6 +151,7 @@ public class CourtBookingService {
         LocalTime end = start.plusHours(1);
         if (start.isBefore(room.getOpenTime()) || !end.isAfter(start) || end.isAfter(room.getCloseTime())) throw invalid("invalid_slot");
         Member member = members.findByUserIdForUpdate(principal.id()).orElseThrow(() -> forbidden("membership_invalid"));
+        if (subscriptions.existsApprovedHoldCovering(principal.id(), date)) throw forbidden("membership_on_hold");
         if (member.getUser().getDeletedAt() != null || !"active".equals(member.getUser().getStatus())
                 || !subscriptions.hasActiveMembershipCoveringSession(principal.id(), now().toLocalDate(), date)) {
             throw forbidden("membership_invalid");

@@ -63,7 +63,8 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
 
     long countByMemberIdAndBookingDateAndStatus(Long memberId, LocalDate bookingDate, String status);
 
-    @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "
+    @Query("select count(b) from CourtBooking b where b.member.id = :memberId "
+            + "and (b.status = 'booked' or coalesce(b.quotaForfeited, false) = true) "
             + "and b.paymentMethod = :method and b.bookingDate between :from and :to")
     long countQuotaUsage(@Param("memberId") Long memberId, @Param("from") LocalDate from, @Param("to") LocalDate to,
                          @Param("method") String method);

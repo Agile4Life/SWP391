@@ -82,10 +82,21 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
             where s.member.userId = :memberId and s.status = 'active'
               and s.startDate <= :today and s.endDate >= :today
               and s.startDate <= :sessionDate and s.endDate >= :sessionDate
+              and (coalesce(s.holdStatus, '') <> 'APPROVED' or s.holdStartDate is null or s.holdEndDate is null
+                   or s.holdStartDate > :sessionDate or s.holdEndDate < :sessionDate)
             """)
     boolean hasActiveMembershipCoveringSession(@Param("memberId") Long memberId,
                                                @Param("today") LocalDate today,
                                                @Param("sessionDate") LocalDate sessionDate);
+
+    /** True when an approved hold (running or still to start) covers {@code date}; used to say "on hold" instead of "no plan". */
+    @Query("""
+            select (count(s) > 0) from MembershipSubscription s
+            where s.member.userId = :memberId and s.status in ('active', 'frozen')
+              and s.holdStatus = 'APPROVED'
+              and s.holdStartDate <= :date and s.holdEndDate >= :date
+            """)
+    boolean existsApprovedHoldCovering(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
     @Query("""
             select s from MembershipSubscription s

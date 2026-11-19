@@ -23,6 +23,8 @@ public class CourtBooking {
     @Column(name = "created_at", nullable = false, updatable = false) private LocalDateTime createdAt;
     @Column(name = "cancelled_at") private LocalDateTime cancelledAt;
     @Column(name = "cancel_reason", length = 255) private String cancelReason;
+    /** A package slot cancelled by a hold too close to the start: it still counts against the monthly quota. */
+    @Column(name = "quota_forfeited") private Boolean quotaForfeited = false;
     /** Court fee for the slot; null on bookings made before pricing existed (they were free). */
     @Column(precision = 12, scale = 2) private BigDecimal price;
     /** {@code package_quota} when the plan covered the slot, otherwise the method paid at booking time. */
@@ -46,6 +48,8 @@ public class CourtBooking {
     public void setCreatedAt(LocalDateTime value) { createdAt = value; }
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(LocalDateTime value) { cancelledAt = value; }
+    public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
+    public void setQuotaForfeited(boolean value) { quotaForfeited = value; }
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String value) { cancelReason = value; }
     public BigDecimal getPrice() { return price; }

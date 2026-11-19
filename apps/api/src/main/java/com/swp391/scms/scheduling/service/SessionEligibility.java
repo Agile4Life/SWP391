@@ -51,6 +51,10 @@ final class SessionEligibility {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_INVALID",
                     "error.scheduling.membership_expired_or_inactive", null, "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch");
         }
+        if (subscriptions.existsApprovedHoldCovering(memberId, sessionDate)) {
+            throw new ForbiddenException("SCHEDULING_MEMBERSHIP_ON_HOLD", "error.scheduling.membership_on_hold",
+                    new Object[]{sessionDate}, "Gói tập đang bảo lưu vào ngày " + sessionDate);
+        }
         // One currently active period must cover both dates; do not combine future renewals.
         if (!subscriptions.hasActiveMembershipCoveringSession(memberId, today, sessionDate)) {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION",
