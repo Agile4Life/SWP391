@@ -561,7 +561,6 @@ public class PaymentService {
         if (vnpayGuard != null) vnpayGuard.refund(paymentId);
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", paymentId));
-        lockSubscriptionMember(payment);
         // Two concurrent refunds must not both read the same refundedAmount.
         if (entityManager != null) entityManager.refresh(payment, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
 

@@ -237,7 +237,31 @@ class MembershipCancellationServiceTest {
         when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setId(1L); paid.setSubscriptionId(100L); paid.setAmount(new java.math.BigDecimal("320000")); paid.setStatus("success");
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+
         service.decide(manager, 7L, true, new CancellationDtos.Decision("Approved", new java.math.BigDecimal("110000")));
         verify(walletService).creditRefund(10L, new java.math.BigDecimal("110000"), "CANCEL_REQ_7", "Moving");
+        // The payment carries the refund, so revenue drops and /payments/{id}/refund can only pay the rest.
+        assertThat(paid.getRefundedAmount()).isEqualByComparingTo("110000");
+        assertThat(paid.getStatus()).isEqualTo("success");
+    }
+
+    @Test
+    void decide_rejectsRefundAboveWhatWasPaid() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        stubDecision();
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setId(1L); paid.setSubscriptionId(100L); paid.setAmount(new java.math.BigDecimal("320000")); paid.setStatus("success");
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+        lenient().when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active));
+        lenient().when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThatThrownBy(() -> service.decide(manager, 7L, true,
+                new CancellationDtos.Decision("Approved", new java.math.BigDecimal("320001"))))
+                .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(walletService);
     }
 }
