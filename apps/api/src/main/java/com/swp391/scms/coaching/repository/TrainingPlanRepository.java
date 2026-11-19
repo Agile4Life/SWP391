@@ -39,5 +39,10 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
 
     @org.springframework.data.jpa.repository.Query("select (count(p) > 0) from TrainingPlan p where p.coach.userId = :coachId and p.member.userId = :memberId")
     boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId, @org.springframework.data.repository.query.Param("memberId") Long memberId);
-}
 
+    /** Active plans whose cycle ended before {@code today} become completed (state machine 7). */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update TrainingPlan p set p.status = 'completed', p.updatedAt = :now where p.status = 'active' and p.endDate < :today")
+    int completeEndedBefore(@org.springframework.data.repository.query.Param("today") java.time.LocalDate today,
+                            @org.springframework.data.repository.query.Param("now") java.time.LocalDateTime now);
+}

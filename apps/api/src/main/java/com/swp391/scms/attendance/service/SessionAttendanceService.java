@@ -253,9 +253,11 @@ public class SessionAttendanceService {
             }
         }
         if (sessionBookings != null) {
-            for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, "booked")) {
-                if (booking.getMember() != null) {
-                    enrollmentStatus.putIfAbsent(booking.getMember().getUserId(), "booked");
+            for (String bookingStatus : List.of("booked", "completed")) {
+                for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, bookingStatus)) {
+                    if (booking.getMember() != null) {
+                        enrollmentStatus.putIfAbsent(booking.getMember().getUserId(), bookingStatus);
+                    }
                 }
             }
         }

@@ -144,4 +144,12 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     long countScheduledForCoachBetween(@Param("coachId") Long coachId,
                                        @Param("startDate") java.time.LocalDate startDate,
                                        @Param("endDate") java.time.LocalDate endDate);
+
+    /** Sessions held before {@code cutoff} become completed (state machine 4). */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("""
+            update ClassSession s set s.status = 'completed', s.updatedAt = :now
+            where s.status = 'scheduled' and s.sessionDate < :cutoff
+            """)
+    int completeHeldBefore(@Param("cutoff") LocalDate cutoff, @Param("now") java.time.LocalDateTime now);
 }

@@ -104,4 +104,15 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @org.springframework.data.repository.query.Param("memberId") Long memberId,
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
+    /** A course enrollment completes once every non-cancelled session of its class was held before {@code cutoff}. */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("""
+            update ClassEnrollment e set e.status = 'completed'
+            where e.status = 'booked'
+              and exists (select s.id from ClassSession s where s.gymClass = e.gymClass and s.status <> 'cancelled')
+              and not exists (select s.id from ClassSession s where s.gymClass = e.gymClass
+                              and s.status <> 'cancelled' and s.sessionDate >= :cutoff)
+            """)
+    int completeFinishedBefore(@Param("cutoff") java.time.LocalDate cutoff);
 }

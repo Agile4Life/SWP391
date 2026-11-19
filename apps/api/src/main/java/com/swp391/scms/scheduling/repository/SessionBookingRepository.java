@@ -110,4 +110,13 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
     List<Long> findMemberIdsWithBooked();
 
     boolean existsBySessionGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
+
+    /** Bookings of sessions held before {@code cutoff} are settled as completed (state machine 12). */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("""
+            update SessionBooking b set b.status = 'completed'
+            where b.status = 'booked'
+              and b.session in (select s from ClassSession s where s.status <> 'cancelled' and s.sessionDate < :cutoff)
+            """)
+    int completeHeldBefore(@Param("cutoff") LocalDate cutoff);
 }

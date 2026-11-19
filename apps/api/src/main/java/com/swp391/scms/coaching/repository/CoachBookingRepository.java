@@ -177,4 +177,9 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             """)
     long countConfirmedForCoachBetween(@Param("coachId") Long coachId, @Param("startDate") LocalDate startDate,
                                        @Param("endDate") LocalDate endDate);
+
+    /** Confirmed 1:1 sessions held before {@code cutoff} become completed. */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("update CoachBooking cb set cb.status = 'completed' where cb.status = 'confirmed' and cb.bookingDate < :cutoff")
+    int completeHeldBefore(@Param("cutoff") LocalDate cutoff);
 }
