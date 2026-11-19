@@ -219,9 +219,9 @@ export function CheckoutPage() {
       <section className={inPortal ? 'shop-page' : 'fit-section shop-page'}>
         <div className="fit-catalog-state" role="status">
           <h1>{sourceText("Giỏ hàng đang trống.")}</h1>
-          <Link to={productsBase} className="fit-pill">
+          <Link to={productsBase} className={inPortal ? 'btn-primary' : 'fit-pill'}>
             <span>{sourceText("Xem sản phẩm")}</span>
-            <RoundArrow />
+            {!inPortal && <RoundArrow />}
           </Link>
         </div>
       </section>,

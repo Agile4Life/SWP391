@@ -755,7 +755,7 @@ export function StaffReceptionPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
                               <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
                                 {formatPrice(item.packagePrice)}
