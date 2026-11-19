@@ -36,7 +36,8 @@ BEGIN
     ORDER BY id
     FOR UPDATE;
 
-    IF NEW.status = 'booked' THEN
+    -- Re-saving a seat already held in the same class takes no new seat.
+    IF NEW.status = 'booked' AND NOT (TG_OP = 'UPDATE' AND OLD.status = 'booked' AND OLD.class_id = NEW.class_id) THEN
         SELECT capacity INTO class_capacity FROM classes WHERE id = NEW.class_id;
         SELECT COUNT(*) INTO booked_count
         FROM class_enrollments
@@ -300,7 +301,8 @@ DECLARE
     business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
     target_date date;
 BEGIN
-    IF NEW.status <> 'booked' THEN
+    IF NEW.status <> 'booked' OR (TG_OP = 'UPDATE' AND OLD.status = 'booked'
+            AND OLD.session_id = NEW.session_id AND OLD.member_id = NEW.member_id) THEN
         RETURN NEW;
     END IF;
     SELECT session_date INTO target_date FROM class_sessions WHERE id = NEW.session_id;
