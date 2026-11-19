@@ -27,7 +27,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/portal', element: <PortalHome /> },
       {
-        element: <RoleGuard allowedRoles={['MEMBER', 'STAFF', 'COACH']} />,
+        element: <RoleGuard allowedRoles={['MEMBER', 'STAFF', 'COACH', 'MANAGER']} />,
         children: [{ path: '/messages', lazy: async () => ({ Component: (await import('../features/chat/ChatPage')).ChatPage }) }],
       },
 
@@ -324,8 +324,9 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/manager/ManagerCoachReviewsPage')).ManagerCoachReviewsPage }),
           },
           {
+            // Khiếu nại chuyển lên được quản lý xử lý trong khung Tin nhắn như lễ tân.
             path: '/manager/support',
-            lazy: async () => ({ Component: (await import('../features/support/StaffSupportPage')).StaffSupportPage }),
+            element: <Navigate to="/messages?tab=support" replace />,
           },
           {
             path: '/manager/requests',

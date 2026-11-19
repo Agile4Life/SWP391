@@ -46,7 +46,7 @@ it('uses safe action links and rejects external or other-role destinations', () 
 
 it('opens staff and manager support notifications in their own queues', () => {
   expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'STAFF')).toBe('/messages?tab=support');
-  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/manager/support');
+  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/messages?tab=support');
 });
 
 it('product_order notifications open the right page per role', () => {

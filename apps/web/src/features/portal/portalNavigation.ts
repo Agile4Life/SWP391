@@ -86,10 +86,8 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
   { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
-  { to: '/manager/support', label: 'Khiếu nại & Đơn từ', icon: 'inbox', roles: ['MANAGER'], tabs: [
-    { to: '/manager/support', label: 'Khiếu nại chuyển lên', en: 'Escalated tickets' },
-    { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', en: 'Internal requests' },
-  ] },
+  // Khiếu nại chuyển lên nằm trong khung Tin nhắn (Hỗ trợ & Khiếu nại), sidebar chỉ còn đơn nội bộ.
+  { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', icon: 'inbox', roles: ['MANAGER'] },
   { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'badge', roles: ['MANAGER'] },
   { to: '/member/profile', label: 'Hồ sơ & Sức khỏe', icon: 'profile', roles: ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] },
 ];
@@ -145,7 +143,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/staff/classes': 'Classes & Scheduling',
   '/staff/kyc': 'Reviews & Holds',
   '/staff/pt-attendance': '1:1 Attendance',
-  '/manager/support': 'Escalations & Requests',
+  '/manager/requests': 'Internal requests',
   '/manager/staff-accounts': 'Staff Accounts',
   '/member/profile': 'Profile & Health',
 };

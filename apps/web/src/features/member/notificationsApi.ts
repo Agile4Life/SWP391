@@ -53,7 +53,7 @@ export function notificationDestination(notification: Pick<MemberNotification, '
   if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
     const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
     if (notification.relatedEntityType === 'product_order' || notification.type === 'order') return manager ? '/manager/products?tab=orders' : '/staff/orders';
-    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return manager ? '/manager/support' : '/messages?tab=support';
+    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
     if (['class_session', 'class_enrollment'].includes(notification.relatedEntityType ?? '') || ['schedule_change', 'class_reminder'].includes(notification.type)) return '/staff/classes';
     return manager ? '/manager/reports' : '/staff/reception';
   }

@@ -11,10 +11,10 @@ describe('complaint navigation', () => {
   });
 
   it('routes complaints to receptionists and managers only', () => {
-    // Lễ tân nhận khiếu nại của hội viên trong Tin nhắn, không còn mục sidebar riêng.
+    // Lễ tân và quản lý xử lý khiếu nại trong Tin nhắn, không còn mục sidebar riêng.
     expect(linksFor('STAFF')).not.toContain('/staff/support');
     expect(linksFor('MEMBER')).not.toContain('/member/support');
-    expect(linksFor('MANAGER')).toContain('/manager/support');
+    expect(linksFor('MANAGER')).not.toContain('/manager/support');
     expect(linksFor('MANAGER')).not.toContain('/coach/support');
     expect(linksFor('MEMBER')).not.toContain('/staff/support');
     expect(linksFor('MEMBER')).not.toContain('/manager/support');
