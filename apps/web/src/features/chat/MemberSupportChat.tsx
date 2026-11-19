@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { useI18n } from '../../shared/i18n';
-import { createSupportTicket, getMySupportTickets, getSupportMessages, getSupportTicket, sendSupportMessage, type SupportMessage, type SupportTicket } from '../member/memberSupportApi';
+import { closeSupportTicket, createSupportTicket, getMySupportTickets, getSupportMessages, getSupportTicket, sendSupportMessage, type SupportMessage, type SupportTicket } from '../member/memberSupportApi';
 import { subscribeSupport } from '../member/supportRealtime';
 import type { ChatConnection } from './chatRealtime';
 import type { ChatError } from './chatMessages';
@@ -40,6 +40,8 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   const [pending, setPending] = useState<string | null>(null);
   const [showTickets, setShowTickets] = useState(false);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
+  const [closing, setClosing] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
   const alive = useRef(false);
   const selection = useRef<number | null>(null);
   const listRequest = useRef(0);
@@ -157,6 +159,22 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     }
   }
 
+  async function closeTicket() {
+    if (!ticket || closing) return;
+    setClosing(true);
+    setCloseError(null);
+    try {
+      const updated = await closeSupportTicket(ticket.id);
+      if (!alive.current) return;
+      setDetail(updated);
+      setTickets(list => list.map(item => item.id === updated.id ? { ...item, status: updated.status } : item));
+    } catch (error) {
+      if (alive.current) setCloseError(error instanceof Error ? error.message : t('Không thể đóng phiếu. Vui lòng thử lại.', 'Could not close the ticket. Please try again.'));
+    } finally {
+      if (alive.current) setClosing(false);
+    }
+  }
+
   const bubbles = useMemo(() => supportBubbles(ticket, messages, true), [ticket, messages]);
   const closed = ticket?.status === 'closed';
   const newMode = selectedId == null;
@@ -217,6 +235,13 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
       ? <div className="direct-chat__compose support-chat__closed"><p className="direct-chat__muted">{t('Phiếu đã đóng, không thể gửi thêm tin nhắn.', 'This ticket is closed. No further messages can be sent.')}</p>
         <button type="button" className="direct-chat__link" onClick={() => selectTicket(null)}>{t('Gửi yêu cầu mới', 'Send a new request')}</button></div>
       : <>
+        {ticket && (ticket.status === 'open' || ticket.status === 'resolved') && <div className="support-chat__closed">
+          {ticket.status === 'resolved' && <p className="direct-chat__muted">{t('Lễ tân đã giải quyết yêu cầu. Phiếu tự đóng sau 72 giờ nếu bạn không phản hồi.', 'The front desk resolved this request. It closes automatically after 72 hours without a reply.')}</p>}
+          {closeError && <p role="alert" className="direct-chat__error">{closeError}</p>}
+          <button type="button" className="direct-chat__link" disabled={closing} onClick={() => void closeTicket()}>
+            {closing ? t('Đang đóng…', 'Closing…') : ticket.status === 'resolved' ? t('Xác nhận đã giải quyết', 'Confirm resolved') : t('Rút yêu cầu', 'Withdraw request')}
+          </button>
+        </div>}
         {newMode && <div className="support-chat__categories" role="radiogroup" aria-label={t('Loại yêu cầu', 'Request category')}>
           {SUPPORT_CATEGORIES.map(item => <button key={item.value} type="button" role="radio" aria-checked={category === item.value} className={`support-chat__chip${category === item.value ? ' is-selected' : ''}`} disabled={sending} onClick={() => setCategory(item.value)}>{t(item.vi, item.en)}</button>)}
         </div>}

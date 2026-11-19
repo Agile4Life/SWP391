@@ -34,5 +34,6 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
         }
         return findByStatusOrderByCreatedAtDesc(status, pageable);
     }
-}
 
+    java.util.List<com.swp391.scms.support.entity.SupportRequest> findByStatusAndResolvedAtBefore(String status, java.time.LocalDateTime cutoff);
+}

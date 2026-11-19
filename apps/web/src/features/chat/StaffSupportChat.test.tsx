@@ -81,7 +81,7 @@ it('changes the ticket status from the status chips and offers only allowed tran
   vi.mocked(supportApi.updateSupportStatus).mockResolvedValue({ ...ticket, status: 'in_progress' });
   await openTicket();
   const chips = [...host.querySelectorAll('[role="radiogroup"][aria-label="Trạng thái phiếu"] [role="radio"]')].map(chip => chip.textContent);
-  expect(chips).toEqual(['Đang chờ', 'Đang xử lý', 'Đã giải quyết']);
+  expect(chips).toEqual(['Đang chờ', 'Đang xử lý']);
   await act(async () => byText('Đang xử lý').click());
   expect(supportApi.updateSupportStatus).toHaveBeenCalledWith(7, 'in_progress');
 });

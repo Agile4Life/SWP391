@@ -91,6 +91,13 @@ public class SupportRequestController {
         return ApiResponse.ok(msg("support.update_status.success"), result);
     }
 
+    @Operation(summary = "Hội viên rút phiếu đang mở hoặc xác nhận phiếu đã giải quyết (đóng phiếu)")
+    @PostMapping("/{id}/close")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ApiResponse<SupportRequestDto> close(@AuthenticationPrincipal AuthenticatedPrincipal principal, @PathVariable Long id) {
+        return ApiResponse.ok(msg("support.close.success"), supportRequestService.closeByMember(id, principal.id()));
+    }
+
     @Operation(summary = "Lễ tân chuyển khiếu nại không tự xử lý được lên quản lý")
     @PostMapping("/{id}/escalate")
     @PreAuthorize("hasRole('RECEPTIONIST')")

@@ -682,4 +682,43 @@ class SupportRequestServiceTest {
         assertThat(seen.escalationReason()).isNull();
         assertThat(seen.escalatedByName()).isNull();
     }
+
+    @Test
+    @DisplayName("Hội viên rút phiếu open hoặc xác nhận phiếu resolved; phiếu khác hoặc của người khác bị từ chối")
+    void closeByMember_onlyOwnerAndOnlyOpenOrResolved() {
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
+        when(supportRequestRepository.save(any(SupportRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toDto(any(SupportRequest.class))).thenReturn(
+                new SupportRequestDto(1L, 10L, "Nguyễn Văn A", null, null, "Lỗi", "Desc", "closed", LocalDateTime.now(), LocalDateTime.now()));
+
+        supportRequestService.closeByMember(1L, 10L);
+        assertThat(sampleRequest.getStatus()).isEqualTo("closed");
+
+        assertThatThrownBy(() -> supportRequestService.closeByMember(1L, 10L))
+                .isInstanceOf(com.swp391.scms.common.exception.BadRequestException.class);
+        sampleRequest.setStatus("resolved");
+        assertThatThrownBy(() -> supportRequestService.closeByMember(1L, 99L))
+                .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("Nhân viên không được nhảy open -> resolved hoặc in_progress -> closed")
+    void updateStatus_rejectsSkippingSteps() {
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("resolved", null), "RECEPTIONIST"))
+                .isInstanceOf(com.swp391.scms.common.exception.AppException.class);
+        sampleRequest.setStatus("in_progress");
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("closed", null), "RECEPTIONIST"))
+                .isInstanceOf(com.swp391.scms.common.exception.AppException.class);
+    }
+
+    @Test
+    @DisplayName("Phiếu resolved quá 72 giờ tự đóng")
+    void closeStaleResolved_closesOldResolvedTickets() {
+        sampleRequest.setStatus("resolved");
+        when(supportRequestRepository.findByStatusAndResolvedAtBefore(eq("resolved"), any(LocalDateTime.class)))
+                .thenReturn(java.util.List.of(sampleRequest));
+        assertThat(supportRequestService.closeStaleResolved()).isEqualTo(1);
+        assertThat(sampleRequest.getStatus()).isEqualTo("closed");
+    }
 }

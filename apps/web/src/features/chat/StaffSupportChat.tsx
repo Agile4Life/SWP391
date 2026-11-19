@@ -15,7 +15,7 @@ import './support-chat.css';
 
 type Status = SupportTicket['status'];
 const STATUSES = Object.keys(SUPPORT_STATUS_LABEL) as Status[];
-const TRANSITIONS: Record<Status, Status[]> = { open: ['open', 'in_progress', 'resolved'], in_progress: ['open', 'in_progress', 'resolved', 'closed'], resolved: ['in_progress', 'resolved', 'closed'], closed: ['closed'] };
+const TRANSITIONS: Record<Status, Status[]> = { open: ['open', 'in_progress'], in_progress: ['open', 'in_progress', 'resolved'], resolved: ['in_progress', 'resolved', 'closed'], closed: ['closed'] };
 
 /**
  * Hộp thư phiếu hỗ trợ của lễ tân trong khung Tin nhắn: danh sách phiếu như danh sách hội thoại,

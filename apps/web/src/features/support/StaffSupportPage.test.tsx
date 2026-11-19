@@ -215,8 +215,8 @@ it('keeps authoritative status when status update fails', async () => {
   vi.mocked(api.updateSupportStatus).mockRejectedValue(new Error('offline'));
   await render(); await open();
   const select = nativeSelect('#staff-support-status');
-  await act(async () => { select.value = 'resolved'; select.dispatchEvent(new Event('change', { bubbles: true })); });
-  expect(api.updateSupportStatus).toHaveBeenCalledWith(7, 'resolved');
+  await act(async () => { select.value = 'in_progress'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  expect(api.updateSupportStatus).toHaveBeenCalledWith(7, 'in_progress');
   expect(select.value).toBe('open');
   expect(host.querySelector('dialog [role="alert"]')).not.toBeNull();
 });

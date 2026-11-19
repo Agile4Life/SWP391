@@ -904,6 +904,38 @@ paths:
         '404':
           description: Phiếu hỗ trợ không tồn tại
 
+  /support/requests/{id}/close:
+    post:
+      summary: Hội viên rút phiếu đang mở hoặc xác nhận phiếu đã giải quyết (chỉ MEMBER, chủ phiếu)
+      description: >-
+        open → closed (rút yêu cầu) hoặc resolved → closed (xác nhận). Phiếu resolved không được hội viên phản hồi
+        sẽ tự đóng sau 72 giờ. Nhân viên chỉ chuyển open → in_progress → resolved (in_progress ↔ open, resolved → in_progress/closed).
+      tags: [Support]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Đã đóng phiếu
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SupportRequestDto'
+        '400':
+          description: Phiếu không ở trạng thái open/resolved (INVALID_STATE_TRANSITION)
+        '403':
+          description: Không phải chủ phiếu (FORBIDDEN)
+        '404':
+          description: Phiếu hỗ trợ không tồn tại
+
   /support/requests/{id}/escalate:
     post:
       summary: Lễ tân chuyển khiếu nại không tự xử lý được lên quản lý (chỉ RECEPTIONIST)

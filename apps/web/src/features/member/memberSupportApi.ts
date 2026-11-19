@@ -53,5 +53,9 @@ export const getSupportInbox = (page = 0, status = '') =>
 export const updateSupportStatus = (id: number, status: SupportTicket['status'], assignedTo?: number) =>
   apiFetch<SupportTicket>(`/support/requests/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, assignedTo }) });
 
+/** Member withdraws an open ticket or confirms a resolved one. */
+export const closeSupportTicket = (id: number) =>
+  apiFetch<SupportTicket>(`/support/requests/${id}/close`, { method: 'POST' });
+
 export const escalateSupportTicket = (id: number, reason: string) =>
   apiFetch<SupportTicket>(`/support/requests/${id}/escalate`, { method: 'POST', body: JSON.stringify({ reason }) });

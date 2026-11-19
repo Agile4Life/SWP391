@@ -35,6 +35,7 @@ import java.util.Set;
 @Service
 public class SupportRequestService {
 
+    static final long AUTO_CLOSE_HOURS = 72;
     private static final Set<String> VALID_STATUSES = Set.of("open", "in_progress", "resolved", "closed");
     private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST");
     private static final String MANAGER = "CENTER_MANAGER";
@@ -115,6 +116,48 @@ public class SupportRequestService {
         notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
                 saved.getId(), dto.subject());
         return supportRequestMapper.toDto(saved).forMember();
+    }
+
+    /** Member withdraws an open ticket or confirms a resolved one; both end in {@code closed}. */
+    @Transactional
+    @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
+    public SupportRequestDto closeByMember(Long id, Long memberId) {
+        SupportRequest request = supportRequestRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
+        if (request.getMember() == null || !Objects.equals(request.getMember().getUserId(), memberId)) {
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        }
+        String status = request.getStatus() == null ? "" : request.getStatus().toLowerCase(Locale.ROOT);
+        if (!"open".equals(status) && !"resolved".equals(status)) {
+            throw new BadRequestException("INVALID_STATE_TRANSITION", "support.close.invalid_state", null,
+                    "Only an open or resolved request can be closed by the member");
+        }
+        request.setStatus("closed");
+        if (request.getResolvedAt() == null) request.setResolvedAt(LocalDateTime.now(clock));
+        SupportRequest saved = supportRequestRepository.save(request);
+        return supportRequestMapper.toDto(saved != null ? saved : request).forMember();
+    }
+
+    /** Resolved tickets the member did not answer for 72 hours are closed automatically. */
+    @Transactional
+    public int closeStaleResolved() {
+        LocalDateTime cutoff = LocalDateTime.now(clock).minusHours(AUTO_CLOSE_HOURS);
+        int closed = 0;
+        for (SupportRequest request : supportRequestRepository.findByStatusAndResolvedAtBefore("resolved", cutoff)) {
+            request.setStatus("closed");
+            supportRequestRepository.save(request);
+            closed++;
+        }
+        return closed;
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(cron = "${app.support.auto-close.cron:0 0 * * * ?}")
+    public void autoCloseResolved() {
+        try {
+            closeStaleResolved();
+        } catch (RuntimeException ignored) {
+            // Retried on the next hourly run.
+        }
     }
 
     @Transactional(readOnly = true)
@@ -480,8 +523,9 @@ public class SupportRequestService {
             return;
         }
         boolean valid = switch (currentStatus == null ? "" : currentStatus.toLowerCase()) {
-            case "open" -> "in_progress".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus);
-            case "in_progress" -> "open".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus) || "closed".equalsIgnoreCase(targetStatus);
+            // Staff take a ticket before resolving it; closing comes after resolving (member confirms or 72h pass).
+            case "open" -> "in_progress".equalsIgnoreCase(targetStatus);
+            case "in_progress" -> "open".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus);
             case "resolved" -> "in_progress".equalsIgnoreCase(targetStatus) || "closed".equalsIgnoreCase(targetStatus);
             default -> false;
         };
