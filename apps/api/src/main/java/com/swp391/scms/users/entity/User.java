@@ -52,6 +52,10 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    /** Tokens issued before this moment are rejected, so a password change signs out every other session. */
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -97,7 +101,15 @@ public class User {
     public void setPhone(String phone) { this.phone = phone; }
 
     public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+    public void setPasswordHash(String passwordHash) {
+        // Replacing an existing password (reset, change) revokes older tokens; setting the first one does not.
+        if (this.passwordHash != null && !this.passwordHash.equals(passwordHash)) {
+            this.passwordChangedAt = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        }
+        this.passwordHash = passwordHash;
+    }
+    public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
 
     public LocalDate getDob() { return dob; }
     public void setDob(LocalDate dob) { this.dob = dob; }

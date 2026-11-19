@@ -1,4 +1,4 @@
-import { apiFetch } from '../../shared/api/client';
+import { apiFetch, setAuthSession } from '../../shared/api/client';
 
 export interface Profile {
   userId: number;
@@ -74,11 +74,14 @@ export const submitMemberKyc = (data: MemberKycRequest) =>
 export const uploadAvatar = (avatarUrl: string | null) =>
   apiFetch<Profile>('/profile/avatar', { method: 'POST', body: JSON.stringify({ avatarUrl }) });
 
-export const changePassword = (currentPassword: string, newPassword: string) =>
-  apiFetch<void>('/profile/password', {
+/** Changing the password signs out every other session; the API returns a fresh token for this one. */
+export const changePassword = async (currentPassword: string, newPassword: string) => {
+  const renewed = await apiFetch<{ token: string; username: string; role: string; fullName?: string | null } | null>('/profile/password', {
     method: 'POST',
     body: JSON.stringify({ currentPassword, newPassword }),
   });
+  if (renewed?.token) setAuthSession(renewed.token, renewed.username, renewed.role, renewed.fullName);
+};
 
 export const updateCoachProfile = (payload: CoachProfileUpdate) =>
   apiFetch<void>('/profile/coach', { method: 'PUT', body: JSON.stringify(payload) });

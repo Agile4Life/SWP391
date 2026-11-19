@@ -48,6 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             AuthenticationUser user = userRepository.findAuthenticationById(userId.longValue()).orElse(null);
             if (user == null || !"active".equalsIgnoreCase(user.status())) return;
+            if (issuedBeforePasswordChange(claims.getIssuedAt(), user.passwordChangedAt())) return;
 
             String role = user.roleCode();
             AuthenticatedPrincipal principal = new AuthenticatedPrincipal(user.id(), user.username(), role);
@@ -58,5 +59,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (JwtException | IllegalArgumentException ex) {
             SecurityContextHolder.clearContext();
         }
+    }
+
+    /** JWT {@code iat} has second precision, so a token issued in the same second as the change is still accepted. */
+    static boolean issuedBeforePasswordChange(java.util.Date issuedAt, java.time.LocalDateTime changedAt) {
+        if (changedAt == null) return false;
+        if (issuedAt == null) return true;
+        return issuedAt.toInstant().isBefore(changedAt.atZone(java.time.ZoneId.systemDefault()).toInstant());
     }
 }

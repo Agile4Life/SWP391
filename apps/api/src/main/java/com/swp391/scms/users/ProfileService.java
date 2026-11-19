@@ -41,6 +41,9 @@ public class ProfileService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private KycCrypto kycCrypto;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.security.JwtService jwtService;
+
     public ProfileService(UserRepository userRepository, MemberRepository memberRepository,
                           CoachRepository coachRepository, ReceptionistRepository receptionistRepository) {
         this(userRepository, memberRepository, coachRepository, receptionistRepository, null, null, null);
@@ -67,7 +70,7 @@ public class ProfileService {
 
     @Transactional
     @Audited(action = "PASSWORD_CHANGE", entity = "users")
-    public void changePassword(Long userId, String currentPassword, String newPassword) {
+    public com.swp391.scms.auth.dto.AuthTokenResponse changePassword(Long userId, String currentPassword, String newPassword) {
         User user = findActiveUser(userId);
         if (passwordEncoder != null && !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new BadRequestException("INVALID_CURRENT_PASSWORD", "users.profile.password.invalid_current", null, null);
@@ -89,6 +92,12 @@ public class ProfileService {
                     user.getId()
             );
         }
+        // The change revokes every older token; this session keeps working with a fresh one.
+        if (jwtService == null) return null;
+        String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
+        String role = user.getRole() != null ? user.getRole().getCode() : null;
+        return new com.swp391.scms.auth.dto.AuthTokenResponse(jwtService.generateToken(user.getId(), username, role),
+                username, role, user.getFullName());
     }
 
     @Transactional(readOnly = true)

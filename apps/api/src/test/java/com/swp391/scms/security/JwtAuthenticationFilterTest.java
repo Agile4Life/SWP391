@@ -72,6 +72,30 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void refusesTokensIssuedBeforeThePasswordChangedButAcceptsNewerOnes() throws Exception {
+        var token = jwt.generateToken(10L, "member", "MEMBER");
+        java.time.LocalDateTime later = java.time.LocalDateTime.now().plusMinutes(1);
+        when(users.findAuthenticationById(10L))
+                .thenReturn(Optional.of(new AuthenticationUser(10L, "member", "active", "MEMBER", later)))
+                .thenReturn(Optional.of(new AuthenticationUser(10L, "member", "active", "MEMBER",
+                        java.time.LocalDateTime.now().minusMinutes(1))));
+        request(token);
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        SecurityContextHolder.clearContext();
+        request(token);
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void replacingAPasswordStampsTheChangeButSettingTheFirstOneDoesNot() {
+        var user = new com.swp391.scms.users.entity.User();
+        user.setPasswordHash("first");
+        assertNull(user.getPasswordChangedAt());
+        user.setPasswordHash("second");
+        assertNotNull(user.getPasswordChangedAt());
+    }
+
+    @Test
     void rejectsTokensSignedWithAnotherSecretBeforeAccessingTheDatabase() throws Exception {
         var otherSigner = new JwtService("another-test-signing-secret-with-at-least-32-bytes", 60000L);
         request(otherSigner.generateToken(10L, "member", "MEMBER"));

@@ -19,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByIdAndDeletedAtIsNull(Long id);
     // Tài khoản cấp phát nội bộ (admin bootstrap, nhân sự, demo) chỉ có email: dùng email làm tên đăng nhập hiển thị,
     // khớp với phản hồi đăng nhập, để /auth/me không trả null khiến frontend tự đăng xuất.
-    @Query("select new com.swp391.scms.users.dto.AuthenticationUser(u.id, coalesce(nullif(u.username, ''), u.email), u.status, r.code) "
+    @Query("select new com.swp391.scms.users.dto.AuthenticationUser(u.id, coalesce(nullif(u.username, ''), u.email), u.status, r.code, u.passwordChangedAt) "
             + "from User u join u.role r where u.id = :id and u.deletedAt is null")
     Optional<AuthenticationUser> findAuthenticationById(@Param("id") Long id);
     Optional<User> findByUsernameIgnoreCase(String username);

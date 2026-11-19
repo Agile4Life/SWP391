@@ -439,7 +439,22 @@ paths:
                 currentPassword: { type: string, minLength: 1 }
                 newPassword: { type: string, minLength: 6, maxLength: 50 }
       responses:
-        '200': { description: Password updated }
+        '200':
+          description: >-
+            Password updated. Every token issued before the change is rejected from now on (other devices are signed
+            out); data carries a fresh token for the current session.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      username: { type: string }
+                      role: { type: string }
+                      fullName: { type: string, nullable: true }
         '400': { description: INVALID_CURRENT_PASSWORD / PASSWORD_UNCHANGED }
   /profile/kyc:
     post:

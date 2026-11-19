@@ -67,10 +67,10 @@ public class ProfileController {
 
     @Operation(summary = "Đổi mật khẩu cá nhân", description = "Xác minh mật khẩu hiện tại, cập nhật mật khẩu mới và gửi email thông báo")
     @PostMapping("/password")
-    public ApiResponse<Void> changeMyPassword(@AuthenticationPrincipal AuthenticatedPrincipal principal,
+    public ApiResponse<com.swp391.scms.auth.dto.AuthTokenResponse> changeMyPassword(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                               @Valid @RequestBody ChangePasswordRequest request) {
-        profileService.changePassword(principal.id(), request.currentPassword(), request.newPassword());
-        return ApiResponse.ok(msg("users.profile.password.success"), null);
+        return ApiResponse.ok(msg("users.profile.password.success"),
+                profileService.changePassword(principal.id(), request.currentPassword(), request.newPassword()));
     }
 
     @Operation(summary = "Xác minh danh tính CCCD/Hộ chiếu", description = "Cập nhật thông tin định danh (CCCD/Hộ chiếu) và đồng bộ họ tên tài khoản trước khi đăng ký gói tập đầu tiên")
