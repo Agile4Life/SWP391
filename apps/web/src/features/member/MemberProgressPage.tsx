@@ -1,6 +1,6 @@
 import { memberText } from './memberI18n';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getMyProgressMetrics, getMyTrainingPlans, type ProgressMetric, type TrainingPlan } from './memberProgressApi';
@@ -21,6 +21,12 @@ type LoadState<T> = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; d
 
 function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; metric: 'weight' | 'bmi'; label: string; unit: string }) {
   useLanguage();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Mở biểu đồ ở tuần mới nhất; các tuần cũ cuộn sang trái.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [points.length]);
   const values = points.map((point) => point[metric]);
   const available = values.filter((value): value is number => value != null);
   if (available.length === 0) return <p className="portal-empty">{memberText("Chưa có số đo ")}{label.toLowerCase()}.</p>;
@@ -32,7 +38,7 @@ function WeeklyChart({ points, metric, label, unit }: { points: WeeklyPoint[]; m
   const width = Math.max(350, 68 + (points.length - 1) * 84);
   // Nối các điểm có số đo thành một đường liền, kể cả khi có tuần thiếu số đo.
   const segments: string[][] = [values.flatMap((value, index) => value == null ? [] : [`${x(index)},${y(value)}`])];
-  return <div className="member-progress-chart-scroll"><svg className="member-progress-chart" width={width} height="205" viewBox={`0 0 ${width} 205`} role="img" aria-label={memberText(`${label} theo tuần, ${unit}`, `${label} by week, ${unit}`)}>
+  return <div className="member-progress-chart-scroll" ref={scrollRef}><svg className="member-progress-chart" width={width} height="205" viewBox={`0 0 ${width} 205`} role="img" aria-label={memberText(`${label} theo tuần, ${unit}`, `${label} by week, ${unit}`)}>
     <line x1="34" y1="160" x2={width - 24} y2="160" stroke="currentColor" opacity=".3" />
     {segments.map((segment, index) => <polyline key={index} points={segment.join(' ')} fill="none" stroke="var(--portal-salmon)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />)}
     {points.map((point, index) => <g key={point.weekStart}>
@@ -49,7 +55,7 @@ function ProgressSummary({ points }: { points: WeeklyPoint[] }) {
     if (values.length === 0) return null;
     const latest = values[values.length - 1];
     const delta = values.length > 1 ? Math.round((latest - values[0]) * 10) / 10 : null;
-    return <div className="progress-summary__tile">
+    return <div key={metric} className="progress-summary__tile">
       <span className="progress-summary__label">{label}</span>
       <strong className="progress-summary__value">{latest}<small> {unit}</small></strong>
       {delta !== null && <span className={`progress-summary__delta${delta === 0 ? '' : delta < 0 ? ' is-down' : ' is-up'}`}>{delta > 0 ? '+' : ''}{delta} {memberText('so với tuần đầu', 'since the first week')}</span>}

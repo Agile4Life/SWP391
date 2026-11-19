@@ -1319,9 +1319,10 @@ export function MemberPackagesPage() {
 
                   <button
                     type="button"
-                    className="btn-primary"
+                    className={disabled ? 'btn-secondary' : 'btn-primary'}
                     style={{ marginTop: 18, width: '100%' }}
                     disabled={submittingPackageId !== null || isStatusSyncing}
+                    aria-disabled={disabled || undefined}
                     onClick={() => {
                       if (disabled) {
                         setBlockedMessage(blockedReason ?? (renewalConflict || nextRenewals > 1
