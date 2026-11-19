@@ -14,6 +14,7 @@ import { ChatThread } from './ChatThread';
 import { AiChatThread } from './AiChatThread';
 import { SupportThread } from './SupportThread';
 import { AI_PEER } from './aiPeer';
+import type { SupportAudience } from './supportChat';
 import { useI18n } from '../../shared/i18n';
 import './chat.css';
 
@@ -44,20 +45,22 @@ export interface ChatRealtimeFeed { connection: ChatConnection; tick: number; re
 export function ChatPage({ embedded = false, visible = true, realtime, onPeersChange }: { embedded?: boolean; visible?: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const user = getCurrentUser();
-  if (!user || !['MEMBER', 'STAFF', 'COACH'].includes(user.role))
+  if (!user || !['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role))
     return <div data-i18n-managed className="portal-container"><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1><p role="alert">{t("Bạn không có quyền truy cập chat riêng.", "You do not have access to private chat.")}</p></div>;
-  // Hội viên và lễ tân có thêm mục Hỗ trợ & Khiếu nại; huấn luyện viên không nhận khiếu nại.
-  const support = user.role === 'MEMBER' ? 'member' : user.role === 'STAFF' ? 'staff' : null;
-  // SÖL AI: hội viên hỏi về bản thân, lễ tân tra nhanh quy định; huấn luyện viên chỉ dùng AI để gợi ý giáo án.
-  const ai = support;
-  return <ChatWorkspace member={user.role === 'MEMBER'} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
+  // Hội viên, lễ tân và quản lý có mục Hỗ trợ & Khiếu nại; huấn luyện viên không nhận khiếu nại.
+  // Quản lý chỉ xử lý phiếu lễ tân chuyển lên và dùng SÖL AI, không có chat riêng (API chat không mở cho quản lý).
+  const manager = user.role === 'MANAGER';
+  const support = user.role === 'MEMBER' ? 'member' : user.role === 'STAFF' ? 'staff' : manager ? 'manager' : null;
+  // SÖL AI: hội viên hỏi về bản thân, lễ tân/quản lý tra nhanh quy định; huấn luyện viên chỉ dùng AI để gợi ý giáo án.
+  const ai = support === 'member' ? 'member' : support ? 'staff' : null;
+  return <ChatWorkspace member={user.role === 'MEMBER'} direct={!manager} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
 }
 
-function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPeersChange }: { member: boolean; support: 'member' | 'staff' | null; ai: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
+function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtime, onPeersChange }: { member: boolean; direct: boolean; support: SupportAudience | null; ai: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selected, setSelected] = useState<ChatConversation | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(direct);
   const [listError, setListError] = useState<ChatError | null>(null);
   const [showContacts, setShowContacts] = useState(false);
   const [pending, setPending] = useState<number | null>(null);
@@ -71,7 +74,7 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
   const openSupportFromUrl = !embedded && !!support && new URLSearchParams(window.location.search).get('tab') === 'support';
   const [mobileThread, setMobileThread] = useState(openSupportFromUrl);
   const [aiOpen, setAiOpen] = useState(false);
-  const [supportOpen, setSupportOpen] = useState(openSupportFromUrl);
+  const [supportOpen, setSupportOpen] = useState(openSupportFromUrl || !direct);
   const pageRef = useRef(0), listSequence = useRef(0), opening = useRef(false), mounted = useRef(true);
   const onPeersRef = useRef(onPeersChange);
   const listTitle = useRef<HTMLHeadingElement>(null);
@@ -94,19 +97,19 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
   const chat = useChatConversation(onSent);
   const { refresh } = chat;
   useEffect(() => {
-    mounted.current = true; void loadInbox(0);
+    mounted.current = true; if (direct) void loadInbox(0);
     return () => { mounted.current = false; };
-  }, [loadInbox]);
-  const ownFeed = !realtime;
+  }, [loadInbox, direct]);
+  const ownFeed = !realtime && direct;
   useEffect(() => {
     if (!ownFeed) return;
     return subscribeChat(() => { void loadInbox(pageRef.current, true); void refresh(); }, setConnection);
   }, [ownFeed, loadInbox, refresh, connectionAttempt]);
   const tick = realtime?.tick ?? 0;
   useEffect(() => {
-    if (tick === 0) return;
+    if (tick === 0 || !direct) return;
     void loadInbox(pageRef.current, true); void refresh();
-  }, [tick, loadInbox, refresh]);
+  }, [tick, loadInbox, refresh, direct]);
   const onRead = useCallback((conversationId: number) => {
     setConversations(list => list.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
   }, []);
@@ -137,15 +140,15 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
     {inRouter && !embedded && support && <SupportTabLink onOpen={selectSupport} />}
     {/* Trong widget, tiêu đề, trạng thái kết nối và nút làm mới nằm ở header của widget. */}
     {!embedded && <header className="portal-header"><div><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1></div>
-      <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}>{t(...connectionLabel[connection])}</span>
+      {direct && <div className="direct-chat__connection"><span role="status" className={`direct-chat__connection-label is-${connection}`}>{t(...connectionLabel[connection])}</span>
         {connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={() => setConnectionAttempt(n => n + 1)}>{t("Thử kết nối lại", "Reconnect")}</button>}
-        <RefreshButton label={t("Làm mới tin nhắn", "Refresh messages")} onClick={() => { void loadInbox(pageRef.current); void refresh(); }} disabled={loading} /></div>
+        <RefreshButton label={t("Làm mới tin nhắn", "Refresh messages")} onClick={() => { void loadInbox(pageRef.current); void refresh(); }} disabled={loading} /></div>}
     </header>}
     <div className="direct-chat__workspace">
       <aside className="direct-chat__inbox" aria-labelledby="chat-inbox-title">
         <div className="direct-chat__inbox-heading">
           <h2 id="chat-inbox-title" tabIndex={-1} ref={listTitle}>{t("Hội thoại của bạn", "Your conversations")}</h2>
-          <button
+          {direct && <button
             type="button"
             data-i18n-managed
             className={`direct-chat__link direct-chat__compose-fab${showContacts ? ' is-active' : ''}`}
@@ -160,7 +163,7 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
             <span className="direct-chat__compose-fab-label">{showContacts ? t('Đóng danh bạ', 'Close contacts') : t('Cuộc trò chuyện mới', 'New conversation')}</span>
-          </button>
+          </button>}
         </div>
         {/* Hỗ trợ & Khiếu nại (hội viên → lễ tân) và SÖL AI luôn ghim ở đầu, trên cả danh bạ. */}
         <ul className="direct-chat__list direct-chat__list--pinned">
@@ -170,7 +173,7 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
             </span>
             <span className="direct-chat__person-info">
               <strong>{t("Hỗ trợ & Khiếu nại", "Support & Tickets")}</strong>
-              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{support === 'staff' ? t("Phiếu hội viên gửi lên lễ tân", "Tickets members send to the front desk") : t("Gửi yêu cầu, khiếu nại tới lễ tân", "Send requests and complaints to the front desk")}</small></span>
+              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{support === 'manager' ? t("Phiếu lễ tân chuyển lên quản lý", "Tickets the front desk escalated to you") : support === 'staff' ? t("Phiếu hội viên gửi lên lễ tân", "Tickets members send to the front desk") : t("Gửi yêu cầu, khiếu nại tới lễ tân", "Send requests and complaints to the front desk")}</small></span>
             </span>
           </button></li>}
           {ai && <li><button type="button" className={`direct-chat__person direct-chat__person--ai${aiOpen ? ' is-selected' : ''}`} onClick={selectAi} aria-current={aiOpen ? 'true' : undefined}>
@@ -181,6 +184,7 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
             </span>
           </button></li>}
         </ul>
+        {direct && <>
         {showContacts && <div id="chat-directory">{openError && <p role="alert" className="direct-chat__error">{t(openError)}</p>}<ChatContacts onChoose={contact => void choose(contact)} pending={pending} forMember={member} /></div>}
         {listError && <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadInbox(page)}>{t("Thử lại", "Retry")}</button></div>}
         {loading && <LoadingSkeleton label={t("Đang tải hội thoại…", "Loading conversations…")} count={4} />}
@@ -212,8 +216,9 @@ function ChatWorkspace({ member, support, ai, embedded, visible, realtime, onPee
           <button type="button" className="direct-chat__link" disabled={page === 0} onClick={() => void loadInbox(page - 1)}>{t("Trước", "Previous")}</button><span>{page + 1}/{totalPages}</span>
           <button type="button" className="direct-chat__link" disabled={page + 1 >= totalPages} onClick={() => void loadInbox(page + 1)}>{t("Sau", "Next")}</button>
         </nav>}
+        </>}
       </aside>
-      {supportOpen && support ? <SupportThread staff={support === 'staff'} active={mobileThread} onBack={backToList} />
+      {supportOpen && support ? <SupportThread audience={support} active={mobileThread} onBack={backToList} />
         : aiOpen && ai ? <AiChatThread audience={ai} active={mobileThread} onBack={backToList} />
         : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} />
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}

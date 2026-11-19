@@ -107,9 +107,11 @@ it('renders chat as plain text and keeps unavailable peers read-only', async () 
   expect(host.querySelector('textarea')?.disabled).toBe(true);
 });
 
-it('manager is forbidden without fetching private data', async () => {
+it('manager gets the escalated support inbox without fetching private chat', async () => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'manager', identifier: 'manager', name: 'Manager', role: 'MANAGER' });
-  await render(); expect(host.querySelector('[role="alert"]')).not.toBeNull();
+  await render();
+  await vi.waitFor(() => expect(host.querySelector('#chat-support-title')?.textContent).toBe('Khiếu nại chuyển lên'));
+  expect(host.querySelector('.direct-chat__compose-fab')).toBeNull();
   expect(api.getConversations).not.toHaveBeenCalled(); expect(subscribeChat).not.toHaveBeenCalled();
 });
 

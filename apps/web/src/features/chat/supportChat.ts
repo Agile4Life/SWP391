@@ -69,3 +69,6 @@ export function supportBubbles(ticket: SupportTicket | null, messages: SupportMe
   }
   return bubbles;
 }
+
+/** Ai đang xem mục Hỗ trợ & Khiếu nại trong Tin nhắn. */
+export type SupportAudience = 'member' | 'staff' | 'manager';

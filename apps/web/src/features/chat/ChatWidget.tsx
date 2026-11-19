@@ -21,9 +21,16 @@ const connectionLabel: Record<ChatConnection, [string, string]> = {
 
 export function ChatWidget() {
   const user = getCurrentUser();
-  const allowed = !user || ['MEMBER', 'STAFF', 'COACH'].includes(user.role);
+  const allowed = !user || ['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role);
   if (!allowed) return null;
+  if (user?.role === 'MANAGER') return <ManagerChatWidget />;
   return user ? <SignedInChatWidget /> : <ChatShell unread={0} feed={null} onOpen={() => {}} />;
+}
+
+/** Quản lý không có chat riêng: không mở kết nối/badge chat, hộp thư khiếu nại tự giữ realtime của nó. */
+const MANAGER_FEED: ChatRealtimeFeed = { connection: 'disabled', tick: 0, reconnect: () => {} };
+function ManagerChatWidget() {
+  return <ChatShell unread={0} feed={MANAGER_FEED} showStatus={false} onOpen={() => {}} />;
 }
 
 /** Widget giữ một kết nối realtime duy nhất: vừa cập nhật badge chưa đọc, vừa báo cho khung chat tải lại. */
@@ -46,7 +53,7 @@ function SignedInChatWidget() {
   return <ChatShell unread={unread} feed={feed} onOpen={refreshUnread} onRefresh={() => { setTick(n => n + 1); refreshUnread(); }} />;
 }
 
-function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void }) {
+function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void; showStatus?: boolean }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
@@ -144,7 +151,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh }: { unread: number; feed: 
       <header className="chat-widget__header">
         <div className="chat-widget__header-title">
           <strong>{t("Tin nhắn", "Messages")}</strong>
-          {feed && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
+          {feed && showStatus && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
             {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>{t("Thử lại", "Retry")}</button>}</p>}
         </div>
         <div className="chat-widget__header-actions">

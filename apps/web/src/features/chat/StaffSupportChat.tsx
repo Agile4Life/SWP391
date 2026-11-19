@@ -20,8 +20,9 @@ const TRANSITIONS: Record<Status, Status[]> = { open: ['open', 'in_progress'], i
 /**
  * Hộp thư phiếu hỗ trợ của lễ tân trong khung Tin nhắn: danh sách phiếu như danh sách hội thoại,
  * mở một phiếu để trả lời bằng ô soạn tin, đổi trạng thái hoặc chuyển cấp lên quản lý.
+ * Với quản lý (`manager`), API chỉ trả phiếu đã chuyển cấp; quản lý trả lời, đổi trạng thái nhưng không chuyển cấp tiếp.
  */
-export function StaffSupportChat({ onBack, active = true }: { onBack: () => void; active?: boolean }) {
+export function StaffSupportChat({ onBack, active = true, manager = false }: { onBack: () => void; active?: boolean; manager?: boolean }) {
   const { t } = useI18n();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [page, setPage] = useState(0);
@@ -129,9 +130,9 @@ export function StaffSupportChat({ onBack, active = true }: { onBack: () => void
     void loadList();
   }
 
-  // Lễ tân chỉ xử lý phiếu chưa chuyển cấp; sau khi chuyển lên quản lý thì chỉ đọc.
-  const canAct = !!ticket && !ticket.escalatedAt;
-  const canEscalate = canAct && (ticket!.status === 'open' || ticket!.status === 'in_progress');
+  // Lễ tân chỉ xử lý phiếu chưa chuyển cấp; sau khi chuyển lên quản lý thì lễ tân chỉ đọc, quản lý xử lý tiếp.
+  const canAct = !!ticket && (manager ? !!ticket.escalatedAt : !ticket.escalatedAt);
+  const canEscalate = canAct && !manager && (ticket!.status === 'open' || ticket!.status === 'in_progress');
   const draft = selected != null ? drafts[selected] ?? '' : '';
 
   async function act(operation: () => Promise<unknown>, onDone?: () => void) {
@@ -177,7 +178,7 @@ export function StaffSupportChat({ onBack, active = true }: { onBack: () => void
 
   if (selected === null) {
     return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
-      <SupportHeader onBack={onBack} active={active} title={t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={connectionText}>
+      <SupportHeader onBack={onBack} active={active} title={manager ? t('Khiếu nại chuyển lên', 'Escalated tickets') : t('Hộp thư hỗ trợ', 'Support inbox')} subtitle={connectionText}>
         <HeaderAction label={t('Làm mới', 'Refresh')} disabled={loading} onClick={() => void loadList()}>
           <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
         </HeaderAction>
@@ -189,7 +190,7 @@ export function StaffSupportChat({ onBack, active = true }: { onBack: () => void
       <div className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
         {loading ? <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
           : listError ? <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadList()}>{t('Thử lại', 'Retry')}</button></div>
-            : tickets.length === 0 ? <p className="direct-chat__empty">{t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}</p>
+            : tickets.length === 0 ? <p className="direct-chat__empty">{manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}</p>
               : <ul className="support-chat__ticket-list">{tickets.map(item => {
                 const pair = SUPPORT_STATUS_LABEL[item.status];
                 return <li key={item.id}><button type="button" data-support-ticket={item.id} className="direct-chat__person" onClick={() => open(item)}>
@@ -199,7 +200,7 @@ export function StaffSupportChat({ onBack, active = true }: { onBack: () => void
                   </span>
                   <span className="support-chat__badges">
                     <span className={`support-chat__pill support-chat__pill--${item.status}`}>{pair ? t(...pair) : item.status}</span>
-                    {item.escalatedAt && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}
+                    {item.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}
                   </span>
                 </button></li>;
               })}</ul>}
@@ -221,9 +222,9 @@ export function StaffSupportChat({ onBack, active = true }: { onBack: () => void
     </SupportHeader>
     {detailError && <div role="alert" className="direct-chat__error"><p>{t(detailError)}</p>{!accessDenied && <button type="button" className="direct-chat__link" onClick={() => void loadDetail(selected)}>{t('Thử lại', 'Retry')}</button>}</div>}
     {ticket && <div className="support-chat__toolbar"><p className="support-chat__ticketbar" title={ticket.subject}><span className="support-chat__ticketbar-subject">{ticket.subject}</span>
-      {ticket.escalatedAt && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}</p></div>}
+      {ticket.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}</p></div>}
     {ticket?.escalatedAt && <p role="status" data-testid="escalation-info" className="direct-chat__muted support-chat__note">
-      {t('Đã chuyển lên quản lý', 'Escalated to management')}{ticket.escalatedByName ? ` · ${ticket.escalatedByName}` : ''} · {formatCenterDateTime(ticket.escalatedAt)}{ticket.escalationReason ? ` — ${ticket.escalationReason}` : ''}. {t('Quản lý đang xử lý, lễ tân chỉ xem.', 'A manager is handling it; the front desk can only view.')}</p>}
+      {t('Đã chuyển lên quản lý', 'Escalated to management')}{ticket.escalatedByName ? ` · ${ticket.escalatedByName}` : ''} · {formatCenterDateTime(ticket.escalatedAt)}{ticket.escalationReason ? ` — ${ticket.escalationReason}` : ''}. {manager ? t('Trả lời hội viên và cập nhật trạng thái tại đây.', 'Reply to the member and update the status here.') : t('Quản lý đang xử lý, lễ tân chỉ xem.', 'A manager is handling it; the front desk can only view.')}</p>}
     {canAct && ticket && !closed && <div className="support-chat__categories" role="radiogroup" aria-label={t('Trạng thái phiếu', 'Ticket status')}>
       {STATUSES.filter(value => TRANSITIONS[ticket.status].includes(value)).map(value => <button key={value} type="button" role="radio" aria-checked={ticket.status === value} className={`support-chat__chip${ticket.status === value ? ' is-selected' : ''}`} disabled={busy || detailLoading} onClick={() => changeStatus(value)}>{t(...SUPPORT_STATUS_LABEL[value])}</button>)}
     </div>}

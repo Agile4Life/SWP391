@@ -132,3 +132,24 @@ it('refetches the open ticket when the realtime channel reports a new member mes
   await act(async () => { changed(); await new Promise(resolve => setTimeout(resolve, 120)); });
   expect(bubbles().map(b => b.textContent).join('|')).toContain('Em gửi thêm ảnh');
 });
+
+it('lets a manager reply on an escalated ticket but not escalate it again', async () => {
+  const escalated = { ...ticket, status: 'in_progress', escalatedAt: '2026-10-25T09:00:00', escalatedByName: 'Lễ tân Hà', escalationReason: 'Cần hoàn tiền' } as supportApi.SupportTicket;
+  vi.mocked(supportApi.getSupportInbox).mockResolvedValue({ content: [escalated], totalPages: 1 });
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(escalated);
+  await act(async () => root.render(<StaffSupportChat manager onBack={() => {}} />));
+  await vi.waitFor(() => expect(host.querySelector('[data-support-ticket="7"]')).not.toBeNull());
+  expect(host.querySelector('.support-chat__pill--escalated')).toBeNull();
+  await act(async () => (host.querySelector('[data-support-ticket="7"]') as HTMLButtonElement).click());
+  await vi.waitFor(() => expect(host.querySelector('textarea#staff-support-message')).not.toBeNull());
+  expect(host.querySelector('[aria-label="Chuyển lên quản lý"]')).toBeNull();
+  expect(host.querySelector('[data-testid="escalation-info"]')?.textContent).toContain('Cần hoàn tiền');
+});
+
+it('keeps an escalated ticket read-only for the receptionist', async () => {
+  const escalated = { ...ticket, escalatedAt: '2026-10-25T09:00:00' } as supportApi.SupportTicket;
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(escalated);
+  await openTicket();
+  await vi.waitFor(() => expect(host.querySelector('[data-testid="escalation-info"]')).not.toBeNull());
+  expect(host.querySelector('textarea#staff-support-message')).toBeNull();
+});

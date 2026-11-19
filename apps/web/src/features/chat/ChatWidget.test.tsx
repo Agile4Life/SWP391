@@ -115,11 +115,13 @@ it('asks guests to log in without fetching private data', async () => {
   expect(api.getConversations).not.toHaveBeenCalled();
 });
 
-it('does not offer direct chat to managers', async () => {
+it('offers managers the widget without private chat realtime or unread polling', async () => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'manager', identifier: 'manager', name: 'Manager', role: 'MANAGER' });
   await render();
-  expect(host.querySelector('button')).toBeNull();
+  expect(host.querySelector('.chat-widget__trigger')).not.toBeNull();
   expect(api.getConversations).not.toHaveBeenCalled();
+  expect(api.getChatUnreadCount).not.toHaveBeenCalled();
+  expect(subscribeChat).not.toHaveBeenCalled();
 });
 
 /** jsdom không có PointerEvent: dựng MouseEvent mang đủ trường pointer mà React đọc. */
