@@ -265,7 +265,7 @@ Lệnh này gọi [`scripts/run-local.bat`](scripts/run-local.bat): kiểm tra m
 | :--- | :--- |
 | Web Portal | `http://localhost:5173` |
 | API healthcheck | `http://localhost:8080/api/v1/health` |
-| Swagger UI | `http://localhost:8080/swagger-ui/index.html` |
+| Swagger UI (chỉ khi `SWAGGER_ENABLED=true`) | `http://localhost:8080/swagger-ui/index.html` |
 
 > [!TIP]
 > Bật `APP_DEMO_SEED_ENABLED=true` để có sẵn dữ liệu và tài khoản demo cho mọi vai trò — xem [DEMO_ACCOUNTS.md](docs/DEMO_ACCOUNTS.md) và [DEMO_DATA.md](docs/DEMO_DATA.md).

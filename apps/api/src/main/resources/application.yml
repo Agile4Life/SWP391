@@ -50,13 +50,14 @@ spring:
         hbm2ddl.halt_on_error: true
         default_batch_fetch_size: 50
 
+# The spec lists every endpoint; keep it off unless a deployment opts in with SWAGGER_ENABLED=true.
 springdoc:
   api-docs:
     path: /v3/api-docs
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
   swagger-ui:
     path: /swagger-ui.html
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
     operations-sorter: method
     tags-sorter: alpha
     try-it-out-enabled: true
