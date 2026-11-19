@@ -471,8 +471,8 @@ paths:
                 citizenId: { type: string, maxLength: 30 }
                 fullName: { type: string, maxLength: 150 }
                 nationality: { type: string }
-                frontImageUrl: { type: string }
-                backImageUrl: { type: string }
+                frontImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
+                backImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
       responses:
         '200': { description: Updated ProfileDto with identityVerified=true and synchronized fullName }
         '400': { description: Invalid document number, foreign-only passport rule, or missing/oversized document image }

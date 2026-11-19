@@ -217,8 +217,8 @@ components:
         cccd: { type: string, description: 'Legacy alias for documentNumber' }
         fullName: { type: string, maxLength: 150 }
         nationality: { type: string, maxLength: 100 }
-        frontImageUrl: { type: string }
-        backImageUrl: { type: string }
+        frontImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
+        backImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
     TrialStatus:
       type: object
       properties:
