@@ -25,6 +25,17 @@ interface MemberLookupItem {
   phone?: string | null;
 }
 
+/** Short tag shown only when the member's plan blocks coaching; nothing is shown when the plan is fine. */
+function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['membershipIssue'] }) {
+  if (!issue) return null;
+  const tag = {
+    FROZEN: { cls: 'badge-warning', label: staffText('Đang bảo lưu', 'On hold'), hint: staffText('Gói đang bảo lưu: chưa thể đặt hoặc điều chuyển buổi tập.', 'Plan on hold: sessions cannot be booked or transferred.') },
+    NO_ACTIVE: { cls: 'badge-danger', label: staffText('Hết hiệu lực gói', 'No valid plan'), hint: staffText('Hội viên không còn gói active còn hạn hôm nay.', 'The member has no active plan valid today.') },
+    NOT_COVERED: { cls: 'badge-warning', label: staffText('Gói hết trước buổi PT', 'Plan ends before PT'), hint: staffText('Gói hết hạn trước ngày của buổi PT này.', 'The plan expires before this PT session date.') },
+  }[issue];
+  return <span className={`badge ${tag.cls} coach-membership-issue`} title={tag.hint}>{tag.label}</span>;
+}
+
 function assignmentSchedule(student: CoachAssignmentStudent): string | null {
   if (student.assignmentType === 'TRAINING_PLAN' && student.endDate) return staffText(`Hạn: ${formatCenterDate(student.endDate)}`, `Expires: ${formatCenterDate(student.endDate)}`);
   return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), student.nextSession) : null;
@@ -418,7 +429,7 @@ export function ManagerCoachAssignmentsPage() {
                             </span>
 
                             <div className="coach-student-detail">
-                              <div>{student.detail}</div>
+                              <div>{student.detail} <MembershipIssueTag issue={student.membershipIssue} /></div>
                               {assignmentSchedule(student) && (
                                 <small data-i18n-managed style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
                                   {assignmentSchedule(student)}
@@ -507,7 +518,7 @@ export function ManagerCoachAssignmentsPage() {
                       {item.assignmentTypeLabel}
                     </span>
                   </td>
-                  <td>{item.detail}</td>
+                  <td>{item.detail} <MembershipIssueTag issue={item.membershipIssue} /></td>
                   <td>{assignmentSchedule(item) || t('Đang hoạt động')}</td>
                   <td>
                     <div className="coach-student-actions">
@@ -684,7 +695,7 @@ export function ManagerCoachAssignmentsPage() {
           <form className="coach-modal-form" onSubmit={(e) => void handleReassignSubmit(e)}>
             <fieldset disabled={busy}>
             {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
-            <p>{t("Chỉ chuyển ")}{reassignStudent.student.assignmentTypeLabel}: {reassignStudent.student.detail}{t(". Các phân công khác được giữ nguyên.")}</p>
+            <p>{t("Chỉ chuyển ")}{reassignStudent.student.assignmentTypeLabel}: {reassignStudent.student.detail?.replace(/\.+$/, '')}{t(". Các phân công khác được giữ nguyên.")}</p>
             <div className="coach-form-group">
               <label>{t("Học viên")}</label>
               <input

@@ -15,6 +15,8 @@ export interface CoachAssignmentStudent {
   detail: string;
   startDate: string | null;
   endDate: string | null;
+  /** Set only when the plan blocks coaching: on hold, no valid plan, or ending before the PT day. */
+  membershipIssue?: 'FROZEN' | 'NO_ACTIVE' | 'NOT_COVERED' | null;
   nextSession: string | null;
   status: string;
   referenceId: number;

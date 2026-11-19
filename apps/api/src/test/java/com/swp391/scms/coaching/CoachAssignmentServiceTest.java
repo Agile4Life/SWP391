@@ -109,6 +109,15 @@ class CoachAssignmentServiceTest {
         verify(plans, never()).save(any()); verifyNoInteractions(notifications);
     }
 
+    @Test void aFrozenMembershipIsReportedAsOnHoldNotAsMissing() {
+        when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "frozen"))
+                .thenReturn(java.util.List.of(new com.swp391.scms.membership.entity.MembershipSubscription()));
+        assertThatThrownBy(() -> service.assignStudent(assign())).isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_FROZEN");
+        verify(plans, never()).save(any());
+    }
+
     @ParameterizedTest @ValueSource(strings = {"inactive", "pending", "locked"})
     void rejectsInactiveMemberAccount(String status) {
         when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(members.findById(100L)).thenReturn(Optional.of(member));
@@ -258,6 +267,22 @@ class CoachAssignmentServiceTest {
         assertThat((List<?>) overview.get("availableCoaches")).hasSize(2);
         verify(plans, never()).findByCoachUserIdOrderByCreatedAtDesc(anyLong()); verify(bookings, never()).findByCoachId(anyLong());
         verify(bookings).findCurrentAssignments(10L, today, LocalTime.of(15, 0));
+    }
+
+    @Test void overviewFlagsOnlyStudentsWhosePlanBlocksCoaching() {
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from));
+        when(plans.findCurrentAssignments(10L, today)).thenReturn(List.of(plan(501L, "active")));
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "frozen"))
+                .thenReturn(List.of(new com.swp391.scms.membership.entity.MembershipSubscription()));
+        @SuppressWarnings("unchecked") List<CoachAssignmentOverviewDto> rows =
+                (List<CoachAssignmentOverviewDto>) service.getOverview(10L, null, null).get("coaches");
+        assertThat(rows.getFirst().students().getFirst().membershipIssue()).isEqualTo("FROZEN");
+
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "frozen")).thenReturn(List.of());
+        when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
+        @SuppressWarnings("unchecked") List<CoachAssignmentOverviewDto> fine =
+                (List<CoachAssignmentOverviewDto>) service.getOverview(10L, null, null).get("coaches");
+        assertThat(fine.getFirst().students().getFirst().membershipIssue()).isNull();
     }
 
     @Test void overviewCollapsesClassEnrollmentAndSessionSeatForSameMember() {

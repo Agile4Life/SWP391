@@ -146,7 +146,17 @@ public class CoachAssignmentService {
         var user = member.getUser();
         return new CoachAssignmentStudentDto(member.getUserId(), member.getMembershipCode(), user.getFullName(), user.getPhone(),
                 user.getEmail(), user.getAvatarUrl(), member.getFitnessGoal(), member.getFitnessLevel(), member.getHealthNotes(),
-                type, msg("type." + type), detail, start, end, nextSession, status, referenceId);
+                type, msg("type." + type), detail, start, end, nextSession, status, referenceId,
+                membershipIssue(member.getUserId(), type, start));
+    }
+
+    /** Why the member's plan blocks coaching right now, or null when nothing is wrong (the page shows a tag only then). */
+    private String membershipIssue(Long memberId, String type, LocalDate sessionDate) {
+        if (!subscriptionRepository.findByMemberUserIdAndStatus(memberId, "frozen").isEmpty()) return "FROZEN";
+        if (!subscriptionRepository.hasActiveMembership(memberId, today())) return "NO_ACTIVE";
+        if ("PT_1_1".equals(type) && sessionDate != null
+                && !subscriptionRepository.hasActiveMembershipCoveringSession(memberId, today(), sessionDate)) return "NOT_COVERED";
+        return null;
     }
 
     public CoachAssignmentStudentDto assignStudent(CoachAssignmentAssignDto dto) {
@@ -200,7 +210,7 @@ public class CoachAssignmentService {
                 throw invalid("ASSIGNMENT_NOT_CURRENT", "not_current");
             }
             if (!subscriptionRepository.hasActiveMembershipCoveringSession(member.getUserId(), today(), booking.getBookingDate())) {
-                throw invalid("NO_ACTIVE_SUBSCRIPTION", "no_membership");
+                throw membershipMissing(member.getUserId());
             }
             requireCoachAvailable(to.getUserId(), booking);
             booking.setCoach(to);
@@ -278,6 +288,13 @@ public class CoachAssignmentService {
 
     private boolean activeAccount(User user) { return user != null && user.getDeletedAt() == null && "active".equals(user.getStatus()); }
     private void requireMembership(Long memberId) {
-        if (!subscriptionRepository.hasActiveMembership(memberId, today())) throw invalid("NO_ACTIVE_SUBSCRIPTION", "no_membership");
+        if (!subscriptionRepository.hasActiveMembership(memberId, today())) throw membershipMissing(memberId);
+    }
+
+    /** A frozen (on hold) membership gets its own message; anything else is the generic "needs an active plan". */
+    private BadRequestException membershipMissing(Long memberId) {
+        return subscriptionRepository.findByMemberUserIdAndStatus(memberId, "frozen").isEmpty()
+                ? invalid("NO_ACTIVE_SUBSCRIPTION", "no_membership")
+                : invalid("MEMBERSHIP_FROZEN", "membership_frozen");
     }
 }

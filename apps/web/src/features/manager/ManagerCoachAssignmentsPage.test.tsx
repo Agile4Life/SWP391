@@ -89,6 +89,7 @@ describe('ManagerCoachAssignmentsPage', () => {
             nextSession: null,
             status: 'active',
             referenceId: 601,
+            membershipIssue: 'FROZEN',
           },
         ],
       },
@@ -183,6 +184,13 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.textContent).toContain('Nguyễn Văn Member');
     expect(host.textContent).toContain('Lê Thị Hoa');
     expect(host.textContent).toContain('Phạm Minh Tuấn');
+  });
+
+  it('tags only the student whose plan is on hold', async () => {
+    await renderComponent();
+    const tags = host.querySelectorAll('.coach-membership-issue');
+    expect(tags).toHaveLength(1);
+    expect(tags[0].textContent).toBe('Đang bảo lưu');
   });
 
   it('filters students based on search input', async () => {
