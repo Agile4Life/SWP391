@@ -84,6 +84,13 @@ public class UserService {
     @Autowired(required = false)
     com.swp391.scms.finance.repository.PaymentRepository paymentRepository;
 
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    com.swp391.scms.scheduling.service.SessionBookingService sessionBookingService;
+
+    @Autowired(required = false)
+    com.swp391.scms.common.i18n.MessageService messageService;
+
     // Commitment sources checked before an account is removed or changes role.
     @Autowired(required = false)
     com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollmentRepository;
@@ -347,6 +354,7 @@ public class UserService {
         }
         User user = findActiveUser(id);
         if (!"active".equals(status)) protectLastActiveAdmin(user);
+        if ("locked".equals(status) && !"locked".equals(user.getStatus())) releaseCommitmentsOnLock(user);
         user.setStatus(status);
         user.setUpdatedAt(LocalDateTime.now(clock));
         return userMapper.toDto(userRepository.save(user));
@@ -390,6 +398,22 @@ public class UserService {
             if (coachBookingRepository != null && coachBookingRepository.existsUpcomingForCoach(id, today)) {
                 throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.coach_sessions", null, null);
             }
+        }
+    }
+
+    /**
+     * Locking must not leave a schedule behind: a coach first hands over upcoming classes and 1:1 sessions; a member's
+     * upcoming per-session seats are freed so others can book them. Paid items (courses, courts, 1:1) stay for the
+     * desk to cancel and refund.
+     */
+    private void releaseCommitmentsOnLock(User user) {
+        String role = user.getRole() == null ? "" : user.getRole().getCode().toUpperCase(Locale.ROOT);
+        if ("COACH".equals(role)) {
+            ensureNoOpenCommitments(user);
+        } else if ("MEMBER".equals(role) && sessionBookingService != null) {
+            String reason = messageService != null
+                    ? messageService.getMessage("scheduling.booking.cancelled_by_account_lock") : "Account locked";
+            sessionBookingService.cancelFutureForMember(user.getId(), reason, date -> false);
         }
     }
 

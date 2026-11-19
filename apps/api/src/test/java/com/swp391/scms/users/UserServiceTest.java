@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -185,6 +186,33 @@ class UserServiceTest {
 
         verify(userRepository, never()).saveAndFlush(any());
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void lockingACoachWithUpcomingClassesIsRefused() {
+        var role = new com.swp391.scms.users.entity.Role(); role.setCode("COACH");
+        User coach = new User(); coach.setId(5L); coach.setRole(role); coach.setStatus("active");
+        when(userRepository.findByIdAndDeletedAtIsNull(5L)).thenReturn(Optional.of(coach));
+        var sessions = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
+        when(sessions.existsScheduledForCoachFrom(eq(5L), any())).thenReturn(true);
+        service.classSessionRepository = sessions;
+
+        assertThrows(ConflictException.class, () -> service.setStatus(5L, "locked"));
+        assertEquals("active", coach.getStatus());
+    }
+
+    @Test
+    void lockingAMemberFreesTheirUpcomingSessionSeats() {
+        var role = new com.swp391.scms.users.entity.Role(); role.setCode("MEMBER");
+        User member = new User(); member.setId(6L); member.setRole(role); member.setStatus("active");
+        when(userRepository.findByIdAndDeletedAtIsNull(6L)).thenReturn(Optional.of(member));
+        var bookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.service.SessionBookingService.class);
+        service.sessionBookingService = bookings;
+
+        service.setStatus(6L, "locked");
+
+        verify(bookings).cancelFutureForMember(eq(6L), any(), any());
+        assertEquals("locked", member.getStatus());
     }
 
     @Test
