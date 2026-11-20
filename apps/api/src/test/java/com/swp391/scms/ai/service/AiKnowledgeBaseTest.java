@@ -41,10 +41,10 @@ class AiKnowledgeBaseTest {
     void tierBenefitsMatchPackageBenefits() {
         String tiers = base.sectionsFor("gói gold khác platinum thế nào");
 
-        assertTrue(tiers.contains("- Platinum: khóa học nhóm miễn phí 4 khóa"));
+        assertTrue(tiers.contains("- Platinum: khóa học nhóm miễn phí 4 khóa cho mỗi 30 ngày thời hạn gói (gói 3 tháng 12 khóa"));
         assertTrue(tiers.contains("PT 1:1 miễn phí 6 buổi"));
-        assertTrue(tiers.contains("bảo lưu: gói dưới 60 ngày tối đa 7 ngày, gói từ 60 ngày tối đa 30 ngày"));
-        assertTrue(tiers.contains("- Silver:") && tiers.contains("bảo lưu: gói dưới 60 ngày không bảo lưu được, gói từ 60 ngày tối đa 7 ngày"));
+        assertTrue(tiers.contains("bảo lưu: tối đa 30 ngày (gói 1 tháng cũ: tối đa 7 ngày)"));
+        assertTrue(tiers.contains("- Silver:") && tiers.contains("bảo lưu: tối đa 7 ngày (gói 1 tháng cũ: không bảo lưu được)"));
         assertTrue(tiers.contains("giảm 20%"));
         assertTrue(tiers.contains("phòng VIP"));
     }

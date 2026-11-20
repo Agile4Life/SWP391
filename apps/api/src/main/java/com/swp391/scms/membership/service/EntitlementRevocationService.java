@@ -24,9 +24,9 @@ import java.util.function.Predicate;
 public class EntitlementRevocationService {
 
     /** A 1:1 session is returned (quota slot or money) only if the hold is approved this many days before it. */
-    static final int PT_HOLD_REFUND_DAYS = 3;
+    public static final int PT_HOLD_REFUND_DAYS = 3;
     /** A court is returned (quota slot or money) only if the hold is approved this many hours before it. */
-    static final int COURT_HOLD_REFUND_HOURS = 2;
+    public static final int COURT_HOLD_REFUND_HOURS = 2;
 
     private final MembershipSubscriptionRepository subscriptions;
     private final EnrollmentService enrollmentService;

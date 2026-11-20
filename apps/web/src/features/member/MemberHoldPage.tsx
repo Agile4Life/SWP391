@@ -201,7 +201,7 @@ export function MemberHoldPage() {
                 <li>{t('Khóa học còn buổi trong giai đoạn bảo lưu sẽ bị hủy: duyệt trước ngày khóa bắt đầu ít nhất 3 ngày thì được trả lại lượt hoặc hoàn học phí vào Ví; muộn hơn hoặc khóa đã bắt đầu thì mất lượt/học phí.', 'Courses with a session during the hold are cancelled: approved at least 3 days before the course starts, the course credit or fee is returned to your Wallet; later, or once the course has started, it is lost.')}</li>
               </ul>
             ) : (
-              <p className="hold-notice hold-notice--info" role="status">{t('Gói này không được bảo lưu. Chỉ gói 3 tháng và gói Platinum 1 tháng được bảo lưu.', 'This package cannot be put on hold. Only 3-month packages and the 1-month Platinum package can be held.')}</p>
+              <p className="hold-notice hold-notice--info" role="status">{t('Gói này không được bảo lưu. Gói trải nghiệm và gói 1 tháng cũ hạng Silver/Gold không có quyền bảo lưu.', 'This package cannot be put on hold. The trial and the old 1-month Silver/Gold packages have no hold allowance.')}</p>
             )}
           </section>
 

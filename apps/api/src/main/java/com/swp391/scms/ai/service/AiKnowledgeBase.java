@@ -8,7 +8,6 @@ import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.service.DynamicQrService;
 import com.swp391.scms.membership.service.MemberTrialService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
-import com.swp391.scms.scheduling.dto.SessionBookingRequests;
 import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.shop.ShopProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,7 +88,6 @@ public class AiKnowledgeBase {
         v.put("checkin.autoCheckoutHours", String.valueOf(CenterCheckinService.ANTI_PASSBACK_TIMEOUT_HOURS));
         v.put("course.onlineHoldMinutes", String.valueOf(EnrollmentService.ONLINE_HOLD_MINUTES));
         v.put("course.blockDays", String.valueOf(CourseAttendanceService.BLOCK_DAYS));
-        v.put("booking.maxBulk", String.valueOf(SessionBookingRequests.MAX_BULK));
         v.put("court.standardPrice", money(CourtPricing.STANDARD_PRICE));
         v.put("court.eveningPrice", money(CourtPricing.EVENING_PRICE));
         v.put("court.eveningFrom", CourtPricing.EVENING_FROM.toString());
@@ -97,6 +95,9 @@ public class AiKnowledgeBase {
         v.put("court.cashReleaseLeadMinutes", String.valueOf(courtCashReleaseLeadMinutes));
         v.put("hold.noticeHours", String.valueOf(MembershipSubscriptionService.HOLD_NOTICE_HOURS));
         v.put("hold.minDays", String.valueOf(MembershipSubscriptionService.MIN_HOLD_DAYS));
+        v.put("hold.courseRefundDays", String.valueOf(EnrollmentService.HOLD_REFUND_NOTICE_DAYS));
+        v.put("hold.ptRefundDays", String.valueOf(com.swp391.scms.membership.service.EntitlementRevocationService.PT_HOLD_REFUND_DAYS));
+        v.put("hold.courtRefundHours", String.valueOf(com.swp391.scms.membership.service.EntitlementRevocationService.COURT_HOLD_REFUND_HOURS));
         v.put("hold.maxDocuments", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENTS));
         v.put("hold.maxDocumentMb", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)));
         v.put("shop.paymentWindowMinutes", String.valueOf(shop.paymentWindowMinutes()));
@@ -171,14 +172,16 @@ public class AiKnowledgeBase {
             MembershipPackage month = pkg(tier, 30);
             MembershipPackage longTerm = pkg(tier, 90);
             sb.append("- ").append(tier.charAt(0)).append(tier.substring(1).toLowerCase(java.util.Locale.ROOT)).append(": ")
-                    .append("khóa học nhóm miễn phí ").append(PackageBenefits.courseCredits(tier, 30)).append(" khóa/gói 1 tháng (gói 3 tháng gấp 3); ")
+                    .append("khóa học nhóm miễn phí ").append(PackageBenefits.courseCredits(tier, 30))
+                    .append(" khóa cho mỗi 30 ngày thời hạn gói (gói 3 tháng ").append(PackageBenefits.courseCredits(tier, 90))
+                    .append(" khóa, dùng trong cả thời hạn gói); ")
                     .append("PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(month)).append(" buổi mỗi 30 ngày; ")
                     .append("đặt sân miễn phí ").append(PackageBenefits.courtBookingsPerCycle(month)).append(" lượt mỗi 30 ngày, ")
                     .append("đặt trước tối đa ").append(PackageBenefits.courtAdvanceDays(month)).append(" ngày, ")
                     .append("tối đa ").append(PackageBenefits.courtMaxUpcoming(month)).append(" lượt sân sắp tới và ")
                     .append(PackageBenefits.courtMaxUnpaidHolds(month)).append(" lượt chưa thanh toán; ")
-                    .append("bảo lưu: gói dưới 60 ngày ").append(holdText(PackageBenefits.holdMaxDays(month)))
-                    .append(", gói từ 60 ngày ").append(holdText(PackageBenefits.holdMaxDays(longTerm))).append("; ")
+                    .append("bảo lưu: ").append(holdText(PackageBenefits.holdMaxDays(longTerm)))
+                    .append(" (gói 1 tháng cũ: ").append(holdText(PackageBenefits.holdMaxDays(month))).append("); ")
                     .append("giảm ").append(PackageBenefits.discountPercent(month)).append("% cho buổi PT thêm, khóa học có phí và sản phẩm");
             if (PackageBenefits.hasVipRoomAccess(month)) {
                 sb.append("; vào phòng VIP và đo chỉ số chuyên sâu (Body Fat, Muscle Mass)");

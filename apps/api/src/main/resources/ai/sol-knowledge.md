@@ -33,8 +33,9 @@ Từ khóa: check in, checkin, check out, checkout, qr, cong, the hoi vien, quet
 
 ## Lịch học và đặt chỗ
 Từ khóa: dat lop, dat cho, lich hoc, huy lop, huy buoi, huy cho, khoa hoc, lop hoc, buoi hoc, dat nhieu buoi
-- Đặt chỗ tại 'Lịch học & Đặt chỗ': đặt từng buổi, hoặc bật 'Đặt nhiều buổi' để đặt tối đa {{booking.maxBulk}} buổi một lượt; buổi đầy hoặc trùng giờ được bỏ qua và báo lại.
-- Hủy chỗ được trước khi buổi học bắt đầu; buổi đã bắt đầu thì không hủy được.
+- Mọi lớp là khóa học lặp lại theo lịch tuần. Tại 'Lịch học & Đặt chỗ', hội viên đăng ký cả khóa học; không còn đặt lẻ từng buổi hay đặt nhiều buổi một lượt.
+- Chỉ đăng ký được khóa học chưa bắt đầu và kết thúc trong thời hạn gói. Mỗi gói có số khóa học miễn phí theo hạng (xem mục Quyền lợi theo hạng gói); vượt số này thì đóng học phí.
+- Hủy đăng ký được trước khi khóa học bắt đầu: lượt miễn phí được trả lại, học phí đã trả hoàn vào Ví SÖL. Khóa đã bắt đầu thì không hủy được.
 - Khóa học có phí trả online (ví hoặc VNPay) được giữ chỗ {{course.onlineHoldMinutes}} phút để thanh toán; trả tiền mặt tại quầy thì giữ chỗ đến khi khóa học bắt đầu.
 - Vắng quá nửa số buổi của một khóa học sẽ bị chặn đăng ký khóa học mới trong {{course.blockDays}} ngày. Buổi nghỉ trong thời gian bảo lưu đã duyệt không tính là vắng.
 
@@ -50,6 +51,9 @@ Từ khóa: bao luu, tam dung, dong bang, hold, nghi tap, tam ngung
 - Gửi yêu cầu tại 'Gói tập & Bảo lưu' > 'Bảo lưu'; lễ tân xét duyệt.
 - Gửi trước ngày bắt đầu bảo lưu ít nhất {{hold.noticeHours}} giờ; mỗi lần tối thiểu {{hold.minDays}} ngày, tối đa theo hạng và thời hạn gói (xem mục Quyền lợi theo hạng gói).
 - Đính kèm được tối đa {{hold.maxDocuments}} giấy tờ, mỗi file không quá {{hold.maxDocumentMb}} MB.
+- Trong thời gian bảo lưu đã duyệt không đặt được PT 1:1, sân, và không đăng ký được khóa học bắt đầu trong khoảng đó.
+- Khi duyệt, các lịch rơi vào thời gian bảo lưu bị hủy: khóa học được trả lượt hoặc hoàn học phí nếu duyệt trước ngày khóa bắt đầu ít nhất {{hold.courseRefundDays}} ngày; PT 1:1 được trả lượt hoặc hoàn tiền nếu duyệt trước buổi tập ít nhất {{hold.ptRefundDays}} ngày; sân được trả lượt hoặc hoàn tiền nếu duyệt trước giờ chơi ít nhất {{hold.courtRefundHours}} giờ. Muộn hơn thì mất lượt hoặc mất tiền. Tiền hoàn vào Ví SÖL.
+- Lễ tân từ chối thì luôn ghi lý do, hội viên xem được trong thông báo và trang Bảo lưu.
 - Hết thời gian bảo lưu, gói tự hoạt động lại và được cộng bù số ngày đã bảo lưu.
 
 ## Hủy gói và hoàn tiền
