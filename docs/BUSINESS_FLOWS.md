@@ -1,6 +1,6 @@
 # Nghiệp vụ SÖL Fitness — các luồng chính đang chạy trên web
 
-> Cập nhật: 19/11/2026, theo code nhánh `fix/business-rules-audit`.
+> Cập nhật: 20/11/2026, theo code nhánh `main` (commit `d422618a`).
 > `docs/PROJECT_MASTER_GUIDE.md` là thiết kế gốc. Tài liệu này mô tả **những gì hệ thống đang làm thật**: màn hình, API, quy tắc và state machine. Phần nào khác thiết kế gốc được ghi ở mục 12.
 > Múi giờ nghiệp vụ là `Asia/Ho_Chi_Minh` cho mọi mốc "hôm nay", "trước giờ học" và job định kỳ.
 
@@ -28,7 +28,7 @@
 | Hội viên | `MEMBER` | `/member/*`, `/messages`, `/checkout` |
 | Huấn luyện viên | `COACH` | `/coach/*`, `/staff/attendance`, `/staff/coach-classes`, `/staff/requests` |
 | Lễ tân | `RECEPTIONIST` (`STAFF`) | `/staff/reception`, `/staff/check-in`, `/staff/check-out`, `/staff/kyc`, `/staff/holds`, `/staff/courts`, `/staff/orders`, `/staff/classes`, `/staff/pt-attendance` |
-| Quản lý trung tâm | `CENTER_MANAGER` (`MANAGER`) | `/manager/*`, `/staff/classes`, `/staff/orders`, `/staff/pt-attendance` |
+| Quản lý trung tâm | `CENTER_MANAGER` (`MANAGER`) | `/manager/*`, `/messages` (chỉ Hỗ trợ & Khiếu nại, SÖL AI), `/staff/classes`, `/staff/orders`, `/staff/pt-attendance` |
 | Quản trị hệ thống | `ADMIN` | `/admin/users`, `/admin/audit-logs`, `/admin/payments` |
 
 - Frontend chặn route bằng `RoleGuard`. Backend vẫn tự kiểm tra role qua `SecurityConfig` và `@PreAuthorize`. Ẩn menu không phải là phân quyền.
@@ -47,23 +47,26 @@
 3. Chỉ `MEMBER`, `COACH`, `RECEPTIONIST` được đăng nhập bằng Google/OTP. Quản lý và Admin dùng mật khẩu.
 4. Tài khoản `locked` hoặc đã xóa mềm không đăng nhập được bằng bất kỳ cách nào.
 5. **Quy tắc mật khẩu** (đăng ký, quên mật khẩu, đổi mật khẩu, quản lý tạo tài khoản): 8–50 ký tự, có ít nhất 1 chữ cái và 1 chữ số, không khoảng trắng (`PasswordPolicy.REGEX` = `^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$`, frontend dùng chung `PASSWORD_REGEX`). Đăng nhập vẫn nhận mật khẩu cũ không đạt quy tắc này.
+6. **Đổi hoặc đặt lại mật khẩu thu hồi mọi token cũ** (`users.password_changed_at`; JWT phát hành trước mốc này bị từ chối). Đổi mật khẩu trả token mới cho phiên hiện tại nên người dùng không bị đăng xuất.
 
 **State `users.status`:** `inactive` (chờ OTP) → `active` ⇄ `locked` (Quản lý/Admin khóa, mở). Xóa mềm đặt `deleted_at`; user đã xóa không hiện trong danh sách mặc định.
 
 ### 2.2 Mua gói, gia hạn, nâng cấp
 **Màn hình:** `/member/packages`, `/member/packages/checkout`, `/member/card`; lễ tân ở `/staff/reception`. **API:** `/api/v1/packages`, `/api/v1/memberships/subscriptions`, `/api/v1/payments`, `/api/v1/payments/vnpay`.
 
-- **Hạng gói:** SILVER, GOLD, PLATINUM, gói 1 tháng hoặc dài hạn (3 tháng). Quyền lợi tính theo chu kỳ 30 ngày từ ngày bắt đầu (`PackageBenefits`):
+- **Hạng gói:** SILVER, GOLD, PLATINUM. Gói bán được dài **90–365 ngày** (3–12 tháng); gói duy nhất ngắn hơn là gói dùng thử 3 ngày (`PackageService.MIN_TERM_DAYS/MAX_TERM_DAYS`). Gói dưới 90 ngày (gói 1 tháng cũ) không tạo hoặc sửa được nữa, hội viên đang dùng vẫn giữ quyền lợi. Landing và `/member/packages` chỉ hiện gói ≥ 90 ngày (lọc ở frontend; API mua gói không tự chặn gói ngắn còn `active`, nên Quản lý cần tắt các gói đó), chia "Gói 3 tháng" (90–179 ngày) và "Đồng hành dài hạn" (≥ 180 ngày). Quản lý tự bật/tắt gói; khởi động API không còn tự tắt gói 6/12 tháng.
+- Quyền lợi tính theo chu kỳ 30 ngày từ ngày bắt đầu (`PackageBenefits`):
 
-| Quyền lợi mỗi chu kỳ | Silver | Gold | Platinum | Dùng thử |
+| Quyền lợi | Silver | Gold | Platinum | Dùng thử |
 |---|---|---|---|---|
-| Khóa học nhóm miễn phí (gói 1 tháng; gói 3 tháng ×3) | 1 | 2 | 4 | 0 |
-| Buổi PT 1:1 miễn phí | 0 | 3 | 6 | 1 |
-| Lượt đặt sân kèm gói | 1 | 2 | 3 | 0 |
+| Khóa học nhóm miễn phí cho **cả thời hạn gói** (mức gốc × số chu kỳ 30 ngày, ví dụ gói 3 tháng ×3; lưu ở `classCreditLimit` của gói) | 1 | 2 | 4 | 0 |
+| Buổi PT 1:1 miễn phí mỗi chu kỳ | 0 | 3 | 6 | 1 |
+| Lượt đặt sân kèm gói mỗi chu kỳ | 1 | 2 | 3 | 0 |
 | Đặt sân trước tối đa | 7 ngày | 14 ngày | 30 ngày | 3 ngày |
+| Lịch sân sắp tới tối đa / giữ chỗ chưa trả tối đa | 3 / 1 | 5 / 2 | 8 / 3 | 1 / 1 |
 | Giảm giá PT thêm, học phí, cửa hàng | — | 10% | 20% | — |
 | Phòng Gym VIP | — | — | Có | — |
-| Bảo lưu tối đa (gói dài hạn / gói 1 tháng) | 7 / 0 | 15 / 0 | 30 / 7 ngày | 0 |
+| Bảo lưu tối đa (gói ≥ 60 ngày / gói 1 tháng cũ) | 7 / 0 | 15 / 0 | 30 / 7 ngày | 0 |
 
 - **Mua mới:** tạo `membership_subscriptions` ở `pending_payment`. Thanh toán thành công (VNPay, Ví, hoặc lễ tân xác nhận tiền mặt/POS) thì gói chuyển sang `active`, phát hành hóa đơn, cấp thẻ QR.
 - **Gia hạn:** tạo kỳ mới liên kết `previous_subscription_id`. Kỳ cũ còn hạn thì kỳ mới bắt đầu ngay sau ngày hết hạn cũ, không mất ngày.
@@ -75,17 +78,20 @@
 ### 2.3 Dùng thử 3 ngày
 **Màn hình:** `/member/dashboard` (gửi yêu cầu), `/staff/kyc` (lễ tân duyệt). **API:** `/api/v1/memberships/trial`, `/api/v1/members/kyc`.
 
-1. Hội viên gửi CCCD hoặc hộ chiếu (số giấy tờ, quốc tịch, ảnh hai mặt).
-2. Lễ tân duyệt thì cấp gói dùng thử 3 ngày hưởng quyền lợi Gold (trừ Platinum). Từ chối thì ghi lý do.
-3. Mỗi tài khoản chỉ được dùng thử một lần. Số giấy tờ được lưu dạng băm.
+1. Hội viên gửi CCCD hoặc hộ chiếu (số giấy tờ, quốc tịch, ảnh hai mặt). Ảnh phải là ảnh tải lên JPEG/PNG/WebP, tối đa 2 MB, không nhận link ngoài (áp dụng cả KYC).
+2. Lễ tân duyệt thì cấp gói dùng thử 3 ngày hưởng quyền lợi Gold (trừ Platinum). Từ chối thì ghi lý do; từ chối giải phóng số giấy tờ (dùng lại được), đơn đã từ chối phải gửi lại mới được duyệt.
+3. Mỗi tài khoản chỉ được dùng thử một lần. Số giấy tờ lưu dạng băm HMAC kèm 4 số cuối. Trong lúc đơn chờ duyệt, số đầy đủ được lưu mã hóa AES-GCM để lễ tân đối chiếu; duyệt hoặc từ chối thì xóa bản mã hóa, màn hình chỉ còn số che.
 
 ### 2.4 Bảo lưu gói
 **Màn hình:** `/member/hold`, `/staff/holds`. **API:** `/api/v1/memberships/subscriptions/{id}/hold` (+ `/approve`, `/reject`, `/withdraw`, `/policy`), `/holds`, `/holds/pending`.
 
 - Điều kiện: gói cho phép bảo lưu và chưa dùng lượt bảo lưu duy nhất. Gửi trước ngày bắt đầu ít nhất **24 giờ**. Thời lượng từ **3 ngày** tới mức tối đa của gói. Giấy tờ (ví dụ giấy tờ y tế) không bắt buộc; nếu đính kèm thì tối đa 5 tệp, mỗi tệp 5 MB.
-- Lễ tân duyệt hoặc từ chối. Hội viên rút yêu cầu khi chưa duyệt; lễ tân rút giúp khi chưa tới ngày bắt đầu.
+- Lễ tân duyệt hoặc từ chối. **Từ chối bắt buộc nhập lý do** (tối đa 500 ký tự); lý do được gửi trong thông báo và hiện ở `/member/hold`, bị xóa khi hội viên gửi yêu cầu mới. Hội viên rút yêu cầu khi chưa duyệt; lễ tân rút giúp khi chưa tới ngày bắt đầu.
+- **Ngày bảo lưu đã duyệt bị khóa đặt lịch:** không đặt được PT 1:1 hay sân vào ngày nằm trong khoảng bảo lưu, và không đăng ký được khóa học bắt đầu trong khoảng đó (kể cả bảo lưu chưa bắt đầu). Lỗi riêng `MEMBERSHIP_ON_HOLD`, `SCHEDULING_MEMBERSHIP_ON_HOLD`, `error.courts.membership_on_hold` thay cho lỗi "không có gói".
 - Khi duyệt (hoàn/mất được quyết định ngay lúc duyệt):
-  - **PT 1:1 và đặt sân** có ngày nằm trong khoảng bảo lưu bị hủy. PT đặt bằng lượt gói được trả lại lượt; PT trả tiền mặt/chuyển khoản và đặt sân **không** tự hoàn tiền. Lịch ngoài khoảng bảo lưu giữ nguyên.
+  - **PT 1:1** có ngày nằm trong khoảng bảo lưu bị hủy. Duyệt trước ngày tập **≥ 3 ngày**: lượt gói được trả lại, tiền đã trả (phần chưa hoàn) vào Ví và payment chuyển `refunded`. Muộn hơn: mất lượt (đánh dấu `quota_forfeited`, vẫn tính vào hạn mức chu kỳ) hoặc mất tiền. Payment còn `pending` chuyển `failed`.
+  - **Đặt sân** trong khoảng bảo lưu bị hủy theo cùng cách, mốc là **≥ 2 giờ** trước giờ chơi.
+  - Hội viên nhận thông báo riêng cho từng lịch (trả lượt / hoàn tiền / không tính phí / mất). Lịch ngoài khoảng bảo lưu giữ nguyên.
   - **Khóa học** còn buổi chưa diễn ra trong khoảng bảo lưu bị **hủy đăng ký** (không giữ chỗ). Duyệt trước ngày khóa bắt đầu **≥ 3 ngày**: khóa miễn phí được trả lượt, khóa có phí được hoàn 100% vào Ví. Muộn hơn hoặc khóa đã bắt đầu: mất lượt (vẫn tính vào chu kỳ) hoặc mất học phí. Học phí đang chờ thanh toán thì payment chuyển `failed`.
   - Hội viên nhận thông báo cho từng khóa (hoàn lượt / mất lượt / hoàn phí / mất phí). Lịch đã hủy không tự khôi phục kể cả khi rút bảo lưu chưa bắt đầu.
 - Tới ngày bắt đầu, gói chuyển `frozen`. Hết hạn bảo lưu (hoặc chạm trần **90 ngày**), gói tự `active` lại và được cộng bù số ngày đã giữ. Ngày bảo lưu không bị tính vào chu kỳ quyền lợi.
@@ -105,27 +111,24 @@
 ### 3.1 Quản lý lớp và lịch
 **Màn hình:** `/staff/classes` (Lễ tân/Quản lý), `/coach/classes`. **API:** `/api/v1/classes`, `/api/v1/classes/sessions`.
 
-- Lớp gồm bộ môn, HLV, phòng, sức chứa, trình độ. Tạo buổi đơn lẻ hoặc theo các thứ trong tuần.
+- Lớp gồm bộ môn, HLV, phòng, sức chứa, trình độ. Lớp chỉ tạo theo lịch lặp các thứ trong tuần (`POST /classes/recurring`); `POST /classes` tạo lớp lẻ đã ngừng (`SCHEDULING_SINGLE_SESSION_DISABLED`). Vẫn thêm được buổi vào lớp có sẵn (`POST /classes/{id}/sessions`).
 - Không xếp được khi HLV hoặc phòng trùng giờ, HLV có đơn nghỉ đã duyệt hôm đó, hoặc phòng đã có người đặt sân. Lớp phòng VIP chỉ cho hội viên Platinum.
 - **Đơn nghỉ trùng ngày:** HLV/lễ tân gửi đơn nghỉ trùng ít nhất một ngày với đơn nghỉ đang chờ duyệt hoặc đã duyệt của chính mình thì server trả `409 LEAVE_OVERLAP`; màn hình hỏi "Vẫn gửi đơn" và chỉ gửi khi người dùng xác nhận (`confirmOverlap: true`).
 - Đổi HLV/phòng thì kiểm tra trùng lịch với mọi buổi sắp tới. Không giảm sức chứa xuống dưới số chỗ đang giữ.
 - **Hủy một buổi:** hủy các booking của buổi, gửi thông báo `schedule_change`.
 - **Ngừng lớp** (xóa lớp có dữ liệu, hoặc đổi trạng thái sang `cancelled`/`archived`): hủy các buổi **chưa diễn ra**, hủy booking và đăng ký khóa học, **hoàn học phí đã thu vào Ví**, đóng học phí chưa trả, báo hội viên. Lớp chưa có dữ liệu thì xóa hẳn.
 
-### 3.2 Đặt từng buổi
-**Màn hình:** `/member/classes`. **API:** `POST /api/v1/classes/sessions/{id}/bookings`, `POST /api/v1/classes/session-bookings/bulk`, `POST /api/v1/classes/session-bookings/cancel`, `DELETE /api/v1/classes/session-bookings/{id}`, `GET /api/v1/classes/session-bookings/my`.
+### 3.2 Đặt từng buổi (đã ngừng)
+Từ 09/11/2026 hội viên **không còn đặt lẻ từng buổi**: mọi lớp là khóa học lặp lại và hội viên đăng ký cả khóa (mục 3.3). `POST /api/v1/classes/sessions/{id}/bookings`, `POST /api/v1/classes/session-bookings/bulk` và `POST /api/v1/classes/sessions/{id}/enroll` luôn trả `400 SCHEDULING_SINGLE_SESSION_DISABLED`; `/member/classes` không còn nút đặt lẻ.
 
-1. Hội viên xem lịch tuần, HLV, phòng, số chỗ còn.
-2. Điều kiện đặt: buổi `scheduled` và chưa bắt đầu; lớp đang hoạt động; có **một kỳ gói `active` bao phủ cả hôm nay lẫn ngày học**; còn chỗ (chỗ theo buổi + đăng ký cả lớp ≤ sức chứa); không trùng giờ với buổi lớp khác hoặc PT 1:1 của chính mình; phòng VIP cần Platinum.
-3. "Đặt nhiều buổi": tối đa **62 buổi** một lượt. Buổi đầy hoặc trùng giờ được bỏ qua và báo lại.
-4. Hủy: hội viên hoặc nhân viên hủy được tới **trước giờ bắt đầu**. Chỗ được giải phóng ngay.
-
-**State `session_bookings.status`:** `booked` → `cancelled` (hủy, buổi bị hủy, gói bảo lưu/hủy/hết hạn) hoặc `completed` (tự động, 7 ngày sau buổi học).
+Bảng `session_bookings` chỉ còn dữ liệu cũ. Các API đọc/hủy (`GET /session-bookings/my`, `DELETE /session-bookings/{id}`, `POST /session-bookings/cancel`) và các nhánh xử lý `session_bookings` trong hủy buổi, khóa tài khoản, job hoàn thành, trigger sức chứa vẫn còn để xử lý dữ liệu cũ.
 
 ### 3.3 Khóa học (đăng ký cả lớp)
-**API:** `POST /api/v1/classes/sessions/{id}/enroll`, `GET /api/v1/classes/enrollments/my`, `DELETE /api/v1/classes/enrollments/{id}`.
+**Màn hình:** `/member/classes`. **API:** `POST /api/v1/classes/{id}/enroll`, `POST /api/v1/classes/{id}/checkout` (học phí), `DELETE /api/v1/classes/{id}/enroll`, `GET /api/v1/classes/my-enrollments`, `GET /api/v1/classes/my-quota`.
 
-- Khóa học phải kết thúc trong thời hạn gói (được nối các kỳ đã trả liền mạch). Mỗi chu kỳ có số khóa miễn phí theo hạng gói; vượt thì đóng học phí (giảm 10%/20% cho Gold/Platinum).
+- Điều kiện: không bị chặn do vắng; lớp đang hoạt động và **chưa bắt đầu** (khóa đã chạy thì đóng đăng ký); có một kỳ gói `active` bao phủ hôm nay và ngày khóa bắt đầu, ngày bắt đầu không nằm trong khoảng bảo lưu đã duyệt (`SCHEDULING_MEMBERSHIP_ON_HOLD`); phòng VIP cần Platinum; chưa đăng ký lớp này; không trùng giờ với lớp khác hoặc PT 1:1 của mình; còn lượt miễn phí hoặc đóng học phí; còn chỗ.
+
+- Khóa học phải kết thúc trong thời hạn gói (được nối các kỳ đã trả liền mạch). Mỗi gói có số khóa miễn phí `classCreditLimit` dùng cho cả thời hạn gói (để trống = không giới hạn); số đã dùng tính từ ngày bắt đầu gói (gói nâng cấp tính từ gói cũ) tới ngày hết hạn, cộng cả lượt bị mất do bảo lưu muộn. Vượt thì đóng học phí (giảm 10%/20% cho Gold/Platinum).
 - Học phí online giữ chỗ **15 phút**; quá hạn chưa trả thì tự giải phóng.
 - **Quy tắc vắng:** vắng quá **50%** số buổi của một khóa thì bị chặn đăng ký khóa mới trong **30 ngày**. Đi muộn tính là có mặt. (Bảo lưu hủy hẳn khóa nên không phát sinh buổi vắng trong kỳ bảo lưu.)
 - Bảo lưu làm hủy khóa: duyệt trước ngày khóa bắt đầu ≥ 3 ngày thì được trả lại lượt/hoàn phí, muộn hơn hoặc khóa đã chạy thì mất (chi tiết ở mục 2.4).
@@ -154,7 +157,7 @@
 |---|---|---|
 | VNPay | Hội viên | Kiểm chữ ký và số tiền ở IPN. Giao dịch quá hạn được đóng sau 15 phút ân hạn. IPN thành công đến muộn cho đơn đã hủy thì tiền vào Ví. |
 | Ví SÖL | Hội viên | Trừ ngay, khóa dòng ví, chống trừ trùng theo mã tham chiếu. |
-| Tiền mặt / POS / chuyển khoản | Lễ tân xác nhận | `PATCH /payments/{id}/status` chỉ đi `pending → success/failed`, `failed → pending`. |
+| Tiền mặt / POS / chuyển khoản | Lễ tân xác nhận | `PATCH /payments/{id}/status` chỉ đi `pending → success/failed`, `failed → pending`, và chỉ cho payment gói tập/học phí. Payment đặt sân, PT 1:1, đơn hàng, nạp Ví bị từ chối (`PAYMENT_STATUS_USE_TARGET_FLOW`): phải xác nhận ở màn hình riêng để đồng thời đánh dấu lịch/đơn đã trả hoặc cộng Ví. |
 
 **State `payments.status`:** `pending` → `success` / `failed`; `failed` → `pending`; `success` → `refunded` (hoàn đủ). Hoàn một phần thì vẫn `success` và ghi `refundedAmount`. Doanh thu luôn tính `netAmount = amount − refundedAmount`.
 
@@ -195,6 +198,7 @@
 
 - Không khóa được Admin/Quản lý hoạt động cuối cùng.
 - Hội viên còn gói hoặc lịch sắp tới, HLV còn lớp hoặc PT sắp tới thì không đổi vai trò/xóa được cho tới khi xử lý xong.
+- **Khóa tài khoản:** HLV còn lớp hoặc PT sắp tới thì không khóa được (phải bàn giao trước, như khi xóa). Khóa hội viên thì khóa học, sân, PT đã trả vẫn giữ (booking theo buổi cũ, nếu còn, bị hủy).
 - Đơn nghỉ phép đã duyệt chặn xếp lớp cho HLV vào ngày đó.
 - Các thao tác thay đổi dữ liệu quan trọng được ghi `audit_logs` qua `@Audited`.
 
@@ -205,7 +209,7 @@
 ### 6.1 Đặt PT 1:1
 **Màn hình:** `/member/explore`, `/member/dashboard`; HLV ở `/coach/pt-attendance`; lễ tân ở `/staff/pt-attendance`. **API:** `/api/v1/coach-bookings`.
 
-- Đặt trước ít nhất **2 giờ**. Cần gói `active` bao phủ cả hôm nay và ngày tập.
+- Đặt trước ít nhất **2 giờ**. Cần gói `active` bao phủ cả hôm nay và ngày tập; ngày tập nằm trong khoảng bảo lưu đã duyệt thì bị chặn (`MEMBERSHIP_ON_HOLD`).
 - Mỗi chu kỳ có số buổi miễn phí theo hạng gói; buổi thêm trả theo giờ (giảm theo hạng gói). Tối đa **2 buổi chưa trả** sắp tới.
 - Không trùng giờ với lịch khác của HLV hoặc hội viên. HLV không có quá **3 giờ PT liên tiếp** trong cửa sổ 4 giờ (phải nghỉ).
 - Hủy trước giờ bắt đầu: lượt miễn phí được trả lại, tiền đã trả vào Ví.
@@ -254,14 +258,14 @@ Hội viên đánh giá HLV sau một buổi đã kết thúc **và được ghi
 `schedule_change`, `package_expiry`, `payment`, `password_changed` còn được gửi qua email.
 
 ### 7.3 Chat trực tiếp
-`/messages`: hội viên chat với HLV phụ trách; nhân viên chat với nhau. Cập nhật thời gian thực qua Supabase Realtime.
+`/messages`: hội viên chat với HLV phụ trách; nhân viên chat với nhau. Cập nhật thời gian thực qua Supabase Realtime. Quản lý không có chat trực tiếp (API chat không mở cho quản lý); ở `/messages` quản lý chỉ có tab Hỗ trợ & Khiếu nại và SÖL AI.
 
 ### 7.4 Hỗ trợ và khiếu nại
-**Màn hình:** tab Hỗ trợ trong `/messages` (hội viên, lễ tân), `/manager/support`. **API:** `/api/v1/support/requests`.
+**Màn hình:** tab "Hỗ trợ & Khiếu nại" trong `/messages` cho hội viên, lễ tân và quản lý. `/manager/support` chỉ còn chuyển hướng tới `/messages?tab=support`; thông báo phiếu hỗ trợ của quản lý cũng mở tab này. **API:** `/api/v1/support/requests`.
 
 1. Hội viên tạo phiếu theo loại (gói tập, lớp học, thanh toán, …). Lễ tân nhận thông báo.
 2. Lễ tân trả lời ngay trong phiếu. Trả lời phiếu `open` thì phiếu tự sang `in_progress`.
-3. Lễ tân không xử lý được thì **chuyển cấp** kèm lý do. Từ đó chỉ Quản lý xử lý, lễ tân chỉ xem.
+3. Lễ tân không xử lý được thì **chuyển cấp** kèm lý do. Từ đó chỉ Quản lý xử lý (trả lời, đổi trạng thái ngay trong khung Tin nhắn; quản lý không có nút chuyển cấp), lễ tân chỉ xem.
 4. Lễ tân/Quản lý đánh dấu `resolved`. Hội viên bấm **"Xác nhận đã giải quyết"** để đóng, hoặc phiếu **tự đóng sau 72 giờ**.
 5. Hội viên **"Rút yêu cầu"** khi phiếu còn `open`.
 
@@ -285,7 +289,7 @@ Hội viên đánh giá HLV sau một buổi đã kết thúc **và được ghi
 ## 9. Luồng mở rộng — Đặt sân
 **Màn hình:** `/member/courts`, `/staff/courts`. **API:** `GET /api/v1/courts`, `GET /api/v1/courts/{roomId}/availability`, `POST /api/v1/court-bookings`, `GET /api/v1/court-bookings/my|quota`, `PATCH /api/v1/court-bookings/{id}/cancel|confirm-payment`.
 
-- Đặt sân cầu lông, tennis theo khung giờ, trong giờ mở cửa, không đặt quá khứ.
+- Đặt sân cầu lông, tennis theo khung giờ, trong giờ mở cửa, không đặt quá khứ, không đặt vào ngày nằm trong khoảng bảo lưu đã duyệt.
 - Giới hạn theo hạng gói: số ngày đặt trước, số lượt kèm gói mỗi chu kỳ, tổng số lượt sắp tới, số chỗ giữ chưa trả (bảng ở 2.2).
 - Trả qua VNPay (giữ chỗ theo thời hạn cổng) hoặc tại quầy (lễ tân xác nhận). Chỗ chưa trả bị nhả trước giờ chơi.
 - Sân không trùng giờ với lớp học dùng cùng phòng.
@@ -346,7 +350,8 @@ Hội viên đánh giá HLV sau một buổi đã kết thúc **và được ghi
 | Gói tự chuyển `expired` khi hết hạn | Hết hạn xác định theo `end_date`; `expired` chỉ dùng cho kỳ bị thay khi nâng cấp. Có thêm `frozen` (bảo lưu) |
 | Giáo án: `draft/active/completed/cancelled` | Có thêm `superseded` (giáo án cũ khi áp dụng giáo án mới) |
 | Hủy lớp "trước giờ học quy định" | Hủy được tới giờ bắt đầu |
+| Đặt chỗ theo từng buổi, cả tuần/cả tháng một lượt | Đã ngừng từ 09/11/2026; hội viên đăng ký cả khóa học |
 | Hỗ trợ: nhân viên không mở lại phiếu đã giải quyết | Nhân viên được `resolved → in_progress` khi hội viên còn vấn đề |
 | Xuất Excel/PDF báo cáo | Chỉ có hóa đơn PDF của hội viên; báo cáo xem trên web và lưu snapshot JSON |
 | Push/SMS | Thông báo trong ứng dụng và email; chưa có SMS |
-| Không có | Đặt sân, PT 1:1, Ví, cửa hàng, dùng thử có duyệt giấy tờ, chat trực tiếp, chuyển cấp khiếu nại |
+| Không có | Đặt sân, PT 1:1, Ví, cửa hàng, dùng thử có duyệt giấy tờ, bảo lưu gói, chat trực tiếp, chuyển cấp khiếu nại (quản lý xử lý trong `/messages`) |
