@@ -417,6 +417,7 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Vui lòng chọn bộ môn thể thao.": "Please select a discipline.",
   "Vui lòng chọn huấn luyện viên phụ trách.": "Please select an assigned coach.",
   "Vui lòng chọn phòng tập.": "Please select a room.",
+  "Vui lòng chọn ít nhất một ngày trong tuần.": "Please select at least one day of the week.",
   "Sức chứa tối đa (capacity) phải lớn hơn 0.": "Maximum capacity must be greater than 0.",
   "Ngày học không được ở trong quá khứ.": "The class date cannot be in the past.",
   "Giờ kết thúc phải sau giờ bắt đầu.": "End time must be after start time.",

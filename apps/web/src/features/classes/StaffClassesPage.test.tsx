@@ -415,6 +415,59 @@ describe('StaffClassesPage weekly timetable', () => {
     expect(document.body.textContent).not.toContain('đã tồn tại trong hệ thống');
   });
 
+  it('checks room conflicts on every recurring weekday and clears the warning when that weekday is deselected', async () => {
+    as('MANAGER');
+    // Buổi đã có vào Thứ 2 tuần sau (2099-01-12) cùng phòng, 10:00–11:00.
+    vi.spyOn(classesApi, 'getSessions').mockResolvedValue([
+      monday,
+      { ...monday, id: 502, sessionDate: '2099-01-12', startTime: '10:00:00', endTime: '11:00:00' },
+    ]);
+    await render();
+    // Khai giảng Thứ 4 (2099-01-07) 10:00–11:00, mặc định T2/T4/T6 → buổi Thứ 2 ngày 12 bị trùng.
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-slot="2099-01-07|10"]')!.click());
+    const warning = () => host.querySelector('dialog[open] [data-testid="schedule-conflict-warning"]');
+    const submit = () => host.querySelector<HTMLButtonElement>('[data-testid="submit-class-button"]')!;
+    expect(warning()?.textContent).toContain('Trùng lịch phòng tập');
+    expect(warning()?.textContent).toContain('vào Thứ 2, ngày 12/01/2099');
+    expect(submit().disabled).toBe(true);
+
+    const mondayChip = [...host.querySelectorAll<HTMLButtonElement>('dialog[open] button')].find((b) => b.textContent === 'Thứ 2')!;
+    await act(async () => mondayChip.click());
+    expect(warning()).toBeNull();
+    expect(submit().disabled).toBe(false);
+  });
+
+  it('lists every conflicting weekday at once and narrows the list as weekdays are deselected', async () => {
+    as('MANAGER');
+    // Phòng đã bận 10:00–11:00 vào Thứ 2 (12, 19/01) và Thứ 4 (14/01).
+    vi.spyOn(classesApi, 'getSessions').mockResolvedValue([
+      monday,
+      { ...monday, id: 502, sessionDate: '2099-01-12', startTime: '10:00:00', endTime: '11:00:00' },
+      { ...monday, id: 503, sessionDate: '2099-01-19', startTime: '10:00:00', endTime: '11:00:00' },
+      { ...monday, id: 504, sessionDate: '2099-01-14', startTime: '10:00:00', endTime: '11:00:00' },
+    ]);
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-slot="2099-01-07|10"]')!.click());
+    const warning = () => host.querySelector('dialog[open] [data-testid="schedule-conflict-warning"]');
+    const submit = () => host.querySelector<HTMLButtonElement>('[data-testid="submit-class-button"]')!;
+    const chip = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('dialog[open] button')].find((b) => b.textContent === label)!;
+
+    expect(warning()?.textContent).toContain('Trùng lịch vào 2 thứ: Thứ 2, Thứ 4 (tổng 3 buổi)');
+    expect(warning()?.textContent).toContain('• Thứ 2: Phòng "Studio A" đã có lớp "Morning Yoga Flow" lúc 10:00 – 11:00 (12/01/2099, 19/01/2099).');
+    expect(warning()?.textContent).toContain('• Thứ 4: Phòng "Studio A" đã có lớp "Morning Yoga Flow" lúc 10:00 – 11:00 (14/01/2099).');
+    expect(submit().disabled).toBe(true);
+
+    // Bỏ Thứ 2 → chỉ còn 1 buổi Thứ 4 bị trùng → quay về câu đơn.
+    await act(async () => chip('Thứ 2').click());
+    expect(warning()?.textContent).toContain('vào Thứ 4, ngày 14/01/2099');
+    expect(warning()?.textContent).not.toContain('Thứ 2');
+    expect(submit().disabled).toBe(true);
+
+    await act(async () => chip('Thứ 4').click());
+    expect(warning()).toBeNull();
+    expect(submit().disabled).toBe(false);
+  });
+
   it('adds a session for an existing class from the empty slot', async () => {
     as('MANAGER');
     const createSession = vi.spyOn(classesApi, 'createSession').mockResolvedValue({ ...monday, id: 502 });

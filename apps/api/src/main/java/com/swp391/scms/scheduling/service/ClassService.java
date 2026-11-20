@@ -810,6 +810,9 @@ public class ClassService {
             String className = existingClass != null && existingClass.getName() != null ? existingClass.getName() : "";
             String rangeStart = formatTime(existing.getStartTime());
             String rangeEnd = formatTime(existing.getEndTime());
+            // {4}: thứ trong tuần (1 = Thứ 2 … 7 = Chủ nhật), dịch bằng choice format trong i18n; {5}: ngày dd/MM/yyyy
+            int dayOfWeek = sessionDate.getDayOfWeek().getValue();
+            String conflictDate = sessionDate.format(CONFLICT_DATE_FORMAT);
 
             if (roomId != null && existingClass != null && existingClass.getRoom() != null
                     && Objects.equals(roomId, existingClass.getRoom().getId())) {
@@ -819,9 +822,10 @@ public class ClassService {
                 throw new ConflictException(
                         "SCHEDULING_ROOM_CONFLICT",
                         "error.scheduling.room_conflict",
-                        new Object[]{roomName, className, rangeStart, rangeEnd},
+                        new Object[]{roomName, className, rangeStart, rangeEnd, dayOfWeek, conflictDate},
                         "Schedule conflict: Room " + roomName + " is already booked for class " + className
-                                + " (" + rangeStart + " - " + rangeEnd + ")");
+                                + " (" + rangeStart + " - " + rangeEnd + " on " + sessionDate.getDayOfWeek()
+                                + " " + conflictDate + ")");
             }
 
             if (coachId != null && existingClass != null && existingClass.getCoach() != null
@@ -833,9 +837,10 @@ public class ClassService {
                 throw new ConflictException(
                         "SCHEDULING_COACH_CONFLICT",
                         "error.scheduling.coach_conflict",
-                        new Object[]{coachName, className, rangeStart, rangeEnd},
+                        new Object[]{coachName, className, rangeStart, rangeEnd, dayOfWeek, conflictDate},
                         "Schedule conflict: Coach " + coachName + " is already teaching class " + className
-                                + " (" + rangeStart + " - " + rangeEnd + ")");
+                                + " (" + rangeStart + " - " + rangeEnd + " on " + sessionDate.getDayOfWeek()
+                                + " " + conflictDate + ")");
             }
         }
     }
@@ -870,6 +875,9 @@ public class ClassService {
         String raw = time.toString();
         return raw.length() >= 5 ? raw.substring(0, 5) : raw;
     }
+
+    private static final java.time.format.DateTimeFormatter CONFLICT_DATE_FORMAT =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /**
      * SCRUM-72 BR-06: schedule lookup for any authenticated role with optional filters.

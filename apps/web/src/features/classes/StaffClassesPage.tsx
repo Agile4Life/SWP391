@@ -92,6 +92,113 @@ function addWeeksToDate(dateStr: string, weeks: number): string {
   return `${year}-${month}-${day}`;
 }
 
+const DAY_OF_WEEK_INDEX: Record<string, number> = {
+  SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+};
+
+/**
+ * Liệt kê các ngày học mà khóa định kỳ sẽ sinh ra: mọi ngày trong [startDate, endDate] (bao gồm 2 đầu)
+ * rơi vào các thứ đã chọn — khớp với vòng lặp sinh buổi ở ClassService.createRecurringClass.
+ */
+function recurringSessionDates(startDate: string, endDate: string, recurringDays: string[]): string[] {
+  if (!startDate || !endDate || recurringDays.length === 0) return [];
+  const wanted = new Set(recurringDays.map((d) => DAY_OF_WEEK_INDEX[d.toUpperCase()]));
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const [ey, em, ed] = endDate.split('-').map(Number);
+  const cursor = new Date(sy, sm - 1, sd);
+  const last = new Date(ey, em - 1, ed);
+  const dates: string[] = [];
+  while (cursor <= last) {
+    if (wanted.has(cursor.getDay())) {
+      const month = String(cursor.getMonth() + 1).padStart(2, '0');
+      const day = String(cursor.getDate()).padStart(2, '0');
+      dates.push(`${cursor.getFullYear()}-${month}-${day}`);
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dates;
+}
+
+const WEEKDAY_LABELS_VI = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+const WEEKDAY_LABELS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** "2026-11-23" → { index: 1, vi: "Thứ 2", en: "Monday" } (index theo Date#getDay, 0 = Chủ nhật). */
+function weekdayOf(dateStr: string): { index: number; vi: string; en: string } {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const index = new Date(y, m - 1, d).getDay();
+  return { index, vi: WEEKDAY_LABELS_VI[index], en: WEEKDAY_LABELS_EN[index] };
+}
+
+interface ScheduleConflict {
+  kind: 'room' | 'coach';
+  /** Tên phòng (kind = room) hoặc tên HLV (kind = coach). */
+  name: string;
+  className: string;
+  start: string;
+  end: string;
+  /** Ngày của buổi bị trùng, dạng ISO yyyy-MM-dd. */
+  date: string;
+}
+
+/** Một buổi trùng: nêu rõ thứ mấy, ngày nào (cùng định dạng với thông báo i18n của backend). */
+function singleConflictMessage(c: ScheduleConflict): StaffMessage {
+  const weekday = weekdayOf(c.date);
+  const dateLabel = formatCenterDate(c.date);
+  return c.kind === 'room'
+    ? staffMessage(
+        `Trùng lịch phòng tập: Phòng "${c.name}" đã có lớp "${c.className}" hoạt động trong khung giờ ${c.start} – ${c.end} vào ${weekday.vi}, ngày ${dateLabel}.`,
+        `Room schedule conflict: Room "${c.name}" is already booked for class "${c.className}" during ${c.start} – ${c.end} on ${weekday.en}, ${dateLabel}.`,
+      )
+    : staffMessage(
+        `Trùng lịch Huấn luyện viên: HLV "${c.name}" đã có lịch dạy lớp "${c.className}" trong khung giờ ${c.start} – ${c.end} vào ${weekday.vi}, ngày ${dateLabel}.`,
+        `Coach schedule conflict: Coach "${c.name}" is already teaching class "${c.className}" during ${c.start} – ${c.end} on ${weekday.en}, ${dateLabel}.`,
+      );
+}
+
+const MAX_LISTED_CONFLICT_DATES = 3;
+
+/**
+ * Nhiều buổi trùng (khóa định kỳ): một dòng tóm tắt liệt kê mọi thứ bị trùng, rồi mỗi thứ một dòng
+ * chi tiết (phòng/HLV, lớp đang chiếm, khung giờ, các ngày). Chỉ một buổi thì dùng câu đơn như cũ.
+ */
+function recurringConflictsMessage(conflicts: ScheduleConflict[]): StaffMessage | null {
+  if (conflicts.length === 0) return null;
+  if (conflicts.length === 1) return singleConflictMessage(conflicts[0]);
+
+  // Gom theo thứ (Thứ 2 → Chủ nhật), rồi theo cùng phòng/HLV + lớp + khung giờ.
+  const mondayFirst = (date: string) => (weekdayOf(date).index + 6) % 7;
+  const groups = new Map<string, ScheduleConflict[]>();
+  for (const c of [...conflicts].sort((a, b) => mondayFirst(a.date) - mondayFirst(b.date) || a.date.localeCompare(b.date))) {
+    const key = [mondayFirst(c.date), c.kind, c.name, c.className, c.start, c.end].join('|');
+    groups.set(key, [...(groups.get(key) ?? []), c]);
+  }
+  const weekdays = [...new Set(conflicts.map((c) => mondayFirst(c.date)))].sort((a, b) => a - b);
+  const weekdayNames = weekdays.map((i) => ({ vi: WEEKDAY_LABELS_VI[(i + 1) % 7], en: WEEKDAY_LABELS_EN[(i + 1) % 7] }));
+
+  const viLines = [
+    `Trùng lịch vào ${weekdays.length} thứ: ${weekdayNames.map((w) => w.vi).join(', ')} (tổng ${conflicts.length} buổi). Bỏ chọn các thứ này hoặc đổi giờ, phòng hoặc HLV.`,
+  ];
+  const enLines = [
+    `Schedule conflicts on ${weekdays.length} ${weekdays.length === 1 ? 'day' : 'days'}: ${weekdayNames.map((w) => w.en).join(', ')} (${conflicts.length} sessions in total). Deselect these days or change the time, room or coach.`,
+  ];
+  for (const items of groups.values()) {
+    const first = items[0];
+    const weekday = weekdayOf(first.date);
+    const shown = items.slice(0, MAX_LISTED_CONFLICT_DATES).map((c) => formatCenterDate(c.date)).join(', ');
+    const rest = items.length - MAX_LISTED_CONFLICT_DATES;
+    const viDates = rest > 0 ? `${shown} và ${rest} buổi khác` : shown;
+    const enDates = rest > 0 ? `${shown} and ${rest} more` : shown;
+    if (first.kind === 'room') {
+      viLines.push(`• ${weekday.vi}: Phòng "${first.name}" đã có lớp "${first.className}" lúc ${first.start} – ${first.end} (${viDates}).`);
+      enLines.push(`• ${weekday.en}: Room "${first.name}" is booked for class "${first.className}" at ${first.start} – ${first.end} (${enDates}).`);
+    } else {
+      viLines.push(`• ${weekday.vi}: HLV "${first.name}" đã dạy lớp "${first.className}" lúc ${first.start} – ${first.end} (${viDates}).`);
+      enLines.push(`• ${weekday.en}: Coach "${first.name}" is teaching class "${first.className}" at ${first.start} – ${first.end} (${enDates}).`);
+    }
+  }
+  return staffMessage(viLines.join('\n'), enLines.join('\n'));
+}
+
 const RECURRING_DAYS_OPTIONS = [
   { value: 'MONDAY', label: 'T2', fullLabel: 'Thứ 2' },
   { value: 'TUESDAY', label: 'T3', fullLabel: 'Thứ 3' },
@@ -200,7 +307,7 @@ export function StaffClassesPage() {
 
 
   // SCRUM-132: Phát hiện trùng lịch phòng tập hoặc HLV theo thời gian thực ngay trên form
-  const detectRoomOrCoachConflict = useCallback(
+  const findScheduleConflict = useCallback(
     (
       coachIdStr: string,
       roomIdStr: string,
@@ -208,7 +315,7 @@ export function StaffClassesPage() {
       startTime: string,
       endTime: string,
       excludeSessionId?: number | null,
-    ): StaffMessage | null => {
+    ): ScheduleConflict | null => {
       if (!sessionDate || !startTime || !endTime || endTime <= startTime) return null;
       const targetCoachId = coachIdStr ? Number(coachIdStr) : null;
       const targetRoomId = roomIdStr ? Number(roomIdStr) : null;
@@ -246,11 +353,12 @@ export function StaffClassesPage() {
           coaches.find((c) => c.id === sCoachId)?.fullName ||
           `#${sCoachId}`;
 
+        const base = { className: sClassName, start: existStart, end: existEnd, date: sessionDate };
         if (targetRoomId && sRoomId === targetRoomId) {
-          return staffMessage(`Trùng lịch phòng tập: Phòng "${sRoomName}" đã có lớp "${sClassName}" hoạt động trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`, `Room schedule conflict: Room "${sRoomName}" already has class "${sClassName}" scheduled ${existStart}–${existEnd} on ${sessionDate}.`);
+          return { ...base, kind: 'room', name: sRoomName };
         }
         if (targetCoachId && sCoachId === targetCoachId) {
-          return staffMessage(`Trùng lịch Huấn luyện viên: HLV "${sCoachName}" đã có lịch dạy lớp "${sClassName}" trong khung giờ ${existStart} – ${existEnd} ngày ${sessionDate}.`, `Coach schedule conflict: Coach "${sCoachName}" is already teaching class "${sClassName}" ${existStart}–${existEnd} on ${sessionDate}.`);
+          return { ...base, kind: 'coach', name: sCoachName };
         }
       }
       return null;
@@ -258,14 +366,25 @@ export function StaffClassesPage() {
     [sessions, classes, rooms, coaches],
   );
 
-  const createScheduleConflictWarning = detectRoomOrCoachConflict(
-    formData.coachId,
-    formData.roomId,
-    formData.sessionDate,
-    formData.startTime,
-    formData.endTime,
-    null,
+  const detectRoomOrCoachConflict = useCallback(
+    (...args: Parameters<typeof findScheduleConflict>): StaffMessage | null => {
+      const conflict = findScheduleConflict(...args);
+      return conflict ? singleConflictMessage(conflict) : null;
+    },
+    [findScheduleConflict],
   );
+
+  // Khóa định kỳ: kiểm tra trùng trên TỪNG buổi sẽ được sinh (theo các thứ đã chọn trong khoảng
+  // ngày khai giảng → ngày kết thúc), không chỉ riêng ngày khai giảng, và gom TẤT CẢ buổi trùng
+  // để manager thấy đủ các thứ cần bỏ chọn trong một lần.
+  const createScheduleConflictWarning = (() => {
+    const startDate = formData.startDate || formData.sessionDate;
+    const endDate = formData.endDate || addWeeksToDate(startDate, formData.durationWeeks || 4);
+    const conflicts = recurringSessionDates(startDate, endDate, formData.recurringDays)
+      .map((date) => findScheduleConflict(formData.coachId, formData.roomId, date, formData.startTime, formData.endTime, null))
+      .filter((conflict): conflict is ScheduleConflict => conflict !== null);
+    return recurringConflictsMessage(conflicts);
+  })();
 
   const existingClass = createMode === 'existing' && existingClassId
     ? classes.find((cls) => cls.id === Number(existingClassId)) ?? null
@@ -464,6 +583,11 @@ export function StaffClassesPage() {
       return;
     }
 
+    if (formData.recurringDays.length === 0) {
+      setModalError('Vui lòng chọn ít nhất một ngày trong tuần.');
+      return;
+    }
+
     if (createScheduleConflictWarning) {
       setModalError(createScheduleConflictWarning);
       return;
@@ -474,9 +598,7 @@ export function StaffClassesPage() {
       const startDateVal = formData.startDate || formData.sessionDate;
       const durationWeeksVal = formData.durationWeeks || 4;
       const endDateVal = formData.endDate || addWeeksToDate(startDateVal, durationWeeksVal);
-      const recurringDaysVal = formData.recurringDays && formData.recurringDays.length > 0
-        ? formData.recurringDays
-        : ['MONDAY', 'WEDNESDAY', 'FRIDAY'];
+      const recurringDaysVal = formData.recurringDays;
 
       await classesApi.createRecurringClass({
         name: formData.name.trim(),
@@ -2088,7 +2210,8 @@ export function StaffClassesPage() {
                 data-testid="schedule-conflict-warning"
               >
                 <span style={{ fontWeight: 700 }}>!</span>
-                <span>{t(modalError || createScheduleConflictWarning)}</span>
+                {/* pre-line: thông báo nhiều buổi trùng có một dòng chi tiết cho mỗi thứ */}
+                <span style={{ whiteSpace: 'pre-line' }}>{t(modalError || createScheduleConflictWarning)}</span>
               </div>
             )}
 
