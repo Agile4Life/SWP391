@@ -2,7 +2,6 @@ package com.swp391.scms.attendance;
 
 import com.swp391.scms.attendance.dto.CheckinRequests;
 import com.swp391.scms.attendance.dto.CheckinResponses.CheckinDto;
-import com.swp391.scms.attendance.dto.CheckinResponses.StreakDto;
 import com.swp391.scms.attendance.service.CenterCheckinService;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
@@ -106,13 +105,5 @@ public class CenterCheckinController {
             @Valid @RequestBody CheckinRequests.SelfScan request) {
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                 .body(ApiResponse.ok(msg("attendance.self_checkout.success"), service.selfCheckout(principal, request)));
-    }
-
-    @Operation(summary = "Get the current member's workout streak")
-    @GetMapping("/streak")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<StreakDto>> streak(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(ApiResponse.ok(msg("attendance.streak.success"), service.streak(principal)));
     }
 }
