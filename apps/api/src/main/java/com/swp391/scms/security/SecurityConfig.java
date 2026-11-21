@@ -98,7 +98,6 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/reports/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/admin/audit-logs/**", "/api/v1/admin/audit-logs").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/my", "/api/v1/training-plans/my").hasRole("MEMBER")
-                    .requestMatchers("/api/v1/coaching/training-completions/my", "/api/v1/coaching/training-completions/my/*").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/training-plans/*", "/api/v1/training-plans/*").hasAnyRole("COACH", "CENTER_MANAGER", "MEMBER")
                     .requestMatchers("/api/v1/coaching/training-plans/**", "/api/v1/coaching/training-plans",
                             "/api/v1/training-plans/**", "/api/v1/training-plans").hasAnyRole("COACH", "CENTER_MANAGER")
@@ -107,9 +106,6 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.POST, "/api/v1/coaching/evaluations").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/health/metrics").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/health/metrics/my").hasRole("MEMBER")
-                    .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
                     // Coach Reviews & Monthly Leaderboard (SCRUM-134)
                     .requestMatchers(HttpMethod.POST, "/api/v1/coaching/reviews").hasRole("MEMBER")
