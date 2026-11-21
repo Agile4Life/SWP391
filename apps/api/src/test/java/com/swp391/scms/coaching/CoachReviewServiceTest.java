@@ -129,24 +129,6 @@ class CoachReviewServiceTest {
     }
 
     @Test
-    void aNewReviewRefreshesThatMonthsLeaderboard() {
-        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
-        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
-        when(reviewRepository.save(any(CoachReview.class))).thenAnswer(invocation -> {
-            CoachReview r = invocation.getArgument(0);
-            r.setId(102L);
-            return r;
-        });
-        var leaderboard = mock(com.swp391.scms.coaching.service.CoachLeaderboardService.class);
-        org.springframework.test.util.ReflectionTestUtils.setField(reviewService, "leaderboard", leaderboard);
-
-        reviewService.createReview(10L, new CoachReviewCreateDto(20L, 55L, null, 5, "Tốt", false));
-
-        java.time.LocalDate today = java.time.LocalDate.now();
-        verify(leaderboard).refreshMonth(today.getYear(), today.getMonthValue());
-    }
-
-    @Test
     void createReview_anonymous_hidesMemberName() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));

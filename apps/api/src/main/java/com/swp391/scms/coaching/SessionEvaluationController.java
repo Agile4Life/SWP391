@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,7 +26,9 @@ import java.util.List;
 
 /**
  * REST Controller for Coaching Session Evaluations (SCRUM-119).
+ * Disabled by default: Session Evaluation endpoints have been removed from the active scope.
  */
+@ConditionalOnProperty(name = "app.coaching.evaluations.enabled", havingValue = "true")
 @Tag(name = "Session Evaluations", description = "Đánh giá buổi tập và nhận xét tiến độ học viên (SCRUM-119)")
 @RestController
 @RequestMapping("/api/v1/coaching/evaluations")
