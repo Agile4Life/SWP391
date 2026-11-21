@@ -2,10 +2,12 @@ package com.swp391.scms.shop.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /** Periodically releases stock held by product orders that were never paid within their window. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component
 public class ProductOrderExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(ProductOrderExpiryScheduler.class);
