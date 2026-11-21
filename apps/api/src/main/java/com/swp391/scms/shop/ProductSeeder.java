@@ -23,9 +23,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Disabled by default: Shop module removed from the active scope. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component
 public class ProductSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(ProductSeeder.class);
