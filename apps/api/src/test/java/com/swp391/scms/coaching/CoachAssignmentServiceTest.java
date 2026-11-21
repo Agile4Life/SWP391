@@ -258,4 +258,54 @@ class CoachAssignmentServiceTest {
         @SuppressWarnings("unchecked") var rows = (List<CoachAssignmentOverviewDto>) overview.get("coaches");
         assertThat(rows.getFirst().students()).hasSize(1); assertThat(rows.getFirst().classStudentsCount()).isEqualTo(1);
     }
+
+    @Test void overviewSortsCoachesByNameStudentsSpecializationAndStatus() {
+        Coach coachC = coach(30L, "HLV Cường");
+        coachC.setSpecialization("Boxing");
+        coachC.setEmploymentStatus("on_leave");
+
+        from.getUser().setFullName("HLV Bảo");
+        from.setSpecialization("Yoga");
+        from.setEmploymentStatus("active");
+
+        to.getUser().setFullName("HLV An");
+        to.setSpecialization("Gym");
+        to.setEmploymentStatus("active");
+
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from, coachC, to));
+        // coach 10L (HLV Bảo): 2 distinct students; coach 20L (HLV An): 1 distinct student; coach 30L (HLV Cường): 0
+        Member m2 = new Member();
+        User u2 = new User(); u2.setId(101L); u2.setFullName("Member Hai"); u2.setStatus("active");
+        m2.setUserId(101L); m2.setUser(u2); m2.setMembershipCode("SCMS-101");
+        TrainingPlan p1 = plan(501L, "active");
+        TrainingPlan p2 = plan(502L, "active"); p2.setMember(m2);
+        when(plans.findCurrentAssignments(10L, today)).thenReturn(List.of(p1, p2));
+        when(plans.findCurrentAssignments(20L, today)).thenReturn(List.of(plan(503L, "active")));
+        when(plans.findCurrentAssignments(30L, today)).thenReturn(List.of());
+
+        @SuppressWarnings("unchecked") var byNameAsc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "name", "asc").get("coaches");
+        assertThat(byNameAsc).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(20L, 10L, 30L);
+
+        @SuppressWarnings("unchecked") var byNameDesc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "name", "desc").get("coaches");
+        assertThat(byNameDesc).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(30L, 10L, 20L);
+
+        @SuppressWarnings("unchecked") var byStudentsDesc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "totalStudentsCount", "desc").get("coaches");
+        assertThat(byStudentsDesc).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(10L, 20L, 30L);
+
+        @SuppressWarnings("unchecked") var bySpecAsc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "specialization", "asc").get("coaches");
+        assertThat(bySpecAsc).extracting(CoachAssignmentOverviewDto::specialization).containsExactly("Boxing", "Gym", "Yoga");
+
+        @SuppressWarnings("unchecked") var byStatusDesc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "employmentStatus", "desc").get("coaches");
+        assertThat(byStatusDesc).extracting(CoachAssignmentOverviewDto::employmentStatus).containsExactly("on_leave", "active", "active");
+    }
+
+    @Test void overviewRejectsInvalidSortFieldOrDirection() {
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from));
+        assertThatThrownBy(() -> service.getOverview(null, null, null, "unknownField", "asc"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVALID_SORT_FIELD");
+        assertThatThrownBy(() -> service.getOverview(null, null, null, "name", "up"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVALID_SORT_DIRECTION");
+    }
 }
