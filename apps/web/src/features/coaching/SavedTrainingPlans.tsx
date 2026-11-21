@@ -245,7 +245,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
           </form>
         </Modal>
       )}
-      {resultPlan && <Modal title={t('Chi tiết giáo án · ') + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} plan={resultPlan} planId={resultPlan.id} /></Modal>}
+      {resultPlan && <Modal title={t('Chi tiết giáo án · ', 'Plan details · ') + (resultPlan.memberName ?? '#' + resultPlan.memberId)} onClose={() => setResultPlan(null)}><TrainingPlanResults key={resultPlan.id} plan={resultPlan} planId={resultPlan.id} /></Modal>}
       {confirmDialog}
     </section>
   );

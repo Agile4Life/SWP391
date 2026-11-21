@@ -150,11 +150,11 @@ export function CoachClassesPage() {
   return (
     <div data-i18n-managed className="portal-container coach-page">
       <PageHeader
-        title={t("Lịch dạy PT 1-1 & học viên")}
+        title={t("Lịch dạy PT 1-1 & học viên", "1:1 PT Schedule & Trainees")}
       />
 
       {/* Phân hệ Tab: Thời khóa biểu PT 1-1 vs Học viên phụ trách */}
-      <div className="portal-tabs coach-nav-tabs" role="tablist" aria-label={t("Phân hệ chức năng HLV")}>
+      <div className="portal-tabs coach-nav-tabs" role="tablist" aria-label={t("Phân hệ chức năng HLV", "Coach feature tabs")}>
         <button
           type="button"
           role="tab"
@@ -162,7 +162,7 @@ export function CoachClassesPage() {
           className={`portal-tab coach-tab-btn ${activeTab === 'schedule' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
-          {t("Thời khóa biểu PT 1-1")}</button>
+          {t("Thời khóa biểu PT 1-1", "1:1 PT Timetable")}</button>
         <button
           type="button"
           role="tab"
@@ -170,7 +170,7 @@ export function CoachClassesPage() {
           className={`portal-tab coach-tab-btn ${activeTab === 'students' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('students')}
         >
-          {t("Học viên phụ trách")}</button>
+          {t("Học viên phụ trách", "Assigned Trainees")}</button>
       </div>
 
       {/* ====================================================================
@@ -178,7 +178,7 @@ export function CoachClassesPage() {
           ==================================================================== */}
       {activeTab === 'schedule' && (
         <WeeklyTimetable
-          label={t("Thời khóa biểu dạy kèm PT 1-1 của tôi")}
+          label={t("Thời khóa biểu dạy kèm PT 1-1 của tôi", "My 1:1 PT Timetable")}
           weekStart={formatYmd(currentMonday)}
           events={ptBookingEvents(coach1on1Bookings)}
           loading={loading}
@@ -186,8 +186,8 @@ export function CoachClassesPage() {
           onRetry={() => void loadWeeklySessions()}
           onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
           onEventClick={handleEventClick}
-          emptyLabel={t("Tuần này bạn chưa có buổi kèm PT 1-1 nào.")}
-          legendNote={t("Bấm vào buổi kèm để xem chi tiết học viên hoặc hủy lịch")}
+          emptyLabel={t("Tuần này bạn chưa có buổi kèm PT 1-1 nào.", "You have no 1:1 sessions scheduled this week.")}
+          legendNote={t("Bấm vào buổi kèm để xem chi tiết học viên hoặc hủy lịch", "Click a session to view trainee details or cancel")}
           legend={[
             { tone: 'mine', label: t('Kèm riêng 1:1') },
             { tone: 'past', label: t('Đã qua') },
