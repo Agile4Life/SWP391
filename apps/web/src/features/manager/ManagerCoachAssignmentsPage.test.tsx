@@ -285,5 +285,40 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(coachAssignmentsApi.reassignStudent).toHaveBeenCalledWith(expect.objectContaining({ assignmentType: 'PT_1_1', referenceId: 501, memberId: 101, fromCoachId: 10, toCoachId: 11, reason: 'HLV cũ nghỉ phép' }));
     expect(notify).toHaveBeenCalledWith('Điều chuyển phân công đã chọn sang HLV mới thành công!', 'success', { translation: { vi: 'Điều chuyển phân công đã chọn sang HLV mới thành công!', en: 'Selected assignment transferred to the new coach successfully!' } });
   });
+
+  it('requests sorted coaches list when sort dropdown value changes', async () => {
+    await renderComponent();
+
+    const sortSelect = host.querySelector('select[aria-label="Sắp xếp danh sách HLV"]') as HTMLSelectElement;
+    expect(sortSelect).toBeTruthy();
+
+    expect(coachAssignmentsApi.getOverview).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'name', sortDir: 'asc' })
+    );
+
+    await act(async () => {
+      sortSelect.value = 'students_desc';
+      sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 260));
+    });
+
+    expect(coachAssignmentsApi.getOverview).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'totalStudentsCount', sortDir: 'desc' })
+    );
+
+    await act(async () => {
+      sortSelect.value = 'pt_desc';
+      sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 260));
+    });
+
+    expect(coachAssignmentsApi.getOverview).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'ptStudentsCount', sortDir: 'desc' })
+    );
+  });
 });
 

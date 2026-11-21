@@ -1,5 +1,5 @@
 import { staffTranslation, useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
@@ -36,6 +36,7 @@ function validateStaffPhone(raw?: string, accounts: StaffAccount[] = []): string
 export function StaffAccountsPage() {
   const { t } = useStaffI18n();
   const [accounts, setAccounts] = useState<StaffAccount[]>([]);
+  const [sortOption, setSortOption] = useState<'name_asc' | 'name_desc' | 'role' | 'status'>('name_asc');
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string }>({});
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,32 @@ export function StaffAccountsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<StaffMessage>('');
   const [reload, setReload] = useState(0);
+
+  const sortedAccounts = useMemo(() => {
+    return [...accounts].sort((a, b) => {
+      switch (sortOption) {
+        case 'name_desc':
+          return b.fullName.localeCompare(a.fullName, 'vi');
+        case 'role': {
+          const roleOrder: Record<string, number> = { COACH: 1, RECEPTIONIST: 2 };
+          const orderA = roleOrder[a.roleCode] ?? 99;
+          const orderB = roleOrder[b.roleCode] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.fullName.localeCompare(b.fullName, 'vi');
+        }
+        case 'status': {
+          const statusOrder: Record<string, number> = { active: 1, unactivated: 2, locked: 3 };
+          const orderA = statusOrder[a.status] ?? 99;
+          const orderB = statusOrder[b.status] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.fullName.localeCompare(b.fullName, 'vi');
+        }
+        case 'name_asc':
+        default:
+          return a.fullName.localeCompare(b.fullName, 'vi');
+      }
+    });
+  }, [accounts, sortOption]);
 
   useEffect(() => {
     let active = true;
@@ -197,13 +224,33 @@ export function StaffAccountsPage() {
       </form>
     </section>
     <section className="portal-card" aria-labelledby="staff-list-heading">
-      <h2 id="staff-list-heading" className="portal-card-title">{t("Huấn luyện viên & Lễ tân")}</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+        <h2 id="staff-list-heading" className="portal-card-title" style={{ margin: 0 }}>{t("Huấn luyện viên & Lễ tân", "Coaches & Receptionists")}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label htmlFor="staff-sort-select" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--sol-text-muted)' }}>
+            {t("Sắp xếp:", "Sort:")}
+          </label>
+          <Select
+            id="staff-sort-select"
+            className="portal-select"
+            value={sortOption}
+            onChange={e => setSortOption(e.target.value as 'name_asc' | 'name_desc' | 'role' | 'status')}
+            aria-label={t("Sắp xếp danh sách nhân sự", "Sort staff list")}
+            data-testid="staff-sort-select"
+          >
+            <option value="name_asc">{t("Tên (A–Z)", "Name (A–Z)")}</option>
+            <option value="name_desc">{t("Tên (Z–A)", "Name (Z–A)")}</option>
+            <option value="role">{t("Vai trò (HLV trước)", "Role (Coach first)")}</option>
+            <option value="status">{t("Trạng thái (Hoạt động trước)", "Status (Active first)")}</option>
+          </Select>
+        </div>
+      </div>
       {loading ? <LoadingSkeleton label={t("Đang tải tài khoản nhân sự")} variant="table" /> : loadError ? <div role="alert" className="portal-alert">
         {t(loadError)} <button className="btn-secondary" type="button" onClick={() => { setLoading(true); setReload(current => current + 1); }}>{t("Thử lại")}</button>
-      </div> : accounts.length === 0 ? <p>{t("Chưa có tài khoản nhân sự.")}</p> : <div className="portal-table-wrapper">
+      </div> : sortedAccounts.length === 0 ? <p>{t("Chưa có tài khoản nhân sự.")}</p> : <div className="portal-table-wrapper">
         <table className="portal-table">
           <thead><tr><th scope="col">{t("Họ và tên")}</th><th scope="col">Email</th><th scope="col">{t("Vai trò")}</th><th scope="col">{t("Trạng thái")}</th><th scope="col">{t("Thao tác")}</th></tr></thead>
-          <tbody>{accounts.map(account => <tr key={account.id}>
+          <tbody>{sortedAccounts.map(account => <tr key={account.id}>
             <td>{account.fullName}</td><td>{account.email}</td>
             <td>{account.roleCode === 'COACH' ? t('Huấn luyện viên') : t('Lễ tân')}</td>
             <td>{account.status === 'active' ? t('Hoạt động') : account.status === 'locked' ? t('Đã khóa') : t('Chưa kích hoạt')}</td>
