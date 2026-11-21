@@ -72,7 +72,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/manager/reports', label: 'Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
   { to: '/manager/coach-assignments', label: 'Phân công HLV', icon: 'users', roles: ['MANAGER'] },
-  { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
   // Khiếu nại chuyển lên nằm trong khung Tin nhắn (Hỗ trợ & Khiếu nại), sidebar chỉ còn đơn nội bộ.
   { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', icon: 'inbox', roles: ['MANAGER'] },
   { to: '/manager/staff-accounts', label: 'Tài khoản nhân sự', icon: 'badge', roles: ['MANAGER'] },
