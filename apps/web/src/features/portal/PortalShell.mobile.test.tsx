@@ -85,7 +85,7 @@ describe('mobile portal navigation', () => {
   it.each([
     ['MEMBER', '/member/dashboard', ['/member/dashboard', '/member/classes', '/member/check-in']],
     ['STAFF', '/staff/reception', ['/staff/reception', '/staff/check-in', '/staff/requests']],
-    ['COACH', '/coach/classes', ['/coach/classes', '/staff/attendance', '/coach/training-plans']],
+    ['COACH', '/coach/classes', ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans']],
     ['MANAGER', '/manager/reports', ['/manager/reports', '/manager/catalogs', '/manager/coach-assignments']],
   ] as const)('shows only the three primary actions for %s and marks the current screen', async (role, path, expected) => {
     await renderPortal(role, path);

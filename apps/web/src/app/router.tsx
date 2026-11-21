@@ -205,11 +205,11 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/attendance',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+            element: <Navigate to="/coach/pt-attendance" replace />,
           },
           {
             path: '/staff/attendance/:sessionId',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+            element: <Navigate to="/coach/pt-attendance" replace />,
           },
           {
             path: '/coach/classes',
