@@ -255,11 +255,11 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/classes',
-            lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),
+            element: <Navigate to="/staff/reception" replace />,
           },
           {
             path: '/staff/orders',
-            lazy: async () => ({ Component: (await import('../features/shop/StaffOrdersPage')).StaffOrdersPage }),
+            element: <Navigate to="/staff/reception" replace />,
           },
         ],
       },
@@ -285,19 +285,19 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/products',
-            lazy: async () => ({ Component: (await import('../features/shop/ManagerProductsPage')).ManagerProductsPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/products/new',
-            lazy: async () => ({ Component: (await import('../features/shop/ManagerProductEditorPage')).ManagerProductEditorPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/products/:productId',
-            lazy: async () => ({ Component: (await import('../features/shop/ManagerProductEditorPage')).ManagerProductEditorPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/equipment',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerEquipmentPage')).ManagerEquipmentPage }),
+            element: <Navigate to="/manager/catalogs" replace />,
           },
           {
             path: '/manager/coach-assignments',
@@ -321,7 +321,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/coach-reviews',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerCoachReviewsPage')).ManagerCoachReviewsPage }),
+            element: <Navigate to="/manager/coach-assignments" replace />,
           },
           {
             // Khiếu nại chuyển lên được quản lý xử lý trong khung Tin nhắn như lễ tân.
