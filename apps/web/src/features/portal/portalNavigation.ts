@@ -68,23 +68,13 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/staff/kyc', label: 'Hồ sơ định danh', en: 'Identity review' },
     { to: '/staff/holds', label: 'Bảo lưu gói tập', en: 'Membership holds' },
   ] },
-  { to: '/staff/courts', label: 'Đặt sân & Đơn hàng', icon: 'court', roles: ['STAFF'], tabs: [
-    { to: '/staff/courts', label: 'Lượt đặt sân', en: 'Court bookings' },
-    { to: '/staff/orders', label: 'Đơn hàng sản phẩm', en: 'Product orders' },
-  ] },
   { to: '/staff/requests', label: 'Đơn từ nội bộ', icon: 'file', roles: ['STAFF', 'COACH'] },
   { to: '/admin/users', label: 'Tài khoản & Phân quyền', icon: 'users', roles: ['ADMIN'] },
   { to: '/admin/audit-logs', label: 'Nhật ký & Lấp đầy', icon: 'chart', roles: ['ADMIN'] },
   { to: '/admin/payments', label: 'Đối soát thanh toán', icon: 'receipt', roles: ['ADMIN'] },
   { to: '/manager/reports', label: 'Doanh thu', icon: 'chart', roles: ['MANAGER'] },
   { to: '/manager/catalogs', label: 'Danh mục vận hành', icon: 'catalog', roles: ['MANAGER'] },
-  { to: '/manager/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MANAGER'] },
-  { to: '/manager/equipment', label: 'Quản lý máy móc thiết bị', icon: 'dumbbell', roles: ['MANAGER'] },
-  { to: '/manager/coach-assignments', label: 'Huấn luyện viên', icon: 'users', roles: ['MANAGER'], tabs: [
-    { to: '/manager/coach-assignments', label: 'Phân công học viên', en: 'Assignments' },
-    { to: '/manager/coach-reviews', label: 'Xếp hạng & đánh giá', en: 'Ratings & reviews' },
-  ] },
-  { to: '/staff/classes', label: 'Quản lý Lớp học & Xếp lịch', icon: 'calendar', roles: ['STAFF', 'MANAGER'] },
+  { to: '/manager/coach-assignments', label: 'Phân công HLV', icon: 'users', roles: ['MANAGER'] },
   { to: '/staff/pt-attendance', label: 'Điểm danh buổi PT', icon: 'check', roles: ['STAFF'] },
   // Khiếu nại chuyển lên nằm trong khung Tin nhắn (Hỗ trợ & Khiếu nại), sidebar chỉ còn đơn nội bộ.
   { to: '/manager/requests', label: 'Đơn nội bộ chờ duyệt', icon: 'inbox', roles: ['MANAGER'] },
@@ -168,8 +158,8 @@ export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label
   ],
   STAFF: [
     { to: '/staff/reception', label: 'Lễ tân' },
-    { to: '/staff/classes', label: 'Lớp học' },
     { to: '/staff/check-in', label: 'Check-in' },
+    { to: '/staff/requests', label: 'Đơn từ' },
   ],
   COACH: [
     { to: '/coach/classes', label: 'Lịch dạy' },
@@ -179,7 +169,7 @@ export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label
   MANAGER: [
     { to: '/manager/reports', label: 'Báo cáo' },
     { to: '/manager/catalogs', label: 'Danh mục' },
-    { to: '/staff/classes', label: 'Lớp học' },
+    { to: '/manager/coach-assignments', label: 'Phân công' },
   ],
 };
 
@@ -197,6 +187,8 @@ export const MOBILE_PRIMARY_NAV_EN_LABELS: Record<string, string> = {
   '/coach/training-plans': 'Plans',
   '/manager/reports': 'Reports',
   '/manager/catalogs': 'Catalogs',
+  '/manager/coach-assignments': 'Coaches',
+  '/staff/requests': 'Requests',
 };
 
 export function getMobileNavLabel(to: string, fallbackVi: string, lang: Language = 'vi'): string {
