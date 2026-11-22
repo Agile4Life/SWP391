@@ -79,6 +79,12 @@ public class CoachAssignmentService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getOverview(Long filterCoachId, String search, String assignmentType) {
+        return getOverview(filterCoachId, search, assignmentType, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getOverview(Long filterCoachId, String search, String assignmentType,
+                                           String sortBy, String sortDir) {
         List<Coach> availableCoaches = coachRepository.findActiveWithUser();
         LocalDate date = today();
         LocalTime time = LocalTime.now(clock);
@@ -124,9 +130,54 @@ public class CoachAssignmentService {
                     coach.getUser().getPhone(), coach.getSpecialization(), coach.getBio(), coach.getEmploymentStatus(),
                     distinct.size(), pt.size(), plans.size(), classes.size(), filtered));
         }
+        sortCoaches(coaches, sortBy, sortDir);
         return Map.of("coaches", coaches, "availableCoaches", availableCoaches.stream()
                         .map(c -> new CoachAssignmentCoachOptionDto(c.getUserId(), c.getUser().getFullName(), c.getSpecialization())).toList(),
                 "stats", new CoachAssignmentSummaryStatsDto(availableCoaches.size(), availableCoaches.size(), allStudents.size(), allPt.size(), allPlans.size(), allClasses.size()));
+    }
+
+    private void sortCoaches(List<CoachAssignmentOverviewDto> coaches, String sortBy, String sortDir) {
+        boolean hasSortBy = sortBy != null && !sortBy.isBlank();
+        boolean hasSortDir = sortDir != null && !sortDir.isBlank();
+        if (!hasSortBy && !hasSortDir) {
+            return;
+        }
+
+        String normalizedDir = hasSortDir ? sortDir.trim().toLowerCase(Locale.ROOT) : "asc";
+        if (!"asc".equals(normalizedDir) && !"desc".equals(normalizedDir)) {
+            throw invalid("INVALID_SORT_DIRECTION", "invalid_sort_dir");
+        }
+
+        String normalizedKey = hasSortBy ? sortBy.trim().toLowerCase(Locale.ROOT) : "name";
+        Comparator<CoachAssignmentOverviewDto> primary = switch (normalizedKey) {
+            case "name", "coachname", "fullname" ->
+                    Comparator.comparing(c -> safeText(c.coachName()), String.CASE_INSENSITIVE_ORDER);
+            case "students", "totalstudents", "totalstudentscount", "studentcount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::totalStudentsCount);
+            case "pt", "ptstudents", "ptstudentscount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::ptStudentsCount);
+            case "plans", "planstudents", "planstudentscount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::planStudentsCount);
+            case "classes", "classstudents", "classstudentscount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::classStudentsCount);
+            case "specialization" ->
+                    Comparator.comparing(c -> safeText(c.specialization()), String.CASE_INSENSITIVE_ORDER);
+            case "status", "employmentstatus" ->
+                    Comparator.comparing(c -> safeText(c.employmentStatus()), String.CASE_INSENSITIVE_ORDER);
+            default -> throw invalid("INVALID_SORT_FIELD", "invalid_sort");
+        };
+
+        if ("desc".equals(normalizedDir)) {
+            primary = primary.reversed();
+        }
+
+        coaches.sort(primary
+                .thenComparing(c -> safeText(c.coachName()), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(CoachAssignmentOverviewDto::coachId, Comparator.nullsLast(Long::compareTo)));
+    }
+
+    private static String safeText(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private Set<Long> studentsOfType(List<CoachAssignmentStudentDto> rows, String type) {

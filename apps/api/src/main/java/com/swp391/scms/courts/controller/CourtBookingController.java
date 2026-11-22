@@ -16,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 @RequestMapping("/api/v1")
 public class CourtBookingController {
     private final CourtBookingService service;

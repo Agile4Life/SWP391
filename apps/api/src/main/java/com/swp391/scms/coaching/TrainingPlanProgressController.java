@@ -3,11 +3,17 @@ import com.swp391.scms.coaching.service.TrainingPlanProgressService;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
+
+/**
+ * Disabled by default: Training plan progress endpoints have been removed from the active scope.
+ */
+@ConditionalOnProperty(name = "app.coaching.progress.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/coaching/training-plans")
 public class TrainingPlanProgressController {

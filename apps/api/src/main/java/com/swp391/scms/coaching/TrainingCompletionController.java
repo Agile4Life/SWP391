@@ -8,6 +8,7 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +19,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 
+/**
+ * Disabled by default: Member training completion history endpoints have been removed from the active scope.
+ */
+@ConditionalOnProperty(name = "app.coaching.completions.enabled", havingValue = "true")
 @Tag(name = "Member Training Completions")
 @RestController
 @RequestMapping("/api/v1/coaching/training-completions/my")

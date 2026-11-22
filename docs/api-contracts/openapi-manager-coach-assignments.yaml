@@ -36,6 +36,15 @@ paths:
         - name: type
           in: query
           schema: { type: string, enum: [ALL, TRAINING_PLAN, PT_1_1, CLASS], default: ALL }
+        - name: sortBy
+          in: query
+          description: |
+            Coach sort field (case-insensitive). Omitted together with sortDir keeps the server order.
+            Ties fall back to coach name, then coachId.
+          schema: { type: string, enum: [name, totalStudentsCount, ptStudentsCount, planStudentsCount, classStudentsCount, specialization, employmentStatus] }
+        - name: sortDir
+          in: query
+          schema: { type: string, enum: [asc, desc], default: asc }
       responses:
         '200':
           description: Current assignments; an empty coaches or students list is valid
@@ -47,7 +56,7 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: '#/components/schemas/Overview' }
-        '400': { description: Invalid assignment type, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '400': { description: Invalid assignment type, sort field (INVALID_SORT_FIELD) or sort direction (INVALID_SORT_DIRECTION), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
         '401': { description: Authentication required }
         '403': { description: Manager role required }
   /manager/coach-assignments/reassign:

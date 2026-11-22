@@ -972,7 +972,7 @@ export function MemberPackagesPage() {
             </p>
           )}
           <p className="row-card__meta" style={{ marginTop: 6 }}>
-            {t(" Gói tập đang được bảo lưu. Khóa học, lịch PT và đặt sân trong giai đoạn bảo lưu đã bị hủy. ", "Your membership is on hold. Courses, PT sessions and courts within the hold period have been cancelled.")}</p>
+            {t(" Gói tập đang được bảo lưu. Các buổi PT 1:1 trong giai đoạn bảo lưu đã bị hủy. ", "Your membership is on hold. 1:1 PT sessions within the hold period have been cancelled.")}</p>
           <p className="row-card__meta">{t("Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.", "Resume to use your remaining days; no new payment needed.")}</p>
           <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
             onClick={() => void handleResume()}>
@@ -1136,13 +1136,8 @@ export function MemberPackagesPage() {
               return durationTab === 'long' ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
             }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage, lang);
-            // Chỉ điều có giá trị so sánh: lượt đặt lớp + quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
-            const highlights = [
-              membershipPackage.classCreditLimit != null
-                ? t(`${membershipPackage.classCreditLimit} lượt đặt lớp mỗi kỳ`, `${membershipPackage.classCreditLimit} class bookings per period`)
-                : t("Không giới hạn lượt đặt lớp", "Unlimited class bookings"),
-              ...details.perks,
-            ];
+            // Lớp nhóm đã bỏ: chỉ so sánh quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
+            const highlights = [...details.perks];
             // Chỉ gập khi còn từ 2 ý trở lên; thừa đúng 1 ý thì hiện luôn
             const visibleCount = highlights.length <= 3 ? highlights.length : 2;
             const isCurrent =

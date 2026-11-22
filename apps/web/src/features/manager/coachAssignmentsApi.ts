@@ -62,11 +62,13 @@ export interface ReassignStudentRequest {
 }
 
 export const coachAssignmentsApi = {
-  getOverview: (params?: { coachId?: number; search?: string; type?: string }) => {
+  getOverview: (params?: { coachId?: number; search?: string; type?: string; sortBy?: string; sortDir?: string }) => {
     const query = new URLSearchParams();
     if (params?.coachId) query.set('coachId', String(params.coachId));
     if (params?.search) query.set('search', params.search);
     if (params?.type) query.set('type', params.type);
+    if (params?.sortBy) query.set('sortBy', params.sortBy);
+    if (params?.sortDir) query.set('sortDir', params.sortDir);
     const qs = query.toString();
     return apiFetch<CoachAssignmentData>(`/manager/coach-assignments${qs ? `?${qs}` : ''}`);
   },

@@ -8,11 +8,17 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Disabled by default: Member health metrics and body-progress tracking endpoints
+ * have been removed from the active scope.
+ */
+@ConditionalOnProperty(name = "app.health.metrics.enabled", havingValue = "true")
 @Tag(name = "Health Metrics", description = "Quản lý và ghi nhận chỉ số sức khỏe của hội viên")
 @RestController
 public class HealthMetricController {

@@ -89,15 +89,15 @@ public class DemoDataSeeder implements ApplicationRunner {
                     "SILVER", "ACTIVE_NEW", 5),
             new MemberSpec("dung", "Phạm Quốc Dũng", "male", 35, "intermediate", "Tăng sức bền", "Đau gối nhẹ",
                     "GOLD", "EXPIRED", 120),
-            new MemberSpec("em", "Võ Ngọc Em", "female", 29, "beginner", "Yoga, thư giãn", null,
+            new MemberSpec("em", "Võ Ngọc Em", "female", 29, "beginner", "Cải thiện sức khỏe", null,
                     "SILVER", "FROZEN", 90),
             new MemberSpec("phuc", "Đặng Hoàng Phúc", "male", 22, "beginner", "Tăng cân lành mạnh", null,
                     "GOLD", "PENDING", 1),
-            new MemberSpec("giang", "Bùi Hương Giang", "female", 33, "intermediate", "Boxing, giảm stress", null,
+            new MemberSpec("giang", "Bùi Hương Giang", "female", 33, "intermediate", "Tăng thể lực, giảm stress", null,
                     "GOLD", "RENEWED", 110),
             new MemberSpec("hieu", "Ngô Trung Hiếu", "male", 40, "advanced", "Duy trì thể lực", null,
                     "PLATINUM", "EXPIRING", 27),
-            new MemberSpec("khoa", "Đỗ Anh Khoa", "male", 26, "beginner", "Bơi lội", null,
+            new MemberSpec("khoa", "Đỗ Anh Khoa", "male", 26, "beginner", "Cải thiện sức bền", null,
                     "SILVER", "CANCELLED", 60),
             new MemberSpec("lan", "Hồ Mỹ Lan", "female", 27, "beginner", "Chưa chọn gói", null,
                     null, "NO_PLAN", 2));
@@ -108,12 +108,12 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final List<CoachSpec> COACHES = List.of(
             new CoachSpec("hung", "Trịnh Quang Hùng", "male", "Gym - Sức mạnh", "NSCA-CPT",
                     "8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.", "Gym"),
-            new CoachSpec("mai", "Lý Thanh Mai", "female", "Yoga", "RYT-500",
-                    "Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.", "Yoga"),
-            new CoachSpec("long", "Phan Thành Long", "male", "Boxing", "AIBA Level 2",
-                    "Cựu vận động viên Boxing, chuyên kỹ thuật đấm và thể lực theo hiệp.", "Boxing"),
-            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Bơi lội", "ASCA Level 2",
-                    "Huấn luyện viên bơi 7 năm kinh nghiệm: kỹ thuật bơi và sức bền dưới nước.", "Bơi lội"));
+            new CoachSpec("mai", "Lý Thanh Mai", "female", "Gym - Phục hồi", "CPT",
+                    "Huấn luyện viên Gym tập trung sức khỏe và phục hồi.", "Gym"),
+            new CoachSpec("long", "Phan Thành Long", "male", "Gym - Thể lực", "CPT",
+                    "Huấn luyện viên Gym tập trung sức mạnh và thể lực.", "Gym"),
+            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Gym - Sức bền", "CPT",
+                    "Huấn luyện viên Gym tập trung kỹ thuật và sức bền.", "Gym"));
 
     /** {@code fromDay}/{@code toDay}: window of sessions relative to the seed day; the class dates follow its sessions. */
     private record ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
@@ -216,9 +216,6 @@ public class DemoDataSeeder implements ApplicationRunner {
             }
         }
 
-        List<String> activeKeys = List.of("an", "binh", "chi", "hieu", "giang");
-        Map<String, List<ClassSession>> sessionsByClass = createClasses(manager, coachByKey, today);
-        enroll(sessionsByClass, memberByKey, activeKeys, coachByKey, today);
         createCheckins(memberByKey, reception, today);
         createPtBookings(memberByKey, coachByKey, today);
         createProgress(memberByKey, coachByKey, today);

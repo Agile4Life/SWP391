@@ -5,7 +5,7 @@ import { ManagerCatalogsPage } from './ManagerCatalogsPage';
 import { catalogApi } from './catalogApi';
 vi.mock('./catalogApi', () => ({ catalogApi: {
   disciplines: vi.fn().mockResolvedValue([{ id: 2, name: 'Tennis' }, { id: 3, name: 'Gym' }]),
-  rooms: vi.fn().mockResolvedValue([{ id: 5, name: 'Phòng cũ', location: null, capacity: 10, status: 'available', disciplineId: null, openTime: null, closeTime: null }]),
+  rooms: vi.fn().mockResolvedValue([{ id: 5, name: 'Phòng Gym Tiêu chuẩn', location: null, capacity: 10, status: 'available', disciplineId: null, openTime: null, closeTime: null }]),
   packages: vi.fn().mockResolvedValue([]), saveRoom: vi.fn().mockResolvedValue({}),
 } }));
 let host: HTMLDivElement; let root: Root;

@@ -63,10 +63,10 @@ class CatalogSeederTest {
         seeder.run(null);
 
         var equipment = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.entity.Equipment.class);
-        verify(equipmentRepository, times(12)).save(equipment.capture());
+        verify(equipmentRepository, times(7)).save(equipment.capture());
         org.assertj.core.api.Assertions.assertThat(equipment.getAllValues())
                 .extracting(item -> item.getRoom().getName())
-                .containsOnly("Phòng Gym Tiêu chuẩn", "Phòng Gym VIP");
+                .containsOnly("Phòng Gym Tiêu chuẩn");
         verify(rooms, never()).create(any());
     }
 
@@ -84,8 +84,8 @@ class CatalogSeederTest {
 
         seeder.run(null);
 
-        verify(disciplines, times(6)).create(any());
-        verify(rooms, times(5)).create(any());
+        verify(disciplines, times(1)).create(any());
+        verify(rooms, times(1)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
         verify(packages, times(4)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
@@ -135,8 +135,7 @@ class CatalogSeederTest {
 
         seeder.run(null);
 
-        // "Yoga" đã có sẵn nên chỉ 5 bộ môn chuẩn còn lại được tạo thêm
-        verify(disciplines, times(5)).create(any());
+        verify(disciplines, times(1)).create(any());
         verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
         verify(packages, times(4)).create(any());
@@ -199,11 +198,11 @@ class CatalogSeederTest {
         seeder.run(null);
 
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.DisciplineRequest.class);
-        verify(disciplines, times(3)).update(any(), requests.capture());
+        verify(disciplines, times(1)).update(any(), requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.name()).toList())
-                .containsExactly("Gym", "Bơi lội", "Boxing");
+                .containsExactly("Gym");
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().description()).isEqualTo("Tạ");
-        verify(disciplines, times(2)).create(any());
+        verify(disciplines, never()).create(any());
     }
 
     @Test
