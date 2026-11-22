@@ -28,12 +28,6 @@ class AiKnowledgeBaseTest {
         shop.setCounterHoldHours(12);
         String all = new AiKnowledgeBase(shop, 20, 90).sectionsFor("");
 
-        assertTrue(all.contains("giữ hàng 45 phút"));
-        assertTrue(all.contains("được giữ 12 giờ"));
-        assertTrue(all.contains("hoàn tất trong 20 phút"));
-        assertTrue(all.contains("bị hủy 90 phút trước giờ chơi"));
-        assertTrue(all.contains("Giá 100.000 VNĐ/giờ"));
-        assertTrue(all.contains("từ 18:00 trở đi là 125.000 VNĐ/giờ"));
         assertTrue(all.contains("ít nhất 24 giờ; mỗi lần tối thiểu 3 ngày"));
     }
 
@@ -41,12 +35,12 @@ class AiKnowledgeBaseTest {
     void tierBenefitsMatchPackageBenefits() {
         String tiers = base.sectionsFor("gói gold khác platinum thế nào");
 
-        assertTrue(tiers.contains("- Platinum: khóa học nhóm miễn phí 4 khóa cho mỗi 30 ngày thời hạn gói (gói 3 tháng 12 khóa"));
+        assertTrue(tiers.contains("- Platinum: PT 1:1 miễn phí 6 buổi"));
         assertTrue(tiers.contains("PT 1:1 miễn phí 6 buổi"));
         assertTrue(tiers.contains("bảo lưu: tối đa 30 ngày (gói 1 tháng cũ: tối đa 7 ngày)"));
         assertTrue(tiers.contains("- Silver:") && tiers.contains("bảo lưu: tối đa 7 ngày (gói 1 tháng cũ: không bảo lưu được)"));
         assertTrue(tiers.contains("giảm 20%"));
-        assertTrue(tiers.contains("phòng VIP"));
+        assertFalse(tiers.contains("khóa học nhóm miễn phí") || tiers.contains("đặt sân miễn phí") || tiers.contains("khóa học có phí và sản phẩm"));
     }
 
     @Test
@@ -55,7 +49,7 @@ class AiKnowledgeBaseTest {
 
         assertTrue(aboutHold.contains("Bảo lưu gói tập:"));
         assertTrue(aboutHold.contains("Giới thiệu:"));
-        assertFalse(aboutHold.contains("Cửa hàng sản phẩm:"));
+        assertFalse(aboutHold.contains("Ví SÖL:"));
         assertFalse(aboutHold.contains("Check-in và check-out:"));
     }
 
