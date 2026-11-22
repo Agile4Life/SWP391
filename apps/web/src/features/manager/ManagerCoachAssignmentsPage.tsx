@@ -66,9 +66,23 @@ export function ManagerCoachAssignmentsPage() {
   const [search, setSearch] = useState('');
   const [coachFilter, setCoachFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [sortOption, setSortOption] = useState<string>('name_asc');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<StaffMessage | null>(null);
+
+  const [sortBy, sortDir] = useMemo(() => {
+    switch (sortOption) {
+      case 'name_desc': return ['name', 'desc'];
+      case 'students_desc': return ['totalStudentsCount', 'desc'];
+      case 'students_asc': return ['totalStudentsCount', 'asc'];
+      case 'pt_desc': return ['ptStudentsCount', 'desc'];
+      case 'status_asc': return ['employmentStatus', 'asc'];
+      case 'name_asc':
+      default:
+        return ['name', 'asc'];
+    }
+  }, [sortOption]);
 
   // Modals state
   const [reassignStudent, setReassignStudent] = useState<{
@@ -91,6 +105,8 @@ export function ManagerCoachAssignmentsPage() {
         coachId: coachFilter ? Number(coachFilter) : undefined,
         search: search.trim() || undefined,
         type: typeFilter !== 'ALL' ? typeFilter : undefined,
+        sortBy,
+        sortDir,
       });
       if (generation === loadGeneration.current) setData(res);
     } catch (err) {
@@ -98,7 +114,7 @@ export function ManagerCoachAssignmentsPage() {
     } finally {
       if (generation === loadGeneration.current) setLoading(false);
     }
-  }, [coachFilter, search, typeFilter]);
+  }, [coachFilter, search, typeFilter, sortBy, sortDir]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -245,6 +261,21 @@ export function ManagerCoachAssignmentsPage() {
             <option value="TRAINING_PLAN">{t("Theo giáo án riêng")}</option>
             <option value="PT_1_1">{t("Tập 1:1 với HLV (PT)")}</option>
             <option value="CLASS">{t("Lớp học nhóm")}</option>
+          </Select>
+
+          <Select
+            className="coach-filter-select"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            aria-label={t("Sắp xếp danh sách HLV", "Sort coaches list")}
+            data-testid="coach-sort-select"
+          >
+            <option value="name_asc">{t("Tên HLV (A–Z)", "Coach name (A–Z)")}</option>
+            <option value="name_desc">{t("Tên HLV (Z–A)", "Coach name (Z–A)")}</option>
+            <option value="students_desc">{t("Số học viên (Nhiều nhất)", "Total students (Highest)")}</option>
+            <option value="students_asc">{t("Số học viên (Ít nhất)", "Total students (Lowest)")}</option>
+            <option value="pt_desc">{t("Học viên PT (Nhiều nhất)", "PT students (Highest)")}</option>
+            <option value="status_asc">{t("Trạng thái làm việc", "Employment status")}</option>
           </Select>
         </div>
 
