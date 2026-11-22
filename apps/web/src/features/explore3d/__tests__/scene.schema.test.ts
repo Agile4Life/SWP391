@@ -34,7 +34,7 @@ describe('SOL_CENTER_SCENE schema & integrity', () => {
 
   it('ensures every ZoneNode has at least one hero viewpoint and non-empty children', () => {
     const zones = allZones(SOL_CENTER_SCENE);
-    expect(zones.length).toBe(10);
+    expect(zones.length).toBe(9);
     for (const zone of zones) {
       expect(zone.viewpoints.some(v => v.kind === 'hero')).toBe(true);
       expect(zone.children.length).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ describe('SOL_CENTER_SCENE schema & integrity', () => {
 
   it('computes worldBox, breadcrumb, search and deep-link resolution accurately', () => {
     const l1 = getLevelByCode(SOL_CENTER_SCENE, 'L1')!;
-    expect(zonesOfLevel(SOL_CENTER_SCENE, l1.id).length).toBe(5);
+    expect(zonesOfLevel(SOL_CENTER_SCENE, l1.id).length).toBe(4);
     expect(childrenOf(SOL_CENTER_SCENE, 'site-sol').length).toBe(1);
 
     const gymItems = itemsOfZone(SOL_CENTER_SCENE, 'zone-l1-gym');
@@ -91,6 +91,8 @@ describe('SOL_CENTER_SCENE schema & integrity', () => {
     expect(searchInbody.some(h => h.id === 'item-l2-vip-inbody-1')).toBe(true);
 
     expect(search(SOL_CENTER_SCENE, 'cau long')).toEqual([]);
+    expect(search(SOL_CENTER_SCENE, 'supplement')).toEqual([]);
+    expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'zone-l1-shop')).toBeNull();
     expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'Phòng Gym VIP')).toBeNull();
     expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'Sân Cầu lông 01')).toBeNull();
     expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'EQ-VIP-INBODY-01')?.id).toBe('item-l2-vip-inbody-1');

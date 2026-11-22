@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { usePublicCatalog } from '../publicCatalog';
 import { CatalogPackages, CatalogStatus, CatalogTrainers } from './CatalogSections';
-import { ProductShelf } from './ProductShelf';
 import { RoundArrow } from './PublicLayout';
 import { SplitHeading } from './SplitHeading';
 import { SportStack } from './SportStack';
@@ -735,7 +734,6 @@ export function FitnessLanding() {
       <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
       {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
-    <ProductShelf />
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
         <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />

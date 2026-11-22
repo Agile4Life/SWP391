@@ -1,50 +1,36 @@
 import { test, expect, settled } from '../fixtures';
 import { authFile } from '../helpers/accounts';
-import { contextFor, newMember } from '../helpers/session';
-import type { Page } from '@playwright/test';
+import { api, apiWith } from '../helpers/api';
+import { newMember } from '../helpers/session';
+import type { OrderDto, Page, ProductDetailDto, ProductSummaryDto, QuoteDto } from '../../src/features/shop/shopTypes';
 
-async function addFirstProductToCart(page: Page) {
-  await page.goto('/products');
-  await page.getByRole('button', { name: 'Thêm vào giỏ' }).first().click();
-  await expect(page.getByRole('button', { name: /Giỏ hàng · 1 sản phẩm/ })).toBeVisible();
-}
-const pickup = async (page: Page) => page.getByText('Nhận tại quầy SÖL').first().click();
-
-test.describe('Mua hàng và vòng đời đơn (hội viên + lễ tân)', () => {
-  test.describe.configure({ mode: 'serial' });
+// Giữ test xử lý đơn của lễ tân; tạo fixture bằng API test thay vì màn Shop Member đã bỏ.
+test.describe('Lễ tân xử lý đơn sản phẩm', () => {
   let orderCode = '';
-  let member: Awaited<ReturnType<typeof newMember>>;
-
-  test.beforeAll(async () => { member = await newMember({ topup: 2_000_000, prefix: 'e2es' }); });
-
-  test('giỏ hàng lưu qua đăng nhập: khách chưa đăng nhập bấm thanh toán bị đưa tới /login', async ({ page }) => {
-    await addFirstProductToCart(page);
-    await page.getByRole('button', { name: /Giỏ hàng · 1 sản phẩm/ }).click();
-    await page.getByRole('dialog').getByRole('button', { name: /^Thanh toán/ }).click();
-    await expect(page).toHaveURL(/\/login\?returnTo=%2Fcheckout|\/login/);
-  });
-
-  test('nhận tại quầy + thanh toán bằng Ví SÖL: tạo đơn, trừ ví, xóa giỏ', async ({ browser }) => {
-    const ctx = await contextFor(browser, member);
-    const page = await ctx.newPage();
-    await addFirstProductToCart(page);
-    await page.goto('/checkout');
-    await settled(page);
-    await pickup(page);
-    await page.getByRole('button', { name: 'Thanh toán bằng Ví SÖL' }).click();
-    await expect(page).toHaveURL(/\/member\/orders\/\d+/);
-    const main = page.locator('main');
-    await expect(main).toContainText('Đã thanh toán');
-    orderCode = (await main.innerText()).match(/SOL-\d{6}-[A-Z0-9]{4}/)?.[0] ?? '';
-    expect(orderCode).toMatch(/^SOL-/);
-    // giỏ đã được dọn
-    await page.goto('/products');
-    await expect(page.getByRole('button', { name: /Giỏ hàng · 0 sản phẩm|Giỏ hàng/ }).first()).toBeVisible();
-    await ctx.close();
+  test.beforeAll(async () => {
+    const member = await newMember({ prefix: 'e2es' });
+    const catalog = await apiWith<Page<ProductSummaryDto>>(member.token, 'GET', '/public/products?inStock=true');
+    expect(catalog.status).toBeLessThan(300);
+    const product = catalog.data.content.find(item => item.inStock);
+    expect(product, 'Catalog test cần ít nhất một sản phẩm còn hàng').toBeTruthy();
+    const detail = await apiWith<ProductDetailDto>(member.token, 'GET', '/public/products/' + product!.slug);
+    expect(detail.status).toBeLessThan(300);
+    const variant = detail.data.variants.find(item => item.available && item.stock > 0);
+    expect(variant, 'Sản phẩm test cần một biến thể còn hàng').toBeTruthy();
+    const items = [{ variantId: variant!.id, quantity: 1 }];
+    const quote = await apiWith<QuoteDto>(member.token, 'POST', '/public/shop/quote', { items, fulfillment: 'pickup' });
+    expect(quote.status).toBeLessThan(300);
+    expect(quote.data.valid).toBe(true);
+    const order = await apiWith<OrderDto>(member.token, 'POST', '/shop/orders', {
+      clientRequestId: crypto.randomUUID(), items, fulfillment: 'pickup', paymentMethod: 'counter', expectedTotal: quote.data.total,
+    });
+    expect(order.status).toBeLessThan(300);
+    const paid = await api('staff', 'POST', '/staff/product-orders/' + order.data.id + '/counter-payment', { method: 'cash' });
+    expect(paid.status).toBeLessThan(300);
+    orderCode = order.data.code;
   });
 
   test('đơn xuất hiện ở "Cần xử lý" của lễ tân và đi hết vòng đời tới Hoàn tất', async ({ browser }) => {
-    test.skip(!orderCode, 'cần đơn từ bước trước');
     test.setTimeout(90_000);
     const ctx = await browser.newContext({ storageState: authFile('staff') });
     const page = await ctx.newPage();
@@ -70,86 +56,15 @@ test.describe('Mua hàng và vòng đời đơn (hội viên + lễ tân)', () =
     await ctx.close();
   });
 
-  test('hội viên thấy tiến trình đơn đã hoàn tất', async ({ browser }) => {
-    test.skip(!orderCode, 'cần đơn từ bước trước');
-    const ctx = await contextFor(browser, member);
-    const page = await ctx.newPage();
-    await page.goto('/member/orders');
-    await settled(page);
-    await expect(page.locator('main')).toContainText(orderCode);
-    await ctx.close();
-  });
 });
 
-test.describe('Thanh toán: trường hợp lỗi', () => {
-  test('ví không đủ số dư: báo lỗi, không tạo đơn đã thanh toán, giỏ giữ nguyên', async ({ browser }) => {
-    const poor = await newMember({ prefix: 'e2ep' });
-    const ctx = await contextFor(browser, poor);
-    const page = await ctx.newPage();
-    await addFirstProductToCart(page);
-    await page.goto('/checkout');
-    await settled(page);
-    await pickup(page);
-    await page.getByRole('button', { name: 'Thanh toán bằng Ví SÖL' }).click();
-    await expect(page.getByRole('alert').or(page.getByText(/không đủ|số dư|nạp thêm/i)).first()).toBeVisible();
-    await expect(page).not.toHaveURL(/\/member\/orders\/\d+\/?$/);
-    await ctx.close();
-  });
-
-  test('giao tận nơi bắt buộc địa chỉ: để trống không đặt được', async ({ browser }) => {
-    const m = await newMember({ topup: 1_000_000, prefix: 'e2ed' });
-    const ctx = await contextFor(browser, m);
-    const page = await ctx.newPage();
-    await addFirstProductToCart(page);
-    await page.goto('/checkout');
-    await settled(page);
-    await page.getByText('Giao tận nơi').first().click();
-    const pay = page.getByRole('button', { name: 'Thanh toán bằng Ví SÖL' });
-    await expect(pay).toBeDisabled().catch(async () => {
-      await pay.click();
-      await expect(page.getByRole('alert').or(page.getByText(/địa chỉ|Họ tên|bắt buộc/i)).first()).toBeVisible();
-    });
-    await expect(page).toHaveURL(/\/checkout/);
-    await ctx.close();
-  });
-
-  test('VNPay chưa cấu hình: báo lỗi thân thiện, không văng trang', async ({ browser }) => {
-    const m = await newMember({ prefix: 'e2ev' });
-    const ctx = await contextFor(browser, m);
-    const page = await ctx.newPage();
-    await addFirstProductToCart(page);
-    await page.goto('/checkout');
-    await settled(page);
-    await pickup(page);
-    await page.getByRole('button', { name: 'Thanh toán VNPay' }).click();
-    await expect(page.locator('main')).toBeVisible();
-    await expect(page).toHaveURL(/\/checkout|\/member\/orders/);
-    await ctx.close();
-  });
-
-  test('giỏ trống: checkout không có nút thanh toán', async ({ browser }) => {
-    const m = await newMember({ prefix: 'e2ee' });
-    const ctx = await contextFor(browser, m);
-    const page = await ctx.newPage();
-    await page.goto('/checkout');
-    await settled(page);
-    await expect(page.getByRole('button', { name: /Thanh toán bằng Ví SÖL/ })).toHaveCount(0);
-    await ctx.close();
-  });
-});
-
-test.describe('Đơn hàng của hội viên', () => {
+test.describe('Shop hội viên đã ngừng bán', () => {
   test.use({ storageState: authFile('an') });
-  test('các tab, bộ lọc trạng thái và địa chỉ giao hàng mở được', async ({ page }) => {
-    await page.goto('/member/orders');
-    await settled(page);
-    for (const tab of ['Chờ thanh toán', 'Đang xử lý', 'Hoàn tất', 'Đã hủy', 'Tất cả']) await page.getByRole('button', { name: tab, exact: true }).click();
-    await page.getByRole('button', { name: 'Địa chỉ giao hàng' }).or(page.getByRole('tab', { name: 'Địa chỉ giao hàng' })).first().click();
-    await expect(page.locator('main')).toContainText(/địa chỉ/i);
-  });
-  test('mở đơn không tồn tại không làm sập trang', async ({ page }) => {
-    await page.goto('/member/orders/99999999');
-    await settled(page);
-    await expect(page.locator('main')).toBeVisible();
-  });
+  for (const path of ['/member/products', '/member/products/sol-whey', '/member/checkout', '/member/orders', '/member/orders/42']) {
+    test(path + ' trở về landing', async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.locator('#hero-title')).toBeVisible();
+    });
+  }
 });

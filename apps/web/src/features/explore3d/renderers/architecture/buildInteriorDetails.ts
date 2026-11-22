@@ -307,38 +307,6 @@ function buildL1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): vo
     pushBox(parts, 1.48, 0.028, 0.04, gx, 0.34, 4.0, chrome);
   }
 
-  // 3. Supplement Shop (x = 10..20, z = 6..15): Activewear Apparel Rack, RTD Fridge & POS Island
-  pushBox(parts, 0.65, 1.65, 2.8, 20.6, 0.82, 9.6, midSteel);
-  const shirtColors = [salmon, '#f8fafc', '#1e293b', '#38bdf8', '#10b981', '#f59e0b'];
-  for (let s = 0; s < 6; s += 1) {
-    pushBox(parts, 0.48, 0.85, 0.28, 20.6, 1.05, 8.5 + s * 0.42, shirtColors[s]!);
-  }
-  // Open-Front Chilled RTD Beverage Merchandiser (x = 20.6, z = 13.4)
-  pushBox(parts, 0.78, 2.15, 1.85, 20.6, 1.08, 13.4, darkSteel);
-  pushBox(parts, 0.66, 1.76, 1.66, 20.64, 1.12, 13.4, '#0f172a');
-  for (let shelf = 0; shelf < 4; shelf += 1) {
-    const sy = 0.52 + shelf * 0.38;
-    pushBox(parts, 0.7, 0.04, 1.62, 20.58, sy, 13.4, chrome);
-    for (let b = 0; b < 5; b += 1) {
-      pushCylinder(
-        parts,
-        0.045,
-        0.045,
-        0.22,
-        20.46,
-        sy + 0.13,
-        12.8 + b * 0.3,
-        shirtColors[(shelf + b) % shirtColors.length]!,
-        7,
-      );
-    }
-  }
-  // Shop Retail POS & Nutrition Bar Island (x = 11.8, z = 12.6)
-  pushBox(parts, 1.8, 0.94, 0.82, 11.8, 0.47, 12.6, warmWood);
-  pushBox(parts, 1.88, 0.06, 0.88, 11.8, 0.97, 12.6, darkSteel);
-  pushBox(parts, 0.42, 0.28, 0.06, 11.45, 1.14, 12.6, darkSteel, -0.25, 0, 0);
-  pushBox(parts, 0.38, 0.22, 0.07, 11.45, 1.14, 12.61, salmon, -0.25, 0, 0);
-
   // 4. Standard Gym Arena (x = -20..4, z = -14..2):
   // Architectural timber-slat acoustic feature panels anchored on solid West piers (leaving z = -14..0.5 panoramic window 100% clear)
   for (const [mz, mw] of [

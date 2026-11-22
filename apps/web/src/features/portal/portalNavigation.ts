@@ -43,7 +43,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/member/check-in', label: 'Quét QR cổng', en: 'Gate QR' },
   ] },
   { to: '/member/invoices', label: 'Giao dịch & Hóa đơn', icon: 'receipt', roles: ['MEMBER'] },
-  { to: '/member/products', label: 'Sản phẩm & Đơn hàng', icon: 'bag', roles: ['MEMBER'] },
   { to: '/member/progress', label: 'Tiến độ & Giáo án', icon: 'chart', roles: ['MEMBER'] },
   { to: '/member/explore', label: 'Tham quan 3D', icon: 'compass', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF'] },
@@ -96,16 +95,8 @@ export function portalNavRoutes(item: Pick<PortalNavItem, 'to' | 'tabs'>): strin
   return item.tabs ? item.tabs.map(tab => tab.to) : [item.to];
 }
 
-/** Mục sidebar đang chọn khi đường dẫn nằm ở một tab con hoặc route con (vd. /member/orders/:id). */
+/** Mục sidebar đang chọn khi đường dẫn nằm ở một tab con hoặc route con (vd. /member/packages/checkout). */
 export function isPortalNavActive(item: Pick<PortalNavItem, 'to' | 'tabs'>, pathname: string): boolean {
-  if (
-    item.to === '/member/products' &&
-    (pathname === '/member/orders' ||
-      pathname.startsWith('/member/orders/') ||
-      pathname === '/member/checkout')
-  ) {
-    return true;
-  }
   return portalNavRoutes(item).some(route => pathname === route || pathname.startsWith(`${route}/`));
 }
 
@@ -120,8 +111,6 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/classes': '1:1 PT schedule',
   '/member/card': 'Card & Check-in',
   '/member/invoices': 'Transactions & Invoices',
-  '/member/orders': 'Shop & Orders',
-  '/member/products': 'Shop & Orders',
   '/member/progress': 'Progress & Plans',
   '/member/notifications': 'Notifications',
   '/coach/classes': 'Coach Schedule & Members',

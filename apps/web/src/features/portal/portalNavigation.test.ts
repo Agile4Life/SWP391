@@ -27,10 +27,6 @@ describe('portal sidebar grouping', () => {
     expect(isPortalNavActive(packages, '/member/hold')).toBe(true);
     expect(isPortalNavActive(packages, '/member/packages/checkout')).toBe(true);
     expect(isPortalNavActive(packages, '/member/card')).toBe(false);
-    const products = PORTAL_NAV.find(item => item.to === '/member/products')!;
-    expect(isPortalNavActive(products, '/member/products')).toBe(true);
-    expect(isPortalNavActive(products, '/member/orders')).toBe(true);
-    expect(isPortalNavActive(products, '/member/orders/42')).toBe(true);
   });
 
   it.each(ROLES)('%s: every mobile shortcut resolves to an allowed sidebar entry', role => {
@@ -39,10 +35,19 @@ describe('portal sidebar grouping', () => {
   });
 });
 
-it('removes Member court navigation and keeps PT, Shop and other roles', () => {
+it('removes Member court navigation and keeps PT and other roles', () => {
   const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER'));
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
   expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
-  expect(member.flatMap(portalNavRoutes)).toContain('/member/products');
+  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/products');
   expect(PORTAL_NAV.flatMap(portalNavRoutes)).toContain('/staff/courts');
+});
+
+it('keeps Staff/Manager Shop navigation while removing every Member Shop shortcut', () => {
+  const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER')).flatMap(portalNavRoutes);
+  expect(member).not.toContain('/member/orders');
+  expect(member).toContain('/member/packages');
+  expect(member).toContain('/member/invoices');
+  expect(PORTAL_NAV.filter(item => item.roles.includes('STAFF')).flatMap(portalNavRoutes)).toContain('/staff/orders');
+  expect(PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes)).toContain('/manager/products');
 });

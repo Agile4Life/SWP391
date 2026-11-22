@@ -8,10 +8,6 @@ import { calculateBmi, FitnessLanding, parseBmiMetric } from './components/Fitne
 import { usePublicCatalog } from './publicCatalog';
 import type { PublicCatalog } from './publicCatalog';
 
-vi.mock('./components/ProductShelf', () => ({
-  ProductShelf: () => <section id="products" data-testid="mock-product-shelf" />,
-}));
-
 const catalog: PublicCatalog = {
   packages: [{ id: 1, name: 'Gói mới', price: 789000, durationDays: 90, classCreditLimit: 8, description: 'Quyền lợi mới', status: 'active' }],
   coaches: [{ id: 2, name: 'HLV An', specialization: 'Gym', bio: 'Hồ sơ mới', certification: 'Yoga 200h', avatarUrl: null }],
@@ -146,7 +142,7 @@ it('validates BMI inputs including empty, zero, negative, extreme values, decima
   expect(calculateBmi('Infinity', '68')).toBeNull();
 });
 
-it('supports Hero Muscle Map hover/focus activation, Escape key dismissal and places #products between #packages and #faq', async () => {
+it('supports Hero Muscle Map hover/focus activation, Escape key dismissal and keeps packages/FAQ without a Shop section', async () => {
   vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: catalog }), { status: 200 }))));
   root = createRoot(host);
   await act(async () => root.render(<MemoryRouter><FitnessLanding /></MemoryRouter>));
@@ -170,11 +166,14 @@ it('supports Hero Muscle Map hover/focus activation, Escape key dismissal and pl
 
   const sectionIds = [...host.querySelectorAll('main > section[id]')].map(s => s.id);
   const packagesIdx = sectionIds.indexOf('packages');
-  const productsIdx = sectionIds.indexOf('products');
+  expect(sectionIds).not.toContain('products');
+  expect(host.querySelector('a[href="/products"]')).toBeNull();
+  const requestedPaths = vi.mocked(fetch).mock.calls.map(([path]) => String(path));
+  expect(requestedPaths.some(path => path.includes('/public/products') || path.includes('/shop/'))).toBe(false);
+  expect(host.querySelector('.shop-cart-trigger')).toBeNull();
   const faqIdx = sectionIds.indexOf('faq');
   expect(packagesIdx).toBeGreaterThanOrEqual(0);
-  expect(productsIdx).toBeGreaterThan(packagesIdx);
-  expect(faqIdx).toBeGreaterThan(productsIdx);
+  expect(faqIdx).toBeGreaterThan(packagesIdx);
 });
 
 it('localizes seeded package perks and coach specialization in English while leaving custom manager copy verbatim', async () => {

@@ -34,7 +34,7 @@ it.each([false, true])('skips removed court requests and preserves core loading 
     expect(host.textContent).toBe(failCore ? 'error' : 'ready');
     expect(courtsApi.courts).not.toHaveBeenCalled();
     const paths = vi.mocked(apiFetch).mock.calls.map(([path]) => path);
-    expect(paths).toContain('/public/products?size=6');
+    expect(paths.some(path => path.startsWith('/public/products'))).toBe(false);
     expect(paths).toContain('/check-in/streak');
     expect(paths.some(path => path.startsWith('/classes/sessions?'))).toBe(false);
   } finally {

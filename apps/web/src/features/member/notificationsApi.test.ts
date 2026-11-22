@@ -50,7 +50,7 @@ it('opens staff and manager support notifications in their own queues', () => {
 });
 
 it('product_order notifications open the right page per role', () => {
-  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MEMBER')).toBe('/member/orders');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MEMBER')).toBe('/member/invoices');
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'STAFF')).toBe('/staff/orders');
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'RECEPTIONIST')).toBe('/staff/orders');
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MANAGER')).toBe('/manager/products?tab=orders');
@@ -64,4 +64,8 @@ it('redirects retired court notifications while preserving PT and staff destinat
   expect(safeNotificationPath('/member/courts?sport=Tennis', 'MEMBER')).toBe('/member/invoices');
   expect(safeNotificationPath('/member/classes?tab=pt', 'MEMBER')).toBe('/member/classes?tab=pt');
   expect(safeNotificationPath('/staff/courts', 'STAFF')).toBe('/staff/courts');
+});
+
+it.each(['/member/orders/42', '/member/products', '/member/checkout'])('maps retired Shop notification links to transaction history: %s', actionPath => {
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order', actionPath }, 'MEMBER')).toBe('/member/invoices');
 });

@@ -325,7 +325,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
 
   it('audits every retained zone, item and hotspot in Walk Mode so camera always faces the selected target without wall occlusion', () => {
     const zones = allZones(SOL_CENTER_SCENE);
-    expect(zones).toHaveLength(10);
+    expect(zones).toHaveLength(9);
 
     // Every single zone must define both a hero and an eye viewpoint
     for (const zone of zones) {

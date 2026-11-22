@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { useI18n } from '../../../shared/i18n';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import type {
@@ -83,10 +82,6 @@ function getEquipmentStatusLabel(
     default:
       return t('Không có dữ liệu trực tiếp', 'No live data available');
   }
-}
-
-function formatVnd(amount: number): string {
-  return formatPrice(Math.round(amount));
 }
 
 const ITEM_KIND_LABELS: Record<string, [string, string]> = {
@@ -660,36 +655,6 @@ export function DetailPanel({
             <div className="explore3d-live-card__meta">
               {t('Kỷ lục', 'Longest')}: {bindings.streak.longestStreak} {t('ngày', 'days')}
             </div>
-          </div>
-        )}
-
-        {hs.liveSummaryKey === 'shop' && bindings.products.length > 0 && (
-          <div className="explore3d-subsection" data-testid="detail-live-shop">
-            <h3 className="explore3d-subsection-title">
-              {t('Sản phẩm nổi bật trên kệ', 'Featured shelf products')}
-            </h3>
-            <ul className="explore3d-product-list">
-              {bindings.products.slice(0, 4).map(p => {
-                const perServing =
-                  p.servingsPerContainer && p.servingsPerContainer > 0
-                    ? Math.round(p.price / p.servingsPerContainer)
-                    : null;
-                return (
-                  <li key={p.id} className="explore3d-product-item">
-                    <div className="explore3d-product-item__name">{p.name}</div>
-                    <div className="explore3d-product-item__price">
-                      <strong>{formatVnd(p.price)}</strong>
-                      {perServing != null && (
-                        <span>
-                          {' '}
-                          · {formatVnd(perServing)} / {t('lần dùng', 'serving')}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
           </div>
         )}
 

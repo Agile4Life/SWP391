@@ -88,56 +88,16 @@ test.describe('Trang công khai', () => {
   });
 });
 
-test.describe('Cửa hàng công khai', () => {
-  test('danh sách sản phẩm, tìm kiếm có kết quả và không có kết quả', async ({ page }) => {
-    await page.goto('/products');
-    await expect(page.getByRole('button', { name: 'Thêm vào giỏ' }).first()).toBeVisible();
-    const search = page.getByPlaceholder('Tìm sản phẩm…');
-    await search.fill('zzzz-khong-ton-tai-123');
-    await expect(page.getByRole('button', { name: 'Thêm vào giỏ' })).toHaveCount(0);
-    await search.fill('');
-    await expect(page.getByRole('button', { name: 'Thêm vào giỏ' }).first()).toBeVisible();
-  });
-
-  test('lọc theo mục tiêu rồi quay lại Tất cả', async ({ page }) => {
-    await page.goto('/products');
-    const all = await page.getByRole('button', { name: 'Thêm vào giỏ' }).count();
-    await page.getByRole('button', { name: 'Tăng cơ', exact: true }).click();
-    const filtered = await page.getByRole('button', { name: 'Thêm vào giỏ' }).count();
-    expect(filtered).toBeLessThanOrEqual(all);
-    await page.getByRole('button', { name: 'Tất cả', exact: true }).first().click();
-    await expect(page.getByRole('button', { name: 'Thêm vào giỏ' })).toHaveCount(all);
-  });
-
-  test('thêm vào giỏ mở giỏ hàng, tăng/giảm số lượng và xóa', async ({ page }) => {
-    await page.goto('/products');
-    await page.getByRole('button', { name: 'Thêm vào giỏ' }).first().click();
-    await page.getByRole('button', { name: /Giỏ hàng · 1 sản phẩm/ }).click();
-    const drawer = page.getByRole('dialog');
-    await expect(drawer).toContainText('Giỏ hàng (1)');
-    const qty = drawer.getByRole('spinbutton').or(drawer.locator('input')).first();
-    await drawer.getByRole('button', { name: /^(Tăng|\+)/ }).first().click().catch(() => undefined);
-    await drawer.getByRole('button', { name: /Xóa/ }).first().click();
-    await expect(drawer.getByText('Giỏ hàng đang trống.')).toBeVisible();
-    void qty;
-  });
-
-  test('chi tiết sản phẩm có câu miễn trừ bắt buộc; slug sai báo không tìm thấy', async ({ page }) => {
-    await page.goto('/products');
-    await page.locator('a[href^="/products/"]').first().click();
-    await expect(page).toHaveURL(/\/products\/.+/);
-    await expect(page.getByText('Thực phẩm bổ sung không phải là thuốc', { exact: false })).toBeVisible();
-    await page.goto('/products/slug-khong-ton-tai-xyz');
-    await settled(page);
-    await expect(page.locator('main')).toBeVisible();
-  });
-
-  test('checkout khi giỏ trống không cho đặt hàng', async ({ page }) => {
-    await page.goto('/checkout');
-    await settled(page);
-    await expect(page.locator('main')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Đặt hàng|Xác nhận đặt/ })).toHaveCount(0);
-  });
+// URL Shop cũ dùng fallback chung; Public không còn giỏ hàng hay catalog sản phẩm.
+test.describe('Shop công khai đã ngừng bán', () => {
+  for (const path of ['/products', '/products/sol-whey', '/checkout']) {
+    test(path + ' trở về landing', async ({ page }) => {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.locator('#hero-title')).toBeVisible();
+      await expect(page.locator('a[href="/products"]')).toHaveCount(0);
+    });
+  }
 });
 
 test.describe('Bảo vệ route khi chưa đăng nhập', () => {
