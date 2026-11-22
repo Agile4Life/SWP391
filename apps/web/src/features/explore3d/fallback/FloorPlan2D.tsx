@@ -7,12 +7,12 @@ import {
   type ResolvedSceneBindings,
 } from '../data/bindings';
 import {
-  LEVEL_ORDER,
   polygonBounds2D,
   type LevelCode,
   type Vec2,
 } from '../scene/schema';
 import {
+  getLevels,
   getLevelByCode,
   hotspotsOfZone,
   itemsOfZone,
@@ -22,6 +22,8 @@ import {
 } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore } from '../state/exploreStore';
+
+const LEVEL_ORDER = getLevels(SOL_CENTER_SCENE).map(level => level.code);
 
 export interface FloorPlan2DProps {
   bindings?: ResolvedSceneBindings;

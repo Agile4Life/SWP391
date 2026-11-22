@@ -91,6 +91,7 @@ export function isTrialPackage(pkg: { price?: number; durationDays?: number; nam
 export const MIN_TERM_DAYS = 90;
 export const LONG_TERM_DAYS = 180;
 
+// Hiển thị quyền lợi thật từ catalog; không tự sửa quyền lợi để khớp scope Gym ở frontend.
 export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = getLanguage()) {
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';

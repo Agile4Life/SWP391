@@ -2381,6 +2381,16 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
+addHotspot(zoneL1Lobby, {
+  id: 'hs-l1-membership-hold',
+  localPosition: [4, 2, 9],
+  title: { vi: 'Bảo lưu gói tập', en: 'Membership hold' },
+  subtitle: { vi: 'Quản lý yêu cầu bảo lưu gói tập hiện có.', en: 'Manage your membership hold requests.' },
+  icon: 'card',
+  priority: 'secondary',
+  action: { type: 'navigate', to: '/member/hold', ctaLabel: { vi: 'Xem bảo lưu', en: 'View holds' } },
+});
+
 // Register zones into their parent levels
 levelB1.children.unshift(zoneB1Pool.id, zoneB1Thermal.id, zoneB1Locker.id, zoneB1Core.id);
 levelL1.children.unshift(
@@ -2395,6 +2405,31 @@ levelL1.children.unshift(
 levelL2.children.unshift(zoneL2VipGym.id, zoneL2Inbody.id, zoneL2PtStudio.id, zoneL2Lounge.id);
 levelRF.children.unshift(zoneRfZen.id, zoneRfTerrace.id);
 levelOUT.children.unshift(zoneOutTennis.id);
+
+// Bỏ cả cây con để search, deep link, hotspot và viewpoint không tham chiếu khu đã loại.
+// Shop, Streak, lớp Gym và PT giữ nguyên cho các commit sau.
+const removedNodeIds = [
+  'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
+  'zone-l2-vip-gym', 'zone-l2-lounge', 'zone-rf-zen', 'lvl-out',
+];
+function removeSceneSubtree(id: string): void {
+  const node = nodes[id];
+  if (!node) return;
+  if ('children' in node) node.children.forEach(removeSceneSubtree);
+  delete nodes[id];
+}
+removedNodeIds.forEach(removeSceneSubtree);
+for (const node of Object.values(nodes)) {
+  if ('children' in node) node.children = node.children.filter(id => Boolean(nodes[id]));
+}
+levelB1.name = { vi: 'Tầng B1 · Thay đồ', en: 'B1 · Changing rooms' };
+levelB1.subtitle = { vi: 'Phòng thay đồ và tủ khóa', en: 'Changing rooms and lockers' };
+levelL1.subtitle = { vi: 'Gym tiêu chuẩn, lễ tân và cổng QR', en: 'Standard Gym, reception and QR gate' };
+levelL2.name = { vi: 'Tầng 2 · Huấn luyện cá nhân', en: 'L2 · Personal training' };
+levelL2.subtitle = { vi: 'Studio PT và khu hỗ trợ hội viên', en: 'PT studio and member support' };
+levelRF.name = { vi: 'Tầng thượng · Sân hiên', en: 'Rooftop · Terrace' };
+levelRF.subtitle = { vi: 'Sân hiên và khu nghỉ', en: 'Terrace and rest area' };
+buildingNode.name = { vi: 'Trung tâm Gym SÖL', en: 'SÖL Gym Center' };
 
 export const SOL_CENTER_SCENE: SceneDoc = {
   version: 1,

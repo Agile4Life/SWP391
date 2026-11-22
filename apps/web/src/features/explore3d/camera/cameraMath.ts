@@ -118,7 +118,7 @@ export function getWalkObstaclesForLevel(
 ): ObstacleBox2D[] {
   const obstacles: ObstacleBox2D[] = [];
 
-  if (levelCode === 'B1') {
+  if (levelCode === 'B1' && doc.nodes['zone-b1-pool']) {
     // Deep water basin of Oasis 25m Lap Pool (leaves east deck x>=5.5 and south deck z>=0.8 walkable)
     obstacles.push({
       minX: -18.4,
@@ -1460,7 +1460,7 @@ export function stepContinuousWalkPose3D(
   } else {
     const settledLvl = resolveHorizontalLevelAtElevation(doc, prevFootY);
     targetFootY = settledLvl.elevation;
-    if (settledLvl.code === 'L1' && posX > 22.5 && Math.abs(posZ) <= 17.5) {
+    if (getLevelByCode(doc, 'OUT') && settledLvl.code === 'L1' && posX > 22.5 && Math.abs(posZ) <= 17.5) {
       nextLevelCode = 'OUT';
     } else {
       nextLevelCode = settledLvl.code;

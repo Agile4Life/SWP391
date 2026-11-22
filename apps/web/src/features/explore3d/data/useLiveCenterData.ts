@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { apiFetch } from '../../../shared/api/client';
 import { centerDate, courtsApi, dateAfter } from '../../courts/courtsApi';
 import { memberCheckinApi } from '../../member/memberCheckinApi';
@@ -201,6 +202,8 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     const todayStr = centerDate();
     const toDateStr = dateAfter(todayStr, 6);
 
+    // Sân không còn consumer trong scene Gym; không tính request bị bỏ là dữ liệu tải thành công.
+    const hasCourtZones = Object.values(SOL_CENTER_SCENE.nodes).some(node => node.type === 'zone' && node.liveBinding?.courtDiscipline);
     const [
       roomsRes,
       equipmentRes,
@@ -213,7 +216,8 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     ] = await Promise.allSettled([
       apiFetch<RawRoom[]>('/rooms'),
       apiFetch<RawEquipment[]>('/equipment'),
-      courtsApi.courts(),
+      // Không gọi API riêng của sân đã loại; giữ endpoint dùng chung cho các role khác.
+      hasCourtZones ? courtsApi.courts() : Promise.resolve([]),
       apiFetch<RawPublicCatalog>('/public/catalog', { headers: { Authorization: '' } }),
       apiFetch<RawProductPage | RawProductItem[]>('/public/products?size=6', {
         headers: { Authorization: '' },
@@ -283,7 +287,7 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     const catalog = catalogRes.status === 'fulfilled' ? catalogRes.value : null;
 
     const coaches: LiveCoachRecord[] = Array.isArray(catalog?.coaches)
-      ? catalog.coaches.map(c => ({
+      ? catalog.coaches.filter(c => matchesDiscipline(c.specialty ?? c.specialization, 'Gym')).map(c => ({
           id: String(c.id),
           fullName: c.fullName ?? c.name ?? 'Coach',
           specialty: c.specialty ?? c.specialization ?? null,
@@ -377,7 +381,7 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     const allCoreFailed =
       roomsRes.status === 'rejected' &&
       equipmentRes.status === 'rejected' &&
-      courtsRes.status === 'rejected';
+      (!hasCourtZones || courtsRes.status === 'rejected');
 
     const snapshotError = allCoreFailed
       ? (roomsRes.reason instanceof Error

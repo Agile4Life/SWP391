@@ -10,11 +10,10 @@ import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import { ChatWidget } from '../../chat/ChatWidget';
 import { CartButton } from '../../shop/components/CartButton';
 import '../fitness-public.css';
-import { SPORT_PAGES, sportIdFromPath } from '../sportPages';
 
 const links: { to: string; hash?: string; label: string; labelEn: string }[] = [
   { to: '/#about', hash: 'about', get label() { return sourceText('Về SÖL'); }, labelEn: 'About SÖL' },
-  { to: '/#multisport', hash: 'multisport', label: 'Bộ môn', labelEn: 'Disciplines' },
+  { to: '/#multisport', hash: 'multisport', label: 'Gym', labelEn: 'Gym' },
   { to: '/#trainers', hash: 'trainers', get label() { return sourceText('Huấn luyện viên'); }, labelEn: 'Coaches' },
   { to: '/#packages', hash: 'packages', label: 'Gói tập', labelEn: 'Memberships' },
   { to: '/products', get label() { return sourceText('Sản phẩm'); }, labelEn: 'Products' },
@@ -45,8 +44,6 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   const root = useRef<HTMLDivElement>(null);
   useComponentReveal(root, pathname);
   const isNavActive = (to: string, target?: string) => {
-    const sportTarget = sportIdFromPath(to);
-    if (sportTarget && to === SPORT_PAGES[sportTarget].path) return sportIdFromPath(pathname) === sportTarget;
     if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
     if (target) return pathname === '/' && hash === `#${target}`;
     if (to === '/products') return pathname.startsWith('/products');
@@ -58,9 +55,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
       ? (lang === 'en' ? 'Sign In' : 'Đăng nhập')
       : pathname === '/register'
         ? (lang === 'en' ? 'Member Registration' : 'Đăng ký hội viên')
-        : sportIdFromPath(pathname)
-          ? SPORT_PAGES[sportIdFromPath(pathname)!].title
-          : pathname.startsWith('/trainers')
+        : pathname.startsWith('/trainers')
             ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
             : pathname.startsWith('/products')
               ? (lang === 'en' ? 'Products' : 'Sản phẩm')

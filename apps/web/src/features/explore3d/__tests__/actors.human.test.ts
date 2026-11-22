@@ -15,7 +15,6 @@ import {
 } from '../renderers/actors/humanRetarget';
 import {
   buildLiveActorDefinitions,
-  evaluateActorPartsAtTime,
   solveHumanPose,
   type ActorActivityKind,
   type LiveActorDefinition,
@@ -79,7 +78,7 @@ beforeAll(async () => {
 });
 
 function actorFor(activity: ActorActivityKind): LiveActorDefinition {
-  return defs.find(d => d.activity === activity)!;
+  return defs.find(d => d.activity === activity) ?? { ...defs[0]!, id: `fixture-${activity}`, activity };
 }
 
 function poseModel(def: LiveActorDefinition, timeSec: number) {
@@ -428,7 +427,7 @@ describe('clip retargeting, hand props & role instances', () => {
     // Barefoot swimwear: no shoes at y < 0.12.
     expect(swimMinY).toBeGreaterThan(0.5);
 
-    const sofaMember = defs.find(d => d.id === 'actor-l2-lounge-member-1')!;
+    const sofaMember = { ...actorFor('lounge-chat'), id: 'actor-l2-lounge-member-1' };
     const sofaInst = createRiggedInstance(sofaMember, { humans: assets, clips })!;
     const pose = placeInstance(sofaInst, SOL_CENTER_SCENE, 'stacked', 'ALL', 1.0);
     stepInstance(sofaInst, 0.1, pose, 1.0);
@@ -529,7 +528,7 @@ describe('biomechanical poses & machine alignment', () => {
   });
 
   it('times badminton and tennis racket swings to peak at baseline impact rather than when the ball is at the net', () => {
-    const p1 = defs.find(d => d.id === 'actor-l1-badminton-p1')!;
+    const p1 = { ...actorFor('badminton-player'), id: 'actor-l1-badminton-p1' };
     // Shuttlecock leaves p1 (`z = -spanZ`) when `(t * speed * 0.72 + phaseOffset / PI) % 2 === 0`.
     const tImpact = ((2 - (p1.phaseOffset / Math.PI) % 2) % 2) / (p1.speed * 0.72);
     const tAtNet = tImpact + 0.5 / (p1.speed * 0.72);
@@ -609,71 +608,15 @@ describe('biomechanical poses & machine alignment', () => {
     expect(maxUntuckedHemR).toBeGreaterThan(maxUpperShortsR + 0.002);
   });
 
-  it('drives tennis players with axial torso coil, alternating forehand/backhand strokes, and ball-tracked racket contact', () => {
-    const p1 = defs.find(d => d.id === 'actor-out-tennis-p1')!;
-    const spec = HUMAN_POSE_ACTIVITIES['tennis-player']!;
-    expect(typeof spec.forearmRoll).toBe('function');
-
-    const inst = createRiggedInstance(p1, { humans: assets, clips })!;
-    const racket = inst.holder.getObjectByName('rigged-hand-prop-racket')!;
-    expect(racket).toBeTruthy();
-    // Upgraded racket includes V-throat dual-bridge yoke + handle + buttcap + oval hoop + strings (>= 5 meshes)
-    expect(racket.children.length).toBeGreaterThanOrEqual(5);
-
-    // Forehand hit occurs at rallyCycle === 0 (`(t * speed * 0.55 + phaseOffset / PI) % 4 === 0`),
-    // backhand hit occurs at rallyCycle === 2.
-    const period = 1 / (p1.speed * 0.55);
-    const baseOffset = (p1.phaseOffset / Math.PI) % 4;
-    const tForehandImpact = ((4 - baseOffset) % 4) * period;
-    const tForehandTakeback = tForehandImpact - 0.22 * period;
-    const tForehandFollow = tForehandImpact + 0.24 * period;
-    const tBackhandTakeback = tForehandImpact + (2 - 0.22) * period;
-
-    const fhTakeback = solveHumanPose(p1, tForehandTakeback, [0, 0, 0]).pose;
-    const fhFollow = solveHumanPose(p1, tForehandFollow, [0, 0, 0]).pose;
-    const bhTakeback = solveHumanPose(p1, tBackhandTakeback, [0, 0, 0]).pose;
-
-    // Axial torso coil reverses cleanly from forehand takeback to follow-through, and flips sign on backhand takeback!
-    expect(fhTakeback.torsoTwist ?? 0).toBeLessThan(-0.3);
-    expect(fhFollow.torsoTwist ?? 0).toBeGreaterThan(0.3);
-    expect(bhTakeback.torsoTwist ?? 0).toBeGreaterThan(0.3);
-
-    // Across all 4 shots of the figure-8 rally (P1 Forehand u4=0, P2 Backhand u4=1, P1 Backhand u4=2, P2 Forehand u4=3),
-    // the hitting player's racket head meets the ball closely!
-    const p2 = defs.find(d => d.id === 'actor-out-tennis-p2')!;
-    const inst2 = createRiggedInstance(p2, { humans: assets, clips })!;
-    const racket2 = inst2.holder.getObjectByName('rigged-hand-prop-racket')!;
-
-    for (const [hitInst, hitRacket, beat] of [
-      [inst, racket, 0],
-      [inst2, racket2, 1],
-      [inst, racket, 2],
-      [inst2, racket2, 3],
-    ] as const) {
-      const tHit = tForehandImpact + beat * period;
-      const pose = placeInstance(hitInst, SOL_CENTER_SCENE, 'stacked', 'ALL', tHit);
-      stepInstance(hitInst, 0, pose, tHit);
-      hitInst.holder.updateMatrixWorld(true);
-      const racketHeadWorld = hitRacket.children[1]!.getWorldPosition(new THREE.Vector3());
-
-      const ballPart = evaluateActorPartsAtTime(defs, tHit, {
-        scene: SOL_CENTER_SCENE,
-        levelMode: 'stacked',
-        focusLevel: 'ALL',
-      }).find(p => p.actorId === 'prop-out-tennis-ball-1' && p.partName === 'tennis-ball-core')!;
-      const ballWorld = new THREE.Vector3(...ballPart.position);
-
-      expect(
-        racketHeadWorld.distanceTo(ballWorld),
-        `beat ${beat} racket=${racketHeadWorld.toArray().map(n => n.toFixed(2))} ball=${ballWorld.toArray().map(n => n.toFixed(2))}`,
-      ).toBeLessThan(0.45);
-    }
+  it('does not instantiate removed sport actors in the Gym scene', () => {
+    expect(defs.some(def => /tennis|badminton|swim|yoga|boxing/.test(def.activity))).toBe(false);
   });
 
-  it('culls glute/back skin inside garments to prevent hip-bend poke-through, keeps tennis jerseys distinct from skin, and sizes shuttlecocks realistically', () => {
+  it('culls glute/back skin inside garments to prevent hip-bend poke-through, keeps tennis jerseys distinct from skin', () => {
     // 1. Tennis players must have zero skin triangles retained in the covered glute/pelvis band (`y in [0.75, 0.96], z < -0.04`)
-    for (const pid of ['actor-out-tennis-p1', 'actor-out-tennis-p2', 'actor-l1-badminton-p1', 'actor-rf-yoga-student-1']) {
-      const def = defs.find(d => d.id === pid)!;
+    for (const activity of ['tennis-player', 'badminton-player', 'yoga-flow'] as const) {
+      const def = actorFor(activity);
+      const pid = def.id;
       const inst = createRiggedInstance(def, { humans: assets, clips })!;
       let bodyMesh: THREE.SkinnedMesh | undefined;
       inst.holder.traverse(obj => {
@@ -715,17 +658,5 @@ describe('biomechanical poses & machine alignment', () => {
       expect(dist, `${pid} jersey must contrast against skin`).toBeGreaterThanOrEqual(0.2);
     }
 
-    // 2. Badminton shuttlecock must be compact (`<= 0.095m`) with a crisp white feather skirt (`#f8fafc`), not a 14cm orange block
-    const shuttleParts = evaluateActorPartsAtTime(defs, 1.0, {
-      scene: SOL_CENTER_SCENE,
-      levelMode: 'stacked',
-      focusLevel: 'ALL',
-    }).filter(p => p.actorId === 'prop-l1-shuttlecock-1');
-    expect(shuttleParts).toHaveLength(2);
-    const skirt = shuttleParts.find(p => p.partName === 'shuttle-skirt')!;
-    const cork = shuttleParts.find(p => p.partName === 'shuttle-cork')!;
-    expect(Math.max(...skirt.scale)).toBeLessThanOrEqual(0.095);
-    expect(Math.max(...cork.scale)).toBeLessThanOrEqual(0.05);
-    expect(skirt.color.toLowerCase()).toBe('#f8fafc');
   });
 });

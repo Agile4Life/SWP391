@@ -1,5 +1,6 @@
 import { getIntlLocale, getLanguage } from '../../shared/i18n';
 import { useCallback, useEffect, useState } from 'react';
+import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { apiFetch } from '../../shared/api/client';
 import type { MembershipPackage } from '../member/membershipApi';
 import type { ClassSessionDto } from '../member/memberClassesApi';
@@ -15,6 +16,7 @@ export interface PublicCatalog {
 }
 
 export function usePublicCatalog() {
+  // State riêng cho dữ liệu, lỗi và lần thử lại; không thay catalog bằng dữ liệu mẫu.
   const [catalog, setCatalog] = useState<PublicCatalog | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -27,19 +29,21 @@ export function usePublicCatalog() {
       const request = ++sequence;
       setError(false);
       try {
+        // Gọi catalog công khai, giữ giá/gói từ server và hủy request khi unmount.
         const data = await apiFetch<PublicCatalog>('/public/catalog', {
           cache: 'no-store', signal: controller.signal, headers: { Authorization: '' },
         });
         if (active && request === sequence) {
           setCatalog({
             packages: Array.isArray(data?.packages) ? data.packages : [],
-            coaches: Array.isArray(data?.coaches) ? data.coaches : [],
+            // Public chỉ giới thiệu HLV có chuyên môn Gym; không đổi dữ liệu hồ sơ gốc.
+            coaches: Array.isArray(data?.coaches) ? data.coaches.filter(coach => matchesDiscipline(coach.specialization, 'Gym')) : [],
             sessions: Array.isArray(data?.sessions) ? data.sessions : [],
           });
           setError(false);
         }
       } catch {
-        // Hide stale prices and schedules when refresh fails.
+        // Không hiển thị giá/lịch cũ khi tải lại lỗi; UI dùng error và retry để thông báo.
         if (active && request === sequence) { setError(true); setCatalog(null); }
       }
     };

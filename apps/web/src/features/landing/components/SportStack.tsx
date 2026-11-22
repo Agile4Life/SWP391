@@ -2,46 +2,20 @@ import { sourceText, useSourceLanguage, sourceFormat } from "../../shop/shopI18n
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
-import { DISCIPLINES, type DisciplineId } from '../../../shared/lib/disciplines';
+import { MAIN_DISCIPLINE } from '../../../shared/lib/disciplines';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import './sport-stack.css';
 
-const content: Record<DisciplineId, { image: string; summary: string; programs: string[] }> = {
-  gym: {
-    image: '/images/fitness/gym-floor.jpg',
-    get summary() { return sourceText('Xây dựng sức mạnh và thể lực với các bài tập tạ.'); },
-    programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
-  },
-  swimming: {
-    image: '/images/fitness/aquatics-pool.jpg',
-    get summary() { return sourceText('Rèn sức bền và kỹ thuật bơi trong hồ bơi của trung tâm.'); },
-    programs: ['Kỹ thuật bơi sải', 'Sức bền dưới nước', 'Thả lỏng và phục hồi'],
-  },
-  boxing: {
-    image: '/images/hero-options/opt5-boxing.jpg',
-    get summary() { return sourceText('Tập kỹ thuật đấm, phản xạ và thể lực qua từng hiệp.'); },
-    programs: ['Kỹ thuật đấm cơ bản', 'Bộ chân và phản xạ', 'Thể lực theo hiệp'],
-  },
-  tennis: {
-    image: '/images/fitness/tennis-court.jpg',
-    get summary() { return sourceText('Luyện kỹ thuật đánh bóng và di chuyển trên sân.'); },
-    programs: ['Kỹ thuật đánh bóng', 'Di chuyển và phản xạ', 'Đánh đôi'],
-  },
-  badminton: {
-    image: '/images/fitness/badminton-court.webp',
-    get summary() { return sourceText('Rèn bộ chân, phản xạ và kỹ thuật đánh cầu.'); },
-    programs: ['Kỹ thuật đánh cầu', 'Bộ chân và phản xạ', 'Thi đấu đôi'],
-  },
-  yoga: {
-    image: '/images/yoga-aerial-silk-studio.jpg',
-    get summary() { return sourceText('Kết hợp hơi thở, tư thế và chuyển động linh hoạt.'); },
-    programs: ['Hơi thở và tư thế', 'Thăng bằng và linh hoạt', 'Giãn cơ và thư giãn'],
-  },
+// Chỉ giới thiệu Gym; giữ danh mục dùng chung của các role khác.
+const content = {
+  image: '/images/fitness/gym-floor.jpg',
+  get summary() { return sourceText('Xây dựng sức mạnh và thể lực với các bài tập tạ.'); },
+  programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
 };
 // The existing import remains stable; this section now uses a scrolling story rather than a deck.
 export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
   useSourceLanguage();
-  const sports = DISCIPLINES.map(sport => ({ ...sport, ...content[sport.id] }));
+  const sports = [{ ...MAIN_DISCIPLINE, ...content }];
   const story = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,7 +42,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
       active = index;
       steps.forEach((step, i) => step.classList.toggle('is-active', i === index));
       dots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
-      marker.style.top = `${index / (sports.length - 1) * 100}%`;
+      marker.style.top = `${sports.length > 1 ? index / (sports.length - 1) * 100 : 0}%`;
       if (preference.matches || index === displayed) {
         show(index);
         return;
@@ -121,9 +95,9 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
     <figcaption>{sourceText("Ảnh minh họa · ")}{sourceText(sport.name)}</figcaption>
   </>;
 
-  return <div className="fit-sport-story" ref={story} role="region" aria-label={sourceText("Khám phá các bộ môn")}>
+  return <div className="fit-sport-story" ref={story} role="region" aria-label={sourceText({ vi: 'Khám phá Gym', en: 'Explore Gym' })}>
     {heading}
-    <p className="fit-sport-story-hint">{sourceText("Cuộn xem các bộ môn ")}<span aria-hidden="true">↓</span></p>
+    <p className="fit-sport-story-hint">{sourceText({ vi: 'Khám phá không gian Gym ', en: 'Explore the Gym floor ' })}<span aria-hidden="true">↓</span></p>
     <div className="fit-sport-story-layout">
       <div className="fit-sport-story-steps">
         <div className="fit-sport-story-rail" aria-hidden="true"><i style={{ top: '0%' }} /></div>
@@ -131,13 +105,12 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
           className={`fit-sport-story-step${index === 0 ? ' is-active' : ''}`}
           data-sport={sport.id} aria-labelledby={`sport-story-${sport.id}`}>
           <span className="fit-sport-story-number" aria-hidden="true">0{index + 1}</span>
-          <span className="fit-sport-story-tier">{sport.tier === 'main' ? sourceText('Bộ môn chính') : sourceText('Bộ môn phụ')}</span>
+          <span className="fit-sport-story-tier">{sourceText('Bộ môn chính')}</span>
           <h3 id={`sport-story-${sport.id}`}>{sourceText(sport.name)}</h3>
           <p className="fit-sport-story-summary">{sport.summary}</p>
           <ul className="fit-sport-story-programs">{sport.programs.map(program => <li key={sourceText(program)}>{sourceText(program)}</li>)}</ul>
           <div className="fit-sport-story-footer">
             <Link className="fit-pill" to={classPath}>{sourceText("Xem lịch học")}<RoundArrow diagonal /></Link>
-            {sport.tier === 'secondary' && <Link className="fit-text-link" to={`/${sport.id}`}>{sourceText("Giới thiệu ")}{sourceText(sport.name)}</Link>}
           </div>
           <figure className="fit-sport-story-inline" data-reveal="image">{illustration(sport)}</figure>
         </article>)}

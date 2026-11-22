@@ -1,7 +1,7 @@
 import type { LevelCode, Vec3 } from '../scene/schema';
 import { LEVEL_ORDER } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { levelOf, resolveDeepLinkNode } from '../scene/selectors';
+import { getLevelByCode, levelOf, resolveDeepLinkNode } from '../scene/selectors';
 import type { LevelMode, WallMode } from './exploreStore';
 
 export const EXPLORE3D_SESSION_KEY = 'scms_explore3d_view';
@@ -27,7 +27,7 @@ export function parseExploreSearchParams(searchParams: URLSearchParams): ParsedE
   const result: ParsedExploreDeepLink = {};
 
   const rawLevel = searchParams.get('level')?.toUpperCase();
-  if (rawLevel && (LEVEL_ORDER as readonly string[]).includes(rawLevel)) {
+  if (rawLevel && (LEVEL_ORDER as readonly string[]).includes(rawLevel) && getLevelByCode(SOL_CENTER_SCENE, rawLevel as LevelCode)) {
     result.level = rawLevel as LevelCode;
   }
 
@@ -99,8 +99,9 @@ export function loadExploreSessionView(): PersistedExploreView | null {
       return {
         position: parsed.position as Vec3,
         target: parsed.target as Vec3,
-        focusLevel: parsed.focusLevel ?? 'ALL',
-        selectedId: parsed.selectedId ?? null,
+        // Session cũ có thể trỏ tới tầng/khu đã loại khỏi scope.
+        focusLevel: parsed.focusLevel && parsed.focusLevel !== 'ALL' && getLevelByCode(SOL_CENTER_SCENE, parsed.focusLevel) ? parsed.focusLevel : 'ALL',
+        selectedId: parsed.selectedId && SOL_CENTER_SCENE.nodes[parsed.selectedId] ? parsed.selectedId : null,
         levelMode: parsed.levelMode ?? 'stacked',
         wallMode: parsed.wallMode ?? 'cutaway',
       };

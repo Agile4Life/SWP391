@@ -681,6 +681,8 @@ export function MemberPackagesPage() {
   }
 
 
+  // API chưa có bộ môn/phòng của gói: chỉ lọc trạng thái và thời hạn hiện có.
+  // Không đoán gói Gym từ SILVER/GOLD; chờ An/Khoa xác nhận catalog trước khi lọc thêm.
   const purchasablePackages = packages.filter((item) => item.status === 'active' && !isTrialPackage(item) && item.durationDays >= MIN_TERM_DAYS);
   const hasRegisteredAnyPackage = Boolean(
     current ||

@@ -22,6 +22,7 @@ import { Lights } from './Lights';
 import { LiveActivityActors } from './LiveActivityActors';
 import { Picking, handleCanvasPointerMissed } from './Picking';
 import { Pool } from './Pool';
+import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { RiggedActors } from './RiggedActors';
 import { SelectionHighlight } from './SelectionHighlight';
 
@@ -142,7 +143,8 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       <Picking>
         <LevelStack />
         <Courts />
-        <Pool />
+        {/* Không dựng nước/bể procedural khi khu hồ bơi đã bỏ khỏi scene. */}
+        {SOL_CENTER_SCENE.nodes['zone-b1-pool'] && <Pool />}
         <ItemInstances resolvedItems={bindings?.items} />
       </Picking>
       <LiveActivityActors benchEnabled={benchEnabled} />

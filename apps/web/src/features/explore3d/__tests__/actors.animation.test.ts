@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { LEVEL_ORDER, type LevelCode } from '../scene/schema';
+import { type LevelCode } from '../scene/schema';
 import {
   buildLiveActorDefinitions,
   createActorPartGeometry,
@@ -10,12 +10,12 @@ import {
 } from '../renderers/actors/liveActorsConfig';
 
 describe('Live 3D Activity Actors & Dynamic Objects', () => {
-  it('builds actor definitions across all 5 levels (B1, L1, L2, RF, OUT) with contiguous instance indices', () => {
+  it('builds actor definitions for Gym and support areas with contiguous instance indices', () => {
     const defs = buildLiveActorDefinitions(SOL_CENTER_SCENE);
-    expect(defs.length).toBeGreaterThanOrEqual(45);
+    expect(defs.length).toBeGreaterThanOrEqual(20);
 
     const levelsPresent = new Set<LevelCode>(defs.map(d => d.level));
-    for (const lvl of LEVEL_ORDER) {
+    for (const lvl of ['L1', 'L2'] as const) {
       expect(levelsPresent.has(lvl)).toBe(true);
     }
 
@@ -26,20 +26,10 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       'barbell-squat',
       'bench-press',
       'dumbbell-curl',
-      'boxing-spar',
-      'heavy-bag-boxer',
-      'heavy-bag-sway',
-      'badminton-player',
-      'badminton-shuttlecock',
-      'swim-freestyle',
-      'yoga-flow',
-      'tennis-player',
-      'tennis-ball',
       'inbody-scan',
       'pt-coach-tablet',
       'receptionist-greet',
       'walking-patrol',
-      'fountain-plume',
     ];
     for (const act of expectedActivities) {
       expect(activities.has(act)).toBe(true);
@@ -128,11 +118,6 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
 
     checkActorMoved('actor-l1-runner-1');
     checkActorMoved('actor-l1-squat-lifter-1');
-    checkActorMoved('prop-l1-shuttlecock-1');
-    checkActorMoved('prop-out-tennis-ball-1');
-    checkActorMoved('actor-b1-swimmer-1');
-    checkActorMoved('actor-rf-yoga-Instructor'.toLowerCase());
-    checkActorMoved('actor-out-pedestrian-1');
   });
 
   it('respects exploded level Y offsets and solo level visibility filtering', () => {
@@ -150,13 +135,9 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
     });
 
     // B1 has explodedOffset = -6.0, RF has explodedOffset = +12.0, L2 has explodedOffset = +6.0
-    const b1Idx = stacked.findIndex(p => p.level === 'B1');
     const l2Idx = stacked.findIndex(p => p.level === 'L2');
-    const rfIdx = stacked.findIndex(p => p.level === 'RF');
 
-    expect(exploded[b1Idx]!.position[1] - stacked[b1Idx]!.position[1]).toBeCloseTo(-6.0, 3);
     expect(exploded[l2Idx]!.position[1] - stacked[l2Idx]!.position[1]).toBeCloseTo(6.0, 3);
-    expect(exploded[rfIdx]!.position[1] - stacked[rfIdx]!.position[1]).toBeCloseTo(12.0, 3);
 
     // Solo mode on L1 hides all non-L1 actors by scaling them to [0, 0, 0]
     const soloL1 = evaluateActorPartsAtTime(defs, 1.25, {

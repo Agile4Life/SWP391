@@ -67,7 +67,7 @@ describe('rigged actors', () => {
     // Every actor that is not a prop or an effect.
     const objects = new Set(['heavy-bag-sway', 'badminton-shuttlecock', 'tennis-ball', 'fountain-plume']);
     expect(rigged.length).toBe(defs.filter(d => !objects.has(d.activity)).length);
-    expect(rigged.length).toBe(53);
+    expect(rigged.length).toBe(22);
   });
 
   it('gives each activity exactly one way to move', () => {
@@ -98,7 +98,7 @@ describe('rigged actors', () => {
   });
 
   it('places actors on their level in stacked and exploded layouts', () => {
-    const l2Runner = rigged.find(d => d.activity === 'treadmill-run' && d.level === 'L2')!;
+    const l2Runner = rigged.find(d => d.activity === 'pt-coach-tablet' && d.level === 'L2')!;
     const stacked = getActorWorldAnchor(l2Runner, SOL_CENTER_SCENE, 'stacked');
     const exploded = getActorWorldAnchor(l2Runner, SOL_CENTER_SCENE, 'exploded');
     expect(stacked[1]).toBeCloseTo(
@@ -116,13 +116,13 @@ describe('rigged actors', () => {
     expect(moved).toBeGreaterThan(0.5);
   });
 
-  it('keeps cyclists on their bike and swimmers on their lap path', () => {
+  it('keeps cyclists on their bike and preserves the shared swimmer renderer', () => {
     const cyclist = rigged.find(d => d.activity === 'upright-bike')!;
     const anchor = getActorWorldAnchor(cyclist, SOL_CENTER_SCENE, 'stacked');
     const placement = computeRiggedPlacement(cyclist, SOL_CENTER_SCENE, 'stacked', 1.25);
     expect(Math.hypot(placement.position[0] - anchor[0], placement.position[2] - anchor[2])).toBeLessThan(0.3);
 
-    const swimmer = rigged.find(d => d.activity === 'swim-freestyle')!;
+    const swimmer = { ...cyclist, id: 'fixture-swimmer', activity: 'swim-freestyle' as const };
     const a = computeRiggedPlacement(swimmer, SOL_CENTER_SCENE, 'stacked', 0);
     const b = computeRiggedPlacement(swimmer, SOL_CENTER_SCENE, 'stacked', 40);
     expect(Math.hypot(b.position[0] - a.position[0], b.position[2] - a.position[2])).toBeGreaterThan(2);
