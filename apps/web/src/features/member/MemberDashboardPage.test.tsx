@@ -13,8 +13,9 @@ const api = vi.hoisted(() => ({
 
 vi.mock('./memberDashboardApi', () => ({
   getCurrentMembership: api.membership,
-  getBookedEnrollments: api.bookings,
 }));
+
+vi.mock('./coachBookingApi', () => ({ getMyCoachBookings: api.bookings }));
 
 function LocationProbe() {
   const location = useLocation();
@@ -85,7 +86,7 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.querySelector('.member-card-details-link')?.textContent).toContain('Còn 120 ngày');
   });
 
-  it('opens Classes from the class card without a duplicate photo card', async () => {
+  it('opens PT schedule from the booking card without a duplicate photo card', async () => {
     await renderDashboard();
     const classLink = host.querySelector<HTMLAnchorElement>('.member-card-overlay-link');
     expect(classLink?.getAttribute('href')).toBe('/member/classes');
@@ -106,57 +107,56 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/card');
     expect(host.querySelector('.member-board-info')).toBeNull();
   });
-  it('shows an empty class list independently of membership', async () => {
+  it('shows an empty PT list independently of membership', async () => {
     await renderDashboard();
     expect(host.textContent).toContain('Essential');
-    expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
+    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
   });
 
-  it('keeps membership when enrollment fails and retries only enrollment', async () => {
+  it('keeps membership when PT booking fails and retries only PT booking', async () => {
     api.bookings.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]);
     await renderDashboard();
     expect(host.textContent).toContain('Essential');
-    expect(host.textContent).toContain('Chưa thể tải lịch học lúc này.');
+    expect(host.textContent).toContain('Chưa thể tải lịch PT lúc này.');
 
     const retry = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Thử lại');
     await act(async () => retry?.click());
     expect(api.bookings).toHaveBeenCalledTimes(2);
     expect(api.membership).toHaveBeenCalledTimes(1);
-    expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
+    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
   });
 
-  it('keeps enrollment result when membership fails', async () => {
+  it('keeps PT booking result when membership fails', async () => {
     api.membership.mockRejectedValue(new Error('offline'));
     api.bookings.mockResolvedValue([{
-      id: 9, classId: 2, className: 'Yoga', coachName: 'An', roomName: 'A',
-      sessionDate: '2026-10-17', startTime: '08:00:00', endTime: '09:00:00',
-      status: 'booked', createdAt: '2026-10-16T10:00:00',
+      id: 9, coachName: 'An',
+      bookingDate: '2099-10-17', startTime: '08:00:00', endTime: '09:00:00',
+      status: 'confirmed', createdAt: '2026-10-16T10:00:00',
       cancelledAt: null, cancelReason: null,
     }]);
     await renderDashboard();
     expect(host.textContent).toContain('Không thể tải thông tin gói tập');
-    expect(host.textContent).toContain('Yoga');
-    expect(host.textContent).toContain('17/10/2026');
+    expect(host.textContent).toContain('An');
+    expect(host.textContent).toContain('17/10/2099');
     expect(host.textContent).toContain('08:00–09:00');
-    expect(host.textContent).toContain('A');
   });
 
-  it('excludes cancelled enrollments and not-yet-started memberships', async () => {
+  it('excludes cancelled PT bookings and not-yet-started memberships', async () => {
     api.membership.mockResolvedValue({
       ...membership,
       startDate: '2099-01-01',
       endDate: '2099-12-31',
     });
     api.bookings.mockResolvedValue([{
-      id: 10, classId: 3, className: 'Pilates Cancelled', coachName: 'Bình', roomName: 'B',
-      sessionDate: null, startTime: null, endTime: null,
+      id: 10, coachName: 'PT Cancelled',
+      bookingDate: null, startTime: null, endTime: null,
       status: 'cancelled', createdAt: '2026-10-16T10:00:00',
       cancelledAt: '2026-10-16T11:00:00', cancelReason: 'Cancelled by MEMBER',
     }]);
     await renderDashboard();
     expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
-    expect(host.textContent).not.toContain('Pilates Cancelled');
-    expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
+    expect(host.textContent).not.toContain('PT Cancelled');
+    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
   });
   it('switches the mounted dashboard and preserves server membership names', async () => {
     await renderDashboard();

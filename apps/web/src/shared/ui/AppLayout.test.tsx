@@ -38,7 +38,7 @@ describe('portal navigation', () => {
     const router = createMemoryRouter([
       { element: <AppLayout />, children: [
         { path: '/member/dashboard', element: <h1>Tổng quan</h1> },
-        { path: '/member/classes', element: <h1>Lịch học</h1> },
+        { path: '/member/classes', element: <h1>Lịch PT 1:1</h1> },
         { path: '/member/profile', element: <h1>Hồ sơ cá nhân</h1> },
         { path: '/member/streak', element: <h1>Streak tập luyện</h1> },
       ] },
@@ -57,7 +57,7 @@ describe('portal navigation', () => {
     expect(input).not.toBeNull();
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setter.call(input, 'lich hoc');
+      setter.call(input, 'lich pt');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     const links = host.querySelectorAll<HTMLAnchorElement>('dialog a');

@@ -3,7 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { apiFetch } from '../../shared/api/client';
 import type { MembershipPackage } from '../member/membershipApi';
-import type { ClassSessionDto } from '../member/memberClassesApi';
+// DTO lịch còn nằm trong catalog dùng chung của backend; Public không hiển thị hay đăng ký lớp.
+interface PublicClassSession {
+  id: number; classId: number; className: string; disciplineId: number;
+  disciplineName: string; coachId: number; coachName: string; roomId: number;
+  roomName: string; sessionDate: string; startTime: string; endTime: string;
+  status: string; cancelReason: string | null; capacity: number; bookedCount: number;
+}
 
 export interface PublicCoach {
   id: number; name: string; specialization: string | null; bio: string | null;
@@ -12,7 +18,7 @@ export interface PublicCoach {
 export interface PublicCatalog {
   packages: MembershipPackage[];
   coaches: PublicCoach[];
-  sessions: ClassSessionDto[];
+  sessions: PublicClassSession[];
 }
 
 export function usePublicCatalog() {

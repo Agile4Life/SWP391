@@ -10,8 +10,6 @@ import { useLiveCenterData } from './data/useLiveCenterData';
 import './explore3d.css';
 import { FloorPlan2D } from './fallback/FloorPlan2D';
 import { PerfOverlay } from './perf/PerfOverlay';
-import { SOL_CENTER_SCENE } from './scene/solCenter.scene';
-import { zoneOf } from './scene/selectors';
 import {
   loadExploreSessionView,
   parseExploreSearchParams,
@@ -21,7 +19,6 @@ import { GuidedTour } from './tour/GuidedTour';
 
 export function ExplorePage() {
   const [searchParams] = useSearchParams();
-  const selectedId = useExploreStore(state => state.selectedId);
   const viewMode = useExploreStore(state => state.viewMode);
 
   const parsedParams = parseExploreSearchParams(searchParams);
@@ -64,10 +61,7 @@ export function ExplorePage() {
     }
   }, [searchParams]);
 
-  const activeZone = zoneOf(SOL_CENTER_SCENE, selectedId);
-  const { bindings } = useLiveCenterData(
-    activeZone?.id ?? null,
-  );
+  const { bindings } = useLiveCenterData();
 
   return (
     <div className="explore3d-page" data-testid="explore3d-page">

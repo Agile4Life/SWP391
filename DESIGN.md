@@ -1,5 +1,9 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Giảm scope Thịnh — Task 2 (22/11/2026):
+- Member/Public bỏ đăng ký lớp nhóm và đặt sân. Giữ URL `/member/classes` cho lịch PT và `?tab=pt` cho đặt/hủy/thanh toán PT; giữ bố cục Dashboard bốn cột.
+- Giữ Classes/Courts của Staff/Coach/Manager, Shop, Streak và quyền lợi gói do backend cung cấp. Catalog/quyền lợi backend vẫn chờ An/Khoa đồng bộ.
+
 Giảm scope Thịnh — Task 1 (22/11/2026):
 - Public/Landing chỉ quảng bá Gym; bỏ trang giới thiệu Swimming, Tennis, Boxing, Badminton, Yoga. Giữ bố cục, theme và cuộn native hiện hành.
 - Explore 3D chỉ có Gym tiêu chuẩn và khu hỗ trợ; bỏ khu bộ môn khác, Gym VIP và tiện ích đặc quyền. Shop, Classes/Courts ở portal, Streak và InBody chờ các commit sau, không xóa trong Task 1.

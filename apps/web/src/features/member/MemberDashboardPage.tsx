@@ -1,6 +1,6 @@
 import { DaysLeft } from './DaysLeft';
 import { memberText } from './memberI18n';
-import { getMyQuota, type QuotaDto } from './memberClassesApi';
+import { getMyCoachBookings, type CoachBookingDto } from './coachBookingApi';
 import { useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,8 +12,6 @@ import { PortalIcon } from '../portal/PortalIcon';
 import './member-board.css';
 import {
   getCurrentMembership,
-  getBookedEnrollments,
-  type BookedClass,
   type MemberSubscription,
 } from './memberDashboardApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
@@ -65,10 +63,10 @@ type MembershipState =
   | { status: 'error' }
   | { status: 'success'; membership: MemberSubscription | null };
 
-type ClassesState =
+type PtState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'success'; classes: BookedClass[] };
+  | { status: 'success'; bookings: CoachBookingDto[] };
 
 export function MemberDashboardPage() {
   useLanguage();
@@ -77,8 +75,8 @@ export function MemberDashboardPage() {
   const [membershipState, setMembershipState] =
     useState<MembershipState>({ status: 'loading' });
 
-  const [classesState, setClassesState] =
-    useState<ClassesState>({ status: 'loading' });
+  const [ptState, setPtState] =
+    useState<PtState>({ status: 'loading' });
 
   const loadMembership = useCallback(async (silent = false) => {
     if (!silent) setMembershipState({ status: 'loading' });
@@ -91,36 +89,25 @@ export function MemberDashboardPage() {
     }
   }, []);
 
-  const [quota, setQuota] = useState<QuotaDto | null>(null);
-  const loadQuota = useCallback(async () => {
-    try {
-      const data = await getMyQuota();
-      setQuota(data && typeof data === 'object' ? data : null);
-    } catch {
-      setQuota(null);
-    }
-  }, []);
-
-  const loadClasses = useCallback(async (silent = false) => {
-    if (!silent) setClassesState({ status: 'loading' });
+  const loadPtBookings = useCallback(async (silent = false) => {
+    if (!silent) setPtState({ status: 'loading' });
 
     try {
-      const classes = await getBookedEnrollments();
-      setClassesState({ status: 'success', classes });
+      // Dashboard chỉ lấy lịch PT thật, không gọi quota hay ghi danh lớp nhóm.
+      const bookings = await getMyCoachBookings();
+      setPtState({ status: 'success', bookings });
     } catch {
-      if (!silent) setClassesState({ status: 'error' });
+      if (!silent) setPtState({ status: 'error' });
     }
   }, []);
 
   useEffect(() => {
     void loadMembership();
-    void loadClasses();
-    void loadQuota();
+    void loadPtBookings();
     const syncDashboard = () => {
       if (document.visibilityState === 'hidden') return;
       void loadMembership(true);
-      void loadClasses(true);
-      void loadQuota();
+      void loadPtBookings(true);
     };
     window.addEventListener('focus', syncDashboard);
     window.addEventListener('online', syncDashboard);
@@ -130,7 +117,7 @@ export function MemberDashboardPage() {
       window.removeEventListener('online', syncDashboard);
       document.removeEventListener('visibilitychange', syncDashboard);
     };
-  }, [loadMembership, loadClasses, loadQuota]);
+  }, [loadMembership, loadPtBookings]);
 
   const today = new Date();
 
@@ -144,18 +131,17 @@ export function MemberDashboardPage() {
       ? membershipState.membership
       : null;
 
-  const classes =
-    classesState.status === 'success'
-      ? classesState.classes.filter(
-          (item) => item.status?.toLowerCase() === 'booked',
-        )
-      : [];
+  // Chỉ hiện buổi PT đã xác nhận và chưa kết thúc; lịch sử vẫn ở màn quản lý PT.
+  const bookings = ptState.status === 'success'
+    ? ptState.bookings.filter(item => item.status === 'confirmed' && new Date(item.bookingDate + 'T' + item.endTime + '+07:00').getTime() > today.getTime())
+        .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate) || a.startTime.localeCompare(b.startTime))
+    : [];
 
   return (
     <div data-i18n-managed className="portal-container member-overview">
       <PageHeader
         title={memberText(`Xin chào, ${userName}`, `Hello, ${userName}`)}
-        actions={<Link className="btn-primary" to="/member/classes">{memberText("Khám phá lịch học")}</Link>}
+        actions={<Link className="btn-primary" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}</Link>}
       />
 
       <div className="member-board" aria-label={memberText("Tổng quan hội viên")}>
@@ -264,7 +250,7 @@ export function MemberDashboardPage() {
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
-          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch lớp học")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch PT", "View PT schedule")}><PortalIcon name="arrow" size={16} /></Link></div>
 
           <section
             className="portal-card member-classes-card"
@@ -275,61 +261,47 @@ export function MemberDashboardPage() {
                 id="upcoming-title"
                 className="portal-card-title"
               >
-                {memberText("Lớp đã đăng ký")}</h2>
-              {membership && quota && (quota.unlimited || quota.totalCredits != null) && (
-                <span
-                  className={`badge ${!quota.unlimited && quota.remainingCredits <= 0 ? 'badge-warning' : 'badge-success'}`}
-                  data-testid="dashboard-course-quota"
-                >
-                  {quota.unlimited
-                    ? memberText('Khóa học không giới hạn', 'Unlimited courses')
-                    : memberText(
-                        `Còn ${quota.remainingCredits}/${quota.totalCredits} khóa miễn phí`,
-                        `${quota.remainingCredits}/${quota.totalCredits} free courses left`,
-                      )}
-                </span>
-              )}
+                {memberText("Lịch PT đã đặt", "Booked PT sessions")}</h2>
             </div>
 
-            {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch lớp học của tôi")} />}
-            {classesState.status === 'loading' && (
-              <LoadingSkeleton label={memberText("Đang tải lịch học…")} count={3} />
+            {ptState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch PT của tôi", "View my PT schedule")} />}
+            {ptState.status === 'loading' && (
+              <LoadingSkeleton label={memberText("Đang tải lịch PT…", "Loading PT schedule…")} count={3} />
             )}
 
-            {classesState.status === 'error' && (
+            {ptState.status === 'error' && (
               <div role="alert">
                 <p className="row-card__meta">
-                  {memberText("Chưa thể tải lịch học lúc này.")}</p>
+                  {memberText("Chưa thể tải lịch PT lúc này.", "Unable to load PT sessions right now.")}</p>
 
                 <button
                   type="button"
                   className="btn-secondary"
                   style={{ marginTop: 16 }}
-                  onClick={() => void loadClasses()}
+                  onClick={() => void loadPtBookings()}
                 >
                   {memberText("Thử lại")}</button>
               </div>
             )}
 
-            {classesState.status === 'success' &&
-              classes.length === 0 && (
-                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lớp học đang đặt.")}</p><Link className="member-text-link" to="/member/classes">{memberText("Tìm lớp phù hợp")}<PortalIcon name="arrow" size={14} /></Link></div>
+            {ptState.status === 'success' &&
+              bookings.length === 0 && (
+                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lịch PT sắp tới.", "You have no upcoming PT sessions.")}</p><Link className="member-text-link" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}<PortalIcon name="arrow" size={14} /></Link></div>
               )}
 
-            {classesState.status === 'success' &&
-              classes.length > 0 && (
+            {ptState.status === 'success' &&
+              bookings.length > 0 && (
                 <div className="stack">
-                  {classes.map((item) => (
+                  {bookings.map((item) => (
                     <div key={item.id} className="row-card member-booking-row">
                       <div>
                         <h3 className="row-card__title">
-                          {item.className}
+                          {item.coachName}
                         </h3>
                         <div className="row-card__meta">
                           {[
-                            validDate(item.sessionDate) ? formatDate(item.sessionDate!) : '',
+                            validDate(item.bookingDate) ? formatDate(item.bookingDate!) : '',
                             item.startTime && item.endTime ? `${item.startTime.slice(0, 5)}–${item.endTime.slice(0, 5)}` : '',
-                            item.roomName ?? '',
                           ].filter(Boolean).join(' · ')}
                         </div>
                       </div>

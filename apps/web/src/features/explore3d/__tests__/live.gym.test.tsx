@@ -36,7 +36,7 @@ it.each([false, true])('skips removed court requests and preserves core loading 
     const paths = vi.mocked(apiFetch).mock.calls.map(([path]) => path);
     expect(paths).toContain('/public/products?size=6');
     expect(paths).toContain('/check-in/streak');
-    expect(paths.some(path => path.startsWith('/classes/sessions?'))).toBe(true);
+    expect(paths.some(path => path.startsWith('/classes/sessions?'))).toBe(false);
   } finally {
     await act(async () => root.unmount());
   }

@@ -16,7 +16,7 @@ const tickerItems = [
   'MOVEMENT STUDIO',
   'FREE WEIGHTS',
   'BARBELL CLUB',
-  'GROUP TRAINING',
+  'PERSONAL TRAINING',
 ];
 
 
@@ -33,7 +33,7 @@ const serviceShapes = [
 const clubMetrics = [
   { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, get label() { return sourceText('MỞ CỬA MỖI NGÀY'); } },
   { value: 'Gym', get label() { return sourceText({ vi: 'PHÒNG GYM TIÊU CHUẨN', en: 'STANDARD GYM FLOOR' }); } },
-  { get value() { return sourceText('Lịch lớp'); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
+  { get value() { return sourceText({ vi: 'Lịch PT', en: 'PT schedule' }); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
   { get value() { return sourceText('QR Pass'); }, get label() { return sourceText({ vi: 'CHECK-IN PHÒNG GYM', en: 'GYM CHECK-IN' }); } },
 ];
 const MUSCLE_CLOSE_DELAY_MS = 600;
@@ -208,19 +208,19 @@ const memberBenefits = [
     get tag() { return sourceText({ vi: 'Bộ môn', en: 'Disciplines' }); },
     idx: '01',
     get title() { return sourceText('Đặt lịch tập trên Portal'); },
-    get description() { return sourceText('Xem lịch lớp theo bộ môn và đặt chỗ khi gói còn hiệu lực.'); },
+    get description() { return sourceText({ vi: 'Xem khung giờ trống và đặt lịch PT khi gói còn hiệu lực.', en: 'View available slots and book PT with an active membership.' }); },
     perks: [
       'Gym',
       { vi: 'Thấy ngay khung giờ còn chỗ', en: 'See open time slots at a glance' },
     ],
   },
   {
-    get tag() { return sourceText('Lớp'); },
+    get tag() { return sourceText({ vi: 'PT 1:1', en: '1:1 PT' }); },
     idx: '02',
-    get title() { return sourceText('Lớp nhóm theo gói tập'); },
-    get description() { return sourceText('Xem huấn luyện viên, giờ học và chỗ trống. Số lượt đặt tùy gói tập.'); },
+    get title() { return sourceText({ vi: 'Huấn luyện cá nhân 1:1', en: 'Personal training' }); },
+    get description() { return sourceText({ vi: 'Chọn huấn luyện viên, xem slot trống và phương thức thanh toán.', en: 'Choose a coach, available slot and payment method.' }); },
     perks: [
-      { vi: 'Lịch lớp sáng, chiều, tối mỗi ngày', en: 'Morning, afternoon and evening classes daily' },
+      { vi: 'Xem khung giờ PT còn trống', en: 'View available PT slots' },
       { vi: 'Điểm danh bằng mã QR', en: 'Check in with your QR code' },
     ],
   },
@@ -259,8 +259,8 @@ const faqs = [
     get answer() { return sourceText('Có. Bạn gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên.'); },
   },
   {
-    get question() { return sourceText('Làm sao để đặt lớp học hoặc đặt sân?'); },
-    get answer() { return sourceText('Đăng nhập Portal để xem lịch và đặt chỗ khi gói còn hiệu lực.'); },
+    get question() { return sourceText({ vi: 'Làm sao để đặt lịch PT 1:1?', en: 'How do I book a 1:1 PT session?' }); },
+    get answer() { return sourceText({ vi: 'Đăng nhập Portal, chọn HLV, khung giờ trống và thanh toán khi gói còn hiệu lực.', en: 'Sign in to the portal, choose a coach and an available slot, then pay with an active membership.' }); },
   },
 ];
 
@@ -372,7 +372,7 @@ export function FitnessLanding() {
   useSourceLanguage();
   const user = getCurrentUser();
   const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
-  const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
+  const ptPath = user ? user.role === 'MEMBER' ? '/member/classes?tab=pt' : homePath(user.role) : '/login';
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
   const planPath = user ? user.role === 'MEMBER' ? '/member/progress' : homePath(user.role) : '/register';
   const accountLabel = !user ? 'Tạo tài khoản' : user.role === 'MEMBER' ? 'Chọn gói tập' : 'Vào portal';
@@ -619,7 +619,7 @@ export function FitnessLanding() {
       </div>
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
-      <SportStack classPath={classPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
+      <SportStack ptPath={ptPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
         <SplitHeading id="multisport-title" lines={[sourceText('Gym')]} />
       </div>} />
     </section>
@@ -795,7 +795,7 @@ export function FitnessLanding() {
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
             <h3>{sourceText("Chưa có gói vẫn trải nghiệm được")}</h3>
-            <p>{sourceText("Tạo tài khoản miễn phí để xem lịch lớp và chọn gói. Gói được kích hoạt tại quầy lễ tân.")}</p>
+            <p>{sourceText({ vi: 'Tạo tài khoản miễn phí để đặt PT và chọn gói. Gói được kích hoạt tại quầy lễ tân.', en: 'Create a free account to book PT and choose a membership. Memberships are activated at reception.' })}</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
               {sourceText(accountLabel)}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

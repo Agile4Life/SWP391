@@ -16,7 +16,7 @@ it('renders a member without a subscription using the real API client and an omi
     status: 200,
     json: async () => ({
       success: true, status: 200, message: 'OK', timestamp: '2026-10-18T22:45:00',
-      ...(url.includes('/enrollments/') ? { data: [] } : {}),
+      ...(url.includes('/coach-bookings/') ? { data: [] } : {}),
     }),
   })));
   const host = document.createElement('div');
@@ -25,8 +25,11 @@ it('renders a member without a subscription using the real API client and an omi
   try {
     await act(async () => root.render(<MemoryRouter><MemberDashboardPage /></MemoryRouter>));
     expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
-    expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
+    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
     expect(host.querySelector('a[href="/member/packages"]')).not.toBeNull();
+    const paths = vi.mocked(fetch).mock.calls.map(([path]) => String(path));
+    expect(paths.some(path => path.includes('/classes/') || path.includes('/court-bookings'))).toBe(false);
+    expect(paths.some(path => path.includes('/coach-bookings/my'))).toBe(true);
     // The same transport fix must cover packages and member cards as well.
     await expect(getCurrentMembership()).resolves.toBeNull();
     await expect(getMySubscription()).resolves.toBeNull();

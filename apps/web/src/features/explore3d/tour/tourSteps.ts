@@ -64,10 +64,10 @@ export const TOUR_STEPS: readonly TourStep[] = [
       vi: 'Khu Gym tiêu chuẩn với máy Cardio, Smith Machine và Squat Rack kết nối trạng thái trực tiếp.',
       en: 'Standard Gym with live equipment status, cardio stations, Smith machines and squat racks.',
     },
-    ctaTo: '/member/classes?discipline=Gym',
+    ctaTo: '/member/packages',
     ctaLabel: {
-      vi: 'Xem Lịch lớp Gym',
-      en: 'View Gym Schedule',
+      vi: 'Xem gói tập',
+      en: 'View memberships',
     },
   },
   {

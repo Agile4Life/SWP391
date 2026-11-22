@@ -40,7 +40,6 @@ export const router = createBrowserRouter([
       {
         element: <RoleGuard allowedRoles={['MEMBER']} />,
         children: [
-          { path: '/member/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).MemberCourtsPage }) },
           {
             path: '/member/dashboard',
             lazy: async () => ({ Component: (await import('../features/member/MemberDashboardPage')).MemberDashboardPage }),

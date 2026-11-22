@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { apiFetch } from '../../../shared/api/client';
-import { centerDate, courtsApi, dateAfter } from '../../courts/courtsApi';
+import { centerNowParts } from '../../../shared/lib/centerTime';
 import { memberCheckinApi } from '../../member/memberCheckinApi';
 import { getCurrentMembership } from '../../member/membershipApi';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { zoneOf } from '../scene/selectors';
 import {
   EMPTY_LIVE_SNAPSHOT,
   inferMembershipTier,
   normalizeKey,
   resolveBindings,
   type LiveCenterSnapshot,
-  type LiveClassSessionRecord,
   type LiveCoachRecord,
-  type LiveCourtSlot,
-  type LiveCourtSummary,
   type LiveEquipmentRecord,
   type LiveMembershipSummary,
   type LiveProductRecord,
@@ -32,11 +28,9 @@ interface CacheEntry {
 }
 
 let cachedCenterSnapshot: CacheEntry | null = null;
-const cachedCourtDisciplineTimestamp = new Map<string, number>();
 
 export function clearLiveCenterCache(): void {
   cachedCenterSnapshot = null;
-  cachedCourtDisciplineTimestamp.clear();
 }
 
 interface RawRoom {
@@ -62,17 +56,6 @@ interface RawEquipment {
   status?: string;
 }
 
-interface RawCourt {
-  id: number | string;
-  name: string;
-  location?: string | null;
-  capacity?: number;
-  status?: string;
-  disciplineName?: string | null;
-  openTime?: string | null;
-  closeTime?: string | null;
-}
-
 interface RawPublicCoach {
   id: number | string;
   name?: string;
@@ -92,7 +75,6 @@ interface RawPublicPackage {
 interface RawPublicCatalog {
   packages?: RawPublicPackage[];
   coaches?: RawPublicCoach[];
-  sessions?: RawClassSession[];
 }
 
 interface RawProductItem {
@@ -126,20 +108,6 @@ interface RawStreak {
   activeDates?: string[];
 }
 
-interface RawClassSession {
-  id: number | string;
-  className: string;
-  disciplineName?: string | null;
-  roomName?: string | null;
-  coachName?: string | null;
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-  capacity?: number | null;
-  bookedCount?: number | null;
-  status?: string | null;
-}
-
 function computeRemainingDays(endDate: string | null | undefined, todayStr: string): number | null {
   if (!endDate) return null;
   const endMs = Date.parse(`${endDate.slice(0, 10)}T00:00:00Z`);
@@ -164,7 +132,7 @@ export interface UseLiveCenterDataResult {
   refresh: () => Promise<void>;
 }
 
-export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenterDataResult {
+export function useLiveCenterData(): UseLiveCenterDataResult {
   const [snapshot, setSnapshot] = useState<LiveCenterSnapshot>(() =>
     cachedCenterSnapshot && Date.now() - cachedCenterSnapshot.timestamp < CACHE_TTL_MS
       ? cachedCenterSnapshot.snapshot
@@ -199,34 +167,25 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
       setError(null);
     }
 
-    const todayStr = centerDate();
-    const toDateStr = dateAfter(todayStr, 6);
+    const todayStr = centerNowParts().date;
 
-    // Sân không còn consumer trong scene Gym; không tính request bị bỏ là dữ liệu tải thành công.
-    const hasCourtZones = Object.values(SOL_CENTER_SCENE.nodes).some(node => node.type === 'zone' && node.liveBinding?.courtDiscipline);
+    // Chỉ tải dữ liệu Gym và các flow còn giữ; không gọi lịch lớp nhóm hay sân.
     const [
       roomsRes,
       equipmentRes,
-      courtsRes,
       catalogRes,
       productsRes,
       membershipRes,
       streakRes,
-      sessionsRes,
     ] = await Promise.allSettled([
       apiFetch<RawRoom[]>('/rooms'),
       apiFetch<RawEquipment[]>('/equipment'),
-      // Không gọi API riêng của sân đã loại; giữ endpoint dùng chung cho các role khác.
-      hasCourtZones ? courtsApi.courts() : Promise.resolve([]),
       apiFetch<RawPublicCatalog>('/public/catalog', { headers: { Authorization: '' } }),
       apiFetch<RawProductPage | RawProductItem[]>('/public/products?size=6', {
         headers: { Authorization: '' },
       }),
       fetchMembershipWithFallback(),
       memberCheckinApi.streak(),
-      apiFetch<RawClassSession[]>(
-        `/classes/sessions?fromDate=${encodeURIComponent(todayStr)}&toDate=${encodeURIComponent(toDateStr)}`,
-      ),
     ]);
 
     const rooms: LiveRoomRecord[] =
@@ -244,11 +203,6 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
           }))
         : [];
 
-    const roomsByName = new Map<string, LiveRoomRecord>();
-    for (const r of rooms) {
-      roomsByName.set(normalizeKey(r.name), r);
-    }
-
     const equipment: LiveEquipmentRecord[] =
       equipmentRes.status === 'fulfilled' && Array.isArray(equipmentRes.value)
         ? equipmentRes.value
@@ -263,25 +217,6 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
               quantity: Number(eq.quantity ?? 0),
               status: eq.status ?? 'active',
             }))
-        : [];
-
-    const courts: LiveCourtSummary[] =
-      courtsRes.status === 'fulfilled' && Array.isArray(courtsRes.value)
-        ? courtsRes.value.map((c: RawCourt) => {
-            const matchedRoom = roomsByName.get(normalizeKey(c.name));
-            const fallbackCap =
-              normalizeKey(c.disciplineName) === normalizeKey('Bơi lội') ? 6 : 4;
-            return {
-              id: String(c.id),
-              name: c.name,
-              location: c.location ?? matchedRoom?.location ?? null,
-              capacity: Number(c.capacity ?? matchedRoom?.capacity ?? fallbackCap),
-              status: c.status ?? matchedRoom?.status ?? 'available',
-              disciplineName: c.disciplineName ?? matchedRoom?.disciplineName ?? null,
-              openTime: c.openTime ?? matchedRoom?.openTime ?? null,
-              closeTime: c.closeTime ?? matchedRoom?.closeTime ?? null,
-            };
-          })
         : [];
 
     const catalog = catalogRes.status === 'fulfilled' ? catalogRes.value : null;
@@ -357,31 +292,9 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
       };
     }
 
-    const rawSessionList: RawClassSession[] =
-      sessionsRes.status === 'fulfilled' && Array.isArray(sessionsRes.value)
-        ? sessionsRes.value
-        : Array.isArray(catalog?.sessions)
-          ? catalog.sessions
-          : [];
-
-    const classSessions: LiveClassSessionRecord[] = rawSessionList.map(s => ({
-      id: String(s.id),
-      className: s.className,
-      disciplineName: s.disciplineName ?? null,
-      roomName: s.roomName ?? null,
-      coachName: s.coachName ?? null,
-      sessionDate: s.sessionDate,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      capacity: s.capacity ?? null,
-      bookedCount: s.bookedCount ?? null,
-      status: s.status ?? null,
-    }));
-
     const allCoreFailed =
       roomsRes.status === 'rejected' &&
-      equipmentRes.status === 'rejected' &&
-      (!hasCourtZones || courtsRes.status === 'rejected');
+      equipmentRes.status === 'rejected';
 
     const snapshotError = allCoreFailed
       ? (roomsRes.reason instanceof Error
@@ -392,10 +305,10 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     const nextSnapshot: LiveCenterSnapshot = {
       rooms,
       equipment,
-      courts,
-      courtSlotsByCourtId: cachedCenterSnapshot?.snapshot.courtSlotsByCourtId ?? {},
-      classSessions,
-      sessions: classSessions,
+      courts: [],
+      courtSlotsByCourtId: {},
+      classSessions: [],
+      sessions: [],
       membership,
       streak,
       coaches,
@@ -420,83 +333,7 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     void loadSnapshot(false);
   }, [loadSnapshot]);
 
-  // Lazily load court slot availability when a court zone (Badminton, Pool, Tennis) is selected
-  useEffect(() => {
-    if (!selectedZoneId) return;
-    const zone = zoneOf(SOL_CENTER_SCENE, selectedZoneId);
-    const courtDiscipline = zone?.liveBinding?.courtDiscipline;
-    if (!courtDiscipline) return;
-
-    const lastFetched = cachedCourtDisciplineTimestamp.get(courtDiscipline);
-    if (lastFetched && Date.now() - lastFetched < CACHE_TTL_MS) {
-      return;
-    }
-
-    const matchingCourts = snapshot.courts.filter(
-      c => normalizeKey(c.disciplineName) === normalizeKey(courtDiscipline),
-    );
-    if (matchingCourts.length === 0) return;
-
-    let cancelled = false;
-    cachedCourtDisciplineTimestamp.set(courtDiscipline, Date.now());
-    const todayStr = centerDate();
-
-    void (async () => {
-      const results = await Promise.allSettled(
-        matchingCourts.map(async court => {
-          const numericId = Number(court.id);
-          if (Number.isNaN(numericId)) return { courtId: court.id, slots: [] as LiveCourtSlot[] };
-          const slots = await courtsApi.availability(numericId, todayStr);
-          return {
-            courtId: court.id,
-            slots: Array.isArray(slots)
-              ? slots.map(s => ({
-                  startTime: s.startTime,
-                  endTime: s.endTime,
-                  status: s.status,
-                }))
-              : [],
-          };
-        }),
-      );
-
-      if (cancelled || !mountedRef.current) return;
-
-      const newSlotsByCourtId: Record<string, LiveCourtSlot[]> = {};
-      for (const r of results) {
-        if (r.status === 'fulfilled' && r.value.slots.length > 0) {
-          newSlotsByCourtId[r.value.courtId] = r.value.slots;
-        }
-      }
-
-      if (Object.keys(newSlotsByCourtId).length === 0) return;
-
-      setSnapshot(prev => {
-        const mergedSlots = {
-          ...(prev.courtSlotsByCourtId ?? {}),
-          ...newSlotsByCourtId,
-        };
-        const updated: LiveCenterSnapshot = {
-          ...prev,
-          courtSlotsByCourtId: mergedSlots,
-        };
-        if (cachedCenterSnapshot) {
-          cachedCenterSnapshot = {
-            snapshot: updated,
-            timestamp: cachedCenterSnapshot.timestamp,
-          };
-        }
-        return updated;
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedZoneId, snapshot.courts]);
-
   const refresh = useCallback(async () => {
-    cachedCourtDisciplineTimestamp.clear();
     await loadSnapshot(true);
   }, [loadSnapshot]);
 
