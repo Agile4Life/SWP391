@@ -105,19 +105,12 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/ai/generate-workout-plan", "/api/v1/ai/recommend",
                             "/api/v1/ai/recommendations/**").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/coaching/evaluations").hasAnyRole("COACH", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/evaluations/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/health/metrics").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/health/metrics/my").hasRole("MEMBER")
                     .requestMatchers("/api/v1/health/metrics/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER")
 
-                    // Coach Reviews & Monthly Leaderboard (SCRUM-134)
-                    .requestMatchers(HttpMethod.POST, "/api/v1/coaching/reviews").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/reviews/my").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/reviews/**").authenticated()
+                    // Coach Leaderboard (ranked by sessions taught, without review/monthly-review endpoints)
                     .requestMatchers(HttpMethod.GET, "/api/v1/coaching/leaderboard").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/monthly-reviews/my").hasRole("COACH")
-                    .requestMatchers("/api/v1/coaching/monthly-reviews/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
 
                     // Desk review of identity documents: the front desk owns it, the manager portal no longer does
                     .requestMatchers("/api/v1/members/kyc/**").hasRole("RECEPTIONIST")
