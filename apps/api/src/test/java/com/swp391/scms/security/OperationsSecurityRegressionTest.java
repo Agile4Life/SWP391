@@ -32,8 +32,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Exercises the merged SCRUM-71..75 matchers with the real security filter chain. */
-@WebMvcTest({ClassController.class, EnrollmentController.class,
-        CenterCheckinController.class, MembershipSubscriptionController.class})
+@WebMvcTest(controllers = {ClassController.class, EnrollmentController.class,
+        CenterCheckinController.class, MembershipSubscriptionController.class},
+        properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
 class OperationsSecurityRegressionTest {

@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Per-session booking endpoints live under /api/v1/classes, where a catch-all matcher reserves writes for the
  * manager. These tests run the real filter chain to prove the member-only matchers are reached first.
  */
-@WebMvcTest(SessionBookingController.class)
+@WebMvcTest(controllers = SessionBookingController.class, properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
 class SessionBookingSecurityTest {

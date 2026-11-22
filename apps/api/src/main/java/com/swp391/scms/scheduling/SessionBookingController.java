@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 /** Per-session class booking: one session, any hand-picked set, a whole week or month, and their cancellation. */
 @Tag(name = "Session Bookings", description = "Book and cancel individual class sessions, singly or in bulk")
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes")
 public class SessionBookingController {
 

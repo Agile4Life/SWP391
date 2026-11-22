@@ -58,9 +58,6 @@ public class PublicCatalogService {
 
     @Transactional(readOnly = true)
     public CatalogDto getCatalog() {
-        var centerClock = (clock != null ? clock : Clock.system(CenterTime.ZONE)).withZone(CenterTime.ZONE);
-        var now = LocalDateTime.now(centerClock);
-        var today = now.toLocalDate();
         var publicPackages = packages.findByStatusOrderByPriceAsc("active").stream().map(PackageDto::of).toList();
         var publicCoaches = coaches.findPublicCoaches().stream().map(c -> {
             String rawAvatar = c.getUser() != null ? c.getUser().getAvatarUrl() : null;
@@ -70,18 +67,6 @@ public class PublicCatalogService {
                     c.getSpecialization(), c.getBio(), c.getCertification(),
                     avatarUrl);
         }).toList();
-        var visibleSessions = sessions.findPublicSessions(today, today.plusDays(6), now.toLocalTime());
-        var classIds = visibleSessions.stream().map(s -> s.getGymClass().getId()).distinct().toList();
-        var bookedCounts = classIds.isEmpty() ? Map.<Long, Long>of()
-                : enrollments.countByClassIdsAndStatus(classIds, "booked").stream()
-                        .collect(Collectors.toMap(ClassBookingCount::classId, ClassBookingCount::bookedCount));
-        var sessionCounts = sessionBookings == null || visibleSessions.isEmpty() ? Map.<Long, Long>of()
-                : sessionBookings.countBookedBySessionIds(visibleSessions.stream().map(s -> s.getId()).toList()).stream()
-                        .collect(Collectors.toMap(SessionBookingCount::sessionId,
-                                SessionBookingCount::bookedCount));
-        var publicSessions = visibleSessions.stream()
-                .map(s -> mapper.toDto(s, bookedCounts.getOrDefault(s.getGymClass().getId(), 0L)
-                        + sessionCounts.getOrDefault(s.getId(), 0L))).toList();
-        return new CatalogDto(publicPackages, publicCoaches, publicSessions);
+        return new CatalogDto(publicPackages, publicCoaches, List.of());
     }
 }

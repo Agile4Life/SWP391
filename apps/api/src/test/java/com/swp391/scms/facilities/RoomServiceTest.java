@@ -29,6 +29,15 @@ class RoomServiceTest {
     @InjectMocks RoomService service;
 
     @Test
+    void listsOnlyStandardGymRoom() {
+        Room standard = new Room(); standard.setName("Phòng Gym Tiêu chuẩn");
+        when(rooms.findAllByNameIgnoreCaseOrderByNameAsc("Phòng Gym Tiêu chuẩn")).thenReturn(java.util.List.of(standard));
+
+        assertEquals(java.util.List.of("Phòng Gym Tiêu chuẩn"),
+                service.list().stream().map(room -> room.name()).toList());
+    }
+
+    @Test
     void createDefaultsToAvailableWhenStatusOmitted() {
         when(rooms.save(any(Room.class))).thenAnswer(i -> i.getArgument(0));
 
