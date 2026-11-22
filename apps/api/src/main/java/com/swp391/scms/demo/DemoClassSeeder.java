@@ -49,7 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Component
 @Order(210)
-@ConditionalOnProperty(name = "app.demo.seed-enabled", havingValue = "true")
+@ConditionalOnProperty(name = {"app.demo.seed-enabled", "app.legacy.classes-enabled"}, havingValue = "true")
 public class DemoClassSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoClassSeeder.class);

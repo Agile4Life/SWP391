@@ -185,7 +185,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
           },
           { path: '/staff/support', element: <Navigate to="/messages?tab=support" replace /> },
-          { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
+          { path: '/staff/courts', element: <Navigate to="/staff/reception" replace /> },
         ],
       },
 
@@ -199,11 +199,11 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/attendance',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+            element: <Navigate to="/coach/pt-attendance" replace />,
           },
           {
             path: '/staff/attendance/:sessionId',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+            element: <Navigate to="/coach/pt-attendance" replace />,
           },
           {
             path: '/coach/classes',
@@ -215,7 +215,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/coach/health-metrics',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachHealthMetricsPage')).CoachHealthMetricsPage }),
+            element: <Navigate to="/coach/training-plans" replace />,
           },
           {
             path: '/coach/saved-plans',
@@ -245,15 +245,15 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/staff/pt-attendance',
-            lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
+            element: <Navigate to="/staff/reception" replace />,
           },
           {
             path: '/staff/classes',
-            lazy: async () => ({ Component: (await import('../features/classes/StaffClassesPage')).StaffClassesPage }),
+            element: <Navigate to="/staff/reception" replace />,
           },
           {
             path: '/staff/orders',
-            lazy: async () => ({ Component: (await import('../features/shop/StaffOrdersPage')).StaffOrdersPage }),
+            element: <Navigate to="/staff/reception" replace />,
           },
         ],
       },
@@ -279,19 +279,19 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/products',
-            lazy: async () => ({ Component: (await import('../features/shop/ManagerProductsPage')).ManagerProductsPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/products/new',
-            lazy: async () => ({ Component: (await import('../features/shop/ManagerProductEditorPage')).ManagerProductEditorPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/products/:productId',
-            lazy: async () => ({ Component: (await import('../features/shop/ManagerProductEditorPage')).ManagerProductEditorPage }),
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: '/manager/equipment',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerEquipmentPage')).ManagerEquipmentPage }),
+            element: <Navigate to="/manager/catalogs" replace />,
           },
           {
             path: '/manager/coach-assignments',
@@ -315,7 +315,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/manager/coach-reviews',
-            lazy: async () => ({ Component: (await import('../features/manager/ManagerCoachReviewsPage')).ManagerCoachReviewsPage }),
+            element: <Navigate to="/manager/coach-assignments" replace />,
           },
           {
             // Khiếu nại chuyển lên được quản lý xử lý trong khung Tin nhắn như lễ tân.

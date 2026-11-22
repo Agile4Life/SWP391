@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 /** Periodically frees course seats held by fees that were never paid. */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 public class CourseEnrollmentExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(CourseEnrollmentExpiryScheduler.class);
     private final EnrollmentService service;

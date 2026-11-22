@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 /** Periodically frees court slots held by bookings that were never paid. */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 public class CourtBookingExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(CourtBookingExpiryScheduler.class);
     private final CourtBookingService service;

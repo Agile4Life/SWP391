@@ -8,6 +8,7 @@ import com.swp391.scms.shop.dto.AddressDtos.AddressRequest;
 import com.swp391.scms.shop.service.AddressService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** Disabled by default: Shop module removed from the active scope. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/shop/addresses")
 @PreAuthorize("hasRole('MEMBER')")
