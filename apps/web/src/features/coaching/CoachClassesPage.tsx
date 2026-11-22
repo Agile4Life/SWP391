@@ -102,7 +102,7 @@ export function CoachClassesPage() {
     setLoading(true);
     setError(null);
     try {
-      const ptBookings = await getCoachSchedule().catch(() => []);
+      const ptBookings = await getCoachSchedule();
       setCoach1on1Bookings(ptBookings);
     } catch {
       setError('Không thể tải lịch dạy PT 1-1 của tuần này. Vui lòng thử lại.');
