@@ -58,7 +58,7 @@ export function StaffAccountsPage() {
           return a.fullName.localeCompare(b.fullName, 'vi');
         }
         case 'status': {
-          const statusOrder: Record<string, number> = { active: 1, unactivated: 2, locked: 3 };
+          const statusOrder: Record<string, number> = { active: 1, inactive: 2, locked: 3 };
           const orderA = statusOrder[a.status] ?? 99;
           const orderB = statusOrder[b.status] ?? 99;
           if (orderA !== orderB) return orderA - orderB;
