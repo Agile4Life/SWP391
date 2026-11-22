@@ -1,6 +1,5 @@
 import { getIntlLocale, getLanguage } from '../../shared/i18n';
 import { useCallback, useEffect, useState } from 'react';
-import { matchesDiscipline } from '../../shared/lib/disciplines';
 import { apiFetch } from '../../shared/api/client';
 import type { MembershipPackage } from '../member/membershipApi';
 import type { ClassSessionDto } from '../member/memberClassesApi';
@@ -36,8 +35,8 @@ export function usePublicCatalog() {
         if (active && request === sequence) {
           setCatalog({
             packages: Array.isArray(data?.packages) ? data.packages : [],
-            // Public chỉ giới thiệu HLV có chuyên môn Gym; không đổi dữ liệu hồ sơ gốc.
-            coaches: Array.isArray(data?.coaches) ? data.coaches.filter(coach => matchesDiscipline(coach.specialization, 'Gym')) : [],
+            // Trung tâm chỉ còn Gym nên mọi HLV công khai đều là HLV Gym (kể cả HLV chưa ghi chuyên môn).
+            coaches: Array.isArray(data?.coaches) ? data.coaches : [],
             sessions: Array.isArray(data?.sessions) ? data.sessions : [],
           });
           setError(false);
