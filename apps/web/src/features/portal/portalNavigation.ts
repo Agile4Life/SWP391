@@ -52,7 +52,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/coach/pt-attendance', label: 'Điểm danh PT 1-1', icon: 'check', roles: ['COACH'] },
   { to: '/coach/training-plans', label: 'Giáo án huấn luyện', icon: 'dumbbell', roles: ['COACH'], tabs: [
     { to: '/coach/training-plans', label: 'Soạn giáo án', en: 'Plan builder' },
-    { to: '/coach/health-metrics', label: 'Chỉ số sức khỏe', en: 'Health metrics' },
     { to: '/coach/saved-plans', label: 'Giáo án đã lưu', en: 'Saved plans' },
   ] },
   { to: '/staff/reception', label: 'Quầy lễ tân & Check-in', icon: 'card', roles: ['STAFF'], tabs: [
