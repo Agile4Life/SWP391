@@ -191,7 +191,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
           },
           { path: '/staff/support', element: <Navigate to="/messages?tab=support" replace /> },
-          { path: '/staff/courts', lazy: async () => ({ Component: (await import('../features/courts/CourtBookingsPage')).StaffCourtsPage }) },
+          { path: '/staff/courts', element: <Navigate to="/staff/reception" replace /> },
         ],
       },
 
@@ -251,7 +251,7 @@ export const router = createBrowserRouter([
         children: [
           {
             path: '/staff/pt-attendance',
-            lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
+            element: <Navigate to="/staff/reception" replace />,
           },
           {
             path: '/staff/classes',
