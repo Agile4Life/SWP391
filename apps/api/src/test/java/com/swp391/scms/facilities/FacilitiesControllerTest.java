@@ -47,12 +47,12 @@ class FacilitiesControllerTest {
 
     @Test
     void listDisciplinesReturnsWrappedData() throws Exception {
-        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
+        when(disciplines.listGym()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
 
         mockMvc.perform(get("/api/v1/disciplines"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].name").value("Yoga"));
+                .andExpect(jsonPath("$.data[0].name").value("Gym"));
     }
 
     @Test

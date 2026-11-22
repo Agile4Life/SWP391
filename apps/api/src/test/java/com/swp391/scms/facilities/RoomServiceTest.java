@@ -31,8 +31,7 @@ class RoomServiceTest {
     @Test
     void listsOnlyStandardGymRoom() {
         Room standard = new Room(); standard.setName("Phòng Gym Tiêu chuẩn");
-        Room oldRoom = new Room(); oldRoom.setName("Phòng Gym VIP");
-        when(rooms.findAllByOrderByNameAsc()).thenReturn(java.util.List.of(standard, oldRoom));
+        when(rooms.findAllByNameIgnoreCaseOrderByNameAsc("Phòng Gym Tiêu chuẩn")).thenReturn(java.util.List.of(standard));
 
         assertEquals(java.util.List.of("Phòng Gym Tiêu chuẩn"),
                 service.list().stream().map(room -> room.name()).toList());

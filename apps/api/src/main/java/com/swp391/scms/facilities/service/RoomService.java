@@ -32,8 +32,7 @@ public class RoomService {
 
     @Transactional(readOnly = true)
     public List<RoomDto> list() {
-        return rooms.findAllByOrderByNameAsc().stream()
-                .filter(room -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(room.getName()))
+        return rooms.findAllByNameIgnoreCaseOrderByNameAsc("Phòng Gym Tiêu chuẩn").stream()
                 .map(RoomDto::of).toList();
     }
 
