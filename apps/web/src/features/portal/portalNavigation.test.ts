@@ -39,10 +39,11 @@ describe('portal sidebar grouping', () => {
   });
 });
 
-it('removes Member court navigation and keeps PT, Shop and other roles', () => {
+it('removes court navigation for every role and keeps PT and Shop', () => {
   const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER'));
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
   expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
   expect(member.flatMap(portalNavRoutes)).toContain('/member/products');
-  expect(PORTAL_NAV.flatMap(portalNavRoutes)).toContain('/staff/courts');
+  // Staff court screen was cut too (manager/receptionist scope reduction).
+  expect(PORTAL_NAV.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
 });
