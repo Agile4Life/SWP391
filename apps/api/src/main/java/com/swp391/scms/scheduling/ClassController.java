@@ -30,6 +30,7 @@ import java.util.List;
  */
 @Tag(name = "Classes & Sessions", description = "Class management and class schedule (SCRUM-72, SCRUM-131)")
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes")
 public class ClassController {
 

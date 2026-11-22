@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { apiFetch } from '../../../shared/api/client';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { memberCheckinApi } from '../../member/memberCheckinApi';
@@ -222,7 +221,7 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
     const catalog = catalogRes.status === 'fulfilled' ? catalogRes.value : null;
 
     const coaches: LiveCoachRecord[] = Array.isArray(catalog?.coaches)
-      ? catalog.coaches.filter(c => matchesDiscipline(c.specialty ?? c.specialization, 'Gym')).map(c => ({
+      ? catalog.coaches.map(c => ({
           id: String(c.id),
           fullName: c.fullName ?? c.name ?? 'Coach',
           specialty: c.specialty ?? c.specialization ?? null,

@@ -41,9 +41,11 @@ public class CoachAssignmentController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOverview(
             @RequestParam(required = false) Long coachId,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String type
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir
     ) {
-        Map<String, Object> data = coachAssignmentService.getOverview(coachId, search, type);
+        Map<String, Object> data = coachAssignmentService.getOverview(coachId, search, type, sortBy, sortDir);
         return ResponseEntity.ok(ApiResponse.ok(
                 msg("manager.coach_assignments.loaded"),
                 data

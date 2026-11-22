@@ -109,3 +109,43 @@ it('rejects duplicate email and phone number before calling createStaffAccount',
   expect(createStaffAccount).not.toHaveBeenCalled();
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Số điện thoại đã tồn tại');
 });
+
+it('sorts staff accounts by name, role, and status', async () => {
+  const staffList = [
+    { id: 1, fullName: 'Bùi Văn B', email: 'b@sol.vn', roleCode: 'RECEPTIONIST' as const, status: 'locked' as const },
+    { id: 2, fullName: 'An Thị A', email: 'a@sol.vn', roleCode: 'COACH' as const, status: 'active' as const },
+    { id: 3, fullName: 'Cù Trọng C', email: 'c@sol.vn', roleCode: 'COACH' as const, status: 'active' as const },
+  ];
+  vi.mocked(listStaffAccounts).mockResolvedValue(staffList);
+  await act(async () => root.render(<StaffAccountsPage />));
+
+  const getRenderedNames = () =>
+    [...host.querySelectorAll('tbody tr')].map(tr => tr.querySelector('td')?.textContent?.trim());
+
+  // Default: name_asc -> An Thị A, Bùi Văn B, Cù Trọng C
+  expect(getRenderedNames()).toEqual(['An Thị A', 'Bùi Văn B', 'Cù Trọng C']);
+
+  const sortSelect = host.querySelector('select[aria-label="Sắp xếp danh sách nhân sự"]') as HTMLSelectElement;
+  expect(sortSelect).toBeTruthy();
+
+  // Sort name_desc -> Cù Trọng C, Bùi Văn B, An Thị A
+  await act(async () => {
+    sortSelect.value = 'name_desc';
+    sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  expect(getRenderedNames()).toEqual(['Cù Trọng C', 'Bùi Văn B', 'An Thị A']);
+
+  // Sort role (Coach first, then Receptionist) -> An Thị A (Coach), Cù Trọng C (Coach), Bùi Văn B (Receptionist)
+  await act(async () => {
+    sortSelect.value = 'role';
+    sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  expect(getRenderedNames()).toEqual(['An Thị A', 'Cù Trọng C', 'Bùi Văn B']);
+
+  // Sort status (Active first, then Locked) -> An Thị A (Active), Cù Trọng C (Active), Bùi Văn B (Locked)
+  await act(async () => {
+    sortSelect.value = 'status';
+    sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  expect(getRenderedNames()).toEqual(['An Thị A', 'Cù Trọng C', 'Bùi Văn B']);
+});

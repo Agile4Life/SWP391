@@ -94,7 +94,8 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
       root.render(<ManagerCatalogsPage />);
     });
 
-    expect(host.textContent).toContain('Reformer Pilates');
+    expect(host.textContent).toContain('Gym');
+    expect(host.textContent).not.toContain('Reformer Pilates');
 
     // Switch to Gói tập tab
     const pkgTabBtn = [...host.querySelectorAll('button')].find((b) =>

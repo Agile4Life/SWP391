@@ -210,7 +210,23 @@ export function ManagerCatalogsPage() {
     return isNew ? 'Tạo gói tập mới' : 'Chỉnh sửa gói tập & giá bán';
   };
 
-  const rowCount = tab === 'disciplines' ? disciplines.length : tab === 'rooms' ? rooms.length : packages.length;
+  // SCRUM / Scope Reduction: Chỉ hiển thị bộ môn Gym và Phòng Gym Tiêu chuẩn
+  const visibleDisciplines = disciplines.filter(
+    (d) => (d.name || '').toLowerCase().includes('gym') || (d.name || '').toLowerCase().includes('thể hình')
+  );
+  const visibleRooms = rooms.filter((r) => {
+    const name = (r.name || '').toLowerCase();
+    const disc = (r.disciplineName || '').toLowerCase();
+    return (
+      name.includes('gym tiêu chuẩn') ||
+      name.includes('standard gym') ||
+      name.includes('tiêu chuẩn') ||
+      (name.includes('gym') && r.tier !== 'PLATINUM') ||
+      disc.includes('gym')
+    );
+  });
+
+  const rowCount = tab === 'disciplines' ? visibleDisciplines.length : tab === 'rooms' ? visibleRooms.length : packages.length;
 
   return (
     <div data-i18n-managed className="portal-container">
@@ -232,8 +248,8 @@ export function ManagerCatalogsPage() {
       <div className="portal-tabs">
         {(
           [
-            ['disciplines', t(`Bộ môn (${disciplines.length})`, `Disciplines (${disciplines.length})`)],
-            ['rooms', t(`Phòng tập (${rooms.length})`, `Rooms (${rooms.length})`)],
+            ['disciplines', t(`Bộ môn (${visibleDisciplines.length})`, `Disciplines (${visibleDisciplines.length})`)],
+            ['rooms', t(`Phòng tập (${visibleRooms.length})`, `Rooms (${visibleRooms.length})`)],
             ['packages', t(`Gói tập (${packages.length})`, `Memberships (${packages.length})`)],
           ] as const
         ).map(([key, label]) => (
@@ -609,7 +625,7 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {disciplines.map((d) => (
+                    {visibleDisciplines.map((d) => (
                       <tr data-i18n-managed key={d.id}>
                         <td><strong>{d.name}</strong></td>
                         <td style={{ color: 'var(--portal-muted)' }}>{d.description || <span className="muted">{t("Không có mô tả")}</span>}</td>
@@ -647,7 +663,7 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {rooms.map((r) => (
+                    {visibleRooms.map((r) => (
                       <tr data-i18n-managed key={r.id}>
                         <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
                         <td>

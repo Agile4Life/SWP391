@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "Class Sessions", description = "Class session lifecycle and cancellation management (SCRUM-113)")
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes/sessions")
 public class ClassSessionController {
 

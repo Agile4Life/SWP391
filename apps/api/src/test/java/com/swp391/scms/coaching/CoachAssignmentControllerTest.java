@@ -57,13 +57,29 @@ class CoachAssignmentControllerTest {
         );
         CoachAssignmentSummaryStatsDto statsDto = new CoachAssignmentSummaryStatsDto(1, 1, 1, 1, 0, 0);
 
-        when(coachAssignmentService.getOverview(any(), any(), any()))
+        when(coachAssignmentService.getOverview(any(), any(), any(), any(), any()))
                 .thenReturn(Map.of("coaches", List.of(coachDto), "stats", statsDto));
 
         mockMvc.perform(get("/api/v1/manager/coach-assignments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.coaches[0].coachName").value("HLV Alpha"))
                 .andExpect(jsonPath("$.data.stats.totalCoaches").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/manager/coach-assignments forwards sortBy and sortDir parameters")
+    void testGetOverviewWithSortParams() throws Exception {
+        when(coachAssignmentService.getOverview(isNull(), eq("gym"), eq("PT_1_1"), eq("totalStudentsCount"), eq("desc")))
+                .thenReturn(Map.of("coaches", Collections.emptyList(), "stats", new CoachAssignmentSummaryStatsDto(0, 0, 0, 0, 0, 0)));
+
+        mockMvc.perform(get("/api/v1/manager/coach-assignments")
+                        .param("search", "gym")
+                        .param("type", "PT_1_1")
+                        .param("sortBy", "totalStudentsCount")
+                        .param("sortDir", "desc"))
+                .andExpect(status().isOk());
+
+        verify(coachAssignmentService).getOverview(null, "gym", "PT_1_1", "totalStudentsCount", "desc");
     }
 
     @Test

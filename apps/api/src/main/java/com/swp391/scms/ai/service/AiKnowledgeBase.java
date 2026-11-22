@@ -172,30 +172,19 @@ public class AiKnowledgeBase {
             MembershipPackage month = pkg(tier, 30);
             MembershipPackage longTerm = pkg(tier, 90);
             sb.append("- ").append(tier.charAt(0)).append(tier.substring(1).toLowerCase(java.util.Locale.ROOT)).append(": ")
-                    .append("khóa học nhóm miễn phí ").append(PackageBenefits.courseCredits(tier, 30))
-                    .append(" khóa cho mỗi 30 ngày thời hạn gói (gói 3 tháng ").append(PackageBenefits.courseCredits(tier, 90))
-                    .append(" khóa, dùng trong cả thời hạn gói); ")
                     .append("PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(month)).append(" buổi mỗi 30 ngày; ")
-                    .append("đặt sân miễn phí ").append(PackageBenefits.courtBookingsPerCycle(month)).append(" lượt mỗi 30 ngày, ")
-                    .append("đặt trước tối đa ").append(PackageBenefits.courtAdvanceDays(month)).append(" ngày, ")
-                    .append("tối đa ").append(PackageBenefits.courtMaxUpcoming(month)).append(" lượt sân sắp tới và ")
-                    .append(PackageBenefits.courtMaxUnpaidHolds(month)).append(" lượt chưa thanh toán; ")
                     .append("bảo lưu: ").append(holdText(PackageBenefits.holdMaxDays(longTerm)))
                     .append(" (gói 1 tháng cũ: ").append(holdText(PackageBenefits.holdMaxDays(month))).append("); ")
-                    .append("giảm ").append(PackageBenefits.discountPercent(month)).append("% cho buổi PT thêm, khóa học có phí và sản phẩm");
-            if (PackageBenefits.hasVipRoomAccess(month)) {
-                sb.append("; vào phòng VIP và đo chỉ số chuyên sâu (Body Fat, Muscle Mass)");
-            }
+                    .append("giảm ").append(PackageBenefits.discountPercent(month)).append("% cho buổi PT thêm");
             sb.append(".\n");
         }
         MembershipPackage trial = pkg(null, PackageBenefits.TRIAL_MAX_DAYS);
         trial.setName("Trải nghiệm");
         sb.append("- Gói trải nghiệm: dịch vụ như hạng Gold, PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(trial))
-                .append(" buổi, không có lượt sân miễn phí, đặt sân trước tối đa ").append(PackageBenefits.courtAdvanceDays(trial))
-                .append(" ngày, không bảo lưu được.");
+                .append(" buổi, không bảo lưu được.");
         return new Section("Quyền lợi theo hạng gói",
                 List.of("quyen loi", "hang", "silver", "gold", "platinum", "vip", "giam gia", "uu dai", "pt", "khac nhau",
-                        "so sanh", "nen chon", "goi nao", "bao luu", "san"),
+                        "so sanh", "nen chon", "goi nao", "bao luu"),
                 false, sb.toString());
     }
 

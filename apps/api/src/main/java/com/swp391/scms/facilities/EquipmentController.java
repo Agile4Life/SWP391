@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Equipment", description = "Gym equipment & machinery management")
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.equipment-enabled", havingValue = "true")
 @RequestMapping("/api/v1/equipment")
 public class EquipmentController {
 

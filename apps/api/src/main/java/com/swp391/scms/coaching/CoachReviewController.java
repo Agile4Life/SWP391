@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Disabled by default: Coach Review endpoints have been removed from the active scope.
+ */
+@ConditionalOnProperty(name = "app.coaching.reviews.enabled", havingValue = "true")
 @Tag(name = "Coach Reviews", description = "Hội viên đánh giá Huấn luyện viên (SCRUM-134)")
 @RestController
 @RequestMapping("/api/v1/coaching/reviews")

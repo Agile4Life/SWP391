@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Disabled by default: Shop module removed from the active scope. */
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/shop/orders")
 @PreAuthorize("hasRole('MEMBER')")

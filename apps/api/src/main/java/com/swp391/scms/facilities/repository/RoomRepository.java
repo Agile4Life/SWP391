@@ -10,6 +10,7 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
     boolean existsByDisciplineId(Long disciplineId);
 
     List<Room> findAllByOrderByNameAsc();
+    List<Room> findAllByNameIgnoreCaseOrderByNameAsc(String name);
 
     @Query("""
             select r from Room r join fetch r.discipline d
