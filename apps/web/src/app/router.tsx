@@ -205,11 +205,11 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/attendance',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+            element: <Navigate to="/coach/pt-attendance" replace />,
           },
           {
             path: '/staff/attendance/:sessionId',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+            element: <Navigate to="/coach/pt-attendance" replace />,
           },
           {
             path: '/coach/classes',
@@ -221,7 +221,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/coach/health-metrics',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachHealthMetricsPage')).CoachHealthMetricsPage }),
+            element: <Navigate to="/coach/training-plans" replace />,
           },
           {
             path: '/coach/saved-plans',

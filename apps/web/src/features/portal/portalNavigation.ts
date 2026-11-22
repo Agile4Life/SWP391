@@ -48,14 +48,10 @@ export const PORTAL_NAV: PortalNavItem[] = [
   { to: '/member/progress', label: 'Tiến độ & Giáo án', icon: 'chart', roles: ['MEMBER'] },
   { to: '/member/explore', label: 'Tham quan 3D', icon: 'compass', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF'] },
-  { to: '/coach/classes', label: 'Lịch dạy & Học viên HLV', icon: 'calendar', roles: ['COACH'] },
-  { to: '/staff/attendance', label: 'Quản lý buổi học', icon: 'check', roles: ['COACH'], tabs: [
-    { to: '/staff/attendance', label: 'Lớp học', en: 'Classes' },
-    { to: '/coach/pt-attendance', label: 'Buổi PT 1:1', en: '1:1 sessions' },
-  ] },
-  { to: '/coach/training-plans', label: 'Giáo án & Đánh giá', icon: 'dumbbell', roles: ['COACH'], tabs: [
+  { to: '/coach/classes', label: 'Lịch dạy PT 1-1', icon: 'calendar', roles: ['COACH'] },
+  { to: '/coach/pt-attendance', label: 'Điểm danh PT 1-1', icon: 'check', roles: ['COACH'] },
+  { to: '/coach/training-plans', label: 'Giáo án huấn luyện', icon: 'dumbbell', roles: ['COACH'], tabs: [
     { to: '/coach/training-plans', label: 'Soạn giáo án', en: 'Plan builder' },
-    { to: '/coach/health-metrics', label: 'Chỉ số sức khỏe', en: 'Health metrics' },
     { to: '/coach/saved-plans', label: 'Giáo án đã lưu', en: 'Saved plans' },
   ] },
   { to: '/staff/reception', label: 'Quầy lễ tân & Check-in', icon: 'card', roles: ['STAFF'], tabs: [
@@ -116,9 +112,10 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/products': 'Shop & Orders',
   '/member/progress': 'Progress & Plans',
   '/member/notifications': 'Notifications',
-  '/coach/classes': 'Coach Schedule & Members',
+  '/coach/classes': '1:1 PT Schedule & Trainees',
+  '/coach/pt-attendance': '1:1 PT Attendance',
   '/staff/attendance': 'Session management',
-  '/coach/training-plans': 'Plans & Assessment',
+  '/coach/training-plans': 'Training Plans',
   '/staff/reception': 'Front Desk & Check-in',
   '/staff/courts': 'Courts & Orders',
   '/staff/requests': 'Internal Requests',
@@ -162,8 +159,8 @@ export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label
     { to: '/staff/requests', label: 'Đơn từ' },
   ],
   COACH: [
-    { to: '/coach/classes', label: 'Lịch dạy' },
-    { to: '/staff/attendance', label: 'Điểm danh' },
+    { to: '/coach/classes', label: 'Lịch PT' },
+    { to: '/coach/pt-attendance', label: 'Điểm danh PT' },
     { to: '/coach/training-plans', label: 'Giáo án' },
   ],
   MANAGER: [
@@ -182,7 +179,8 @@ export const MOBILE_PRIMARY_NAV_EN_LABELS: Record<string, string> = {
   '/staff/reception': 'Desk',
   '/staff/classes': 'Classes',
   '/staff/check-in': 'Check-in',
-  '/coach/classes': 'Schedule',
+  '/coach/classes': 'PT Schedule',
+  '/coach/pt-attendance': 'PT Attendance',
   '/staff/attendance': 'Attendance',
   '/coach/training-plans': 'Plans',
   '/manager/reports': 'Reports',
