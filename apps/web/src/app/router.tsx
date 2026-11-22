@@ -221,7 +221,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/coach/health-metrics',
-            lazy: async () => ({ Component: (await import('../features/coaching/CoachHealthMetricsPage')).CoachHealthMetricsPage }),
+            element: <Navigate to="/coach/training-plans" replace />,
           },
           {
             path: '/coach/saved-plans',
