@@ -24,11 +24,18 @@ it('recovers the purchase intent after an OAuth redirect and clears it on arriva
   expect(authDestination('MEMBER', '')).toBe('/member/dashboard');
 });
 
-it.each(['/checkout', '/products', '/products/sol-whey-isolate'])('accepts shop return path %s', path => {
-  expect(purchaseAuthPath('/login', `?returnTo=${encodeURIComponent(path)}`)).toBe(`/login?returnTo=${encodeURIComponent(path)}`);
-  expect(authDestination('MEMBER', `?returnTo=${encodeURIComponent(path)}`)).toBe(path);
+it.each(['/checkout', '/products', '/products/sol-whey-isolate'])('rejects retired shop return path %s', path => {
+  expect(purchaseAuthPath('/login', `?returnTo=${encodeURIComponent(path)}`)).toBe('/login');
+  expect(authDestination('MEMBER', `?returnTo=${encodeURIComponent(path)}`)).toBe('/member/dashboard');
 });
 
 it.each(['//evil.com', '/products/../admin/users', 'https://x.y/checkout', '/checkout?next=//evil'])('rejects %s', path => {
   expect(purchaseAuthPath('/login', `?returnTo=${encodeURIComponent(path)}`)).toBe('/login');
+});
+
+it('ignores a persisted Shop intent after OAuth while keeping a new membership intent', () => {
+  sessionStorage.setItem('scms_purchase_return', '/checkout');
+  expect(authDestination('MEMBER', '?google_oauth=authenticated')).toBe('/member/dashboard');
+  rememberPurchaseIntent('?returnTo=' + encodeURIComponent('/member/packages?packageId=7'));
+  expect(authDestination('MEMBER', '')).toBe('/member/packages?packageId=7');
 });

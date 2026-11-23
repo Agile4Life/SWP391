@@ -17,8 +17,7 @@ export function PortalSectionTabs({ label, tabs, pathname, lang }: PortalSection
   const activeInGroup = tabs.some(
     tab =>
       pathname === tab.to ||
-      pathname.startsWith(`${tab.to}/`) ||
-      (tab.to === '/member/products' && pathname === '/member/checkout'),
+      pathname.startsWith(`${tab.to}/`),
   );
   if (!activeInGroup) return null;
   return (

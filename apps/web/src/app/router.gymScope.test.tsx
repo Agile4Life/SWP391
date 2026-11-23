@@ -5,13 +5,13 @@ it('removes public sport pages while retaining the other planned commit routes',
   const publicPaths = router.routes.map(route => route.path);
   expect(publicPaths).toContain('/');
   expect(publicPaths).toContain('/trainers/:trainerId');
-  expect(publicPaths).toContain('/products');
+  for (const path of ['/products', '/products/:slug', '/checkout']) expect(publicPaths).not.toContain(path);
   for (const path of ['/swimming', '/tennis', '/boxing', '/badminton', '/yoga', '/sports/:sportId']) {
     expect(publicPaths).not.toContain(path);
   }
   const portalPaths = router.routes.flatMap(route => route.children ?? []).flatMap(group => group.children ?? []).map(route => route.path);
-  expect(portalPaths).not.toContain('/member/courts');
-  for (const path of ['/member/packages', '/member/packages/checkout', '/member/classes', '/member/streak', '/member/progress', '/member/products', '/staff/classes', '/staff/courts', '/manager/products']) {
+  for (const path of ['/member/courts', '/member/products', '/member/products/:slug', '/member/checkout', '/member/orders', '/member/orders/:orderId']) expect(portalPaths).not.toContain(path);
+  for (const path of ['/member/packages', '/member/packages/checkout', '/member/classes', '/member/streak', '/member/progress', '/staff/classes', '/staff/courts', '/staff/orders', '/manager/products', '/manager/products/new', '/manager/products/:productId']) {
     expect(portalPaths).toContain(path);
   }
 });

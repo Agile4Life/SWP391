@@ -4,13 +4,10 @@ import { PortalHome } from '../shared/ui/PortalHome';
 import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
 
 export const router = createBrowserRouter([
-  // Public chỉ giới thiệu Gym; URL bộ môn cũ đi qua fallback, các route nghiệp vụ giữ nguyên.
+  // Public chỉ giới thiệu Gym; bỏ route Shop Member/Public, giữ route gói/PT và quản lý độc lập.
   { path: '/', lazy: async () => ({ Component: (await import('../features/landing/LandingPage')).LandingPage }) },
   { path: '/trainers', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
   { path: '/trainers/:trainerId', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
-  { path: '/products', lazy: async () => ({ Component: (await import('../features/shop/ProductsPage')).ProductsPage }) },
-  { path: '/products/:slug', lazy: async () => ({ Component: (await import('../features/shop/ProductDetailPage')).ProductDetailPage }) },
-  { path: '/checkout', lazy: async () => ({ Component: (await import('../features/shop/CheckoutPage')).CheckoutPage }) },
   { path: '/login', lazy: async () => ({ Component: (await import('../features/auth/LoginPage')).LoginPage }) },
   { path: '/register', lazy: async () => ({ Component: (await import('../features/auth/RegisterPage')).RegisterPage }) },
 
@@ -73,29 +70,6 @@ export const router = createBrowserRouter([
           {
             path: '/member/invoices',
             lazy: async () => ({ Component: (await import('../features/member/MemberInvoicesPage')).MemberInvoicesPage }),
-          },
-          {
-            path: '/member/orders',
-            lazy: async () => ({ Component: (await import('../features/shop/MemberOrdersPage')).MemberOrdersPage }),
-          },
-          {
-            path: '/member/products',
-            lazy: async () => {
-              const { MemberOrdersPage } = await import('../features/shop/MemberOrdersPage');
-              return { Component: () => <MemberOrdersPage defaultTab="shop" /> };
-            },
-          },
-          {
-            path: '/member/products/:slug',
-            lazy: async () => ({ Component: (await import('../features/shop/ProductDetailPage')).ProductDetailPage }),
-          },
-          {
-            path: '/member/checkout',
-            lazy: async () => ({ Component: (await import('../features/shop/CheckoutPage')).CheckoutPage }),
-          },
-          {
-            path: '/member/orders/:orderId',
-            lazy: async () => ({ Component: (await import('../features/shop/MemberOrderDetailPage')).MemberOrderDetailPage }),
           },
           {
             path: '/member/progress',

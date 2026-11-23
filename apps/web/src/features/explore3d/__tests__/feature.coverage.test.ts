@@ -36,7 +36,7 @@ describe('Explore 3D Member Feature Coverage', () => {
     // Also verify extended member routes mentioned in Section 10 of the plan
     expect(reachableRoutes.has('/member/streak')).toBe(true);
     expect(reachableRoutes.has('/member/packages/checkout')).toBe(true);
-    expect(reachableRoutes.has('/member/products')).toBe(true);
+    expect(reachableRoutes.has('/member/products')).toBe(false);
     expect(reachableRoutes.has('/messages')).toBe(true);
     expect(reachableRoutes.has('/trainers')).toBe(true);
   });

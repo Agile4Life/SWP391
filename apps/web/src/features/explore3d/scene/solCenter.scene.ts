@@ -1033,14 +1033,6 @@ addWall(levelL1, 'boxing-south', [4, -4], [20, -4], {
   material: 'glass',
   openings: [{ id: 'op-l1-boxing-south-door', kind: 'glass-door', offset: 8, width: 2.6, height: 2.6, sillHeight: 0 }],
 });
-addWall(levelL1, 'shop-west', [8, -4], [8, 6], {
-  material: 'glass',
-  openings: [{ id: 'op-l1-shop-west-door', kind: 'glass-door', offset: 4, width: 2.4, height: 2.6, sillHeight: 0 }],
-});
-addWall(levelL1, 'shop-south', [8, 6], [20, 6], {
-  material: 'glass',
-  openings: [{ id: 'op-l1-shop-south-door', kind: 'glass-door', offset: 5, width: 2.6, height: 2.6, sillHeight: 0 }],
-});
 addWall(levelL1, 'lobby-west', [-6, 2], [-6, 15], {
   material: 'glass',
   openings: [{ id: 'op-l1-badminton-door', kind: 'glass-door', offset: 5, width: 2.8, height: 2.6, sillHeight: 0 }],
@@ -2406,9 +2398,9 @@ levelRF.children.unshift(zoneRfZen.id, zoneRfTerrace.id);
 levelOUT.children.unshift(zoneOutTennis.id);
 
 // Bỏ cả cây con để search, deep link, hotspot và viewpoint không tham chiếu khu đã loại.
-// Shop, Streak, lớp Gym và PT giữ nguyên cho các commit sau.
+// Bỏ Shop cùng cây con; giữ Streak, Health, Progress và PT cho đúng phạm vi Task 3.
 const removedNodeIds = [
-  'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
+  'zone-l1-shop', 'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
   'zone-l2-vip-gym', 'zone-l2-lounge', 'zone-rf-zen', 'lvl-out',
 ];
 function removeSceneSubtree(id: string): void {

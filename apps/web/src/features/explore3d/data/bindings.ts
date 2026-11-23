@@ -387,7 +387,6 @@ export function resolveBindings(
       validSessions,
       activeMemberTier,
       coaches,
-      products,
       membership,
       streak,
     );
@@ -567,7 +566,6 @@ function resolveZoneBinding(
   validSessions: LiveClassSessionRecord[],
   activeMemberTier: 'SILVER' | 'GOLD' | 'PLATINUM' | null,
   coaches: LiveCoachRecord[],
-  products: LiveProductRecord[],
   membership: LiveMembershipSummary,
   streak: LiveStreakSummary,
 ): ResolvedZoneBinding {
@@ -722,7 +720,6 @@ function resolveZoneBinding(
     formatOpenHours(matchedCourts[0]?.openTime, matchedCourts[0]?.closeTime);
 
   const hasZoneSpecificContext =
-    (zone.id === 'zone-l1-shop' && products.length > 0) ||
     (zone.id === 'zone-l2-pt-studio' && coaches.length > 0) ||
     ((zone.id === 'zone-l1-lobby' || zone.id === 'zone-l1-gate') &&
       (membership !== null || streak !== null));

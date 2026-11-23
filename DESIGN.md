@@ -1,5 +1,9 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Giảm scope Thịnh — Task 3 (22/11/2026):
+- Bỏ Shop thương mại điện tử Member/Public: catalog sản phẩm, giỏ hàng, checkout đơn hàng, lịch sử đơn hàng và Shop trong Explore 3D.
+- Giữ thanh toán gói tập/PT, lịch sử giao dịch cũ và Shop của Staff/Manager. Giữ Streak, Progress, Health cho Task 4. Không đổi theme hay bố cục tổng thể.
+
 Giảm scope Thịnh — Task 2 (22/11/2026):
 - Member/Public bỏ đăng ký lớp nhóm và đặt sân. Giữ URL `/member/classes` cho lịch PT và `?tab=pt` cho đặt/hủy/thanh toán PT; giữ bố cục Dashboard bốn cột.
 - Giữ Classes/Courts của Staff/Coach/Manager, Shop, Streak và quyền lợi gói do backend cung cấp. Catalog/quyền lợi backend vẫn chờ An/Khoa đồng bộ.

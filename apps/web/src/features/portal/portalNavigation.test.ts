@@ -27,10 +27,6 @@ describe('portal sidebar grouping', () => {
     expect(isPortalNavActive(packages, '/member/hold')).toBe(true);
     expect(isPortalNavActive(packages, '/member/packages/checkout')).toBe(true);
     expect(isPortalNavActive(packages, '/member/card')).toBe(false);
-    const products = PORTAL_NAV.find(item => item.to === '/member/products')!;
-    expect(isPortalNavActive(products, '/member/products')).toBe(true);
-    expect(isPortalNavActive(products, '/member/orders')).toBe(true);
-    expect(isPortalNavActive(products, '/member/orders/42')).toBe(true);
   });
 
   it.each(ROLES)('%s: every mobile shortcut resolves to an allowed sidebar entry', role => {
@@ -39,11 +35,21 @@ describe('portal sidebar grouping', () => {
   });
 });
 
-it('removes court navigation for every role and keeps PT and Shop', () => {
+it('removes court navigation for every role and keeps PT', () => {
   const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER'));
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
   expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
-  expect(member.flatMap(portalNavRoutes)).toContain('/member/products');
+  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/products');
   // Staff court screen was cut too (manager/receptionist scope reduction).
   expect(PORTAL_NAV.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
+});
+
+it('removes Shop navigation for members, staff and managers', () => {
+  const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER')).flatMap(portalNavRoutes);
+  expect(member).not.toContain('/member/orders');
+  expect(member).toContain('/member/packages');
+  expect(member).toContain('/member/invoices');
+  // Staff orders and manager products were cut in the staff/manager scope reduction.
+  expect(PORTAL_NAV.filter(item => item.roles.includes('STAFF')).flatMap(portalNavRoutes)).not.toContain('/staff/orders');
+  expect(PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes)).not.toContain('/manager/products');
 });

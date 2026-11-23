@@ -13,7 +13,6 @@ import {
   type LiveCoachRecord,
   type LiveEquipmentRecord,
   type LiveMembershipSummary,
-  type LiveProductRecord,
   type LiveRoomRecord,
   type LiveStreakSummary,
   type ResolvedSceneBindings,
@@ -74,21 +73,6 @@ interface RawPublicPackage {
 interface RawPublicCatalog {
   packages?: RawPublicPackage[];
   coaches?: RawPublicCoach[];
-}
-
-interface RawProductItem {
-  id: number | string;
-  name: string;
-  slug: string;
-  price?: number;
-  minPrice?: number;
-  servingsPerContainer?: number | null;
-  stockQuantity?: number | null;
-  inStock?: boolean;
-}
-
-interface RawProductPage {
-  content?: RawProductItem[];
 }
 
 interface RawSubscription {
@@ -173,16 +157,12 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
       roomsRes,
       equipmentRes,
       catalogRes,
-      productsRes,
       membershipRes,
       streakRes,
     ] = await Promise.allSettled([
       apiFetch<RawRoom[]>('/rooms'),
       apiFetch<RawEquipment[]>('/equipment'),
       apiFetch<RawPublicCatalog>('/public/catalog', { headers: { Authorization: '' } }),
-      apiFetch<RawProductPage | RawProductItem[]>('/public/products?size=6', {
-        headers: { Authorization: '' },
-      }),
       fetchMembershipWithFallback(),
       memberCheckinApi.streak(),
     ]);
@@ -228,29 +208,6 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
           avatarUrl: c.avatarUrl ?? null,
         }))
       : [];
-
-    const rawProductsValue = productsRes.status === 'fulfilled' ? productsRes.value : null;
-    const rawProductItems: RawProductItem[] = Array.isArray(rawProductsValue)
-      ? rawProductsValue
-      : Array.isArray(rawProductsValue?.content)
-        ? rawProductsValue.content
-        : [];
-
-    const products: LiveProductRecord[] = rawProductItems.map(p => ({
-      id: String(p.id),
-      name: p.name,
-      slug: p.slug,
-      price: Number(p.price ?? p.minPrice ?? 0),
-      servingsPerContainer: p.servingsPerContainer ?? null,
-      stockQuantity:
-        p.stockQuantity !== undefined
-          ? p.stockQuantity
-          : typeof p.inStock === 'boolean'
-            ? p.inStock
-              ? 1
-              : 0
-            : null,
-    }));
 
     let membership: LiveMembershipSummary = null;
     if (membershipRes.status === 'fulfilled' && membershipRes.value?.packageName) {
@@ -311,7 +268,8 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
       membership,
       streak,
       coaches,
-      products,
+      // Không tải catalog sản phẩm khi Shop không còn trong scene.
+      products: [],
       fetchedAt: Date.now(),
       error: snapshotError,
     };

@@ -8,20 +8,7 @@ export function selectedPackageId(search: string): number | null {
   return Number.isSafeInteger(num) && num > 0 ? num : null;
 }
 
-function shopReturnPath(target: string): string | null {
-  if (!target.startsWith('/') || target.startsWith('//') || target.includes('..')) return null;
-  try {
-    const url = new URL(target, 'https://scms.invalid');
-    if (url.origin !== 'https://scms.invalid' || url.search || url.hash) return null;
-    if (/^\/checkout$|^\/products$|^\/products\/[a-z0-9-]{1,180}$/.test(url.pathname)) {
-      return url.pathname;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
+// Chỉ khôi phục ý định mua gói hội viên; URL Shop cũ không còn là đích đăng nhập.
 function purchaseReturnPath(search: string): string | null {
   const target = new URLSearchParams(search).get('returnTo');
   if (!target) return null;
@@ -36,7 +23,7 @@ function purchaseReturnPath(search: string): string | null {
       return null;
     }
   }
-  return shopReturnPath(target);
+  return null;
 }
 
 export function purchaseAuthPath(path: '/login' | '/register', search: string): string {

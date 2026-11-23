@@ -29,10 +29,10 @@ it('verifies signed VNPay return parameters with the server',async()=>{
  expect(api.verifyVnpayReturn).toHaveBeenCalledWith({vnp_TxnRef:'ABC123',vnp_ResponseCode:'00',vnp_SecureHash:'signed123'});
  expect(host.textContent).toContain('Thanh toán thành công');
 });
-it('vnpay return accepts /member/orders/42 and still rejects other paths',async()=>{
+it('vnpay return redirects historical Shop payments and rejects other paths',async()=>{
  vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({reference:'ABC123',paymentId:1,subscriptionId:null,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/member/orders/42'});
  await render('?vnp_TxnRef=ABC123');
- expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe('/member/orders/42');
+ expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe('/member/invoices');
 
  vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({reference:'DEF456',paymentId:2,subscriptionId:null,amount:500000,status:'success',expiresAt:'2026-11-03T12:15:00',destination:'/admin/users'});
  await render('?vnp_TxnRef=DEF456');
@@ -55,8 +55,8 @@ it('keeps pending uncertain and only announces a delayed success after a backend
  expect(toast.success).toHaveBeenCalledTimes(1);
 });
 
-it.each(['/member/packages', '/member/classes?tab=pt', '/member/orders/42', '/member/courts'])('keeps active payment destinations and redirects retired court results: %s', async destination => {
+it.each(['/member/packages', '/member/classes?tab=pt', '/member/orders/42', '/member/courts'])('keeps active payment destinations and redirects retired court/Shop results: %s', async destination => {
   vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({ reference: 'ABC123', paymentId: 1, subscriptionId: null, amount: 500000, status: 'success', expiresAt: '2026-11-03T12:15:00', destination });
   await render('?vnp_TxnRef=ABC123');
-  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe(destination === '/member/courts' ? '/member/invoices' : destination);
+  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe(destination === '/member/courts' || destination.startsWith('/member/orders/') ? '/member/invoices' : destination);
 });
