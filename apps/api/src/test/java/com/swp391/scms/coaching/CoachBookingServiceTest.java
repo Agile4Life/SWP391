@@ -712,6 +712,21 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    @DisplayName("Khi tắt lớp học nhóm (legacyClassesEnabled=false), các ClassSession cũ không chặn slot PT 1:1 của HLV")
+    void legacyClassSessionsAreIgnoredWhenClassesDisabled() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "legacyClassesEnabled", false);
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+
+        List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, LocalDate.of(2026, 11, 26), 10L);
+        CoachAvailableSlotDto slot17 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(17, 0))).findFirst().orElseThrow();
+
+        assertThat(slot17.available()).isTrue();
+        verify(classSessionRepository, never()).findActiveByCoachAndDate(any(), any());
+        verify(classSessionRepository, never()).findActiveByMemberAndDate(any(), any());
+    }
+
+    @Test
     void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
         var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "staffRequestRepository", leaves);
