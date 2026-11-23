@@ -136,12 +136,15 @@ components:
         note: { type: string, maxLength: 500 }
     TrialClaimRequest:
       type: object
-      required: [fullName]
+      description: >-
+        When documentNumber/cccd is omitted and the member has a PENDING or APPROVED KYC on file,
+        the stored document type, number, nationality, full name and photos are reused.
+        Otherwise documentNumber and fullName are required (400 TRIAL_FULL_NAME_REQUIRED when fullName is missing).
       properties:
         documentType: { type: string, enum: [CCCD, PASSPORT], default: CCCD }
         documentNumber: { type: string, description: 'CCCD (9/12 digits) or Passport (6-15 alphanumeric)' }
         cccd: { type: string, description: 'Legacy alias for documentNumber' }
-        fullName: { type: string, maxLength: 150 }
+        fullName: { type: string, maxLength: 150, description: 'Optional when reusing stored KYC; falls back to the account full name' }
         nationality: { type: string, maxLength: 100 }
         frontImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
         backImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
