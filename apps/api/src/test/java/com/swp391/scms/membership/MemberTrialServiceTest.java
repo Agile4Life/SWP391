@@ -58,6 +58,7 @@ class MemberTrialServiceTest {
     private NotificationService notifications;
 
     private final CccdHasher hasher = new CccdHasher("test-pepper");
+    private final com.swp391.scms.users.KycCrypto kycCrypto = new com.swp391.scms.users.KycCrypto("test-kyc-secret-key-for-unit-test");
     private MemberTrialService service;
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-03T10:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
 
@@ -74,7 +75,8 @@ class MemberTrialServiceTest {
                 notifications,
                 null,
                 clock,
-                hasher
+                hasher,
+                kycCrypto
         );
 
         User user = new User();
@@ -419,9 +421,6 @@ class MemberTrialServiceTest {
 
     @Test
     void requestTrialReusesVerifiedMemberKycWhenRequestOmitsDocumentDetails() {
-        com.swp391.scms.users.KycCrypto kycCrypto = new com.swp391.scms.users.KycCrypto("test-kyc-secret-key-for-unit-test");
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "kycCrypto", kycCrypto);
-
         testMember.getUser().setFullName("Nguyen Van Test");
         testMember.setIdentityVerified(true);
         testMember.setKycStatus("APPROVED");
@@ -454,5 +453,26 @@ class MemberTrialServiceTest {
         assertEquals("Nguyen Van Test", captor.getValue().getFullName());
         assertEquals(validPngDataUrl, captor.getValue().getFrontImageUrl());
         assertEquals(validPngDataUrl, captor.getValue().getBackImageUrl());
+    }
+
+    @Test
+    void requestTrialReusesLegacyPlainKycWhenNoEncryptedCopyExists() {
+        testMember.setKycStatus("APPROVED");
+        testMember.setDocumentType("CCCD");
+        testMember.setNationality("VN");
+        testMember.setCitizenIdEncrypted(null);
+        testMember.setCitizenId("001200008888");
+
+        when(members.findById(10L)).thenReturn(java.util.Optional.of(testMember));
+        when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.requestTrial(new AuthenticatedPrincipal(10L, "member1", "MEMBER"),
+                new TrialClaimRequest(null, null, null, null, null, null, null));
+
+        org.mockito.ArgumentCaptor<MemberTrialRedemption> captor = org.mockito.ArgumentCaptor.forClass(MemberTrialRedemption.class);
+        verify(trialRedemptions).saveAndFlush(captor.capture());
+        assertEquals(hasher.hash("001200008888"), captor.getValue().getCccdHash());
     }
 }

@@ -47,9 +47,7 @@ public class MemberTrialService {
     private final MessageService messageService;
     private final Clock clock;
     private final CccdHasher cccdHasher;
-
-    @Autowired(required = false)
-    private com.swp391.scms.users.KycCrypto kycCrypto;
+    private final com.swp391.scms.users.KycCrypto kycCrypto;
 
     @Autowired
     public MemberTrialService(
@@ -60,7 +58,8 @@ public class MemberTrialService {
             @Autowired(required = false) NotificationService notifications,
             @Autowired(required = false) MessageService messageService,
             @Autowired(required = false) Clock clock,
-            CccdHasher cccdHasher
+            CccdHasher cccdHasher,
+            @Autowired(required = false) com.swp391.scms.users.KycCrypto kycCrypto
     ) {
         this.trialRedemptions = trialRedemptions;
         this.members = members;
@@ -70,6 +69,7 @@ public class MemberTrialService {
         this.messageService = messageService;
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
         this.cccdHasher = cccdHasher;
+        this.kycCrypto = kycCrypto;
     }
 
     private String msg(String key, Object... args) {
@@ -134,6 +134,15 @@ public class MemberTrialService {
                 "KYC_IMAGE_INVALID", "error.kyc.image_invalid");
     }
 
+    /** Số giấy tờ KYC đã lưu: bản mã hóa nếu có, nếu không thì bản rõ cũ (chưa backfill); bản đã che thì bỏ qua. */
+    private String storedDocumentNumber(Member member) {
+        if (member.getCitizenIdEncrypted() != null && kycCrypto != null) {
+            return kycCrypto.decrypt(member.getCitizenIdEncrypted());
+        }
+        String plain = member.getCitizenId();
+        return plain != null && !com.swp391.scms.users.KycCrypto.isMasked(plain) ? plain : null;
+    }
+
     private boolean isVietnamese(String nationality) {
         if (nationality == null) return false;
         String s = nationality.trim().toUpperCase(Locale.ROOT);
@@ -164,12 +173,12 @@ public class MemberTrialService {
             member = members.findById(memberId)
                     .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
             // Nếu hội viên đã nộp KYC trước đó (PENDING hoặc APPROVED) và chưa nhập lại số giấy tờ, tái sử dụng KYC đã lưu
-            boolean hasReusableKyc = member.getCitizenIdEncrypted() != null && kycCrypto != null
-                    && (Boolean.TRUE.equals(member.getIdentityVerified())
+            // Cùng điều kiện với giao diện (MemberPackagesPage.hasReusableKyc): có trạng thái hợp lệ và có số giấy tờ đã lưu.
+            boolean hasReusableKyc = Boolean.TRUE.equals(member.getIdentityVerified())
                     || "APPROVED".equalsIgnoreCase(member.getKycStatus())
-                    || "PENDING".equalsIgnoreCase(member.getKycStatus()));
+                    || "PENDING".equalsIgnoreCase(member.getKycStatus());
             if (hasReusableKyc) {
-                String decryptedDoc = kycCrypto.decrypt(member.getCitizenIdEncrypted());
+                String decryptedDoc = storedDocumentNumber(member);
                 if (decryptedDoc != null && !decryptedDoc.isBlank()) {
                     docNumber = decryptedDoc.trim();
                     if (member.getDocumentType() != null && !member.getDocumentType().isBlank()) {

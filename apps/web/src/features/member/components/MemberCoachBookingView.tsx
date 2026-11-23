@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
-import { centerNowParts, formatCenterDate } from '../../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, parseCenterTime } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
 import {
   getCoaches,
@@ -152,6 +152,8 @@ export function MemberCoachBookingView({
 
   // Cancel Modal State
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
+  // Thời điểm mở hộp thoại hủy, dùng để báo trước có được hoàn lượt (quy tắc 2 giờ) hay không.
+  const [cancelOpenedAt, setCancelOpenedAt] = useState(0);
   const [cancelling, setCancelling] = useState(false);
 
   const daysList = nextDays(10);
@@ -1121,7 +1123,7 @@ export function MemberCoachBookingView({
                           type="button"
                           className="btn-secondary btn-sm"
                           style={{ color: 'var(--portal-danger)', borderColor: 'var(--portal-danger)' }}
-                          onClick={() => setCancelTarget(b)}
+                          onClick={() => { setCancelTarget(b); setCancelOpenedAt(Date.now()); }}
                         >
                           {memberText("Hủy lịch hẹn")}</button>
                       )}
@@ -1654,8 +1656,8 @@ export function MemberCoachBookingView({
               <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
             </p>
             {cancelTarget.paymentMethod === 'package_quota' && (() => {
-              const sessionStartMs = new Date(`${cancelTarget.bookingDate}T${cancelTarget.startTime.slice(0, 5)}:00`).getTime();
-              const isWithinTwoHours = Number.isFinite(sessionStartMs) && sessionStartMs - Date.now() < 2 * 60 * 60 * 1000;
+              const sessionStart = parseCenterTime(`${cancelTarget.bookingDate}T${cancelTarget.startTime.slice(0, 5)}:00`);
+              const isWithinTwoHours = sessionStart !== null && sessionStart.getTime() - cancelOpenedAt < 2 * 60 * 60 * 1000;
               return (
                 <p style={{ margin: 0, fontSize: '0.88rem', color: isWithinTwoHours ? 'var(--portal-danger)' : 'var(--portal-text-muted)' }}>
                   {isWithinTwoHours

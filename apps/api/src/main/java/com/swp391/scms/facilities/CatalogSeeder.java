@@ -277,18 +277,26 @@ public class CatalogSeeder implements ApplicationRunner {
      * Chuyển gói seed cũ sang quyền lợi mới (spec 2026-11-09). Chỉ đụng vào gói còn nguyên mô tả và hạn mức seed cũ;
      * gói mà Manager đã chỉnh sửa thì giữ nguyên, kể cả giá.
      */
+    // Dòng đầu mô tả của các bản seed 3/6 tháng trước đây; chỉ gói còn nguyên một trong các dòng này mới được chuyển đổi.
+    private static final java.util.Set<String> OLD_SEEDED_FIRST_LINES = java.util.Set.of(
+            "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)",
+            "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)",
+            "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)",
+            "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (3 tháng)",
+            "BASIC – Đồng hành 6 tháng (Tiết kiệm 16%)",
+            "STANDARD – Đồng hành 6 tháng (Tiết kiệm 17%)",
+            "VIP – Đồng hành 6 tháng (Đặc quyền VIP - Tiết kiệm 17%)",
+            "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)");
+
+    /**
+     * Chuyển một lần gói 3/6 tháng còn mô tả seed cũ sang mô tả, giá, hạn mức mới và mở bán lại.
+     * Sau khi chuyển, mô tả không còn khớp bản cũ nên các lần khởi động sau không đụng tới:
+     * Manager toàn quyền đổi giá, mô tả và bật/tắt gói.
+     */
     private void syncSeededPackage(String name, String desc, BigDecimal price, Integer creditLimit, String tier) {
         for (var pkg : packages.list()) {
             if (!name.equalsIgnoreCase(pkg.name())) continue;
-            String currentDesc = pkg.description();
-            if (!isLegacySeededDescription(currentDesc)) {
-                return;
-            }
-            boolean descMatches = java.util.Objects.equals(desc, currentDesc);
-            boolean priceMatches = pkg.price() != null && pkg.price().compareTo(price) == 0;
-            boolean tierMatches = tier.equalsIgnoreCase(pkg.tier());
-            boolean isActive = "active".equalsIgnoreCase(pkg.status());
-            if (!descMatches || !priceMatches || !tierMatches || !isActive) {
+            if (isOldSeededDescription(pkg.description())) {
                 packages.update(pkg.id(), new PackageRequest(
                         pkg.name(), desc, price, pkg.durationDays(), creditLimit, "active", tier));
             }
@@ -296,13 +304,10 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
-    private static boolean isLegacySeededDescription(String description) {
+    private static boolean isOldSeededDescription(String description) {
         if (description == null) return false;
-        String trimmed = description.trim();
-        return trimmed.startsWith("BASIC –")
-                || trimmed.startsWith("STANDARD –")
-                || trimmed.startsWith("VIP –")
-                || trimmed.startsWith("CAO CẤP –");
+        String firstLine = description.strip().lines().findFirst().orElse("").strip();
+        return OLD_SEEDED_FIRST_LINES.contains(firstLine);
     }
 
     private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
