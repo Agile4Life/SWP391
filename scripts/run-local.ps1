@@ -52,7 +52,7 @@ function Test-ScmsLocalService {
 }
 
 function Wait-ScmsLocalService {
-    param([string]$Name, [string]$Uri, [switch]$Api, [int]$TimeoutSeconds = 120)
+    param([string]$Name, [string]$Uri, [switch]$Api, [int]$TimeoutSeconds = 240)
     Write-Host "-> Dang cho $Name san sang: $Uri" -ForegroundColor Yellow
     $timer = [Diagnostics.Stopwatch]::StartNew()
     while ($timer.Elapsed.TotalSeconds -lt $TimeoutSeconds) {

@@ -27,48 +27,9 @@ function formatYmd(d: Date): string {
 
 const currentMondayStr = formatYmd(getWeekMonday(new Date()));
 
-describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên Phụ trách)', () => {
+describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Phụ trách)', () => {
   let host: HTMLDivElement;
   let root: Root;
-
-  const mockSessions = [
-    {
-      id: 201,
-      classId: 1,
-      className: 'High-Intensity Strength & Conditioning',
-      disciplineId: 1,
-      disciplineName: 'Strength Training',
-      coachId: 1,
-      coachName: 'Coach Marcus Vance',
-      roomId: 101,
-      roomName: 'Studio 01 (Tầng 2)',
-      sessionDate: currentMondayStr,
-      startTime: '07:00',
-      endTime: '08:15',
-      status: 'scheduled',
-      capacity: 15,
-      bookedCount: 12,
-      level: 'Trung cấp - Nâng cao',
-    },
-    {
-      id: 202,
-      classId: 2,
-      className: 'Olympic Weightlifting Fundamentals',
-      disciplineId: 1,
-      disciplineName: 'Weightlifting',
-      coachId: 1,
-      coachName: 'Coach Marcus Vance',
-      roomId: 102,
-      roomName: 'Phòng Cử Tạ (Tầng 1)',
-      sessionDate: currentMondayStr,
-      startTime: '10:00',
-      endTime: '11:30',
-      status: 'scheduled',
-      capacity: 10,
-      bookedCount: 8,
-      level: 'Cơ bản',
-    },
-  ];
 
   const mockStudents = [
     {
@@ -143,8 +104,6 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       })
     );
 
-    vi.spyOn(coachingApi, 'getCoachWeeklySchedule').mockResolvedValue(mockSessions);
-    vi.spyOn(coachingApi, 'getSessionStudents').mockResolvedValue(mockStudents);
     vi.spyOn(coachingApi, 'getAllAssignedStudents').mockResolvedValue(mockStudents);
   });
 
@@ -158,7 +117,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     vi.unstubAllGlobals();
   });
 
-  it('renders the coach weekly timetable from 06:00 to 22:00 with only their own sessions', async () => {
+  it('renders the coach weekly timetable and navigation', async () => {
     await act(async () => {
       root.render(
         <MemoryRouter>
@@ -167,27 +126,12 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    expect(host.textContent).toContain('Lịch dạy & học viên');
-    expect(host.textContent).toContain('Thời khóa biểu');
+    expect(host.textContent).toContain('Lịch dạy PT 1-1 & học viên');
+    expect(host.textContent).toContain('Thời khóa biểu PT 1-1');
     expect(host.textContent).toContain('Học viên phụ trách');
     expect(host.querySelector('[aria-label="Tuần trước"]')).not.toBeNull();
     expect(host.querySelector('[aria-label="Tuần sau"]')).not.toBeNull();
     expect(host.querySelectorAll('.mcal__col')).toHaveLength(7);
-    // Bảng chỉ xem thu gọn theo lịch tuần; bấm "Hiện đủ" để xem 06:00–22:00.
-    await act(async () => { [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Cả ngày')?.click(); });
-    expect(host.querySelectorAll('.mcal__gutter span')).toHaveLength(16);
-    expect(host.querySelector('.tt__mark')).toBeNull();
-    expect(host.textContent).toContain('Thứ 2');
-    expect(host.textContent).toContain('Chủ nhật');
-    const titles = [...host.querySelectorAll('.mcal__event-title')].map((node) => node.textContent);
-    expect(titles).toEqual(expect.arrayContaining(['High-Intensity Strength & Conditioning', 'Olympic Weightlifting Fundamentals']));
-    expect(host.querySelector('.mcal__slot')).toBeNull();
-
-    // Ensure raw emojis are removed
-    expect(host.textContent).not.toContain('⏰');
-    expect(host.textContent).not.toContain('📍');
-    expect(host.textContent).not.toContain('👥');
-    expect(host.textContent).not.toContain('🎯');
   });
 
   it('allows switching weeks and triggers schedule reload', async () => {
@@ -206,7 +150,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       nextWeekBtn.click();
     });
 
-    expect(coachingApi.getCoachWeeklySchedule).toHaveBeenCalled();
+    expect(getCoachSchedule).toHaveBeenCalled();
   });
 
   it('switches to dedicated "Học viên phụ trách" tab and displays assigned students without icons', async () => {
@@ -238,7 +182,29 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
     expect(host.textContent).not.toContain('⚠️');
   });
 
-  it('opens modal to view enrolled students, and allows switching to attendance and evaluation history', async () => {
+  it('shows confirmed 1:1 bookings on the timetable and opens their detail modal', async () => {
+    vi.mocked(getCoachSchedule).mockResolvedValueOnce([
+      {
+        id: 9,
+        memberName: 'Phạm Quốc Bảo',
+        bookingDate: currentMondayStr,
+        startTime: '18:00:00',
+        endTime: '19:00:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+        disciplineName: 'Gym',
+        notes: 'Đau vai trái',
+      },
+      {
+        id: 10,
+        memberName: 'Đã hủy',
+        bookingDate: currentMondayStr,
+        startTime: '20:00:00',
+        endTime: '21:00:00',
+        status: 'cancelled',
+      },
+    ] as never);
+
     await act(async () => {
       root.render(
         <MemoryRouter>
@@ -247,53 +213,13 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Danh sách Lớp & Học viên P
       );
     });
 
-    const viewStudentsBtn = host.querySelector('.mcal__event') as HTMLButtonElement;
-    expect(viewStudentsBtn).not.toBeNull();
-
-    await act(async () => {
-      viewStudentsBtn.click();
-    });
-
-    expect(coachingApi.getSessionStudents).toHaveBeenCalled();
-    expect(host.textContent).toContain('Mục tiêu thể lực:');
-    expect(host.textContent).toContain('Lưu ý sức khỏe & chấn thương:');
-    expect(host.textContent).toContain('Lê Hoàng Long');
-    expect(host.textContent).toContain('thoát vị đĩa đệm');
-
-    const filterSelect = host.querySelector('.students-modal-filter-bar select') as HTMLSelectElement;
-    expect(filterSelect).not.toBeNull();
-
-    // Chuyển sang "Lịch sử điểm danh"
-    await act(async () => {
-      filterSelect.value = 'attendance';
-      filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    expect(host.querySelectorAll('.history-record-card')).toHaveLength(0);
-
-    // Chuyển sang "Đánh giá học viên"
-    await act(async () => {
-      filterSelect.value = 'evaluation';
-      filterSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-
-    expect(host.querySelectorAll('.history-record-card')).toHaveLength(0);
-  });
-
-  it('shows confirmed 1:1 bookings on the same timetable and opens their detail', async () => {
-    vi.mocked(getCoachSchedule).mockResolvedValueOnce([
-      { id: 9, memberName: 'Phạm Quốc Bảo', bookingDate: currentMondayStr, startTime: '18:00:00', endTime: '19:00:00',
-        status: 'confirmed', paymentMethod: 'package_quota', disciplineName: 'Gym', notes: 'Đau vai trái' },
-      { id: 10, memberName: 'Đã hủy', bookingDate: currentMondayStr, startTime: '20:00:00', endTime: '21:00:00', status: 'cancelled' },
-    ] as never);
-    await act(async () => { root.render(<MemoryRouter><CoachClassesPage /></MemoryRouter>); });
     const events = [...host.querySelectorAll<HTMLButtonElement>('.mcal__event--mine')];
     expect(events).toHaveLength(1);
     expect(events[0].textContent).toContain('PT 1:1 · Phạm Quốc Bảo');
+
     await act(async () => events[0].click());
     const dialog = host.querySelector('dialog')!;
     expect(dialog.textContent).toContain('Đau vai trái');
     expect(dialog.textContent).toContain('Quyền lợi gói tập');
-    expect(coachingApi.getSessionStudents).not.toHaveBeenCalled();
   });
 });

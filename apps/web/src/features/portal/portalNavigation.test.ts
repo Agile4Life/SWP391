@@ -35,19 +35,21 @@ describe('portal sidebar grouping', () => {
   });
 });
 
-it('removes Member court navigation and keeps PT and other roles', () => {
+it('removes court navigation for every role and keeps PT', () => {
   const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER'));
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
   expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/products');
-  expect(PORTAL_NAV.flatMap(portalNavRoutes)).toContain('/staff/courts');
+  // Staff court screen was cut too (manager/receptionist scope reduction).
+  expect(PORTAL_NAV.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
 });
 
-it('keeps Staff/Manager Shop navigation while removing every Member Shop shortcut', () => {
+it('removes Shop navigation for members, staff and managers', () => {
   const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER')).flatMap(portalNavRoutes);
   expect(member).not.toContain('/member/orders');
   expect(member).toContain('/member/packages');
   expect(member).toContain('/member/invoices');
-  expect(PORTAL_NAV.filter(item => item.roles.includes('STAFF')).flatMap(portalNavRoutes)).toContain('/staff/orders');
-  expect(PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes)).toContain('/manager/products');
+  // Staff orders and manager products were cut in the staff/manager scope reduction.
+  expect(PORTAL_NAV.filter(item => item.roles.includes('STAFF')).flatMap(portalNavRoutes)).not.toContain('/staff/orders');
+  expect(PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes)).not.toContain('/manager/products');
 });

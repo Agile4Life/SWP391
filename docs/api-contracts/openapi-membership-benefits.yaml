@@ -8,61 +8,6 @@ info:
 servers:
   - url: /api/v1
 paths:
-  /classes:
-    post:
-      deprecated: true
-      summary: Retired - one-off classes are no longer created; use POST /classes/recurring
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/sessions/{id}/enroll:
-    post:
-      deprecated: true
-      summary: Retired - enroll in the whole course with POST /classes/{id}/enroll
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/sessions/{id}/bookings:
-    post:
-      deprecated: true
-      summary: Retired - per-session booking; enroll in the whole course instead
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/session-bookings/bulk:
-    post:
-      deprecated: true
-      summary: Retired - bulk per-session booking
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/{id}/enroll:
-    post:
-      summary: Enroll the member in a recurring course
-      description: |
-        Consumes one course credit of the active package. The course must end on or before the last day of the
-        unbroken run of paid membership periods that covers its start date, otherwise
-        403 SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP (renew first). After an upgrade, credits already spent on the
-        previous plan still count against the new allowance.
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '201': { description: Enrolled }
-        '403': { description: SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP or SCHEDULING_COURSE_QUOTA_EXCEEDED }
-  /classes/my-quota:
-    get:
-      summary: Course credits of the member's active package
-      description: |
-        Adds `enrollBlockedUntil` (date-time, nullable). It is set when the member missed more than 50% of the
-        sessions of a course; enrolling or checking out a new course answers 403 SCHEDULING_COURSE_ENROLL_BLOCKED
-        until then (30 days). Finished sessions nobody recorded are marked `absent` automatically; late arrivals
-        count as present and `excused` sessions are not absences.
-      responses:
-        '200': { description: Quota with optional enrollBlockedUntil }
   /subscriptions/{id}/hold:
     post:
       summary: Request a hold (multipart/form-data)
@@ -132,12 +77,6 @@ paths:
         `subtotal = list - discount` plus memberDiscountPercent/memberDiscountAmount so `total = subtotal + shippingFee` holds.
       responses:
         '200': { description: Quote with discountPercent and discountAmount }
-  /classes/{id}/checkout:
-    post:
-      summary: Pay the fee of a course beyond the free credits
-      description: The fee is reduced by the tier discount of the active package (Gold 10%, Platinum 20%); the payment note records the percentage and the list price. `GET /classes/my-quota` returns `discountPercent`.
-      responses:
-        '201': { description: Checkout with the discounted amount }
   /members/{memberId}/health-metrics/batch:
     post:
       summary: Record several measurements of one assessment at once
@@ -164,25 +103,6 @@ paths:
       description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches and managers still see and write plans, which appear after an upgrade.
       responses:
         '200': { description: Plans (empty for Silver) }
-  /classes/enrollments/my:
-    get:
-      summary: The member's course enrollments with progress
-      description: |
-        Each item adds `totalSessions` (not cancelled), `attendedSessions` (present or late) and `remainingSessions`
-        (total minus attended, missed and excused: a missed session is not made up). Entering the center through the
-        gate from 30 minutes before a booked course session until its end marks it `present` (`late` when the scan is
-        more than 15 minutes after the start); a coach's own record is never overwritten.
-      responses:
-        '200': { description: Enrollments with totalSessions, attendedSessions, remainingSessions }
-  /classes/recurring:
-    post:
-      summary: Create a recurring course that repeats weekly
-      description: |
-        A course needs `recurringDays` (MONDAY...) and meets on those weekdays every week between `startDate` and
-        `endDate` (400 SCHEDULING_NO_RECURRING_DAYS when none is chosen). Monthly repetition (`repeatType`,
-        `monthDays`) was removed: the fields are no longer accepted nor returned.
-      responses:
-        '201': { description: Course with all its sessions }
   /coaching/bookings:
     get:
       summary: 1:1 sessions (CoachBookingDto)
@@ -246,24 +166,12 @@ paths:
       responses:
         '200': { description: Rejected }
         '400': { description: KYC_REJECT_REASON_REQUIRED }
-  /classes/{classId}/students:
-    get:
-      summary: Students of a class
-      description: A coach reads only the classes they teach (403 otherwise). The front desk gets contact details with `healthNotes` blanked. Managers see everything. The same rules apply to /classes/sessions/{id}/students.
-      responses:
-        '200': { description: Students }
   /check-in/scan:
     post:
       summary: Gate scan
       description: Only rotating signed codes (`DYN:...`, 60 seconds) are accepted. A static code is recorded as DENIED with error.attendance.static_qr_rejected.
       responses:
         '201': { description: Check-in record (GRANTED or DENIED) }
-  /classes/enrollments/{id}:
-    delete:
-      summary: Cancel a course enrollment
-      description: A member cannot cancel once the course has started (400 SCHEDULING_CANNOT_CANCEL_STARTED_COURSE), so the credit is not handed back; the desk can. Cancelling before the start voids the unpaid fee.
-      responses:
-        '200': { description: Cancelled }
   /health/metrics#cycle:
     post:
       summary: One assessment day per 30-day cycle (Gold, Platinum, trial)

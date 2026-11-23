@@ -44,9 +44,6 @@ public class CoachReviewService {
     @Autowired(required = false)
     private com.swp391.scms.attendance.repository.SessionAttendanceRepository attendanceRepository;
 
-    @Autowired(required = false)
-    private CoachLeaderboardService leaderboard;
-
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository) {
@@ -111,10 +108,6 @@ public class CoachReviewService {
         review.setCreatedAt(LocalDateTime.now());
 
         CoachReview saved = reviewRepository.save(review);
-        // The month's ranking and bonuses follow the new rating right away (the month is when the review was written).
-        if (leaderboard != null) {
-            leaderboard.refreshMonth(saved.getCreatedAt().getYear(), saved.getCreatedAt().getMonthValue());
-        }
 
         // Send in-app notification to the Coach
         if (notificationService != null) {

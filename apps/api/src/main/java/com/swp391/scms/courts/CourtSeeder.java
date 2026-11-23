@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  * A court is a room that has a court discipline and whole-hour opening hours; existing rooms are never touched.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 @Order(100)
 public class CourtSeeder implements ApplicationRunner {
 

@@ -21,6 +21,7 @@ import java.time.ZoneId;
  * attendance corrections still see them as booked.
  */
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 public class SessionCompletionScheduler {
     public static final int GRACE_DAYS = 7;
     private static final Logger log = LoggerFactory.getLogger(SessionCompletionScheduler.class);

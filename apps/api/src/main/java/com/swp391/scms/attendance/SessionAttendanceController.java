@@ -23,6 +23,7 @@ import java.util.List;
  */
 @Tag(name = "Session Attendance", description = "Class session attendance tracking (SCRUM-111)")
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/attendance")
 public class SessionAttendanceController {
 

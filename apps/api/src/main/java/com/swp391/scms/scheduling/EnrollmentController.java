@@ -22,6 +22,7 @@ import java.util.List;
  */
 @Tag(name = "Class Enrollments", description = "Member class booking and cancellation (SCRUM-73)")
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes")
 public class EnrollmentController {
 

@@ -27,6 +27,15 @@ class DisciplineServiceTest {
     @InjectMocks DisciplineService service;
 
     @Test
+    void publicCatalogContainsOnlyGymEvenWhenOtherDisciplinesExist() {
+        Discipline gym = new Discipline(); gym.setName("Gym");
+        when(disciplines.findAllByNameIgnoreCaseOrderByNameAsc("Gym")).thenReturn(java.util.List.of(gym));
+
+        assertEquals(java.util.List.of("Gym"), new DisciplineController(service).list().getData().stream()
+                .map(d -> d.name()).toList());
+    }
+
+    @Test
     void createRejectsDuplicateName() {
         when(disciplines.existsByNameIgnoreCase("Yoga")).thenReturn(true);
 

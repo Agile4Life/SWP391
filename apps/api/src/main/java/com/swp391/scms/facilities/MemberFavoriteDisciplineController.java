@@ -19,6 +19,7 @@ import java.util.List;
  * SCRUM-133: REST Controller for member's favorite disciplines.
  */
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.favorite-disciplines-enabled", havingValue = "true")
 @RequestMapping("/api/v1/members/me/favorite-disciplines")
 public class MemberFavoriteDisciplineController {
 

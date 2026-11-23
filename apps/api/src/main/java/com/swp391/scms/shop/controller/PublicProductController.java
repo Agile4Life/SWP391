@@ -22,6 +22,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/** Disabled by default: Shop module removed from the active scope. */
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/public")
 public class PublicProductController {

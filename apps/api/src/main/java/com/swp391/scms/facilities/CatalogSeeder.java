@@ -21,11 +21,11 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String TRIAL_PACKAGE_NAME = "Gói Trải Nghiệm 3 Ngày";
     public static final String TRIAL_PACKAGE_DESC = "GÓI TRẢI NGHIỆM – Khám phá SÖL Fitness trong 3 ngày\n"
             + "Quyền lợi:\n"
-            + "- Nhận các dịch vụ của gói Gold (không gồm phòng VIP).\n"
+            + "- Nhận các dịch vụ của gói Gold.\n"
             + "- Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.\n"
             + "- 01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.\n"
             + "- Sử dụng tủ khóa và tiện ích phòng thay đồ.\n"
-            + "- Không đăng ký lớp Group Fitness và không áp dụng chính sách bảo lưu.";
+            + "- Không áp dụng chính sách bảo lưu.";
     public static final BigDecimal TRIAL_PACKAGE_PRICE = BigDecimal.ZERO;
     public static final int TRIAL_PACKAGE_DURATION = 3;
     public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 0;
@@ -40,9 +40,7 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Tập luyện không giới hạn trong giờ hoạt động.\n"
             + "- Sử dụng khu vực tập luyện tiêu chuẩn.\n"
             + "- Sử dụng phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 1 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
+            + "- Miễn phí nước uống.";
     public static final BigDecimal SILVER_PRICE = new BigDecimal("199000");
     public static final int SILVER_DURATION = 30;
     public static final Integer SILVER_CREDIT_LIMIT = 1;
@@ -54,10 +52,8 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Sử dụng khu vực máy tập nâng cao.\n"
             + "- Cung cấp khăn tập riêng trong mỗi buổi tập.\n"
             + "- Tủ khóa cá nhân cố định.\n"
-            + "- Được đánh giá thể trạng định kỳ mỗi tháng.\n"
             + "- Xây dựng kế hoạch tập luyện cá nhân cơ bản.\n"
-            + "- 2 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+            + "- Giảm 10% dịch vụ PT bổ sung.";
     public static final BigDecimal GOLD_PRICE = new BigDecimal("299000");
     public static final int GOLD_DURATION = 30;
     public static final Integer GOLD_CREDIT_LIMIT = 2;
@@ -66,17 +62,14 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String PLATINUM_DESC = "VIP – Cao cấp\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
             + "- 06 buổi tập Personal Trainer 1:1 mỗi tháng.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt.\n"
             + "- Sử dụng hệ thống máy tập cao cấp và thiết bị chuyên biệt.\n"
             + "- Khăn tập và khăn tắm cá nhân theo tiêu chuẩn VIP.\n"
             + "- Tủ đồ cá nhân cao cấp, có khóa riêng.\n"
             + "- Sử dụng phòng xông hơi.\n"
             + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
-            + "- Đánh giá chỉ số cơ thể chuyên sâu: BMI, Body Fat, Muscle Mass.\n"
             + "- Thiết kế giáo án tập luyện riêng theo mục tiêu.\n"
             + "- Tư vấn dinh dưỡng cơ bản cùng huấn luyện viên.\n"
-            + "- 4 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.\n"
+            + "- Giảm 20% dịch vụ PT bổ sung.\n"
             + "- Được mời tham gia các sự kiện và chương trình độc quyền.";
     public static final BigDecimal PLATINUM_PRICE = new BigDecimal("599000");
     public static final int PLATINUM_DURATION = 30;
@@ -88,9 +81,7 @@ public class CatalogSeeder implements ApplicationRunner {
             + "Quyền lợi:\n"
             + "- Tập luyện không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
             + "- Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 3 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
+            + "- Miễn phí nước uống.";
     public static final BigDecimal SILVER_3M_PRICE = new BigDecimal("549000");
     public static final int SILVER_3M_DURATION = 90;
     public static final Integer SILVER_3M_CREDIT_LIMIT = 3;
@@ -101,8 +92,7 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- 09 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
             + "- Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.\n"
             + "- Tủ khóa cá nhân cố định.\n"
-            + "- 6 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+            + "- Giảm 10% dịch vụ PT bổ sung.";
     public static final BigDecimal GOLD_3M_PRICE = new BigDecimal("799000");
     public static final int GOLD_3M_DURATION = 90;
     public static final Integer GOLD_3M_CREDIT_LIMIT = 6;
@@ -111,11 +101,10 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String PLATINUM_3M_DESC = "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
             + "- 18 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt và phòng xông hơi.\n"
+            + "- Sử dụng phòng xông hơi.\n"
             + "- Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.\n"
             + "- Giáo án tập luyện riêng và tư vấn dinh dưỡng cơ bản.\n"
-            + "- 12 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+            + "- Giảm 20% dịch vụ PT bổ sung.";
     public static final BigDecimal PLATINUM_3M_PRICE = new BigDecimal("1599000");
     public static final int PLATINUM_3M_DURATION = 90;
     public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
@@ -140,19 +129,10 @@ public class CatalogSeeder implements ApplicationRunner {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
-        // Bộ môn chuẩn: Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông, Yoga là bộ môn phụ.
+        // Chỉ tạo dữ liệu mẫu cho Gym; dữ liệu lịch sử được giữ nguyên.
         upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
-        upsertDiscipline("Bơi lội", "Kỹ thuật bơi, sức bền dưới nước và phục hồi", "Thermal Aquatics");
-        upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
-        upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
-        upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
-        upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
         if (rooms.list().isEmpty()) {
             rooms.create(new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", null, null, null, "STANDARD"));
-            rooms.create(new RoomRequest("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", null, null, null, "PLATINUM"));
-            rooms.create(new RoomRequest("Zen Garden Studio", "Penthouse", 18, "available", null, null, null, "STANDARD"));
-            rooms.create(new RoomRequest("Ring Arena 01", "Level 1 - East Wing", 14, "maintenance", null, null, null, "STANDARD"));
-            rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
         }
 
         // Upsert 3-day trial package
@@ -187,13 +167,9 @@ public class CatalogSeeder implements ApplicationRunner {
 
     private void seedInitialEquipment() {
         upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
-        upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
         var allRooms = roomRepository.findAll();
         com.swp391.scms.facilities.entity.Room standard = allRooms.stream()
                 .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()))
-                .findFirst().orElse(null);
-        com.swp391.scms.facilities.entity.Room vip = allRooms.stream()
-                .filter(r -> "Phòng Gym VIP".equalsIgnoreCase(r.getName()))
                 .findFirst().orElse(null);
 
         if (standard != null) {
@@ -204,13 +180,6 @@ public class CatalogSeeder implements ApplicationRunner {
             seedEquipmentIfMissing("Dàn tạ tay cao su Dumbbell (2.5-40kg)", "EQ-DUMB-01", "Free Weights", standard, 2, "active");
             seedEquipmentIfMissing("Khung gánh tạ Squat Rack", "EQ-SQUAT-01", "Strength", standard, 2, "active");
             seedEquipmentIfMissing("Ghế đẩy ngực đa năng Adjustable Bench", "EQ-BENCH-01", "Free Weights", standard, 6, "active");
-        }
-        if (vip != null) {
-            seedEquipmentIfMissing("Máy chạy bộ cao cấp Technogym Artis Run", "EQ-VIP-RUN-01", "Cardio", vip, 4, "active");
-            seedEquipmentIfMissing("Máy tập toàn thân Synchro Elliptical VIP", "EQ-VIP-SYN-01", "Cardio", vip, 3, "active");
-            seedEquipmentIfMissing("Dàn tạ khối thông minh Technogym Kinesis One", "EQ-VIP-KIN-01", "Strength", vip, 2, "active");
-            seedEquipmentIfMissing("Dàn tạ đơn Urethane bọc crôm VIP", "EQ-VIP-DUMB-01", "Free Weights", vip, 1, "active");
-            seedEquipmentIfMissing("Máy đo chỉ số cơ thể chuyên sâu InBody 770", "EQ-VIP-INBODY-01", "Diagnostic", vip, 1, "active");
         }
     }
 

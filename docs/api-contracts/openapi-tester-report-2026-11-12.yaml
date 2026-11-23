@@ -33,16 +33,6 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/RequestHistory' } }
         '403': { description: Member, coach or admin }
-  /api/v1/classes/{id}/enroll:
-    post:
-      summary: Enrol in a whole course with a plan credit (mục 1)
-      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
-      responses:
-        '201': { description: Enrolled }
-        '400':
-          description: >-
-            SCHEDULING_COURSE_ALREADY_STARTED when the course start date has passed (checked before membership
-            coverage, same rule as POST /classes/{id}/checkout).
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }
