@@ -129,7 +129,7 @@ export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = ge
   if (pkg.durationDays >= 360) {
     tierBadge = t(`Gói 12 tháng • 365 ngày (Tiết kiệm 25%)`, `12-month plan • 365 days (Save 25%)`);
   } else if (pkg.durationDays >= 170) {
-    tierBadge = t(`Gói 6 tháng • 180 ngày (Tiết kiệm ~17%)`, `6-month plan • 180 days (Save ~17%)`);
+    tierBadge = t(`Gói 6 tháng • 180 ngày`, `6-month plan • 180 days`);
   } else if (pkg.durationDays === 90) {
     tierBadge = t(`Gói 3 tháng • 90 ngày`, `3-month plan • 90 days`);
   } else if (pkg.durationDays === 30) {

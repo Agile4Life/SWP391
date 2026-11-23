@@ -101,6 +101,7 @@ export function MemberPackagesPage() {
 
   const [submittingPackageId, setSubmittingPackageId] =
     useState<number | null>(null);
+  const [expandedBenefitIds, setExpandedBenefitIds] = useState<Record<number, boolean>>({});
   const requestBusy = useRef(false);
   const createdSubscriptions = useRef<MemberSubscription[]>([]);
   const syncVersion = useRef(0);
@@ -1266,25 +1267,40 @@ export function MemberPackagesPage() {
                     {details.summary}
                   </p>
 
-                  <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
-                    {highlights.slice(0, visibleCount).map((benefit, index) => (
-                      <li key={index} className="package-benefit-item">
-                        <span>{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {highlights.length > visibleCount && (
-                    <details className="package-benefit-more">
-                      <summary>{t("Xem thêm ", "View more")}{highlights.length - visibleCount} {t("quyền lợi", "benefits")}</summary>
-                      <ul className="package-benefit-list">
-                        {highlights.slice(visibleCount).map((benefit, index) => (
-                          <li key={index} className="package-benefit-item">
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
+                  {(() => {
+                    const isExpanded = Boolean(expandedBenefitIds[membershipPackage.id]);
+                    const shownHighlights = isExpanded ? highlights : highlights.slice(0, visibleCount);
+                    return (
+                      <>
+                        <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
+                          {shownHighlights.map((benefit, index) => (
+                            <li key={index} className="package-benefit-item">
+                              <span>{benefit}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {highlights.length > visibleCount && (
+                          <div className="package-benefit-more">
+                            <button
+                              type="button"
+                              className="package-benefit-more__toggle"
+                              aria-expanded={isExpanded}
+                              onClick={() =>
+                                setExpandedBenefitIds((prev) => ({
+                                  ...prev,
+                                  [membershipPackage.id]: !isExpanded,
+                                }))
+                              }
+                            >
+                              {isExpanded
+                                ? t("Thu gọn", "Show less")
+                                : `${t("Xem thêm ", "View more ")}${highlights.length - visibleCount} ${t("quyền lợi", "benefits")}`}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                 </div>
 

@@ -100,9 +100,11 @@
   .member-packages .portal-dialog { animation: none; }
 }
 
+.member-packages .grid-3 { align-items: start; }
 .member-packages .package-price-term { font-size: .9rem; font-weight: 500; color: var(--portal-muted); white-space: nowrap; }
 .member-packages .package-benefit-more { margin-top: 8px; }
-.member-packages .package-benefit-more summary { cursor: pointer; color: var(--portal-salmon); font-size: 13px; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.member-packages .package-benefit-more__toggle { background: none; border: 0; padding: 0; cursor: pointer; color: var(--portal-salmon); font-size: 13px; font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; }
+.member-packages .package-benefit-more__toggle:hover { text-decoration: underline; }
 .member-packages .package-manage { position: relative; }
 .member-packages .package-manage > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; }
 .member-packages .package-manage > summary::-webkit-details-marker { display: none; }
